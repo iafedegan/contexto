@@ -1,0 +1,84 @@
+@import "tailwindcss";
+
+/* ---------------------------------------------------------------------------
+   Sistema de diseño — CONtexto Ganadero
+   Paleta sobria de medio informativo. Prioridad absoluta a legibilidad móvil.
+--------------------------------------------------------------------------- */
+
+:root {
+  --bg: #ffffff;
+  --bg-subtle: #f6f6f4;
+  --fg: #1a1a1a;
+  --fg-muted: #5b5b55;
+  --border: #e4e4de;
+  --brand: #1f6d3a; /* verde ganadero */
+  --brand-fg: #ffffff;
+  --link: #185c31;
+  --danger: #b42318;
+  --radius: 0.5rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #121311;
+    --bg-subtle: #1b1c19;
+    --fg: #ececec;
+    --fg-muted: #a1a199;
+    --border: #2c2e29;
+    --brand: #4caf6d;
+    --brand-fg: #0c1a0f;
+    --link: #6fd18c;
+  }
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-bg-subtle: var(--bg-subtle);
+  --color-fg: var(--fg);
+  --color-fg-muted: var(--fg-muted);
+  --color-border: var(--border);
+  --color-brand: var(--brand);
+  --color-brand-fg: var(--brand-fg);
+  --color-link: var(--link);
+  --radius: var(--radius);
+  --font-sans: var(--font-sans), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-serif: var(--font-serif), Georgia, "Times New Roman", serif;
+}
+
+* {
+  border-color: var(--border);
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+a {
+  color: inherit;
+}
+
+/* Cuerpo de artículo renderizado desde markdown/HTML sanitizado. */
+.prose {
+  font-family: var(--font-serif);
+  font-size: 1.125rem;
+  line-height: 1.75;
+  max-width: 42rem;
+}
+.prose p { margin: 0 0 1.25rem; }
+.prose h2 { font-size: 1.5rem; font-weight: 700; margin: 2rem 0 0.75rem; font-family: var(--font-sans); }
+.prose h3 { font-size: 1.2rem; font-weight: 700; margin: 1.5rem 0 0.5rem; font-family: var(--font-sans); }
+.prose a { color: var(--link); text-decoration: underline; text-underline-offset: 2px; }
+.prose ul, .prose ol { margin: 0 0 1.25rem 1.25rem; }
+.prose li { margin-bottom: 0.4rem; }
+.prose blockquote {
+  border-left: 3px solid var(--brand);
+  padding-left: 1rem;
+  color: var(--fg-muted);
+  font-style: italic;
+  margin: 0 0 1.25rem;
+}
+.prose img { border-radius: var(--radius); margin: 1.5rem 0; }

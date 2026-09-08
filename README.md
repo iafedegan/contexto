@@ -1,0 +1,100 @@
+# CONtexto Ganadero — Plataforma
+
+Portal público + panel editorial propio + capacidades de IA para el medio
+CONtexto Ganadero. Scaffold funcional basado en la propuesta OV-PRO-FDG-001.
+
+Stack: **Next.js 16 (App Router / RSC)** · **PostgreSQL + pgvector** (Supabase) ·
+**Drizzle ORM** · **Auth.js** · **Vercel AI SDK** (Anthropic) · **Inngest** ·
+**Tailwind CSS** · despliegue en **Vercel**.
+
+---
+
+## Puesta en marcha
+
+```bash
+npm install
+cp .env.example .env.local        # completa DATABASE_URL, AUTH_SECRET, ANTHROPIC_API_KEY, …
+npm run db:setup                  # extensiones + migraciones + índices + seed
+npm run dev
+```
+
+`npm run db:setup` ejecuta, en orden:
+
+| paso | comando | qué hace |
+|---|---|---|
+| 1 | `db:extras:pre` | `CREATE EXTENSION vector, pg_trgm` |
+| 2 | `db:generate` | genera SQL desde `src/db/schema.ts` (ya incluido: `drizzle/0000_init.sql`) |
+| 3 | `db:migrate` | aplica migraciones |
+| 4 | `db:extras:post` | índices HNSW (vectorial) + GIN (full-text español) |
+| 5 | `db:seed` | usuario admin, secciones, artículos de ejemplo |
+
+Usuario admin por defecto: `editor@contextoganadero.com` / `cambia-esta-clave`
+(configurable con `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD`). Panel en `/panel`.
+
+---
+
+## Cómo el código implementa los principios de arquitectura
+
+| # | Principio | Dónde |
+|---|---|---|
+| 1 | Sin migración del archivo · integración de solo lectura | `src/lib/archive-client.ts` (nunca escribe al origen), tabla `archive_index`, cron `src/app/api/cron/sync-archive` |
+| 2 | Sin CMS comercial · panel a medida | `src/app/panel/**` (roles, borradores, programación, vista previa, asistencia SEO) |
+| 3 | Un solo motor de base de datos | `src/db/schema.ts` — contenido, usuarios, avisos, series de datos y vectores en el mismo Postgres |
+| 4 | Generación estática + borde | `revalidate` + `generateStaticParams` en las rutas de contenido; revalidación *on-demand* en `src/app/api/revalidate` y en las Server Actions del panel |
+| 5 | Módulos de dominio, un solo deploy | `src/lib` (contenido, búsqueda, archivo, seo), `src/agents`, `src/inngest` — separados en código, un despliegue |
+| 6 | IA con aprobación humana obligatoria | `agent_drafts.status`, `src/app/panel/borradores-ia` — aprobar crea un borrador atribuido al editor; publicar es un paso aparte |
+
+## SEO técnico (corrige los hallazgos del diagnóstico)
+
+- **`NewsArticle` JSON-LD** — `src/lib/seo.ts` + `src/components/json-ld.tsx`, en cada artículo.
+- **`robots.txt`** permite explícitamente buscadores y crawlers de IA (GPTBot, ClaudeBot, PerplexityBot…) — `src/app/robots.ts`.
+- **Metadatos por artículo** derivados de título/resumen, sin acumulación de keywords — `articleMetadata()`.
+- **Sitemap XML dinámico**, **RSS**, **canonical** — `src/app/sitemap.ts`, `src/app/feed.xml`, `alternates.canonical`.
+- **`llms.txt`** — `src/app/llms.txt/route.ts`.
+- **Redirecciones 301** taxonomía antigua → nueva — `src/proxy.ts` (prefijos) + tabla `redirects` (`src/app/(public)/[...path]`).
+
+## Asistente conversacional (RAG)
+
+`src/app/api/assistant/route.ts` + `src/components/assistant-chat.tsx`
+
+- Recuperación híbrida (vectorial + full-text, fusión RRF) sobre índice unificado `articles` + `archive_index` — `src/lib/search.ts`.
+- **Sin fuentes recuperadas → declina responder** (criterio de aceptación).
+- Citación: solo se registran como citadas las fuentes referenciadas con `[n]` en la respuesta.
+- Guardrails y límite de dominio en el prompt de sistema — `src/agents/prompts.ts`.
+- Presupuesto: tope por sesión + tope mensual USD; al superarlo **degrada a búsqueda semántica** sin generación — `src/lib/budget.ts`.
+- Log en `assistant_queries` → tablero de demanda informativa (`/panel/demanda`).
+
+## Agentes de producción editorial
+
+`src/agents/draft-generator.ts` (borrador desde fuente estructurada) +
+`src/agents/fact-checker.ts` (contrasta cada cifra contra la fuente; marca lo no
+verificable). Tope diario configurable. Encolados vía Inngest
+(`src/inngest/functions.ts`, evento `agent/draft.requested`).
+
+---
+
+## Estado de los criterios de aceptación
+
+| Criterio | Estado en el scaffold |
+|---|---|
+| Home/categoría/artículo estáticos, regenerados al publicar | ✅ ISR + revalidación on-demand en Server Actions |
+| Lighthouse móvil ≥ 90 / LCP ≤ 2.5 s | ⏳ base lista (RSC, next/font, next/image, JS mínimo); medir con datos reales |
+| `NewsArticle` JSON-LD válido en 100 % de artículos nuevos | ✅ emitido siempre desde el servidor |
+| `robots.txt` permite crawlers de buscadores y de IA | ✅ |
+| 0 artículos del archivo transformados; URLs legadas 200/301 | ✅ archivo solo lectura; 301 en proxy + tabla `redirects` |
+| Asistente: 0 respuestas sin cita verificable | ✅ modo generativo solo con fuentes; declina si no hay |
+| Nada generado por agentes visible sin aprobación registrada | ✅ `agent_drafts` + atribución al editor |
+
+`⏳` = requiere despliegue y datos reales para verificar.
+
+---
+
+## Pendiente / siguientes pasos
+
+- Provisionar el proyecto Supabase y Vercel (variables + `vercel.json` ya listo con crons).
+- Sanitizar el HTML del cuerpo en el panel (p. ej. `sanitize-html`) antes de persistir.
+- Editor enriquecido (TipTap) en lugar del textarea HTML.
+- Flujo de alta de 2FA (`otplib` ya instalado: `generateSecret` + `generateURI` + QR).
+- Cliente real de la API del archivo histórico (ajustar `src/lib/archive-client.ts` al contrato real).
+- Gestión de `ads_zones` y newsletter en el panel.
+- Tests e2e (Playwright) de los criterios de aceptación.
