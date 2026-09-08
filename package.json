@@ -6,6 +6,7 @@
     "predev": "tsx scripts/dev-setup.ts",
     "dev": "next dev",
     "build": "next build",
+    "build:local": "PGLITE_DATA_DIR=memory:// next build",
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",

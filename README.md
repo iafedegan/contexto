@@ -3,33 +3,49 @@
 Portal público + panel editorial propio + capacidades de IA para el medio
 CONtexto Ganadero. Scaffold funcional basado en la propuesta OV-PRO-FDG-001.
 
-Stack: **Next.js 16 (App Router / RSC)** · **PostgreSQL + pgvector** (Supabase) ·
-**Drizzle ORM** · **Auth.js** · **Vercel AI SDK** (Anthropic) · **Inngest** ·
-**Tailwind CSS** · despliegue en **Vercel**.
+Stack: **Next.js 16 (App Router / RSC)** · **PostgreSQL + pgvector** (Supabase en
+prod, PGlite embebido en local) · **Drizzle ORM** · **Auth.js** · **Vercel AI
+SDK** (Anthropic) · **Inngest** · **Tailwind CSS** · despliegue en **Vercel**.
+
+> **Demo rápida:** `npm install && npm run dev` — sin base de datos ni claves.
 
 ---
 
 ## Puesta en marcha
 
+### MVP local (cero infraestructura)
+
 ```bash
 npm install
-cp .env.example .env.local        # completa DATABASE_URL, AUTH_SECRET, ANTHROPIC_API_KEY, …
-npm run db:setup                  # extensiones + migraciones + índices + seed
 npm run dev
 ```
 
-`npm run db:setup` ejecuta, en orden:
+No hace falta base de datos ni claves. `predev` levanta un **Postgres embebido
+(PGlite, con pgvector)** en `.pglite/`, aplica las migraciones y carga datos de
+ejemplo (8 artículos, archivo histórico simulado, borrador de IA, log de
+consultas). Abre <http://localhost:3000>.
 
-| paso | comando | qué hace |
-|---|---|---|
-| 1 | `db:extras:pre` | `CREATE EXTENSION vector, pg_trgm` |
-| 2 | `db:generate` | genera SQL desde `src/db/schema.ts` (ya incluido: `drizzle/0000_init.sql`) |
-| 3 | `db:migrate` | aplica migraciones |
-| 4 | `db:extras:post` | índices HNSW (vectorial) + GIN (full-text español) |
-| 5 | `db:seed` | usuario admin, secciones, artículos de ejemplo |
+- Panel editorial: <http://localhost:3000/panel> → `editor@contextoganadero.com` / `contexto2026`
+- Sin `ANTHROPIC_API_KEY`, el asistente funciona en **modo búsqueda** (recupera y
+  cita fuentes, sin generación). Añade la clave en `.env.local` para respuestas
+  generativas.
+- La BD local se **recrea en cada arranque** (demo determinista). Para conservar
+  los cambios del panel entre reinicios: `KEEP_LOCAL_DB=1 npm run dev`.
+- `npm run build:local` compila usando una BD en memoria (no toca `.pglite/`).
 
-Usuario admin por defecto: `editor@contextoganadero.com` / `cambia-esta-clave`
-(configurable con `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD`). Panel en `/panel`.
+### Producción (Supabase + Vercel)
+
+```bash
+cp .env.example .env.local        # DATABASE_URL, AUTH_SECRET, ANTHROPIC_API_KEY, …
+npm run db:setup                  # extensiones + migraciones + índices + seed
+npm run build && npm start
+```
+
+Al definir `DATABASE_URL`, la app ignora PGlite y usa el Postgres gestionado.
+`npm run db:setup` ejecuta, en orden: `db:extras:pre` (`CREATE EXTENSION vector,
+pg_trgm`) → `db:generate` (SQL desde `src/db/schema.ts`, ya incluido en
+`drizzle/0000_init.sql`) → `db:migrate` → `db:extras:post` (índices HNSW + GIN
+español) → `db:seed`.
 
 ---
 

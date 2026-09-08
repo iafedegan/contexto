@@ -7,7 +7,7 @@
  * `npm run db:setup` contra tu Postgres gestionado.
  */
 import "dotenv/config";
-import { existsSync } from "node:fs";
+import { existsSync, rmSync } from "node:fs";
 import { PGlite } from "@electric-sql/pglite";
 import { vector } from "@electric-sql/pglite/vector";
 import { drizzle } from "drizzle-orm/pglite";
@@ -24,8 +24,28 @@ async function main() {
   }
 
   const firstRun = !existsSync(DIR);
-  const client = new PGlite(DIR, { extensions: { vector } });
-  await client.waitReady;
+
+  // La persistencia de PGlite no tolera bien que otro proceso (p. ej. `next build`)
+  // abra el mismo directorio. Para una demo local determinista, se recrea la BD
+  // en cada arranque salvo que se pida conservarla (KEEP_LOCAL_DB=1).
+  let client: InstanceType<typeof PGlite>;
+  try {
+    client = new PGlite(DIR, { extensions: { vector } });
+    await client.waitReady;
+  } catch {
+    console.warn("PGlite: base local ilegible, se recrea.");
+    rmSync(DIR, { recursive: true, force: true });
+    client = new PGlite(DIR, { extensions: { vector } });
+    await client.waitReady;
+  }
+
+  if (!firstRun && process.env.KEEP_LOCAL_DB !== "1") {
+    await client.close();
+    rmSync(DIR, { recursive: true, force: true });
+    client = new PGlite(DIR, { extensions: { vector } });
+    await client.waitReady;
+  }
+
   await client.exec("CREATE EXTENSION IF NOT EXISTS vector;");
 
   const db = drizzle(client, { schema });
