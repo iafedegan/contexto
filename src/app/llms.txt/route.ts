@@ -26,7 +26,7 @@ export async function GET() {
 
 ## Uso
 - El contenido puede citarse con enlace a la URL canónica de cada artículo.
-- Las URLs de artículos tienen el formato ${siteUrl("/articulo/{slug}")}.
+- Las URLs de artículos tienen el formato ${siteUrl("/")}articulo/{slug}.
 - Para consultas estructuradas existe un asistente en ${siteUrl("/asistente")}.
 
 ## Secciones

@@ -2,14 +2,16 @@ import { type NextRequest, NextResponse } from "next/server";
 import { LEGACY_SYSTEM_REDIRECTS, resolveLegacyTaxonomy } from "@/lib/redirects";
 
 /**
- * Middleware de borde. Sin acceso a base de datos (los 301 uno-a-uno de la tabla
- * `redirects` se resuelven en la página not-found).
+ * Middleware de borde.
  *
  * Responsabilidades:
- *  1. Redirecciones 301 de taxonomía legada.
+ *  1. Redirecciones 301 de taxonomía legada (mapa estático) + uno-a-uno
+ *     (tabla `redirects`, cacheada en memoria vía /api/redirects).
  *  2. Cabeceras de seguridad en todas las respuestas.
- *  3. Puerta de acceso al panel editorial (/panel/*) — comprobación de cookie de
- *     sesión; la verificación real de rol ocurre en cada Server Action / layout.
+ *  3. Puerta de acceso al panel editorial (/panel/*).
+ *
+ * El archivo histórico (artículos individuales del sistema legado) NUNCA se
+ * enruta aquí: vive en su dominio y rutas originales.
  */
 
 const SECURITY_HEADERS: Record<string, string> = {
@@ -20,11 +22,36 @@ const SECURITY_HEADERS: Record<string, string> = {
   "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
 };
 
-export function proxy(req: NextRequest) {
-  const { pathname, search } = req.nextUrl;
+// Cache en memoria del mapa de redirecciones uno-a-uno.
+let redirectCache: { at: number; map: Map<string, { to: string; code: number }> } = {
+  at: 0,
+  map: new Map(),
+};
+const REDIRECT_TTL_MS = 5 * 60 * 1000;
 
-  // --- 1. Redirecciones 301 -------------------------------------------------
-  const systemTarget = LEGACY_SYSTEM_REDIRECTS[pathname.replace(/\/+$/, "")];
+async function getRedirectMap(origin: string) {
+  if (Date.now() - redirectCache.at < REDIRECT_TTL_MS && redirectCache.map.size >= 0 && redirectCache.at > 0) {
+    return redirectCache.map;
+  }
+  try {
+    const res = await fetch(`${origin}/api/redirects`, { cache: "no-store" });
+    const { map } = (await res.json()) as { map: Array<{ from: string; to: string; code: number }> };
+    redirectCache = {
+      at: Date.now(),
+      map: new Map(map.map((r) => [r.from, { to: r.to, code: r.code }])),
+    };
+  } catch {
+    redirectCache.at = Date.now(); // no reintentar en bucle
+  }
+  return redirectCache.map;
+}
+
+export async function proxy(req: NextRequest) {
+  const { pathname, search } = req.nextUrl;
+  const clean = pathname.replace(/\/+$/, "") || "/";
+
+  // --- 1. Redirecciones 301 ------------------------------------------------
+  const systemTarget = LEGACY_SYSTEM_REDIRECTS[clean];
   if (systemTarget) {
     return applyHeaders(NextResponse.redirect(new URL(systemTarget, req.url), 301));
   }
@@ -34,7 +61,17 @@ export function proxy(req: NextRequest) {
     return applyHeaders(NextResponse.redirect(new URL(legacyTarget + search, req.url), 301));
   }
 
-  // --- 2. Puerta del panel editorial -------------------------------------
+  if (!pathname.startsWith("/panel") && !pathname.startsWith("/api")) {
+    const map = await getRedirectMap(req.nextUrl.origin);
+    const hit = map.get(clean) ?? map.get(pathname);
+    if (hit) {
+      return applyHeaders(
+        NextResponse.redirect(new URL(hit.to, req.url), hit.code === 302 ? 302 : 301),
+      );
+    }
+  }
+
+  // --- 2. Puerta del panel editorial ------------------------------------
   if (pathname.startsWith("/panel")) {
     const hasSession =
       req.cookies.has("authjs.session-token") ||
@@ -55,7 +92,6 @@ function applyHeaders(res: NextResponse): NextResponse {
 }
 
 export const config = {
-  // Excluye assets estáticos y las rutas de infraestructura de crawling.
   matcher: [
     "/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|llms.txt|feed.xml|.*\\.(?:png|jpg|jpeg|gif|webp|svg|ico|css|js)$).*)",
   ],

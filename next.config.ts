@@ -4,6 +4,10 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
 
+  // PGlite (Postgres embebido para el MVP local) carga WASM en tiempo de ejecución
+  // y no debe pasar por el bundler del servidor.
+  serverExternalPackages: ["@electric-sql/pglite"],
+
   // Imágenes remotas del CDN de medios. Ajustar al dominio real de assets.
   images: {
     formats: ["image/avif", "image/webp"],

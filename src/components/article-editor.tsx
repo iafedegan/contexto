@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Button, Card, Input, Textarea } from "@/components/ui";
-import { saveArticle } from "@/app/panel/articulos/actions";
+import { saveArticle } from "@/app/panel/(app)/articulos/actions";
 
 type Option = { id: string; name: string };
 type Initial = {

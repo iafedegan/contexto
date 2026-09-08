@@ -13,7 +13,12 @@ type SP = { searchParams: Promise<{ q?: string }> };
 export default async function SearchPage({ searchParams }: SP) {
   const { q = "" } = await searchParams;
   const query = q.trim();
-  const results = query ? await hybridSearch(query, 30).catch(() => []) : [];
+  const results = query
+    ? await hybridSearch(query, 30).catch((e) => {
+        console.error("BUSCAR error:", e);
+        return [];
+      })
+    : [];
 
   return (
     <div className="mx-auto max-w-2xl">

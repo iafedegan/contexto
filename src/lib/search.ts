@@ -1,6 +1,6 @@
 import "server-only";
 import { sql } from "drizzle-orm";
-import { db } from "@/db";
+import { db, rowsOf } from "@/db";
 import { embed, toVectorLiteral } from "./embeddings";
 
 /**
@@ -26,23 +26,39 @@ export type SearchHit = {
 
 const K = 60; // constante RRF
 
+// Palabras vacías frecuentes en preguntas en español (no aportan a la búsqueda).
+const STOPWORDS = new Set(
+  "el la los las un una unos unas de del a al y o u en con por para que como cual cuales donde cuando cuanto cuanta cuantos cuantas se su sus mi mis tu tus lo le les es son está están va van hay muy más menos sobre entre desde hasta este esta estos estas ese esa esos esas".split(
+    " ",
+  ),
+);
+
+/**
+ * Convierte una pregunta en lenguaje natural en una consulta OR para
+ * `websearch_to_tsquery` (que entiende la palabra clave `or`). Así "¿cómo van
+ * los precios del novillo en Medellín?" recupera artículos que contengan
+ * cualquiera de los términos significativos.
+ */
+function toOrQuery(input: string): string {
+  const words = input
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .replace(/[^a-z0-9ñ\s]/g, " ")
+    .split(/\s+/)
+    .filter((w) => w.length >= 3 && !STOPWORDS.has(w));
+  return [...new Set(words)].join(" or ");
+}
+
 export async function hybridSearch(query: string, limit = 20): Promise<SearchHit[]> {
-  const q = query.trim();
+  const q = toOrQuery(query);
   if (!q) return [];
 
   const queryVec = await embed(q);
   const vecLiteral = queryVec ? toVectorLiteral(queryVec) : null;
 
   // Un solo round-trip: CTEs para cada señal y fusión RRF en SQL.
-  const rows = await db.execute<{
-    kind: "articulo" | "archivo";
-    id: string;
-    title: string;
-    summary: string;
-    url: string;
-    published_at: string | null;
-    score: number;
-  }>(sql`
+  const rows = rowsOf(await db.execute(sql`
     WITH params AS (
       SELECT
         ${q} AS q,
@@ -107,7 +123,7 @@ export async function hybridSearch(query: string, limit = 20): Promise<SearchHit
     FROM fused
     ORDER BY score DESC
     LIMIT ${limit}
-  `);
+  `));
 
   return (rows as unknown as Array<Record<string, unknown>>).map((r) => ({
     kind: r.kind as "articulo" | "archivo",
@@ -125,7 +141,35 @@ export async function relatedContent(
   seedText: string,
   excludeArticleId: string,
   limit = 5,
+  fallbackCategorySlug?: string | null,
 ): Promise<SearchHit[]> {
   const hits = await hybridSearch(seedText, limit + 3);
-  return hits.filter((h) => !(h.kind === "articulo" && h.id === excludeArticleId)).slice(0, limit);
+  let out = hits.filter((h) => !(h.kind === "articulo" && h.id === excludeArticleId)).slice(0, limit);
+
+  // Respaldo por categoría cuando la búsqueda no arroja suficientes resultados.
+  if (out.length < 3 && fallbackCategorySlug) {
+    const rows = rowsOf(await db.execute(sql`
+      SELECT a.id::text AS id, a.title, a.excerpt AS summary,
+             '/articulo/' || a.slug AS url, a.published_at
+      FROM articles a
+      JOIN categories c ON c.id = a.category_id
+      WHERE c.slug = ${fallbackCategorySlug}
+        AND a.status = 'publicado'
+        AND a.id <> ${excludeArticleId}::uuid
+      ORDER BY a.published_at DESC
+      LIMIT ${limit}
+    `));
+    const extra: SearchHit[] = (rows as unknown as Array<Record<string, unknown>>).map((r) => ({
+      kind: "articulo" as const,
+      id: String(r.id),
+      title: String(r.title),
+      summary: String(r.summary ?? ""),
+      url: String(r.url),
+      publishedAt: r.published_at ? new Date(r.published_at as string).toISOString() : null,
+      score: 0,
+    }));
+    const seen = new Set(out.map((h) => h.url));
+    out = [...out, ...extra.filter((h) => !seen.has(h.url))].slice(0, limit);
+  }
+  return out;
 }

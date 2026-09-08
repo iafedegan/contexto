@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { db } from "@/db";
+import { db, rowsOf } from "@/db";
 import { Card } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
@@ -32,7 +32,7 @@ export default async function DemandaPage() {
       GROUP BY mode`),
   ]);
 
-  const rows = <T,>(r: unknown) => r as unknown as T[];
+  const rows = <T,>(r: unknown) => rowsOf<Record<string, unknown>>(r) as unknown as T[];
 
   return (
     <div className="flex flex-col gap-6">

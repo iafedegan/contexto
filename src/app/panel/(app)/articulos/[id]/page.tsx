@@ -8,7 +8,7 @@ import {
   publishArticle,
   scheduleArticle,
   submitForReview,
-} from "@/app/panel/articulos/actions";
+} from "@/app/panel/(app)/articulos/actions";
 
 export const dynamic = "force-dynamic";
 

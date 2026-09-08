@@ -33,7 +33,7 @@ export default async function ArticlePage({ params }: Params) {
   const a = await getPublishedArticleBySlug(slug).catch(() => null);
   if (!a) notFound();
 
-  const related = await relatedContent(`${a.title}\n${a.excerpt}`, a.id, 4).catch(() => []);
+  const related = await relatedContent(a.title, a.id, 4, a.categorySlug).catch(() => []);
 
   const seo = { ...a, authorName: a.authorName, categoryName: a.categoryName };
 
