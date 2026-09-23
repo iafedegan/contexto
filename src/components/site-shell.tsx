@@ -1,4 +1,4 @@
-import { getAllCategories } from "@/lib/content";
+import { getTopLevelCategories } from "@/lib/content";
 import { getSiteIdentity } from "@/lib/site-identity";
 import { ReadingProgress } from "@/components/reading-progress";
 import { SiteHeader, type NavItem } from "@/components/site-header";
@@ -93,8 +93,10 @@ export async function SiteShell({
 
 export async function navItems(locale: Locale = DEFAULT_LOCALE): Promise<NavItem[]> {
   try {
-    const categories = await getAllCategories();
-    return categories.slice(0, 6).map((c) => ({
+    // Solo las de primer nivel: las subcategorías se navegan desde los filtros
+    // de la propia sección, no desde la barra.
+    const categories = await getTopLevelCategories();
+    return categories.map((c) => ({
       href: `/categoria/${c.slug}`,
       label: categoryLabel(locale, c.slug, c.name),
     }));

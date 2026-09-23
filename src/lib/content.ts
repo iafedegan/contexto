@@ -1,5 +1,5 @@
 import "server-only";
-import { and, desc, eq, lte, sql } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNull, lte, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
   articles,
@@ -90,30 +90,77 @@ export async function getHomepageArticles(limit = 13): Promise<ArticleListItem[]
     )
     .limit(limit);
 }
+export type CategoryFilters = {
+  limit?: number;
+  offset?: number;
+  /** Slug de una subcategoría (hija directa) para restringir el listado a ella. */
+  subcategorySlug?: string;
+  /** Fecha mínima de publicación, formato "YYYY-MM-DD" (inclusive). */
+  dateFrom?: string;
+  /** Fecha máxima de publicación, formato "YYYY-MM-DD" (inclusive). */
+  dateTo?: string;
+};
 
 export async function getArticlesByCategory(
   categorySlug: string,
-  limit = 20,
-  offset = 0,
-): Promise<{ category: { name: string; description: string | null } | null; items: ArticleListItem[] }> {
+  filters: CategoryFilters = {},
+): Promise<{
+  category: { name: string; description: string | null } | null;
+  subcategories: { slug: string; name: string }[];
+  items: ArticleListItem[];
+  total: number;
+}> {
+  const { limit = 20, offset = 0, subcategorySlug, dateFrom, dateTo } = filters;
+
   const [cat] = await db
     .select({ id: categories.id, name: categories.name, description: categories.description })
     .from(categories)
     .where(eq(categories.slug, categorySlug))
     .limit(1);
-  if (!cat) return { category: null, items: [] };
+  if (!cat) return { category: null, subcategories: [], items: [], total: 0 };
 
-  const items = await db
-    .select(listSelection)
-    .from(articles)
-    .leftJoin(categories, eq(articles.categoryId, categories.id))
-    .leftJoin(authors, eq(articles.authorId, authors.id))
-    .where(and(publishedCondition, eq(articles.categoryId, cat.id)))
-    .orderBy(desc(articles.publishedAt))
-    .limit(limit)
-    .offset(offset);
+  const children = await db
+    .select({ id: categories.id, slug: categories.slug, name: categories.name })
+    .from(categories)
+    .where(eq(categories.parentId, cat.id))
+    .orderBy(categories.sortOrder, categories.name);
 
-  return { category: { name: cat.name, description: cat.description }, items };
+  // Por defecto se listan los artículos de la categoría y de sus subcategorías
+  // directas; si se pide una subcategoría concreta, se restringe a esa sola.
+  let categoryIds = [cat.id, ...children.map((c) => c.id)];
+  if (subcategorySlug) {
+    const match = children.find((c) => c.slug === subcategorySlug);
+    categoryIds = match ? [match.id] : [];
+  }
+
+  const conditions = [publishedCondition, inArray(articles.categoryId, categoryIds)];
+  if (dateFrom) conditions.push(gte(articles.publishedAt, sql`${dateFrom}::date`));
+  if (dateTo) conditions.push(lte(articles.publishedAt, sql`(${dateTo}::date + interval '1 day')`));
+  const where = and(...conditions);
+
+  const [items, [{ count }]] = await Promise.all([
+    categoryIds.length === 0
+      ? Promise.resolve([])
+      : db
+          .select(listSelection)
+          .from(articles)
+          .leftJoin(categories, eq(articles.categoryId, categories.id))
+          .leftJoin(authors, eq(articles.authorId, authors.id))
+          .where(where)
+          .orderBy(desc(articles.publishedAt))
+          .limit(limit)
+          .offset(offset),
+    categoryIds.length === 0
+      ? Promise.resolve([{ count: 0 }])
+      : db.select({ count: sql<number>`count(*)::int` }).from(articles).where(where),
+  ]);
+
+  return {
+    category: { name: cat.name, description: cat.description },
+    subcategories: children,
+    items,
+    total: count,
+  };
 }
 
 export type FullArticle = {
@@ -218,6 +265,15 @@ export async function getAuthorWithArticles(slug: string) {
 
 export async function getAllCategories() {
   return db.select().from(categories).orderBy(categories.sortOrder, categories.name);
+}
+
+/** Solo las categorías de primer nivel (sin padre) — para el navbar. */
+export async function getTopLevelCategories() {
+  return db
+    .select()
+    .from(categories)
+    .where(isNull(categories.parentId))
+    .orderBy(categories.sortOrder, categories.name);
 }
 
 /** Slugs para generateStaticParams (pre-render en build) y sitemap. */

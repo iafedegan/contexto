@@ -10,17 +10,75 @@
  * NUNCA se redirigen aquí: permanecen en su dominio/ruta original intactas.
  */
 
-/** Mapa de secciones legadas -> nueva ruta de categoría. */
+/**
+ * Mapa de secciones legadas -> nueva ruta de categoría.
+ * Calcado 1:1 del navbar real de contextoganadero.com (9 secciones padre +
+ * sus subcategorías); las claves son las rutas tal como existen hoy en el
+ * sitio legado. Debe mantenerse en sync con `CHILD_CATS` en
+ * src/db/seed-data.ts (misma fuente de verdad, dos formatos).
+ */
 export const LEGACY_TAXONOMY: Record<string, string> = {
-  "/economia": "/categoria/economia-y-mercados",
-  "/ganaderia-sostenible": "/categoria/sostenibilidad",
+  // Ganadería
+  "/sostenible": "/categoria/sostenible",
+  "/produccion": "/categoria/produccion",
+  "/sistemas-silvopastoriles": "/categoria/sistemas-silvopastoriles",
+  "/nutricion": "/categoria/nutricion",
+  "/saludanimal": "/categoria/salud-animal",
+  "/razas": "/categoria/razas",
+  // Sistemas pecuarios
+  "/porcicola": "/categoria/porcicola",
+  "/equino": "/categoria/equino",
+  "/avicola": "/categoria/avicola",
+  "/ovinocaprino": "/categoria/ovino-caprino",
+  "/otrossistemP": "/categoria/otros-sistemas-pecuarios",
+  // Colombia
+  "/politica": "/categoria/politica",
+  "/gremialidad": "/categoria/gremialidad",
   "/regiones": "/categoria/regiones",
-  "/columna": "/categoria/opinion",
-  "/columnistas": "/categoria/opinion",
-  "/politica": "/categoria/politica-gremial",
+  "/RegionesView": "/categoria/regiones",
+  // Economía
+  "/nacional": "/categoria/nacional",
+  "/internacional": "/categoria/internacional",
+  "/IndicadoresView/IndicadorGanadero": "/categoria/precio-del-ganado",
   "/agricultura": "/categoria/agricultura",
-  "/ciencia-y-tecnologia": "/categoria/ciencia-y-tecnologia",
-  "/blogs": "/categoria/opinion",
+  "/agroindustria": "/categoria/agroindustria",
+  // Mundo
+  "/argentina": "/categoria/argentina",
+  "/eeuu": "/categoria/eeuu",
+  "/espana": "/categoria/espana",
+  "/mexico": "/categoria/mexico",
+  "/peru": "/categoria/peru",
+  "/otrosmundo": "/categoria/otros-mundo",
+  // Tendencias
+  "/medioambiente": "/categoria/medioambiente",
+  "/gastronomia": "/categoria/gastronomia",
+  "/innovacion": "/categoria/innovacion",
+  "/mascotas": "/categoria/mascotas",
+  "/redessociales": "/categoria/redes-sociales",
+  // Opinión
+  "/columna": "/categoria/columnas",
+  "/columnas": "/categoria/columnas",
+  "/editorial": "/categoria/editorial",
+  "/blogs": "/categoria/blogs",
+  "/BlogsView": "/categoria/blogs",
+  "/columnistas": "/categoria/columnistas",
+  "/ColumnistasView": "/categoria/columnistas",
+  // Agenda
+  "/congresos": "/categoria/congresos",
+  "/ferias": "/categoria/ferias",
+  "/tauromaquia": "/categoria/tauromaquia",
+  "/otroseventos": "/categoria/otros-eventos",
+  // Especiales
+  "/cronica": "/categoria/cronica",
+  "/reportaje": "/categoria/reportaje",
+  "/entrevistas": "/categoria/entrevistas",
+  "/informes": "/categoria/informes",
+  "/gobierno-petro": "/categoria/gobierno-petro",
+  // Legado previo al MVP (rutas ya retiradas del sitio en vivo, se conservan
+  // por si quedan enlaces externos o de buscadores indexados).
+  "/economia": "/categoria/nacional",
+  "/ganaderia-sostenible": "/categoria/sostenible",
+  "/ciencia-y-tecnologia": "/categoria/razas",
 };
 
 /**

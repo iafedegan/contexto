@@ -8,49 +8,115 @@ import * as schema from "./schema";
 
 type AnyDb = typeof DbType;
 
-const CATS = [
+/**
+ * Taxonomía calcada del navbar real de contextoganadero.com (verificada en el
+ * sitio en vivo): 9 secciones de primer nivel, cada una con sus subcategorías
+ * reales. `legacyPaths` guarda la ruta exacta del sitio legado para que
+ * `LEGACY_TAXONOMY` (src/lib/redirects.ts) pueda 301-ear tráfico e indexación
+ * acumulada hacia `/categoria/<slug>`.
+ */
+const PARENT_CATS = [
+  { slug: "ganaderia", name: "Ganadería", description: "Producción, sanidad y manejo del hato.", sortOrder: 1 },
   {
-    slug: "economia-y-mercados",
-    name: "Economía y mercados",
-    description: "Precios, exportaciones e indicadores del sector.",
-    legacyPaths: ["/economia", "/mercados"],
-    sortOrder: 1,
-  },
-  {
-    slug: "regiones",
-    name: "Regiones",
-    description: "Noticias de las zonas ganaderas del país.",
-    legacyPaths: ["/regiones"],
+    slug: "sistemas-pecuarios",
+    name: "Sistemas pecuarios",
+    description: "Porcicultura, avicultura y otras especies de producción.",
     sortOrder: 2,
   },
+  { slug: "colombia", name: "Colombia", description: "Política, gremios y regiones del país.", sortOrder: 3 },
   {
-    slug: "sostenibilidad",
-    name: "Sostenibilidad",
-    description: "Ganadería sostenible, clima y ambiente.",
-    legacyPaths: ["/ganaderia-sostenible"],
-    sortOrder: 3,
-  },
-  {
-    slug: "politica-gremial",
-    name: "Política gremial",
-    description: "Fedegán, gobierno y normativa que afecta al productor.",
-    legacyPaths: ["/politica"],
+    slug: "economia",
+    name: "Economía",
+    description: "Mercados, precios, agricultura y agroindustria.",
     sortOrder: 4,
   },
+  { slug: "mundo", name: "Mundo", description: "Ganadería y agro en otros países.", sortOrder: 5 },
   {
-    slug: "ciencia-y-tecnologia",
-    name: "Ciencia y tecnología",
-    description: "Genética, sanidad animal e innovación en finca.",
-    legacyPaths: ["/ciencia-y-tecnologia"],
-    sortOrder: 5,
-  },
-  {
-    slug: "opinion",
-    name: "Opinión",
-    description: "Columnas y análisis de la actualidad ganadera.",
-    legacyPaths: ["/columna", "/columnistas", "/blogs"],
+    slug: "tendencias",
+    name: "Tendencias",
+    description: "Medioambiente, innovación y vida rural.",
     sortOrder: 6,
   },
+  { slug: "opinion", name: "Opinión", description: "Columnas, editoriales y columnistas.", sortOrder: 7 },
+  { slug: "agenda", name: "Agenda", description: "Congresos, ferias y eventos del sector.", sortOrder: 8 },
+  {
+    slug: "especiales",
+    name: "Especiales",
+    description: "Crónicas, reportajes e informes en profundidad.",
+    sortOrder: 9,
+  },
+];
+
+type ParentSlug = (typeof PARENT_CATS)[number]["slug"];
+
+const CHILD_CATS: Array<{
+  slug: string;
+  name: string;
+  description: string;
+  legacyPaths: string[];
+  sortOrder: number;
+  parent: ParentSlug;
+}> = [
+  // --- Ganadería ---
+  { slug: "sostenible", name: "Sostenible", description: "Ganadería sostenible, clima y ambiente.", legacyPaths: ["/sostenible"], sortOrder: 1, parent: "ganaderia" },
+  { slug: "produccion", name: "Producción", description: "Manejo productivo y costos de finca.", legacyPaths: ["/produccion"], sortOrder: 2, parent: "ganaderia" },
+  { slug: "sistemas-silvopastoriles", name: "Sistema Silvopastoril", description: "Arreglos silvopastoriles y agroforestería.", legacyPaths: ["/sistemas-silvopastoriles"], sortOrder: 3, parent: "ganaderia" },
+  { slug: "nutricion", name: "Nutrición", description: "Alimentación y suplementación del hato.", legacyPaths: ["/nutricion"], sortOrder: 4, parent: "ganaderia" },
+  { slug: "salud-animal", name: "Salud Animal", description: "Sanidad, vacunación y enfermedades.", legacyPaths: ["/saludanimal"], sortOrder: 5, parent: "ganaderia" },
+  { slug: "razas", name: "Razas", description: "Genética y selección de razas bovinas.", legacyPaths: ["/razas"], sortOrder: 6, parent: "ganaderia" },
+
+  // --- Sistemas pecuarios ---
+  { slug: "porcicola", name: "Porcícola", description: "Producción porcina.", legacyPaths: ["/porcicola"], sortOrder: 1, parent: "sistemas-pecuarios" },
+  { slug: "equino", name: "Equino", description: "Cría y manejo equino.", legacyPaths: ["/equino"], sortOrder: 2, parent: "sistemas-pecuarios" },
+  { slug: "avicola", name: "Avícola", description: "Producción avícola.", legacyPaths: ["/avicola"], sortOrder: 3, parent: "sistemas-pecuarios" },
+  { slug: "ovino-caprino", name: "Ovino-Caprino", description: "Producción ovina y caprina.", legacyPaths: ["/ovinocaprino"], sortOrder: 4, parent: "sistemas-pecuarios" },
+  { slug: "otros-sistemas-pecuarios", name: "Otros", description: "Otras especies de producción pecuaria.", legacyPaths: ["/otrossistemP"], sortOrder: 5, parent: "sistemas-pecuarios" },
+
+  // --- Colombia ---
+  { slug: "politica", name: "Política", description: "Gobierno y normativa que afecta al productor.", legacyPaths: ["/politica"], sortOrder: 1, parent: "colombia" },
+  { slug: "gremialidad", name: "Gremialidad", description: "Fedegán y los gremios del sector.", legacyPaths: ["/gremialidad"], sortOrder: 2, parent: "colombia" },
+  { slug: "regiones", name: "Regiones", description: "Noticias de las zonas ganaderas del país.", legacyPaths: ["/regiones", "/RegionesView/ultNo"], sortOrder: 3, parent: "colombia" },
+
+  // --- Economía ---
+  { slug: "nacional", name: "Nacional", description: "Economía y mercados a nivel nacional.", legacyPaths: ["/nacional"], sortOrder: 1, parent: "economia" },
+  { slug: "internacional", name: "Internacional", description: "Comercio exterior y mercados internacionales.", legacyPaths: ["/internacional"], sortOrder: 2, parent: "economia" },
+  { slug: "precio-del-ganado", name: "Precio del Ganado", description: "Indicadores y precios del ganado en pie.", legacyPaths: ["/IndicadoresView/IndicadorGanadero"], sortOrder: 3, parent: "economia" },
+  { slug: "agricultura", name: "Agricultura", description: "Cultivos e insumos agrícolas.", legacyPaths: ["/agricultura"], sortOrder: 4, parent: "economia" },
+  { slug: "agroindustria", name: "Agroindustria", description: "Procesamiento, exportación y cadena de valor.", legacyPaths: ["/agroindustria"], sortOrder: 5, parent: "economia" },
+
+  // --- Mundo ---
+  { slug: "argentina", name: "Argentina", description: "Ganadería y agro en Argentina.", legacyPaths: ["/argentina"], sortOrder: 1, parent: "mundo" },
+  { slug: "eeuu", name: "EE.UU.", description: "Ganadería y agro en Estados Unidos.", legacyPaths: ["/eeuu"], sortOrder: 2, parent: "mundo" },
+  { slug: "espana", name: "España", description: "Ganadería y agro en España.", legacyPaths: ["/espana"], sortOrder: 3, parent: "mundo" },
+  { slug: "mexico", name: "México", description: "Ganadería y agro en México.", legacyPaths: ["/mexico"], sortOrder: 4, parent: "mundo" },
+  { slug: "peru", name: "Perú", description: "Ganadería y agro en Perú.", legacyPaths: ["/peru"], sortOrder: 5, parent: "mundo" },
+  { slug: "otros-mundo", name: "Otros", description: "Otros países y mercados internacionales.", legacyPaths: ["/otrosmundo"], sortOrder: 6, parent: "mundo" },
+
+  // --- Tendencias ---
+  { slug: "medioambiente", name: "Medioambiente", description: "Clima, agua y biodiversidad.", legacyPaths: ["/medioambiente"], sortOrder: 1, parent: "tendencias" },
+  { slug: "gastronomia", name: "Gastronomía", description: "Carne, lácteos y cocina rural.", legacyPaths: ["/gastronomia"], sortOrder: 2, parent: "tendencias" },
+  { slug: "innovacion", name: "Innovación", description: "Tecnología aplicada al campo.", legacyPaths: ["/innovacion"], sortOrder: 3, parent: "tendencias" },
+  { slug: "mascotas", name: "Mascotas", description: "Animales de compañía en la vida rural.", legacyPaths: ["/mascotas"], sortOrder: 4, parent: "tendencias" },
+  { slug: "redes-sociales", name: "Redes Sociales", description: "Tendencias digitales del sector.", legacyPaths: ["/redessociales"], sortOrder: 5, parent: "tendencias" },
+
+  // --- Opinión ---
+  { slug: "columnas", name: "Columnas", description: "Columnas y análisis de la actualidad ganadera.", legacyPaths: ["/columna", "/columnas"], sortOrder: 1, parent: "opinion" },
+  { slug: "editorial", name: "Editorial", description: "La posición editorial del medio.", legacyPaths: ["/editorial"], sortOrder: 2, parent: "opinion" },
+  { slug: "blogs", name: "Blogs", description: "Blogs de colaboradores del medio.", legacyPaths: ["/blogs", "/BlogsView/SeeMore/ultNo"], sortOrder: 3, parent: "opinion" },
+  { slug: "columnistas", name: "Columnistas", description: "Perfiles de los columnistas del medio.", legacyPaths: ["/columnistas", "/ColumnistasView/1"], sortOrder: 4, parent: "opinion" },
+
+  // --- Agenda ---
+  { slug: "congresos", name: "Congresos", description: "Congresos y encuentros del sector.", legacyPaths: ["/congresos"], sortOrder: 1, parent: "agenda" },
+  { slug: "ferias", name: "Ferias", description: "Ferias ganaderas y agropecuarias.", legacyPaths: ["/ferias"], sortOrder: 2, parent: "agenda" },
+  { slug: "tauromaquia", name: "Tauromaquia", description: "Eventos taurinos.", legacyPaths: ["/tauromaquia"], sortOrder: 3, parent: "agenda" },
+  { slug: "otros-eventos", name: "Otros eventos", description: "Otros eventos del sector agropecuario.", legacyPaths: ["/otroseventos"], sortOrder: 4, parent: "agenda" },
+
+  // --- Especiales ---
+  { slug: "cronica", name: "Crónica", description: "Crónicas del campo colombiano.", legacyPaths: ["/cronica"], sortOrder: 1, parent: "especiales" },
+  { slug: "reportaje", name: "Reportaje", description: "Reportajes en profundidad.", legacyPaths: ["/reportaje"], sortOrder: 2, parent: "especiales" },
+  { slug: "entrevistas", name: "Entrevistas", description: "Entrevistas a protagonistas del sector.", legacyPaths: ["/entrevistas"], sortOrder: 3, parent: "especiales" },
+  { slug: "informes", name: "Informes", description: "Informes y análisis extensos.", legacyPaths: ["/informes"], sortOrder: 4, parent: "especiales" },
+  { slug: "gobierno-petro", name: "Gobierno Petro", description: "Seguimiento a la política agropecuaria del gobierno.", legacyPaths: ["/gobierno-petro"], sortOrder: 5, parent: "especiales" },
 ];
 
 const ARTICLES: Array<{
@@ -71,7 +137,7 @@ const ARTICLES: Array<{
     excerpt:
       "La Central Ganadera de Medellín reportó un alza sostenida en el precio del novillo gordo, impulsada por una menor oferta regional y mayor demanda de plantas de sacrificio.",
     body: "<p>El precio promedio del novillo gordo en la Central Ganadera de Medellín cerró la primera quincena de septiembre en 9.850 pesos por kilo en pie, un 4 % por encima del cierre de agosto.</p><h2>Qué explica el alza</h2><p>Comercializadores consultados atribuyen el movimiento a una menor entrada de animales desde el Magdalena Medio y a la reactivación de pedidos de plantas de sacrificio con destino a Bogotá.</p><h2>Perspectiva</h2><p>El gremio regional espera que los precios se estabilicen en octubre si mejora la oferta de ganado cebado del Bajo Cauca.</p>",
-    cat: "economia-y-mercados",
+    cat: "precio-del-ganado",
     author: "redaccion",
     tags: ["precios", "novillo gordo", "Antioquia", "subasta"],
     daysAgo: 1,
@@ -97,7 +163,7 @@ const ARTICLES: Array<{
     excerpt:
       "Un programa de asistencia técnica acompañó la conversión de 1.200 hectáreas a sistemas silvopastoriles en Córdoba y Sucre durante el último año.",
     body: "<p>El programa, financiado con cooperación internacional y recursos del gremio, cerró su primera fase con 1.200 hectáreas convertidas a sistemas silvopastoriles intensivos.</p><h2>Resultados</h2><p>Las fincas participantes reportan aumentos de entre 15 % y 30 % en la producción de leche por hectárea y una reducción del estrés calórico del hato.</p><h2>Siguiente fase</h2><p>La meta para el próximo año es sumar 2.000 hectáreas y capacitar a 400 productores adicionales.</p>",
-    cat: "sostenibilidad",
+    cat: "sistemas-silvopastoriles",
     author: "maria-restrepo",
     tags: ["silvopastoril", "sostenibilidad", "Córdoba", "Sucre", "leche"],
     daysAgo: 5,
@@ -110,7 +176,7 @@ const ARTICLES: Array<{
     excerpt:
       "Las partes discuten ajustes al calendario y a la tarifa del ciclo de vacunación contra fiebre aftosa y brucelosis para el próximo semestre.",
     body: "<p>Representantes del Ministerio de Agricultura, el ICA y los gremios ganaderos se reunieron esta semana para revisar el esquema operativo del próximo ciclo de vacunación.</p><h2>Puntos en discusión</h2><ul><li>Actualización de la tarifa por dosis aplicada.</li><li>Ampliación de la ventana de vacunación en zonas de difícil acceso.</li><li>Fortalecimiento de la trazabilidad digital de los registros.</li></ul><p>Se espera una decisión antes de que termine el mes.</p>",
-    cat: "politica-gremial",
+    cat: "politica",
     author: "redaccion",
     tags: ["vacunación", "fiebre aftosa", "ICA", "brucelosis", "política"],
     daysAgo: 7,
@@ -123,7 +189,7 @@ const ARTICLES: Array<{
     excerpt:
       "Núcleos de selección en razas cebuínas reportan avances medibles en consumo residual de alimento sin sacrificar fertilidad.",
     body: "<p>Programas de mejoramiento en Brahman y Guzerá que incorporan el consumo residual de alimento como criterio de selección presentan sus primeros resultados tras cinco años de evaluación.</p><h2>Qué se midió</h2><p>Los animales más eficientes consumieron entre 8 % y 12 % menos alimento para la misma ganancia de peso, sin diferencias significativas en indicadores reproductivos.</p><p>Los técnicos advierten que la adopción a nivel comercial dependerá del acceso a pruebas de desempeño a costo razonable.</p>",
-    cat: "ciencia-y-tecnologia",
+    cat: "razas",
     author: "maria-restrepo",
     tags: ["genética", "Brahman", "eficiencia alimenticia", "trópico"],
     daysAgo: 10,
@@ -136,7 +202,7 @@ const ARTICLES: Array<{
     excerpt:
       "El volumen exportado aumentó frente al mismo periodo del año anterior, con mayor participación de destinos del Medio Oriente.",
     body: "<p>Las exportaciones colombianas de carne bovina y despojos comestibles registraron un crecimiento interanual en el tercer trimestre, según cifras preliminares del sector.</p><h2>Destinos</h2><p>Se mantiene la concentración en mercados regionales, pero crecen los envíos a destinos del Medio Oriente y el norte de África.</p><h2>Retos</h2><p>El gremio insiste en la necesidad de nuevas admisibilidades sanitarias y en reducir los costos logísticos portuarios.</p>",
-    cat: "economia-y-mercados",
+    cat: "agroindustria",
     author: "redaccion",
     tags: ["exportaciones", "carne bovina", "comercio exterior"],
     daysAgo: 12,
@@ -149,7 +215,7 @@ const ARTICLES: Array<{
     excerpt:
       "Sin jóvenes dispuestos a quedarse en el campo, la mejor genética y la mejor pradera no sirven de nada. Una reflexión sobre lo que viene.",
     body: "<p>Recorriendo fincas en el último año, una pregunta se repite más que cualquier consulta sobre precios o sanidad: ¿quién va a manejar esto cuando yo no pueda?</p><p>El relevo generacional no se resuelve con un crédito ni con un taller. Requiere que la actividad sea rentable, que ofrezca calidad de vida y que el conocimiento se transmita de forma ordenada.</p><p>Hay experiencias que funcionan: empresas familiares que profesionalizan la administración, esquemas de aparcería con jóvenes técnicos, cooperativas que comparten maquinaria. Vale la pena mirarlas de cerca.</p>",
-    cat: "opinion",
+    cat: "columnas",
     author: "jorge-medina",
     tags: ["opinión", "relevo generacional", "campo"],
     daysAgo: 15,
@@ -162,7 +228,7 @@ const ARTICLES: Array<{
     excerpt:
       "El precio de sales mineralizadas y fertilizantes presiona los márgenes de las fincas lecheras del altiplano cundiboyacense.",
     body: "<p>Productores de leche de Ubaté y Chiquinquirá reportan incrementos en el costo de sales mineralizadas, fertilizantes y concentrado que no alcanzan a compensarse con el precio pagado al productor.</p><h2>Margen ajustado</h2><p>En fincas de menos de 20 vacas, el margen operativo por litro se ha reducido de forma sostenida durante el año.</p><p>Las asociaciones piden revisar la fórmula de pago y fortalecer las compras conjuntas de insumos.</p>",
-    cat: "economia-y-mercados",
+    cat: "produccion",
     author: "redaccion",
     tags: ["leche", "costos", "insumos", "Cundinamarca", "Boyacá"],
     daysAgo: 18,
@@ -252,8 +318,19 @@ export async function seed(db: AnyDb): Promise<{ created: boolean }> {
     ])
     .onConflictDoNothing();
 
-  // --- Taxonomía ---
-  await db.insert(schema.categories).values(CATS).onConflictDoNothing();
+  // --- Taxonomía (padres primero, luego hijas con parentId) ---
+  await db.insert(schema.categories).values(PARENT_CATS).onConflictDoNothing();
+  const parents = await db.select().from(schema.categories);
+  const parentId = (slug: string) => parents.find((c) => c.slug === slug)?.id ?? null;
+  await db
+    .insert(schema.categories)
+    .values(
+      CHILD_CATS.map(({ parent, ...c }) => ({
+        ...c,
+        parentId: parentId(parent),
+      })),
+    )
+    .onConflictDoNothing();
 
   // --- Autores ---
   await db
@@ -314,7 +391,7 @@ export async function seed(db: AnyDb): Promise<{ created: boolean }> {
   await db
     .insert(schema.redirects)
     .values([
-      { fromPath: "/economia/precio-del-ganado-hoy", toPath: "/categoria/economia-y-mercados" },
+      { fromPath: "/economia/precio-del-ganado-hoy", toPath: "/categoria/precio-del-ganado" },
       {
         fromPath: "/nota/precio-novillo",
         toPath: "/articulo/precio-novillo-gordo-sube-4-por-ciento-en-medellin",

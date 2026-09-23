@@ -1,4 +1,5 @@
-import { categoryLabel, t, type Locale } from "@/lib/i18n";
+import Link from "next/link";
+import { categoryLabel, localePath, t, type Locale } from "@/lib/i18n";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { ArticleCard } from "@/components/article-card";
@@ -13,6 +14,11 @@ import { siteUrl } from "@/lib/utils";
 export const revalidate = 600;
 
 type Params = { params: Promise<{ slug: string }> };
+/** Filtros de la sección: subcategoría, rango de fechas y página. */
+type Query = Promise<{ subcategoria?: string; desde?: string; hasta?: string; pagina?: string }>;
+type PageProps = Params & { searchParams?: Query };
+
+const PAGE_SIZE = 24;
 
 export async function generateStaticParams() {
   try {
@@ -24,7 +30,9 @@ export async function generateStaticParams() {
 
 async function generateMetadataImpl({ params }: Params): Promise<Metadata> {
   const { slug } = await params;
-  const { category } = await getArticlesByCategory(slug, 1).catch(() => ({ category: null }));
+  const { category } = await getArticlesByCategory(slug, { limit: 1 }).catch(() => ({
+    category: null,
+  }));
   if (!category) return { title: "Sección no encontrada", robots: { index: false } };
   return {
     title: category.name,
@@ -35,15 +43,34 @@ async function generateMetadataImpl({ params }: Params): Promise<Metadata> {
   };
 }
 
-async function CategoryPage({ params, locale }: Params & { locale: Locale }) {
+async function CategoryPage({ params, searchParams, locale }: PageProps & { locale: Locale }) {
   const { slug } = await params;
-  const { category, items } = await getArticlesByCategory(slug, 24).catch(() => ({
-    category: null,
-    items: [],
-  }));
+  const { subcategoria, desde, hasta, pagina } = (await searchParams) ?? {};
+  const page = Math.max(1, Number(pagina) || 1);
+
+  const { category, subcategories, items, total } = await getArticlesByCategory(slug, {
+    limit: PAGE_SIZE,
+    offset: (page - 1) * PAGE_SIZE,
+    subcategorySlug: subcategoria || undefined,
+    dateFrom: desde || undefined,
+    dateTo: hasta || undefined,
+  }).catch(() => ({ category: null, subcategories: [], items: [], total: 0 }));
   if (!category) notFound();
 
   const site = await getSiteTheme();
+  const filtrando = Boolean(subcategoria || desde || hasta);
+  const paginas = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+  /** Conserva los filtros al cambiar de página. */
+  const hrefPagina = (n: number) => {
+    const sp = new URLSearchParams();
+    if (subcategoria) sp.set("subcategoria", subcategoria);
+    if (desde) sp.set("desde", desde);
+    if (hasta) sp.set("hasta", hasta);
+    if (n > 1) sp.set("pagina", String(n));
+    const qs = sp.toString();
+    return localePath(locale, `/categoria/${slug}${qs ? `?${qs}` : ""}`);
+  };
 
   return (
     <SiteShell theme={site.theme} style={site.style} locale={locale} variant="seccion">
@@ -67,16 +94,78 @@ async function CategoryPage({ params, locale }: Params & { locale: Locale }) {
         )}
         <div className="mt-8 flex flex-wrap items-center gap-3">
           <span className="lx-chip border-[var(--border-strong)] text-[var(--accent)]">
-            {items.length} {t(locale, "section.count")}
+            {total} {t(locale, "section.count")}
           </span>
           <span className="lx-chip">{t(locale, "section.live")}</span>
         </div>
         <hr className="lx-rule-strong mt-10" />
       </header>
 
+      {/* Filtros de la sección. Formulario GET: cada combinación es una URL
+          propia, enlazable y cacheable, y funciona sin JavaScript. */}
+      {subcategories.length > 0 && (
+        <form
+          action={localePath(locale, `/categoria/${slug}`)}
+          method="get"
+          className="lx-card mb-10 flex flex-wrap items-end gap-4 p-5"
+        >
+          <label className="flex min-w-[12rem] flex-col gap-1.5">
+            <span className="lx-kicker text-[var(--fg-muted)]">{t(locale, "section.subcategory")}</span>
+            <select
+              name="subcategoria"
+              defaultValue={subcategoria ?? ""}
+              className="lx-ui rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] px-3 py-2 text-sm outline-none transition focus:border-[var(--accent)]"
+            >
+              <option value="">{t(locale, "section.all")}</option>
+              {subcategories.map((sc) => (
+                <option key={sc.slug} value={sc.slug}>
+                  {sc.name}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="flex flex-col gap-1.5">
+            <span className="lx-kicker text-[var(--fg-muted)]">{t(locale, "section.from")}</span>
+            <input
+              type="date"
+              name="desde"
+              defaultValue={desde ?? ""}
+              className="lx-ui rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] px-3 py-2 text-sm outline-none transition focus:border-[var(--accent)]"
+            />
+          </label>
+
+          <label className="flex flex-col gap-1.5">
+            <span className="lx-kicker text-[var(--fg-muted)]">{t(locale, "section.to")}</span>
+            <input
+              type="date"
+              name="hasta"
+              defaultValue={hasta ?? ""}
+              className="lx-ui rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] px-3 py-2 text-sm outline-none transition focus:border-[var(--accent)]"
+            />
+          </label>
+
+          <button
+            type="submit"
+            className="lx-ui rounded-full bg-[var(--accent)] px-5 py-2 text-sm font-semibold text-[var(--accent-fg)] transition hover:opacity-90"
+          >
+            {t(locale, "section.filter")}
+          </button>
+
+          {filtrando && (
+            <Link
+              href={localePath(locale, `/categoria/${slug}`)}
+              className="lx-link text-sm text-[var(--fg-muted)]"
+            >
+              {t(locale, "section.clear")}
+            </Link>
+          )}
+        </form>
+      )}
+
       {items.length === 0 ? (
         <p className="py-16 text-center text-[var(--fg-muted)]">
-          {t(locale, "section.empty")}
+          {filtrando ? t(locale, "section.noMatches") : t(locale, "section.empty")}
         </p>
       ) : (
         <div className="grid gap-7 sm:grid-cols-2 lg:grid-cols-3">
@@ -84,6 +173,28 @@ async function CategoryPage({ params, locale }: Params & { locale: Locale }) {
             <ArticleCard key={a.slug} a={a} locale={locale} variant="copper" index={i} />
           ))}
         </div>
+      )}
+
+      {paginas > 1 && (
+        <nav className="mt-14 flex items-center justify-center gap-6">
+          {page > 1 ? (
+            <Link href={hrefPagina(page - 1)} className="lx-link text-sm">
+              ← {t(locale, "section.prev")}
+            </Link>
+          ) : (
+            <span />
+          )}
+          <span className="lx-ui text-xs uppercase tracking-[0.16em] text-[var(--fg-muted)]">
+            {page} / {paginas}
+          </span>
+          {page < paginas ? (
+            <Link href={hrefPagina(page + 1)} className="lx-link text-sm">
+              {t(locale, "section.next")} →
+            </Link>
+          ) : (
+            <span />
+          )}
+        </nav>
       )}
     </SiteShell>
   );
