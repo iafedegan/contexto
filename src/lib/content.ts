@@ -44,6 +44,8 @@ export type ArticleListItem = {
   authorName: string | null;
   /** Estilo manual fijado en /panel/portada. null = todo por defecto. */
   homeStyle: HomeStyle | null;
+  /** Etiqueta "En Vivo" activada por la redacción (AI-03 / FM-06). */
+  isLive: boolean;
 };
 
 const listSelection = {
@@ -57,6 +59,7 @@ const listSelection = {
   categorySlug: categories.slug,
   authorName: authors.name,
   homeStyle: articles.homeStyle,
+  isLive: articles.isLive,
 };
 
 export async function getRecentArticles(limit = 12): Promise<ArticleListItem[]> {
@@ -181,6 +184,7 @@ export type FullArticle = {
   authorName: string | null;
   authorSlug: string | null;
   authorBio: string | null;
+  isLive: boolean;
 };
 
 export async function getPublishedArticleBySlug(slug: string): Promise<FullArticle | null> {
@@ -203,6 +207,7 @@ export async function getPublishedArticleBySlug(slug: string): Promise<FullArtic
       authorName: authors.name,
       authorSlug: authors.slug,
       authorBio: authors.bio,
+      isLive: articles.isLive,
     })
     .from(articles)
     .leftJoin(categories, eq(articles.categoryId, categories.id))
@@ -240,6 +245,7 @@ export async function getArticleForPreview(
       authorName: authors.name,
       authorSlug: authors.slug,
       authorBio: authors.bio,
+      isLive: articles.isLive,
     })
     .from(articles)
     .leftJoin(categories, eq(articles.categoryId, categories.id))
@@ -274,6 +280,36 @@ export async function getTopLevelCategories() {
     .from(categories)
     .where(isNull(categories.parentId))
     .orderBy(categories.sortOrder, categories.name);
+}
+
+/**
+ * Última hora (H-05): la nota marcada como `is_breaking` más reciente. Solo
+ * una: la barra pierde su fuerza si se usa para todo.
+ */
+export async function getBreakingArticle(): Promise<{ slug: string; title: string } | null> {
+  const [row] = await db
+    .select({ slug: articles.slug, title: articles.title })
+    .from(articles)
+    .where(and(publishedCondition, eq(articles.isBreaking, true)))
+    .orderBy(desc(articles.publishedAt))
+    .limit(1);
+  return row ?? null;
+}
+
+/**
+ * Más leídas (H-04). Se ordena por el contador de `views`, que alimenta el
+ * beacon del cliente; se limita a los últimos 30 días para que la lista refleje
+ * la actualidad y no un éxito de hace dos años.
+ */
+export async function getMostReadArticles(limit = 5): Promise<ArticleListItem[]> {
+  return db
+    .select(listSelection)
+    .from(articles)
+    .leftJoin(categories, eq(articles.categoryId, categories.id))
+    .leftJoin(authors, eq(articles.authorId, authors.id))
+    .where(and(publishedCondition, gte(articles.publishedAt, sql`now() - interval '30 days'`)))
+    .orderBy(desc(articles.views), desc(articles.publishedAt))
+    .limit(limit);
 }
 
 /** Slugs para generateStaticParams (pre-render en build) y sitemap. */

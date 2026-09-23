@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ArticleListItem } from "@/lib/content";
 import { CardMedia } from "@/components/cover-art";
+import { LiveBadge } from "@/components/live-badge";
 import { formatDate } from "@/lib/utils";
 import { homeStyleImageScale, homeStyleTitleCss } from "@/lib/home-style";
 import { DEFAULT_LOCALE, INTL_LOCALE, categoryLabel, localePath, type Locale } from "@/lib/i18n";
@@ -95,6 +96,20 @@ function Kicker({
   locale: Locale;
   className?: string;
 }) {
+  // La etiqueta de directo sustituye visualmente a la sección cuando aplica:
+  // dos distintivos compitiendo en el mismo sitio restan fuerza a ambos.
+  if (a.isLive) {
+    return (
+      <span className={`inline-flex items-center gap-2 ${className}`}>
+        <LiveBadge locale={locale} />
+        {a.categorySlug && (
+          <Link href={localePath(locale, `/categoria/${a.categorySlug}`)} className="lx-kicker">
+            {categoryLabel(locale, a.categorySlug, a.categoryName ?? "")}
+          </Link>
+        )}
+      </span>
+    );
+  }
   if (!a.categorySlug) return null;
   return (
     <Link

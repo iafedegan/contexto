@@ -27,7 +27,11 @@ export async function saveSiteIdentity(formData: FormData) {
     tagline: String(formData.get("tagline") ?? "").trim(),
     description: String(formData.get("description") ?? "").trim(),
     domain: String(formData.get("domain") ?? "").trim().replace(/^https?:\/\//, ""),
+    radioStreamUrl: String(formData.get("radioStreamUrl") ?? "").trim(),
   };
+  if (identity.radioStreamUrl && !/^https?:\/\//.test(identity.radioStreamUrl)) {
+    throw new Error("La URL de la emisora debe empezar por http:// o https://");
+  }
   if (!identity.name) throw new Error("El nombre del sitio no puede quedar vacío.");
 
   await db

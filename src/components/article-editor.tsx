@@ -15,6 +15,7 @@ import {
   Save,
   Search,
   Gauge,
+  Zap,
   Send,
   Sparkles,
   Tag,
@@ -48,6 +49,8 @@ type Initial = {
   slug: string | null;
   coverImageUrl: string | null;
   coverImageAlt: string | null;
+  isBreaking: boolean;
+  isLive: boolean;
 };
 
 const STATUS_LABEL: Record<string, string> = {
@@ -88,6 +91,9 @@ export function ArticleEditor({
 
   // Medios: portada del artículo y archivos insertados en el cuerpo.
   const [cover, setCover] = useState(initial.coverImageUrl ?? "");
+  // Distintivos editoriales: última hora (H-05) y directo (AI-03).
+  const [breaking, setBreaking] = useState(initial.isBreaking);
+  const [live, setLive] = useState(initial.isLive);
   const [coverAlt, setCoverAlt] = useState(initial.coverImageAlt ?? "");
   const [subiendo, setSubiendo] = useState<"portada" | "cuerpo" | null>(null);
   const [mediaError, setMediaError] = useState("");
@@ -688,6 +694,25 @@ export function ArticleEditor({
             </div>
           </Panel>
 
+          <Panel title="Distintivos" icon={<Zap size={13} />}>
+            <input type="hidden" name="isBreaking" value={breaking ? "1" : "0"} />
+            <input type="hidden" name="isLive" value={live ? "1" : "0"} />
+            <div className="flex flex-col gap-2.5">
+              <Interruptor
+                activo={breaking}
+                onToggle={() => setBreaking((v) => !v)}
+                titulo="Última hora"
+                detalle="Barra roja en la portada. Solo se muestra la nota marcada más reciente."
+              />
+              <Interruptor
+                activo={live}
+                onToggle={() => setLive((v) => !v)}
+                titulo="En vivo"
+                detalle="Etiqueta de directo en las tarjetas y en el artículo."
+              />
+            </div>
+          </Panel>
+
           {initial.id && (
             <Panel title="Flujo editorial" icon={<Send size={13} />}>
               <div className="flex flex-col gap-2.5">
@@ -772,6 +797,50 @@ function Panel({
       )}
       {children}
     </section>
+  );
+}
+
+/** Interruptor con etiqueta y explicación, para los distintivos editoriales. */
+function Interruptor({
+  activo,
+  onToggle,
+  titulo,
+  detalle,
+}: {
+  activo: boolean;
+  onToggle: () => void;
+  titulo: string;
+  detalle: string;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={activo}
+      onClick={onToggle}
+      className={`flex items-start gap-3 rounded-[var(--radius)] border p-3 text-left transition ${
+        activo
+          ? "border-[var(--accent)] bg-[var(--accent)]/8"
+          : "border-[var(--border)] hover:border-[var(--border-strong)]"
+      }`}
+    >
+      <span
+        aria-hidden
+        className={`mt-0.5 flex h-5 w-9 shrink-0 items-center rounded-full p-0.5 transition ${
+          activo ? "bg-[var(--accent)]" : "bg-[var(--border-strong)]"
+        }`}
+      >
+        <span
+          className={`size-4 rounded-full bg-white transition-transform ${activo ? "translate-x-4" : ""}`}
+        />
+      </span>
+      <span className="min-w-0">
+        <span className="block text-sm font-semibold">{titulo}</span>
+        <span className="mt-0.5 block text-[0.7rem] leading-snug text-[var(--fg-muted)]">
+          {detalle}
+        </span>
+      </span>
+    </button>
   );
 }
 

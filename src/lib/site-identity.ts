@@ -17,6 +17,8 @@ export type SiteIdentity = {
   description: string;
   /** Dominio canónico, sin protocolo. Vacío = el de la variable de entorno. */
   domain: string;
+  /** Stream de la emisora (AI-02). Vacío = no se muestra el botón de play. */
+  radioStreamUrl: string;
 };
 
 export const SITE_IDENTITY_KEY = "site_identity";
@@ -27,6 +29,7 @@ export const DEFAULT_IDENTITY: SiteIdentity = {
   description:
     "Noticias, análisis y datos del sector ganadero y agropecuario de Colombia: mercados, regiones, sostenibilidad y política gremial.",
   domain: "",
+  radioStreamUrl: "",
 };
 
 /** `cache()`: una sola consulta por render aunque la pidan layout y páginas. */

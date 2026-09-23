@@ -5,6 +5,8 @@ import Link from "next/link";
 import Image from "next/image";
 import type { Metadata } from "next";
 import { AdsBanner } from "@/components/ads-banner";
+import { ViewCounter } from "@/components/view-counter";
+import { LiveBadge } from "@/components/live-badge";
 import { JsonLd } from "@/components/json-ld";
 import { SiteShell } from "@/components/site-shell";
 import { getSiteTheme } from "@/lib/site-theme";
@@ -73,6 +75,8 @@ export function ArticleDocument({
 
   return (
       <article>
+        {/* El contador solo corre en la página pública, no en la vista previa. */}
+        {!preview && <ViewCounter slug={a.slug} />}
         {!preview && <JsonLd data={newsArticleJsonLd(seo)} />}
         {!preview && (
         <JsonLd
@@ -101,6 +105,8 @@ export function ArticleDocument({
             </>
           )}
         </nav>
+
+        {a.isLive && <LiveBadge locale={locale} className="mt-6" />}
 
         <h1 className="lx-display mt-6 text-[2rem] font-semibold leading-[1.06] tracking-tight sm:text-[2.4rem] md:text-[3.4rem]">
           {a.title}

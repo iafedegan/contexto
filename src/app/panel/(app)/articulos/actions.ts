@@ -51,6 +51,8 @@ export async function saveArticle(formData: FormData) {
   const body = String(formData.get("body") ?? "");
   const categoryId = (formData.get("categoryId") as string) || null;
   const authorId = (formData.get("authorId") as string) || null;
+  const isBreaking = String(formData.get("isBreaking") ?? "0") === "1";
+  const isLive = String(formData.get("isLive") ?? "0") === "1";
   const coverImageUrl = String(formData.get("coverImageUrl") ?? "").trim() || null;
   const coverImageAlt = String(formData.get("coverImageAlt") ?? "").trim() || null;
   const metaTitle = String(formData.get("metaTitle") ?? "").trim() || null;
@@ -70,6 +72,8 @@ export async function saveArticle(formData: FormData) {
     authorId,
     coverImageUrl,
     coverImageAlt,
+    isBreaking,
+    isLive,
     metaTitle,
     metaDescription,
     tags,
@@ -93,6 +97,9 @@ export async function saveArticle(formData: FormData) {
   }
 
   await reindex(articleId);
+  // Los distintivos (última hora, directo) salen en la cabecera y en las
+  // tarjetas de todo el portal, así que se refresca el layout completo.
+  revalidatePath("/", "layout");
   revalidatePath("/panel/articulos");
   redirect(`/panel/articulos/${articleId}?guardado=1`);
 }

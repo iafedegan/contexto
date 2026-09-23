@@ -25,6 +25,8 @@ type Initial = {
   slug: string | null;
   coverImageUrl: string | null;
   coverImageAlt: string | null;
+  isBreaking: boolean;
+  isLive: boolean;
 };
 
 const EMPTY: Initial = {
@@ -40,6 +42,8 @@ const EMPTY: Initial = {
   slug: null,
   coverImageUrl: null,
   coverImageAlt: null,
+  isBreaking: false,
+  isLive: false,
 };
 
 export default async function ArticleEditorPage({
@@ -75,6 +79,8 @@ export default async function ArticleEditorPage({
       slug: row.slug,
       coverImageUrl: row.coverImageUrl,
       coverImageAlt: row.coverImageAlt,
+      isBreaking: row.isBreaking,
+      isLive: row.isLive,
     };
     status = row.status;
   }

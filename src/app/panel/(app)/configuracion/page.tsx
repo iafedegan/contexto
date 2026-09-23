@@ -93,6 +93,16 @@ export default async function ConfiguracionPage() {
             />
           </Field>
 
+          <Field label="Emisora en directo" hint="URL del stream · vacío = sin botón de radio">
+            <input
+              name="radioStreamUrl"
+              defaultValue={identity.radioStreamUrl}
+              placeholder="https://stream.emisora.com/live"
+              disabled={!isAdmin}
+              className="lx-input"
+            />
+          </Field>
+
           {isAdmin && (
             <div className="flex items-end">
               <button

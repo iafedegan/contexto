@@ -1,6 +1,7 @@
 import { getTopLevelCategories } from "@/lib/content";
 import { getSiteIdentity } from "@/lib/site-identity";
 import { ReadingProgress } from "@/components/reading-progress";
+import { BreakingBar } from "@/components/breaking-bar";
 import { SiteHeader, type NavItem } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import type { Theme } from "@/lib/theme";
@@ -73,6 +74,8 @@ export async function SiteShell({
           <ReadingProgress />
         </div>
       )}
+      {/* Última hora por encima de todo: si hay urgencia, es lo primero. */}
+      <BreakingBar locale={locale} />
       <SiteHeader theme={theme} nav={nav} locale={locale} identity={identity} />
       <main id="contenido" className={mainClassName ?? shell.main}>
         {/* Honestidad con el lector: la interfaz cambia de idioma, las notas no. */}
