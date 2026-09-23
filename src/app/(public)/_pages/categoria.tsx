@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { ArticleCard } from "@/components/article-card";
 import { JsonLd } from "@/components/json-ld";
-import { collectionJsonLd } from "@/lib/seo";
+import { breadcrumbJsonLd, collectionJsonLd } from "@/lib/seo";
 import { SiteShell } from "@/components/site-shell";
 import { getSiteTheme } from "@/lib/site-theme";
 import { getAllCategories, getArticlesByCategory } from "@/lib/content";
@@ -82,7 +82,28 @@ async function CategoryPage({ params, searchParams, locale }: PageProps & { loca
           items: items.map((a) => ({ title: a.title, slug: a.slug })),
         })}
       />
+      <JsonLd
+        data={breadcrumbJsonLd([
+          { name: locale === "es" ? "Inicio" : "Home", path: "/" },
+          { name: category.name, path: `/categoria/${slug}` },
+        ])}
+      />
+
       <header className="relative mb-14 pt-10">
+        {/* Miga visible (C-02): ubica al lector y alimenta el dato estructurado. */}
+        <nav
+          aria-label="breadcrumb"
+          className="lx-ui mb-6 flex flex-wrap items-center gap-2 text-[0.68rem] uppercase tracking-[0.2em] text-[var(--fg-muted)]"
+        >
+          <Link href={localePath(locale, "/")} className="lx-link">
+            {locale === "es" ? "Inicio" : "Home"}
+          </Link>
+          <span aria-hidden className="text-[var(--accent-2)]">/</span>
+          <span className="text-[var(--accent)]">
+            {categoryLabel(locale, slug, category.name)}
+          </span>
+        </nav>
+
         <p className="lx-kicker text-[var(--accent)]">{t(locale, "section.kicker")}</p>
         <h1 className="lx-display mt-3 text-[2.6rem] font-extrabold leading-[0.95] tracking-tight break-words sm:text-5xl md:text-7xl">
           {categoryLabel(locale, slug, category.name)}
@@ -100,6 +121,33 @@ async function CategoryPage({ params, searchParams, locale }: PageProps & { loca
         </div>
         <hr className="lx-rule-strong mt-10" />
       </header>
+
+      {/* Atajos de fecha del C-09. Son enlaces, no botones: cada rango tiene su
+          propia URL, cacheable y compartible, y funcionan sin JavaScript. */}
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        {RANGOS.map((r) => {
+          const desdeISO = r.dias === null ? "" : isoHaceDias(r.dias);
+          const activo = r.dias === null ? !desde && !hasta : desde === desdeISO && !hasta;
+          const sp = new URLSearchParams();
+          if (subcategoria) sp.set("subcategoria", subcategoria);
+          if (desdeISO) sp.set("desde", desdeISO);
+          const qs = sp.toString();
+          return (
+            <Link
+              key={r.clave}
+              href={localePath(locale, `/categoria/${slug}${qs ? `?${qs}` : ""}`)}
+              aria-current={activo ? "true" : undefined}
+              className={`lx-ui inline-flex min-h-11 items-center rounded-full border px-4 text-[0.72rem] uppercase tracking-[0.14em] transition ${
+                activo
+                  ? "border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-fg)]"
+                  : "border-[var(--border)] text-[var(--fg-muted)] hover:border-[var(--accent)] hover:text-[var(--accent)]"
+              }`}
+            >
+              {t(locale, r.clave)}
+            </Link>
+          );
+        })}
+      </div>
 
       {/* Filtros de la sección. Formulario GET: cada combinación es una URL
           propia, enlazable y cacheable, y funciona sin JavaScript. */}
@@ -147,7 +195,7 @@ async function CategoryPage({ params, searchParams, locale }: PageProps & { loca
 
           <button
             type="submit"
-            className="lx-ui rounded-full bg-[var(--accent)] px-5 py-2 text-sm font-semibold text-[var(--accent-fg)] transition hover:opacity-90"
+            className="lx-ui min-h-11 rounded-full bg-[var(--accent)] px-5 text-sm font-semibold text-[var(--accent-fg)] transition hover:opacity-90"
           >
             {t(locale, "section.filter")}
           </button>
@@ -175,31 +223,106 @@ async function CategoryPage({ params, searchParams, locale }: PageProps & { loca
         </div>
       )}
 
-      {paginas > 1 && (
-        <nav className="mt-14 flex items-center justify-center gap-6">
-          {page > 1 ? (
-            <Link href={hrefPagina(page - 1)} className="lx-link text-sm">
-              ← {t(locale, "section.prev")}
-            </Link>
-          ) : (
-            <span />
+      {/* Continuidad de resultados (C-12): siempre se indica cuántos hay y
+          cómo seguir, con paginación numérica enlazable. */}
+      {items.length > 0 && (
+        <nav className="mt-14 flex flex-col items-center gap-4" aria-label="paginación">
+          <p className="lx-ui text-xs uppercase tracking-[0.16em] text-[var(--fg-muted)]">
+            {t(locale, "section.showing")} {(page - 1) * PAGE_SIZE + 1}–
+            {Math.min(page * PAGE_SIZE, total)} {t(locale, "section.of")} {total}
+          </p>
+
+          {paginas > 1 && (
+            <ol className="flex flex-wrap items-center justify-center gap-2">
+              {page > 1 && (
+                <li>
+                  <Link href={hrefPagina(page - 1)} className={BOTON_PAG}>
+                    ←
+                  </Link>
+                </li>
+              )}
+              {paginasVisibles(page, paginas).map((n, i) =>
+                n === null ? (
+                  <li key={`gap-${i}`} className="px-1 text-[var(--fg-muted)]">
+                    …
+                  </li>
+                ) : (
+                  <li key={n}>
+                    <Link
+                      href={hrefPagina(n)}
+                      aria-current={n === page ? "page" : undefined}
+                      className={`${BOTON_PAG} ${
+                        n === page
+                          ? "border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-fg)]"
+                          : ""
+                      }`}
+                    >
+                      {n}
+                    </Link>
+                  </li>
+                ),
+              )}
+              {page < paginas && (
+                <li>
+                  <Link href={hrefPagina(page + 1)} className={BOTON_PAG}>
+                    →
+                  </Link>
+                </li>
+              )}
+            </ol>
           )}
-          <span className="lx-ui text-xs uppercase tracking-[0.16em] text-[var(--fg-muted)]">
-            {page} / {paginas}
-          </span>
-          {page < paginas ? (
-            <Link href={hrefPagina(page + 1)} className="lx-link text-sm">
-              {t(locale, "section.next")} →
+
+          {page < paginas && (
+            <Link
+              href={hrefPagina(page + 1)}
+              className="lx-ui inline-flex min-h-11 w-full max-w-sm items-center justify-center rounded-full border border-[var(--border-strong)] px-6 text-sm font-semibold transition hover:border-[var(--accent)] hover:text-[var(--accent)]"
+            >
+              {t(locale, "section.loadMore")}
             </Link>
-          ) : (
-            <span />
           )}
         </nav>
       )}
+
     </SiteShell>
   );
 }
 
+
+const BOTON_PAG =
+  "lx-ui grid min-h-11 min-w-11 place-items-center rounded-full border border-[var(--border)] px-3 text-sm transition hover:border-[var(--accent)] hover:text-[var(--accent)]";
+
+/**
+ * Ventana de páginas: primera, última, la actual y sus vecinas. `null` marca
+ * un salto (…). Evita listar cincuenta números en secciones con mucho archivo.
+ */
+function paginasVisibles(actual: number, total: number): (number | null)[] {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+  const cerca = [actual - 1, actual, actual + 1].filter((n) => n > 1 && n < total);
+  const nums = [1, ...cerca, total];
+  const salida: (number | null)[] = [];
+  let previo = 0;
+  for (const n of nums) {
+    if (n - previo > 1) salida.push(null);
+    salida.push(n);
+    previo = n;
+  }
+  return salida;
+}
+
+/** Atajos de fecha del C-09: todo, hoy, últimos 7 días, últimos 30 días. */
+const RANGOS = [
+  { clave: "section.rangeAll", dias: null },
+  { clave: "section.rangeToday", dias: 0 },
+  { clave: "section.rangeWeek", dias: 7 },
+  { clave: "section.rangeMonth", dias: 30 },
+] as const;
+
+/** Fecha ISO (YYYY-MM-DD) de hace N días, en la zona del servidor. */
+function isoHaceDias(dias: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() - dias);
+  return d.toISOString().slice(0, 10);
+}
 
 /** Fábrica: la misma página en cualquier idioma de interfaz. */
 export function makePage(locale: Locale) {
