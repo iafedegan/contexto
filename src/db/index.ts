@@ -22,8 +22,32 @@ const g = globalThis as unknown as {
   __cg_pglite?: import("@electric-sql/pglite").PGlite;
 };
 
+/**
+ * Cadena de conexión efectiva, en orden de preferencia.
+ *
+ * Se aceptan también los nombres que inyecta la integración Vercel↔Supabase
+ * (`POSTGRES_URL*`), para que conectarla desde el panel de Vercel baste y no
+ * haya que copiar credenciales a mano. Se prefiere siempre la variante con
+ * pooler: en serverless, cada invocación abriría su propia conexión directa y
+ * agotaría el límite de la base.
+ *
+ * Se descartan las cadenas vacías, no solo las ausentes: una variable definida
+ * sin valor es un error de configuración frecuente y, tratada como válida,
+ * rompe el arranque con un mensaje incomprensible.
+ */
 function connectionString(): string | null {
-  return process.env.DATABASE_URL_POOLED ?? process.env.DATABASE_URL ?? null;
+  const candidatas = [
+    process.env.DATABASE_URL_POOLED,
+    process.env.DATABASE_URL,
+    process.env.POSTGRES_URL,
+    process.env.POSTGRES_PRISMA_URL,
+    process.env.POSTGRES_URL_NON_POOLING,
+  ];
+  for (const c of candidatas) {
+    const v = c?.trim();
+    if (v) return v;
+  }
+  return null;
 }
 
 export function isEmbeddedDb(): boolean {
