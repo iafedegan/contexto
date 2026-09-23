@@ -40,11 +40,23 @@ export async function getPsiKey(): Promise<{ key: string | null; source: "entorn
   return plain ? { key: plain, source: "panel" } : { key: null, source: null };
 }
 
+/** Contenedor de GTM efectivo: el entorno manda sobre el panel. */
+export async function getGtmId(): Promise<string> {
+  return process.env.NEXT_PUBLIC_GTM_ID ?? (await readAnalytics()).gtmId;
+}
+
+/** Código de verificación de Search Console, para la etiqueta meta. */
+export async function getSearchConsoleToken(): Promise<string> {
+  return (await readAnalytics()).searchConsoleToken;
+}
+
 export async function getAnalyticsStatus(): Promise<AnalyticsStatus> {
   const settings = await readAnalytics();
   const { key, source } = await getPsiKey();
   return {
     ga4Id: process.env.NEXT_PUBLIC_GA4_ID ?? settings.ga4Id,
+    gtmId: process.env.NEXT_PUBLIC_GTM_ID ?? settings.gtmId,
+    searchConsoleToken: settings.searchConsoleToken,
     publicBaseUrl: settings.publicBaseUrl,
     psiPresent: Boolean(key),
     psiSource: source,

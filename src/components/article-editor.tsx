@@ -33,6 +33,7 @@ import {
 import { uploadMedia } from "@/app/panel/(app)/articulos/media-actions";
 import { analizarConGoogle } from "@/app/panel/(app)/articulos/seo-actions";
 import type { PsiReport } from "@/lib/psi-types";
+import { embedHtml, parseEmbed } from "@/lib/embeds";
 import { auditArticle, scoreLabel } from "@/lib/seo-audit";
 
 type Option = { id: string; name: string };
@@ -96,6 +97,7 @@ export function ArticleEditor({
   const [live, setLive] = useState(initial.isLive);
   const [coverAlt, setCoverAlt] = useState(initial.coverImageAlt ?? "");
   const [subiendo, setSubiendo] = useState<"portada" | "cuerpo" | null>(null);
+  const [urlVideo, setUrlVideo] = useState("");
   const [mediaError, setMediaError] = useState("");
 
   // Auditoría externa (Lighthouse, vía PageSpeed Insights de Google).
@@ -134,6 +136,19 @@ export function ArticleEditor({
     } finally {
       setSubiendo(null);
     }
+  }
+
+  /** Inserta un vídeo de YouTube o Vimeo al final del cuerpo (RT-09). */
+  function insertarVideo() {
+    const embed = parseEmbed(urlVideo);
+    if (!embed) {
+      setMediaError("No se reconoce la dirección. Pega un enlace de YouTube (incluido un directo) o de Vimeo.");
+      return;
+    }
+    setMediaError("");
+    const html = embedHtml(embed, title || "Vídeo");
+    setBody((b) => (b.trimEnd() ? `${b.trimEnd()}\n\n${html}\n` : `${html}\n`));
+    setUrlVideo("");
   }
 
   async function onPortada(file: File) {
@@ -502,6 +517,34 @@ export function ArticleEditor({
                   </label>
                 </div>
               </div>
+            </div>
+
+            {/* YouTube / Vimeo / directos (RT-09). Se guarda el identificador,
+                nunca el HTML que traiga pegado el redactor. */}
+            <div className="mt-5 rounded-[var(--radius)] border border-[var(--border)] p-3">
+              <p className="text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-[var(--fg-muted)]">
+                Vídeo de YouTube o Vimeo
+              </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <input
+                  value={urlVideo}
+                  onChange={(e) => setUrlVideo(e.target.value)}
+                  placeholder="https://www.youtube.com/watch?v=… o /live/…"
+                  className="lx-mono min-w-[14rem] flex-1 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] px-3 py-2 text-[0.78rem] outline-none transition focus:border-[var(--accent)]"
+                />
+                <button
+                  type="button"
+                  onClick={insertarVideo}
+                  disabled={!urlVideo.trim()}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border)] px-3 py-1.5 text-xs font-medium transition hover:border-[var(--accent)] hover:text-[var(--accent)] disabled:opacity-50"
+                >
+                  <Film size={13} /> Insertar vídeo
+                </button>
+              </div>
+              <p className="mt-2 text-[0.68rem] leading-snug text-[var(--fg-muted)]">
+                Se incrusta por youtube-nocookie: no deja cookies de seguimiento hasta que el lector
+                pulsa play.
+              </p>
             </div>
 
             {mediaError && (

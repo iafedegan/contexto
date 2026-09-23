@@ -16,17 +16,25 @@ export type AnalyticsSettings = {
    * trabaja en local y se quiere auditar a través de un túnel (ngrok y afines).
    */
   publicBaseUrl: string;
+  /** Contenedor de Google Tag Manager, del tipo GTM-XXXXXXX. */
+  gtmId: string;
+  /** Código de verificación de Search Console (etiqueta meta). */
+  searchConsoleToken: string;
 };
 
 export const DEFAULT_ANALYTICS: AnalyticsSettings = {
   ga4Id: "",
   psiKey: null,
   publicBaseUrl: "",
+  gtmId: "",
+  searchConsoleToken: "",
 };
 
 /** Estado que se muestra en el panel: nunca incluye la clave entera. */
 export type AnalyticsStatus = {
   ga4Id: string;
+  gtmId: string;
+  searchConsoleToken: string;
   publicBaseUrl: string;
   psiPresent: boolean;
   psiSource: "entorno" | "panel" | null;
@@ -34,3 +42,4 @@ export type AnalyticsStatus = {
 };
 
 export const GA4_ID_RE = /^G-[A-Z0-9]{6,}$/i;
+export const GTM_ID_RE = /^GTM-[A-Z0-9]{5,}$/i;

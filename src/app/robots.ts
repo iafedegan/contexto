@@ -33,7 +33,8 @@ export default function robots(): MetadataRoute.Robots {
       { userAgent: "*", allow: "/", disallow },
       ...aiBots.map((ua) => ({ userAgent: ua, allow: "/", disallow })),
     ],
-    sitemap: siteUrl("/sitemap.xml"),
+    // Google News exige su propio sitemap, con las 48 h más recientes.
+    sitemap: [siteUrl("/sitemap.xml"), siteUrl("/news-sitemap.xml")],
     host: siteUrl("/"),
   };
 }

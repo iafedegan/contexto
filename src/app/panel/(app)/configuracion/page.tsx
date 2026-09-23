@@ -170,6 +170,29 @@ export default async function ConfiguracionPage() {
             />
           </Field>
 
+          <Field label="Contenedor de Google Tag Manager" hint="GTM-XXXXXXX · se carga solo en el portal público">
+            <input
+              name="gtmId"
+              defaultValue={analytics.gtmId}
+              placeholder="GTM-XXXXXXX"
+              disabled={!isAdmin}
+              className="lx-mono w-full rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] px-3 py-2 text-sm outline-none transition focus:border-[var(--accent)] disabled:opacity-60"
+            />
+          </Field>
+
+          <Field
+            label="Verificación de Search Console"
+            hint="Pega el código o la etiqueta meta completa"
+          >
+            <input
+              name="searchConsoleToken"
+              defaultValue={analytics.searchConsoleToken}
+              placeholder="google-site-verification=…"
+              disabled={!isAdmin}
+              className="lx-mono w-full rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] px-3 py-2 text-sm outline-none transition focus:border-[var(--accent)] disabled:opacity-60"
+            />
+          </Field>
+
           <Field
             label="Clave de PageSpeed Insights"
             hint={
@@ -221,6 +244,12 @@ export default async function ConfiguracionPage() {
             label="PageSpeed Insights"
             value={analytics.psiPresent ? `Desde ${analytics.psiSource}` : "Sin configurar"}
             ok={analytics.psiPresent}
+          />
+          <Stat label="Tag Manager" value={analytics.gtmId || "Sin configurar"} ok={Boolean(analytics.gtmId)} />
+          <Stat
+            label="Search Console"
+            value={analytics.searchConsoleToken ? "Verificado" : "Sin verificar"}
+            ok={Boolean(analytics.searchConsoleToken)}
           />
           <Stat label="Base para auditar" value={analytics.publicBaseUrl || identity.domain || "Sin dominio"} />
         </div>

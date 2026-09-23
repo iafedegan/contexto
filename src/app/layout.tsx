@@ -4,6 +4,7 @@ import { JsonLd } from "@/components/json-ld";
 import { organizationJsonLd } from "@/lib/seo";
 import { siteUrl } from "@/lib/utils";
 import { getSiteIdentity } from "@/lib/site-identity";
+import { getSearchConsoleToken } from "@/lib/analytics-server";
 import { PwaRegister } from "@/components/pwa-register";
 import "./globals.css";
 
@@ -13,7 +14,10 @@ import "./globals.css";
  * un objeto estático habría que redesplegar para cambiar el título del sitio.
  */
 export async function generateMetadata(): Promise<Metadata> {
-  const identity = await getSiteIdentity();
+  const [identity, verificacion] = await Promise.all([
+    getSiteIdentity(),
+    getSearchConsoleToken().catch(() => ""),
+  ]);
   return {
   metadataBase: new URL(siteUrl("/")),
   title: {
@@ -28,6 +32,8 @@ export async function generateMetadata(): Promise<Metadata> {
   },
   openGraph: { type: "website", siteName: identity.name, locale: "es_CO" },
   robots: { index: true, follow: true, "max-image-preview": "large" },
+  // Verificación de propiedad en Search Console, si está configurada.
+  ...(verificacion ? { verification: { google: verificacion } } : {}),
   // Instalable como aplicación: el manifiesto lo genera src/app/manifest.ts.
   manifest: "/manifest.webmanifest",
   appleWebApp: { capable: true, statusBarStyle: "default", title: identity.name },

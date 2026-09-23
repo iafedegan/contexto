@@ -7,7 +7,7 @@ import { siteSettings, users, type UserRole } from "@/db/schema";
 import { requireRole } from "@/lib/auth";
 import { SITE_IDENTITY_KEY, type SiteIdentity } from "@/lib/site-identity";
 import { SECRETS_KEY } from "@/lib/ai-provider";
-import { ANALYTICS_KEY, GA4_ID_RE, type AnalyticsSettings } from "@/lib/analytics";
+import { ANALYTICS_KEY, GA4_ID_RE, GTM_ID_RE, type AnalyticsSettings } from "@/lib/analytics";
 import { readAnalytics } from "@/lib/analytics-server";
 import {
   AI_PROVIDERS,
@@ -173,6 +173,15 @@ export async function saveAnalyticsSettings(formData: FormData) {
     throw new Error("El identificador de GA4 tiene la forma G-XXXXXXXXXX.");
   }
 
+  const gtmId = String(formData.get("gtmId") ?? "").trim();
+  if (gtmId && !GTM_ID_RE.test(gtmId)) {
+    throw new Error("El contenedor de GTM tiene la forma GTM-XXXXXXX.");
+  }
+
+  const searchConsoleToken = String(formData.get("searchConsoleToken") ?? "")
+    .trim()
+    .replace(/^<meta[^>]*content=["']?([^"'>\s]+).*$/i, "$1");
+
   const publicBaseUrl = String(formData.get("publicBaseUrl") ?? "")
     .trim()
     .replace(/\/$/, "");
@@ -200,7 +209,7 @@ export async function saveAnalyticsSettings(formData: FormData) {
     psiKey = encryptSecret(nueva);
   }
 
-  const value: AnalyticsSettings = { ga4Id, psiKey, publicBaseUrl };
+  const value: AnalyticsSettings = { ga4Id, psiKey, publicBaseUrl, gtmId, searchConsoleToken };
   await db
     .insert(siteSettings)
     .values({ key: ANALYTICS_KEY, value })

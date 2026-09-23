@@ -7,6 +7,7 @@ import type { Metadata } from "next";
 import { AdsBanner } from "@/components/ads-banner";
 import { ViewCounter } from "@/components/view-counter";
 import { LiveBadge } from "@/components/live-badge";
+import { ShareButtons } from "@/components/share-buttons";
 import { JsonLd } from "@/components/json-ld";
 import { SiteShell } from "@/components/site-shell";
 import { getSiteTheme } from "@/lib/site-theme";
@@ -139,6 +140,12 @@ export function ArticleDocument({
             </p>
           </div>
         </div>
+
+        {!preview && (
+          <div className="mt-8">
+            <ShareButtons title={a.title} locale={locale} />
+          </div>
+        )}
 
         <figure className="lx-media lx-card mt-10 aspect-[16/9] w-full">
           {a.coverImageUrl ? (

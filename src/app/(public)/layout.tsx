@@ -4,15 +4,19 @@
  * Lo único común es la medición: GA4 se carga aquí, así que queda fuera del
  * panel y de las vistas previas.
  */
-import { Ga4 } from "@/components/analytics-ga4";
-import { getGa4Id } from "@/lib/analytics-server";
+import { Ga4, Gtm } from "@/components/analytics-ga4";
+import { getGa4Id, getGtmId } from "@/lib/analytics-server";
 
 export default async function PublicLayout({ children }: { children: React.ReactNode }) {
-  const ga4 = await getGa4Id().catch(() => "");
+  const [ga4, gtm] = await Promise.all([
+    getGa4Id().catch(() => ""),
+    getGtmId().catch(() => ""),
+  ]);
   return (
     <>
       {children}
       <Ga4 id={ga4} />
+      <Gtm id={gtm} />
     </>
   );
 }

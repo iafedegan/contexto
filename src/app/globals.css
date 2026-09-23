@@ -1122,6 +1122,18 @@ a {
   line-height: 1.5;
   color: var(--fg-muted);
 }
+/* Vídeo incrustado: proporción 16:9 estable para no provocar saltos de
+   diseño (CLS) mientras carga el iframe. */
+.prose .lx-embed { margin: 2.4rem 0; }
+.prose .lx-embed iframe {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border: 0;
+  border-radius: var(--radius-lg);
+  background: #000;
+}
+
 .prose video { width: 100%; border-radius: var(--radius-lg); margin: 2rem 0; background: #000; }
 .prose hr { margin: 2.5rem 0; border: 0; height: 1px; background: var(--border); }
 
