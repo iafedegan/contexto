@@ -5,9 +5,33 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+/**
+ * Base absoluta del sitio, para canónicas, sitemaps, Open Graph y enlaces
+ * firmados.
+ *
+ * Se comprueba que la variable tenga contenido y no solo que esté definida:
+ * en Vercel, `NEXT_PUBLIC_SITE_URL` llega como cadena vacía cuando no se ha
+ * configurado, y `??` no la descarta porque "" no es null. Eso hacía fallar el
+ * build entero con `Invalid URL`.
+ *
+ * Sin variable propia se usa el dominio que asigna Vercel: primero el de
+ * producción, que es estable, y si no el de este despliegue concreto.
+ */
+function baseUrl(): string {
+  const propia = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+  if (propia) return propia.replace(/\/$/, "");
+
+  const produccion = process.env.VERCEL_PROJECT_PRODUCTION_URL?.trim();
+  if (produccion) return `https://${produccion}`;
+
+  const despliegue = process.env.VERCEL_URL?.trim();
+  if (despliegue) return `https://${despliegue}`;
+
+  return "http://localhost:3000";
+}
+
 export function siteUrl(path = "/"): string {
-  const base = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
-  return new URL(path, base).toString();
+  return new URL(path, baseUrl()).toString();
 }
 
 export function slugify(input: string): string {
