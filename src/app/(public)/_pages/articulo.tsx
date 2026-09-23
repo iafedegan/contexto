@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import type { Metadata } from "next";
+import { AdsBanner } from "@/components/ads-banner";
 import { JsonLd } from "@/components/json-ld";
 import { SiteShell } from "@/components/site-shell";
 import { getSiteTheme } from "@/lib/site-theme";
@@ -153,6 +154,11 @@ export function ArticleDocument({
           className="prose prose-drop mx-auto mt-12"
           dangerouslySetInnerHTML={{ __html: a.body }}
         />
+
+        {/* Zona comercial del artículo. La plantilla es de una sola columna, así
+            que la creatividad de 300×250 va tras el cuerpo, antes de los temas;
+            si la zona está vacía o fuera de vigencia no ocupa espacio. */}
+        {!preview && <AdsBanner zone="article_sidebar" className="mx-auto mt-14" />}
 
         {a.tags.length > 0 && (
           <ul className="mx-auto mt-12 flex max-w-[40rem] flex-wrap gap-2">

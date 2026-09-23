@@ -8,6 +8,7 @@ import {
   VanguardiaTemplate,
 } from "@/components/home/templates";
 import { FeatureStrip } from "@/components/feature-strip";
+import { AdsBanner } from "@/components/ads-banner";
 import { SiteShell } from "@/components/site-shell";
 import { getHomeLayoutConfig, getHomepageArticles } from "@/lib/content";
 import { DEFAULT_HOME_LAYOUT, splitHomeSlots } from "@/lib/home-layout";
@@ -77,6 +78,10 @@ async function HomePage({ locale }: { locale: Locale }) {
           </div>
         </div>
       )}
+
+      {/* Zona comercial de portada. No ocupa sitio si no hay creatividad
+          activa y vigente (ver src/lib/ads.ts). */}
+      <AdsBanner zone="home_top" className="mx-auto mb-10" />
 
       {/* La cinta de destacados es parte de la identidad "diario"; el resto de
           plantillas ya destaca con su propio hero o cuadrícula. */}
