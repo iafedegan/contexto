@@ -919,6 +919,56 @@ a {
 }
 
 
+
+/* ==================== Modo oscuro (§12.4) ================================
+   Solo afecta a las plantillas claras: Vanguardia, Revista y Esmeralda ya son
+   oscuras y conservan su identidad. Se remapean los neutros (fondo, texto,
+   bordes) y se dejan intactos el color de marca y las tipografías, que son lo
+   que distingue a cada plantilla.
+   Es una preferencia del lector, guardada en su navegador; no cambia la
+   plantilla que eligió la redacción.
+   ========================================================================= */
+:root[data-dark="1"] [data-theme="clasico"],
+:root[data-dark="1"] [data-theme="compacto"],
+:root[data-dark="1"] [data-theme="articulo"],
+:root[data-dark="1"] [data-theme="autor"],
+:root[data-dark="1"] [data-theme="institucional"] {
+  color-scheme: dark;
+  --bg: #12100d;
+  --bg-2: #1a1713;
+  --surface: #1c1915;
+  --surface-2: #24201a;
+  --fg: #f2ece1;
+  --fg-muted: #a79c8b;
+  --border: #322c24;
+  --border-strong: #4a4136;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --shadow-hover: 0 24px 46px -30px rgba(0, 0, 0, 0.9);
+}
+
+/* El acento de Clásico es un rojo profundo pensado sobre papel: sobre fondo
+   oscuro no alcanza el contraste AA, así que se aclara sin cambiar de tono. */
+:root[data-dark="1"] [data-theme="clasico"] {
+  --accent: #e2604f;
+  --accent-2: #cfa758;
+  --link: #e2604f;
+  --border-strong: #e2604f;
+}
+
+:root[data-dark="1"] [data-theme="compacto"],
+:root[data-dark="1"] [data-theme="articulo"],
+:root[data-dark="1"] [data-theme="autor"],
+:root[data-dark="1"] [data-theme="institucional"] {
+  --accent: color-mix(in oklab, var(--accent) 72%, white);
+  --link: var(--accent);
+}
+
+/* Las fotos a plena luz deslumbran sobre fondo oscuro. */
+:root[data-dark="1"] .lx-media img,
+:root[data-dark="1"] .prose img {
+  filter: brightness(0.92);
+}
+
 /* ============== Primitivas de portada (componentes Clásico/Revista/…) =====
    Portadas del worktree de portada editable, re-teñidas con los tokens de
    arriba: el mismo marcado sirve para las cinco plantillas.

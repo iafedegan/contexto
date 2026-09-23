@@ -57,7 +57,19 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es-CO" className={fontVariables}>
+    <html lang="es-CO" className={fontVariables} suppressHydrationWarning>
+      <head>
+        {/*
+          Se decide el modo ANTES de pintar. Si esto se hiciera en un efecto de
+          React, el lector vería un destello de fondo claro en cada carga, que
+          es justo lo que hace que un modo oscuro se perciba como mal hecho.
+        */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var m=localStorage.getItem('cg-modo');var o=m?m==='oscuro':window.matchMedia('(prefers-color-scheme: dark)').matches;document.documentElement.dataset.dark=o?'1':'0';}catch(e){}})();`,
+          }}
+        />
+      </head>
       <body>
         <a
           href="#contenido"

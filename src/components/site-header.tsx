@@ -6,6 +6,7 @@ import { DEFAULT_IDENTITY, type SiteIdentity } from "@/lib/site-identity";
 import { DEFAULT_LOCALE, INTL_LOCALE, localePath, t, type Locale } from "@/lib/i18n";
 import { MoreMenu } from "@/components/more-menu";
 import { RadioPlayer } from "@/components/radio-player";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export type NavItem = { href: string; label: string };
 
@@ -69,6 +70,7 @@ function MastheadHeader({ nav, locale, identity }: { nav: NavItem[]; locale: Loc
           <span className="lx-foil font-semibold">{t(locale, "nav.digitalEdition")}</span>
           <span className="flex items-center gap-3">
             <LocaleSwitch locale={locale} />
+        <ThemeToggle locale={locale} />
         {identity.radioStreamUrl && <RadioPlayer src={identity.radioStreamUrl} locale={locale} />}
             <Link href="/panel" className="lx-link hidden sm:block">
               {t(locale, "nav.panel")}
@@ -133,6 +135,7 @@ function ReadingHeader({ nav, locale, identity }: { nav: NavItem[]; locale: Loca
         </nav>
         <div className="flex items-center gap-3">
           <LocaleSwitch locale={locale} />
+        <ThemeToggle locale={locale} />
         {identity.radioStreamUrl && <RadioPlayer src={identity.radioStreamUrl} locale={locale} />}
           <Link
             href={localePath(locale, "/buscar")}
@@ -174,6 +177,7 @@ function BoldHeader({ nav, locale, identity }: { nav: NavItem[]; locale: Locale;
           <MoreMenu locale={locale} />
         </nav>
         <LocaleSwitch locale={locale} />
+        <ThemeToggle locale={locale} />
         {identity.radioStreamUrl && <RadioPlayer src={identity.radioStreamUrl} locale={locale} />}
         <Link
           href={localePath(locale, "/buscar")}
@@ -202,6 +206,7 @@ function CoutureHeader({ nav, locale, identity }: { nav: NavItem[]; locale: Loca
         </div>
         <div className="mt-5 flex justify-center">
           <LocaleSwitch locale={locale} />
+        <ThemeToggle locale={locale} />
         {identity.radioStreamUrl && <RadioPlayer src={identity.radioStreamUrl} locale={locale} />}
         </div>
         <nav
@@ -247,6 +252,7 @@ function CommandHeader({ nav, locale, identity }: { nav: NavItem[]; locale: Loca
         </nav>
         <div className="ml-auto flex items-center gap-2">
           <LocaleSwitch locale={locale} />
+        <ThemeToggle locale={locale} />
         {identity.radioStreamUrl && <RadioPlayer src={identity.radioStreamUrl} locale={locale} />}
           <span className="lx-chip lx-mono border-[var(--border-strong)] text-[var(--accent)]">
             {t(locale, "search.kicker").toLowerCase()}
@@ -273,6 +279,7 @@ function GlassHeader({ nav, locale, identity }: { nav: NavItem[]; locale: Locale
           {t(locale, "nav.online")}
         </span>
         <LocaleSwitch locale={locale} className="ml-auto" />
+        <ThemeToggle locale={locale} />
         {identity.radioStreamUrl && <RadioPlayer src={identity.radioStreamUrl} locale={locale} />}
         <nav aria-label={t(locale, "nav.sections")} className="hidden gap-4 text-xs text-[var(--fg-muted)] sm:flex">
           {nav.slice(0, 3).map((n) => (
@@ -304,6 +311,7 @@ function CrestHeader({ nav, locale, identity }: { nav: NavItem[]; locale: Locale
         <p className="lx-kicker mt-2 text-[var(--accent-2)]">{t(locale, "nav.institutional")}</p>
         <div className="mt-4 flex justify-center">
           <LocaleSwitch locale={locale} />
+        <ThemeToggle locale={locale} />
         {identity.radioStreamUrl && <RadioPlayer src={identity.radioStreamUrl} locale={locale} />}
         </div>
       </div>
@@ -334,6 +342,7 @@ function ArchiveHeader({ nav, locale, identity }: { nav: NavItem[]; locale: Loca
         </Link>
         <span className="lx-chip">{t(locale, "nav.archive")}</span>
         <LocaleSwitch locale={locale} className="ml-auto" />
+        <ThemeToggle locale={locale} />
         {identity.radioStreamUrl && <RadioPlayer src={identity.radioStreamUrl} locale={locale} />}
         <nav aria-label={t(locale, "nav.sections")} className="flex gap-5 text-xs tracking-wide text-[var(--fg-muted)]">
           {nav.slice(0, 3).map((n) => (
