@@ -50,26 +50,36 @@ export default async function ArticlePage({ params }: Params) {
         ])}
       />
 
-      <nav className="mb-4 text-xs text-[var(--fg-muted)]">
-        <Link href="/">Inicio</Link>
+      <nav className="mb-5 flex items-center gap-1.5 text-xs text-[var(--ink-faint)]">
+        <Link href="/" className="hover:text-[var(--brand)]">
+          Inicio
+        </Link>
         {a.categorySlug && (
           <>
-            {" / "}
-            <Link href={`/categoria/${a.categorySlug}`}>{a.categoryName}</Link>
+            <span aria-hidden>/</span>
+            <Link href={`/categoria/${a.categorySlug}`} className="hover:text-[var(--brand)]">
+              {a.categoryName}
+            </Link>
           </>
         )}
       </nav>
 
-      <h1 className="text-3xl font-extrabold leading-tight md:text-4xl">{a.title}</h1>
-      <p className="mt-3 text-lg text-[var(--fg-muted)]">{a.excerpt}</p>
+      {a.categorySlug && <p className="kicker">{a.categoryName}</p>}
+      <h1 className="mt-2 text-[2rem] font-extrabold leading-[1.13] tracking-[-0.025em] md:text-[2.6rem]">
+        {a.title}
+      </h1>
+      <p className="mt-4 font-serif text-xl leading-relaxed text-[var(--ink-soft)]">{a.excerpt}</p>
 
-      <div className="mt-4 flex items-center gap-2 text-sm text-[var(--fg-muted)]">
+      <div className="mt-5 flex flex-wrap items-center gap-x-2 gap-y-1 border-y border-[var(--line)] py-3 text-sm text-[var(--ink-faint)]">
         {a.authorSlug ? (
-          <Link href={`/autor/${a.authorSlug}`} className="font-medium text-[var(--fg)]">
+          <Link
+            href={`/autor/${a.authorSlug}`}
+            className="font-semibold text-[var(--ink)] hover:text-[var(--brand)]"
+          >
             {a.authorName}
           </Link>
         ) : (
-          <span>{a.authorName}</span>
+          <span className="font-semibold text-[var(--ink)]">{a.authorName}</span>
         )}
         {a.publishedAt && (
           <>
@@ -86,17 +96,20 @@ export default async function ArticlePage({ params }: Params) {
           width={896}
           height={504}
           priority
-          className="mt-6 aspect-video w-full rounded-[var(--radius)] object-cover"
+          className="mt-7 aspect-video w-full rounded-[var(--radius)] border border-[var(--line)] object-cover shadow-[var(--shadow-sm)]"
         />
       )}
 
       {/* El cuerpo llega como HTML ya sanitizado en el panel editorial. */}
-      <div className="prose mt-8" dangerouslySetInnerHTML={{ __html: a.body }} />
+      <div className="prose mt-9" dangerouslySetInnerHTML={{ __html: a.body }} />
 
       {a.tags.length > 0 && (
-        <ul className="mt-8 flex flex-wrap gap-2 text-xs">
+        <ul className="mt-9 flex flex-wrap gap-2 text-xs">
           {a.tags.map((t) => (
-            <li key={t} className="rounded-full bg-[var(--bg-subtle)] px-2 py-1 text-[var(--fg-muted)]">
+            <li
+              key={t}
+              className="rounded-full border border-[var(--line)] bg-[var(--surface-2)] px-2.5 py-1 text-[var(--ink-soft)]"
+            >
               {t}
             </li>
           ))}
@@ -104,29 +117,36 @@ export default async function ArticlePage({ params }: Params) {
       )}
 
       {a.authorBio && (
-        <div className="mt-10 rounded-[var(--radius)] bg-[var(--bg-subtle)] p-4 text-sm">
-          <p className="font-semibold">{a.authorName}</p>
-          <p className="mt-1 text-[var(--fg-muted)]">{a.authorBio}</p>
+        <div className="mt-12 flex gap-4 rounded-[var(--radius)] border border-[var(--line)] bg-[var(--surface-2)] p-5 text-sm">
+          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[var(--brand)] text-base font-bold text-[var(--brand-fg)]">
+            {(a.authorName ?? "?").slice(0, 1)}
+          </div>
+          <div>
+            <p className="font-semibold text-[var(--ink)]">{a.authorName}</p>
+            <p className="mt-1 leading-relaxed text-[var(--ink-soft)]">{a.authorBio}</p>
+          </div>
         </div>
       )}
 
       {related.length > 0 && (
-        <section className="mt-14">
-          <h2 className="mb-4 border-b border-[var(--border)] pb-2 text-sm font-bold uppercase tracking-wide">
+        <section className="mt-16">
+          <h2 className="mb-5 border-b border-[var(--line-strong)] pb-3 text-sm font-bold uppercase tracking-[0.08em]">
             Contenido relacionado
           </h2>
-          <ul className="flex flex-col gap-3">
+          <ul className="flex flex-col divide-y divide-[var(--line)]">
             {related.map((r) => (
-              <li key={`${r.kind}-${r.id}`}>
+              <li key={`${r.kind}-${r.id}`} className="py-3.5">
                 <Link
                   href={r.url}
-                  className="text-[var(--link)] underline"
+                  className="font-serif text-[17px] font-medium leading-snug text-[var(--ink)] transition-colors hover:text-[var(--brand)]"
                   {...(r.kind === "archivo" ? { rel: "bookmark" } : {})}
                 >
                   {r.title}
                 </Link>
                 {r.kind === "archivo" && (
-                  <span className="ml-2 text-xs text-[var(--fg-muted)]">(archivo)</span>
+                  <span className="ml-2 align-middle text-[11px] font-semibold uppercase tracking-wide text-[var(--ink-faint)]">
+                    archivo
+                  </span>
                 )}
               </li>
             ))}

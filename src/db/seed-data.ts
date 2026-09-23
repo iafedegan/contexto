@@ -272,7 +272,8 @@ export async function seed(db: AnyDb): Promise<{ created: boolean }> {
       title: a.title,
       excerpt: a.excerpt,
       body: a.body,
-      coverImageUrl: a.cover,
+      // Imagen de ejemplo determinista (solo demo local).
+      coverImageUrl: a.cover ?? `https://picsum.photos/seed/${a.slug}/1200/800`,
       categoryId: catId(a.cat),
       authorId: authorId(a.author),
       status: "publicado" as const,

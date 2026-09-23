@@ -73,11 +73,24 @@ const ROLE_RANK: Record<UserRole, number> = {
   administrador: 3,
 };
 
+/**
+ * Verifica sesión + rol y devuelve el usuario TAL COMO ESTÁ EN LA BASE DE DATOS
+ * (no la copia del JWT). Así los cambios de rol / desactivaciones surten efecto
+ * de inmediato y nunca se usa un id de usuario obsoleto en escrituras con FK.
+ */
 export async function requireRole(min: UserRole) {
   const session = await auth();
-  if (!session?.user) throw new Error("NO_AUTENTICADO");
-  if (ROLE_RANK[session.user.role] < ROLE_RANK[min]) throw new Error("SIN_PERMISO");
-  return session.user;
+  if (!session?.user?.email) throw new Error("NO_AUTENTICADO");
+
+  const [u] = await db
+    .select({ id: users.id, name: users.name, email: users.email, role: users.role, active: users.active })
+    .from(users)
+    .where(eq(users.email, session.user.email))
+    .limit(1);
+
+  if (!u || !u.active) throw new Error("NO_AUTENTICADO");
+  if (ROLE_RANK[u.role] < ROLE_RANK[min]) throw new Error("SIN_PERMISO");
+  return u;
 }
 
 export function canPublish(role: UserRole): boolean {

@@ -38,17 +38,18 @@ export default async function CategoryPage({ params }: Params) {
   if (!category) notFound();
 
   return (
-    <div>
-      <header className="mb-8 border-b border-[var(--border)] pb-4">
-        <h1 className="text-2xl font-extrabold">{category.name}</h1>
+    <div className="rise">
+      <header className="mb-9 border-b border-[var(--line-strong)] pb-5">
+        <p className="kicker">Sección</p>
+        <h1 className="mt-1.5 text-[2rem] font-extrabold tracking-[-0.025em]">{category.name}</h1>
         {category.description && (
-          <p className="mt-2 text-[var(--fg-muted)]">{category.description}</p>
+          <p className="mt-2 max-w-xl text-[15px] text-[var(--ink-soft)]">{category.description}</p>
         )}
       </header>
       {items.length === 0 ? (
-        <p className="text-[var(--fg-muted)]">Sin artículos en esta sección todavía.</p>
+        <p className="text-[var(--ink-soft)]">Sin artículos en esta sección todavía.</p>
       ) : (
-        <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-x-8 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
           {items.map((a) => (
             <ArticleCard key={a.slug} a={a} />
           ))}

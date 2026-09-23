@@ -1,84 +1,221 @@
 @import "tailwindcss";
 
-/* ---------------------------------------------------------------------------
+/* ===========================================================================
    Sistema de diseño — CONtexto Ganadero
-   Paleta sobria de medio informativo. Prioridad absoluta a legibilidad móvil.
---------------------------------------------------------------------------- */
+   Medio informativo. Estética editorial contemporánea: papel cálido, tinta
+   profunda, un verde de marca sobrio y mucho aire. Prioridad móvil.
+=========================================================================== */
 
 :root {
-  --bg: #ffffff;
-  --bg-subtle: #f6f6f4;
-  --fg: #1a1a1a;
-  --fg-muted: #5b5b55;
-  --border: #e4e4de;
-  --brand: #1f6d3a; /* verde ganadero */
+  --paper: #faf9f5;
+  --surface: #ffffff;
+  --surface-2: #f2f1ec;
+  --ink: #1c1b18;
+  --ink-soft: #55524c;
+  --ink-faint: #8b877e;
+  --line: #e7e4dc;
+  --line-strong: #d8d4c8;
+
+  --brand: #1c6b45;
+  --brand-strong: #12523a;
+  --brand-tint: #e8f1eb;
   --brand-fg: #ffffff;
-  --link: #185c31;
-  --danger: #b42318;
-  --radius: 0.5rem;
+  --accent: #c2703d; /* terracota para kickers / estados hover */
+  --link: #176241;
+
+  --danger: #b3261e;
+  --warn: #b26a00;
+  --ok: #1c6b45;
+
+  --radius: 14px;
+  --radius-sm: 9px;
+
+  /* Alias de compatibilidad con los nombres antiguos de token. */
+  --bg: var(--paper);
+  --bg-subtle: var(--surface-2);
+  --fg: var(--ink);
+  --fg-muted: var(--ink-soft);
+  --border: var(--line);
+  --shadow-sm: 0 1px 2px rgba(28, 27, 24, 0.05), 0 1px 3px rgba(28, 27, 24, 0.04);
+  --shadow-md: 0 2px 6px rgba(28, 27, 24, 0.05), 0 12px 28px -8px rgba(28, 27, 24, 0.12);
+  --shadow-lg: 0 8px 40px -8px rgba(28, 27, 24, 0.22);
+  --maxw: 68rem;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #121311;
-    --bg-subtle: #1b1c19;
-    --fg: #ececec;
-    --fg-muted: #a1a199;
-    --border: #2c2e29;
-    --brand: #4caf6d;
-    --brand-fg: #0c1a0f;
-    --link: #6fd18c;
+    --paper: #121311;
+    --surface: #1a1c19;
+    --surface-2: #212420;
+    --ink: #ececE6;
+    --ink-soft: #b4b2a8;
+    --ink-faint: #83817a;
+    --line: #2c2f2a;
+    --line-strong: #3a3e37;
+
+    --brand: #57b985;
+    --brand-strong: #7cd0a3;
+    --brand-tint: #17281f;
+    --brand-fg: #0c1a12;
+    --accent: #e0965f;
+    --link: #7cd0a3;
+
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.35), 0 16px 40px -12px rgba(0, 0, 0, 0.6);
+    --shadow-lg: 0 12px 48px -8px rgba(0, 0, 0, 0.7);
+
+    --bg: var(--paper);
+    --bg-subtle: var(--surface-2);
+    --fg: var(--ink);
+    --fg-muted: var(--ink-soft);
+    --border: var(--line);
   }
 }
 
 @theme inline {
-  --color-bg: var(--bg);
-  --color-bg-subtle: var(--bg-subtle);
-  --color-fg: var(--fg);
-  --color-fg-muted: var(--fg-muted);
-  --color-border: var(--border);
+  --color-paper: var(--paper);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-ink-faint: var(--ink-faint);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
   --color-brand: var(--brand);
+  --color-brand-strong: var(--brand-strong);
+  --color-brand-tint: var(--brand-tint);
   --color-brand-fg: var(--brand-fg);
-  --color-link: var(--link);
+  --color-accent: var(--accent);
+  --color-danger: var(--danger);
+  --color-warn: var(--warn);
   --radius: var(--radius);
   --font-sans: var(--font-sans), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --font-serif: var(--font-serif), Georgia, "Times New Roman", serif;
+  --font-serif: var(--font-serif), "Iowan Old Style", Georgia, "Times New Roman", serif;
 }
 
 * {
-  border-color: var(--border);
+  border-color: var(--line);
+  -webkit-tap-highlight-color: transparent;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--bg);
-  color: var(--fg);
+  background: var(--paper);
+  color: var(--ink);
   font-family: var(--font-sans);
+  font-feature-settings: "kern", "liga", "cv11";
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  line-height: 1.55;
+}
+
+::selection {
+  background: var(--brand);
+  color: var(--brand-fg);
 }
 
 a {
   color: inherit;
 }
 
-/* Cuerpo de artículo renderizado desde markdown/HTML sanitizado. */
+/* Utilidades pequeñas -------------------------------------------------- */
+
+.kicker {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--brand);
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+}
+
+.hairline {
+  border-bottom: 1px solid var(--line);
+}
+
+/* Placeholder de imagen: malla de color en vez de un bloque plano. */
+.img-fallback {
+  background:
+    radial-gradient(130% 130% at 8% 0%, color-mix(in oklab, var(--brand) 26%, white), transparent 60%),
+    radial-gradient(130% 130% at 100% 100%, color-mix(in oklab, var(--accent) 22%, white), transparent 62%),
+    var(--surface-2);
+}
+@media (prefers-color-scheme: dark) {
+  .img-fallback {
+    background:
+      radial-gradient(130% 130% at 8% 0%, color-mix(in oklab, var(--brand) 42%, var(--surface-2)), transparent 60%),
+      radial-gradient(130% 130% at 100% 100%, color-mix(in oklab, var(--accent) 34%, var(--surface-2)), transparent 62%),
+      var(--surface-2);
+  }
+}
+
+/* Foco visible y accesible en toda la interfaz. */
+:where(a, button, input, select, textarea, summary):focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* Cuerpo de artículo (markdown / HTML sanitizado) --------------------- */
 .prose {
   font-family: var(--font-serif);
-  font-size: 1.125rem;
-  line-height: 1.75;
-  max-width: 42rem;
+  font-size: 1.19rem;
+  line-height: 1.72;
+  color: var(--ink);
+  max-width: 40rem;
 }
-.prose p { margin: 0 0 1.25rem; }
-.prose h2 { font-size: 1.5rem; font-weight: 700; margin: 2rem 0 0.75rem; font-family: var(--font-sans); }
-.prose h3 { font-size: 1.2rem; font-weight: 700; margin: 1.5rem 0 0.5rem; font-family: var(--font-sans); }
-.prose a { color: var(--link); text-decoration: underline; text-underline-offset: 2px; }
-.prose ul, .prose ol { margin: 0 0 1.25rem 1.25rem; }
-.prose li { margin-bottom: 0.4rem; }
+.prose > p:first-of-type::first-letter {
+  float: left;
+  font-size: 3.4rem;
+  line-height: 0.8;
+  padding: 0.28rem 0.6rem 0 0;
+  color: var(--brand);
+  font-weight: 600;
+}
+.prose p { margin: 0 0 1.3rem; }
+.prose h2 {
+  font-family: var(--font-sans);
+  font-size: 1.45rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin: 2.4rem 0 0.8rem;
+}
+.prose h3 {
+  font-family: var(--font-sans);
+  font-size: 1.16rem;
+  font-weight: 700;
+  margin: 1.7rem 0 0.5rem;
+}
+.prose a {
+  color: var(--brand-strong);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2.5px;
+}
+.prose ul, .prose ol { margin: 0 0 1.3rem 1.3rem; }
+.prose li { margin-bottom: 0.45rem; }
 .prose blockquote {
   border-left: 3px solid var(--brand);
-  padding-left: 1rem;
-  color: var(--fg-muted);
+  padding-left: 1.1rem;
+  margin: 1.6rem 0;
+  color: var(--ink-soft);
   font-style: italic;
-  margin: 0 0 1.25rem;
 }
-.prose img { border-radius: var(--radius); margin: 1.5rem 0; }
+.prose img { border-radius: var(--radius); margin: 1.8rem 0; }
+.prose.prose-sm { font-size: 1rem; line-height: 1.6; }
+.prose.prose-sm > p:first-of-type::first-letter { float: none; font-size: inherit; padding: 0; color: inherit; font-weight: inherit; }
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+.rise { animation: rise 0.4s ease both; }

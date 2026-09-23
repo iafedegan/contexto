@@ -22,43 +22,72 @@ export default async function PanelHome() {
       .where(sql`${assistantQueries.createdAt} > now() - interval '7 days'`),
   ]);
 
-  const statusMap = Object.fromEntries(byStatus.map((r) => [r.status, r.n]));
+  const s = Object.fromEntries(byStatus.map((r) => [r.status, r.n]));
 
   return (
-    <div className="flex flex-col gap-6">
-      <h1 className="text-xl font-bold">Resumen editorial</h1>
+    <div className="rise flex flex-col gap-8">
+      <div>
+        <h1 className="text-2xl font-extrabold tracking-[-0.02em]">Resumen editorial</h1>
+        <p className="mt-1 text-sm text-[var(--ink-soft)]">Estado de la redacción de un vistazo.</p>
+      </div>
+
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat label="Publicados" value={statusMap["publicado"] ?? 0} />
-        <Stat label="En revisión" value={statusMap["en_revision"] ?? 0} />
-        <Stat label="Programados" value={statusMap["programado"] ?? 0} />
-        <Stat label="Borradores" value={statusMap["borrador"] ?? 0} />
+        <Stat label="Publicados" value={s["publicado"] ?? 0} accent />
+        <Stat label="En revisión" value={s["en_revision"] ?? 0} />
+        <Stat label="Programados" value={s["programado"] ?? 0} />
+        <Stat label="Borradores" value={s["borrador"] ?? 0} />
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <Card>
-          <p className="text-sm text-[var(--fg-muted)]">Borradores de IA pendientes de aprobación</p>
-          <p className="mt-1 text-3xl font-bold">{pendingDrafts[0]?.n ?? 0}</p>
-          <Link href="/panel/borradores-ia" className="mt-2 inline-block text-sm text-[var(--link)] underline">
-            Revisar cola →
-          </Link>
-        </Card>
-        <Card>
-          <p className="text-sm text-[var(--fg-muted)]">Preguntas al asistente (7 días)</p>
-          <p className="mt-1 text-3xl font-bold">{queries7d[0]?.n ?? 0}</p>
-          <Link href="/panel/demanda" className="mt-2 inline-block text-sm text-[var(--link)] underline">
-            Ver demanda informativa →
-          </Link>
-        </Card>
+        <ActionCard
+          label="Borradores de IA pendientes"
+          value={pendingDrafts[0]?.n ?? 0}
+          href="/panel/borradores-ia"
+          cta="Revisar cola"
+        />
+        <ActionCard
+          label="Preguntas al asistente · 7 días"
+          value={queries7d[0]?.n ?? 0}
+          href="/panel/demanda"
+          cta="Ver demanda informativa"
+        />
       </div>
     </div>
   );
 }
 
-function Stat({ label, value }: { label: string; value: number }) {
+function Stat({ label, value, accent = false }: { label: string; value: number; accent?: boolean }) {
   return (
-    <Card>
-      <p className="text-sm text-[var(--fg-muted)]">{label}</p>
-      <p className="mt-1 text-3xl font-bold">{value}</p>
+    <Card className={accent ? "border-[var(--brand)] bg-[var(--brand-tint)]" : ""}>
+      <p className="text-[13px] font-medium text-[var(--ink-soft)]">{label}</p>
+      <p className="mt-1 text-4xl font-extrabold tracking-tight tabular-nums text-[var(--ink)]">
+        {value}
+      </p>
+    </Card>
+  );
+}
+
+function ActionCard({
+  label,
+  value,
+  href,
+  cta,
+}: {
+  label: string;
+  value: number;
+  href: string;
+  cta: string;
+}) {
+  return (
+    <Card className="flex flex-col">
+      <p className="text-sm text-[var(--ink-soft)]">{label}</p>
+      <p className="mt-1 text-3xl font-extrabold tabular-nums">{value}</p>
+      <Link
+        href={href}
+        className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--brand)] hover:gap-2.5"
+      >
+        {cta} <span aria-hidden>→</span>
+      </Link>
     </Card>
   );
 }
