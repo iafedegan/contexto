@@ -45,6 +45,29 @@ const PARENT_CATS = [
     description: "Crónicas, reportajes e informes en profundidad.",
     sortOrder: 9,
   },
+  // Secciones que el anexo funcional exige como mínimo (§2.1) y que la
+  // taxonomía actual del sitio no contempla. Se añaden al final: la barra
+  // principal muestra las ocho primeras (N-04) y el resto vive en «Más».
+  {
+    slug: "entrevistas",
+    name: "Entrevistas",
+    description: "Conversaciones con líderes, expertos, productores y autoridades.",
+    sortOrder: 10,
+  },
+  {
+    slug: "analisis",
+    name: "Análisis",
+    description: "Contexto sectorial, interpretación de cifras y coyuntura.",
+    sortOrder: 11,
+  },
+  {
+    slug: "servicios",
+    name: "Servicios",
+    description: "Recursos, herramientas e información útil para el productor.",
+    sortOrder: 12,
+  },
+  { slug: "tv", name: "TV", description: "Programas, entrevistas en vídeo y material audiovisual.", sortOrder: 13 },
+  { slug: "radio", name: "Radio", description: "Emisora, transmisiones y pódcast del sector.", sortOrder: 14 },
 ];
 
 type ParentSlug = (typeof PARENT_CATS)[number]["slug"];

@@ -13,6 +13,8 @@ export type NavItem = { href: string; label: string };
 type Props = {
   theme: Theme;
   nav: NavItem[];
+  /** Secciones que no caben en la barra principal (N-04): van al menú «Más». */
+  extraNav?: NavItem[];
   locale?: Locale;
   /** Nombre y lema editables en /panel/configuracion. */
   identity?: SiteIdentity;
@@ -22,39 +24,42 @@ type Props = {
 export function SiteHeader({
   theme,
   nav,
+  extraNav = [],
   locale = DEFAULT_LOCALE,
   identity = DEFAULT_IDENTITY,
 }: Props) {
+  // Las secciones sobrantes viajan con el resto de enlaces del menú «Más».
+  const masExtra = extraNav;
   switch (theme) {
     case "home":
     case "esmeralda":
     case "clasico":
-      return <MastheadHeader nav={nav} locale={locale} identity={identity} />;
+      return <MastheadHeader nav={nav} extra={masExtra} locale={locale} identity={identity} />;
     case "revista":
-      return <CoutureHeader nav={nav} locale={locale} identity={identity} />;
+      return <CoutureHeader nav={nav} extra={masExtra} locale={locale} identity={identity} />;
     case "compacto":
-      return <BoldHeader nav={nav} locale={locale} identity={identity} />;
+      return <BoldHeader nav={nav} extra={masExtra} locale={locale} identity={identity} />;
     case "vanguardia":
-      return <GlassHeader nav={nav} locale={locale} identity={identity} />;
+      return <GlassHeader nav={nav} extra={masExtra} locale={locale} identity={identity} />;
     case "articulo":
-      return <ReadingHeader nav={nav} locale={locale} identity={identity} />;
+      return <ReadingHeader nav={nav} extra={masExtra} locale={locale} identity={identity} />;
     case "seccion":
-      return <BoldHeader nav={nav} locale={locale} identity={identity} />;
+      return <BoldHeader nav={nav} extra={masExtra} locale={locale} identity={identity} />;
     case "autor":
-      return <CoutureHeader nav={nav} locale={locale} identity={identity} />;
+      return <CoutureHeader nav={nav} extra={masExtra} locale={locale} identity={identity} />;
     case "buscar":
-      return <CommandHeader nav={nav} locale={locale} identity={identity} />;
+      return <CommandHeader nav={nav} extra={masExtra} locale={locale} identity={identity} />;
     case "asistente":
-      return <GlassHeader nav={nav} locale={locale} identity={identity} />;
+      return <GlassHeader nav={nav} extra={masExtra} locale={locale} identity={identity} />;
     case "institucional":
-      return <CrestHeader nav={nav} locale={locale} identity={identity} />;
+      return <CrestHeader nav={nav} extra={masExtra} locale={locale} identity={identity} />;
     default:
-      return <ArchiveHeader nav={nav} locale={locale} identity={identity} />;
+      return <ArchiveHeader nav={nav} extra={masExtra} locale={locale} identity={identity} />;
   }
 }
 
 /* ------------------------------------------------------------------ HOME */
-function MastheadHeader({ nav, locale, identity }: { nav: NavItem[]; locale: Locale; identity: SiteIdentity }) {
+function MastheadHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extra: NavItem[]; locale: Locale; identity: SiteIdentity }) {
   const today = new Intl.DateTimeFormat(INTL_LOCALE[locale], {
     weekday: "long",
     day: "numeric",
@@ -110,7 +115,7 @@ function MastheadHeader({ nav, locale, identity }: { nav: NavItem[]; locale: Loc
           >
             {t(locale, "nav.search")}
           </Link>
-          <MoreMenu locale={locale} />
+          <MoreMenu locale={locale} extra={extra} />
         </div>
       </nav>
     </header>
@@ -118,7 +123,7 @@ function MastheadHeader({ nav, locale, identity }: { nav: NavItem[]; locale: Loc
 }
 
 /* -------------------------------------------------------------- ARTÍCULO */
-function ReadingHeader({ nav, locale, identity }: { nav: NavItem[]; locale: Locale; identity: SiteIdentity }) {
+function ReadingHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extra: NavItem[]; locale: Locale; identity: SiteIdentity }) {
   return (
     <header className="sticky top-0 z-40 border-b border-[var(--border)] bg-[var(--nav-bg)]">
       <ReadingProgress />
@@ -143,7 +148,7 @@ function ReadingHeader({ nav, locale, identity }: { nav: NavItem[]; locale: Loca
           >
             {t(locale, "nav.search")}
           </Link>
-          <MoreMenu locale={locale} />
+          <MoreMenu locale={locale} extra={extra} />
           <Link
             href={localePath(locale, "/asistente")}
             className="lx-ui rounded-[var(--radius)] border border-[var(--accent)] px-3 py-1.5 text-[0.7rem] uppercase tracking-[0.18em] text-[var(--accent)] transition hover:bg-[var(--accent)] hover:text-[var(--accent-fg)]"
@@ -157,7 +162,7 @@ function ReadingHeader({ nav, locale, identity }: { nav: NavItem[]; locale: Loca
 }
 
 /* --------------------------------------------------------------- SECCIÓN */
-function BoldHeader({ nav, locale, identity }: { nav: NavItem[]; locale: Locale; identity: SiteIdentity }) {
+function BoldHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extra: NavItem[]; locale: Locale; identity: SiteIdentity }) {
   return (
     <header className="sticky top-0 z-40 bg-[var(--nav-bg)] px-4 py-4">
       <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-4 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--nav-bg)] px-5 py-4 shadow-[var(--shadow)]">
@@ -174,7 +179,7 @@ function BoldHeader({ nav, locale, identity }: { nav: NavItem[]; locale: Locale;
               {n.label}
             </Link>
           ))}
-          <MoreMenu locale={locale} />
+          <MoreMenu locale={locale} extra={extra} />
         </nav>
         <LocaleSwitch locale={locale} />
         <ThemeToggle locale={locale} />
@@ -192,7 +197,7 @@ function BoldHeader({ nav, locale, identity }: { nav: NavItem[]; locale: Locale;
 }
 
 /* ------------------------------------------------------------------ AUTOR */
-function CoutureHeader({ nav, locale, identity }: { nav: NavItem[]; locale: Locale; identity: SiteIdentity }) {
+function CoutureHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extra: NavItem[]; locale: Locale; identity: SiteIdentity }) {
   return (
     <header className="relative z-40 bg-[var(--nav-bg)] px-0 pb-0 pt-8 text-center sm:sticky sm:top-0 sm:px-6 sm:pb-6 sm:pt-10">
       <div className="mx-auto max-w-4xl px-6">
@@ -221,7 +226,7 @@ function CoutureHeader({ nav, locale, identity }: { nav: NavItem[]; locale: Loca
               </Link>
             </span>
           ))}
-          <MoreMenu locale={locale} />
+          <MoreMenu locale={locale} extra={extra} />
         </nav>
       </div>
     </header>
@@ -229,7 +234,7 @@ function CoutureHeader({ nav, locale, identity }: { nav: NavItem[]; locale: Loca
 }
 
 /* --------------------------------------------------------------- BUSCADOR */
-function CommandHeader({ nav, locale, identity }: { nav: NavItem[]; locale: Locale; identity: SiteIdentity }) {
+function CommandHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extra: NavItem[]; locale: Locale; identity: SiteIdentity }) {
   return (
     <header className="sticky top-0 z-40 border-b border-[var(--border)] bg-[var(--nav-bg)]">
       <div
@@ -248,7 +253,7 @@ function CommandHeader({ nav, locale, identity }: { nav: NavItem[]; locale: Loca
               {n.label.toLowerCase()}
             </Link>
           ))}
-          <MoreMenu locale={locale} />
+          <MoreMenu locale={locale} extra={extra} />
         </nav>
         <div className="ml-auto flex items-center gap-2">
           <LocaleSwitch locale={locale} />
@@ -267,7 +272,7 @@ function CommandHeader({ nav, locale, identity }: { nav: NavItem[]; locale: Loca
 }
 
 /* -------------------------------------------------------------- ASISTENTE */
-function GlassHeader({ nav, locale, identity }: { nav: NavItem[]; locale: Locale; identity: SiteIdentity }) {
+function GlassHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extra: NavItem[]; locale: Locale; identity: SiteIdentity }) {
   return (
     <header className="sticky top-0 z-40 bg-[var(--nav-bg)] px-4 py-4">
       <div className="mx-auto flex max-w-3xl items-center gap-4 rounded-full border border-[var(--border)] bg-[var(--nav-bg)] px-5 py-2.5 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.9)]">
@@ -290,7 +295,7 @@ function GlassHeader({ nav, locale, identity }: { nav: NavItem[]; locale: Locale
           <Link href={localePath(locale, "/buscar")} className="lx-link text-[var(--accent)]">
             {t(locale, "nav.search")}
           </Link>
-          <MoreMenu locale={locale} />
+          <MoreMenu locale={locale} extra={extra} />
         </nav>
       </div>
     </header>
@@ -298,7 +303,7 @@ function GlassHeader({ nav, locale, identity }: { nav: NavItem[]; locale: Locale
 }
 
 /* ---------------------------------------------------------- INSTITUCIONAL */
-function CrestHeader({ nav, locale, identity }: { nav: NavItem[]; locale: Locale; identity: SiteIdentity }) {
+function CrestHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extra: NavItem[]; locale: Locale; identity: SiteIdentity }) {
   return (
     <header className="relative z-40 border-b-2 border-[var(--accent)] bg-[var(--nav-bg)] sm:sticky sm:top-0">
       <div className="mx-auto max-w-5xl px-6 py-8 text-center">
@@ -326,14 +331,14 @@ function CrestHeader({ nav, locale, identity }: { nav: NavItem[]; locale: Locale
             </Link>
           ))}
         </div>
-        <MoreMenu locale={locale} />
+        <MoreMenu locale={locale} extra={extra} />
         </nav>
     </header>
   );
 }
 
 /* ---------------------------------------------------------------- ARCHIVO */
-function ArchiveHeader({ nav, locale, identity }: { nav: NavItem[]; locale: Locale; identity: SiteIdentity }) {
+function ArchiveHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extra: NavItem[]; locale: Locale; identity: SiteIdentity }) {
   return (
     <header className="sticky top-0 z-40 border-b border-[var(--border)] bg-[var(--nav-bg)]">
       <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-4 px-6 py-5">
@@ -353,7 +358,7 @@ function ArchiveHeader({ nav, locale, identity }: { nav: NavItem[]; locale: Loca
           <Link href={localePath(locale, "/buscar")} className="lx-link text-[var(--accent)]">
             {t(locale, "nav.search")}
           </Link>
-          <MoreMenu locale={locale} />
+          <MoreMenu locale={locale} extra={extra} />
         </nav>
       </div>
     </header>

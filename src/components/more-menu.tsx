@@ -11,7 +11,14 @@ import { localePath, t, type Locale } from "@/lib/i18n";
  * de enlaces —institucionales, legales y comerciales— vive aquí. Es el mismo
  * conjunto que el pie, para que el lector encuentre lo mismo en ambos sitios.
  */
-export function MoreMenu({ locale }: { locale: Locale }) {
+export function MoreMenu({
+  locale,
+  extra = [],
+}: {
+  locale: Locale;
+  /** Secciones que no caben en la barra principal (N-04). */
+  extra?: { href: string; label: string }[];
+}) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -49,6 +56,23 @@ export function MoreMenu({ locale }: { locale: Locale }) {
           role="menu"
           className="absolute right-0 top-full z-50 mt-1 w-[16rem] overflow-hidden rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] py-2 text-left shadow-[var(--shadow)]"
         >
+          {extra.length > 0 && (
+            <>
+              {extra.map((e) => (
+                <Link
+                  key={e.href}
+                  role="menuitem"
+                  href={localePath(locale, e.href)}
+                  onClick={() => setOpen(false)}
+                  className="lx-ui block px-4 py-2.5 text-[0.8rem] normal-case tracking-normal text-[var(--fg)] transition hover:bg-[var(--surface-2)] hover:text-[var(--accent)]"
+                >
+                  {e.label}
+                </Link>
+              ))}
+              <span aria-hidden className="my-1.5 block h-px bg-[var(--border)]" />
+            </>
+          )}
+
           {/* El acceso al panel va aquí además de en el pie: desde el menú
               «Más» está a un clic en cualquier plantilla y también en móvil,
               donde el enlace de la cabecera se oculta por falta de espacio. */}

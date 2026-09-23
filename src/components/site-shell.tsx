@@ -64,7 +64,11 @@ export async function SiteShell({
   /** Idioma de la INTERFAZ (el contenido sigue en español). */
   locale?: Locale;
 }) {
-  const [nav, identity] = await Promise.all([navItems(locale), getSiteIdentity()]);
+  const [nav, extraNav, identity] = await Promise.all([
+    navItems(locale),
+    navOverflow(locale),
+    getSiteIdentity(),
+  ]);
   const shell = SHELL[variant];
 
   return (
@@ -77,7 +81,7 @@ export async function SiteShell({
       )}
       {/* Última hora por encima de todo: si hay urgencia, es lo primero. */}
       <BreakingBar locale={locale} />
-      <SiteHeader theme={theme} nav={nav} locale={locale} identity={identity} />
+      <SiteHeader theme={theme} nav={nav} extraNav={extraNav} locale={locale} identity={identity} />
       <main id="contenido" className={mainClassName ?? shell.main}>
         {/* Honestidad con el lector: la interfaz cambia de idioma, las notas no. */}
         {locale === "en" && (
@@ -99,12 +103,25 @@ export async function SiteShell({
   );
 }
 
+/** Secciones a partir de la novena: no caben en la barra, van al menú «Más». */
+export async function navOverflow(locale: Locale = DEFAULT_LOCALE): Promise<NavItem[]> {
+  try {
+    const categories = await getTopLevelCategories();
+    return categories.slice(8).map((c) => ({
+      href: `/categoria/${c.slug}`,
+      label: categoryLabel(locale, c.slug, c.name),
+    }));
+  } catch {
+    return [];
+  }
+}
+
 export async function navItems(locale: Locale = DEFAULT_LOCALE): Promise<NavItem[]> {
   try {
-    // Solo las de primer nivel: las subcategorías se navegan desde los filtros
-    // de la propia sección, no desde la barra.
+    // Solo las de primer nivel, y como mucho ocho (N-04): más opciones
+    // visibles sobrecargan la navegación. El resto está en el menú «Más».
     const categories = await getTopLevelCategories();
-    return categories.map((c) => ({
+    return categories.slice(0, 8).map((c) => ({
       href: `/categoria/${c.slug}`,
       label: categoryLabel(locale, c.slug, c.name),
     }));
