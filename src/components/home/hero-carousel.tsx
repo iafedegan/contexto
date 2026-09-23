@@ -49,9 +49,9 @@ export function HeroCarousel({
 
   return (
     <div onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}>
-      {/* Ruptura a sangre completa: cancela el padding/max-width de `.shell`
-          usando el ancho del viewport, no del contenedor. */}
-      <div className="relative left-1/2 right-1/2 -mx-[50vw] w-screen">
+      {/* Ruptura a sangre completa (ver `.lx-fullbleed`): la anula el contenedor
+          `.lx-bleed-off` cuando la portada se pinta junto a la barra lateral. */}
+      <div className="lx-fullbleed">
         <div
           // Alto en vh (con techo) en vez de aspect-ratio: con la cabecera
           // fija arriba, una imagen que ocupe casi toda la altura del

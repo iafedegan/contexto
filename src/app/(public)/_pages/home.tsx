@@ -9,6 +9,7 @@ import {
 } from "@/components/home/templates";
 import { FeatureStrip } from "@/components/feature-strip";
 import { AdsBanner } from "@/components/ads-banner";
+import { SiteSidebar } from "@/components/site-sidebar";
 import { SiteShell } from "@/components/site-shell";
 import { getHomeLayoutConfig, getHomepageArticles } from "@/lib/content";
 import { DEFAULT_HOME_LAYOUT, splitHomeSlots } from "@/lib/home-layout";
@@ -91,20 +92,31 @@ async function HomePage({ locale }: { locale: Locale }) {
         </div>
       )}
 
-      {/* Cada plantilla se referencia por su nombre en el JSX (y no por un mapa
-          indexado en runtime) para no perder el límite cliente/servidor que
-          Next resuelve de forma estática. */}
-      {layout.templateId === "revista" ? (
-        <RevistaTemplate {...props} />
-      ) : layout.templateId === "compacto" ? (
-        <CompactoTemplate {...props} />
-      ) : layout.templateId === "vanguardia" ? (
-        <VanguardiaTemplate {...props} />
-      ) : layout.templateId === "clasico" ? (
-        <ClasicoTemplate {...props} />
-      ) : (
-        <EsmeraldaTemplate {...props} />
-      )}
+      {/* Cuerpo de la portada + barra lateral (§8). En pantallas menores de
+          1024 px la lateral baja al final, que es lo que pide M-05. */}
+      <div className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_19rem]">
+        <div className="lx-bleed-off min-w-0">
+          {/* Cada plantilla se referencia por su nombre en el JSX (y no por un
+              mapa indexado en runtime) para no perder el límite cliente/servidor
+              que Next resuelve de forma estática. */}
+          {layout.templateId === "revista" ? (
+            <RevistaTemplate {...props} />
+          ) : layout.templateId === "compacto" ? (
+            <CompactoTemplate {...props} />
+          ) : layout.templateId === "vanguardia" ? (
+            <VanguardiaTemplate {...props} />
+          ) : layout.templateId === "clasico" ? (
+            <ClasicoTemplate {...props} />
+          ) : (
+            <EsmeraldaTemplate {...props} />
+          )}
+
+          {/* Billboard entre el bloque destacado y el resto (§9.1). */}
+          <AdsBanner zone="home_billboard" className="mx-auto mt-14" />
+        </div>
+
+        <SiteSidebar locale={locale} />
+      </div>
 
       {/* Banda de llamada al asistente, común a todas las plantillas. */}
       <section className="lx-card lx-shine relative mt-20 overflow-hidden px-8 py-14 text-center">

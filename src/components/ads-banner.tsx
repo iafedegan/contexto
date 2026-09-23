@@ -45,6 +45,9 @@ function AdsCreative({
       width={width}
       height={height}
       className="h-auto w-full rounded-[var(--radius)] object-contain"
+      // Carga diferida obligatoria del §9.2: la publicidad nunca debe competir
+      // con el contenido por el ancho de banda inicial ni empeorar el LCP.
+      loading="lazy"
       unoptimized
     />
   );

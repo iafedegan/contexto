@@ -2,6 +2,7 @@ import { getTopLevelCategories } from "@/lib/content";
 import { getSiteIdentity } from "@/lib/site-identity";
 import { ReadingProgress } from "@/components/reading-progress";
 import { BreakingBar } from "@/components/breaking-bar";
+import { AdsBanner } from "@/components/ads-banner";
 import { SiteHeader, type NavItem } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import type { Theme } from "@/lib/theme";
@@ -89,6 +90,10 @@ export async function SiteShell({
         )}
         {children}
       </main>
+      {/* Leaderboard antes del pie (§9.1). Vacío = no ocupa espacio. */}
+      <div className="shell pb-10">
+        <AdsBanner zone="footer" className="mx-auto" />
+      </div>
       <SiteFooter theme={theme} nav={nav} locale={locale} identity={identity} />
     </div>
   );

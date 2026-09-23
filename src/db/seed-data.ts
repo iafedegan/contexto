@@ -403,8 +403,13 @@ export async function seed(db: AnyDb): Promise<{ created: boolean }> {
   await db
     .insert(schema.adsZones)
     .values([
-      { key: "home_top", name: "Home — banner superior" },
-      { key: "article_sidebar", name: "Artículo — barra lateral" },
+      { key: "home_top", name: "Portada — leaderboard superior (728×90)" },
+      { key: "home_billboard", name: "Portada — billboard bajo el hero (970×250)" },
+      { key: "home_grid", name: "Portada — rectángulo en la grilla (300×250)" },
+      { key: "sidebar_top", name: "Barra lateral — superior (300×250)" },
+      { key: "sidebar_sticky", name: "Barra lateral — media página fija (300×600)" },
+      { key: "article_sidebar", name: "Artículo — rectángulo (300×250)" },
+      { key: "footer", name: "Pie — leaderboard (728×90)" },
     ])
     .onConflictDoNothing();
 

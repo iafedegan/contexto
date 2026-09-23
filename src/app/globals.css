@@ -924,6 +924,23 @@ a {
    arriba: el mismo marcado sirve para las cinco plantillas.
    =========================================================================== */
 
+/* Ruptura a sangre del hero. Se declara como clase y no con utilidades para
+   poder anularla dentro de una columna: cuando la portada lleva barra lateral,
+   el hero debe quedarse en su columna en vez de invadir toda la ventana. */
+.lx-fullbleed {
+  position: relative;
+  left: 50%;
+  right: 50%;
+  margin-inline: -50vw;
+  width: 100vw;
+}
+.lx-bleed-off .lx-fullbleed {
+  left: auto;
+  right: auto;
+  margin-inline: 0;
+  width: 100%;
+}
+
 .shell {
   width: 100%;
   max-width: var(--maxw);

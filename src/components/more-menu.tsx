@@ -49,6 +49,9 @@ export function MoreMenu({ locale }: { locale: Locale }) {
           role="menu"
           className="absolute right-0 top-full z-50 mt-1 w-[16rem] overflow-hidden rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] py-2 text-left shadow-[var(--shadow)]"
         >
+          {/* El acceso al panel va aquí además de en el pie: desde el menú
+              «Más» está a un clic en cualquier plantilla y también en móvil,
+              donde el enlace de la cabecera se oculta por falta de espacio. */}
           {MENU_SECUNDARIO.map((m) => (
             <Link
               key={m.slug}
@@ -60,6 +63,16 @@ export function MoreMenu({ locale }: { locale: Locale }) {
               {m.label[locale]}
             </Link>
           ))}
+
+          <span aria-hidden className="my-1.5 block h-px bg-[var(--border)]" />
+          <Link
+            role="menuitem"
+            href="/panel"
+            onClick={() => setOpen(false)}
+            className="lx-ui block px-4 py-2.5 text-[0.8rem] font-semibold normal-case tracking-normal text-[var(--accent)] transition hover:bg-[var(--surface-2)]"
+          >
+            {t(locale, "footer.panel")}
+          </Link>
         </div>
       )}
     </div>
