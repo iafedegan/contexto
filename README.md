@@ -165,3 +165,18 @@ verificable). Tope diario configurable. Encolados vía Inngest
 - Cliente real de la API del archivo histórico (ajustar `src/lib/archive-client.ts` al contrato real).
 - Gestión de `ads_zones` y newsletter en el panel.
 - Tests e2e (Playwright) de los criterios de aceptación.
+
+## Tareas programadas y el plan de Vercel
+
+`vercel.json` declara dos crons con **frecuencia diaria**, que es el máximo que
+permite el plan Hobby. En cuanto el proyecto pase a Pro conviene devolverlos a
+su cadencia real, porque de ella depende que una nota programada se publique a
+su hora y no al día siguiente:
+
+```json
+{ "path": "/api/cron/publish-scheduled", "schedule": "*/5 * * * *" }
+{ "path": "/api/cron/sync-archive",      "schedule": "0 */6 * * *" }
+```
+
+Mientras tanto, la publicación programada puede dispararse a mano desde el
+panel o invocando el endpoint con la cabecera `Authorization: Bearer $CRON_SECRET`.
