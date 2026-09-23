@@ -1,8 +1,9 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Source_Sans_3, Source_Serif_4 } from "next/font/google";
 import { JsonLd } from "@/components/json-ld";
 import { organizationJsonLd } from "@/lib/seo";
 import { siteUrl } from "@/lib/utils";
+import { PwaRegister } from "@/components/pwa-register";
 import "./globals.css";
 
 const sans = Source_Sans_3({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
@@ -25,6 +26,19 @@ export const metadata: Metadata = {
   },
   openGraph: { type: "website", siteName: SITE_NAME, locale: "es_CO" },
   robots: { index: true, follow: true, "max-image-preview": "large" },
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: SITE_NAME,
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#1f6d3a" },
+    { media: "(prefers-color-scheme: dark)", color: "#121311" },
+  ],
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -32,6 +46,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="es-CO" className={`${sans.variable} ${serif.variable}`}>
       <body>
         <JsonLd data={organizationJsonLd()} />
+        <PwaRegister />
         {children}
       </body>
     </html>

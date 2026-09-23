@@ -27,6 +27,15 @@ const nextConfig: NextConfig = {
           { key: "X-DNS-Prefetch-Control", value: "on" },
         ],
       },
+      {
+        // El Service Worker debe revalidarse siempre: nunca servir una versión
+        // vieja de la lógica de caché offline desde un CDN/browser cache.
+        source: "/sw.js",
+        headers: [
+          { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
+          { key: "Service-Worker-Allowed", value: "/" },
+        ],
+      },
     ];
   },
 
