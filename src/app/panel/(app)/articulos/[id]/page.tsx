@@ -23,6 +23,8 @@ type Initial = {
   metaDescription: string | null;
   tags: string[];
   slug: string | null;
+  coverImageUrl: string | null;
+  coverImageAlt: string | null;
 };
 
 const EMPTY: Initial = {
@@ -36,6 +38,8 @@ const EMPTY: Initial = {
   metaDescription: null,
   tags: [],
   slug: null,
+  coverImageUrl: null,
+  coverImageAlt: null,
 };
 
 export default async function ArticleEditorPage({
@@ -69,6 +73,8 @@ export default async function ArticleEditorPage({
       metaDescription: row.metaDescription,
       tags: row.tags,
       slug: row.slug,
+      coverImageUrl: row.coverImageUrl,
+      coverImageAlt: row.coverImageAlt,
     };
     status = row.status;
   }

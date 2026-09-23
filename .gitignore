@@ -42,3 +42,4 @@ next-env.d.ts
 
 # base de datos local embebida
 .pglite/
+public/subidas/

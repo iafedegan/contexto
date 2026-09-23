@@ -73,9 +73,10 @@ export async function proxy(req: NextRequest) {
 
   // --- 2. Puerta del panel editorial ------------------------------------
   if (pathname.startsWith("/panel")) {
+    // Nombres propios del proyecto: ver `SESSION_COOKIE` en src/lib/auth.ts.
     const hasSession =
-      req.cookies.has("authjs.session-token") ||
-      req.cookies.has("__Secure-authjs.session-token");
+      req.cookies.has("contexto.session-token") ||
+      req.cookies.has("__Secure-contexto.session-token");
     if (!hasSession && pathname !== "/panel/login") {
       const url = new URL("/panel/login", req.url);
       url.searchParams.set("next", pathname);

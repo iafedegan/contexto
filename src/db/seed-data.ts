@@ -63,6 +63,7 @@ const ARTICLES: Array<{
   tags: string[];
   daysAgo: number;
   cover: string | null;
+  coverAlt?: string;
 }> = [
   {
     slug: "precio-novillo-gordo-sube-4-por-ciento-en-medellin",
@@ -74,7 +75,8 @@ const ARTICLES: Array<{
     author: "redaccion",
     tags: ["precios", "novillo gordo", "Antioquia", "subasta"],
     daysAgo: 1,
-    cover: null,
+    cover: "/fotos/precio-novillo-gordo-sube-4-por-ciento-en-medellin.jpg",
+    coverAlt: "Novillos en pastoreo",
   },
   {
     slug: "lluvias-de-agosto-mejoran-praderas-en-los-llanos-orientales",
@@ -86,7 +88,8 @@ const ARTICLES: Array<{
     author: "redaccion",
     tags: ["clima", "praderas", "Llanos", "Meta", "Casanare"],
     daysAgo: 3,
-    cover: null,
+    cover: "/fotos/lluvias-de-agosto-mejoran-praderas-en-los-llanos-orientales.jpg",
+    coverAlt: "Praderas verdes tras la temporada de lluvias",
   },
   {
     slug: "sistemas-silvopastoriles-ganan-terreno-en-el-caribe",
@@ -98,7 +101,8 @@ const ARTICLES: Array<{
     author: "maria-restrepo",
     tags: ["silvopastoril", "sostenibilidad", "Córdoba", "Sucre", "leche"],
     daysAgo: 5,
-    cover: null,
+    cover: "/fotos/sistemas-silvopastoriles-ganan-terreno-en-el-caribe.jpg",
+    coverAlt: "Ganado bajo árboles en un sistema silvopastoril",
   },
   {
     slug: "gobierno-y-gremios-negocian-nuevo-esquema-de-vacunacion",
@@ -110,7 +114,8 @@ const ARTICLES: Array<{
     author: "redaccion",
     tags: ["vacunación", "fiebre aftosa", "ICA", "brucelosis", "política"],
     daysAgo: 7,
-    cover: null,
+    cover: "/fotos/gobierno-y-gremios-negocian-nuevo-esquema-de-vacunacion.jpg",
+    coverAlt: "Vacunación de bovinos en finca",
   },
   {
     slug: "seleccion-genetica-por-eficiencia-alimenticia-en-el-tropico",
@@ -122,7 +127,8 @@ const ARTICLES: Array<{
     author: "maria-restrepo",
     tags: ["genética", "Brahman", "eficiencia alimenticia", "trópico"],
     daysAgo: 10,
-    cover: null,
+    cover: "/fotos/seleccion-genetica-por-eficiencia-alimenticia-en-el-tropico.jpg",
+    coverAlt: "Toro cebú de núcleo de selección",
   },
   {
     slug: "exportaciones-de-carne-bovina-crecen-en-el-tercer-trimestre",
@@ -134,7 +140,8 @@ const ARTICLES: Array<{
     author: "redaccion",
     tags: ["exportaciones", "carne bovina", "comercio exterior"],
     daysAgo: 12,
-    cover: null,
+    cover: "/fotos/exportaciones-de-carne-bovina-crecen-en-el-tercer-trimestre.jpg",
+    coverAlt: "Carne bovina lista para despacho",
   },
   {
     slug: "el-reto-de-relevo-generacional-en-la-ganaderia-columna",
@@ -146,7 +153,8 @@ const ARTICLES: Array<{
     author: "jorge-medina",
     tags: ["opinión", "relevo generacional", "campo"],
     daysAgo: 15,
-    cover: null,
+    cover: "/fotos/el-reto-de-relevo-generacional-en-la-ganaderia-columna.jpg",
+    coverAlt: "Ganadero joven en faenas de finca",
   },
   {
     slug: "pequenos-productores-de-leche-enfrentan-alza-en-costos-de-insumos",
@@ -158,7 +166,8 @@ const ARTICLES: Array<{
     author: "redaccion",
     tags: ["leche", "costos", "insumos", "Cundinamarca", "Boyacá"],
     daysAgo: 18,
-    cover: null,
+    cover: "/fotos/pequenos-productores-de-leche-enfrentan-alza-en-costos-de-insumos.jpg",
+    coverAlt: "Ordeño en una finca lechera",
   },
 ];
 
@@ -220,16 +229,21 @@ export async function seed(db: AnyDb): Promise<{ created: boolean }> {
   const adminPass = process.env.SEED_ADMIN_PASSWORD ?? "contexto2026";
   const redactorEmail = "redactor@contextoganadero.com";
 
+  // Ids fijos a propósito: la BD local se recrea en cada arranque y, con ids
+  // aleatorios, la sesión guardada en el navegador apuntaba a un usuario que
+  // ya no existía. Con ids estables la sesión sobrevive al reinicio.
   await db
     .insert(schema.users)
     .values([
       {
+        id: "00000000-0000-4000-8000-000000000001",
         email: adminEmail,
         name: "Ana Gómez",
         role: "administrador",
         passwordHash: await bcrypt.hash(adminPass, 10),
       },
       {
+        id: "00000000-0000-4000-8000-000000000002",
         email: redactorEmail,
         name: "Luis Parra",
         role: "redactor",
@@ -273,6 +287,7 @@ export async function seed(db: AnyDb): Promise<{ created: boolean }> {
       excerpt: a.excerpt,
       body: a.body,
       coverImageUrl: a.cover,
+      coverImageAlt: a.coverAlt ?? null,
       categoryId: catId(a.cat),
       authorId: authorId(a.author),
       status: "publicado" as const,

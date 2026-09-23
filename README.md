@@ -49,6 +49,57 @@ español) → `db:seed`.
 
 ---
 
+## Sistema de plantillas (diseño)
+
+Cada plantilla es un **tema completo**: paleta, tipografías, radios, sombras,
+texturas, navbar, tarjetas y footer propios. El tema se activa con
+`<SiteShell theme="…">` (`src/components/site-shell.tsx`), que fija
+`data-theme` y monta la pareja navbar/footer correspondiente. Los tokens viven
+en `src/app/globals.css`; las tipografías se descargan y auto-hospedan en build
+con `next/font` desde `src/app/fonts.ts`.
+
+### Plantillas de portada (elegibles en `/panel/portada`)
+
+La portada no tiene un diseño fijo: un editor elige su plantilla en
+`/panel/portada`, y esa elección es también el **tema** de la página — cambian
+cuadrícula, componentes, cabecera, pie, paleta y tipografías. Desde ahí se
+arrastran las notas para fijar su orden (`articles.homePosition`) y se ajusta el
+estilo de cada tarjeta (`articles.homeStyle`).
+
+| Plantilla | Qué la distingue |
+|---|---|
+| **Esmeralda Real** | Obsidiana verde y pan de oro: cintillo de titulares, apertura a sangre, columna «Lo último» numerada |
+| **Clásico** | Broadsheet de papel crema: cinta de destacados, principal + «En breve», capitular y filete rojo |
+| **Revista** | Hero cinematográfico con carrusel y efecto Ken Burns, negro y oro, carrusel de arrastre |
+| **Compacto** | Cuadrícula técnica blanca y zafiro: fichas numeradas, máxima densidad de notas |
+| **Vanguardia** | Bento oscuro y asimétrico, orbes de gradiente, vidrio y coral → violeta |
+
+### Plantillas de ruta
+
+| Ruta | Tema | Navbar | Tipografías |
+|---|---|---|---|
+| `/` | La elegida en `/panel/portada` (5 opciones) | La de su plantilla | Las de su plantilla |
+| `/articulo/[slug]` | Marfil & Burdeos | Barra fija con progreso de lectura | Bodoni Moda · Spectral |
+| `/categoria/[slug]` | Cobre & Obsidiana | Barra flotante con nav en píldoras | Syne · Space Grotesk |
+| `/autor/[slug]` | Champán & Perla | Centrada, capitales espaciadas | Cormorant Garamond · Jost |
+| `/buscar` | Zafiro Medianoche | Barra tipo consola | Space Grotesk · JetBrains Mono |
+| `/asistente` | Obsidiana & Aurora | Píldora de cristal flotante | Outfit · JetBrains Mono |
+| `/politica-editorial` | Mármol & Verde Botella | Institucional con sello | Marcellus · Source Serif 4 |
+| `404` | Sepia & Ámbar | Mínima con etiqueta de archivo | Marcellus · Jost |
+| `/panel/**` | Grafito & Jade | Barra de herramienta densa | Space Grotesk · Inter Tight |
+| `/panel/login` | Platino | Sin navbar (vestíbulo) | Outfit · JetBrains Mono |
+
+Efectos compartidos (`lx-*` en `globals.css`): grano, aurora animada, viñeta,
+barrido de luz en tarjetas, marco interior metálico, texto con lámina de oro,
+aparición al hacer scroll (`animation-timeline: view()`) y capitular en el
+cuerpo del artículo. Todo respeta `prefers-reduced-motion`.
+
+Los artículos sin imagen reciben una **portada generada** determinista
+(`src/components/cover-art.tsx`): malla de degradados en `oklch` sobre una
+paleta curada + monograma.
+
+---
+
 ## Cómo el código implementa los principios de arquitectura
 
 | # | Principio | Dónde |

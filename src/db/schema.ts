@@ -8,6 +8,7 @@
  * hay que recrear las columnas `embedding` y sus índices HNSW.
  */
 import { relations, sql } from "drizzle-orm";
+import type { HomeTitleFont } from "@/lib/home-fonts";
 import {
   boolean,
   date,
@@ -26,6 +27,27 @@ import {
 } from "drizzle-orm/pg-core";
 
 export const EMBEDDING_DIMENSIONS = 1536;
+
+/**
+ * Estilo manual de una tarjeta en /panel/portada. Todo opcional: lo que no se
+ * fija usa el look por defecto de la sección donde caiga la nota.
+ */
+export type HomeStyle = {
+  /** Tamaño del bloque: cuánto texto/imagen se muestra. */
+  size?: "sm" | "md" | "lg";
+  /** Columnas ocupadas en la cuadrícula "Lo más reciente" (1 o 2). */
+  span?: 1 | 2;
+  /** Familia del titular: ver `HOME_FONTS` en src/lib/home-fonts.ts. */
+  font?: HomeTitleFont;
+  bold?: boolean;
+  italic?: boolean;
+  /** Escala del titular en % sobre el tamaño de su sección (80-150). */
+  titleScale?: number;
+  /** Escala de la imagen en % (40-100): la encoge dentro de la tarjeta. */
+  imageScale?: number;
+  /** Color del titular (#rrggbb). Sin valor = el del tema de la plantilla. */
+  color?: string;
+};
 
 // --- Enums -----------------------------------------------------------------
 
@@ -144,11 +166,19 @@ export const articles = pgTable(
     originDraftId: uuid("origin_draft_id"),
     // Embedding del título + excerpt + body (recorte) para búsqueda híbrida.
     embedding: vector("embedding", { dimensions: EMBEDDING_DIMENSIONS }),
+    // Posición manual en la portada (0 = principal, 1 = secundaria, 2..5 =
+    // "en breve", 6+ = río). null = no está fijado; se ordena por fecha.
+    // La gestiona el editor desde /panel/portada (drag & drop).
+    homePosition: integer("home_position"),
+    // Estilo manual de la tarjeta (tamaño, tipografía, negrilla/cursiva,
+    // escala de imagen…). null = todo por defecto. Ver tipo `HomeStyle`.
+    homeStyle: jsonb("home_style").$type<HomeStyle>(),
   },
   (t) => [
     index("articles_status_published_idx").on(t.status, t.publishedAt),
     index("articles_category_idx").on(t.categoryId),
     index("articles_scheduled_idx").on(t.scheduledFor),
+    index("articles_home_position_idx").on(t.homePosition),
     // Índice vectorial HNSW (coseno). Se crea en migración manual porque
     // drizzle-kit aún no emite `USING hnsw` de forma estable.
   ],
@@ -312,6 +342,48 @@ export const redirects = pgTable(
   },
   (t) => [uniqueIndex("redirects_from_idx").on(t.fromPath)],
 );
+
+// --- Ajustes de sitio (clave/valor) --------------------------------
+// Mecanismo genérico para configuración editable desde el panel que no es
+// contenido (p. ej. el diseño de las secciones de portada). Una fila por
+// clave; `value` es JSON libre e interpretado por quien lo lee.
+
+export const siteSettings = pgTable("site_settings", {
+  key: text("key").primaryKey(),
+  value: jsonb("value").notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/**
+ * Fondo de la portada, elegido por un editor en /panel/portada. Se aplica a
+ * TODA la plantilla (cabecera, contenido y pie), sobrescribiendo los tokens
+ * de color del tema con variables CSS en línea.
+ */
+export type HomeBackground = {
+  /** "theme" = el del tema de la plantilla; "solid" = un color; "gradient" = degradado. */
+  mode: "theme" | "solid" | "gradient";
+  /** Color sólido, o primer punto del degradado. */
+  from?: string;
+  /** Segundo punto del degradado. */
+  to?: string;
+  /** Ángulo del degradado en grados (0 = de abajo a arriba). */
+  angle?: number;
+};
+
+/** Valor de site_settings con key = "home_layout": plantilla visual de la
+ * portada + ajustes finos de sus secciones. */
+export type HomeLayoutConfig = {
+  /** Plantilla: decide componentes, efectos y tipografía (no solo columnas). */
+  templateId?: "esmeralda" | "clasico" | "revista" | "compacto" | "vanguardia";
+  /** "En breve" en la plantilla Clásico: lista vertical o fila horizontal. */
+  breveDirection?: "vertical" | "horizontal";
+  /** Columnas cuando "En breve" es horizontal (2-4). */
+  breveColumns?: number;
+  /** Columnas de la cuadrícula "Lo más reciente" en escritorio (2-4). */
+  riverColumns?: number;
+  /** Fondo de la plantilla (color sólido o degradado). */
+  background?: HomeBackground;
+};
 
 // --- Relaciones ---------------------------------------------------
 

@@ -1,4 +1,5 @@
 import "server-only";
+import { redirect } from "next/navigation";
 import NextAuth, { type DefaultSession } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { eq } from "drizzle-orm";
@@ -16,7 +17,45 @@ declare module "next-auth" {
   }
 }
 
+/**
+ * En producción el secreto viene siempre de `AUTH_SECRET`. En el MVP local
+ * (sin `.env.local`) se usa un secreto fijo de desarrollo para que el panel
+ * funcione sin configuración; nunca se aplica fuera de `next dev`.
+ */
+const secret =
+  process.env.AUTH_SECRET ??
+  (process.env.NODE_ENV === "development" ? "contexto-ganadero-dev-secret" : undefined);
+
+/**
+ * Nombre de cookie propio del proyecto. Las cookies ignoran el puerto: varias
+ * apps Next en `localhost` comparten jar y se pisan la `authjs.session-token`
+ * entre sí, dejando al panel en un bucle /panel → /panel/login. Con prefijo
+ * propio cada app conserva su sesión.
+ */
+const COOKIE_PREFIX = "contexto";
+const useSecureCookies = process.env.NODE_ENV === "production";
+export const SESSION_COOKIE = `${COOKIE_PREFIX}.session-token`;
+export const SESSION_COOKIE_SECURE = `__Secure-${COOKIE_PREFIX}.session-token`;
+
 export const { handlers, signIn, signOut, auth } = NextAuth({
+  secret,
+  trustHost: true,
+  cookies: {
+    sessionToken: {
+      name: useSecureCookies ? SESSION_COOKIE_SECURE : SESSION_COOKIE,
+      options: { httpOnly: true, sameSite: "lax", path: "/", secure: useSecureCookies },
+    },
+    csrfToken: {
+      name: useSecureCookies ? `__Host-${COOKIE_PREFIX}.csrf-token` : `${COOKIE_PREFIX}.csrf-token`,
+      options: { httpOnly: true, sameSite: "lax", path: "/", secure: useSecureCookies },
+    },
+    callbackUrl: {
+      name: useSecureCookies
+        ? `__Secure-${COOKIE_PREFIX}.callback-url`
+        : `${COOKIE_PREFIX}.callback-url`,
+      options: { sameSite: "lax", path: "/", secure: useSecureCookies },
+    },
+  },
   session: { strategy: "jwt", maxAge: 60 * 60 * 8 },
   pages: { signIn: "/panel/login" },
   providers: [
@@ -30,19 +69,36 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const email = String(creds?.email ?? "").toLowerCase().trim();
         const password = String(creds?.password ?? "");
         const totp = String(creds?.totp ?? "").trim();
-        if (!email || !password) return null;
+
+        /**
+         * Hacia fuera, cualquier fallo es indistinguible: decir "ese correo no
+         * existe" permitiría enumerar cuentas. Hacia dentro se registra el
+         * motivo real en la consola del servidor, que es donde el equipo puede
+         * verlo, porque un único mensaje genérico hace imposible distinguir una
+         * clave mal tecleada de una cuenta desactivada o de un 2FA pendiente.
+         */
+        const rechazar = (motivo: string) => {
+          console.warn(`[login] rechazado (${email || "sin correo"}): ${motivo}`);
+          return null;
+        };
+
+        if (!email || !password) return rechazar("faltan correo o contraseña");
 
         const [u] = await db.select().from(users).where(eq(users.email, email)).limit(1);
-        if (!u || !u.active || !u.passwordHash) return null;
+        if (!u) return rechazar("no hay ninguna cuenta con ese correo");
+        if (!u.active) return rechazar("la cuenta está desactivada");
+        if (!u.passwordHash) return rechazar("la cuenta no tiene contraseña definida");
 
         const ok = await bcrypt.compare(password, u.passwordHash);
-        if (!ok) return null;
+        if (!ok) return rechazar("contraseña incorrecta");
 
         // Segundo factor obligatorio si está habilitado para la cuenta.
         if (u.totpEnabled) {
-          if (!u.totpSecret || !totp) return null;
-          const valid = verifyTotp({ token: totp, secret: u.totpSecret }).valid;
-          if (!valid) return null;
+          if (!u.totpSecret) return rechazar("2FA activado pero sin secreto guardado");
+          if (!totp) return rechazar("falta el código de verificación (2FA)");
+          if (!verifyTotp({ token: totp, secret: u.totpSecret }).valid) {
+            return rechazar("código de verificación incorrecto");
+          }
         }
 
         return { id: u.id, name: u.name, email: u.email, role: u.role };
@@ -75,9 +131,35 @@ const ROLE_RANK: Record<UserRole, number> = {
 
 export async function requireRole(min: UserRole) {
   const session = await auth();
-  if (!session?.user) throw new Error("NO_AUTENTICADO");
+  if (!session?.user) redirect("/panel/login");
   if (ROLE_RANK[session.user.role] < ROLE_RANK[min]) throw new Error("SIN_PERMISO");
-  return session.user;
+
+  // La sesión JWT sobrevive a la cuenta: en local la BD se recrea en cada
+  // arranque y los ids cambian, aunque el correo siga siendo el mismo. Se
+  // valida por id y, si no aparece, se reconcilia por correo (estable) para
+  // no echar al editor de una sesión que sigue siendo legítima.
+  const [byId] = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.id, session.user.id))
+    .limit(1);
+  if (byId) return session.user;
+
+  const email = session.user.email?.toLowerCase().trim();
+  if (email) {
+    const [byEmail] = await db
+      .select({ id: users.id, role: users.role, active: users.active })
+      .from(users)
+      .where(eq(users.email, email))
+      .limit(1);
+    if (byEmail?.active && ROLE_RANK[byEmail.role] >= ROLE_RANK[min]) {
+      return { ...session.user, id: byEmail.id, role: byEmail.role };
+    }
+  }
+
+  // La cuenta ya no existe: login limpio en vez de una excepción en mitad de
+  // una Server Action.
+  redirect("/panel/login");
 }
 
 export function canPublish(role: UserRole): boolean {

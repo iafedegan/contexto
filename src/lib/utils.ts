@@ -20,7 +20,12 @@ export function slugify(input: string): string {
     .slice(0, 96);
 }
 
-export function formatDate(date: Date | string, locale = "es-CO"): string {
+/**
+ * Fecha larga. El idioma viene de la INTERFAZ, no del contenido: en la versión
+ * inglesa del sitio "19 de septiembre de 2026" se lee "September 19, 2026",
+ * aunque la nota siga en español.
+ */
+export function formatDate(date: Date | string, locale: string = "es-CO"): string {
   const d = typeof date === "string" ? new Date(date) : date;
   return new Intl.DateTimeFormat(locale, {
     year: "numeric",

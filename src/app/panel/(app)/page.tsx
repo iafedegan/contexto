@@ -25,8 +25,11 @@ export default async function PanelHome() {
   const statusMap = Object.fromEntries(byStatus.map((r) => [r.status, r.n]));
 
   return (
-    <div className="flex flex-col gap-6">
-      <h1 className="text-xl font-bold">Resumen editorial</h1>
+    <div className="flex flex-col gap-8">
+      <header>
+        <p className="lx-kicker text-[var(--accent)]">Panel editorial</p>
+        <h1 className="lx-display mt-2 text-3xl font-semibold tracking-tight">Resumen editorial</h1>
+      </header>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Stat label="Publicados" value={statusMap["publicado"] ?? 0} />
         <Stat label="En revisión" value={statusMap["en_revision"] ?? 0} />
@@ -35,20 +38,18 @@ export default async function PanelHome() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <Card>
-          <p className="text-sm text-[var(--fg-muted)]">Borradores de IA pendientes de aprobación</p>
-          <p className="mt-1 text-3xl font-bold">{pendingDrafts[0]?.n ?? 0}</p>
-          <Link href="/panel/borradores-ia" className="mt-2 inline-block text-sm text-[var(--link)] underline">
-            Revisar cola →
-          </Link>
-        </Card>
-        <Card>
-          <p className="text-sm text-[var(--fg-muted)]">Preguntas al asistente (7 días)</p>
-          <p className="mt-1 text-3xl font-bold">{queries7d[0]?.n ?? 0}</p>
-          <Link href="/panel/demanda" className="mt-2 inline-block text-sm text-[var(--link)] underline">
-            Ver demanda informativa →
-          </Link>
-        </Card>
+        <Highlight
+          label="Borradores de IA pendientes de aprobación"
+          value={pendingDrafts[0]?.n ?? 0}
+          href="/panel/borradores-ia"
+          cta="Revisar cola"
+        />
+        <Highlight
+          label="Preguntas al asistente (7 días)"
+          value={queries7d[0]?.n ?? 0}
+          href="/panel/demanda"
+          cta="Ver demanda informativa"
+        />
       </div>
     </div>
   );
@@ -56,9 +57,36 @@ export default async function PanelHome() {
 
 function Stat({ label, value }: { label: string; value: number }) {
   return (
-    <Card>
-      <p className="text-sm text-[var(--fg-muted)]">{label}</p>
-      <p className="mt-1 text-3xl font-bold">{value}</p>
+    <Card className="lx-shine p-6">
+      <p className="lx-kicker text-[var(--fg-muted)]">{label}</p>
+      <p className="lx-display mt-3 text-4xl font-semibold tabular-nums">{value}</p>
+    </Card>
+  );
+}
+
+function Highlight({
+  label,
+  value,
+  href,
+  cta,
+}: {
+  label: string;
+  value: number;
+  href: string;
+  cta: string;
+}) {
+  return (
+    <Card className="lx-shine group p-6">
+      <p className="lx-kicker text-[var(--fg-muted)]">{label}</p>
+      <p className="lx-display mt-3 text-5xl font-semibold tabular-nums text-[var(--accent)]">
+        {value}
+      </p>
+      <Link href={href} className="lx-link mt-4 inline-flex items-center gap-2 text-sm">
+        {cta}
+        <span aria-hidden className="transition-transform duration-500 group-hover:translate-x-1">
+          →
+        </span>
+      </Link>
     </Card>
   );
 }

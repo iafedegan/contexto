@@ -1,44 +1,318 @@
 import Link from "next/link";
-import Image from "next/image";
 import type { ArticleListItem } from "@/lib/content";
+import { CardMedia } from "@/components/cover-art";
 import { formatDate } from "@/lib/utils";
+import { homeStyleImageScale, homeStyleTitleCss } from "@/lib/home-style";
+import { DEFAULT_LOCALE, INTL_LOCALE, categoryLabel, localePath, type Locale } from "@/lib/i18n";
 
-export function ArticleCard({ a, priority = false }: { a: ArticleListItem; priority?: boolean }) {
+export type CardVariant = "lead" | "gold" | "copper" | "pearl" | "rail";
+
+/**
+ * Tamaño base del titular por variante, en px. El estilo por tarjeta fijado en
+ * /panel/portada (fuente, negrilla, cursiva, escala) se aplica SOBRE esta base,
+ * así un mismo ajuste se ve proporcionado en la apertura y en la rejilla.
+ */
+const TITLE_PX: Record<CardVariant, number> = {
+  lead: 44,
+  gold: 20,
+  copper: 24,
+  pearl: 24,
+  rail: 18,
+};
+
+/** Estilo resuelto de una tarjeta: titular, imagen y densidad del bloque. */
+function cardStyle(a: ArticleListItem, variant: CardVariant) {
+  const size = a.homeStyle?.size ?? null;
+  return {
+    title: homeStyleTitleCss(a.homeStyle, TITLE_PX[variant], variant === "lead" ? 1.08 : 1.2),
+    imageScale: homeStyleImageScale(a.homeStyle),
+    // "S" comprime el bloque (sin imagen ni resumen); "L" lo abre.
+    hideMedia: size === "sm",
+    hideExcerpt: size === "sm",
+    excerptClamp: size === "lg" ? "line-clamp-4" : "line-clamp-2",
+  };
+}
+
+/** Envoltura que aplica la escala de imagen elegida en el panel. */
+function mediaScaleStyle(scale: number): React.CSSProperties | undefined {
+  return scale === 100 ? undefined : { width: `${scale}%`, marginInline: "auto" };
+}
+
+type Props = {
+  a: ArticleListItem;
+  variant?: CardVariant;
+  priority?: boolean;
+  index?: number;
+  /** Idioma de la interfaz: fechas, «Por» y nombres de sección. */
+  locale?: Locale;
+};
+
+/** Tarjeta editorial. Cada plantilla usa la variante que le corresponde. */
+export function ArticleCard({
+  a,
+  variant = "gold",
+  priority = false,
+  index,
+  locale = DEFAULT_LOCALE,
+}: Props) {
+  switch (variant) {
+    case "lead":
+      return <LeadCard a={a} priority={priority} locale={locale} />;
+    case "copper":
+      return <CopperCard a={a} index={index} locale={locale} />;
+    case "pearl":
+      return <PearlCard a={a} locale={locale} />;
+    case "rail":
+      return <RailCard a={a} index={index} locale={locale} />;
+    default:
+      return <GoldCard a={a} priority={priority} locale={locale} />;
+  }
+}
+
+function Meta({
+  a,
+  locale,
+  className = "",
+}: {
+  a: ArticleListItem;
+  locale: Locale;
+  className?: string;
+}) {
   return (
-    <article className="group flex flex-col gap-2">
-      <Link href={`/articulo/${a.slug}`} className="block overflow-hidden rounded-[var(--radius)]">
-        {a.coverImageUrl ? (
-          <Image
+    <p className={`text-xs text-[var(--fg-muted)] ${className}`}>
+      {a.authorName ? `${a.authorName} · ` : ""}
+      {a.publishedAt ? formatDate(a.publishedAt, INTL_LOCALE[locale]) : ""}
+    </p>
+  );
+}
+
+function Kicker({
+  a,
+  locale,
+  className = "",
+}: {
+  a: ArticleListItem;
+  locale: Locale;
+  className?: string;
+}) {
+  if (!a.categorySlug) return null;
+  return (
+    <Link
+      href={localePath(locale, `/categoria/${a.categorySlug}`)}
+      className={`lx-kicker ${className}`}
+    >
+      {categoryLabel(locale, a.categorySlug, a.categoryName ?? "")}
+    </Link>
+  );
+}
+
+/* --------------------------------------------- Portada: pieza de apertura */
+function LeadCard({ a, priority, locale }: { a: ArticleListItem; priority?: boolean; locale: Locale }) {
+  const st = cardStyle(a, "lead");
+  return (
+    <article className="lx-card lx-reveal group relative">
+      <div className="lx-shine pointer-events-none absolute inset-0 z-[3]" />
+      <div className="lx-inlay pointer-events-none absolute inset-0 z-[2]" />
+      <Link
+        href={localePath(locale, `/articulo/${a.slug}`)}
+        className="block"
+        aria-label={a.title}
+        tabIndex={-1}
+        style={mediaScaleStyle(st.imageScale)}
+      >
+        <CardMedia
+          src={a.coverImageUrl}
+          alt={a.coverImageAlt ?? a.title}
+          seed={a.slug}
+          label={a.categoryName ?? a.title}
+          ratio="aspect-[16/11]"
+          priority={priority}
+          sizes="(min-width: 768px) 60vw, 100vw"
+        />
+      </Link>
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 hidden h-3/4 bg-gradient-to-t from-[var(--bg)] via-[var(--bg)]/80 to-transparent md:block" />
+      <div className="relative z-[4] p-6 md:absolute md:inset-x-0 md:bottom-0 md:p-9">
+        <Kicker a={a} locale={locale} className="text-[var(--accent)]" />
+        <h2
+          className="lx-display mt-3 text-2xl font-semibold leading-[1.12] tracking-tight sm:text-3xl md:text-[2.75rem]"
+          style={st.title}
+        >
+          <Link href={localePath(locale, `/articulo/${a.slug}`)} className="transition-colors hover:text-[var(--link)]">
+            {a.title}
+          </Link>
+        </h2>
+        {!st.hideExcerpt && (
+          <p
+            className={`mt-3 max-w-xl text-sm leading-relaxed text-[var(--fg-muted)] md:text-base ${st.excerptClamp}`}
+          >
+            {a.excerpt}
+          </p>
+        )}
+        <Meta a={a} locale={locale} className="mt-4" />
+      </div>
+    </article>
+  );
+}
+
+/* ------------------------------------------- Portada: rejilla pan de oro */
+function GoldCard({ a, priority, locale }: { a: ArticleListItem; priority?: boolean; locale: Locale }) {
+  const st = cardStyle(a, "gold");
+  return (
+    <article className="lx-card lx-reveal group flex h-full flex-col">
+      <div className="lx-shine absolute inset-0 z-[3]" />
+      {!st.hideMedia && (
+        <Link
+          href={localePath(locale, `/articulo/${a.slug}`)}
+          className="relative block"
+          style={mediaScaleStyle(st.imageScale)}
+        >
+          <CardMedia
             src={a.coverImageUrl}
             alt={a.coverImageAlt ?? a.title}
-            width={640}
-            height={360}
+            seed={a.slug}
+            label={a.categoryName ?? a.title}
             priority={priority}
-            className="aspect-video w-full object-cover transition group-hover:scale-[1.02]"
           />
-        ) : (
-          <div className="aspect-video w-full bg-[var(--bg-subtle)]" />
-        )}
-      </Link>
-      <div className="flex flex-col gap-1">
-        {a.categorySlug && (
-          <Link
-            href={`/categoria/${a.categorySlug}`}
-            className="text-xs font-semibold uppercase tracking-wide text-[var(--brand)]"
-          >
-            {a.categoryName}
-          </Link>
-        )}
-        <h3 className="text-lg font-bold leading-snug">
-          <Link href={`/articulo/${a.slug}`} className="hover:text-[var(--link)]">
+        </Link>
+      )}
+      <div className="flex flex-1 flex-col gap-2.5 p-5">
+        <Kicker a={a} locale={locale} className="text-[var(--accent)]" />
+        <h3 className="lx-display text-xl font-semibold leading-snug" style={st.title}>
+          <Link href={localePath(locale, `/articulo/${a.slug}`)} className="transition-colors hover:text-[var(--link)]">
             {a.title}
           </Link>
         </h3>
-        <p className="line-clamp-2 text-sm text-[var(--fg-muted)]">{a.excerpt}</p>
-        <p className="text-xs text-[var(--fg-muted)]">
-          {a.authorName ? `${a.authorName} · ` : ""}
-          {a.publishedAt ? formatDate(a.publishedAt) : ""}
-        </p>
+        {!st.hideExcerpt && (
+          <p className={`text-sm leading-relaxed text-[var(--fg-muted)] ${st.excerptClamp}`}>
+            {a.excerpt}
+          </p>
+        )}
+        <Meta a={a} locale={locale} className="mt-auto pt-3" />
+      </div>
+    </article>
+  );
+}
+
+/* ------------------------------------------------- Portada: columna lateral */
+function RailCard({ a, index, locale }: { a: ArticleListItem; index?: number; locale: Locale }) {
+  const st = cardStyle(a, "rail");
+  return (
+    <article className="lx-reveal group flex gap-4 border-b border-[var(--border)] pb-4 last:border-0">
+      {typeof index === "number" && (
+        <span className="lx-display w-8 shrink-0 text-2xl font-semibold text-[var(--accent)] opacity-60">
+          {String(index + 1).padStart(2, "0")}
+        </span>
+      )}
+      <div className="min-w-0 flex-1">
+        <Kicker a={a} locale={locale} className="text-[0.6rem] text-[var(--fg-muted)]" />
+        <h3 className="lx-display mt-1.5 text-lg font-medium leading-snug" style={st.title}>
+          <Link href={localePath(locale, `/articulo/${a.slug}`)} className="lx-link">
+            {a.title}
+          </Link>
+        </h3>
+        <Meta a={a} locale={locale} className="mt-2" />
+      </div>
+      {!st.hideMedia && (
+      <Link href={localePath(locale, `/articulo/${a.slug}`)} className="hidden shrink-0 sm:block" aria-hidden tabIndex={-1}>
+        <span className="lx-media block size-20 overflow-hidden rounded-[var(--radius)]">
+          <CardMedia
+            src={a.coverImageUrl}
+            alt=""
+            seed={a.slug}
+            label={a.categoryName ?? a.title}
+            ratio="aspect-square"
+            sizes="80px"
+          />
+        </span>
+      </Link>
+      )}
+    </article>
+  );
+}
+
+/* ------------------------------------------------------- Sección: cobre */
+function CopperCard({ a, index, locale }: { a: ArticleListItem; index?: number; locale: Locale }) {
+  const st = cardStyle(a, "copper");
+  return (
+    <article className="lx-card lx-reveal group flex h-full flex-col">
+      <div className="lx-shine absolute inset-0 z-[3]" />
+      <Link
+        href={localePath(locale, `/articulo/${a.slug}`)}
+        className="relative block"
+        style={mediaScaleStyle(st.imageScale)}
+      >
+        <CardMedia
+          src={a.coverImageUrl}
+          alt={a.coverImageAlt ?? a.title}
+          seed={a.slug}
+          label={a.categoryName ?? a.title}
+          ratio="aspect-[4/3]"
+        />
+        {typeof index === "number" && (
+          <span className="lx-display absolute left-4 top-4 z-[4] grid size-10 place-items-center rounded-full bg-[var(--bg)]/70 text-sm font-bold text-[var(--accent)] backdrop-blur-md">
+            {String(index + 1).padStart(2, "0")}
+          </span>
+        )}
+      </Link>
+      <div className="flex flex-1 flex-col gap-3 p-6">
+        <Kicker a={a} locale={locale} className="text-[var(--accent-2)]" />
+        <h3
+          className="lx-display text-2xl font-extrabold leading-[1.1] tracking-tight"
+          style={st.title}
+        >
+          <Link href={localePath(locale, `/articulo/${a.slug}`)} className="transition-colors hover:text-[var(--accent)]">
+            {a.title}
+          </Link>
+        </h3>
+        {!st.hideExcerpt && (
+          <p className={`text-sm leading-relaxed text-[var(--fg-muted)] ${st.excerptClamp}`}>
+            {a.excerpt}
+          </p>
+        )}
+        <div className="mt-auto flex items-center justify-between pt-4">
+          <Meta a={a} locale={locale} />
+          <span
+            aria-hidden
+            className="lx-ui text-lg text-[var(--accent)] transition-transform duration-500 group-hover:translate-x-1"
+          >
+            →
+          </span>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+/* --------------------------------------------------------- Autor: perla */
+function PearlCard({ a, locale }: { a: ArticleListItem; locale: Locale }) {
+  const st = cardStyle(a, "pearl");
+  return (
+    <article className="lx-card lx-reveal group flex h-full flex-col rounded-[var(--radius-lg)]">
+      <div className="lx-shine absolute inset-0 z-[3]" />
+      <Link href={localePath(locale, `/articulo/${a.slug}`)} className="relative block px-3 pt-3">
+        <span className="block overflow-hidden rounded-[calc(var(--radius-lg)-0.5rem)]">
+          <CardMedia
+            src={a.coverImageUrl}
+            alt={a.coverImageAlt ?? a.title}
+            seed={a.slug}
+            label={a.categoryName ?? a.title}
+            ratio="aspect-[5/3]"
+          />
+        </span>
+      </Link>
+      <div className="flex flex-1 flex-col gap-2 p-6 text-center">
+        <Kicker a={a} locale={locale} className="text-[var(--accent)]" />
+        <h3 className="lx-display text-2xl font-light leading-tight" style={st.title}>
+          <Link href={localePath(locale, `/articulo/${a.slug}`)} className="transition-colors hover:text-[var(--accent)]">
+            {a.title}
+          </Link>
+        </h3>
+        {!st.hideExcerpt && (
+          <p className={`text-sm font-light leading-relaxed text-[var(--fg-muted)] ${st.excerptClamp}`}>
+            {a.excerpt}
+          </p>
+        )}
+        <Meta a={a} locale={locale} className="mt-auto pt-3" />
       </div>
     </article>
   );

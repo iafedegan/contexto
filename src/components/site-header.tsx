@@ -1,41 +1,333 @@
 import Link from "next/link";
-import { getAllCategories } from "@/lib/content";
+import { ReadingProgress } from "@/components/reading-progress";
+import { LocaleSwitch } from "@/components/locale-switch";
+import type { Theme } from "@/lib/theme";
+import { DEFAULT_IDENTITY, type SiteIdentity } from "@/lib/site-identity";
+import { DEFAULT_LOCALE, INTL_LOCALE, localePath, t, type Locale } from "@/lib/i18n";
 
-const SITE_NAME = process.env.NEXT_PUBLIC_SITE_NAME ?? "CONtexto Ganadero";
+export type NavItem = { href: string; label: string };
 
-export async function SiteHeader() {
-  let categories: Awaited<ReturnType<typeof getAllCategories>> = [];
-  try {
-    categories = await getAllCategories();
-  } catch {
-    // Sin DB en build local: el header se degrada a solo logo + búsqueda.
+type Props = {
+  theme: Theme;
+  nav: NavItem[];
+  locale?: Locale;
+  /** Nombre y lema editables en /panel/configuracion. */
+  identity?: SiteIdentity;
+};
+
+/** Cada plantilla estrena navbar: estructura, altura, ritmo y efectos propios. */
+export function SiteHeader({
+  theme,
+  nav,
+  locale = DEFAULT_LOCALE,
+  identity = DEFAULT_IDENTITY,
+}: Props) {
+  switch (theme) {
+    case "home":
+    case "esmeralda":
+    case "clasico":
+      return <MastheadHeader nav={nav} locale={locale} identity={identity} />;
+    case "revista":
+      return <CoutureHeader nav={nav} locale={locale} identity={identity} />;
+    case "compacto":
+      return <BoldHeader nav={nav} locale={locale} identity={identity} />;
+    case "vanguardia":
+      return <GlassHeader nav={nav} locale={locale} identity={identity} />;
+    case "articulo":
+      return <ReadingHeader nav={nav} locale={locale} identity={identity} />;
+    case "seccion":
+      return <BoldHeader nav={nav} locale={locale} identity={identity} />;
+    case "autor":
+      return <CoutureHeader nav={nav} locale={locale} identity={identity} />;
+    case "buscar":
+      return <CommandHeader nav={nav} locale={locale} identity={identity} />;
+    case "asistente":
+      return <GlassHeader nav={nav} locale={locale} identity={identity} />;
+    case "institucional":
+      return <CrestHeader nav={nav} locale={locale} identity={identity} />;
+    default:
+      return <ArchiveHeader nav={nav} locale={locale} identity={identity} />;
   }
+}
+
+/* ------------------------------------------------------------------ HOME */
+function MastheadHeader({ nav, locale, identity }: { nav: NavItem[]; locale: Locale; identity: SiteIdentity }) {
+  const today = new Intl.DateTimeFormat(INTL_LOCALE[locale], {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(new Date());
 
   return (
-    <header className="border-b border-[var(--border)] bg-[var(--bg)]">
-      <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-3">
-        <Link href="/" className="text-lg font-extrabold tracking-tight text-[var(--brand)]">
-          {SITE_NAME}
+    <header className="relative z-40 bg-[var(--nav-bg)] sm:sticky sm:top-0">
+      <div className="border-b border-[var(--border)]/60">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-2 text-[0.62rem] uppercase tracking-[0.3em] text-[var(--fg-muted)]">
+          <span className="hidden sm:block">{today}</span>
+          <span className="lx-foil font-semibold">{t(locale, "nav.digitalEdition")}</span>
+          <span className="flex items-center gap-3">
+            <LocaleSwitch locale={locale} />
+            <Link href="/panel" className="lx-link hidden sm:block">
+              {t(locale, "nav.panel")}
+            </Link>
+          </span>
+        </div>
+      </div>
+
+      <div className="mx-auto max-w-7xl px-6 pb-6 pt-10 text-center">
+        <div className="flex items-center justify-center gap-6">
+          <span className="hidden h-px flex-1 bg-gradient-to-r from-transparent to-[var(--border-strong)] md:block" />
+          <Link href={localePath(locale, "/")} className="block">
+            <span className="lx-display lx-foil block text-4xl font-semibold leading-none tracking-tight md:text-6xl">
+              {identity.name}
+            </span>
+            <span className="lx-kicker mt-3 block text-[var(--fg-muted)]">
+              {identity.tagline || t(locale, "nav.tagline")}
+            </span>
+          </Link>
+          <span className="hidden h-px flex-1 bg-gradient-to-l from-transparent to-[var(--border-strong)] md:block" />
+        </div>
+      </div>
+
+      <nav
+        aria-label={t(locale, "nav.sections")}
+        className="sticky top-0 z-40 border-y border-[var(--border)] bg-[var(--nav-bg)] sm:static"
+      >
+        <div className="lx-navrail mx-auto max-w-7xl items-center justify-start gap-x-7 gap-y-2 px-6 py-3 text-[0.68rem] uppercase tracking-[0.2em] sm:justify-center">
+          {nav.map((n) => (
+            <Link key={n.href} href={localePath(locale, n.href)} className="lx-link lx-ui">
+              {n.label}
+            </Link>
+          ))}
+          <Link
+            href={localePath(locale, "/buscar")}
+            className="lx-ui rounded-full border border-[var(--border-strong)] px-4 py-1 text-[var(--accent)] transition hover:bg-[var(--surface-2)]"
+          >
+            {t(locale, "nav.search")}
+          </Link>
+        </div>
+      </nav>
+    </header>
+  );
+}
+
+/* -------------------------------------------------------------- ARTÍCULO */
+function ReadingHeader({ nav, locale, identity }: { nav: NavItem[]; locale: Locale; identity: SiteIdentity }) {
+  return (
+    <header className="sticky top-0 z-40 border-b border-[var(--border)] bg-[var(--nav-bg)]">
+      <ReadingProgress />
+      <div className="mx-auto flex max-w-6xl items-center justify-between gap-6 px-6 py-3">
+        <Link href={localePath(locale, "/")} className="lx-display text-lg font-medium tracking-[0.14em] uppercase">
+          {identity.name}
         </Link>
-        <nav className="hidden gap-4 text-sm md:flex" aria-label="Secciones">
-          {categories.slice(0, 6).map((c) => (
-            <Link key={c.slug} href={`/categoria/${c.slug}`} className="hover:text-[var(--link)]">
-              {c.name}
+        <nav aria-label={t(locale, "nav.sections")} className="hidden gap-6 text-[0.72rem] uppercase tracking-[0.18em] lg:flex">
+          {nav.slice(0, 4).map((n) => (
+            <Link key={n.href} href={localePath(locale, n.href)} className="lx-link lx-ui text-[var(--fg-muted)]">
+              {n.label}
             </Link>
           ))}
         </nav>
-        <div className="flex items-center gap-3 text-sm">
-          <Link href="/asistente" className="hover:text-[var(--link)]">
-            Asistente
+        <div className="flex items-center gap-3">
+          <LocaleSwitch locale={locale} />
+          <Link
+            href={localePath(locale, "/buscar")}
+            className="lx-ui text-[0.7rem] uppercase tracking-[0.18em] text-[var(--fg-muted)] hover:text-[var(--accent)]"
+          >
+            {t(locale, "nav.search")}
           </Link>
           <Link
-            href="/buscar"
-            aria-label="Buscar"
-            className="rounded-[var(--radius)] border border-[var(--border)] px-3 py-1.5"
+            href={localePath(locale, "/asistente")}
+            className="lx-ui rounded-[var(--radius)] border border-[var(--accent)] px-3 py-1.5 text-[0.7rem] uppercase tracking-[0.18em] text-[var(--accent)] transition hover:bg-[var(--accent)] hover:text-[var(--accent-fg)]"
           >
-            Buscar
+            {t(locale, "nav.assistant")}
           </Link>
         </div>
+      </div>
+    </header>
+  );
+}
+
+/* --------------------------------------------------------------- SECCIÓN */
+function BoldHeader({ nav, locale, identity }: { nav: NavItem[]; locale: Locale; identity: SiteIdentity }) {
+  return (
+    <header className="sticky top-0 z-40 bg-[var(--nav-bg)] px-4 py-4">
+      <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-4 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--nav-bg)] px-5 py-4 shadow-[var(--shadow)]">
+        <Link href={localePath(locale, "/")} className="lx-display mr-auto text-xl font-extrabold tracking-tight">
+{identity.name}
+        </Link>
+        <nav aria-label={t(locale, "nav.sections")} className="flex flex-wrap items-center gap-2">
+          {nav.map((n) => (
+            <Link
+              key={n.href}
+              href={localePath(locale, n.href)}
+              className="lx-ui rounded-full border border-[var(--border)] px-4 py-1.5 text-xs font-medium transition hover:border-[var(--border-strong)] hover:bg-[var(--surface-2)] hover:text-[var(--accent-2)]"
+            >
+              {n.label}
+            </Link>
+          ))}
+        </nav>
+        <LocaleSwitch locale={locale} />
+        <Link
+          href={localePath(locale, "/buscar")}
+          aria-label={t(locale, "nav.search")}
+          className="lx-ui grid size-10 place-items-center rounded-full bg-gradient-to-br from-[var(--accent)] to-[var(--accent-2)] text-base font-bold text-[var(--accent-fg)] transition hover:scale-105"
+        >
+          ⌕
+        </Link>
+      </div>
+    </header>
+  );
+}
+
+/* ------------------------------------------------------------------ AUTOR */
+function CoutureHeader({ nav, locale, identity }: { nav: NavItem[]; locale: Locale; identity: SiteIdentity }) {
+  return (
+    <header className="relative z-40 bg-[var(--nav-bg)] px-0 pb-0 pt-8 text-center sm:sticky sm:top-0 sm:px-6 sm:pb-6 sm:pt-10">
+      <div className="mx-auto max-w-4xl px-6">
+        <Link href={localePath(locale, "/")} className="lx-display block text-2xl font-light tracking-[0.42em] uppercase">
+          {identity.name}
+        </Link>
+        <div className="mx-auto mt-5 flex max-w-sm items-center gap-4">
+          <span className="h-px flex-1 bg-[var(--border-strong)]/60" />
+          <span className="lx-kicker text-[var(--accent)]">{t(locale, "nav.signatures")}</span>
+          <span className="h-px flex-1 bg-[var(--border-strong)]/60" />
+        </div>
+        <div className="mt-5 flex justify-center">
+          <LocaleSwitch locale={locale} />
+        </div>
+        <nav
+          aria-label={t(locale, "nav.sections")}
+          className="lx-navrail sticky top-0 z-40 mt-4 items-center justify-start gap-x-5 gap-y-2 bg-[var(--nav-bg)] px-6 py-3 text-[0.78rem] font-light tracking-[0.1em] text-[var(--fg-muted)] sm:static sm:justify-center sm:bg-transparent sm:py-0"
+        >
+          {nav.map((n, i) => (
+            <span key={n.href} className="flex items-center gap-5">
+              {i > 0 && <span aria-hidden className="text-[var(--accent)]">·</span>}
+              <Link href={localePath(locale, n.href)} className="lx-link">
+                {n.label}
+              </Link>
+            </span>
+          ))}
+        </nav>
+      </div>
+    </header>
+  );
+}
+
+/* --------------------------------------------------------------- BUSCADOR */
+function CommandHeader({ nav, locale, identity }: { nav: NavItem[]; locale: Locale; identity: SiteIdentity }) {
+  return (
+    <header className="sticky top-0 z-40 border-b border-[var(--border)] bg-[var(--nav-bg)]">
+      <div
+        aria-hidden
+        className="h-px w-full bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-70"
+      />
+      <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-4 px-6 py-3">
+        <Link href={localePath(locale, "/")} className="lx-mono text-sm font-bold tracking-tight">
+          <span className="text-[var(--accent)]">~/</span>
+          {identity.name.split(" ")[0].toLowerCase()}
+          <span className="lx-pulse text-[var(--accent)]">_</span>
+        </Link>
+        <nav aria-label={t(locale, "nav.sections")} className="ml-4 hidden gap-4 text-xs md:flex">
+          {nav.slice(0, 5).map((n) => (
+            <Link key={n.href} href={localePath(locale, n.href)} className="lx-link lx-mono text-[var(--fg-muted)]">
+              {n.label.toLowerCase()}
+            </Link>
+          ))}
+        </nav>
+        <div className="ml-auto flex items-center gap-2">
+          <LocaleSwitch locale={locale} />
+          <span className="lx-chip lx-mono border-[var(--border-strong)] text-[var(--accent)]">
+            {t(locale, "search.kicker").toLowerCase()}
+          </span>
+          <Link href={localePath(locale, "/asistente")} className="lx-chip lx-mono hover:text-[var(--accent)]">
+            {t(locale, "nav.assistant").toLowerCase()}
+          </Link>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+/* -------------------------------------------------------------- ASISTENTE */
+function GlassHeader({ nav, locale, identity }: { nav: NavItem[]; locale: Locale; identity: SiteIdentity }) {
+  return (
+    <header className="sticky top-0 z-40 bg-[var(--nav-bg)] px-4 py-4">
+      <div className="mx-auto flex max-w-3xl items-center gap-4 rounded-full border border-[var(--border)] bg-[var(--nav-bg)] px-5 py-2.5 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.9)]">
+        <Link href={localePath(locale, "/")} className="lx-display text-sm font-semibold tracking-tight">
+          {identity.name}
+        </Link>
+        <span className="flex items-center gap-2 rounded-full bg-[var(--surface-2)] px-3 py-1 text-[0.62rem] uppercase tracking-[0.18em] text-[var(--accent-2)]">
+          <span className="lx-pulse size-1.5 rounded-full bg-[var(--accent-2)]" />
+          {t(locale, "nav.online")}
+        </span>
+        <LocaleSwitch locale={locale} className="ml-auto" />
+        <nav aria-label={t(locale, "nav.sections")} className="hidden gap-4 text-xs text-[var(--fg-muted)] sm:flex">
+          {nav.slice(0, 3).map((n) => (
+            <Link key={n.href} href={localePath(locale, n.href)} className="lx-link">
+              {n.label}
+            </Link>
+          ))}
+          <Link href={localePath(locale, "/buscar")} className="lx-link text-[var(--accent)]">
+            {t(locale, "nav.search")}
+          </Link>
+        </nav>
+      </div>
+    </header>
+  );
+}
+
+/* ---------------------------------------------------------- INSTITUCIONAL */
+function CrestHeader({ nav, locale, identity }: { nav: NavItem[]; locale: Locale; identity: SiteIdentity }) {
+  return (
+    <header className="relative z-40 border-b-2 border-[var(--accent)] bg-[var(--nav-bg)] sm:sticky sm:top-0">
+      <div className="mx-auto max-w-5xl px-6 py-8 text-center">
+        <Link href={localePath(locale, "/")} className="inline-flex flex-col items-center gap-3">
+          <span className="grid size-14 place-items-center rounded-full border-2 border-[var(--accent)] text-lg tracking-[0.1em] text-[var(--accent)]">
+            CG
+          </span>
+          <span className="lx-display text-xl tracking-[0.3em] uppercase">{identity.name}</span>
+        </Link>
+        <p className="lx-kicker mt-2 text-[var(--accent-2)]">{t(locale, "nav.institutional")}</p>
+        <div className="mt-4 flex justify-center">
+          <LocaleSwitch locale={locale} />
+        </div>
+      </div>
+      <nav
+        aria-label={t(locale, "nav.sections")}
+        className="sticky top-0 z-40 border-t border-[var(--border)] bg-[var(--nav-bg)] sm:static"
+      >
+        <div className="lx-navrail mx-auto max-w-5xl justify-start gap-x-8 gap-y-2 px-6 py-3 text-[0.7rem] uppercase tracking-[0.2em] text-[var(--fg-muted)] sm:justify-center">
+          {nav.map((n) => (
+            <Link key={n.href} href={localePath(locale, n.href)} className="lx-link lx-ui">
+              {n.label}
+            </Link>
+          ))}
+        </div>
+      </nav>
+    </header>
+  );
+}
+
+/* ---------------------------------------------------------------- ARCHIVO */
+function ArchiveHeader({ nav, locale, identity }: { nav: NavItem[]; locale: Locale; identity: SiteIdentity }) {
+  return (
+    <header className="sticky top-0 z-40 border-b border-[var(--border)] bg-[var(--nav-bg)]">
+      <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-4 px-6 py-5">
+        <Link href={localePath(locale, "/")} className="lx-display text-lg tracking-[0.22em] uppercase text-[var(--accent)]">
+          {identity.name}
+        </Link>
+        <span className="lx-chip">{t(locale, "nav.archive")}</span>
+        <LocaleSwitch locale={locale} className="ml-auto" />
+        <nav aria-label={t(locale, "nav.sections")} className="flex gap-5 text-xs tracking-wide text-[var(--fg-muted)]">
+          {nav.slice(0, 3).map((n) => (
+            <Link key={n.href} href={localePath(locale, n.href)} className="lx-link">
+              {n.label}
+            </Link>
+          ))}
+          <Link href={localePath(locale, "/buscar")} className="lx-link text-[var(--accent)]">
+            {t(locale, "nav.search")}
+          </Link>
+        </nav>
       </div>
     </header>
   );

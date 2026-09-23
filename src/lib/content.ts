@@ -1,7 +1,25 @@
 import "server-only";
 import { and, desc, eq, lte, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { articles, authors, categories } from "@/db/schema";
+import {
+  articles,
+  authors,
+  categories,
+  siteSettings,
+  type HomeLayoutConfig,
+  type HomeStyle,
+} from "@/db/schema";
+import { DEFAULT_HOME_LAYOUT } from "@/lib/home-layout";
+
+/** Disposición y plantilla de la portada, configuradas en /panel/portada. */
+export async function getHomeLayoutConfig(): Promise<Required<HomeLayoutConfig>> {
+  const [row] = await db
+    .select({ value: siteSettings.value })
+    .from(siteSettings)
+    .where(eq(siteSettings.key, "home_layout"))
+    .limit(1);
+  return { ...DEFAULT_HOME_LAYOUT, ...((row?.value as HomeLayoutConfig) ?? {}) };
+}
 
 /**
  * Consultas de lectura del portal público. Todas filtran por estado "publicado"
@@ -24,6 +42,8 @@ export type ArticleListItem = {
   categoryName: string | null;
   categorySlug: string | null;
   authorName: string | null;
+  /** Estilo manual fijado en /panel/portada. null = todo por defecto. */
+  homeStyle: HomeStyle | null;
 };
 
 const listSelection = {
@@ -36,6 +56,7 @@ const listSelection = {
   categoryName: categories.name,
   categorySlug: categories.slug,
   authorName: authors.name,
+  homeStyle: articles.homeStyle,
 };
 
 export async function getRecentArticles(limit = 12): Promise<ArticleListItem[]> {
@@ -46,6 +67,27 @@ export async function getRecentArticles(limit = 12): Promise<ArticleListItem[]> 
     .leftJoin(authors, eq(articles.authorId, authors.id))
     .where(publishedCondition)
     .orderBy(desc(articles.publishedAt))
+    .limit(limit);
+}
+
+/**
+ * Como getRecentArticles, pero respeta el orden manual fijado por un editor en
+ * /panel/portada (`articles.homePosition`): los artículos anclados van primero,
+ * en el orden elegido, y el resto llena los huecos por fecha. Solo lo usa la
+ * portada; RSS, llms.txt y el cintillo siguen el orden cronológico real.
+ */
+export async function getHomepageArticles(limit = 13): Promise<ArticleListItem[]> {
+  return db
+    .select(listSelection)
+    .from(articles)
+    .leftJoin(categories, eq(articles.categoryId, categories.id))
+    .leftJoin(authors, eq(articles.authorId, authors.id))
+    .where(publishedCondition)
+    .orderBy(
+      sql`(${articles.homePosition} is null)`,
+      articles.homePosition,
+      desc(articles.publishedAt),
+    )
     .limit(limit);
 }
 
@@ -119,6 +161,43 @@ export async function getPublishedArticleBySlug(slug: string): Promise<FullArtic
     .leftJoin(categories, eq(articles.categoryId, categories.id))
     .leftJoin(authors, eq(articles.authorId, authors.id))
     .where(and(eq(articles.slug, slug), publishedCondition))
+    .limit(1);
+  return row ?? null;
+}
+
+/**
+ * Igual que la anterior pero SIN filtro de estado: la usa la vista previa del
+ * panel para que el redactor vea su borrador tal y como quedará publicado.
+ * Nunca se expone en rutas públicas.
+ */
+export async function getArticleForPreview(
+  id: string,
+): Promise<(FullArticle & { status: string }) | null> {
+  const [row] = await db
+    .select({
+      id: articles.id,
+      slug: articles.slug,
+      title: articles.title,
+      excerpt: articles.excerpt,
+      body: articles.body,
+      metaTitle: articles.metaTitle,
+      metaDescription: articles.metaDescription,
+      coverImageUrl: articles.coverImageUrl,
+      coverImageAlt: articles.coverImageAlt,
+      tags: articles.tags,
+      publishedAt: articles.publishedAt,
+      updatedAt: articles.updatedAt,
+      status: articles.status,
+      categoryName: categories.name,
+      categorySlug: categories.slug,
+      authorName: authors.name,
+      authorSlug: authors.slug,
+      authorBio: authors.bio,
+    })
+    .from(articles)
+    .leftJoin(categories, eq(articles.categoryId, categories.id))
+    .leftJoin(authors, eq(articles.authorId, authors.id))
+    .where(eq(articles.id, id))
     .limit(1);
   return row ?? null;
 }

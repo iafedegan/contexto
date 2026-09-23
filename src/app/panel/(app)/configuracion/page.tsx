@@ -1,0 +1,325 @@
+import { asc } from "drizzle-orm";
+import { BarChart3, Globe, ShieldCheck, Sparkles, Users } from "lucide-react";
+import { db } from "@/db";
+import { users } from "@/db/schema";
+import { auth } from "@/lib/auth";
+import { getSiteIdentity } from "@/lib/site-identity";
+import { UserRow } from "@/components/panel/user-row";
+import { getKeyStatus } from "@/lib/ai-provider";
+import { ApiKeyForm } from "@/components/panel/api-key-form";
+import { getAnalyticsStatus } from "@/lib/analytics-server";
+import { saveAnalyticsSettings, saveSiteIdentity } from "./actions";
+
+export const dynamic = "force-dynamic";
+
+const MONTHLY_BUDGET = process.env.ASSISTANT_MONTHLY_BUDGET_USD ?? "150";
+const SESSION_LIMIT = process.env.ASSISTANT_SESSION_QUERY_LIMIT ?? "15";
+
+export default async function ConfiguracionPage() {
+  const session = await auth();
+  const isAdmin = session?.user.role === "administrador";
+
+  const [identity, keyStatus, analytics, people] = await Promise.all([
+    getSiteIdentity(),
+    getKeyStatus(),
+    getAnalyticsStatus(),
+    db
+      .select({
+        id: users.id,
+        name: users.name,
+        email: users.email,
+        role: users.role,
+        active: users.active,
+        totpEnabled: users.totpEnabled,
+      })
+      .from(users)
+      .orderBy(asc(users.name)),
+  ]);
+
+  return (
+    <div className="flex flex-col gap-8">
+      <header>
+        <p className="lx-kicker text-[var(--accent)]">Panel editorial</p>
+        <h1 className="lx-display mt-2 text-3xl font-semibold tracking-tight">Configuración</h1>
+        <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[var(--fg-muted)]">
+          Lo que se cambia aquí afecta a todo el portal: nombre, lema y descripción salen en la
+          cabecera, el pie y los metadatos de cada página.
+        </p>
+      </header>
+
+      {/* ------------------------------------------------ Identidad del sitio */}
+      <Section
+        id="sitio"
+        icon={<Globe size={14} />}
+        title="Identidad del sitio"
+        hint={isAdmin ? undefined : "Solo un administrador puede modificarla."}
+      >
+        <form action={saveSiteIdentity} className="grid gap-4 sm:grid-cols-2">
+          <Field label="Nombre" hint="Cabecera, pie y plantilla de títulos">
+            <input
+              name="name"
+              defaultValue={identity.name}
+              required
+              disabled={!isAdmin}
+              className="lx-input"
+            />
+          </Field>
+          <Field label="Lema" hint="Bajo el logotipo de portada">
+            <input
+              name="tagline"
+              defaultValue={identity.tagline}
+              disabled={!isAdmin}
+              className="lx-input"
+            />
+          </Field>
+          <div className="sm:col-span-2">
+            <Field label="Descripción" hint="Meta description por defecto (70–155 car.)">
+              <textarea
+                name="description"
+                defaultValue={identity.description}
+                rows={2}
+                disabled={!isAdmin}
+                className="lx-input resize-y"
+              />
+            </Field>
+          </div>
+          <Field label="Dominio canónico" hint="Sin https:// · vacío = el del entorno">
+            <input
+              name="domain"
+              defaultValue={identity.domain}
+              placeholder="contextoganadero.com"
+              disabled={!isAdmin}
+              className="lx-input"
+            />
+          </Field>
+
+          {isAdmin && (
+            <div className="flex items-end">
+              <button
+                type="submit"
+                className="rounded-full bg-[var(--accent)] px-5 py-2.5 text-sm font-semibold text-[var(--accent-fg)] transition hover:opacity-90"
+              >
+                Guardar cambios
+              </button>
+            </div>
+          )}
+        </form>
+      </Section>
+
+      {/* ---------------------------------------------------------- Personas */}
+      <Section
+        id="usuarios"
+        icon={<Users size={14} />}
+        title="Personas y roles"
+        hint={`${people.length} cuentas · redactor < editor < administrador`}
+      >
+        <div className="overflow-hidden rounded-[var(--radius)] border border-[var(--border)]">
+          <table className="w-full border-separate border-spacing-0 text-sm">
+            <thead>
+              <tr>
+                {["Persona", "Rol", "2FA", "Estado"].map((h) => (
+                  <th
+                    key={h}
+                    className="lx-kicker border-b border-[var(--border)] bg-[var(--surface-2)] px-4 py-3 text-left text-[var(--fg-muted)]"
+                  >
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {people.map((p) => (
+                <UserRow
+                  key={p.id}
+                  user={p}
+                  canManage={isAdmin && p.id !== session?.user.id}
+                  isSelf={p.id === session?.user.id}
+                />
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Section>
+
+
+      {/* ---------------------------------------------- Analítica y SEO */}
+      <Section
+        id="analitica"
+        icon={<BarChart3 size={14} />}
+        title="Analítica y SEO"
+        hint="Medición del portal y auditoría de Google antes de publicar"
+      >
+        <form action={saveAnalyticsSettings} className="grid gap-4 sm:grid-cols-2">
+          <Field label="ID de medición GA4" hint="Del tipo G-XXXXXXXXXX · se carga solo en el portal público">
+            <input
+              name="ga4Id"
+              defaultValue={analytics.ga4Id}
+              placeholder="G-XXXXXXXXXX"
+              disabled={!isAdmin}
+              className="lx-mono w-full rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] px-3 py-2 text-sm outline-none transition focus:border-[var(--accent)] disabled:opacity-60"
+            />
+          </Field>
+
+          <Field
+            label="Clave de PageSpeed Insights"
+            hint={
+              analytics.psiPresent
+                ? `Configurada (${analytics.psiMasked}) desde ${analytics.psiSource}`
+                : "Gratuita, se genera en Google Cloud"
+            }
+          >
+            <input
+              name="psiKey"
+              type="password"
+              autoComplete="off"
+              placeholder={analytics.psiPresent ? "Déjalo vacío para conservar la actual" : "AIza…"}
+              disabled={!isAdmin}
+              className="lx-mono w-full rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] px-3 py-2 text-sm outline-none transition focus:border-[var(--accent)] disabled:opacity-60"
+            />
+          </Field>
+
+          <div className="sm:col-span-2">
+            <Field
+              label="Base pública para auditar"
+              hint="Solo en local: el túnel (ngrok y afines) con el que Google puede abrir el sitio"
+            >
+              <input
+                name="publicBaseUrl"
+                defaultValue={analytics.publicBaseUrl}
+                placeholder="https://mi-tunel.ngrok-free.app"
+                disabled={!isAdmin}
+                className="lx-mono w-full rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] px-3 py-2 text-sm outline-none transition focus:border-[var(--accent)] disabled:opacity-60"
+              />
+            </Field>
+          </div>
+
+          {isAdmin && (
+            <div className="sm:col-span-2">
+              <button
+                type="submit"
+                className="rounded-full bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--accent-fg)] transition hover:opacity-90"
+              >
+                Guardar analítica
+              </button>
+            </div>
+          )}
+        </form>
+
+        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+          <Stat label="GA4" value={analytics.ga4Id || "Sin configurar"} ok={Boolean(analytics.ga4Id)} />
+          <Stat
+            label="PageSpeed Insights"
+            value={analytics.psiPresent ? `Desde ${analytics.psiSource}` : "Sin configurar"}
+            ok={analytics.psiPresent}
+          />
+          <Stat label="Base para auditar" value={analytics.publicBaseUrl || identity.domain || "Sin dominio"} />
+        </div>
+
+        <p className="mt-4 flex items-start gap-2 rounded-[var(--radius)] bg-[var(--surface-2)] p-3 text-xs leading-relaxed text-[var(--fg-muted)]">
+          <ShieldCheck size={14} className="mt-px shrink-0 text-[var(--accent-2)]" />
+          GA4 mide el portal <strong>después</strong> de publicar y nunca se carga en el panel ni en
+          las vistas previas. PageSpeed audita la nota <strong>antes</strong>: para un borrador se le
+          pasa un enlace de vista previa firmado y caducable, con <code className="lx-mono">noindex</code>.
+          Google necesita alcanzar la dirección, así que en <code className="lx-mono">localhost</code>{" "}
+          solo funciona a través de un túnel.
+        </p>
+      </Section>
+
+      {/* ------------------------------------------------ Asistente / agentes */}
+      <Section
+        id="asistente"
+        icon={<Sparkles size={14} />}
+        title="Asistente y agentes de IA"
+        hint="La clave de la API se puede guardar aquí, cifrada"
+      >
+        <ApiKeyForm status={keyStatus} canManage={isAdmin} />
+
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <Stat
+            label="Origen de la clave"
+            value={keyStatus.source ? `Desde ${keyStatus.source}` : "Sin configurar"}
+            ok={keyStatus.present}
+          />
+          <Stat label="Modelo" value={keyStatus.model} />
+          <Stat label="Presupuesto mensual" value={`US$ ${MONTHLY_BUDGET}`} />
+          <Stat label="Tope por sesión" value={`${SESSION_LIMIT} consultas`} />
+        </div>
+        <p className="mt-4 flex items-start gap-2 rounded-[var(--radius)] bg-[var(--surface-2)] p-3 text-xs leading-relaxed text-[var(--fg-muted)]">
+          <ShieldCheck size={14} className="mt-px shrink-0 text-[var(--accent-2)]" />
+          Sin clave, el asistente responde en modo búsqueda (recupera y cita fuentes, sin generar) y
+          la redacción asistida entrega un esqueleto en vez de inventar hechos. Ningún contenido de
+          IA se publica sin la aprobación de un editor.
+        </p>
+      </Section>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ Piezas */
+
+function Section({
+  id,
+  icon,
+  title,
+  hint,
+  children,
+}: {
+  id: string;
+  icon: React.ReactNode;
+  title: string;
+  hint?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section
+      id={id}
+      className="scroll-mt-24 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow)]"
+    >
+      <header className="mb-4 flex flex-wrap items-baseline gap-2">
+        <span className="text-[var(--accent)]">{icon}</span>
+        <h2 className="text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-[var(--fg-muted)]">
+          {title}
+        </h2>
+        {hint && <span className="text-xs text-[var(--fg-muted)]">· {hint}</span>}
+      </header>
+      {children}
+    </section>
+  );
+}
+
+function Field({
+  label,
+  hint,
+  children,
+}: {
+  label: string;
+  hint?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <label className="block">
+      <span className="mb-1.5 flex items-baseline gap-2">
+        <span className="text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-[var(--fg-muted)]">
+          {label}
+        </span>
+        {hint && <span className="text-[0.7rem] text-[var(--fg-muted)]/75">{hint}</span>}
+      </span>
+      {children}
+    </label>
+  );
+}
+
+function Stat({ label, value, ok }: { label: string; value: string; ok?: boolean }) {
+  return (
+    <div className="rounded-[var(--radius)] border border-[var(--border)] p-3">
+      <p className="lx-kicker text-[var(--fg-muted)]">{label}</p>
+      <p
+        className={`mt-1.5 text-sm font-semibold ${
+          ok === undefined ? "" : ok ? "text-[var(--accent-2)]" : "text-[var(--danger)]"
+        }`}
+      >
+        {value}
+      </p>
+    </div>
+  );
+}

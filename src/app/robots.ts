@@ -10,7 +10,8 @@ import { siteUrl } from "@/lib/utils";
  * Solo se excluye el panel editorial y los endpoints internos.
  */
 export default function robots(): MetadataRoute.Robots {
-  const disallow = ["/panel", "/api/", "/buscar"];
+  // `/vista-previa` lleva además `noindex`: son borradores con enlace firmado.
+  const disallow = ["/panel", "/api/", "/buscar", "/vista-previa"];
 
   const aiBots = [
     "GPTBot",

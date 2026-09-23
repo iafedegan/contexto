@@ -1,58 +1,517 @@
 @import "tailwindcss";
 
-/* ---------------------------------------------------------------------------
-   Sistema de diseño — CONtexto Ganadero
-   Paleta sobria de medio informativo. Prioridad absoluta a legibilidad móvil.
---------------------------------------------------------------------------- */
+/* ===========================================================================
+   CONtexto Ganadero — Sistema de diseño "deluxe"
+   ---------------------------------------------------------------------------
+   Una plantilla = un tema completo. Cada tema redefine paleta, tipografías,
+   radios, sombras y textura; el navbar, las tarjetas y el footer leen esas
+   variables y cambian de carácter sin duplicar componentes.
+
+   Temas:  home · articulo · seccion · autor · buscar · asistente
+           institucional · archivo · panel · acceso
+   =========================================================================== */
 
 :root {
-  --bg: #ffffff;
-  --bg-subtle: #f6f6f4;
-  --fg: #1a1a1a;
-  --fg-muted: #5b5b55;
-  --border: #e4e4de;
-  --brand: #1f6d3a; /* verde ganadero */
-  --brand-fg: #ffffff;
-  --link: #185c31;
-  --danger: #b42318;
   --radius: 0.5rem;
-}
+  --radius-lg: 1.25rem;
+  --danger: #c0392b;
+  --ease-lux: cubic-bezier(0.22, 1, 0.36, 1);
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #121311;
-    --bg-subtle: #1b1c19;
-    --fg: #ececec;
-    --fg-muted: #a1a199;
-    --border: #2c2e29;
-    --brand: #4caf6d;
-    --brand-fg: #0c1a0f;
-    --link: #6fd18c;
-  }
+  /* Fallback (tema neutro oscuro para body / overscroll). */
+  --bg: #07090b;
+  --bg-2: #0d1013;
+  --surface: #121519;
+  --surface-2: #171b20;
+  --fg: #f2f2f0;
+  --fg-muted: #9aa0a6;
+  --border: rgba(255, 255, 255, 0.1);
+  --border-strong: rgba(255, 255, 255, 0.2);
+  --accent: #c9a227;
+  --accent-2: #1f6d3a;
+  --accent-fg: #0b0b0a;
+  --link: var(--accent);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-hover: 0 24px 60px -24px rgba(0, 0, 0, 0.7);
+  --sheen: rgba(255, 255, 255, 0.14);
+  --font-display: var(--f-playfair), Georgia, serif;
+  --font-body: var(--f-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-ui: var(--f-inter), ui-sans-serif, system-ui, sans-serif;
+
 }
 
 @theme inline {
   --color-bg: var(--bg);
-  --color-bg-subtle: var(--bg-subtle);
+  --color-bg-2: var(--bg-2);
+  --color-surface: var(--surface);
   --color-fg: var(--fg);
   --color-fg-muted: var(--fg-muted);
   --color-border: var(--border);
-  --color-brand: var(--brand);
-  --color-brand-fg: var(--brand-fg);
-  --color-link: var(--link);
+  --color-accent: var(--accent);
+  --color-accent-2: var(--accent-2);
+  --color-brand: var(--accent);
   --radius: var(--radius);
-  --font-sans: var(--font-sans), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --font-serif: var(--font-serif), Georgia, "Times New Roman", serif;
+  --font-display: var(--font-display);
+  --font-body: var(--font-body);
+  --font-ui: var(--font-ui);
+  --font-mono: var(--f-mono), ui-monospace, monospace;
 }
+
+/* ---------------------------------------------------------------- 1. HOME
+   "Esmeralda Real": obsidiana verde, pan de oro, didona de portada.        */
+[data-theme="home"],
+[data-theme="esmeralda"] {
+  color-scheme: dark;
+  --bg: #05100b;
+  --bg-2: #081a12;
+  --surface: rgba(255, 255, 255, 0.035);
+  --surface-2: rgba(201, 162, 39, 0.07);
+  --fg: #f4f2e9;
+  --fg-muted: #9fb7a8;
+  --border: rgba(201, 162, 39, 0.22);
+  --border-strong: rgba(201, 162, 39, 0.5);
+  --accent: #d8b558;
+  --accent-2: #2f9c62;
+  --accent-fg: #08140d;
+  --link: #e7cf8c;
+  --radius: 0.25rem;
+  --radius-lg: 0.35rem;
+  --shadow: 0 1px 0 rgba(216, 181, 88, 0.12);
+  --shadow-hover: 0 30px 70px -30px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(216, 181, 88, 0.35);
+  --sheen: rgba(216, 181, 88, 0.22);
+  --font-display: var(--f-playfair), Georgia, serif;
+  --font-body: var(--f-inter), system-ui, sans-serif;
+  --font-ui: var(--f-inter), system-ui, sans-serif;
+}
+
+/* ------------------------------------------------------------ 2. ARTÍCULO
+   "Marfil & Burdeos": papel cálido, didona Bodoni, lectura en Spectral.    */
+[data-theme="articulo"] {
+  color-scheme: light;
+  --bg: #fbf8f2;
+  --bg-2: #f4efe4;
+  --surface: #ffffff;
+  --surface-2: #f6f1e7;
+  --fg: #1b1714;
+  --fg-muted: #6d6257;
+  --border: #e3d9c8;
+  --border-strong: #c9b998;
+  --accent: #7b1e2b;
+  --accent-2: #a8843a;
+  --accent-fg: #fdfaf4;
+  --link: #7b1e2b;
+  --radius: 0.15rem;
+  --radius-lg: 0.2rem;
+  --shadow: 0 1px 2px rgba(60, 42, 20, 0.06);
+  --shadow-hover: 0 26px 50px -30px rgba(60, 42, 20, 0.45);
+  --sheen: rgba(168, 132, 58, 0.18);
+  --font-display: var(--f-bodoni), "Times New Roman", serif;
+  --font-body: var(--f-spectral), Georgia, serif;
+  --font-ui: var(--f-inter), system-ui, sans-serif;
+}
+
+/* -------------------------------------------------------------- 3. SECCIÓN
+   "Cobre & Obsidiana": grotescas expresivas, degradados de cobre líquido.  */
+[data-theme="seccion"] {
+  color-scheme: dark;
+  --bg: #0c0b0a;
+  --bg-2: #16120e;
+  --surface: rgba(255, 255, 255, 0.04);
+  --surface-2: rgba(201, 123, 63, 0.1);
+  --fg: #f4efe7;
+  --fg-muted: #a6988a;
+  --border: rgba(233, 184, 114, 0.2);
+  --border-strong: rgba(233, 184, 114, 0.45);
+  --accent: #e08c4c;
+  --accent-2: #f0c890;
+  --accent-fg: #180f08;
+  --link: #f0c890;
+  --radius: 1rem;
+  --radius-lg: 1.75rem;
+  --shadow: 0 1px 0 rgba(255, 255, 255, 0.04);
+  --shadow-hover: 0 30px 60px -28px rgba(224, 140, 76, 0.5);
+  --sheen: rgba(240, 200, 144, 0.25);
+  --font-display: var(--f-syne), ui-sans-serif, sans-serif;
+  --font-body: var(--f-grotesk), ui-sans-serif, sans-serif;
+  --font-ui: var(--f-grotesk), ui-sans-serif, sans-serif;
+}
+
+/* ---------------------------------------------------------------- 4. AUTOR
+   "Champán & Perla": luz suave, garalda fina, aire y capitulares.          */
+[data-theme="autor"] {
+  color-scheme: light;
+  --bg: #f8f4ef;
+  --bg-2: #efe7dc;
+  --surface: #fffdfa;
+  --surface-2: #f3ece1;
+  --fg: #2a241d;
+  --fg-muted: #7d7365;
+  --border: #e5dbcc;
+  --border-strong: #c6ad86;
+  --accent: #a4834f;
+  --accent-2: #8a6a49;
+  --accent-fg: #fffdf8;
+  --link: #8a6a49;
+  --radius: 999px;
+  --radius-lg: 2rem;
+  --shadow: 0 1px 2px rgba(120, 95, 60, 0.07);
+  --shadow-hover: 0 28px 55px -32px rgba(120, 95, 60, 0.5);
+  --sheen: rgba(198, 173, 134, 0.3);
+  --font-display: var(--f-cormorant), Garamond, serif;
+  --font-body: var(--f-jost), ui-sans-serif, sans-serif;
+  --font-ui: var(--f-jost), ui-sans-serif, sans-serif;
+}
+
+/* ------------------------------------------------------------- 5. BUSCADOR
+   "Zafiro Medianoche": consola de precisión, cian eléctrico, mono.         */
+[data-theme="buscar"] {
+  color-scheme: dark;
+  --bg: #05070f;
+  --bg-2: #090d1c;
+  --surface: rgba(126, 160, 255, 0.06);
+  --surface-2: rgba(110, 231, 249, 0.08);
+  --fg: #e9edfb;
+  --fg-muted: #8791b6;
+  --border: rgba(126, 160, 255, 0.2);
+  --border-strong: rgba(110, 231, 249, 0.5);
+  --accent: #6ee7f9;
+  --accent-2: #8b7bff;
+  --accent-fg: #04121a;
+  --link: #6ee7f9;
+  --radius: 0.75rem;
+  --radius-lg: 1.1rem;
+  --shadow: 0 1px 0 rgba(255, 255, 255, 0.05);
+  --shadow-hover: 0 0 0 1px rgba(110, 231, 249, 0.4), 0 24px 60px -30px rgba(110, 231, 249, 0.6);
+  --sheen: rgba(110, 231, 249, 0.3);
+  --font-display: var(--f-grotesk), ui-sans-serif, sans-serif;
+  --font-body: var(--f-inter), ui-sans-serif, sans-serif;
+  --font-ui: var(--f-mono), ui-monospace, monospace;
+}
+
+/* ------------------------------------------------------------ 6. ASISTENTE
+   "Obsidiana & Aurora": cristal, violeta, halos en movimiento.             */
+[data-theme="asistente"] {
+  color-scheme: dark;
+  --bg: #050507;
+  --bg-2: #0b0912;
+  --surface: rgba(255, 255, 255, 0.05);
+  --surface-2: rgba(167, 139, 250, 0.12);
+  --fg: #f5f3fb;
+  --fg-muted: #a09bb8;
+  --border: rgba(255, 255, 255, 0.12);
+  --border-strong: rgba(167, 139, 250, 0.5);
+  --accent: #b9a2ff;
+  --accent-2: #4ade9c;
+  --accent-fg: #0d0a18;
+  --link: #c7b6ff;
+  --radius: 1.25rem;
+  --radius-lg: 2rem;
+  --shadow: 0 1px 0 rgba(255, 255, 255, 0.06);
+  --shadow-hover: 0 30px 80px -30px rgba(167, 139, 250, 0.55);
+  --sheen: rgba(185, 162, 255, 0.28);
+  --font-display: var(--f-outfit), ui-sans-serif, sans-serif;
+  --font-body: var(--f-outfit), ui-sans-serif, sans-serif;
+  --font-ui: var(--f-mono), ui-monospace, monospace;
+}
+
+/* -------------------------------------------------------- 7. INSTITUCIONAL
+   "Mármol & Verde Botella": capital romana, sello, doble filete.           */
+[data-theme="institucional"] {
+  color-scheme: light;
+  --bg: #f5f4f0;
+  --bg-2: #eceae3;
+  --surface: #ffffff;
+  --surface-2: #f0efe8;
+  --fg: #13211a;
+  --fg-muted: #5d6b62;
+  --border: #d9d6cb;
+  --border-strong: #0f3d2e;
+  --accent: #0f3d2e;
+  --accent-2: #b08f4f;
+  --accent-fg: #f7f6f1;
+  --link: #0f3d2e;
+  --radius: 0.2rem;
+  --radius-lg: 0.25rem;
+  --shadow: 0 1px 2px rgba(19, 33, 26, 0.07);
+  --shadow-hover: 0 20px 45px -28px rgba(19, 33, 26, 0.5);
+  --sheen: rgba(176, 143, 79, 0.2);
+  --font-display: var(--f-marcellus), Georgia, serif;
+  --font-body: var(--f-source-serif), Georgia, serif;
+  --font-ui: var(--f-jost), ui-sans-serif, sans-serif;
+}
+
+/* -------------------------------------------------------------- 8. ARCHIVO
+   "Sepia & Ámbar": pergamino nocturno para 404 / rutas heredadas.          */
+[data-theme="archivo"] {
+  color-scheme: dark;
+  --bg: #100e0a;
+  --bg-2: #1a1610;
+  --surface: rgba(255, 255, 255, 0.04);
+  --surface-2: rgba(212, 160, 74, 0.1);
+  --fg: #f0e7d6;
+  --fg-muted: #a3947a;
+  --border: rgba(212, 160, 74, 0.22);
+  --border-strong: rgba(212, 160, 74, 0.45);
+  --accent: #d4a04a;
+  --accent-2: #8a6a3b;
+  --accent-fg: #130f08;
+  --link: #e8c07a;
+  --radius: 0.3rem;
+  --radius-lg: 0.5rem;
+  --shadow: 0 1px 0 rgba(255, 255, 255, 0.04);
+  --shadow-hover: 0 24px 50px -28px rgba(0, 0, 0, 0.8);
+  --sheen: rgba(212, 160, 74, 0.25);
+  --font-display: var(--f-marcellus), Georgia, serif;
+  --font-body: var(--f-jost), ui-sans-serif, sans-serif;
+  --font-ui: var(--f-jost), ui-sans-serif, sans-serif;
+}
+
+
+/* ================= Plantillas de portada (elegibles en /panel/portada) =====
+   Cada una es un tema completo, igual que las plantillas de ruta: cambia
+   paleta, tipografías, cabecera, pie y los componentes que renderiza la
+   portada (carrusel, tiles, cuadrícula bento…).
+   =========================================================================== */
+
+/* Clásico — "Broadsheet": papel crema, tinta densa, filete rojo de diario. */
+[data-theme="clasico"] {
+  color-scheme: light;
+  --bg: #faf7f0;
+  --bg-2: #f1ece0;
+  --surface: #ffffff;
+  --surface-2: #f5f0e4;
+  --fg: #16130f;
+  --fg-muted: #5e564a;
+  --border: #ddd4c0;
+  --border-strong: #b9271a;
+  --accent: #b9271a;
+  --accent-2: #8a6a2f;
+  --accent-fg: #fffaf2;
+  --link: #8f1e14;
+  --radius: 0.1rem;
+  --radius-lg: 0.15rem;
+  --shadow: 0 1px 2px rgba(40, 30, 12, 0.07);
+  --shadow-hover: 0 24px 46px -30px rgba(40, 30, 12, 0.45);
+  --sheen: rgba(185, 39, 26, 0.14);
+  --font-display: var(--f-playfair), Georgia, serif;
+  --font-body: var(--f-spectral), Georgia, serif;
+  --font-ui: var(--f-inter), system-ui, sans-serif;
+}
+
+/* Revista — portada cinematográfica: negro y oro, carrusel a sangre. */
+[data-theme="revista"] {
+  color-scheme: dark;
+  --bg: #0c0c0b;
+  --bg-2: #171614;
+  --surface: rgba(255, 255, 255, 0.045);
+  --surface-2: rgba(212, 162, 78, 0.1);
+  --fg: #f6f1e6;
+  --fg-muted: #a79d8b;
+  --border: rgba(212, 162, 78, 0.2);
+  --border-strong: rgba(212, 162, 78, 0.55);
+  --accent: #d4a24e;
+  --accent-2: #e8cf9a;
+  --accent-fg: #14100a;
+  --link: #e8cf9a;
+  --radius: 0.2rem;
+  --radius-lg: 0.4rem;
+  --shadow: 0 1px 0 rgba(212, 162, 78, 0.12);
+  --shadow-hover: 0 32px 70px -30px rgba(0, 0, 0, 0.95);
+  --sheen: rgba(232, 207, 154, 0.25);
+  --font-display: var(--f-bodoni), "Times New Roman", serif;
+  --font-body: var(--f-jost), ui-sans-serif, sans-serif;
+  --font-ui: var(--f-jost), ui-sans-serif, sans-serif;
+}
+
+/* Compacto — cuadrícula técnica: blanco nítido, azul zafiro, máxima densidad. */
+[data-theme="compacto"] {
+  color-scheme: light;
+  --bg: #fbfcfd;
+  --bg-2: #eef2f7;
+  --surface: #ffffff;
+  --surface-2: #e9eff8;
+  --fg: #0f172a;
+  --fg-muted: #5b6b82;
+  --border: #dbe3ee;
+  --border-strong: #1d4ed8;
+  --accent: #1d4ed8;
+  --accent-2: #0ea5e9;
+  --accent-fg: #ffffff;
+  --link: #1d4ed8;
+  --radius: 0.4rem;
+  --radius-lg: 0.6rem;
+  --shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+  --shadow-hover: 0 22px 44px -26px rgba(29, 78, 216, 0.45);
+  --sheen: rgba(29, 78, 216, 0.14);
+  --font-display: var(--f-grotesk), ui-sans-serif, sans-serif;
+  --font-body: var(--f-inter), ui-sans-serif, sans-serif;
+  --font-ui: var(--f-inter), ui-sans-serif, sans-serif;
+}
+
+/* Vanguardia — bento inmersivo: casi negro, coral → violeta, vidrio y orbes. */
+[data-theme="vanguardia"] {
+  color-scheme: dark;
+  --bg: #08090c;
+  --bg-2: #101218;
+  --surface: rgba(255, 255, 255, 0.055);
+  --surface-2: rgba(139, 92, 246, 0.14);
+  --fg: #f7f7fb;
+  --fg-muted: #9aa0b4;
+  --border: rgba(255, 255, 255, 0.12);
+  --border-strong: rgba(139, 92, 246, 0.55);
+  --accent: #ff6a48;
+  --accent-2: #8b5cf6;
+  --accent-fg: #12060b;
+  --link: #ff8f75;
+  --radius: 1.1rem;
+  --radius-lg: 1.9rem;
+  --shadow: 0 1px 0 rgba(255, 255, 255, 0.06);
+  --shadow-hover: 0 34px 80px -34px rgba(139, 92, 246, 0.6);
+  --sheen: rgba(255, 106, 72, 0.25);
+  --font-display: var(--f-outfit), ui-sans-serif, sans-serif;
+  --font-body: var(--f-outfit), ui-sans-serif, sans-serif;
+  /* Sans real: los titulares de las fichas bento leen --font-sans (alias de
+     --font-ui). La monoespaciada se reserva a los apoyos con .lx-mono. */
+  --font-ui: var(--f-outfit), ui-sans-serif, sans-serif;
+}
+
+/* ---------------------------------------------------------------- 9. PANEL
+   "Grafito & Jade": herramienta de redacción, densa y silenciosa.          */
+[data-theme="panel"] {
+  color-scheme: dark;
+  --bg: #0a0c0e;
+  --bg-2: #11151a;
+  --surface: rgba(255, 255, 255, 0.035);
+  --surface-2: rgba(74, 222, 156, 0.08);
+  --fg: #eef1f4;
+  --fg-muted: #93a0ac;
+  --border: rgba(255, 255, 255, 0.1);
+  --border-strong: rgba(74, 222, 156, 0.4);
+  --accent: #4ade9c;
+  --accent-2: #d8b558;
+  --accent-fg: #06170f;
+  --link: #7ff0bd;
+  --radius: 0.65rem;
+  --radius-lg: 1rem;
+  --shadow: 0 1px 0 rgba(255, 255, 255, 0.05);
+  --shadow-hover: 0 22px 50px -30px rgba(0, 0, 0, 0.9);
+  --sheen: rgba(74, 222, 156, 0.22);
+  --font-display: var(--f-grotesk), ui-sans-serif, sans-serif;
+  --font-body: var(--f-inter), ui-sans-serif, sans-serif;
+  --font-ui: var(--f-inter), ui-sans-serif, sans-serif;
+}
+
+/* -------------------------------------------------------------- 10. ACCESO
+   "Platino": vestíbulo de acceso, cristal sobre negro absoluto.            */
+[data-theme="acceso"] {
+  color-scheme: dark;
+  --bg: #040506;
+  --bg-2: #0a0c10;
+  --surface: rgba(255, 255, 255, 0.06);
+  --surface-2: rgba(255, 255, 255, 0.1);
+  --fg: #f2f4f7;
+  --fg-muted: #9aa3ad;
+  --border: rgba(255, 255, 255, 0.14);
+  --border-strong: rgba(226, 232, 240, 0.55);
+  --accent: #dfe5ec;
+  --accent-2: #4ade9c;
+  --accent-fg: #0a0c10;
+  --link: #dfe5ec;
+  --radius: 1rem;
+  --radius-lg: 1.5rem;
+  --shadow: 0 1px 0 rgba(255, 255, 255, 0.08);
+  --shadow-hover: 0 40px 90px -40px rgba(0, 0, 0, 1);
+  --sheen: rgba(255, 255, 255, 0.35);
+  --font-display: var(--f-outfit), ui-sans-serif, sans-serif;
+  --font-body: var(--f-inter), ui-sans-serif, sans-serif;
+  --font-ui: var(--f-mono), ui-monospace, monospace;
+}
+
+
+/* Alias de portada, re-declarados en cada elemento con tema: así
+   var(--bg)/var(--fg) se resuelven contra ESE tema y no contra :root. */
+[data-theme] {
+  /* Alias para los componentes de portada (Clásico, Revista, Compacto,
+     Vanguardia): hablan en --paper/--ink/--rule, que aquí se resuelven contra
+     los tokens del tema activo. Así una sola paleta tiñe ambos sistemas. */
+  /* Fondo SÓLIDO de la barra de navegación. Nunca translúcido: sobre una
+     aurora o un degradado, el blur dejaba los enlaces sin contraste estable. */
+  --nav-bg: var(--bg-2);
+  --paper: var(--bg);
+  --paper-2: var(--bg-2);
+  --ink: var(--fg);
+  --ink-soft: var(--fg-muted);
+  --ink-faint: color-mix(in oklab, var(--fg-muted) 78%, transparent);
+  --rule: var(--border);
+  --rule-strong: var(--accent);
+  --brand: var(--accent);
+  --brand-ink: var(--accent);
+  --brand-fg: var(--accent-fg);
+  --font-sans: var(--font-ui);
+  --font-serif: var(--font-body);
+  --maxw: min(96rem, 94vw);
+}
+
+
+/* ============== Cromo del panel (barra de edición de portada) =============
+   La barra y los paneles del editor son SIEMPRE claros, pero viven dentro del
+   contenedor con el tema de la plantilla (que puede ser oscuro). Sin un tema
+   propio heredan `--fg`/`--fg-muted` del tema oscuro y quedan en gris casi
+   invisible sobre blanco. Estos dos temas fijan su propia tinta.
+   =========================================================================== */
+
+[data-theme="panel-ui"] {
+  color-scheme: light;
+  --bg: #ffffff;
+  --bg-2: #f1f5f9;
+  --surface: #ffffff;
+  --surface-2: #e8edf3;
+  --fg: #0b1220;
+  --fg-muted: #334155;
+  --ink-faint: #475569;
+  --border: #c3ccd8;
+  --border-strong: #64748b;
+  --accent: #b45309;
+  --accent-2: #0f766e;
+  --accent-fg: #ffffff;
+  --link: #b45309;
+  --nav-bg: #ffffff;
+  --shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+}
+
+/* Selector de plantillas: lienzo ámbar. */
+[data-theme="panel-amber"] {
+  color-scheme: light;
+  --bg: #fdf6e6;
+  --bg-2: #f7ead0;
+  --surface: #fffaf0;
+  --surface-2: #f6e7c8;
+  --fg: #1c1408;
+  --fg-muted: #5c4a2c;
+  --ink-faint: #6b5636;
+  --border: #e4d2ab;
+  --border-strong: #b45309;
+  --accent: #b45309;
+  --accent-2: #8a6a2f;
+  --accent-fg: #fffaf0;
+  --link: #92400e;
+  --nav-bg: #fdf6e6;
+  --shadow: 0 1px 2px rgba(80, 58, 20, 0.1);
+}
+
+/* ============================ Base ====================================== */
 
 * {
   border-color: var(--border);
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
-  background: var(--bg);
+  background: #05070a;
   color: var(--fg);
-  font-family: var(--font-sans);
+  font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
@@ -61,24 +520,601 @@ a {
   color: inherit;
 }
 
-/* Cuerpo de artículo renderizado desde markdown/HTML sanitizado. */
-.prose {
-  font-family: var(--font-serif);
-  font-size: 1.125rem;
-  line-height: 1.75;
-  max-width: 42rem;
+::selection {
+  background: var(--accent);
+  color: var(--accent-fg);
 }
-.prose p { margin: 0 0 1.25rem; }
-.prose h2 { font-size: 1.5rem; font-weight: 700; margin: 2rem 0 0.75rem; font-family: var(--font-sans); }
-.prose h3 { font-size: 1.2rem; font-weight: 700; margin: 1.5rem 0 0.5rem; font-family: var(--font-sans); }
-.prose a { color: var(--link); text-decoration: underline; text-underline-offset: 2px; }
-.prose ul, .prose ol { margin: 0 0 1.25rem 1.25rem; }
-.prose li { margin-bottom: 0.4rem; }
-.prose blockquote {
-  border-left: 3px solid var(--brand);
-  padding-left: 1rem;
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+/* ============================ Estructura ================================= */
+
+.lx-shell {
+  position: relative;
+  isolation: isolate;
+  /* `clip` recorta los halos de la aurora sin crear contenedor de scroll:
+     así el navbar `sticky` de las plantillas sigue funcionando. */
+  overflow-x: clip;
+  display: flex;
+  min-height: 100dvh;
+  flex-direction: column;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-body);
+}
+
+/* Textura de grano: da "peso" al color plano, como un papel o un barniz. */
+.lx-grain::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+  opacity: 0.4;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='0.35'/%3E%3C/svg%3E");
+}
+
+/* Halos de color en movimiento lentísimo (aurora). */
+.lx-aurora::before {
+  content: "";
+  position: absolute;
+  inset: -20% -10% auto -10%;
+  height: 120vh;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(42rem 26rem at 18% 8%, color-mix(in oklab, var(--accent) 22%, transparent), transparent 70%),
+    radial-gradient(38rem 24rem at 82% 22%, color-mix(in oklab, var(--accent-2) 20%, transparent), transparent 70%),
+    radial-gradient(30rem 20rem at 50% 60%, color-mix(in oklab, var(--accent) 12%, transparent), transparent 70%);
+  filter: blur(8px);
+  animation: lx-drift 26s var(--ease-lux) infinite alternate;
+}
+
+.lx-vignette::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(120% 80% at 50% 0%, transparent 40%, color-mix(in oklab, var(--bg) 85%, black) 100%);
+}
+
+@keyframes lx-drift {
+  0% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(-3%, 2%, 0) scale(1.08); }
+  100% { transform: translate3d(3%, -2%, 0) scale(1.03); }
+}
+
+/* Fila de secciones en móvil: una sola línea deslizable en vez de dos o tres
+   apiladas. Ahorra ~50 px de barra fija en pantallas pequeñas. */
+.lx-navrail {
+  display: flex;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x proximity;
+}
+.lx-navrail::-webkit-scrollbar { display: none; }
+.lx-navrail > * { flex: none; scroll-snap-align: start; }
+
+@media (min-width: 640px) {
+  .lx-navrail {
+    flex-wrap: wrap;
+    overflow-x: visible;
+  }
+}
+
+/* ============================ Tipografía ================================= */
+
+.lx-display { font-family: var(--font-display); }
+.lx-ui { font-family: var(--font-ui); }
+.lx-mono { font-family: var(--f-mono), ui-monospace, monospace; }
+
+.lx-kicker {
+  font-family: var(--font-ui);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+/* Texto con lámina metálica + brillo que recorre las letras. */
+.lx-foil {
+  background: linear-gradient(
+    100deg,
+    color-mix(in oklab, var(--accent) 65%, var(--fg)) 0%,
+    var(--accent) 28%,
+    #fff8e2 46%,
+    var(--accent) 62%,
+    color-mix(in oklab, var(--accent) 60%, var(--fg)) 100%
+  );
+  background-size: 250% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: lx-foil 7s linear infinite;
+}
+
+@keyframes lx-foil {
+  to { background-position: -250% 0; }
+}
+
+.lx-rule {
+  height: 1px;
+  border: 0;
+  background: linear-gradient(90deg, transparent, var(--border-strong), transparent);
+}
+
+.lx-rule-strong {
+  height: 2px;
+  border: 0;
+  background: linear-gradient(90deg, var(--accent), color-mix(in oklab, var(--accent-2) 70%, transparent), transparent);
+}
+
+/* ============================ Superficies ================================ */
+
+.lx-card {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background:
+    linear-gradient(160deg, color-mix(in oklab, var(--surface) 100%, transparent), transparent 62%),
+    var(--bg-2);
+  box-shadow: var(--shadow);
+  transition:
+    transform 0.55s var(--ease-lux),
+    box-shadow 0.55s var(--ease-lux),
+    border-color 0.4s var(--ease-lux);
+}
+
+.lx-card:hover {
+  transform: translateY(-6px);
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-hover);
+}
+
+.lx-glass {
+  background: color-mix(in oklab, var(--surface) 100%, transparent);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+}
+
+/* Barrido de luz sobre la tarjeta al pasar el cursor. */
+.lx-shine::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  background: linear-gradient(105deg, transparent 38%, var(--sheen) 50%, transparent 62%);
+  background-size: 260% 100%;
+  background-position: 160% 0;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.lx-card:hover .lx-shine::before,
+.lx-shine:hover::before {
+  opacity: 1;
+  animation: lx-sweep 1.1s var(--ease-lux);
+}
+
+@keyframes lx-sweep {
+  from { background-position: 160% 0; }
+  to { background-position: -60% 0; }
+}
+
+/* Marco interior de hilo metálico. */
+.lx-inlay::after {
+  content: "";
+  position: absolute;
+  inset: 0.45rem;
+  z-index: 2;
+  pointer-events: none;
+  border: 1px solid color-mix(in oklab, var(--accent) 28%, transparent);
+  border-radius: calc(var(--radius-lg) - 0.3rem);
+  opacity: 0.55;
+  transition: opacity 0.4s var(--ease-lux), inset 0.4s var(--ease-lux);
+}
+
+.lx-card:hover .lx-inlay::after {
+  opacity: 1;
+}
+
+.lx-media {
+  overflow: hidden;
+}
+
+.lx-media img,
+.lx-media .lx-art {
+  transition: transform 0.9s var(--ease-lux), filter 0.9s var(--ease-lux);
+}
+
+.lx-card:hover .lx-media img,
+.lx-card:hover .lx-media .lx-art {
+  transform: scale(1.06);
+  filter: saturate(1.1);
+}
+
+/* Portada generada: malla de degradados + inicial en caja alta. */
+.lx-art {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  background-color: var(--bg-2);
+}
+
+.lx-art::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+  opacity: 0.18;
+  mix-blend-mode: overlay;
+}
+
+/* En los temas de papel (autor, institucional) la portada generada se aclara
+   para no romper la luminosidad de la página. */
+[data-theme="autor"] .lx-art,
+[data-theme="institucional"] .lx-art {
+  filter: brightness(1.55) saturate(0.7) contrast(0.88);
+}
+
+/* ============================ Controles ================================== */
+
+.lx-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  overflow: hidden;
+  border-radius: var(--radius);
+  border: 1px solid transparent;
+  background: linear-gradient(135deg, var(--accent), color-mix(in oklab, var(--accent) 55%, var(--accent-2)));
+  padding: 0.7rem 1.4rem;
+  font-family: var(--font-ui);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent-fg);
+  box-shadow: var(--shadow);
+  transition: transform 0.4s var(--ease-lux), box-shadow 0.4s var(--ease-lux), opacity 0.3s;
+}
+
+.lx-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 34px -18px color-mix(in oklab, var(--accent) 70%, transparent);
+}
+
+.lx-btn:disabled {
+  opacity: 0.45;
+  transform: none;
+}
+
+.lx-btn-ghost {
+  background: transparent;
+  border-color: var(--border-strong);
+  color: var(--fg);
+}
+
+.lx-btn-ghost:hover {
+  background: var(--surface-2);
+}
+
+.lx-input {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: color-mix(in oklab, var(--surface) 100%, transparent);
+  padding: 0.7rem 0.95rem;
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  color: var(--fg);
+  transition: border-color 0.3s, box-shadow 0.3s, background 0.3s;
+}
+
+.lx-input::placeholder { color: var(--fg-muted); }
+
+.lx-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px color-mix(in oklab, var(--accent) 18%, transparent);
+}
+
+.lx-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-2);
+  padding: 0.3rem 0.85rem;
+  font-family: var(--font-ui);
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
   color: var(--fg-muted);
-  font-style: italic;
-  margin: 0 0 1.25rem;
 }
-.prose img { border-radius: var(--radius); margin: 1.5rem 0; }
+
+/* Enlace con filete que crece desde la izquierda. */
+.lx-link {
+  position: relative;
+  transition: color 0.3s;
+}
+
+.lx-link::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -4px;
+  height: 1px;
+  width: 100%;
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.45s var(--ease-lux);
+}
+
+.lx-link:hover { color: var(--link); }
+.lx-link:hover::after { transform: scaleX(1); }
+
+/* ============================ Movimiento ================================= */
+
+.lx-reveal {
+  animation: lx-rise 0.9s var(--ease-lux) both;
+}
+
+@supports (animation-timeline: view()) {
+  .lx-reveal {
+    animation: lx-rise linear both;
+    animation-timeline: view();
+    animation-range: entry 0% cover 28%;
+  }
+}
+
+@keyframes lx-rise {
+  from { opacity: 0; transform: translateY(26px); }
+  to { opacity: 1; transform: none; }
+}
+
+.lx-marquee {
+  display: flex;
+  gap: 3rem;
+  width: max-content;
+  animation: lx-scroll 38s linear infinite;
+}
+
+@keyframes lx-scroll {
+  to { transform: translateX(-50%); }
+}
+
+.lx-pulse { animation: lx-pulse 2.4s ease-in-out infinite; }
+
+@keyframes lx-pulse {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .lx-card:hover { transform: none; }
+}
+
+
+/* ============== Primitivas de portada (componentes Clásico/Revista/…) =====
+   Portadas del worktree de portada editable, re-teñidas con los tokens de
+   arriba: el mismo marcado sirve para las cinco plantillas.
+   =========================================================================== */
+
+.shell {
+  width: 100%;
+  max-width: var(--maxw);
+  margin-inline: auto;
+  padding-inline: clamp(1rem, 4vw, 2.5rem);
+}
+
+.kicker {
+  font-family: var(--font-ui);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.meta {
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  letter-spacing: 0.02em;
+  color: var(--ink-faint);
+}
+
+.headline {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.012em;
+  line-height: 1.12;
+  text-wrap: balance;
+}
+
+.rule-strong {
+  border-top: 2px solid var(--accent);
+}
+
+.entry-title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.011em;
+  line-height: 1.16;
+  text-wrap: balance;
+}
+.entry-link:hover .entry-title {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+  text-decoration-color: var(--accent);
+}
+.entry-dek {
+  font-family: var(--font-body);
+  color: var(--fg-muted);
+  line-height: 1.55;
+}
+
+.media-frame {
+  display: block;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-2);
+}
+.media-frame img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.6s var(--ease-lux);
+}
+.entry-link:hover .media-frame img {
+  transform: scale(1.04);
+}
+
+/* "Revista": la tarjeta se alza y la foto se acerca. */
+.hover-zoom {
+  border-radius: var(--radius-lg);
+  transition: transform 0.45s var(--ease-lux), box-shadow 0.45s var(--ease-lux);
+}
+.hover-zoom:hover {
+  transform: translateY(-5px);
+  box-shadow: var(--shadow-hover);
+}
+.hover-zoom .media-frame img { transition: transform 0.7s var(--ease-lux); }
+.hover-zoom:hover .media-frame img { transform: scale(1.08); }
+
+/* Grano de papel (Clásico) / de panel (Vanguardia). */
+.grain { position: relative; isolation: isolate; }
+.grain::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0.06;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Panel de vidrio (Vanguardia). */
+.glass {
+  background: color-mix(in oklab, var(--surface) 100%, transparent);
+  backdrop-filter: blur(16px) saturate(1.4);
+  -webkit-backdrop-filter: blur(16px) saturate(1.4);
+  border: 1px solid var(--border);
+}
+
+/* Orbes de gradiente a la deriva (Vanguardia). */
+@keyframes meshDrift {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(4%, -5%) scale(1.1); }
+  66% { transform: translate(-5%, 4%) scale(1.04); }
+}
+.mesh-orb { animation: meshDrift 22s ease-in-out infinite; will-change: transform; }
+.mesh-orb.delay { animation-duration: 28s; animation-direction: reverse; }
+
+@media (prefers-reduced-motion: reduce) {
+  .mesh-orb { animation: none; }
+}
+
+/* Lienzo cálido de papel prensa (Clásico). */
+.tpl-broadsheet {
+  --bw-paper: color-mix(in oklab, var(--bg) 92%, #f7efdc);
+  --bw-rule: var(--border);
+  background: var(--bw-paper);
+  border: 1px solid var(--bw-rule);
+}
+
+/* ============================ Cuerpo de texto ============================ */
+
+.prose {
+  font-family: var(--font-body);
+  font-size: 1.15rem;
+  line-height: 1.78;
+  max-width: 40rem;
+  color: var(--fg);
+}
+.prose p { margin: 0 0 1.4rem; }
+.prose h2 {
+  font-family: var(--font-display);
+  font-size: 1.8rem;
+  font-weight: 600;
+  line-height: 1.2;
+  margin: 2.6rem 0 0.9rem;
+}
+.prose h3 {
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  font-weight: 600;
+  margin: 1.9rem 0 0.6rem;
+}
+.prose a {
+  color: var(--link);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+  text-decoration-color: color-mix(in oklab, var(--link) 45%, transparent);
+}
+.prose a:hover { text-decoration-color: var(--link); }
+.prose ul, .prose ol { margin: 0 0 1.4rem 1.3rem; }
+.prose li { margin-bottom: 0.5rem; }
+.prose blockquote {
+  position: relative;
+  margin: 2rem 0;
+  padding: 0.2rem 0 0.2rem 1.6rem;
+  border-left: 2px solid var(--accent);
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  font-style: italic;
+  line-height: 1.5;
+  color: color-mix(in oklab, var(--fg) 88%, var(--accent));
+}
+.prose img { border-radius: var(--radius-lg); margin: 2rem 0; }
+/* Figuras insertadas desde el panel (foto o vídeo con su pie). */
+.prose figure { margin: 2.4rem 0; }
+.prose figure img, .prose figure video { margin: 0; display: block; width: 100%; border-radius: var(--radius-lg); }
+.prose figcaption {
+  margin-top: 0.7rem;
+  font-family: var(--font-ui);
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--fg-muted);
+}
+.prose video { width: 100%; border-radius: var(--radius-lg); margin: 2rem 0; background: #000; }
+.prose hr { margin: 2.5rem 0; border: 0; height: 1px; background: var(--border); }
+
+/* Capitular de lujo para el primer párrafo del artículo. */
+.prose-drop > p:first-of-type::first-letter {
+  float: left;
+  margin: 0.32em 0.12em 0 0;
+  font-family: var(--font-display);
+  font-size: 4.2em;
+  line-height: 0.72;
+  font-weight: 500;
+  color: var(--accent);
+}

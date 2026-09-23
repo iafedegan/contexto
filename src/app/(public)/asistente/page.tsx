@@ -1,23 +1,13 @@
+/**
+ * Ruta en español. Comparte la implementación y solo
+ * cambia el idioma de la INTERFAZ; el contenido sigue en español.
+ *
+ */
 import type { Metadata } from "next";
-import { AssistantChat } from "@/components/assistant-chat";
+import { makePage } from "../_pages/asistente";
 
 export const metadata: Metadata = {
   title: "Asistente",
-  description:
-    "Asistente conversacional de CONtexto Ganadero: responde con base en el archivo completo del medio y cita cada fuente.",
+  description: "Asistente conversacional de CONtexto Ganadero: responde con base en el archivo completo del medio y cita cada fuente.",
 };
-
-export default function AssistantPage() {
-  return (
-    <div className="mx-auto max-w-2xl">
-      <h1 className="text-2xl font-extrabold">Asistente CONtexto Ganadero</h1>
-      <p className="mt-2 text-sm text-[var(--fg-muted)]">
-        Recuperación sobre contenido propio + archivo histórico. No sustituye la asesoría de un
-        médico veterinario para casos individuales.
-      </p>
-      <div className="mt-6">
-        <AssistantChat />
-      </div>
-    </div>
-  );
-}
+export default makePage("es");

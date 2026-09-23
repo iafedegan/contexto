@@ -1,8 +1,8 @@
 import { cn } from "@/lib/utils";
 
 /**
- * Primitivas de UI mínimas (estilo shadcn/ui, sin la dependencia completa en el
- * scaffold). Sustituibles por `npx shadcn@latest add ...` cuando se amplíe.
+ * Primitivas de UI. Leen las variables del tema activo (`data-theme`), así que
+ * el mismo botón se ve "pan de oro" en portada y "jade" en el panel.
  */
 
 export function Button({
@@ -13,67 +13,28 @@ export function Button({
   variant?: "primary" | "outline" | "ghost" | "danger";
 }) {
   const styles = {
-    primary: "bg-[var(--brand)] text-[var(--brand-fg)] hover:opacity-90",
-    outline: "border border-[var(--border)] hover:bg-[var(--bg-subtle)]",
-    ghost: "hover:bg-[var(--bg-subtle)]",
-    danger: "bg-[var(--danger)] text-white hover:opacity-90",
+    primary: "lx-btn",
+    outline: "lx-btn lx-btn-ghost",
+    ghost:
+      "inline-flex items-center justify-center gap-2 rounded-[var(--radius)] px-4 py-2 text-sm font-medium transition hover:bg-[var(--surface-2)]",
+    danger:
+      "inline-flex items-center justify-center gap-2 rounded-[var(--radius)] bg-[var(--danger)] px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90",
   }[variant];
-  return (
-    <button
-      className={cn(
-        "inline-flex items-center justify-center gap-2 rounded-[var(--radius)] px-4 py-2 text-sm font-medium transition disabled:opacity-50",
-        styles,
-        className,
-      )}
-      {...props}
-    />
-  );
+  return <button className={cn(styles, "disabled:opacity-50", className)} {...props} />;
 }
 
 export function Input({ className, ...props }: React.InputHTMLAttributes<HTMLInputElement>) {
-  return (
-    <input
-      className={cn(
-        "w-full rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-sm outline-none focus:border-[var(--brand)]",
-        className,
-      )}
-      {...props}
-    />
-  );
+  return <input className={cn("lx-input", className)} {...props} />;
 }
 
 export function Textarea({ className, ...props }: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
-  return (
-    <textarea
-      className={cn(
-        "w-full rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-sm outline-none focus:border-[var(--brand)]",
-        className,
-      )}
-      {...props}
-    />
-  );
+  return <textarea className={cn("lx-input", className)} {...props} />;
 }
 
 export function Card({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return (
-    <div
-      className={cn(
-        "rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg)] p-4",
-        className,
-      )}
-      {...props}
-    />
-  );
+  return <div className={cn("lx-card p-5", className)} {...props} />;
 }
 
 export function Badge({ className, ...props }: React.HTMLAttributes<HTMLSpanElement>) {
-  return (
-    <span
-      className={cn(
-        "inline-flex items-center rounded-full bg-[var(--bg-subtle)] px-2 py-0.5 text-xs font-medium text-[var(--fg-muted)]",
-        className,
-      )}
-      {...props}
-    />
-  );
+  return <span className={cn("lx-chip", className)} {...props} />;
 }

@@ -51,6 +51,8 @@ export async function saveArticle(formData: FormData) {
   const body = String(formData.get("body") ?? "");
   const categoryId = (formData.get("categoryId") as string) || null;
   const authorId = (formData.get("authorId") as string) || null;
+  const coverImageUrl = String(formData.get("coverImageUrl") ?? "").trim() || null;
+  const coverImageAlt = String(formData.get("coverImageAlt") ?? "").trim() || null;
   const metaTitle = String(formData.get("metaTitle") ?? "").trim() || null;
   const metaDescription = String(formData.get("metaDescription") ?? "").trim() || null;
   const tags = String(formData.get("tags") ?? "")
@@ -66,6 +68,8 @@ export async function saveArticle(formData: FormData) {
     body,
     categoryId,
     authorId,
+    coverImageUrl,
+    coverImageAlt,
     metaTitle,
     metaDescription,
     tags,

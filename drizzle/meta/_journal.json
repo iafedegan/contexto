@@ -8,6 +8,34 @@
       "when": 1788827713426,
       "tag": "0000_init",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1789605228064,
+      "tag": "0001_add_home_position",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1789607907626,
+      "tag": "0002_add_home_size_span",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1789609243192,
+      "tag": "0003_home_style_json",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1789609973987,
+      "tag": "0004_site_settings",
+      "breakpoints": true
     }
   ]
 }

@@ -1,12 +1,18 @@
-import { SiteHeader } from "@/components/site-header";
-import { SiteFooter } from "@/components/site-footer";
+/**
+ * El grupo público no impone marco: cada página monta su propia plantilla con
+ * `<SiteShell theme="…">` (navbar, paleta, tipografías y footer propios).
+ * Lo único común es la medición: GA4 se carga aquí, así que queda fuera del
+ * panel y de las vistas previas.
+ */
+import { Ga4 } from "@/components/analytics-ga4";
+import { getGa4Id } from "@/lib/analytics-server";
 
-export default function PublicLayout({ children }: { children: React.ReactNode }) {
+export default async function PublicLayout({ children }: { children: React.ReactNode }) {
+  const ga4 = await getGa4Id().catch(() => "");
   return (
-    <div className="flex min-h-screen flex-col">
-      <SiteHeader />
-      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">{children}</main>
-      <SiteFooter />
-    </div>
+    <>
+      {children}
+      <Ga4 id={ga4} />
+    </>
   );
 }

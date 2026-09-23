@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { anthropic } from "@ai-sdk/anthropic";
+import { getAiModel } from "@/lib/ai-provider";
 import { generateText } from "ai";
 import { db } from "@/db";
 import { assistantQueries } from "@/db/schema";
@@ -10,7 +10,6 @@ import { ASSISTANT_SYSTEM } from "@/agents/prompts";
 export const runtime = "nodejs";
 export const maxDuration = 30;
 
-const MODEL = process.env.ASSISTANT_MODEL ?? "claude-sonnet-5";
 
 type CitedSource = { title: string; url: string; kind: "articulo" | "archivo" };
 type Body = { question: string; sessionId: string; history?: { role: string; content: string }[] };
@@ -42,7 +41,8 @@ export async function POST(req: Request) {
   }
 
   const budget = await checkBudget(sessionId);
-  const hasLlmKey = Boolean(process.env.ANTHROPIC_API_KEY);
+  const model = await getAiModel();
+  const hasLlmKey = Boolean(model);
 
   // 2. Sin presupuesto o sin proveedor de IA -> búsqueda semántica sin generación.
   if (!budget.allowGeneration || !hasLlmKey) {
@@ -64,7 +64,7 @@ export async function POST(req: Request) {
 
   try {
     const { text, usage } = await generateText({
-      model: anthropic(MODEL),
+      model: model!,
       system: `${ASSISTANT_SYSTEM}\n\nFRAGMENTOS DE CONTEXTO:\n${context}`,
       prompt: q,
       temperature: 0.2,

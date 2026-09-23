@@ -117,3 +117,61 @@ function toIso(d?: Date | string | null): string | undefined {
   if (!d) return undefined;
   return (typeof d === "string" ? new Date(d) : d).toISOString();
 }
+
+/**
+ * Listado de sección: `CollectionPage` + `ItemList`.
+ *
+ * Google necesita saber que una página de sección es un LISTADO, no un
+ * artículo: con esto puede mostrar el conjunto en resultados enriquecidos y
+ * entiende la jerarquía portada → sección → nota.
+ */
+export function collectionJsonLd(input: {
+  name: string;
+  description?: string | null;
+  path: string;
+  items: Array<{ title: string; slug: string }>;
+}) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    name: input.name,
+    ...(input.description ? { description: input.description } : {}),
+    url: siteUrl(input.path),
+    isPartOf: { "@type": "WebSite", name: SITE_NAME, url: siteUrl("/") },
+    mainEntity: {
+      "@type": "ItemList",
+      numberOfItems: input.items.length,
+      itemListElement: input.items.map((a, i) => ({
+        "@type": "ListItem",
+        position: i + 1,
+        url: siteUrl(`/articulo/${a.slug}`),
+        name: a.title,
+      })),
+    },
+  };
+}
+
+/** Página de firma: `ProfilePage` + `Person`, con sus notas como creaciones. */
+export function authorJsonLd(input: {
+  name: string;
+  bio?: string | null;
+  slug: string;
+  items: Array<{ title: string; slug: string }>;
+}) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "ProfilePage",
+    mainEntity: {
+      "@type": "Person",
+      name: input.name,
+      ...(input.bio ? { description: input.bio } : {}),
+      url: siteUrl(`/autor/${input.slug}`),
+      worksFor: { "@type": "NewsMediaOrganization", name: SITE_NAME, url: siteUrl("/") },
+    },
+    hasPart: input.items.slice(0, 20).map((a) => ({
+      "@type": "NewsArticle",
+      headline: a.title,
+      url: siteUrl(`/articulo/${a.slug}`),
+    })),
+  };
+}
