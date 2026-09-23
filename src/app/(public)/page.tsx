@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AdsBanner } from "@/components/ads-banner";
 import { ArticleCard } from "@/components/article-card";
 import { getRecentArticles } from "@/lib/content";
 
@@ -34,6 +35,8 @@ export default async function HomePage() {
 
   return (
     <div className="flex flex-col gap-10">
+      <AdsBanner zone="home_top" className="mx-auto" />
+
       <section className="grid gap-6 md:grid-cols-2">
         <ArticleCard a={lead} priority />
         <div className="flex flex-col gap-4">
