@@ -3,9 +3,12 @@ import { db } from "@/db";
 import { agentDrafts } from "@/db/schema";
 import { Badge, Button, Card } from "@/components/ui";
 import { formatDate } from "@/lib/utils";
-import { approveDraft, rejectDraft } from "./actions";
+import { DEMO_SOURCES } from "@/agents/sources";
+import { approveDraft, rejectDraft, runAgentOnDemoSource } from "./actions";
 
 export const dynamic = "force-dynamic";
+
+const AGENT_MODE = process.env.ANTHROPIC_API_KEY ? "IA (Claude)" : "simulación por plantilla";
 
 export default async function DraftsQueue() {
   const rows = await db
@@ -24,6 +27,27 @@ export default async function DraftsQueue() {
           aprobar se crea un artículo en borrador atribuido a ti; la publicación es un paso aparte.
         </p>
       </div>
+
+      <Card className="flex flex-col gap-3 border-dashed">
+        <div>
+          <p className="text-sm font-semibold">Ejecutar el agente sobre una fuente</p>
+          <p className="text-xs text-[var(--fg-muted)]">
+            Fuentes estructuradas de demostración (en producción llegan de SIPSA, salas de prensa,
+            ICA, agenda sectorial). El agente redacta un borrador y lo pasa por el verificador de
+            cifras. Modo actual: <strong>{AGENT_MODE}</strong>.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {DEMO_SOURCES.map((s) => (
+            <form key={s.key} action={runAgentOnDemoSource}>
+              <input type="hidden" name="sourceKey" value={s.key} />
+              <Button variant="outline" type="submit" title={s.description}>
+                + {s.label}
+              </Button>
+            </form>
+          ))}
+        </div>
+      </Card>
 
       {rows.length === 0 && <p className="text-[var(--fg-muted)]">No hay borradores pendientes.</p>}
 

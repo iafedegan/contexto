@@ -7,6 +7,8 @@ import { db } from "@/db";
 import { agentDrafts, articles } from "@/db/schema";
 import { requireRole } from "@/lib/auth";
 import { slugify } from "@/lib/utils";
+import { generateDraft } from "@/agents/draft-generator";
+import { getDemoSource } from "@/agents/sources";
 
 /**
  * Aprobar un borrador de agente NO lo publica. Crea un artículo en estado
@@ -45,6 +47,23 @@ export async function approveDraft(draftId: string) {
 
   revalidatePath("/panel/borradores-ia");
   redirect(`/panel/articulos/${article.id}?desde_borrador=1`);
+}
+
+/**
+ * Ejecuta el AGENTE de producción editorial sobre una fuente estructurada de
+ * demostración: genera un borrador, lo verifica y lo deja en la cola. Nunca
+ * publica. Muestra el flujo completo aunque no haya proveedor de IA configurado.
+ */
+export async function runAgentOnDemoSource(formData: FormData) {
+  await requireRole("editor");
+  const key = String(formData.get("sourceKey") ?? "");
+  const source = getDemoSource(key);
+  if (!source) throw new Error("Fuente de demostración desconocida.");
+
+  const result = await generateDraft(source);
+  revalidatePath("/panel/borradores-ia");
+  revalidatePath("/panel");
+  if ("skipped" in result) throw new Error(result.skipped);
 }
 
 export async function rejectDraft(formData: FormData) {
