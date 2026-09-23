@@ -150,13 +150,19 @@ export function ArticleEditor({
           <p className="text-sm font-semibold">Estado: {status}</p>
           {initial.slug && (
             <a
-              href={`/articulo/${initial.slug}`}
+              href={`/api/preview?id=${initial.id}`}
               target="_blank"
               rel="noreferrer"
               className="mt-1 block text-sm text-[var(--link)] underline"
             >
-              Vista previa pública →
+              Vista previa →
             </a>
+          )}
+          {initial.slug && (
+            <p className="mt-1 text-xs text-[var(--fg-muted)]">
+              Funciona en cualquier estado (borrador, en revisión, programado). Solo el estado
+              &quot;publicado&quot; es visible sin iniciar sesión.
+            </p>
           )}
         </Card>
 

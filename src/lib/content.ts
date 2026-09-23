@@ -1,7 +1,7 @@
 import "server-only";
 import { and, desc, eq, lte, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { articles, authors, categories } from "@/db/schema";
+import { articles, authors, categories, type EditorialStatus } from "@/db/schema";
 
 /**
  * Consultas de lectura del portal público. Todas filtran por estado "publicado"
@@ -87,6 +87,7 @@ export type FullArticle = {
   tags: string[];
   publishedAt: Date | null;
   updatedAt: Date;
+  status: EditorialStatus;
   categoryName: string | null;
   categorySlug: string | null;
   authorName: string | null;
@@ -109,6 +110,7 @@ export async function getPublishedArticleBySlug(slug: string): Promise<FullArtic
       tags: articles.tags,
       publishedAt: articles.publishedAt,
       updatedAt: articles.updatedAt,
+      status: articles.status,
       categoryName: categories.name,
       categorySlug: categories.slug,
       authorName: authors.name,
@@ -119,6 +121,41 @@ export async function getPublishedArticleBySlug(slug: string): Promise<FullArtic
     .leftJoin(categories, eq(articles.categoryId, categories.id))
     .leftJoin(authors, eq(articles.authorId, authors.id))
     .where(and(eq(articles.slug, slug), publishedCondition))
+    .limit(1);
+  return row ?? null;
+}
+
+/**
+ * Variante de getPublishedArticleBySlug sin filtro de estado, para la vista previa
+ * del panel editorial. Nunca se expone sin pasar antes por Draft Mode + sesión
+ * autenticada (ver /api/preview y /articulo/[slug]/page.tsx).
+ */
+export async function getArticleBySlugForPreview(slug: string): Promise<FullArticle | null> {
+  const [row] = await db
+    .select({
+      id: articles.id,
+      slug: articles.slug,
+      title: articles.title,
+      excerpt: articles.excerpt,
+      body: articles.body,
+      metaTitle: articles.metaTitle,
+      metaDescription: articles.metaDescription,
+      coverImageUrl: articles.coverImageUrl,
+      coverImageAlt: articles.coverImageAlt,
+      tags: articles.tags,
+      publishedAt: articles.publishedAt,
+      updatedAt: articles.updatedAt,
+      status: articles.status,
+      categoryName: categories.name,
+      categorySlug: categories.slug,
+      authorName: authors.name,
+      authorSlug: authors.slug,
+      authorBio: authors.bio,
+    })
+    .from(articles)
+    .leftJoin(categories, eq(articles.categoryId, categories.id))
+    .leftJoin(authors, eq(articles.authorId, authors.id))
+    .where(eq(articles.slug, slug))
     .limit(1);
   return row ?? null;
 }

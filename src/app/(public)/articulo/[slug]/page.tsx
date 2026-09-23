@@ -1,9 +1,14 @@
 import { notFound } from "next/navigation";
+import { draftMode } from "next/headers";
 import Link from "next/link";
 import Image from "next/image";
 import type { Metadata } from "next";
 import { JsonLd } from "@/components/json-ld";
-import { getAllPublishedSlugs, getPublishedArticleBySlug } from "@/lib/content";
+import {
+  getAllPublishedSlugs,
+  getArticleBySlugForPreview,
+  getPublishedArticleBySlug,
+} from "@/lib/content";
 import { relatedContent } from "@/lib/search";
 import { articleMetadata, breadcrumbJsonLd, newsArticleJsonLd } from "@/lib/seo";
 import { formatDate } from "@/lib/utils";
@@ -11,6 +16,14 @@ import { formatDate } from "@/lib/utils";
 export const revalidate = 3600;
 
 type Params = { params: Promise<{ slug: string }> };
+
+const STATUS_LABEL: Record<string, string> = {
+  borrador: "Borrador",
+  en_revision: "En revisión",
+  programado: "Programado",
+  publicado: "Publicado",
+  archivado: "Archivado",
+};
 
 export async function generateStaticParams() {
   try {
@@ -23,15 +36,24 @@ export async function generateStaticParams() {
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { slug } = await params;
-  const a = await getPublishedArticleBySlug(slug).catch(() => null);
+  const isDraft = (await draftMode()).isEnabled;
+  const a = isDraft
+    ? await getArticleBySlugForPreview(slug).catch(() => null)
+    : await getPublishedArticleBySlug(slug).catch(() => null);
   if (!a) return { title: "Artículo no encontrado", robots: { index: false } };
-  return articleMetadata({ ...a, authorName: a.authorName, categoryName: a.categoryName });
+  const meta = articleMetadata({ ...a, authorName: a.authorName, categoryName: a.categoryName });
+  if (isDraft && a.status !== "publicado") meta.robots = { index: false, follow: false };
+  return meta;
 }
 
 export default async function ArticlePage({ params }: Params) {
   const { slug } = await params;
-  const a = await getPublishedArticleBySlug(slug).catch(() => null);
+  const isDraft = (await draftMode()).isEnabled;
+  const a = isDraft
+    ? await getArticleBySlugForPreview(slug).catch(() => null)
+    : await getPublishedArticleBySlug(slug).catch(() => null);
   if (!a) notFound();
+  const isUnpublishedPreview = isDraft && a.status !== "publicado";
 
   const related = await relatedContent(a.title, a.id, 4, a.categorySlug).catch(() => []);
 
@@ -39,6 +61,17 @@ export default async function ArticlePage({ params }: Params) {
 
   return (
     <article className="mx-auto max-w-2xl">
+      {isUnpublishedPreview && (
+        <div className="mb-6 flex items-center justify-between gap-3 rounded-[var(--radius)] border border-[var(--danger)] bg-[var(--danger)]/10 px-4 py-2 text-sm text-[var(--danger)]">
+          <span>
+            Vista previa · estado: <strong>{STATUS_LABEL[a.status] ?? a.status}</strong> · no
+            visible públicamente
+          </span>
+          <a href={`/api/preview/disable?from=/panel/articulos`} className="underline shrink-0">
+            Salir de vista previa
+          </a>
+        </div>
+      )}
       <JsonLd data={newsArticleJsonLd(seo)} />
       <JsonLd
         data={breadcrumbJsonLd([
