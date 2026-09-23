@@ -86,3 +86,45 @@ async function staleWhileRevalidate(request, cacheName) {
     .catch(() => undefined);
   return cached ?? (await fetchPromise) ?? Response.error();
 }
+
+/* ------------------------------------------------------------------ Push
+   Notificaciones de última hora (FM-01). El payload lo construye el servidor
+   en src/lib/push.ts; aquí solo se pinta y se gestiona el clic.
+   ---------------------------------------------------------------------- */
+self.addEventListener("push", (event) => {
+  if (!event.data) return;
+  let datos = {};
+  try {
+    datos = event.data.json();
+  } catch {
+    datos = { title: "CONtexto Ganadero", body: event.data.text() };
+  }
+  event.waitUntil(
+    self.registration.showNotification(datos.title || "CONtexto Ganadero", {
+      body: datos.body || "",
+      icon: datos.icon || "/icon?size=192",
+      badge: datos.badge || "/icon?size=96",
+      tag: datos.tag || "cg-noticia",
+      renotify: true,
+      data: { url: datos.url || "/" },
+    }),
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const destino = (event.notification.data && event.notification.data.url) || "/";
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((ventanas) => {
+      // Si ya hay una pestaña del portal abierta, se reutiliza en vez de
+      // abrir una nueva cada vez que llega un aviso.
+      for (const v of ventanas) {
+        if (v.url.includes(self.location.origin) && "focus" in v) {
+          v.navigate(destino);
+          return v.focus();
+        }
+      }
+      return self.clients.openWindow(destino);
+    }),
+  );
+});

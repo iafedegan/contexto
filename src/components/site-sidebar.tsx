@@ -2,6 +2,7 @@ import Link from "next/link";
 import { FacebookIcon, InstagramIcon, LinkedinIcon, YoutubeIcon } from "@/components/social-icons";
 import { AdsBanner } from "@/components/ads-banner";
 import { NewsletterForm } from "@/components/newsletter-form";
+import { PushToggle } from "@/components/push-toggle";
 import { getMostReadArticles } from "@/lib/content";
 import { localePath, t, type Locale } from "@/lib/i18n";
 
@@ -12,6 +13,9 @@ import { localePath, t, type Locale } from "@/lib/i18n";
  * la relación con la audiencia. La zona de 300 × 600 va `sticky` como pide el
  * §9.1, y la de 300 × 250 queda arriba, above the fold.
  */
+/** Clave pública VAPID: es pública por definición, va al cliente sin problema. */
+const VAPID_PUBLIC = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? "";
+
 export async function SiteSidebar({ locale }: { locale: Locale }) {
   const masLeidas = await getMostReadArticles(5).catch(() => []);
 
@@ -45,7 +49,12 @@ export async function SiteSidebar({ locale }: { locale: Locale }) {
       {/* 300 × 250, above the fold. */}
       <AdsBanner zone="sidebar_top" />
 
-      <NewsletterForm locale={locale} />
+      <div className="flex flex-col gap-3">
+        <NewsletterForm locale={locale} />
+        {/* Avisos de última hora (FM-01). El permiso se pide al pulsar, nunca
+            al cargar la página. */}
+        <PushToggle locale={locale} publicKey={VAPID_PUBLIC} />
+      </div>
 
       <section>
         <h2 className="lx-kicker border-b border-[var(--border)] pb-2 text-[var(--accent)]">

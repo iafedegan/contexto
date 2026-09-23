@@ -33,6 +33,7 @@ const GROUPS: Group[] = [
       { href: "/panel/articulos", label: "Artículos", hint: "Crear, editar y programar" },
       { href: "/panel/borradores-ia", label: "Borradores IA", hint: "Cola pendiente de aprobación" },
       { href: "/panel/demanda", label: "Demanda informativa", hint: "Qué pregunta la audiencia" },
+      { href: "/panel/avisos", label: "Avisos de última hora", hint: "Notificaciones push" },
     ],
   },
   {
