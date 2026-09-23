@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
+import { env } from "@/lib/env";
 
-const SITE_NAME = process.env.NEXT_PUBLIC_SITE_NAME ?? "CONtexto Ganadero";
+const SITE_NAME = env(process.env.NEXT_PUBLIC_SITE_NAME, "CONtexto Ganadero");
 
 export default function manifest(): MetadataRoute.Manifest {
   return {

@@ -10,11 +10,12 @@ import { ApiKeyForm } from "@/components/panel/api-key-form";
 import { MfaForm } from "@/components/panel/mfa-form";
 import { getAnalyticsStatus } from "@/lib/analytics-server";
 import { saveAnalyticsSettings, saveSiteIdentity } from "./actions";
+import { env } from "@/lib/env";
 
 export const dynamic = "force-dynamic";
 
-const MONTHLY_BUDGET = process.env.ASSISTANT_MONTHLY_BUDGET_USD ?? "150";
-const SESSION_LIMIT = process.env.ASSISTANT_SESSION_QUERY_LIMIT ?? "15";
+const MONTHLY_BUDGET = env(process.env.ASSISTANT_MONTHLY_BUDGET_USD, "150");
+const SESSION_LIMIT = env(process.env.ASSISTANT_SESSION_QUERY_LIMIT, "15");
 
 export default async function ConfiguracionPage() {
   const session = await auth();

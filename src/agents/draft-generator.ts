@@ -7,9 +7,10 @@ import { db } from "@/db";
 import { agentDrafts, type agentSource } from "@/db/schema";
 import { DRAFT_GENERATOR_SYSTEM } from "./prompts";
 import { factCheckDraft, ruleFactCheck, type FactCheck } from "./fact-checker";
+import { env } from "@/lib/env";
 
-const MODEL = process.env.ASSISTANT_MODEL ?? "claude-sonnet-5";
-const DAILY_LIMIT = Number(process.env.AGENT_DAILY_DRAFT_LIMIT ?? "20");
+const MODEL = env(process.env.ASSISTANT_MODEL, "claude-sonnet-5");
+const DAILY_LIMIT = Number(env(process.env.AGENT_DAILY_DRAFT_LIMIT, "20"));
 const HAS_LLM = Boolean(process.env.ANTHROPIC_API_KEY);
 
 type Source = (typeof agentSource.enumValues)[number];

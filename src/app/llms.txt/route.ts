@@ -1,5 +1,6 @@
 import { getAllCategories, getRecentArticles } from "@/lib/content";
 import { siteUrl } from "@/lib/utils";
+import { env } from "@/lib/env";
 
 /**
  * /llms.txt — maximiza la aparición del medio en respuestas de asistentes de IA
@@ -9,7 +10,7 @@ import { siteUrl } from "@/lib/utils";
 export const revalidate = 3600;
 
 export async function GET() {
-  const name = process.env.NEXT_PUBLIC_SITE_NAME ?? "CONtexto Ganadero";
+  const name = env(process.env.NEXT_PUBLIC_SITE_NAME, "CONtexto Ganadero");
   let categories: Awaited<ReturnType<typeof getAllCategories>> = [];
   let recent: Awaited<ReturnType<typeof getRecentArticles>> = [];
   try {

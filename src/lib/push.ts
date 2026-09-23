@@ -4,6 +4,7 @@ import { eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import { pushSubscriptions } from "@/db/schema";
 import { getSiteIdentity } from "@/lib/site-identity";
+import { env } from "@/lib/env";
 
 /**
  * Notificaciones push (FM-01) mediante Web Push con claves VAPID.
@@ -26,7 +27,7 @@ export function pushConfigurado(): boolean {
 async function configurar() {
   const { name } = await getSiteIdentity().catch(() => ({ name: "CONtexto Ganadero" }));
   webpush.setVapidDetails(
-    process.env.VAPID_SUBJECT ?? "mailto:contexto@fedegan.org.co",
+    env(process.env.VAPID_SUBJECT, "mailto:contexto@fedegan.org.co"),
     PUBLIC_KEY,
     PRIVATE_KEY,
   );

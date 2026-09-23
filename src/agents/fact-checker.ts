@@ -3,8 +3,9 @@ import { generateObject } from "ai";
 import { anthropic } from "@ai-sdk/anthropic";
 import { z } from "zod";
 import { FACT_CHECKER_SYSTEM } from "./prompts";
+import { env } from "@/lib/env";
 
-const MODEL = process.env.ASSISTANT_MODEL ?? "claude-sonnet-5";
+const MODEL = env(process.env.ASSISTANT_MODEL, "claude-sonnet-5");
 
 const checksSchema = z.object({
   checks: z.array(

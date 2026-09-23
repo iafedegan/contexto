@@ -1,5 +1,6 @@
 import { getRecentArticles } from "@/lib/content";
 import { siteUrl } from "@/lib/utils";
+import { env } from "@/lib/env";
 
 export const revalidate = 1800;
 
@@ -8,7 +9,7 @@ function esc(s: string): string {
 }
 
 export async function GET() {
-  const name = process.env.NEXT_PUBLIC_SITE_NAME ?? "CONtexto Ganadero";
+  const name = env(process.env.NEXT_PUBLIC_SITE_NAME, "CONtexto Ganadero");
   let items: Awaited<ReturnType<typeof getRecentArticles>> = [];
   try {
     items = await getRecentArticles(40);
