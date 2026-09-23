@@ -336,3 +336,4 @@ export type ArchiveEntry = typeof archiveIndex.$inferSelect;
 export type AgentDraft = typeof agentDrafts.$inferSelect;
 export type User = typeof users.$inferSelect;
 export type UserRole = (typeof userRole.enumValues)[number];
+export type EditorialStatus = (typeof editorialStatus.enumValues)[number];
