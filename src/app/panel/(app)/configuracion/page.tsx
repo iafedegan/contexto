@@ -7,6 +7,7 @@ import { getSiteIdentity } from "@/lib/site-identity";
 import { UserRow } from "@/components/panel/user-row";
 import { getKeyStatus } from "@/lib/ai-provider";
 import { ApiKeyForm } from "@/components/panel/api-key-form";
+import { MfaForm } from "@/components/panel/mfa-form";
 import { getAnalyticsStatus } from "@/lib/analytics-server";
 import { saveAnalyticsSettings, saveSiteIdentity } from "./actions";
 
@@ -35,6 +36,8 @@ export default async function ConfiguracionPage() {
       .from(users)
       .orderBy(asc(users.name)),
   ]);
+
+  const yoMismo = people.find((p) => p.id === session?.user.id || p.email === session?.user.email);
 
   return (
     <div className="flex flex-col gap-8">
@@ -151,6 +154,16 @@ export default async function ConfiguracionPage() {
         </div>
       </Section>
 
+
+      {/* --------------------------------------------- Seguridad de mi cuenta */}
+      <Section
+        id="seguridad"
+        icon={<ShieldCheck size={14} />}
+        title="Seguridad de mi cuenta"
+        hint="Segundo factor de acceso al panel"
+      >
+        <MfaForm activo={yoMismo?.totpEnabled ?? false} />
+      </Section>
 
       {/* ---------------------------------------------- Analítica y SEO */}
       <Section

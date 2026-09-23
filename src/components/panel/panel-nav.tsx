@@ -55,6 +55,11 @@ const GROUPS: Group[] = [
         hint: "Estado del modelo y presupuesto",
       },
       {
+        href: "/panel/configuracion#seguridad",
+        label: "Seguridad de mi cuenta",
+        hint: "Verificación en dos pasos",
+      },
+      {
         href: "/panel/mensajes",
         label: "Mensajes recibidos",
         hint: "Contacto y solicitudes de pauta",
