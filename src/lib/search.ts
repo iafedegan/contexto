@@ -21,6 +21,11 @@ export type SearchHit = {
   summary: string;
   url: string;
   publishedAt: string | null;
+  /** Miniatura del resultado (B-02). El archivo histórico no la expone. */
+  image: string | null;
+  /** Sección, para el filtro y el contexto del resultado. */
+  categorySlug: string | null;
+  categoryName: string | null;
   score: number;
 };
 
@@ -67,18 +72,20 @@ export async function hybridSearch(query: string, limit = 20): Promise<SearchHit
     lexical AS (
       SELECT 'articulo'::text AS kind, a.id::text AS id, a.title,
              a.excerpt AS summary, '/articulo/' || a.slug AS url,
-             a.published_at,
+             a.published_at, a.cover_image_url AS image,
+             c.slug AS category_slug, c.name AS category_name,
              ts_rank(
                to_tsvector('spanish', a.title || ' ' || a.excerpt || ' ' || a.body),
                websearch_to_tsquery('spanish', (SELECT q FROM params))
              ) AS rank
       FROM articles a
+      LEFT JOIN categories c ON c.id = a.category_id
       WHERE a.status = 'publicado'
         AND to_tsvector('spanish', a.title || ' ' || a.excerpt || ' ' || a.body)
             @@ websearch_to_tsquery('spanish', (SELECT q FROM params))
       UNION ALL
       SELECT 'archivo'::text, ar.external_id, ar.title, ar.summary,
-             ar.canonical_url, ar.published_at,
+             ar.canonical_url, ar.published_at, NULL::text, NULL::text, NULL::text,
              ts_rank(
                to_tsvector('spanish', ar.title || ' ' || ar.summary),
                websearch_to_tsquery('spanish', (SELECT q FROM params))
@@ -93,13 +100,15 @@ export async function hybridSearch(query: string, limit = 20): Promise<SearchHit
     semantic AS (
       SELECT 'articulo'::text AS kind, a.id::text AS id, a.title,
              a.excerpt AS summary, '/articulo/' || a.slug AS url, a.published_at,
+             a.cover_image_url AS image, c.slug AS category_slug, c.name AS category_name,
              a.embedding <=> (SELECT vec FROM params)::vector AS dist
       FROM articles a
+      LEFT JOIN categories c ON c.id = a.category_id
       WHERE a.status = 'publicado' AND a.embedding IS NOT NULL
         AND (SELECT vec FROM params) IS NOT NULL
       UNION ALL
       SELECT 'archivo'::text, ar.external_id, ar.title, ar.summary,
-             ar.canonical_url, ar.published_at,
+             ar.canonical_url, ar.published_at, NULL::text, NULL::text, NULL::text,
              ar.embedding <=> (SELECT vec FROM params)::vector AS dist
       FROM archive_index ar
       WHERE ar.embedding IS NOT NULL AND (SELECT vec FROM params) IS NOT NULL
@@ -108,18 +117,18 @@ export async function hybridSearch(query: string, limit = 20): Promise<SearchHit
       SELECT *, row_number() OVER (ORDER BY dist ASC) AS rn FROM semantic LIMIT 50
     ),
     fused AS (
-      SELECT kind, id, title, summary, url, published_at,
+      SELECT kind, id, title, summary, url, published_at, image, category_slug, category_name,
              SUM(w) AS score
       FROM (
-        SELECT kind, id, title, summary, url, published_at,
+        SELECT kind, id, title, summary, url, published_at, image, category_slug, category_name,
                1.0 / (${K} + rn) AS w FROM lexical_ranked
         UNION ALL
-        SELECT kind, id, title, summary, url, published_at,
+        SELECT kind, id, title, summary, url, published_at, image, category_slug, category_name,
                1.0 / (${K} + rn) AS w FROM semantic_ranked
       ) s
-      GROUP BY kind, id, title, summary, url, published_at
+      GROUP BY kind, id, title, summary, url, published_at, image, category_slug, category_name
     )
-    SELECT kind, id, title, summary, url, published_at, score
+    SELECT kind, id, title, summary, url, published_at, image, category_slug, category_name, score
     FROM fused
     ORDER BY score DESC
     LIMIT ${limit}
@@ -132,6 +141,9 @@ export async function hybridSearch(query: string, limit = 20): Promise<SearchHit
     summary: String(r.summary ?? ""),
     url: String(r.url),
     publishedAt: r.published_at ? new Date(r.published_at as string).toISOString() : null,
+    image: (r.image as string | null) ?? null,
+    categorySlug: (r.category_slug as string | null) ?? null,
+    categoryName: (r.category_name as string | null) ?? null,
     score: Number(r.score),
   }));
 }
@@ -150,7 +162,8 @@ export async function relatedContent(
   if (out.length < 3 && fallbackCategorySlug) {
     const rows = rowsOf(await db.execute(sql`
       SELECT a.id::text AS id, a.title, a.excerpt AS summary,
-             '/articulo/' || a.slug AS url, a.published_at
+             '/articulo/' || a.slug AS url, a.published_at,
+             a.cover_image_url AS image, c.slug AS category_slug, c.name AS category_name
       FROM articles a
       JOIN categories c ON c.id = a.category_id
       WHERE c.slug = ${fallbackCategorySlug}
@@ -166,6 +179,9 @@ export async function relatedContent(
       summary: String(r.summary ?? ""),
       url: String(r.url),
       publishedAt: r.published_at ? new Date(r.published_at as string).toISOString() : null,
+      image: (r.image as string | null) ?? null,
+      categorySlug: (r.category_slug as string | null) ?? null,
+      categoryName: (r.category_name as string | null) ?? null,
       score: 0,
     }));
     const seen = new Set(out.map((h) => h.url));
