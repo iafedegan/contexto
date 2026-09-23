@@ -4,6 +4,7 @@ import { JsonLd } from "@/components/json-ld";
 import { organizationJsonLd } from "@/lib/seo";
 import { siteUrl } from "@/lib/utils";
 import { getSiteIdentity } from "@/lib/site-identity";
+import { PwaRegister } from "@/components/pwa-register";
 import "./globals.css";
 
 /**
@@ -27,6 +28,9 @@ export async function generateMetadata(): Promise<Metadata> {
   },
   openGraph: { type: "website", siteName: identity.name, locale: "es_CO" },
   robots: { index: true, follow: true, "max-image-preview": "large" },
+  // Instalable como aplicación: el manifiesto lo genera src/app/manifest.ts.
+  manifest: "/manifest.webmanifest",
+  appleWebApp: { capable: true, statusBarStyle: "default", title: identity.name },
   };
 }
 
@@ -56,6 +60,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           Saltar al contenido
         </a>
         <JsonLd data={organizationJsonLd()} />
+        <PwaRegister />
         {children}
       </body>
     </html>
