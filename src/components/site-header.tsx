@@ -1,12 +1,12 @@
 import Link from "next/link";
-import { getAllCategories } from "@/lib/content";
+import { getTopLevelCategories } from "@/lib/content";
 
 const SITE_NAME = process.env.NEXT_PUBLIC_SITE_NAME ?? "CONtexto Ganadero";
 
 export async function SiteHeader() {
-  let categories: Awaited<ReturnType<typeof getAllCategories>> = [];
+  let categories: Awaited<ReturnType<typeof getTopLevelCategories>> = [];
   try {
-    categories = await getAllCategories();
+    categories = await getTopLevelCategories();
   } catch {
     // Sin DB en build local: el header se degrada a solo logo + búsqueda.
   }
@@ -18,7 +18,7 @@ export async function SiteHeader() {
           {SITE_NAME}
         </Link>
         <nav className="hidden gap-4 text-sm md:flex" aria-label="Secciones">
-          {categories.slice(0, 6).map((c) => (
+          {categories.map((c) => (
             <Link key={c.slug} href={`/categoria/${c.slug}`} className="hover:text-[var(--link)]">
               {c.name}
             </Link>
