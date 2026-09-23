@@ -173,12 +173,21 @@ export const articles = pgTable(
     // Estilo manual de la tarjeta (tamaño, tipografía, negrilla/cursiva,
     // escala de imagen…). null = todo por defecto. Ver tipo `HomeStyle`.
     homeStyle: jsonb("home_style").$type<HomeStyle>(),
+    // Última hora (H-05): barra destacada en portada mientras esté activa.
+    isBreaking: boolean("is_breaking").notNull().default(false),
+    // Etiqueta "En Vivo" (AI-03 / FM-06): cubrimientos y transmisiones.
+    isLive: boolean("is_live").notNull().default(false),
+    // Contador de lecturas para "Más leídas" (H-04). Lo incrementa un beacon
+    // del cliente, no el render: con ISR el render no equivale a una visita.
+    views: integer("views").notNull().default(0),
   },
   (t) => [
     index("articles_status_published_idx").on(t.status, t.publishedAt),
     index("articles_category_idx").on(t.categoryId),
     index("articles_scheduled_idx").on(t.scheduledFor),
     index("articles_home_position_idx").on(t.homePosition),
+    index("articles_views_idx").on(t.views),
+    index("articles_breaking_idx").on(t.isBreaking),
     // Índice vectorial HNSW (coseno). Se crea en migración manual porque
     // drizzle-kit aún no emite `USING hnsw` de forma estable.
   ],
@@ -409,3 +418,39 @@ export type AgentDraft = typeof agentDrafts.$inferSelect;
 export type User = typeof users.$inferSelect;
 export type UserRole = (typeof userRole.enumValues)[number];
 export type EditorialStatus = (typeof editorialStatus.enumValues)[number];
+
+/**
+ * Mensajes de los formularios públicos (contacto y pauta comercial).
+ * Se guardan en la base y se leen desde el panel: nada se envía a servicios de
+ * terceros, y así el equipo conserva la trazabilidad de cada solicitud.
+ */
+export const contactKind = pgEnum("contact_kind", ["contacto", "comercial"]);
+
+export const contactMessages = pgTable(
+  "contact_messages",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    kind: contactKind("kind").notNull().default("contacto"),
+    name: text("name").notNull(),
+    email: text("email").notNull(),
+    organization: text("organization"),
+    subject: text("subject"),
+    message: text("message").notNull(),
+    /** Marca de atención del panel: evita responder dos veces lo mismo. */
+    handled: boolean("handled").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("contact_messages_created_idx").on(t.createdAt)],
+);
+
+/**
+ * Suscripciones a notificaciones push (FM-01). Una fila por navegador; el
+ * endpoint es único y es lo que el servidor usa para enviar el aviso.
+ */
+export const pushSubscriptions = pgTable("push_subscriptions", {
+  endpoint: text("endpoint").primaryKey(),
+  p256dh: text("p256dh").notNull(),
+  auth: text("auth").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).notNull().defaultNow(),
+});

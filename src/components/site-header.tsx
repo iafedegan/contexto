@@ -4,6 +4,7 @@ import { LocaleSwitch } from "@/components/locale-switch";
 import type { Theme } from "@/lib/theme";
 import { DEFAULT_IDENTITY, type SiteIdentity } from "@/lib/site-identity";
 import { DEFAULT_LOCALE, INTL_LOCALE, localePath, t, type Locale } from "@/lib/i18n";
+import { MoreMenu } from "@/components/more-menu";
 
 export type NavItem = { href: string; label: string };
 
@@ -105,6 +106,7 @@ function MastheadHeader({ nav, locale, identity }: { nav: NavItem[]; locale: Loc
           >
             {t(locale, "nav.search")}
           </Link>
+          <MoreMenu locale={locale} />
         </div>
       </nav>
     </header>
@@ -135,6 +137,7 @@ function ReadingHeader({ nav, locale, identity }: { nav: NavItem[]; locale: Loca
           >
             {t(locale, "nav.search")}
           </Link>
+          <MoreMenu locale={locale} />
           <Link
             href={localePath(locale, "/asistente")}
             className="lx-ui rounded-[var(--radius)] border border-[var(--accent)] px-3 py-1.5 text-[0.7rem] uppercase tracking-[0.18em] text-[var(--accent)] transition hover:bg-[var(--accent)] hover:text-[var(--accent-fg)]"
@@ -165,6 +168,7 @@ function BoldHeader({ nav, locale, identity }: { nav: NavItem[]; locale: Locale;
               {n.label}
             </Link>
           ))}
+          <MoreMenu locale={locale} />
         </nav>
         <LocaleSwitch locale={locale} />
         <Link
@@ -207,6 +211,7 @@ function CoutureHeader({ nav, locale, identity }: { nav: NavItem[]; locale: Loca
               </Link>
             </span>
           ))}
+          <MoreMenu locale={locale} />
         </nav>
       </div>
     </header>
@@ -233,6 +238,7 @@ function CommandHeader({ nav, locale, identity }: { nav: NavItem[]; locale: Loca
               {n.label.toLowerCase()}
             </Link>
           ))}
+          <MoreMenu locale={locale} />
         </nav>
         <div className="ml-auto flex items-center gap-2">
           <LocaleSwitch locale={locale} />
@@ -270,6 +276,7 @@ function GlassHeader({ nav, locale, identity }: { nav: NavItem[]; locale: Locale
           <Link href={localePath(locale, "/buscar")} className="lx-link text-[var(--accent)]">
             {t(locale, "nav.search")}
           </Link>
+          <MoreMenu locale={locale} />
         </nav>
       </div>
     </header>
@@ -303,7 +310,8 @@ function CrestHeader({ nav, locale, identity }: { nav: NavItem[]; locale: Locale
             </Link>
           ))}
         </div>
-      </nav>
+        <MoreMenu locale={locale} />
+        </nav>
     </header>
   );
 }
@@ -327,6 +335,7 @@ function ArchiveHeader({ nav, locale, identity }: { nav: NavItem[]; locale: Loca
           <Link href={localePath(locale, "/buscar")} className="lx-link text-[var(--accent)]">
             {t(locale, "nav.search")}
           </Link>
+          <MoreMenu locale={locale} />
         </nav>
       </div>
     </header>

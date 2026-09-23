@@ -26,6 +26,7 @@ const es: Dict = {
   // --- Cromo ---
   "nav.sections": "Secciones",
   "nav.search": "Buscar",
+  "nav.more": "Más",
   "nav.assistant": "Asistente",
   "nav.panel": "Panel editorial",
   "nav.signatures": "Firmas",
@@ -38,6 +39,7 @@ const es: Dict = {
   // --- Pie ---
   "footer.sections": "Secciones",
   "footer.institutional": "Institucional",
+  "footer.legal": "Legal",
   "footer.tools": "Herramientas",
   "footer.editorialPolicy": "Política editorial",
   "footer.panel": "Panel editorial",
@@ -141,6 +143,7 @@ const es: Dict = {
 const en: Dict = {
   "nav.sections": "Sections",
   "nav.search": "Search",
+  "nav.more": "More",
   "nav.assistant": "Assistant",
   "nav.panel": "Newsroom panel",
   "nav.signatures": "Bylines",
@@ -152,6 +155,7 @@ const en: Dict = {
 
   "footer.sections": "Sections",
   "footer.institutional": "Institutional",
+  "footer.legal": "Legal",
   "footer.tools": "Tools",
   "footer.editorialPolicy": "Editorial policy",
   "footer.panel": "Newsroom panel",

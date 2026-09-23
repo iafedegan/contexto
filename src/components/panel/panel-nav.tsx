@@ -55,6 +55,11 @@ const GROUPS: Group[] = [
         hint: "Estado del modelo y presupuesto",
       },
       {
+        href: "/panel/mensajes",
+        label: "Mensajes recibidos",
+        hint: "Contacto y solicitudes de pauta",
+      },
+      {
         label: "Analítica y SEO",
         href: "/panel/configuracion#analitica",
         hint: "GA4 y auditoría de Google",

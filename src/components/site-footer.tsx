@@ -3,10 +3,23 @@ import type { NavItem } from "@/components/site-header";
 import { THEME_LABEL, type Theme } from "@/lib/theme";
 import { DEFAULT_IDENTITY, type SiteIdentity } from "@/lib/site-identity";
 import { DEFAULT_LOCALE, localePath, t, type Locale } from "@/lib/i18n";
+import { MENU_SECUNDARIO } from "@/content/institucional";
 
+/**
+ * Menú secundario completo del §2.2: institucional, legal y comercial. Vive en
+ * el pie porque es donde el lector lo busca, y en el menú «Más» de la cabecera.
+ */
 function legalLinks(locale: Locale) {
+  return MENU_SECUNDARIO.map((m) => ({
+    href: localePath(locale, `/${m.slug}`),
+    label: m.label[locale],
+  }));
+}
+
+/** Herramientas del portal: canales de sindicación y acceso al panel. */
+function toolLinks(locale: Locale) {
   return [
-    { href: localePath(locale, "/politica-editorial"), label: t(locale, "footer.editorialPolicy") },
+    { href: localePath(locale, "/buscar"), label: t(locale, "nav.search") },
     { href: "/feed.xml", label: "RSS" },
     { href: "/sitemap.xml", label: "Sitemap" },
     { href: "/llms.txt", label: "llms.txt" },
@@ -30,8 +43,9 @@ export function SiteFooter({
   identity?: SiteIdentity;
 }) {
   const LEGAL = legalLinks(locale);
+  const TOOLS = toolLinks(locale);
   const ARCHIVE_NOTE = t(locale, "footer.archiveNote");
-  const props = { nav, theme, locale, LEGAL, ARCHIVE_NOTE, SITE_NAME: identity.name };
+  const props = { nav, theme, locale, LEGAL, TOOLS, ARCHIVE_NOTE, SITE_NAME: identity.name };
   switch (theme) {
     case "home":
     case "esmeralda":
@@ -66,6 +80,7 @@ type FooterProps = {
   theme: Theme;
   locale: Locale;
   LEGAL: Array<{ href: string; label: string }>;
+  TOOLS: Array<{ href: string; label: string }>;
   ARCHIVE_NOTE: string;
 };
 
@@ -78,7 +93,7 @@ function Signature({ theme, locale = "es" }: { theme: Theme; locale?: Locale }) 
 }
 
 /* ------------------------------------------------------------------ HOME */
-function GrandFooter({ nav, theme, locale, LEGAL, ARCHIVE_NOTE, SITE_NAME }: FooterProps) {
+function GrandFooter({ nav, theme, locale, LEGAL, TOOLS, ARCHIVE_NOTE, SITE_NAME }: FooterProps) {
   return (
     <footer className="relative mt-24 border-t border-[var(--border)] bg-[var(--bg-2)]">
       <div
@@ -86,7 +101,7 @@ function GrandFooter({ nav, theme, locale, LEGAL, ARCHIVE_NOTE, SITE_NAME }: Foo
         className="h-px w-full bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent"
       />
       <div className="mx-auto max-w-7xl px-6 py-16">
-        <div className="grid gap-12 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
+        <div className="grid gap-12 md:grid-cols-2 lg:grid-cols-[1.3fr_1fr_1fr_1fr_1fr]">
           <div>
             <span className="lx-display lx-foil text-3xl font-semibold">{SITE_NAME}</span>
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-[var(--fg-muted)]">
@@ -97,11 +112,9 @@ function GrandFooter({ nav, theme, locale, LEGAL, ARCHIVE_NOTE, SITE_NAME }: Foo
             </Link>
           </div>
           <FooterColumn title={t(locale, "footer.sections")} items={nav.map((n) => ({ ...n, href: localePath(locale, n.href) }))} />
-          <FooterColumn title={t(locale, "footer.institutional")} items={LEGAL.slice(0, 3)} />
-          <FooterColumn
-            title={t(locale, "footer.tools")}
-            items={[...LEGAL.slice(3), { href: localePath(locale, "/buscar"), label: t(locale, "nav.search") }]}
-          />
+          <FooterColumn title={t(locale, "footer.institutional")} items={LEGAL.slice(0, 4)} />
+          <FooterColumn title={t(locale, "footer.legal")} items={LEGAL.slice(4)} />
+          <FooterColumn title={t(locale, "footer.tools")} items={TOOLS} />
         </div>
         <div className="mt-14 flex flex-wrap items-center justify-between gap-4 border-t border-[var(--border)] pt-6 text-xs text-[var(--fg-muted)]">
           <p>
