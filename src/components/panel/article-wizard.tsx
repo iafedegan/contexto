@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -179,6 +179,31 @@ export function ArticleWizard({
       }),
     [title, excerpt, bodyHtml, metaTitle, metaDescription, tags],
   );
+  // Recordar el último paso por artículo (en este navegador) para retomar
+  // donde se quedó al volver a abrirlo desde la lista.
+  const stepKey = initial ? `cg:paso:${initial.id}` : null;
+  useEffect(() => {
+    if (!stepKey || startStep) return;
+    try {
+      const saved = localStorage.getItem(stepKey);
+      const i = STEPS.findIndex((x) => x.key === saved);
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- solo existe en el cliente
+      if (i > 0) setStep(i);
+    } catch {
+      /* sin almacenamiento: se empieza por el primer paso */
+    }
+    // Solo al montar.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  useEffect(() => {
+    if (!stepKey) return;
+    try {
+      localStorage.setItem(stepKey, STEPS[step].key);
+    } catch {
+      /* ignorar */
+    }
+  }, [stepKey, step, STEPS]);
+
   const categoryName = categories.find((c) => c.id === categoryId)?.name;
   const authorName = authors.find((a) => a.id === authorId)?.name;
 
