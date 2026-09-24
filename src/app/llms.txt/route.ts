@@ -7,7 +7,7 @@ import { env } from "@/lib/env";
  * (canal de tráfico hoy inexistente). Estructura recomendada por llmstxt.org:
  * título, resumen, y listas de enlaces con contexto.
  */
-export const revalidate = 3600;
+export const dynamic = "force-dynamic";
 
 export async function GET() {
   const name = env(process.env.NEXT_PUBLIC_SITE_NAME, "CONtexto Ganadero");

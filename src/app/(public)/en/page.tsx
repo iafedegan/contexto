@@ -6,5 +6,4 @@
 import { makePage } from "../_pages/home";
 
 export const revalidate = 300;
-export const dynamic = "error";
 export default makePage("en");

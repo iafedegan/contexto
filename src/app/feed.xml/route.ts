@@ -2,7 +2,7 @@ import { getRecentArticles } from "@/lib/content";
 import { siteUrl } from "@/lib/utils";
 import { env } from "@/lib/env";
 
-export const revalidate = 1800;
+export const dynamic = "force-dynamic";
 
 function esc(s: string): string {
   return s.replace(/[<>&'"]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", "'": "&apos;", '"': "&quot;" }[c]!));
