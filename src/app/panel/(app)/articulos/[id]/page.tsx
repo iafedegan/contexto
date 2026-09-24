@@ -80,10 +80,10 @@ export default async function ArticleEditorPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ modo?: string; paso?: string; desde?: string }>;
+  searchParams: Promise<{ modo?: string; paso?: string; desde?: string; guardado?: string }>;
 }) {
   const { id } = await params;
-  const { modo, paso, desde } = await searchParams;
+  const { modo, paso, desde, guardado } = await searchParams;
   const session = await auth();
   const isNew = id === "nuevo";
 
@@ -95,7 +95,15 @@ export default async function ArticleEditorPage({
   // Artículo nuevo: primero se elige cómo crearlo.
   if (isNew) {
     if (modo === "manual" || modo === "ia") {
-      return <ArticleWizard categories={cats} authors={auths} mode={modo} site={await siteChrome()} />;
+      return (
+        <ArticleWizard
+          categories={cats}
+          authors={auths}
+          mode={modo}
+          site={await siteChrome()}
+          canPublish={canPublish(session!.user.role)}
+        />
+      );
     }
     return <ModeChooser />;
   }
@@ -138,6 +146,9 @@ export default async function ArticleEditorPage({
           mode={modo}
           startStep={paso}
           site={await siteChrome()}
+          status={row.status}
+          canPublish={canPublish(session!.user.role)}
+          savedAs={guardado}
           initial={{
             id: row.id,
             title: row.title,

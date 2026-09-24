@@ -193,7 +193,7 @@ export default async function ArticlesList({ searchParams }: { searchParams: Sea
         </Stat>
         <Stat label="Más leído esta semana" value={top && Number(top.weekViews) > 0 ? nf.format(Number(top.weekViews)) : "—"}>
           {top && Number(top.weekViews) > 0 ? (
-            <Link href={`/panel/articulos/${top.id}`} className="lx-link line-clamp-2">
+            <Link href={`/panel/articulos/${top.id}?modo=manual`} className="lx-link line-clamp-2">
               {top.title}
             </Link>
           ) : (
@@ -238,7 +238,7 @@ export default async function ArticlesList({ searchParams }: { searchParams: Sea
               return (
                 <tr key={r.id} className="transition-colors hover:bg-[var(--surface-2)]">
                   <Td>
-                    <Link href={`/panel/articulos/${r.id}`} className="lx-link font-medium">
+                    <Link href={`/panel/articulos/${r.id}?modo=manual`} className="lx-link font-medium">
                       {r.title}
                     </Link>
                     <div className="mt-1 flex flex-wrap items-center gap-x-2 text-xs text-[var(--fg-muted)]">

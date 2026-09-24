@@ -11,6 +11,7 @@ import {
   Loader2,
   RotateCcw,
   Save,
+  Send,
   Sparkles,
   Trash2,
   X,
@@ -26,6 +27,14 @@ import { SiteArticlePreview, type SitePreviewChrome } from "@/components/panel/s
 import { auditArticle, scoreLabel, type AuditItem } from "@/lib/seo-audit";
 
 type Option = { id: string; name: string };
+
+const STATUS_LABEL: Record<string, string> = {
+  borrador: "Borrador",
+  en_revision: "En revisión",
+  programado: "Programado",
+  publicado: "Publicado",
+  archivado: "Archivado",
+};
 
 export type WizardInitial = {
   id: string;
@@ -111,6 +120,9 @@ export function ArticleWizard({
   initial,
   startStep,
   site,
+  status,
+  canPublish = false,
+  savedAs,
 }: {
   categories: Option[];
   authors: Option[];
@@ -121,6 +133,12 @@ export function ArticleWizard({
   startStep?: string;
   /** Cabecera, pie y tema del sitio para la vista previa de escritorio. */
   site?: SitePreviewChrome;
+  /** Estado editorial del artículo reabierto. */
+  status?: string;
+  /** Editor o administrador: puede publicar directamente. */
+  canPublish?: boolean;
+  /** Resultado del último guardado (?guardado=…), para confirmarlo. */
+  savedAs?: string;
 }) {
   const heading = mode === "ia" ? "Nuevo artículo con IA" : "Nuevo artículo";
   const STEPS: readonly { key: StepKey; label: string }[] = mode === "ia" ? STEPS_IA : STEPS_MANUAL;
@@ -313,7 +331,12 @@ export function ArticleWizard({
       <div className="lx-card shrink-0 px-4 py-3">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
           <span className="text-sm font-semibold">
-            {heading} · Paso {step + 1} de {STEPS.length}: {current.label}
+            {initial ? "Editar artículo" : heading} · Paso {step + 1} de {STEPS.length}: {current.label}
+            {status && (
+              <span className="ml-2 rounded-full bg-[var(--surface-2)] px-2 py-0.5 text-[0.7rem] font-medium text-[var(--fg-muted)]">
+                {STATUS_LABEL[status] ?? status}
+              </span>
+            )}
           </span>
           <ol className="hidden flex-1 flex-wrap gap-1 lg:flex">
             {STEPS.map((s, i) => (
@@ -335,9 +358,15 @@ export function ArticleWizard({
             ))}
           </ol>
           <span className="ml-auto flex items-center gap-3 text-xs">
-            <Link href="/panel/articulos/nuevo" className="lx-link">
-              Cambiar modo
-            </Link>
+            {initial ? (
+              <Link href={`/panel/articulos/${initial.id}`} className="lx-link">
+                Editor completo
+              </Link>
+            ) : (
+              <Link href="/panel/articulos/nuevo" className="lx-link">
+                Cambiar modo
+              </Link>
+            )}
             <Link href="/panel/articulos" className="lx-link inline-flex items-center gap-1">
               <ArrowLeft size={12} /> Volver a artículos
             </Link>
@@ -655,9 +684,25 @@ export function ArticleWizard({
           <ArrowLeft size={15} /> Atrás
         </button>
         {isLast ? (
-          <button type="submit" className="lx-btn">
-            <Save size={15} /> Guardar borrador
-          </button>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {savedAs && (
+              <span className="text-sm font-medium text-[#16a34a]">
+                ✓ {savedAs === "publicar" ? "Publicado" : savedAs === "revision" ? "Enviado a revisión" : "Guardado"}
+              </span>
+            )}
+            <button type="submit" name="intent" value="borrador" className="lx-btn lx-btn-ghost">
+              <Save size={15} /> Guardar borrador
+            </button>
+            {canPublish ? (
+              <button type="submit" name="intent" value="publicar" className="lx-btn">
+                <Send size={15} /> {status === "publicado" ? "Guardar y actualizar" : "Publicar"}
+              </button>
+            ) : (
+              <button type="submit" name="intent" value="revision" className="lx-btn">
+                <Send size={15} /> Enviar a revisión
+              </button>
+            )}
+          </div>
         ) : (
           <button type="button" onClick={next} className="lx-btn">
             {STEPS[step + 1].key === "vista" ? "Ver vista previa" : "Siguiente"} <ArrowRight size={15} />

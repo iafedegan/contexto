@@ -101,10 +101,18 @@ export async function saveArticle(formData: FormData) {
   // tarjetas de todo el portal, así que se refresca el layout completo.
   revalidatePath("/", "layout");
   revalidatePath("/panel/articulos");
-  // Si viene del asistente paso a paso, el editor ofrece volver a él.
+  // El asistente paso a paso puede, además de guardar, publicar o enviar a
+  // revisión en el mismo clic (el permiso se comprueba dentro de cada acción).
+  const intent = String(formData.get("intent") ?? "");
+  if (intent === "publicar") await publishArticle(articleId);
+  else if (intent === "revision") await submitForReview(articleId);
+
+  // Desde el asistente se vuelve al asistente, en su vista previa.
   const desde = String(formData.get("desde") ?? "");
-  const origen = desde === "ia" || desde === "manual" ? `&desde=${desde}` : "";
-  redirect(`/panel/articulos/${articleId}?guardado=1${origen}`);
+  if (desde === "ia" || desde === "manual") {
+    redirect(`/panel/articulos/${articleId}?modo=${desde}&paso=vista&guardado=${intent || "borrador"}`);
+  }
+  redirect(`/panel/articulos/${articleId}?guardado=1`);
 }
 
 export async function submitForReview(articleId: string) {
