@@ -158,7 +158,7 @@ export default async function ArticlesList({ searchParams }: { searchParams: Sea
   return (
     <div className="flex flex-col gap-4">
       {/* --- Título, resumen y filtros: fijos bajo la cabecera del panel --- */}
-      <div className="sticky top-[var(--panel-header-h,61px)] z-30 -mx-2 flex flex-col gap-2 bg-[var(--bg)] px-2 pb-2 pt-3">
+      <div className="sticky top-[var(--panel-header-h,61px)] z-30 -mx-2 flex flex-col gap-2 rounded-b-[var(--radius)] bg-white px-2 pb-2 pt-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="lx-kicker text-[var(--accent)]">Contenido</p>
