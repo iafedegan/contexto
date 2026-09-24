@@ -28,12 +28,12 @@ export type ShellVariant =
 /**
  * `shell` es la MISMA medida que usan cabecera y pie en las cinco plantillas:
  * así las subpáginas ocupan todo el ancho útil y su contenido queda alineado
- * con el navbar. El artículo es la excepción a propósito: un texto largo se
- * lee mal a 96 rem, y su cuerpo mantiene su columna de lectura.
+ * con el navbar. El artículo también ocupa todo el ancho, por decisión
+ * editorial.
  */
 const SHELL: Record<ShellVariant, { main: string; fx: string }> = {
   portada: { main: "shell flex-1 py-12", fx: "lx-grain" },
-  articulo: { main: "mx-auto w-full max-w-3xl flex-1 px-6 py-14", fx: "lx-grain" },
+  articulo: { main: "shell flex-1 py-14", fx: "lx-grain" },
   seccion: { main: "shell flex-1 py-12", fx: "lx-grain lx-aurora lx-vignette" },
   autor: { main: "shell flex-1 py-14", fx: "lx-grain" },
   buscar: { main: "shell flex-1 py-12", fx: "lx-grain lx-aurora" },

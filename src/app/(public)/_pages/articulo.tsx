@@ -172,7 +172,7 @@ export function ArticleDocument({
 
         {/* El cuerpo llega como HTML ya sanitizado en el panel editorial. */}
         <div
-          className="prose prose-drop mx-auto mt-12"
+          className="prose prose-drop mt-12 !max-w-none"
           dangerouslySetInnerHTML={{ __html: a.body }}
         />
 
@@ -182,7 +182,7 @@ export function ArticleDocument({
         {!preview && <AdsBanner zone="article_sidebar" className="mx-auto mt-14" />}
 
         {a.tags.length > 0 && (
-          <ul className="mx-auto mt-12 flex max-w-[40rem] flex-wrap gap-2">
+          <ul className="mx-auto mt-12 flex flex-wrap gap-2">
             {a.tags.map((t) => (
               <li key={t} className="lx-chip">
                 {t}
@@ -192,7 +192,7 @@ export function ArticleDocument({
         )}
 
         {a.authorBio && (
-          <aside className="lx-card mx-auto mt-14 flex max-w-[40rem] gap-5 p-6">
+          <aside className="lx-card mx-auto mt-14 flex gap-5 p-6">
             <span className="lx-display grid size-14 shrink-0 place-items-center rounded-full border border-[var(--accent)] text-xl text-[var(--accent)]">
               {(a.authorName ?? "C").charAt(0)}
             </span>
@@ -205,7 +205,7 @@ export function ArticleDocument({
         )}
 
         {related.length > 0 && (
-          <section className="mx-auto mt-16 max-w-[40rem]">
+          <section className="mx-auto mt-16">
             <h2 className="lx-kicker border-b border-[var(--border)] pb-3 text-[var(--accent)]">
               {t(locale, "article.keepReading")}
             </h2>
