@@ -249,7 +249,7 @@ export function ArticleEditor({
               href={
                 status === "publicado" && initial.slug
                   ? `/articulo/${initial.slug}`
-                  : `/panel/vista-previa/${initial.id}`
+                  : `/vista-previa/${initial.id}`
               }
               target="_blank"
               rel="noreferrer"
