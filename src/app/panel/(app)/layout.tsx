@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth, signOut } from "@/lib/auth";
 import { PanelNav } from "@/components/panel/panel-nav";
+import { HeaderHeightVar } from "@/components/panel/header-height";
 
 /** Panel editorial — plantilla «Grafito & Jade». */
 export const dynamic = "force-dynamic";
@@ -16,7 +17,9 @@ export default async function PanelLayout({ children }: { children: React.ReactN
       {/* La barra del panel va en claro (tema `panel-ui`), igual que la barra
           del editor de portada: es cromo de herramienta, no parte del sitio.
           El contenido de cada pantalla conserva su propio tema debajo. */}
+      <HeaderHeightVar />
       <header
+        data-panel-header
         data-theme="panel-ui"
         className="sticky top-0 z-40 border-b border-[var(--border)] bg-[var(--nav-bg)] text-[var(--fg)]"
       >

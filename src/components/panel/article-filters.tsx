@@ -29,7 +29,7 @@ export function ArticleFilters({
   const select = (name: string, value: string, label: string, options: Option[], all?: string) => (
     <label className="flex min-w-0 flex-col gap-0.5">
       <span className="lx-kicker text-[0.65rem] text-[var(--fg-muted)]">{label}</span>
-      <select name={name} defaultValue={value} onChange={submit} className="lx-input h-9 min-w-0 py-1 text-sm">
+      <select name={name} defaultValue={value} onChange={submit} className="lx-input min-w-0 !py-1.5 !pl-3 !text-sm leading-normal">
         {all && <option value="">{all}</option>}
         {options.map((o) => (
           <option key={o.value} value={o.value}>
@@ -53,7 +53,7 @@ export function ArticleFilters({
           name="q"
           defaultValue={values.q}
           placeholder="Título o palabra clave…"
-          className="lx-input h-9 py-1 text-sm"
+          className="lx-input !py-1.5 !px-3 !text-sm leading-normal"
         />
       </label>
       {select("estado", values.estado, "Estado", statuses, "Todos")}
@@ -61,7 +61,7 @@ export function ArticleFilters({
       {select("autor", values.autor, "Autor", authors, "Todos")}
       {select("orden", values.orden, "Ordenar por", sorts)}
       <div className="col-span-2 flex items-end gap-2 sm:col-span-4 lg:col-span-1">
-        <button type="submit" className="lx-btn h-9 flex-1 py-1 lg:flex-none">
+        <button type="submit" className="lx-btn flex-1 !py-2 lg:flex-none">
           Filtrar
         </button>
         {active && (

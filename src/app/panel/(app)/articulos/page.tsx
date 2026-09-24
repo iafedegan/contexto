@@ -156,19 +156,18 @@ export default async function ArticlesList({ searchParams }: { searchParams: Sea
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
+    <div className="flex flex-col gap-4">
+      {/* --- Título, resumen y filtros: fijos bajo la cabecera del panel --- */}
+      <div className="sticky top-[var(--panel-header-h,61px)] z-30 -mx-2 flex flex-col gap-2 bg-[var(--bg)] px-2 pb-2 pt-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="lx-kicker text-[var(--accent)]">Contenido</p>
-          <h1 className="lx-display mt-2 text-3xl font-semibold tracking-tight">Artículos</h1>
+          <h1 className="lx-display text-2xl font-semibold tracking-tight">Artículos</h1>
         </div>
         <Link href="/panel/articulos/nuevo">
           <Button>Nuevo artículo</Button>
         </Link>
       </div>
-
-      {/* --- Resumen + filtros: fijos bajo la cabecera en escritorio --- */}
-      <div className="flex flex-col gap-2 bg-[var(--bg)] py-2 lg:sticky lg:top-[61px] lg:z-30">
       <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
         <Stat label="Artículos" value={nf.format(summary.total)}>
           {nf.format(summary.publicados)} publicados · {nf.format(summary.pendientes)} en preparación
@@ -324,7 +323,7 @@ function Stat({ label, value, children }: { label: string; value: string; childr
         <span className="lx-kicker truncate text-[0.65rem] text-[var(--fg-muted)]">{label}</span>
         <span className="lx-display text-lg font-semibold leading-none tabular-nums">{value}</span>
       </div>
-      <span className="truncate text-[0.7rem] text-[var(--fg-muted)] [&_a]:line-clamp-none">{children}</span>
+      <span className="hidden truncate text-[0.7rem] text-[var(--fg-muted)] sm:block [&_a]:line-clamp-none">{children}</span>
     </div>
   );
 }
