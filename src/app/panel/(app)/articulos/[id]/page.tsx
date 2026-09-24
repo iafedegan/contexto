@@ -121,7 +121,6 @@ export default async function ArticleEditorPage({
         >
           <ArrowLeft size={15} /> Volver a artículos
         </Link>
-        <h1 className="text-xl font-bold">{isNew ? "Nuevo artículo" : initial.title}</h1>
       </div>
       {stats && <ArticleStats {...stats} />}
       <ArticleEditor
@@ -129,6 +128,7 @@ export default async function ArticleEditorPage({
         categories={cats}
         authors={auths}
         status={status}
+        heading={<h1 className="text-xl font-bold">{isNew ? "Nuevo artículo" : initial.title}</h1>}
         canPublish={canPublish(session!.user.role)}
         publishAction={async () => {
           "use server";

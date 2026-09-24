@@ -72,6 +72,7 @@ export function ArticleEditor({
   scheduleAction,
   submitForReviewAction,
   status,
+  heading,
 }: {
   initial: Initial;
   categories: Option[];
@@ -81,6 +82,8 @@ export function ArticleEditor({
   scheduleAction: (iso: string) => Promise<void>;
   submitForReviewAction: () => Promise<void>;
   status: string;
+  /** Título de la pantalla, debajo de la barra de acciones. */
+  heading?: React.ReactNode;
 }) {
   const [title, setTitle] = useState(initial.title);
   const [excerpt, setExcerpt] = useState(initial.excerpt);
@@ -267,6 +270,8 @@ export function ArticleEditor({
           </button>
         </div>
       </div>
+
+      {heading}
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_21rem]">
         {/* ---------------------------------------------------- Redacción */}
