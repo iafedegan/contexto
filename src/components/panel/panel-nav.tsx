@@ -56,6 +56,11 @@ const GROUPS: Group[] = [
         hint: "Estado del modelo y presupuesto",
       },
       {
+        href: "/panel/configuracion#publicidad",
+        label: "Publicidad y pauta",
+        hint: "Zonas de anuncios en las cinco plantillas",
+      },
+      {
         href: "/panel/configuracion#seguridad",
         label: "Seguridad de mi cuenta",
         hint: "Verificación en dos pasos",

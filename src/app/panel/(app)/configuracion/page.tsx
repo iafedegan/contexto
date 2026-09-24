@@ -1,13 +1,15 @@
 import { asc } from "drizzle-orm";
-import { BarChart3, Globe, ShieldCheck, Sparkles, Users } from "lucide-react";
+import { BarChart3, Globe, Megaphone, ShieldCheck, Sparkles, Users } from "lucide-react";
 import { db } from "@/db";
-import { users } from "@/db/schema";
+import { adsZones, users } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { getSiteIdentity } from "@/lib/site-identity";
 import { UserRow } from "@/components/panel/user-row";
 import { getKeyStatus } from "@/lib/ai-provider";
 import { ApiKeyForm } from "@/components/panel/api-key-form";
 import { MfaForm } from "@/components/panel/mfa-form";
+import { AdsZoneForm, type AdsZoneRow } from "@/components/panel/ads-zone-form";
+import { AD_ZONE_SPECS, type AdZoneKey } from "@/lib/ads";
 import { getAnalyticsStatus } from "@/lib/analytics-server";
 import { saveAnalyticsSettings, saveSiteIdentity } from "./actions";
 import { env } from "@/lib/env";
@@ -21,7 +23,7 @@ export default async function ConfiguracionPage() {
   const session = await auth();
   const isAdmin = session?.user.role === "administrador";
 
-  const [identity, keyStatus, analytics, people] = await Promise.all([
+  const [identity, keyStatus, analytics, people, adsRows] = await Promise.all([
     getSiteIdentity(),
     getKeyStatus(),
     getAnalyticsStatus(),
@@ -36,7 +38,27 @@ export default async function ConfiguracionPage() {
       })
       .from(users)
       .orderBy(asc(users.name)),
+    db.select().from(adsZones),
   ]);
+
+  // Las zonas siempre existen (se siembran una vez); AD_ZONE_SPECS da el
+  // tamaño y el orden de aparición en el sitio.
+  const zonasPauta: AdsZoneRow[] = Object.keys(AD_ZONE_SPECS).map((key) => {
+    const fila = adsRows.find((r) => r.key === key);
+    const spec = AD_ZONE_SPECS[key as AdZoneKey];
+    return {
+      key: key as AdZoneKey,
+      name: fila?.name ?? key,
+      html: fila?.html ?? null,
+      imageUrl: fila?.imageUrl ?? null,
+      clickUrl: fila?.clickUrl ?? null,
+      active: fila?.active ?? false,
+      startsAt: fila?.startsAt ?? null,
+      endsAt: fila?.endsAt ?? null,
+      width: spec.width,
+      height: spec.height,
+    };
+  });
 
   const yoMismo = people.find((p) => p.id === session?.user.id || p.email === session?.user.email);
 
@@ -276,6 +298,33 @@ export default async function ConfiguracionPage() {
           Google necesita alcanzar la dirección, así que en <code className="lx-mono">localhost</code>{" "}
           solo funciona a través de un túnel.
         </p>
+      </Section>
+
+      {/* ------------------------------------------------ Publicidad y pauta */}
+      <Section
+        id="publicidad"
+        icon={<Megaphone size={14} />}
+        title="Publicidad y pauta"
+        hint="Las siete zonas del portal, iguales en las cinco plantillas"
+      >
+        <p className="mb-4 text-sm leading-relaxed text-[var(--fg-muted)]">
+          Cada zona vive en todas las plantillas de portada, en el artículo o en el pie. Actívala solo
+          cuando tenga creatividad: una zona sin imagen ni HTML no ocupa espacio en el sitio. Pega la
+          URL de una imagen ya alojada, o el código que entregue el anunciante o el ad server.
+        </p>
+
+        <div className="grid gap-4 lg:grid-cols-2">
+          {zonasPauta.map((z) => (
+            <AdsZoneForm key={z.key} zone={z} canManage={isAdmin} />
+          ))}
+        </div>
+
+        {!isAdmin && (
+          <p className="mt-4 flex items-start gap-2 rounded-[var(--radius)] bg-[var(--surface-2)] p-3 text-xs leading-relaxed text-[var(--fg-muted)]">
+            <ShieldCheck size={14} className="mt-px shrink-0 text-[var(--accent-2)]" />
+            Solo un administrador puede cambiar la pauta.
+          </p>
+        )}
       </Section>
 
       {/* ------------------------------------------------ Asistente / agentes */}
