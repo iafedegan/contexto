@@ -68,7 +68,7 @@ function MastheadHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extr
   }).format(new Date());
 
   return (
-    <header className="relative z-40 bg-[var(--nav-bg)] sm:sticky sm:top-0">
+    <header data-region="navbar" className="relative z-40 bg-[var(--nav-bg)] sm:sticky sm:top-0">
       <div className="border-b border-[var(--border)]/60">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-2 text-[0.62rem] uppercase tracking-[0.3em] text-[var(--fg-muted)]">
           <span className="hidden sm:block">{today}</span>
@@ -125,7 +125,7 @@ function MastheadHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extr
 /* -------------------------------------------------------------- ARTÍCULO */
 function ReadingHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extra: NavItem[]; locale: Locale; identity: SiteIdentity }) {
   return (
-    <header className="sticky top-0 z-40 border-b border-[var(--border)] bg-[var(--nav-bg)]">
+    <header data-region="navbar" className="sticky top-0 z-40 border-b border-[var(--border)] bg-[var(--nav-bg)]">
       <ReadingProgress />
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-6 px-6 py-3">
         <Link href={localePath(locale, "/")} className="lx-display text-lg font-medium tracking-[0.14em] uppercase">
@@ -164,7 +164,7 @@ function ReadingHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extra
 /* --------------------------------------------------------------- SECCIÓN */
 function BoldHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extra: NavItem[]; locale: Locale; identity: SiteIdentity }) {
   return (
-    <header className="sticky top-0 z-40 bg-[var(--nav-bg)] px-4 py-4">
+    <header data-region="navbar" className="sticky top-0 z-40 bg-[var(--nav-bg)] px-4 py-4">
       <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-4 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--nav-bg)] px-5 py-4 shadow-[var(--shadow)]">
         <Link href={localePath(locale, "/")} className="lx-display mr-auto text-xl font-extrabold tracking-tight">
 {identity.name}
@@ -199,7 +199,7 @@ function BoldHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extra: N
 /* ------------------------------------------------------------------ AUTOR */
 function CoutureHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extra: NavItem[]; locale: Locale; identity: SiteIdentity }) {
   return (
-    <header className="relative z-40 bg-[var(--nav-bg)] px-0 pb-0 pt-8 text-center sm:sticky sm:top-0 sm:px-6 sm:pb-6 sm:pt-10">
+    <header data-region="navbar" className="relative z-40 bg-[var(--nav-bg)] px-0 pb-0 pt-8 text-center sm:sticky sm:top-0 sm:px-6 sm:pb-6 sm:pt-10">
       <div className="mx-auto max-w-4xl px-6">
         <Link href={localePath(locale, "/")} className="lx-display block text-2xl font-light tracking-[0.42em] uppercase">
           {identity.name}
@@ -236,7 +236,7 @@ function CoutureHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extra
 /* --------------------------------------------------------------- BUSCADOR */
 function CommandHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extra: NavItem[]; locale: Locale; identity: SiteIdentity }) {
   return (
-    <header className="sticky top-0 z-40 border-b border-[var(--border)] bg-[var(--nav-bg)]">
+    <header data-region="navbar" className="sticky top-0 z-40 border-b border-[var(--border)] bg-[var(--nav-bg)]">
       <div
         aria-hidden
         className="h-px w-full bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-70"
@@ -274,7 +274,7 @@ function CommandHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extra
 /* -------------------------------------------------------------- ASISTENTE */
 function GlassHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extra: NavItem[]; locale: Locale; identity: SiteIdentity }) {
   return (
-    <header className="sticky top-0 z-40 bg-[var(--nav-bg)] px-4 py-4">
+    <header data-region="navbar" className="sticky top-0 z-40 bg-[var(--nav-bg)] px-4 py-4">
       <div className="mx-auto flex max-w-3xl items-center gap-4 rounded-full border border-[var(--border)] bg-[var(--nav-bg)] px-5 py-2.5 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.9)]">
         <Link href={localePath(locale, "/")} className="lx-display text-sm font-semibold tracking-tight">
           {identity.name}
@@ -305,7 +305,7 @@ function GlassHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extra: 
 /* ---------------------------------------------------------- INSTITUCIONAL */
 function CrestHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extra: NavItem[]; locale: Locale; identity: SiteIdentity }) {
   return (
-    <header className="relative z-40 border-b-2 border-[var(--accent)] bg-[var(--nav-bg)] sm:sticky sm:top-0">
+    <header data-region="navbar" className="relative z-40 border-b-2 border-[var(--accent)] bg-[var(--nav-bg)] sm:sticky sm:top-0">
       <div className="mx-auto max-w-5xl px-6 py-8 text-center">
         <Link href={localePath(locale, "/")} className="inline-flex flex-col items-center gap-3">
           <span className="grid size-14 place-items-center rounded-full border-2 border-[var(--accent)] text-lg tracking-[0.1em] text-[var(--accent)]">
@@ -340,7 +340,7 @@ function CrestHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extra: 
 /* ---------------------------------------------------------------- ARCHIVO */
 function ArchiveHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extra: NavItem[]; locale: Locale; identity: SiteIdentity }) {
   return (
-    <header className="sticky top-0 z-40 border-b border-[var(--border)] bg-[var(--nav-bg)]">
+    <header data-region="navbar" className="sticky top-0 z-40 border-b border-[var(--border)] bg-[var(--nav-bg)]">
       <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-4 px-6 py-5">
         <Link href={localePath(locale, "/")} className="lx-display text-lg tracking-[0.22em] uppercase text-[var(--accent)]">
           {identity.name}

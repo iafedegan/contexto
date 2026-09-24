@@ -95,7 +95,7 @@ function Signature({ theme, locale = "es" }: { theme: Theme; locale?: Locale }) 
 /* ------------------------------------------------------------------ HOME */
 function GrandFooter({ nav, theme, locale, LEGAL, TOOLS, ARCHIVE_NOTE, SITE_NAME }: FooterProps) {
   return (
-    <footer className="relative mt-24 border-t border-[var(--border)] bg-[var(--bg-2)]">
+    <footer data-region="footer" className="relative mt-24 border-t border-[var(--border)] bg-[var(--bg-2)]">
       <div
         aria-hidden
         className="h-px w-full bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent"
@@ -181,7 +181,7 @@ function FooterLink({
 /* -------------------------------------------------------------- ARTÍCULO */
 function ColophonFooter({ theme, locale, LEGAL, ARCHIVE_NOTE, SITE_NAME }: FooterProps) {
   return (
-    <footer className="mt-24 border-t border-[var(--border)] bg-[var(--bg-2)]">
+    <footer data-region="footer" className="mt-24 border-t border-[var(--border)] bg-[var(--bg-2)]">
       <div className="mx-auto max-w-2xl px-6 py-14 text-center">
         <span className="lx-display text-2xl italic text-[var(--accent)]">{SITE_NAME}</span>
         <hr className="lx-rule mx-auto my-6 w-24" />
@@ -208,7 +208,7 @@ function ColophonFooter({ theme, locale, LEGAL, ARCHIVE_NOTE, SITE_NAME }: Foote
 /* --------------------------------------------------------------- SECCIÓN */
 function CopperFooter({ nav, theme, locale, LEGAL, ARCHIVE_NOTE, SITE_NAME }: FooterProps) {
   return (
-    <footer className="relative mt-24 overflow-hidden rounded-t-[3rem] border-t border-[var(--border)] bg-[var(--bg-2)]">
+    <footer data-region="footer" className="relative mt-24 overflow-hidden rounded-t-[3rem] border-t border-[var(--border)] bg-[var(--bg-2)]">
       <span
         aria-hidden
         className="lx-display pointer-events-none absolute -bottom-10 -right-6 text-[11rem] font-extrabold leading-none text-[var(--accent)] opacity-[0.07]"
@@ -257,7 +257,7 @@ function CopperFooter({ nav, theme, locale, LEGAL, ARCHIVE_NOTE, SITE_NAME }: Fo
 /* ------------------------------------------------------------------ AUTOR */
 function AtelierFooter({ theme, locale, LEGAL, ARCHIVE_NOTE, SITE_NAME }: FooterProps) {
   return (
-    <footer className="mt-28 border-t border-[var(--border)] bg-[var(--bg-2)]">
+    <footer data-region="footer" className="mt-28 border-t border-[var(--border)] bg-[var(--bg-2)]">
       <div className="mx-auto max-w-3xl px-6 py-16 text-center">
         <p className="lx-display text-2xl font-light italic leading-relaxed text-[var(--fg)]">
           {t(locale, "footer.quote")}
@@ -292,7 +292,7 @@ function AtelierFooter({ theme, locale, LEGAL, ARCHIVE_NOTE, SITE_NAME }: Footer
 /* --------------------------------------------------------------- BUSCADOR */
 function StatusFooter({ theme, locale, LEGAL, SITE_NAME }: FooterProps) {
   return (
-    <footer className="mt-20 border-t border-[var(--border)] bg-[var(--bg-2)]">
+    <footer data-region="footer" className="mt-20 border-t border-[var(--border)] bg-[var(--bg-2)]">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-3 px-6 py-6 text-[0.7rem] text-[var(--fg-muted)]">
         <span className="lx-mono flex items-center gap-2 text-[var(--accent)]">
           <span className="lx-pulse size-1.5 rounded-full bg-[var(--accent)]" />
@@ -314,7 +314,7 @@ function StatusFooter({ theme, locale, LEGAL, SITE_NAME }: FooterProps) {
 /* -------------------------------------------------------------- ASISTENTE */
 function AuroraFooter({ theme, locale, LEGAL, SITE_NAME }: FooterProps) {
   return (
-    <footer className="relative mt-20">
+    <footer data-region="footer" className="relative mt-20">
       <div
         aria-hidden
         className="mx-auto h-px max-w-3xl bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent"
@@ -346,7 +346,7 @@ function AuroraFooter({ theme, locale, LEGAL, SITE_NAME }: FooterProps) {
 /* ---------------------------------------------------------- INSTITUCIONAL */
 function SealFooter({ theme, locale, LEGAL, ARCHIVE_NOTE, SITE_NAME }: FooterProps) {
   return (
-    <footer className="mt-24 border-t-2 border-[var(--accent)] bg-[var(--surface)]">
+    <footer data-region="footer" className="mt-24 border-t-2 border-[var(--accent)] bg-[var(--surface)]">
       <div className="mx-auto grid max-w-5xl gap-8 px-6 py-12 md:grid-cols-[auto_1fr]">
         <span className="grid size-16 place-items-center rounded-full border border-[var(--accent)] text-sm tracking-[0.1em] text-[var(--accent)]">
           CG
@@ -377,7 +377,7 @@ function SealFooter({ theme, locale, LEGAL, ARCHIVE_NOTE, SITE_NAME }: FooterPro
 /* ---------------------------------------------------------------- ARCHIVO */
 function SepiaFooter({ theme, locale, LEGAL, SITE_NAME }: FooterProps) {
   return (
-    <footer className="mt-20 border-t border-[var(--border)]">
+    <footer data-region="footer" className="mt-20 border-t border-[var(--border)]">
       <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-6 gap-y-3 px-6 py-8 text-xs text-[var(--fg-muted)]">
         <span className="lx-display tracking-[0.2em] uppercase text-[var(--accent)]">{SITE_NAME}</span>
         {LEGAL.map((l) => (

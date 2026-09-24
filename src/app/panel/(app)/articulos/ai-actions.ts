@@ -142,3 +142,65 @@ function scaffold(tema: string, encargo: string, section?: string): GeneratedDra
     ],
   };
 }
+
+// --- Regenerar una sola parte del borrador --------------------------------
+
+export type DraftPart = "excerpt" | "tags" | "body" | "seo";
+
+const PART_SCHEMAS = {
+  excerpt: z.object({ excerpt: z.string().min(20).max(300) }),
+  tags: z.object({ tags: z.array(z.string()).min(3).max(8) }),
+  body: z.object({ body: z.string().min(50) }),
+  seo: z.object({ metaTitle: z.string().min(8).max(70), metaDescription: z.string().min(50).max(170) }),
+} as const;
+
+const PART_TASK: Record<DraftPart, string> = {
+  excerpt: "Escribe SOLO una nueva entradilla (2-3 líneas, 70-155 caracteres ideal) que explique por qué importa la noticia.",
+  tags: "Propón SOLO un nuevo conjunto de 3 a 6 palabras clave o etiquetas, en minúsculas, específicas del tema. La primera debe ser la palabra clave principal.",
+  body: "Redacta SOLO un nuevo cuerpo en HTML (<p>, <h2>), de al menos 250 palabras, con intertítulos. Marca entre {{llaves}} todo dato que no esté en las notas.",
+  seo: "Propón SOLO un nuevo título SEO (15-65 caracteres) y una meta descripción en prosa (70-155 caracteres).",
+};
+
+export type RegenerateResult =
+  | { ok: true; part: DraftPart; value: Partial<Pick<GeneratedDraft, "excerpt" | "tags" | "body" | "metaTitle" | "metaDescription">> }
+  | { ok: false; error: string };
+
+/**
+ * Regenera una parte del borrador (entradilla, palabras clave, cuerpo o ficha
+ * SEO) sin tocar el resto. Recibe la versión actual para proponer otra
+ * distinta. Como el borrador completo, nunca publica: devuelve texto al editor.
+ */
+export async function regenerateDraftPart(input: {
+  title: string;
+  prompt: string;
+  part: DraftPart;
+  current: string;
+  section?: string;
+}): Promise<RegenerateResult> {
+  await requireRole("redactor");
+  const model = await getAiModel();
+  if (!model) {
+    return { ok: false, error: "Para regenerar hace falta la clave del modelo (Configuración → Asistente)." };
+  }
+  try {
+    const { object } = await generateObject({
+      model,
+      schema: PART_SCHEMAS[input.part],
+      system: EDITOR_ASSIST_SYSTEM,
+      prompt: [
+        `TÍTULO: ${input.title.trim()}`,
+        input.section ? `SECCIÓN: ${input.section}` : "",
+        `ENCARGO Y NOTAS:\n${input.prompt.trim()}`,
+        input.current ? `VERSIÓN ACTUAL (el editor la rechazó; propón otra claramente distinta):\n${input.current.slice(0, 4000)}` : "",
+        `TAREA: ${PART_TASK[input.part]}`,
+      ]
+        .filter(Boolean)
+        .join("\n\n"),
+    });
+    return { ok: true, part: input.part, value: object };
+  } catch (err) {
+    console.error("regenerateDraftPart:", err);
+    const detalle = err && typeof err === "object" && "message" in err ? String((err as Error).message) : "";
+    return { ok: false, error: detalle ? `El proveedor rechazó la petición: ${detalle.slice(0, 220)}` : "El modelo no respondió." };
+  }
+}

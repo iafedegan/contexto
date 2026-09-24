@@ -33,13 +33,17 @@ export function EditableCard({
   className?: string;
   children: React.ReactNode;
 }) {
-  if (!builderDragProps) return <div className={className}>{children}</div>;
+  // La principal es el «hero»; el resto, «tarjetas». Lo usa el estilo por
+  // componente de /panel/portada (src/lib/home-regions.ts).
+  const region = index === 0 ? "hero" : "cards";
+  if (!builderDragProps) return <div data-region={region} className={className}>{children}</div>;
 
   const isSelected = builderSelected === index;
   const isOver = builderOverIndex === index;
   return (
     <div
       {...builderDragProps(index)}
+      data-region={region}
       className={cn(
         "group/editable relative h-full cursor-pointer outline-2 outline-offset-2 transition",
         isSelected

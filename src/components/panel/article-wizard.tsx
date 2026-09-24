@@ -9,6 +9,7 @@ import {
   Eye,
   ImagePlus,
   Loader2,
+  RotateCcw,
   Save,
   Sparkles,
   Trash2,
@@ -16,7 +17,11 @@ import {
 } from "lucide-react";
 import { saveArticle } from "@/app/panel/(app)/articulos/actions";
 import { uploadMedia } from "@/app/panel/(app)/articulos/media-actions";
-import { generateArticleDraft } from "@/app/panel/(app)/articulos/ai-actions";
+import {
+  generateArticleDraft,
+  regenerateDraftPart,
+  type DraftPart,
+} from "@/app/panel/(app)/articulos/ai-actions";
 import { auditArticle, scoreLabel, type AuditItem } from "@/lib/seo-audit";
 
 type Option = { id: string; name: string };
@@ -202,6 +207,40 @@ export function ArticleWizard({
     });
   }
 
+  // Paso de revisión con IA -> parte del borrador que se puede regenerar.
+  const PART_OF: Partial<Record<StepKey, DraftPart>> = {
+    resumen: "excerpt",
+    claves: "tags",
+    cuerpo: "body",
+    seo: "seo",
+  };
+
+  function regenerate(part: DraftPart) {
+    const current = {
+      excerpt,
+      tags: tags.join(", "),
+      body: bodyHtml,
+      seo: `${metaTitle}\n${metaDescription}`,
+    }[part];
+    setError("");
+    startGenerating(async () => {
+      const res = await regenerateDraftPart({
+        title: title.trim(),
+        prompt: context.trim(),
+        part,
+        current,
+        section: categories.find((c) => c.id === categoryId)?.name,
+      });
+      if (!res.ok) return setError(res.error);
+      const v = res.value;
+      if (v.excerpt) setExcerpt(v.excerpt);
+      if (v.tags) setTags(v.tags.map((t) => t.toLowerCase()).slice(0, 12));
+      if (v.body) setBody(toText(v.body));
+      if (v.metaTitle) setMetaTitle(v.metaTitle);
+      if (v.metaDescription) setMetaDescription(v.metaDescription);
+    });
+  }
+
   async function onCover(file: File) {
     setError("");
     setUploading(true);
@@ -288,6 +327,24 @@ export function ArticleWizard({
       {/* --- Pantalla del paso + panel SEO lateral (escritorio) --- */}
       <div className="flex min-h-0 flex-1 gap-3">
       <div className="lx-card min-h-0 flex-1 overflow-y-auto p-5 sm:p-6">
+        {mode === "ia" && generated && PART_OF[current.key] && (
+          <div className="mx-auto mb-4 flex max-w-2xl flex-wrap items-center gap-2 rounded-[var(--radius)] border border-[var(--border-strong)] bg-[var(--surface-2)] px-3 py-2">
+            <Sparkles size={14} className="text-[var(--accent)]" />
+            <span className="mr-auto text-sm">Propuesta de la IA. ¿Te gusta?</span>
+            <button
+              type="button"
+              onClick={() => regenerate(PART_OF[current.key]!)}
+              disabled={generating}
+              className="lx-btn lx-btn-ghost !py-1.5 text-xs"
+            >
+              {generating ? <Loader2 size={13} className="animate-spin" /> : <RotateCcw size={13} />}
+              {generating ? "Regenerando…" : "Regenerar"}
+            </button>
+            <button type="button" onClick={next} disabled={generating} className="lx-btn !py-1.5 text-xs">
+              <Check size={13} /> Me gusta
+            </button>
+          </div>
+        )}
         {current.key === "tema" && (
           <Step
             title="Título y contexto"

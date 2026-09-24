@@ -9,6 +9,7 @@
  */
 import { relations, sql } from "drizzle-orm";
 import type { HomeTitleFont } from "@/lib/home-fonts";
+import type { RegionStyles } from "@/lib/home-regions";
 import {
   boolean,
   date,
@@ -410,6 +411,8 @@ export type HomeLayoutConfig = {
   riverColumns?: number;
   /** Fondo de la plantilla (color sólido o degradado). */
   background?: HomeBackground;
+  /** Estilo por componente: navbar, hero, cuerpo, tarjetas y pie. */
+  regions?: RegionStyles;
 };
 
 // --- Relaciones ---------------------------------------------------

@@ -5,6 +5,7 @@ import { and, eq, isNotNull, notInArray, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { articles, siteSettings, type HomeLayoutConfig, type HomeStyle } from "@/db/schema";
 import { requireRole } from "@/lib/auth";
+import { sanitizeRegions } from "@/lib/home-regions";
 
 export type HomeLayoutEntry = {
   id: string;
@@ -56,8 +57,10 @@ export async function resetHomeLayout() {
  * contenido): si "En breve" es vertical u horizontal, cuántas columnas, y
  * cuántas columnas tiene la cuadrícula "Lo más reciente".
  */
-export async function saveHomeSectionLayout(config: HomeLayoutConfig) {
+export async function saveHomeSectionLayout(input: HomeLayoutConfig) {
   await requireRole("editor");
+  // El estilo por componente acaba convertido en CSS: se guarda ya validado.
+  const config: HomeLayoutConfig = { ...input, regions: sanitizeRegions(input.regions) };
   await db
     .insert(siteSettings)
     .values({ key: "home_layout", value: config })

@@ -12,6 +12,7 @@ import {
   LayoutGrid,
   Megaphone,
   Monitor,
+  Paintbrush,
   Rows3,
   RotateCcw,
   Save,
@@ -34,6 +35,8 @@ import type { ArticleListItem } from "@/lib/content";
 import type { HomeBackground, HomeLayoutConfig, HomeStyle } from "@/db/schema";
 import { HOME_TEMPLATES } from "@/lib/home-layout";
 import { BACKGROUND_PRESETS, homeBackgroundStyle } from "@/lib/home-background";
+import { regionsCss, type RegionId } from "@/lib/home-regions";
+import { RegionEditor } from "@/components/panel/region-editor";
 import { HOME_FONTS, HOME_FONT_GROUPS, type HomeTitleFont } from "@/lib/home-fonts";
 import { cn } from "@/lib/utils";
 
@@ -74,6 +77,7 @@ export function HomeBuilder({
   const [pending, startTransition] = useTransition();
   const [saved, setSaved] = useState(false);
   const [selected, setSelected] = useState<number | null>(null);
+  const [region, setRegion] = useState<RegionId>("navbar");
   // "template": elegir la plantilla. "content": la página real, editable —
   // clic para estilo, arrastrar para reordenar. La disposición de secciones
   // (columnas, dirección de "En breve") se ajusta desde "content" también,
@@ -279,14 +283,31 @@ export function HomeBuilder({
           <div
             className="mx-auto bg-[var(--paper)]"
             style={{ width: anchoPreview, zoom: escala }}
+            // Clic en navbar, pie, cuerpo… selecciona ese componente en el panel.
+            // Los enlaces de la vista previa no navegan.
+            onClickCapture={(e) => {
+              const el = e.target as HTMLElement;
+              if (el.closest("a")) e.preventDefault();
+              const r = el.closest("[data-region]")?.getAttribute("data-region") as RegionId | null;
+              if (r) setRegion(r);
+            }}
           >
             <div
               className="flex min-h-full flex-col bg-[var(--paper)] text-[var(--ink)] transition-colors"
               data-theme={layout.templateId}
+              data-site-root
               style={homeBackgroundStyle(layout.background)}
             >
+              <style
+                dangerouslySetInnerHTML={{
+                  __html:
+                    regionsCss(layout.regions) +
+                    // Marca en el lienzo el componente que se está editando.
+                    `\n[data-site-root] [data-region="${region}"]{outline:2px dashed #b45309;outline-offset:-2px}`,
+                }}
+              />
               {headerVariants[layout.templateId]}
-              <main className="shell flex-1 py-8">
+              <main data-region="body" className="shell flex-1 py-8">
                 <div className="flex flex-col gap-10">
                   {layout.templateId === "clasico" && <FeatureStrip items={strip} />}
                   <Template
@@ -317,6 +338,15 @@ export function HomeBuilder({
       >
         <Bloque titulo="Plantilla" icono={<LayoutGrid size={13} />}>
           <TemplatePicker layout={layout} onPick={(config) => patchLayout(config)} compacto />
+        </Bloque>
+
+        <Bloque titulo="Componentes" icono={<Paintbrush size={13} />} abierto>
+          <RegionEditor
+            value={layout.regions ?? {}}
+            active={region}
+            onActive={setRegion}
+            onChange={(regions) => patchLayout({ regions })}
+          />
         </Bloque>
 
         <Bloque titulo="Disposición y fondo" icono={<Rows3 size={13} />}>

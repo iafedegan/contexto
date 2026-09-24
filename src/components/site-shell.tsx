@@ -1,5 +1,6 @@
 import { getTopLevelCategories } from "@/lib/content";
 import { getSiteIdentity } from "@/lib/site-identity";
+import { getSiteTheme } from "@/lib/site-theme";
 import { ReadingProgress } from "@/components/reading-progress";
 import { BreakingBar } from "@/components/breaking-bar";
 import { AdsBanner } from "@/components/ads-banner";
@@ -64,15 +65,18 @@ export async function SiteShell({
   /** Idioma de la INTERFAZ (el contenido sigue en español). */
   locale?: Locale;
 }) {
-  const [nav, extraNav, identity] = await Promise.all([
+  const [nav, extraNav, identity, site] = await Promise.all([
     navItems(locale),
     navOverflow(locale),
     getSiteIdentity(),
+    getSiteTheme(),
   ]);
   const shell = SHELL[variant];
 
   return (
-    <div data-theme={theme} className={cn("lx-shell", shell.fx)} style={style}>
+    <div data-theme={theme} data-site-root className={cn("lx-shell", shell.fx)} style={style}>
+      {/* Estilo por componente elegido en /panel/portada (ya validado). */}
+      {site.css && <style dangerouslySetInnerHTML={{ __html: site.css }} />}
       {/* El progreso de lectura acompaña al artículo en cualquier plantilla. */}
       {variant === "articulo" && (
         <div className="sticky top-0 z-50 h-0">
@@ -82,7 +86,7 @@ export async function SiteShell({
       {/* Última hora por encima de todo: si hay urgencia, es lo primero. */}
       <BreakingBar locale={locale} />
       <SiteHeader theme={theme} nav={nav} extraNav={extraNav} locale={locale} identity={identity} />
-      <main id="contenido" className={mainClassName ?? shell.main}>
+      <main id="contenido" data-region="body" className={mainClassName ?? shell.main}>
         {/* Honestidad con el lector: la interfaz cambia de idioma, las notas no. */}
         {locale === "en" && (
           <p

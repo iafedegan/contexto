@@ -4,6 +4,7 @@ import type { CSSProperties } from "react";
 import { getHomeLayoutConfig } from "@/lib/content";
 import { homeBackgroundStyle } from "@/lib/home-background";
 import { DEFAULT_HOME_LAYOUT } from "@/lib/home-layout";
+import { regionsCss } from "@/lib/home-regions";
 import type { Theme } from "@/lib/theme";
 
 /**
@@ -17,12 +18,13 @@ import type { Theme } from "@/lib/theme";
  * por separado y solo se paga una consulta.
  */
 export const getSiteTheme = cache(
-  async (): Promise<{ theme: Theme; style?: CSSProperties }> => {
+  async (): Promise<{ theme: Theme; style?: CSSProperties; css?: string }> => {
     try {
       const layout = await getHomeLayoutConfig();
       return {
         theme: layout.templateId as Theme,
         style: homeBackgroundStyle(layout.background),
+        css: regionsCss(layout.regions),
       };
     } catch {
       // Sin base de datos (build local): la plantilla por defecto.

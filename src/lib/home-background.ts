@@ -48,32 +48,42 @@ function shade(hex: string, amount: number, toward: "light" | "dark"): string {
 }
 
 /**
+ * Tokens de color derivados de un fondo. El texto se deriva del fondo, no del
+ * tema: así elegir un color oscuro en una plantilla clara (o al revés) nunca
+ * deja titulares ilegibles. Lo usan el fondo global y el de cada componente.
+ */
+export function derivePalette(base: string): Record<string, string> {
+  const dark = isDark(base);
+  const fg = dark ? "#f6f4ee" : "#14120f";
+  const fgMuted = dark ? shade(fg, 0.38, "dark") : shade(fg, 0.42, "light");
+  return {
+    "--bg": base,
+    "--bg-2": shade(base, 0.08, dark ? "light" : "dark"),
+    "--nav-bg": shade(base, 0.05, dark ? "light" : "dark"),
+    "--surface": dark ? shade(base, 0.07, "light") : shade(base, 0.04, "dark"),
+    "--surface-2": shade(base, dark ? 0.12 : 0.07, dark ? "light" : "dark"),
+    "--fg": fg,
+    "--fg-muted": fgMuted,
+    "--border": dark ? shade(base, 0.16, "light") : shade(base, 0.12, "dark"),
+  };
+}
+
+export function isDark(hex: string): boolean {
+  return luminance(hex) < 0.42;
+}
+
+export function mutedOf(fg: string): string {
+  return isDark(fg) ? shade(fg, 0.42, "light") : shade(fg, 0.38, "dark");
+}
+
+/**
  * Devuelve el `style` para el contenedor de la plantilla. `undefined` cuando
  * el fondo es el del tema (no se inyecta nada y manda `globals.css`).
  */
 export function homeBackgroundStyle(bg?: HomeBackground): CSSProperties | undefined {
   if (!bg || bg.mode === "theme" || !bg.from) return undefined;
 
-  const base = bg.from;
-  const dark = luminance(base) < 0.42;
-
-  // El texto se deriva del fondo, no del tema: así elegir un color oscuro en
-  // una plantilla clara (o al revés) nunca deja titulares ilegibles.
-  const fg = dark ? "#f6f4ee" : "#14120f";
-  const fgMuted = dark ? shade(fg, 0.38, "dark") : shade(fg, 0.42, "light");
-  const border = dark ? shade(base, 0.16, "light") : shade(base, 0.12, "dark");
-  const surface = dark ? shade(base, 0.07, "light") : shade(base, 0.04, "dark");
-
-  const style: CSSProperties & Record<string, string> = {
-    "--bg": base,
-    "--bg-2": shade(base, 0.08, dark ? "light" : "dark"),
-    "--nav-bg": shade(base, 0.05, dark ? "light" : "dark"),
-    "--surface": surface,
-    "--surface-2": shade(base, dark ? 0.12 : 0.07, dark ? "light" : "dark"),
-    "--fg": fg,
-    "--fg-muted": fgMuted,
-    "--border": border,
-  };
+  const style: CSSProperties & Record<string, string> = { ...derivePalette(bg.from) };
 
   if (bg.mode === "gradient" && bg.to) {
     const angle = bg.angle ?? 160;
