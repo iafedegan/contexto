@@ -72,14 +72,7 @@ export default async function ArticleEditorPage({
   // Artículo nuevo: primero se elige cómo crearlo.
   if (isNew) {
     if (modo === "manual" || modo === "ia") {
-      return (
-        <div className="flex flex-col gap-6">
-          <h1 className="text-xl font-bold">
-            Nuevo artículo · {modo === "ia" ? "con asistente de IA" : "paso a paso"}
-          </h1>
-          <ArticleWizard categories={cats} authors={auths} mode={modo} />
-        </div>
-      );
+      return <ArticleWizard categories={cats} authors={auths} mode={modo} />;
     }
     return <ModeChooser />;
   }

@@ -93,6 +93,7 @@ export function ArticleWizard({
   authors: Option[];
   mode?: "manual" | "ia";
 }) {
+  const heading = mode === "ia" ? "Nuevo artículo con IA" : "Nuevo artículo";
   const STEPS: readonly { key: StepKey; label: string }[] = mode === "ia" ? STEPS_IA : STEPS_MANUAL;
   const [step, setStep] = useState(0);
   const [context, setContext] = useState("");
@@ -222,7 +223,12 @@ export function ArticleWizard({
     "w-full rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] px-4 py-3 outline-none transition focus:border-[var(--accent)] placeholder:text-[var(--fg-muted)]/50";
 
   return (
-    <form action={saveArticle} className="flex flex-col gap-5">
+    <form
+      action={saveArticle}
+      // Todo el asistente cabe en la ventana: solo la tarjeta del paso tiene
+      // scroll interno si su contenido (cuerpo largo, vista previa) lo exige.
+      className="-my-6 flex h-[calc(100dvh-var(--panel-header-h,61px)-5.75rem)] min-h-[30rem] flex-col gap-3"
+    >
       {/* Todo viaja oculto: el formulario solo se envía desde la vista previa. */}
       <input type="hidden" name="id" value="" />
       <input type="hidden" name="title" value={title.trim()} />
@@ -239,46 +245,46 @@ export function ArticleWizard({
       <input type="hidden" name="isLive" value="0" />
 
       {/* --- Progreso --- */}
-      <div className="lx-card p-4">
-        <div className="flex items-center justify-between gap-3 text-sm">
-          <span className="font-semibold">
-            Paso {step + 1} de {STEPS.length} · {current.label}
+      <div className="lx-card shrink-0 px-4 py-3">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <span className="text-sm font-semibold">
+            {heading} · Paso {step + 1} de {STEPS.length}: {current.label}
           </span>
-          <Link href="/panel/articulos/nuevo" className="lx-link text-xs">
+          <ol className="hidden flex-1 flex-wrap gap-1 lg:flex">
+            {STEPS.map((s, i) => (
+              <li key={s.key}>
+                <button
+                  type="button"
+                  onClick={() => goTo(i)}
+                  className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[0.7rem] transition ${
+                    i === step
+                      ? "border-[var(--accent)] bg-[var(--accent)] text-white"
+                      : i < step
+                        ? "border-[var(--border-strong)] text-[var(--accent)]"
+                        : "border-[var(--border)] text-[var(--fg-muted)]"
+                  }`}
+                >
+                  {i < step && <Check size={10} />} {s.label}
+                </button>
+              </li>
+            ))}
+          </ol>
+          <Link href="/panel/articulos/nuevo" className="lx-link ml-auto text-xs">
             Cambiar modo
           </Link>
         </div>
-        <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-[var(--border)]">
+        <div className="mt-2 h-1 overflow-hidden rounded-full bg-[var(--border)]">
           <div
             className="h-full rounded-full bg-[var(--accent)] transition-all"
             style={{ width: `${((step + 1) / STEPS.length) * 100}%` }}
           />
         </div>
-        <ol className="mt-3 hidden flex-wrap gap-1.5 md:flex">
-          {STEPS.map((s, i) => (
-            <li key={s.key}>
-              <button
-                type="button"
-                onClick={() => goTo(i)}
-                className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs transition ${
-                  i === step
-                    ? "border-[var(--accent)] bg-[var(--accent)] text-white"
-                    : i < step
-                      ? "border-[var(--border-strong)] text-[var(--accent)]"
-                      : "border-[var(--border)] text-[var(--fg-muted)]"
-                }`}
-              >
-                {i < step && <Check size={11} />} {s.label}
-              </button>
-            </li>
-          ))}
-        </ol>
       </div>
 
       <SeoBar score={audit.score} items={audit.items} focus={tags[0]} />
 
       {/* --- Pantalla del paso --- */}
-      <div className="lx-card min-h-[22rem] p-6 sm:p-8">
+      <div className="lx-card min-h-0 flex-1 overflow-y-auto p-5 sm:p-6">
         {current.key === "tema" && (
           <Step
             title="Título y contexto"
@@ -295,7 +301,7 @@ export function ArticleWizard({
             <textarea
               value={context}
               onChange={(e) => setContext(e.target.value)}
-              rows={5}
+              rows={4}
               placeholder="La Central Ganadera de Medellín reportó 9.850 $/kg en pie para el novillo gordo en la primera quincena de septiembre, 4 % sobre agosto; causas: menor entrada del Magdalena Medio…"
               className={`${input} resize-y text-base leading-relaxed`}
             />
@@ -331,7 +337,7 @@ export function ArticleWizard({
               autoFocus
               value={excerpt}
               onChange={(e) => setExcerpt(e.target.value)}
-              rows={4}
+              rows={3}
               placeholder="La Central Ganadera reportó un alza del 4 % frente a agosto por menor oferta…"
               className={`${input} resize-y text-base leading-relaxed`}
             />
@@ -418,7 +424,7 @@ export function ArticleWizard({
               autoFocus
               value={body}
               onChange={(e) => setBody(e.target.value)}
-              rows={16}
+              rows={11}
               placeholder={"Primer párrafo con lo más importante…\n\n## Qué explica el alza\n\nSegundo párrafo…"}
               className={`${input} resize-y text-base leading-relaxed`}
             />
@@ -552,7 +558,7 @@ export function ArticleWizard({
       </div>
 
       {/* --- Navegación --- */}
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex shrink-0 items-center justify-between gap-3">
         <button
           type="button"
           onClick={back}
@@ -577,10 +583,10 @@ export function ArticleWizard({
 
 function Step({ title, hint, children }: { title: string; hint: string; children: React.ReactNode }) {
   return (
-    <div className="mx-auto flex max-w-2xl flex-col gap-3">
-      <h2 className="lx-display text-2xl font-semibold">{title}</h2>
+    <div className="mx-auto flex max-w-2xl flex-col gap-2">
+      <h2 className="lx-display text-xl font-semibold sm:text-2xl">{title}</h2>
       <p className="text-sm text-[var(--fg-muted)]">{hint}</p>
-      <div className="mt-2 flex flex-col gap-3">{children}</div>
+      <div className="mt-2 flex flex-col gap-2.5">{children}</div>
     </div>
   );
 }
@@ -612,7 +618,10 @@ const STEP_OF: Record<string, string> = {
   etiquetas: "Palabras clave",
 };
 
-/** Barra de SEO en vivo: nota real de la auditoría y lo que falta, por gravedad. */
+/**
+ * Barra de SEO en vivo, en una sola línea: nota real de la auditoría, la
+ * siguiente mejora y un desplegable con todo lo que falta, por gravedad.
+ */
 function SeoBar({ score, items, focus }: { score: number; items: AuditItem[]; focus?: string }) {
   const [open, setOpen] = useState(false);
   const pending = items
@@ -620,42 +629,57 @@ function SeoBar({ score, items, focus }: { score: number; items: AuditItem[]; fo
     .sort((a, b) => (a.severity === b.severity ? b.weight - a.weight : a.severity === "error" ? -1 : 1));
   const done = items.length - pending.length;
   const color = score >= 75 ? "#16a34a" : score >= 55 ? "#d97706" : "#dc2626";
-  const shown = open ? pending : pending.slice(0, 3);
+  const dot = (i: AuditItem) => (i.severity === "error" ? "#dc2626" : "#d97706");
 
   return (
-    <div className="lx-card p-4">
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+    <div className="lx-card relative shrink-0 px-4 py-2.5">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
         <span className="lx-kicker text-[var(--fg-muted)]">SEO</span>
-        <span className="text-2xl font-semibold tabular-nums" style={{ color }}>
+        <span className="text-xl font-semibold tabular-nums" style={{ color }}>
           {score}
         </span>
         <span className="text-sm font-semibold" style={{ color }}>
           {scoreLabel(score)}
         </span>
+        <div
+          className="h-2 min-w-[6rem] flex-1 overflow-hidden rounded-full bg-[var(--border)]"
+          role="progressbar"
+          aria-valuenow={score}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label="Puntuación SEO"
+        >
+          <div className="h-full rounded-full transition-all duration-500" style={{ width: `${score}%`, background: color }} />
+        </div>
         <span className="text-xs text-[var(--fg-muted)]">
-          {done} de {items.length} criterios cumplidos
-          {focus ? ` · palabra clave: «${focus}»` : " · añade palabras clave para medir la principal"}
+          {done}/{items.length} criterios
         </span>
+        {pending.length > 0 ? (
+          <button
+            type="button"
+            onClick={() => setOpen(!open)}
+            aria-expanded={open}
+            className="rounded-full border border-[var(--border)] px-2.5 py-0.5 text-xs font-medium transition hover:border-[var(--accent)]"
+          >
+            {open ? "Cerrar" : `Qué falta (${pending.length})`}
+          </button>
+        ) : (
+          <span className="text-xs font-medium text-[#16a34a]">Todo en orden ✓</span>
+        )}
       </div>
-      <div
-        className="mt-3 h-2.5 overflow-hidden rounded-full bg-[var(--border)]"
-        role="progressbar"
-        aria-valuenow={score}
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-label="Puntuación SEO"
-      >
-        <div className="h-full rounded-full transition-all duration-500" style={{ width: `${score}%`, background: color }} />
-      </div>
-      {pending.length > 0 ? (
-        <ul className="mt-3 flex flex-col gap-1.5">
-          {shown.map((i) => (
+      {pending[0] && (
+        <p className="mt-1 truncate text-xs text-[var(--fg-muted)]">
+          <span className="mr-1.5 inline-block size-1.5 rounded-full align-middle" style={{ background: dot(pending[0]) }} />
+          Siguiente mejora: {pending[0].text}
+          {STEP_OF[pending[0].id] && <span className="text-[var(--accent)]"> · {STEP_OF[pending[0].id]}</span>}
+          {!focus && " · añade palabras clave para medir la principal"}
+        </p>
+      )}
+      {open && (
+        <ul className="absolute inset-x-0 top-full z-40 mt-1 flex max-h-[50vh] flex-col gap-2 overflow-y-auto rounded-[var(--radius)] border border-[var(--border)] bg-white p-4 shadow-lg">
+          {pending.map((i) => (
             <li key={i.id} className="flex items-start gap-2 text-sm">
-              <span
-                className="mt-1.5 size-2 shrink-0 rounded-full"
-                style={{ background: i.severity === "error" ? "#dc2626" : "#d97706" }}
-                aria-label={i.severity === "error" ? "Importante" : "Mejora"}
-              />
+              <span className="mt-1.5 size-2 shrink-0 rounded-full" style={{ background: dot(i) }} />
               <span>
                 {i.text}
                 {i.help && <span className="text-[var(--fg-muted)]"> — {i.help}</span>}
@@ -664,13 +688,6 @@ function SeoBar({ score, items, focus }: { score: number; items: AuditItem[]; fo
             </li>
           ))}
         </ul>
-      ) : (
-        <p className="mt-3 text-sm text-[#16a34a]">Todo en orden: cumple todos los criterios.</p>
-      )}
-      {pending.length > 3 && (
-        <button type="button" onClick={() => setOpen(!open)} className="lx-link mt-2 text-xs">
-          {open ? "Ver menos" : `Ver las ${pending.length} cosas que faltan`}
-        </button>
       )}
     </div>
   );
