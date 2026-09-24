@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { saveArticle } from "@/app/panel/(app)/articulos/actions";
 import { uploadMedia } from "@/app/panel/(app)/articulos/media-actions";
+import { auditArticle, scoreLabel, type AuditItem } from "@/lib/seo-audit";
 
 type Option = { id: string; name: string };
 
@@ -32,6 +33,10 @@ const STEPS = [
 const escapeHtml = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
+/** Convierte las URL escritas a mano en enlaces. */
+const linkify = (s: string) =>
+  s.replace(/https?:\/\/[^\s<]+[^\s<.,;:!?)]/g, (u) => `<a href="${u}" rel="noopener">${u}</a>`);
+
 /**
  * Texto plano -> HTML: cada bloque separado por una línea en blanco es un
  * párrafo; una línea que empieza por "## " es un intertítulo. Si el redactor
@@ -46,7 +51,7 @@ function toHtml(text: string): string {
     .map((b) =>
       b.startsWith("## ")
         ? `<h2>${escapeHtml(b.slice(3))}</h2>`
-        : `<p>${escapeHtml(b).replace(/\n/g, "<br>")}</p>`,
+        : `<p>${linkify(escapeHtml(b)).replace(/\n/g, "<br>")}</p>`,
     )
     .join("\n");
 }
@@ -70,6 +75,21 @@ export function ArticleWizard({ categories, authors }: { categories: Option[]; a
 
   const words = body.trim() ? body.trim().split(/\s+/).length : 0;
   const bodyHtml = toHtml(body);
+  // Misma auditoría que el editor completo. La palabra clave principal es la
+  // primera etiqueta; si aún no hay, se usa el título.
+  const audit = useMemo(
+    () =>
+      auditArticle({
+        title,
+        excerpt,
+        body: bodyHtml,
+        metaTitle,
+        metaDescription,
+        tags,
+        focus: tags[0] || title,
+      }),
+    [title, excerpt, bodyHtml, metaTitle, metaDescription, tags],
+  );
   const categoryName = categories.find((c) => c.id === categoryId)?.name;
   const authorName = authors.find((a) => a.id === authorId)?.name;
 
@@ -187,6 +207,8 @@ export function ArticleWizard({ categories, authors }: { categories: Option[]; a
         </ol>
       </div>
 
+      <SeoBar score={audit.score} items={audit.items} focus={tags[0]} />
+
       {/* --- Pantalla del paso --- */}
       <div className="lx-card min-h-[22rem] p-6 sm:p-8">
         {current.key === "titulo" && (
@@ -290,7 +312,7 @@ export function ArticleWizard({ categories, authors }: { categories: Option[]; a
         {current.key === "cuerpo" && (
           <Step
             title="Escribe el cuerpo"
-            hint="Separa los párrafos con una línea en blanco. Empieza una línea con «## » para un intertítulo."
+            hint="Separa los párrafos con una línea en blanco. Empieza una línea con «## » para un intertítulo. Las direcciones https://… se convierten en enlaces."
           >
             <textarea
               autoFocus
@@ -464,5 +486,87 @@ function Counter({ value, min, max }: { value: number; min: number; max: number 
     <p className={`text-right text-xs ${ok ? "text-[var(--accent)]" : "text-[var(--fg-muted)]"}`}>
       {value} / {max} caracteres {ok ? "✓" : `(ideal ${min}–${max})`}
     </p>
+  );
+}
+
+/** Paso del asistente donde se corrige cada criterio de la auditoría. */
+const STEP_OF: Record<string, string> = {
+  "title-len": "Título o Buscadores",
+  "desc-len": "Resumen o Buscadores",
+  "desc-prosa": "Resumen",
+  excerpt: "Resumen",
+  cuerpo: "Cuerpo",
+  intertitulos: "Cuerpo",
+  parrafos: "Cuerpo",
+  frases: "Cuerpo",
+  "tema-titulo": "Título",
+  "tema-entrada": "Cuerpo",
+  alt: "Cuerpo",
+  enlaces: "Cuerpo",
+  pendientes: "Cuerpo",
+  etiquetas: "Palabras clave",
+};
+
+/** Barra de SEO en vivo: nota real de la auditoría y lo que falta, por gravedad. */
+function SeoBar({ score, items, focus }: { score: number; items: AuditItem[]; focus?: string }) {
+  const [open, setOpen] = useState(false);
+  const pending = items
+    .filter((i) => !i.ok)
+    .sort((a, b) => (a.severity === b.severity ? b.weight - a.weight : a.severity === "error" ? -1 : 1));
+  const done = items.length - pending.length;
+  const color = score >= 75 ? "#16a34a" : score >= 55 ? "#d97706" : "#dc2626";
+  const shown = open ? pending : pending.slice(0, 3);
+
+  return (
+    <div className="lx-card p-4">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        <span className="lx-kicker text-[var(--fg-muted)]">SEO</span>
+        <span className="text-2xl font-semibold tabular-nums" style={{ color }}>
+          {score}
+        </span>
+        <span className="text-sm font-semibold" style={{ color }}>
+          {scoreLabel(score)}
+        </span>
+        <span className="text-xs text-[var(--fg-muted)]">
+          {done} de {items.length} criterios cumplidos
+          {focus ? ` · palabra clave: «${focus}»` : " · añade palabras clave para medir la principal"}
+        </span>
+      </div>
+      <div
+        className="mt-3 h-2.5 overflow-hidden rounded-full bg-[var(--border)]"
+        role="progressbar"
+        aria-valuenow={score}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-label="Puntuación SEO"
+      >
+        <div className="h-full rounded-full transition-all duration-500" style={{ width: `${score}%`, background: color }} />
+      </div>
+      {pending.length > 0 ? (
+        <ul className="mt-3 flex flex-col gap-1.5">
+          {shown.map((i) => (
+            <li key={i.id} className="flex items-start gap-2 text-sm">
+              <span
+                className="mt-1.5 size-2 shrink-0 rounded-full"
+                style={{ background: i.severity === "error" ? "#dc2626" : "#d97706" }}
+                aria-label={i.severity === "error" ? "Importante" : "Mejora"}
+              />
+              <span>
+                {i.text}
+                {i.help && <span className="text-[var(--fg-muted)]"> — {i.help}</span>}
+                {STEP_OF[i.id] && <span className="ml-1 text-xs text-[var(--accent)]">({STEP_OF[i.id]})</span>}
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="mt-3 text-sm text-[#16a34a]">Todo en orden: cumple todos los criterios.</p>
+      )}
+      {pending.length > 3 && (
+        <button type="button" onClick={() => setOpen(!open)} className="lx-link mt-2 text-xs">
+          {open ? "Ver menos" : `Ver las ${pending.length} cosas que faltan`}
+        </button>
+      )}
+    </div>
   );
 }
