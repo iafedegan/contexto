@@ -30,17 +30,20 @@ let redirectCache: { at: number; map: Map<string, { to: string; code: number }> 
 const REDIRECT_TTL_MS = 5 * 60 * 1000;
 
 async function getRedirectMap(origin: string) {
-  if (process.env.NEXT_PHASE === "phase-production-build") {
+  if (process.env.NEXT_PHASE === "phase-production-build" || process.env.VERCEL || process.env.CI) {
     return redirectCache.map;
   }
   if (Date.now() - redirectCache.at < REDIRECT_TTL_MS && redirectCache.at > 0) {
     return redirectCache.map;
   }
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 1000);
   try {
     const res = await fetch(`${origin}/api/redirects`, {
       cache: "no-store",
-      signal: AbortSignal.timeout(2000),
+      signal: controller.signal,
     });
+    clearTimeout(timer);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const { map } = (await res.json()) as { map: Array<{ from: string; to: string; code: number }> };
     redirectCache = {
@@ -48,6 +51,7 @@ async function getRedirectMap(origin: string) {
       map: new Map(map.map((r) => [r.from, { to: r.to, code: r.code }])),
     };
   } catch {
+    clearTimeout(timer);
     redirectCache.at = Date.now(); // no reintentar en bucle
   }
   return redirectCache.map;
@@ -68,7 +72,7 @@ export async function proxy(req: NextRequest) {
     return applyHeaders(NextResponse.redirect(new URL(legacyTarget + search, req.url), 301));
   }
 
-  if (!pathname.startsWith("/panel") && !pathname.startsWith("/api")) {
+  if (!pathname.startsWith("/panel") && !pathname.startsWith("/api") && !pathname.startsWith("/_not-found")) {
     const map = await getRedirectMap(req.nextUrl.origin);
     const hit = map.get(clean) ?? map.get(pathname);
     if (hit) {
@@ -101,6 +105,6 @@ function applyHeaders(res: NextResponse): NextResponse {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|llms.txt|feed.xml|.*\\.(?:png|jpg|jpeg|gif|webp|svg|ico|css|js)$).*)",
+    "/((?!_next/static|_next/image|_not-found|favicon.ico|robots.txt|sitemap.xml|llms.txt|feed.xml|.*\\.(?:png|jpg|jpeg|gif|webp|svg|ico|css|js)$).*)",
   ],
 };
