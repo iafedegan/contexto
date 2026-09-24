@@ -30,11 +30,18 @@ let redirectCache: { at: number; map: Map<string, { to: string; code: number }> 
 const REDIRECT_TTL_MS = 5 * 60 * 1000;
 
 async function getRedirectMap(origin: string) {
-  if (Date.now() - redirectCache.at < REDIRECT_TTL_MS && redirectCache.map.size >= 0 && redirectCache.at > 0) {
+  if (process.env.NEXT_PHASE === "phase-production-build") {
+    return redirectCache.map;
+  }
+  if (Date.now() - redirectCache.at < REDIRECT_TTL_MS && redirectCache.at > 0) {
     return redirectCache.map;
   }
   try {
-    const res = await fetch(`${origin}/api/redirects`, { cache: "no-store" });
+    const res = await fetch(`${origin}/api/redirects`, {
+      cache: "no-store",
+      signal: AbortSignal.timeout(2000),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const { map } = (await res.json()) as { map: Array<{ from: string; to: string; code: number }> };
     redirectCache = {
       at: Date.now(),
