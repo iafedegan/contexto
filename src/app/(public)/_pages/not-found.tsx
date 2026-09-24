@@ -1,14 +1,14 @@
 import Link from "next/link";
 import { localePath, t, type Locale } from "@/lib/i18n";
-import { SiteShell } from "@/components/site-shell";
-import { getSiteTheme } from "@/lib/site-theme";
+import { SiteHeader } from "@/components/site-header";
+import { SiteFooter } from "@/components/site-footer";
 
-/** 404 — plantilla «Sepia & Ámbar», la del archivo histórico. */
-async function NotFound({ locale }: { locale: Locale }) {
-  const site = await getSiteTheme();
+/** 404 — plantilla «Sepia & Ámbar», la del archivo histórico (completamente estática, 0 consultas). */
+function NotFound({ locale }: { locale: Locale }) {
   return (
-    <SiteShell theme={site.theme} style={site.style} locale={locale} variant="archivo">
-      <div className="py-16 text-center">
+    <div data-theme="archivo" className="lx-shell lx-grain lx-aurora flex min-h-screen flex-col justify-between">
+      <SiteHeader theme="archivo" nav={[]} locale={locale} />
+      <main id="contenido" className="shell flex-1 py-16 text-center">
         <p className="lx-display text-[7rem] font-normal leading-none text-[var(--accent)] opacity-30">
           404
         </p>
@@ -26,11 +26,11 @@ async function NotFound({ locale }: { locale: Locale }) {
             {t(locale, "notFound.search")}
           </Link>
         </div>
-      </div>
-    </SiteShell>
+      </main>
+      <SiteFooter theme="archivo" nav={[]} locale={locale} />
+    </div>
   );
 }
-
 
 /** Fábrica: el mismo 404 en cualquier idioma de interfaz. */
 export function makeNotFound(locale: Locale) {

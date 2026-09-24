@@ -46,4 +46,9 @@ const nextConfig: NextConfig = {
   // reescribe aquí. Las redirecciones 301 de taxonomía están en middleware.ts.
 };
 
-export default nextConfig;
+export default function (phase: string): NextConfig {
+  if (phase) {
+    process.env.NEXT_PHASE = phase;
+  }
+  return nextConfig;
+}
