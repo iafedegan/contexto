@@ -4,7 +4,7 @@ import { db } from "@/db";
 import { articles, authors, categories } from "@/db/schema";
 import { auth, canPublish } from "@/lib/auth";
 import Link from "next/link";
-import { PenLine, Sparkles } from "lucide-react";
+import { ArrowLeft, PenLine, Sparkles } from "lucide-react";
 import { ArticleEditor } from "@/components/article-editor";
 import { ArticleWizard } from "@/components/panel/article-wizard";
 import { ViewsBarChart } from "@/components/panel/views-chart";
@@ -114,7 +114,15 @@ export default async function ArticleEditorPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-xl font-bold">{isNew ? "Nuevo artículo" : initial.title}</h1>
+      <div className="flex flex-col gap-2">
+        <Link
+          href="/panel/articulos"
+          className="inline-flex w-fit items-center gap-1.5 text-sm text-[var(--fg-muted)] transition hover:text-[var(--accent)]"
+        >
+          <ArrowLeft size={15} /> Volver a artículos
+        </Link>
+        <h1 className="text-xl font-bold">{isNew ? "Nuevo artículo" : initial.title}</h1>
+      </div>
       {stats && <ArticleStats {...stats} />}
       <ArticleEditor
         initial={initial}
@@ -236,6 +244,12 @@ function ModeChooser() {
   return (
     <div className="flex flex-col gap-6">
       <div>
+        <Link
+          href="/panel/articulos"
+          className="mb-3 inline-flex items-center gap-1.5 text-sm text-[var(--fg-muted)] transition hover:text-[var(--accent)]"
+        >
+          <ArrowLeft size={15} /> Volver a artículos
+        </Link>
         <p className="lx-kicker text-[var(--accent)]">Nuevo artículo</p>
         <h1 className="lx-display mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">
           ¿Cómo quieres crearlo?

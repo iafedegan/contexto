@@ -308,9 +308,14 @@ export function ArticleWizard({
               </li>
             ))}
           </ol>
-          <Link href="/panel/articulos/nuevo" className="lx-link ml-auto text-xs">
-            Cambiar modo
-          </Link>
+          <span className="ml-auto flex items-center gap-3 text-xs">
+            <Link href="/panel/articulos/nuevo" className="lx-link">
+              Cambiar modo
+            </Link>
+            <Link href="/panel/articulos" className="lx-link inline-flex items-center gap-1">
+              <ArrowLeft size={12} /> Volver a artículos
+            </Link>
+          </span>
         </div>
         <div className="mt-2 h-1 overflow-hidden rounded-full bg-[var(--border)]">
           <div
