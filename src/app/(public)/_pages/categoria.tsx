@@ -40,7 +40,11 @@ async function generateMetadataImpl({ params }: Params): Promise<Metadata> {
     description:
       category.description ??
       `Noticias y análisis de ${category.name.toLowerCase()} en el sector ganadero colombiano.`,
-    alternates: { canonical: siteUrl(`/categoria/${slug}`) },
+    alternates: {
+      canonical: siteUrl(`/categoria/${slug}`),
+      // Los lectores RSS descubren solos el feed de la sección.
+      types: { "application/rss+xml": siteUrl(`/categoria/${slug}/feed.xml`) },
+    },
   };
 }
 
@@ -345,7 +349,10 @@ export function makeMetadata(locale: Locale) {
     return {
       ...meta,
       robots: { index: false, follow: true },
-      alternates: { canonical: siteUrl(`/categoria/${slug}`) },
+      alternates: {
+        canonical: siteUrl(`/categoria/${slug}`),
+        types: { "application/rss+xml": siteUrl(`/categoria/${slug}/feed.xml`) },
+      },
     };
   };
 }
