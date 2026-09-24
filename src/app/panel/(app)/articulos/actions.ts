@@ -101,7 +101,10 @@ export async function saveArticle(formData: FormData) {
   // tarjetas de todo el portal, así que se refresca el layout completo.
   revalidatePath("/", "layout");
   revalidatePath("/panel/articulos");
-  redirect(`/panel/articulos/${articleId}?guardado=1`);
+  // Si viene del asistente paso a paso, el editor ofrece volver a él.
+  const desde = String(formData.get("desde") ?? "");
+  const origen = desde === "ia" || desde === "manual" ? `&desde=${desde}` : "";
+  redirect(`/panel/articulos/${articleId}?guardado=1${origen}`);
 }
 
 export async function submitForReview(articleId: string) {

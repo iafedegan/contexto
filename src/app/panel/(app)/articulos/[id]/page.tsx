@@ -57,10 +57,10 @@ export default async function ArticleEditorPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ modo?: string }>;
+  searchParams: Promise<{ modo?: string; paso?: string; desde?: string }>;
 }) {
   const { id } = await params;
-  const { modo } = await searchParams;
+  const { modo, paso, desde } = await searchParams;
   const session = await auth();
   const isNew = id === "nuevo";
 
@@ -106,6 +106,30 @@ export default async function ArticleEditorPage({
       isLive: row.isLive,
     };
     status = row.status;
+    // Reabrir un artículo guardado en el asistente (botón «Volver al asistente»).
+    if (modo === "manual" || modo === "ia") {
+      return (
+        <ArticleWizard
+          categories={cats}
+          authors={auths}
+          mode={modo}
+          startStep={paso}
+          initial={{
+            id: row.id,
+            title: row.title,
+            excerpt: row.excerpt,
+            body: row.body,
+            tags: row.tags,
+            categoryId: row.categoryId,
+            authorId: row.authorId,
+            coverImageUrl: row.coverImageUrl,
+            coverImageAlt: row.coverImageAlt,
+            metaTitle: row.metaTitle,
+            metaDescription: row.metaDescription,
+          }}
+        />
+      );
+    }
     if (row.status === "publicado" || row.views > 0) {
       const [series, best] = await Promise.all([articleSeries(row.id, 30), bestDay(row.id)]);
       stats = { views: row.views, publishedAt: row.publishedAt, series, best };
@@ -115,12 +139,21 @@ export default async function ArticleEditorPage({
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
-        <Link
-          href="/panel/articulos"
-          className="inline-flex w-fit items-center gap-1.5 text-sm text-[var(--fg-muted)] transition hover:text-[var(--accent)]"
-        >
-          <ArrowLeft size={15} /> Volver a artículos
-        </Link>
+        {!isNew && (desde === "ia" || desde === "manual") ? (
+          <Link
+            href={`/panel/articulos/${id}?modo=${desde}&paso=seo`}
+            className="inline-flex w-fit items-center gap-1.5 text-sm text-[var(--fg-muted)] transition hover:text-[var(--accent)]"
+          >
+            <ArrowLeft size={15} /> Volver al asistente {desde === "ia" ? "de IA" : "paso a paso"}
+          </Link>
+        ) : (
+          <Link
+            href="/panel/articulos"
+            className="inline-flex w-fit items-center gap-1.5 text-sm text-[var(--fg-muted)] transition hover:text-[var(--accent)]"
+          >
+            <ArrowLeft size={15} /> Volver a artículos
+          </Link>
+        )}
       </div>
       {stats && <ArticleStats {...stats} />}
       <ArticleEditor

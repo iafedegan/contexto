@@ -26,6 +26,20 @@ import { auditArticle, scoreLabel, type AuditItem } from "@/lib/seo-audit";
 
 type Option = { id: string; name: string };
 
+export type WizardInitial = {
+  id: string;
+  title: string;
+  excerpt: string;
+  body: string;
+  tags: string[];
+  categoryId: string | null;
+  authorId: string | null;
+  coverImageUrl: string | null;
+  coverImageAlt: string | null;
+  metaTitle: string | null;
+  metaDescription: string | null;
+};
+
 const STEPS_MANUAL = [
   { key: "titulo", label: "Título" },
   { key: "resumen", label: "Resumen" },
@@ -93,29 +107,36 @@ export function ArticleWizard({
   categories,
   authors,
   mode = "manual",
+  initial,
+  startStep,
 }: {
   categories: Option[];
   authors: Option[];
   mode?: "manual" | "ia";
+  /** Artículo ya guardado que se reabre en el asistente. */
+  initial?: WizardInitial;
+  /** Paso por el que se abre (clave de STEPS). */
+  startStep?: string;
 }) {
   const heading = mode === "ia" ? "Nuevo artículo con IA" : "Nuevo artículo";
   const STEPS: readonly { key: StepKey; label: string }[] = mode === "ia" ? STEPS_IA : STEPS_MANUAL;
-  const [step, setStep] = useState(0);
+  const [step, setStep] = useState(() => Math.max(0, STEPS.findIndex((x) => x.key === startStep)));
   const [context, setContext] = useState("");
-  const [generated, setGenerated] = useState(false);
+  // Un artículo reabierto ya tiene borrador: se puede revisar y regenerar.
+  const [generated, setGenerated] = useState(!!initial);
   const [aiNote, setAiNote] = useState("");
   const [generating, startGenerating] = useTransition();
-  const [title, setTitle] = useState("");
-  const [excerpt, setExcerpt] = useState("");
-  const [tags, setTags] = useState<string[]>([]);
+  const [title, setTitle] = useState(initial?.title ?? "");
+  const [excerpt, setExcerpt] = useState(initial?.excerpt ?? "");
+  const [tags, setTags] = useState<string[]>(initial?.tags ?? []);
   const [tagDraft, setTagDraft] = useState("");
-  const [categoryId, setCategoryId] = useState("");
-  const [authorId, setAuthorId] = useState("");
-  const [body, setBody] = useState("");
-  const [cover, setCover] = useState("");
-  const [coverAlt, setCoverAlt] = useState("");
-  const [metaTitle, setMetaTitle] = useState("");
-  const [metaDescription, setMetaDescription] = useState("");
+  const [categoryId, setCategoryId] = useState(initial?.categoryId ?? "");
+  const [authorId, setAuthorId] = useState(initial?.authorId ?? "");
+  const [body, setBody] = useState(() => (initial?.body ? toText(initial.body) : ""));
+  const [cover, setCover] = useState(initial?.coverImageUrl ?? "");
+  const [coverAlt, setCoverAlt] = useState(initial?.coverImageAlt ?? "");
+  const [metaTitle, setMetaTitle] = useState(initial?.metaTitle ?? "");
+  const [metaDescription, setMetaDescription] = useState(initial?.metaDescription ?? "");
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
 
@@ -269,7 +290,8 @@ export function ArticleWizard({
       className="-my-6 flex h-[calc(100dvh-var(--panel-header-h,61px)-5.75rem)] min-h-[30rem] flex-col gap-3"
     >
       {/* Todo viaja oculto: el formulario solo se envía desde la vista previa. */}
-      <input type="hidden" name="id" value="" />
+      <input type="hidden" name="id" value={initial?.id ?? ""} />
+      <input type="hidden" name="desde" value={mode} />
       <input type="hidden" name="title" value={title.trim()} />
       <input type="hidden" name="excerpt" value={excerpt.trim()} />
       <input type="hidden" name="body" value={bodyHtml} />
