@@ -22,6 +22,7 @@ import {
   regenerateDraftPart,
   type DraftPart,
 } from "@/app/panel/(app)/articulos/ai-actions";
+import { SiteArticlePreview, type SitePreviewChrome } from "@/components/panel/site-article-preview";
 import { auditArticle, scoreLabel, type AuditItem } from "@/lib/seo-audit";
 
 type Option = { id: string; name: string };
@@ -109,6 +110,7 @@ export function ArticleWizard({
   mode = "manual",
   initial,
   startStep,
+  site,
 }: {
   categories: Option[];
   authors: Option[];
@@ -117,6 +119,8 @@ export function ArticleWizard({
   initial?: WizardInitial;
   /** Paso por el que se abre (clave de STEPS). */
   startStep?: string;
+  /** Cabecera, pie y tema del sitio para la vista previa de escritorio. */
+  site?: SitePreviewChrome;
 }) {
   const heading = mode === "ia" ? "Nuevo artículo con IA" : "Nuevo artículo";
   const STEPS: readonly { key: StepKey; label: string }[] = mode === "ia" ? STEPS_IA : STEPS_MANUAL;
@@ -599,40 +603,33 @@ export function ArticleWizard({
         )}
 
         {current.key === "vista" && (
-          <div>
-            <p className="lx-kicker mb-4 flex items-center gap-2 text-[var(--accent)]">
-              <Eye size={14} /> Vista previa · así lo verá el lector
-            </p>
-            <article className="mx-auto max-w-3xl">
-              {categoryName && <p className="lx-kicker text-[var(--accent)]">{categoryName}</p>}
-              <h2 className="lx-display mt-2 text-3xl font-semibold leading-tight sm:text-4xl">{title}</h2>
-              <p className="mt-4 text-lg leading-relaxed text-[var(--fg-muted)]">{excerpt}</p>
-              <p className="mt-4 text-sm text-[var(--fg-muted)]">
-                Por {authorName ?? "Redacción"} · {Math.max(1, Math.round(words / 200))} min de lectura
+          <div className="flex h-full min-h-[24rem] flex-col gap-3">
+            <div className="flex flex-wrap items-center gap-3">
+              <button type="button" onClick={back} className="lx-link inline-flex items-center gap-1 text-sm">
+                <ArrowLeft size={14} /> Volver a editar
+              </button>
+              <p className="lx-kicker ml-auto flex items-center gap-2 text-[var(--accent)]">
+                <Eye size={14} /> Así se verá en el sitio
               </p>
-              {cover && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={cover}
-                  alt={coverAlt || title}
-                  className="mt-6 aspect-[16/9] w-full rounded-[var(--radius)] object-cover"
+            </div>
+            {site ? (
+              <div className="min-h-0 flex-1">
+                <SiteArticlePreview
+                  chrome={site}
+                  title={title}
+                  excerpt={excerpt}
+                  bodyHtml={bodyHtml}
+                  cover={cover}
+                  coverAlt={coverAlt}
+                  category={categoryName}
+                  author={authorName}
+                  minutes={Math.max(1, Math.round(words / 200))}
+                  tags={tags}
                 />
-              )}
-              {bodyHtml ? (
-                <div className="prose mt-8 max-w-none" dangerouslySetInnerHTML={{ __html: bodyHtml }} />
-              ) : (
-                <p className="mt-8 text-sm italic text-[var(--fg-muted)]">Sin cuerpo todavía.</p>
-              )}
-              {tags.length > 0 && (
-                <ul className="mt-8 flex flex-wrap gap-2">
-                  {tags.map((t) => (
-                    <li key={t} className="lx-chip">
-                      {t}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </article>
+              </div>
+            ) : (
+              <p className="text-sm text-[var(--fg-muted)]">Vista previa no disponible.</p>
+            )}
           </div>
         )}
 
@@ -644,7 +641,7 @@ export function ArticleWizard({
         {error && <p className="mt-4 text-sm text-[var(--danger,#b4442e)]">{error}</p>}
       </div>
 
-      <SeoPanel score={audit.score} items={audit.items} focus={tags[0]} />
+      {current.key !== "vista" && <SeoPanel score={audit.score} items={audit.items} focus={tags[0]} />}
       </div>
 
       {/* --- Navegación --- */}
