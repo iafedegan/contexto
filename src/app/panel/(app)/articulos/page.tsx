@@ -278,9 +278,9 @@ export default async function ArticlesList({ searchParams }: { searchParams: Sea
                   </Td>
                   <Td>
                     {r.status === "publicado" || Number(r.views) > 0 ? (
-                      <div className="flex items-center gap-3">
+                      <div className="flex min-w-[9.5rem] items-center gap-3">
                         <ViewsSparkline values={serie} />
-                        <div className="text-xs leading-tight">
+                        <div className="whitespace-nowrap text-xs leading-tight">
                           <div className="font-semibold tabular-nums">{nf.format(last7)}</div>
                           <div className="text-[var(--fg-muted)]">
                             7 días

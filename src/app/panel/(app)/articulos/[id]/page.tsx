@@ -3,7 +3,10 @@ import { asc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { articles, authors, categories } from "@/db/schema";
 import { auth, canPublish } from "@/lib/auth";
+import Link from "next/link";
+import { PenLine, Sparkles } from "lucide-react";
 import { ArticleEditor } from "@/components/article-editor";
+import { ArticleWizard } from "@/components/panel/article-wizard";
 import { ViewsBarChart } from "@/components/panel/views-chart";
 import { articleSeries, bestDay, nf, pctChange } from "@/lib/article-stats";
 import { formatDate } from "@/lib/utils";
@@ -51,10 +54,13 @@ const EMPTY: Initial = {
 
 export default async function ArticleEditorPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ modo?: string }>;
 }) {
   const { id } = await params;
+  const { modo } = await searchParams;
   const session = await auth();
   const isNew = id === "nuevo";
 
@@ -62,6 +68,19 @@ export default async function ArticleEditorPage({
     db.select({ id: categories.id, name: categories.name }).from(categories).orderBy(asc(categories.name)),
     db.select({ id: authors.id, name: authors.name }).from(authors).orderBy(asc(authors.name)),
   ]);
+
+  // Artículo nuevo: primero se elige cómo crearlo.
+  if (isNew && modo !== "ia") {
+    if (modo === "manual") {
+      return (
+        <div className="flex flex-col gap-6">
+          <h1 className="text-xl font-bold">Nuevo artículo · paso a paso</h1>
+          <ArticleWizard categories={cats} authors={auths} />
+        </div>
+      );
+    }
+    return <ModeChooser />;
+  }
 
   let initial: Initial = EMPTY;
   let status = "nuevo";
@@ -199,5 +218,52 @@ function ArticleStats({
         Una lectura cuenta cuando alguien permanece al menos 5 segundos en la nota (una vez por sesión).
       </p>
     </section>
+  );
+}
+
+function ModeChooser() {
+  const options = [
+    {
+      href: "/panel/articulos/nuevo?modo=manual",
+      icon: <PenLine size={22} />,
+      title: "Escribirlo yo",
+      text: "Un paso a paso guiado: título, resumen, palabras clave, sección, cuerpo, portada y buscadores. Al final ves la vista previa antes de guardar.",
+      cta: "Empezar paso a paso",
+    },
+    {
+      href: "/panel/articulos/nuevo?modo=ia",
+      icon: <Sparkles size={22} />,
+      title: "Con asistente de IA",
+      text: "Pega tus notas, cifras y fuentes; la IA prepara un borrador que tú revisas y editas. Nada se publica sin tu aprobación.",
+      cta: "Usar el asistente",
+    },
+  ];
+  return (
+    <div className="flex flex-col gap-6">
+      <div>
+        <p className="lx-kicker text-[var(--accent)]">Nuevo artículo</p>
+        <h1 className="lx-display mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">
+          ¿Cómo quieres crearlo?
+        </h1>
+      </div>
+      <div className="grid gap-4 md:grid-cols-2">
+        {options.map((o) => (
+          <Link
+            key={o.href}
+            href={o.href}
+            className="lx-card group flex flex-col gap-3 p-6 transition hover:-translate-y-0.5 hover:border-[var(--accent)]"
+          >
+            <span className="grid size-11 place-items-center rounded-full bg-[var(--surface-2)] text-[var(--accent)]">
+              {o.icon}
+            </span>
+            <h2 className="lx-display text-xl font-semibold">{o.title}</h2>
+            <p className="text-sm leading-relaxed text-[var(--fg-muted)]">{o.text}</p>
+            <span className="mt-auto pt-2 text-sm font-semibold text-[var(--accent)] group-hover:underline">
+              {o.cta} →
+            </span>
+          </Link>
+        ))}
+      </div>
+    </div>
   );
 }
