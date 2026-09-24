@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -10,16 +10,18 @@ import {
   ImagePlus,
   Loader2,
   Save,
+  Sparkles,
   Trash2,
   X,
 } from "lucide-react";
 import { saveArticle } from "@/app/panel/(app)/articulos/actions";
 import { uploadMedia } from "@/app/panel/(app)/articulos/media-actions";
+import { generateArticleDraft } from "@/app/panel/(app)/articulos/ai-actions";
 import { auditArticle, scoreLabel, type AuditItem } from "@/lib/seo-audit";
 
 type Option = { id: string; name: string };
 
-const STEPS = [
+const STEPS_MANUAL = [
   { key: "titulo", label: "Título" },
   { key: "resumen", label: "Resumen" },
   { key: "claves", label: "Palabras clave" },
@@ -29,6 +31,31 @@ const STEPS = [
   { key: "seo", label: "Buscadores" },
   { key: "vista", label: "Vista previa" },
 ] as const;
+
+type StepKey = (typeof STEPS_MANUAL)[number]["key"] | "tema";
+
+// Con IA el primer paso pide título y contexto; el resto es igual, pero ya
+// viene prellenado por el borrador para que el redactor lo revise.
+const STEPS_IA: { key: StepKey; label: string }[] = [
+  { key: "tema", label: "Título y contexto" },
+  ...STEPS_MANUAL.slice(1),
+];
+
+const decode = (s: string) =>
+  s.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, "&");
+
+/**
+ * HTML sencillo del borrador -> texto editable (párrafos y «## » intertítulos).
+ * Si trae otras etiquetas (figuras, listas…) se deja en HTML para no perderlas.
+ */
+function toText(html: string): string {
+  const t = html
+    .replace(/<h2[^>]*>([\s\S]*?)<\/h2>/gi, "## $1\n\n")
+    .replace(/<p[^>]*>([\s\S]*?)<\/p>/gi, "$1\n\n")
+    .replace(/<br\s*\/?>/gi, "\n");
+  if (/<[a-z/][^>]*>/i.test(t)) return html;
+  return decode(t).replace(/\n{3,}/g, "\n\n").trim();
+}
 
 const escapeHtml = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -57,8 +84,21 @@ function toHtml(text: string): string {
 }
 
 /** Creación manual de un artículo, una pantalla por paso, con vista previa final. */
-export function ArticleWizard({ categories, authors }: { categories: Option[]; authors: Option[] }) {
+export function ArticleWizard({
+  categories,
+  authors,
+  mode = "manual",
+}: {
+  categories: Option[];
+  authors: Option[];
+  mode?: "manual" | "ia";
+}) {
+  const STEPS: readonly { key: StepKey; label: string }[] = mode === "ia" ? STEPS_IA : STEPS_MANUAL;
   const [step, setStep] = useState(0);
+  const [context, setContext] = useState("");
+  const [generated, setGenerated] = useState(false);
+  const [aiNote, setAiNote] = useState("");
+  const [generating, startGenerating] = useTransition();
   const [title, setTitle] = useState("");
   const [excerpt, setExcerpt] = useState("");
   const [tags, setTags] = useState<string[]>([]);
@@ -95,6 +135,7 @@ export function ArticleWizard({ categories, authors }: { categories: Option[]; a
 
   // Qué impide avanzar desde cada paso (solo título y resumen son obligatorios).
   const blocker: Record<string, string | null> = {
+    tema: !generated ? "Genera el borrador con la IA para continuar." : null,
     titulo: title.trim().length < 5 ? "Escribe un título de al menos 5 caracteres." : null,
     resumen: excerpt.trim().length < 20 ? "El resumen debe tener al menos 20 caracteres." : null,
   };
@@ -131,6 +172,33 @@ export function ArticleWizard({ categories, authors }: { categories: Option[]; a
       .filter((t) => t && !tags.includes(t));
     if (nuevos.length) setTags([...tags, ...nuevos].slice(0, 12));
     setTagDraft("");
+  }
+
+  function generate() {
+    if (title.trim().length < 5) return setError("Escribe un título de al menos 5 caracteres.");
+    if (context.trim().length < 20) return setError("Añade un poco más de contexto (mínimo 20 caracteres).");
+    setError("");
+    startGenerating(async () => {
+      const res = await generateArticleDraft({
+        title: title.trim(),
+        prompt: context.trim(),
+        section: categories.find((c) => c.id === categoryId)?.name,
+      });
+      if (!res.ok) return setError(res.error);
+      const d = res.draft;
+      setTitle(d.title || title);
+      setExcerpt(d.excerpt);
+      setBody(toText(d.body));
+      setMetaTitle(d.metaTitle);
+      setMetaDescription(d.metaDescription);
+      setTags(d.tags.map((t) => t.toLowerCase()).slice(0, 12));
+      setGenerated(true);
+      setAiNote(
+        res.note ??
+          "Borrador generado. Revísalo paso a paso: lo que la IA no pudo confirmar va entre {{llaves}}.",
+      );
+      setStep(1);
+    });
   }
 
   async function onCover(file: File) {
@@ -211,6 +279,38 @@ export function ArticleWizard({ categories, authors }: { categories: Option[]; a
 
       {/* --- Pantalla del paso --- */}
       <div className="lx-card min-h-[22rem] p-6 sm:p-8">
+        {current.key === "tema" && (
+          <Step
+            title="Título y contexto"
+            hint="Escribe el título y cuéntale a la IA de qué va: cifras, fuentes, lugares, declaraciones. Con eso redacta un borrador que revisarás paso a paso."
+          >
+            <input
+              autoFocus
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="El precio del novillo gordo sube 4 % en Medellín"
+              className={`${input} lx-display text-xl font-semibold sm:text-2xl`}
+            />
+            <Counter value={title.length} min={15} max={65} />
+            <textarea
+              value={context}
+              onChange={(e) => setContext(e.target.value)}
+              rows={5}
+              placeholder="La Central Ganadera de Medellín reportó 9.850 $/kg en pie para el novillo gordo en la primera quincena de septiembre, 4 % sobre agosto; causas: menor entrada del Magdalena Medio…"
+              className={`${input} resize-y text-base leading-relaxed`}
+            />
+            <div className="flex flex-wrap items-center gap-3">
+              <button type="button" onClick={generate} disabled={generating} className="lx-btn">
+                {generating ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
+                {generating ? "Redactando…" : generated ? "Volver a generar" : "Generar borrador"}
+              </button>
+              <span className="text-xs text-[var(--fg-muted)]">
+                Nada se publica sin tu revisión. {generated && "Ya hay un borrador: pulsa Siguiente para revisarlo."}
+              </span>
+            </div>
+          </Step>
+        )}
+
         {current.key === "titulo" && (
           <Step title="¿Cuál es el título?" hint="Claro y concreto: lo que verá el lector y Google. Ideal entre 15 y 65 caracteres.">
             <input
@@ -443,6 +543,11 @@ export function ArticleWizard({ categories, authors }: { categories: Option[]; a
           </div>
         )}
 
+        {aiNote && current.key !== "tema" && current.key !== "vista" && (
+          <p className="mx-auto mt-5 flex max-w-2xl items-start gap-2 rounded-[var(--radius)] bg-[var(--surface-2)] p-3 text-xs text-[var(--fg-muted)]">
+            <Sparkles size={13} className="mt-0.5 shrink-0 text-[var(--accent)]" /> {aiNote}
+          </p>
+        )}
         {error && <p className="mt-4 text-sm text-[var(--danger,#b4442e)]">{error}</p>}
       </div>
 

@@ -70,12 +70,14 @@ export default async function ArticleEditorPage({
   ]);
 
   // Artículo nuevo: primero se elige cómo crearlo.
-  if (isNew && modo !== "ia") {
-    if (modo === "manual") {
+  if (isNew) {
+    if (modo === "manual" || modo === "ia") {
       return (
         <div className="flex flex-col gap-6">
-          <h1 className="text-xl font-bold">Nuevo artículo · paso a paso</h1>
-          <ArticleWizard categories={cats} authors={auths} />
+          <h1 className="text-xl font-bold">
+            Nuevo artículo · {modo === "ia" ? "con asistente de IA" : "paso a paso"}
+          </h1>
+          <ArticleWizard categories={cats} authors={auths} mode={modo} />
         </div>
       );
     }
@@ -234,7 +236,7 @@ function ModeChooser() {
       href: "/panel/articulos/nuevo?modo=ia",
       icon: <Sparkles size={22} />,
       title: "Con asistente de IA",
-      text: "Pega tus notas, cifras y fuentes; la IA prepara un borrador que tú revisas y editas. Nada se publica sin tu aprobación.",
+      text: "Solo el título y un poco de contexto: la IA redacta el borrador y lo revisas con el mismo paso a paso, barra SEO y vista previa. Nada se publica sin tu aprobación.",
       cta: "Usar el asistente",
     },
   ];
