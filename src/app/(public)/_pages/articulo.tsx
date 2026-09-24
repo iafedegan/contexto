@@ -8,6 +8,7 @@ import { AdsBanner } from "@/components/ads-banner";
 import { ViewCounter } from "@/components/view-counter";
 import { LiveBadge } from "@/components/live-badge";
 import { ShareButtons } from "@/components/share-buttons";
+import { ReaderMode } from "@/components/reader-mode";
 import { JsonLd } from "@/components/json-ld";
 import { SiteShell } from "@/components/site-shell";
 import { getSiteTheme } from "@/lib/site-theme";
@@ -149,11 +150,20 @@ export function ArticleDocument({
           </div>
         </div>
 
-        {!preview && (
-          <div className="mt-8">
-            <ShareButtons title={a.title} locale={locale} />
-          </div>
-        )}
+        <div className="mt-8 flex flex-wrap items-center gap-4">
+          <ReaderMode
+            title={a.title}
+            excerpt={a.excerpt}
+            body={a.body}
+            cover={a.coverImageUrl}
+            coverAlt={a.coverImageAlt}
+            kicker={a.categorySlug ? categoryLabel(locale, a.categorySlug, a.categoryName ?? "") : undefined}
+            byline={[a.authorName, a.publishedAt && formatDate(a.publishedAt, INTL_LOCALE[locale]), `${readingMinutes} ${t(locale, "article.readTime")}`]
+              .filter(Boolean)
+              .join(" · ")}
+          />
+          {!preview && <ShareButtons title={a.title} locale={locale} />}
+        </div>
 
         <figure className="lx-media lx-card mt-10 aspect-[16/9] w-full">
           {a.coverImageUrl ? (
