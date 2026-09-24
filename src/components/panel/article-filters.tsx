@@ -27,9 +27,9 @@ export function ArticleFilters({
   const active = Boolean(values.q || values.estado || values.categoria || values.autor);
 
   const select = (name: string, value: string, label: string, options: Option[], all?: string) => (
-    <label className="flex min-w-0 flex-col gap-1">
-      <span className="lx-kicker text-[var(--fg-muted)]">{label}</span>
-      <select name={name} defaultValue={value} onChange={submit} className="lx-input py-2">
+    <label className="flex min-w-0 flex-col gap-0.5">
+      <span className="lx-kicker text-[0.65rem] text-[var(--fg-muted)]">{label}</span>
+      <select name={name} defaultValue={value} onChange={submit} className="lx-input h-9 min-w-0 py-1 text-sm">
         {all && <option value="">{all}</option>}
         {options.map((o) => (
           <option key={o.value} value={o.value}>
@@ -44,28 +44,28 @@ export function ArticleFilters({
     <form
       ref={form}
       method="get"
-      className="lx-card grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 lg:grid-cols-[minmax(0,2fr)_repeat(4,minmax(0,1fr))_auto]"
+      className="lx-card grid grid-cols-2 gap-2 px-3 py-2 sm:grid-cols-4 lg:grid-cols-[minmax(0,2fr)_repeat(4,minmax(0,1fr))_auto]"
     >
-      <label className="flex min-w-0 flex-col gap-1">
-        <span className="lx-kicker text-[var(--fg-muted)]">Buscar</span>
+      <label className="col-span-2 flex min-w-0 flex-col gap-0.5 sm:col-span-4 lg:col-span-1">
+        <span className="lx-kicker text-[0.65rem] text-[var(--fg-muted)]">Buscar</span>
         <input
           type="search"
           name="q"
           defaultValue={values.q}
           placeholder="Título o palabra clave…"
-          className="lx-input py-2"
+          className="lx-input h-9 py-1 text-sm"
         />
       </label>
       {select("estado", values.estado, "Estado", statuses, "Todos")}
       {select("categoria", values.categoria, "Categoría", categories, "Todas")}
       {select("autor", values.autor, "Autor", authors, "Todos")}
       {select("orden", values.orden, "Ordenar por", sorts)}
-      <div className="flex items-end gap-2">
-        <button type="submit" className="lx-btn py-2">
+      <div className="col-span-2 flex items-end gap-2 sm:col-span-4 lg:col-span-1">
+        <button type="submit" className="lx-btn h-9 flex-1 py-1 lg:flex-none">
           Filtrar
         </button>
         {active && (
-          <Link href="/panel/articulos" className="lx-link whitespace-nowrap py-2 text-sm">
+          <Link href="/panel/articulos" className="lx-link whitespace-nowrap py-1 text-sm">
             Limpiar
           </Link>
         )}

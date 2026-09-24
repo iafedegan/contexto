@@ -167,8 +167,9 @@ export default async function ArticlesList({ searchParams }: { searchParams: Sea
         </Link>
       </div>
 
-      {/* --- Resumen --- */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      {/* --- Resumen + filtros: fijos bajo la cabecera en escritorio --- */}
+      <div className="flex flex-col gap-2 bg-[var(--bg)] py-2 lg:sticky lg:top-[61px] lg:z-30">
+      <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
         <Stat label="Artículos" value={nf.format(summary.total)}>
           {nf.format(summary.publicados)} publicados · {nf.format(summary.pendientes)} en preparación
           {summary.programados > 0 && ` · ${nf.format(summary.programados)} programados`}
@@ -209,6 +210,7 @@ export default async function ArticlesList({ searchParams }: { searchParams: Sea
         authors={[...auths.map((a) => ({ value: a.id, label: a.name })), { value: "sin-autor", label: "Sin autor" }]}
         sorts={SORTS}
       />
+      </div>
 
       <p className="text-sm text-[var(--fg-muted)]">
         {nf.format(rows.length)} {rows.length === 1 ? "artículo" : "artículos"}
@@ -317,10 +319,12 @@ export default async function ArticlesList({ searchParams }: { searchParams: Sea
 
 function Stat({ label, value, children }: { label: string; value: string; children: React.ReactNode }) {
   return (
-    <div className="lx-card flex flex-col gap-1 p-4">
-      <span className="lx-kicker text-[var(--fg-muted)]">{label}</span>
-      <span className="lx-display text-2xl font-semibold tabular-nums">{value}</span>
-      <span className="text-xs text-[var(--fg-muted)]">{children}</span>
+    <div className="lx-card flex min-w-0 flex-col gap-0.5 px-3 py-2">
+      <div className="flex items-baseline justify-between gap-2">
+        <span className="lx-kicker truncate text-[0.65rem] text-[var(--fg-muted)]">{label}</span>
+        <span className="lx-display text-lg font-semibold leading-none tabular-nums">{value}</span>
+      </div>
+      <span className="truncate text-[0.7rem] text-[var(--fg-muted)] [&_a]:line-clamp-none">{children}</span>
     </div>
   );
 }
