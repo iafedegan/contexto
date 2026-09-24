@@ -30,7 +30,7 @@ let redirectCache: { at: number; map: Map<string, { to: string; code: number }> 
 const REDIRECT_TTL_MS = 5 * 60 * 1000;
 
 async function getRedirectMap(origin: string) {
-  if (process.env.NEXT_PHASE === "phase-production-build" || process.env.VERCEL || process.env.CI) {
+  if (process.env.NEXT_PHASE === "phase-production-build" || process.env.CI) {
     return redirectCache.map;
   }
   if (Date.now() - redirectCache.at < REDIRECT_TTL_MS && redirectCache.at > 0) {
