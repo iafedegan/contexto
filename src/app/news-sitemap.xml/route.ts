@@ -11,7 +11,7 @@ import { siteUrl } from "@/lib/utils";
  * últimas 48 horas y exige nombre de publicación, idioma y fecha exacta. Un
  * sitemap general no sirve para News, por eso va en su propia ruta.
  */
-export const revalidate = 300;
+export const dynamic = "force-dynamic";
 
 function esc(s: string): string {
   return s
