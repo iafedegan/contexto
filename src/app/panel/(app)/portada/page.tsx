@@ -1,7 +1,9 @@
 import { and, desc, eq, lte, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { articles, authors, categories } from "@/db/schema";
+import { auth } from "@/lib/auth";
 import { getHomeLayoutConfig } from "@/lib/content";
+import { getAdsZoneRows } from "@/lib/ads";
 import { HomeBuilder } from "@/components/panel/home-builder";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
@@ -10,7 +12,8 @@ import { navItems } from "@/components/site-shell";
 export const dynamic = "force-dynamic";
 
 export default async function PortadaPage() {
-  const [rows, layout, nav] = await Promise.all([
+  const [session, rows, layout, nav, adsZones] = await Promise.all([
+    auth(),
     db
       .select({
         id: articles.id,
@@ -34,6 +37,7 @@ export default async function PortadaPage() {
       .orderBy(sql`(${articles.homePosition} is null)`, articles.homePosition, desc(articles.publishedAt)),
     getHomeLayoutConfig(),
     navItems(),
+    getAdsZoneRows(),
   ]);
 
   return (
@@ -48,6 +52,8 @@ export default async function PortadaPage() {
         key={rows.map((r) => `${r.id}:${r.homePosition}:${JSON.stringify(r.homeStyle)}`).join("|") + JSON.stringify(layout)}
         initialItems={rows}
         initialLayout={layout}
+        adsZones={adsZones}
+        canManagePauta={session?.user.role === "administrador"}
         headerVariants={{
           esmeralda: <SiteHeader theme="esmeralda" nav={nav} />,
           clasico: <SiteHeader theme="clasico" nav={nav} />,

@@ -3,20 +3,9 @@
 import { useActionState } from "react";
 import { Check, Loader2, TriangleAlert, Trash2 } from "lucide-react";
 import { clearAdsZone, saveAdsZone, type AdsZoneState } from "@/app/panel/(app)/configuracion/ads-actions";
-import type { AdZoneKey } from "@/lib/ads";
+import type { AdsZoneRow } from "@/lib/ads";
 
-export type AdsZoneRow = {
-  key: AdZoneKey;
-  name: string;
-  html: string | null;
-  imageUrl: string | null;
-  clickUrl: string | null;
-  active: boolean;
-  startsAt: Date | null;
-  endsAt: Date | null;
-  width: number;
-  height: number;
-};
+export type { AdsZoneRow };
 
 /** Fecha en el formato que espera un <input type="datetime-local">. */
 function paraInput(d: Date | null): string {

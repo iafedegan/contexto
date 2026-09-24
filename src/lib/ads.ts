@@ -40,6 +40,45 @@ const activeNow = and(
   or(isNull(adsZones.endsAt), gte(adsZones.endsAt, sql`now()`)),
 );
 
+export type AdsZoneRow = {
+  key: AdZoneKey;
+  name: string;
+  html: string | null;
+  imageUrl: string | null;
+  clickUrl: string | null;
+  active: boolean;
+  startsAt: Date | null;
+  endsAt: Date | null;
+  width: number;
+  height: number;
+};
+
+/**
+ * Las 7 zonas, siempre en el mismo orden (el de `AD_ZONE_SPECS`), con su fila
+ * de la base si existe. Único punto de esta consulta: la usan tanto la
+ * pantalla general de Configuración como el editor visual de portada, y no
+ * deben poder desincronizarse en qué zonas existen o cómo se llaman.
+ */
+export async function getAdsZoneRows(): Promise<AdsZoneRow[]> {
+  const filas = await db.select().from(adsZones);
+  return (Object.keys(AD_ZONE_SPECS) as AdZoneKey[]).map((key) => {
+    const fila = filas.find((r) => r.key === key);
+    const spec = AD_ZONE_SPECS[key];
+    return {
+      key,
+      name: fila?.name ?? key,
+      html: fila?.html ?? null,
+      imageUrl: fila?.imageUrl ?? null,
+      clickUrl: fila?.clickUrl ?? null,
+      active: fila?.active ?? false,
+      startsAt: fila?.startsAt ?? null,
+      endsAt: fila?.endsAt ?? null,
+      width: spec.width,
+      height: spec.height,
+    };
+  });
+}
+
 /** Creatividad activa de una zona, o null si está vacía/inactiva/fuera de vigencia. */
 export async function getAdsZone(key: AdZoneKey): Promise<AdsZoneContent | null> {
   const [row] = await db

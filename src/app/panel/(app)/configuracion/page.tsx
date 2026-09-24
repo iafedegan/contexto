@@ -1,15 +1,15 @@
 import { asc } from "drizzle-orm";
 import { BarChart3, Globe, Megaphone, ShieldCheck, Sparkles, Users } from "lucide-react";
 import { db } from "@/db";
-import { adsZones, users } from "@/db/schema";
+import { users } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { getSiteIdentity } from "@/lib/site-identity";
 import { UserRow } from "@/components/panel/user-row";
 import { getKeyStatus } from "@/lib/ai-provider";
 import { ApiKeyForm } from "@/components/panel/api-key-form";
 import { MfaForm } from "@/components/panel/mfa-form";
-import { AdsZoneForm, type AdsZoneRow } from "@/components/panel/ads-zone-form";
-import { AD_ZONE_SPECS, type AdZoneKey } from "@/lib/ads";
+import { AdsZoneForm } from "@/components/panel/ads-zone-form";
+import { getAdsZoneRows } from "@/lib/ads";
 import { getAnalyticsStatus } from "@/lib/analytics-server";
 import { saveAnalyticsSettings, saveSiteIdentity } from "./actions";
 import { env } from "@/lib/env";
@@ -23,7 +23,7 @@ export default async function ConfiguracionPage() {
   const session = await auth();
   const isAdmin = session?.user.role === "administrador";
 
-  const [identity, keyStatus, analytics, people, adsRows] = await Promise.all([
+  const [identity, keyStatus, analytics, people, zonasPauta] = await Promise.all([
     getSiteIdentity(),
     getKeyStatus(),
     getAnalyticsStatus(),
@@ -38,27 +38,8 @@ export default async function ConfiguracionPage() {
       })
       .from(users)
       .orderBy(asc(users.name)),
-    db.select().from(adsZones),
+    getAdsZoneRows(),
   ]);
-
-  // Las zonas siempre existen (se siembran una vez); AD_ZONE_SPECS da el
-  // tamaño y el orden de aparición en el sitio.
-  const zonasPauta: AdsZoneRow[] = Object.keys(AD_ZONE_SPECS).map((key) => {
-    const fila = adsRows.find((r) => r.key === key);
-    const spec = AD_ZONE_SPECS[key as AdZoneKey];
-    return {
-      key: key as AdZoneKey,
-      name: fila?.name ?? key,
-      html: fila?.html ?? null,
-      imageUrl: fila?.imageUrl ?? null,
-      clickUrl: fila?.clickUrl ?? null,
-      active: fila?.active ?? false,
-      startsAt: fila?.startsAt ?? null,
-      endsAt: fila?.endsAt ?? null,
-      width: spec.width,
-      height: spec.height,
-    };
-  });
 
   const yoMismo = people.find((p) => p.id === session?.user.id || p.email === session?.user.email);
 

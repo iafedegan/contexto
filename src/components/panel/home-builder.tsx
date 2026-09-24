@@ -10,6 +10,7 @@ import {
   Image as ImageIcon,
   Italic,
   LayoutGrid,
+  Megaphone,
   Monitor,
   Rows3,
   RotateCcw,
@@ -20,6 +21,8 @@ import {
   X,
 } from "lucide-react";
 import { FeatureStrip } from "@/components/feature-strip";
+import { AdsZoneForm } from "@/components/panel/ads-zone-form";
+import type { AdsZoneRow } from "@/lib/ads";
 import { TEMPLATE_COMPONENTS } from "@/components/home/templates";
 import {
   saveHomeLayout,
@@ -46,6 +49,8 @@ export function HomeBuilder({
   initialLayout,
   headerVariants,
   footerVariants,
+  adsZones,
+  canManagePauta,
 }: {
   initialItems: Item[];
   initialLayout: Layout;
@@ -59,6 +64,9 @@ export function HomeBuilder({
   headerVariants: Record<Layout["templateId"], React.ReactNode>;
   /** El pie también cambia con la plantilla, igual que la cabecera. */
   footerVariants: Record<Layout["templateId"], React.ReactNode>;
+  /** Las 7 zonas de pauta, gestionables sin salir del editor de portada. */
+  adsZones: AdsZoneRow[];
+  canManagePauta: boolean;
 }) {
   const router = useRouter();
   const [items, setItems] = useState(initialItems);
@@ -335,6 +343,22 @@ export function HomeBuilder({
             <p className="text-xs leading-relaxed text-[var(--fg-muted)]">
               Haz clic en cualquier tarjeta del lienzo para ajustar su tipografía, color, tamaño e
               imagen. Arrástrala para cambiar su posición en la portada.
+            </p>
+          )}
+        </Bloque>
+
+        {/* Las mismas zonas que en Configuración › Publicidad, aquí también:
+            quien diseña la portada no debería tener que salir a otra pantalla
+            para activar o cambiar un banner. */}
+        <Bloque titulo="Publicidad" icono={<Megaphone size={13} />}>
+          <div className="flex flex-col gap-3">
+            {adsZones.map((z) => (
+              <AdsZoneForm key={z.key} zone={z} canManage={canManagePauta} />
+            ))}
+          </div>
+          {!canManagePauta && (
+            <p className="mt-2 text-[0.68rem] leading-snug text-[var(--fg-muted)]">
+              Solo un administrador puede cambiar la pauta.
             </p>
           )}
         </Bloque>
