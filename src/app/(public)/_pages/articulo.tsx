@@ -12,7 +12,7 @@ import { JsonLd } from "@/components/json-ld";
 import { SiteShell } from "@/components/site-shell";
 import { getSiteTheme } from "@/lib/site-theme";
 import { CoverArt } from "@/components/cover-art";
-import { getAllPublishedSlugs, getPublishedArticleBySlug, type FullArticle } from "@/lib/content";
+import { getPublishedArticleBySlug, type FullArticle } from "@/lib/content";
 import { relatedContent } from "@/lib/search";
 import { articleMetadata, breadcrumbJsonLd, newsArticleJsonLd } from "@/lib/seo";
 import { formatDate } from "@/lib/utils";
@@ -22,13 +22,21 @@ export const revalidate = 3600;
 
 type Params = { params: Promise<{ slug: string }> };
 
+/**
+ * Ningún artículo se prerenderiza en el build, a propósito.
+ *
+ * Prerenderizarlos obliga a consultar la base una vez por página y en paralelo,
+ * y el pooler de Supabase cancela las consultas por exceso de concurrencia: el
+ * despliegue se caía con «took more than 60 seconds» en cada nota. Además no
+ * escala — el archivo histórico son 41.000 artículos, imposibles de generar en
+ * cada build.
+ *
+ * Con la lista vacía cada nota se genera en su primera visita y queda cacheada
+ * por ISR (`revalidate`), que es el comportamiento que ya tenía a partir de la
+ * segunda visita.
+ */
 export async function generateStaticParams() {
-  try {
-    const slugs = await getAllPublishedSlugs();
-    return slugs.map((s) => ({ slug: s.slug }));
-  } catch {
-    return [];
-  }
+  return [];
 }
 
 async function generateMetadataImpl({ params }: Params): Promise<Metadata> {

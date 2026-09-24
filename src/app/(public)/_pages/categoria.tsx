@@ -7,7 +7,7 @@ import { JsonLd } from "@/components/json-ld";
 import { breadcrumbJsonLd, collectionJsonLd } from "@/lib/seo";
 import { SiteShell } from "@/components/site-shell";
 import { getSiteTheme } from "@/lib/site-theme";
-import { getAllCategories, getArticlesByCategory } from "@/lib/content";
+import { getArticlesByCategory } from "@/lib/content";
 import { siteUrl } from "@/lib/utils";
 
 /** Sección — plantilla «Cobre & Obsidiana». */
@@ -20,12 +20,13 @@ type PageProps = Params & { searchParams?: Query };
 
 const PAGE_SIZE = 24;
 
+/**
+ * Las secciones tampoco se prerenderizan: mismo motivo que los artículos, la
+ * concurrencia del build agota el pooler. Se generan en la primera visita y
+ * quedan cacheadas por ISR.
+ */
 export async function generateStaticParams() {
-  try {
-    return (await getAllCategories()).map((c) => ({ slug: c.slug }));
-  } catch {
-    return [];
-  }
+  return [];
 }
 
 async function generateMetadataImpl({ params }: Params): Promise<Metadata> {
