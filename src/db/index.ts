@@ -15,7 +15,9 @@ import * as schema from "./schema";
  */
 type DB = PostgresJsDatabase<typeof schema> & PgliteDatabase<typeof schema>;
 
-export const PGLITE_DIR = process.env.PGLITE_DATA_DIR ?? `${process.cwd()}/.pglite`;
+export const PGLITE_DIR = process.env.VERCEL
+  ? `/tmp/.pglite`
+  : process.env.PGLITE_DATA_DIR ?? `${process.cwd()}/.pglite`;
 
 const g = globalThis as unknown as {
   __cg_db?: DB;
