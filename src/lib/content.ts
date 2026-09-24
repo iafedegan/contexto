@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { and, desc, eq, gte, inArray, isNull, lte, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
@@ -12,14 +13,14 @@ import {
 import { DEFAULT_HOME_LAYOUT } from "@/lib/home-layout";
 
 /** Disposición y plantilla de la portada, configuradas en /panel/portada. */
-export async function getHomeLayoutConfig(): Promise<Required<HomeLayoutConfig>> {
+export const getHomeLayoutConfig = cache(async (): Promise<Required<HomeLayoutConfig>> => {
   const [row] = await db
     .select({ value: siteSettings.value })
     .from(siteSettings)
     .where(eq(siteSettings.key, "home_layout"))
     .limit(1);
   return { ...DEFAULT_HOME_LAYOUT, ...((row?.value as HomeLayoutConfig) ?? {}) };
-}
+});
 
 /**
  * Consultas de lectura del portal público. Todas filtran por estado "publicado"
@@ -274,13 +275,13 @@ export async function getAllCategories() {
 }
 
 /** Solo las categorías de primer nivel (sin padre) — para el navbar. */
-export async function getTopLevelCategories() {
+export const getTopLevelCategories = cache(async () => {
   return db
     .select()
     .from(categories)
     .where(isNull(categories.parentId))
     .orderBy(categories.sortOrder, categories.name);
-}
+});
 
 /**
  * Última hora (H-05): la nota marcada como `is_breaking` más reciente. Solo

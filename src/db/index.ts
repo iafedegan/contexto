@@ -74,19 +74,13 @@ function init(): DB {
   if (url) {
     const local = /localhost|127\.0\.0\.1/.test(url);
     const client = postgresClient(url, {
-      // Una conexión por instancia: en serverless cada invocación es un proceso
-      // y el pooler es quien multiplexa.
-      max: process.env.NODE_ENV === "production" ? 1 : 5,
+      // Pool de conexiones para serverless: permite atender múltiples consultas
+      // concurrentes de React Server Components sin encolarse ni agotar el tiempo.
+      max: 10,
       // El pooler en modo transacción no conserva sentencias preparadas.
       prepare: false,
-      /**
-       * Tiempos de espera explícitos. Sin ellos, una base inalcanzable deja la
-       * conexión colgada hasta el límite del entorno: en el build de Vercel eso
-       * significó 60 s por página y la compilación entera cayó por agotar el
-       * tiempo, en vez de fallar rápido y seguir con el contenido en blanco.
-       */
-      connect_timeout: 10,
-      idle_timeout: 20,
+      connect_timeout: 5,
+      idle_timeout: 10,
       // Supabase exige TLS; en local (PGlite o Postgres de desarrollo) no.
       ssl: local ? false : "require",
       onnotice: () => {},

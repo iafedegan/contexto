@@ -26,7 +26,6 @@ import { homeBackgroundStyle } from "@/lib/home-background";
  * fijado manualmente por el editor (`articles.homePosition`).
  */
 export const revalidate = 300;
-export const dynamic = "error"; // falla el build si algo fuerza render dinámico
 
 async function HomePage({ locale }: { locale: Locale }) {
   let articles: Awaited<ReturnType<typeof getHomepageArticles>> = [];
