@@ -480,22 +480,25 @@
 
 /* Selector de plantillas: lienzo ámbar. */
 [data-theme="panel-amber"] {
+  /* Panel: lienzo blanco y tarjetas blancas con borde neutro y sombra suave
+     (estilo SaaS actual). El naranja queda solo como acento. */
   color-scheme: light;
   --bg: #ffffff;
-  --bg-2: #f7ead0;
-  --surface: #fffaf0;
-  --surface-2: #f6e7c8;
-  --fg: #1c1408;
-  --fg-muted: #5c4a2c;
-  --ink-faint: #6b5636;
-  --border: #e4d2ab;
-  --border-strong: #b45309;
+  --bg-2: #ffffff;
+  --surface: #ffffff;
+  --surface-2: #f4f4f5;
+  --fg: #18181b;
+  --fg-muted: #52525b;
+  --ink-faint: #71717a;
+  --border: #e4e4e7;
+  --border-strong: #d97706;
   --accent: #b45309;
   --accent-2: #8a6a2f;
-  --accent-fg: #fffaf0;
+  --accent-fg: #ffffff;
   --link: #92400e;
-  --nav-bg: #fdf6e6;
-  --shadow: 0 1px 2px rgba(80, 58, 20, 0.1);
+  --nav-bg: #ffffff;
+  --shadow: 0 1px 2px rgba(24, 24, 27, 0.04), 0 8px 24px -16px rgba(24, 24, 27, 0.18);
+  --shadow-hover: 0 2px 4px rgba(24, 24, 27, 0.05), 0 18px 40px -20px rgba(24, 24, 27, 0.28);
 }
 
 /* ============================ Base ====================================== */
