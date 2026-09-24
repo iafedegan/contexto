@@ -281,9 +281,12 @@ export function ArticleWizard({
         </div>
       </div>
 
-      <SeoBar score={audit.score} items={audit.items} focus={tags[0]} />
+      <div className="lg:hidden">
+        <SeoBar score={audit.score} items={audit.items} focus={tags[0]} />
+      </div>
 
-      {/* --- Pantalla del paso --- */}
+      {/* --- Pantalla del paso + panel SEO lateral (escritorio) --- */}
+      <div className="flex min-h-0 flex-1 gap-3">
       <div className="lx-card min-h-0 flex-1 overflow-y-auto p-5 sm:p-6">
         {current.key === "tema" && (
           <Step
@@ -557,6 +560,9 @@ export function ArticleWizard({
         {error && <p className="mt-4 text-sm text-[var(--danger,#b4442e)]">{error}</p>}
       </div>
 
+      <SeoPanel score={audit.score} items={audit.items} focus={tags[0]} />
+      </div>
+
       {/* --- Navegación --- */}
       <div className="flex shrink-0 items-center justify-between gap-3">
         <button
@@ -690,5 +696,79 @@ function SeoBar({ score, items, focus }: { score: number; items: AuditItem[]; fo
         </ul>
       )}
     </div>
+  );
+}
+
+/** Panel SEO lateral (escritorio): nota, barra y la lista completa de criterios. */
+function SeoPanel({ score, items, focus }: { score: number; items: AuditItem[]; focus?: string }) {
+  const pending = items
+    .filter((i) => !i.ok)
+    .sort((a, b) => (a.severity === b.severity ? b.weight - a.weight : a.severity === "error" ? -1 : 1));
+  const passed = items.filter((i) => i.ok);
+  const color = score >= 75 ? "#16a34a" : score >= 55 ? "#d97706" : "#dc2626";
+
+  return (
+    <aside className="lx-card hidden w-80 shrink-0 flex-col overflow-hidden p-0 lg:flex" aria-label="Puntuación SEO">
+      <div className="border-b border-[var(--border)] p-4">
+        <p className="lx-kicker text-[var(--fg-muted)]">SEO en vivo</p>
+        <div className="mt-1 flex items-baseline gap-2">
+          <span className="text-3xl font-semibold tabular-nums" style={{ color }}>
+            {score}
+          </span>
+          <span className="text-sm font-semibold" style={{ color }}>
+            {scoreLabel(score)}
+          </span>
+          <span className="ml-auto text-xs text-[var(--fg-muted)]">
+            {passed.length}/{items.length}
+          </span>
+        </div>
+        <div
+          className="mt-2 h-2 overflow-hidden rounded-full bg-[var(--border)]"
+          role="progressbar"
+          aria-valuenow={score}
+          aria-valuemin={0}
+          aria-valuemax={100}
+        >
+          <div className="h-full rounded-full transition-all duration-500" style={{ width: `${score}%`, background: color }} />
+        </div>
+        <p className="mt-2 text-xs text-[var(--fg-muted)]">
+          {focus ? `Palabra clave: «${focus}»` : "Añade palabras clave para medir la principal."}
+        </p>
+      </div>
+      <div className="min-h-0 flex-1 overflow-y-auto p-4">
+        {pending.length > 0 && (
+          <>
+            <p className="lx-kicker mb-2 text-[var(--fg-muted)]">Qué falta ({pending.length})</p>
+            <ul className="flex flex-col gap-2.5">
+              {pending.map((i) => (
+                <li key={i.id} className="flex items-start gap-2 text-sm leading-snug">
+                  <span
+                    className="mt-1.5 size-2 shrink-0 rounded-full"
+                    style={{ background: i.severity === "error" ? "#dc2626" : "#d97706" }}
+                  />
+                  <span>
+                    {i.text}
+                    {i.help && <span className="block text-xs text-[var(--fg-muted)]">{i.help}</span>}
+                    {STEP_OF[i.id] && <span className="block text-xs text-[var(--accent)]">→ {STEP_OF[i.id]}</span>}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+        {passed.length > 0 && (
+          <>
+            <p className="lx-kicker mb-2 mt-4 text-[var(--fg-muted)]">Cumplido ({passed.length})</p>
+            <ul className="flex flex-col gap-1.5">
+              {passed.map((i) => (
+                <li key={i.id} className="flex items-start gap-2 text-xs text-[var(--fg-muted)]">
+                  <Check size={12} className="mt-0.5 shrink-0 text-[#16a34a]" /> {i.text}
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+      </div>
+    </aside>
   );
 }
