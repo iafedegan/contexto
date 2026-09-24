@@ -3,6 +3,7 @@
  * Idempotente: usa onConflictDoNothing y comprueba si ya hay contenido.
  */
 import bcrypt from "bcryptjs";
+import { eq } from "drizzle-orm";
 import type { db as DbType } from "./index";
 import * as schema from "./schema";
 
@@ -396,6 +397,38 @@ export async function seed(db: AnyDb): Promise<{ created: boolean }> {
       updatedAt: new Date(now - a.daysAgo * 86_400_000),
     })),
   );
+
+  // --- Lecturas de ejemplo (analítica del panel) ---
+  // Serie determinista: cada artículo arranca fuerte el día que se publica y
+  // decae, con algo de ruido. Así la demo local tiene tendencias creíbles.
+  // Solo en la BD embebida: en Postgres gestionado las cifras deben ser reales.
+  const isEmbedded = !process.env.DATABASE_URL && !process.env.DATABASE_URL_POOLED;
+  const inserted = await db
+    .select({ id: schema.articles.id, publishedAt: schema.articles.publishedAt })
+    .from(schema.articles);
+  const dayMs = 86_400_000;
+  const dailyRows: { articleId: string; day: string; views: number }[] = [];
+  inserted.forEach((a, i) => {
+    if (!isEmbedded || !a.publishedAt) return;
+    const peak = 180 + ((i * 97) % 420);
+    for (let d = 0; d < 30; d++) {
+      const dayTs = now - d * dayMs;
+      const age = Math.floor((dayTs - a.publishedAt.getTime()) / dayMs);
+      if (age < 0) continue;
+      const noise = 0.75 + (((i + 3) * (d + 7) * 31) % 50) / 100;
+      const views = Math.round((peak / (1 + age * 0.45)) * noise);
+      if (views > 0) {
+        dailyRows.push({ articleId: a.id, day: new Date(dayTs).toISOString().slice(0, 10), views });
+      }
+    }
+  });
+  if (dailyRows.length > 0) {
+    await db.insert(schema.articleViewsDaily).values(dailyRows);
+    for (const a of inserted) {
+      const total = dailyRows.filter((r) => r.articleId === a.id).reduce((s, r) => s + r.views, 0);
+      await db.update(schema.articles).set({ views: total }).where(eq(schema.articles.id, a.id));
+    }
+  }
 
   // --- Espejo del archivo histórico (solo lectura) ---
   await db.insert(schema.archiveIndex).values(

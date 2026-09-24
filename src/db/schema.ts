@@ -193,6 +193,24 @@ export const articles = pgTable(
   ],
 );
 
+// Lecturas agregadas por artículo y día (analítica del panel). La alimenta el
+// mismo beacon que `articles.views`; solo guarda un entero por día, nunca
+// datos del visitante.
+export const articleViewsDaily = pgTable(
+  "article_views_daily",
+  {
+    articleId: uuid("article_id")
+      .notNull()
+      .references(() => articles.id, { onDelete: "cascade" }),
+    day: date("day").notNull(),
+    views: integer("views").notNull().default(0),
+  },
+  (t) => [
+    primaryKey({ columns: [t.articleId, t.day] }),
+    index("article_views_daily_day_idx").on(t.day),
+  ],
+);
+
 // --- Espejo de solo lectura del archivo histórico ---------------------
 // NUNCA se escribe de vuelta al sistema origen. Solo lo actualiza el job de
 // sincronización (src/lib/archive-client.ts + inngest).

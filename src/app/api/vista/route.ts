@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { eq, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { articles } from "@/db/schema";
+import { articles, articleViewsDaily } from "@/db/schema";
 
 /**
  * Contador de lecturas para «Más leídas» (H-04).
@@ -24,10 +24,21 @@ export async function POST(req: Request) {
   if (!slug) return NextResponse.json({ ok: false }, { status: 400 });
 
   try {
-    await db
+    const [row] = await db
       .update(articles)
       .set({ views: sql`${articles.views} + 1` })
-      .where(eq(articles.slug, slug));
+      .where(eq(articles.slug, slug))
+      .returning({ id: articles.id });
+    if (row) {
+      // Agregado diario para la analítica del panel, en hora de Colombia.
+      await db
+        .insert(articleViewsDaily)
+        .values({ articleId: row.id, day: sql`(now() at time zone 'America/Bogota')::date`, views: 1 })
+        .onConflictDoUpdate({
+          target: [articleViewsDaily.articleId, articleViewsDaily.day],
+          set: { views: sql`${articleViewsDaily.views} + 1` },
+        });
+    }
   } catch {
     // Un fallo del contador nunca debe romper la lectura del artículo.
   }
