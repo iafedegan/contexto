@@ -134,13 +134,47 @@ function FooterColumn({ title, items }: { title: string; items: NavItem[] }) {
       <ul className="mt-4 flex flex-col gap-2.5 text-sm text-[var(--fg-muted)]">
         {items.map((i) => (
           <li key={i.href}>
-            <Link href={i.href} className="lx-link">
+            <FooterLink href={i.href} className="lx-link">
               {i.label}
-            </Link>
+            </FooterLink>
           </li>
         ))}
       </ul>
     </div>
+  );
+}
+
+/**
+ * `sitemap.xml`, `feed.xml` y `llms.txt` son ficheros que sirve el servidor,
+ * no páginas de la aplicación. Enlazarlos con <Link> hacía que Next les pidiera
+ * su carga por adelantado como componentes de servidor (`?_rsc=`), lo que
+ * devuelve un 500 y llena la consola de errores. Para esos destinos, un <a>
+ * normal es lo correcto.
+ */
+function esFichero(href: string): boolean {
+  return /\.(xml|txt)$/.test(href);
+}
+
+function FooterLink({
+  href,
+  className,
+  children,
+}: {
+  href: string;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  if (esFichero(href)) {
+    return (
+      <a href={href} className={className}>
+        {children}
+      </a>
+    );
+  }
+  return (
+    <Link href={href} className={className}>
+      {children}
+    </Link>
   );
 }
 
@@ -154,9 +188,9 @@ function ColophonFooter({ theme, locale, LEGAL, ARCHIVE_NOTE, SITE_NAME }: Foote
         <ul className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-[0.72rem] uppercase tracking-[0.18em] text-[var(--fg-muted)]">
           {LEGAL.map((l) => (
             <li key={l.href}>
-              <Link href={l.href} className="lx-link lx-ui">
+              <FooterLink href={l.href} className="lx-link lx-ui">
                 {l.label}
-              </Link>
+            </FooterLink>
             </li>
           ))}
         </ul>
@@ -202,9 +236,9 @@ function CopperFooter({ nav, theme, locale, LEGAL, ARCHIVE_NOTE, SITE_NAME }: Fo
           <ul className="flex flex-col gap-2 text-sm text-[var(--fg-muted)]">
             {LEGAL.map((l) => (
               <li key={l.href}>
-                <Link href={l.href} className="lx-link">
+                <FooterLink href={l.href} className="lx-link">
                   {l.label}
-                </Link>
+            </FooterLink>
               </li>
             ))}
           </ul>
@@ -238,9 +272,9 @@ function AtelierFooter({ theme, locale, LEGAL, ARCHIVE_NOTE, SITE_NAME }: Footer
         <ul className="mt-8 flex flex-wrap justify-center gap-x-6 gap-y-2 text-xs font-light tracking-[0.12em] text-[var(--fg-muted)]">
           {LEGAL.map((l) => (
             <li key={l.href}>
-              <Link href={l.href} className="lx-link">
+              <FooterLink href={l.href} className="lx-link">
                 {l.label}
-              </Link>
+            </FooterLink>
             </li>
           ))}
         </ul>
@@ -292,9 +326,9 @@ function AuroraFooter({ theme, locale, LEGAL, SITE_NAME }: FooterProps) {
         <ul className="mt-6 flex flex-wrap justify-center gap-x-5 gap-y-2 text-xs text-[var(--fg-muted)]">
           {LEGAL.map((l) => (
             <li key={l.href}>
-              <Link href={l.href} className="lx-link">
+              <FooterLink href={l.href} className="lx-link">
                 {l.label}
-              </Link>
+            </FooterLink>
             </li>
           ))}
         </ul>
@@ -324,9 +358,9 @@ function SealFooter({ theme, locale, LEGAL, ARCHIVE_NOTE, SITE_NAME }: FooterPro
           <ul className="mt-5 flex flex-wrap gap-x-6 gap-y-2 text-[0.72rem] uppercase tracking-[0.16em] text-[var(--fg-muted)]">
             {LEGAL.map((l) => (
               <li key={l.href}>
-                <Link href={l.href} className="lx-link lx-ui">
+                <FooterLink href={l.href} className="lx-link lx-ui">
                   {l.label}
-                </Link>
+            </FooterLink>
               </li>
             ))}
           </ul>
@@ -347,9 +381,9 @@ function SepiaFooter({ theme, locale, LEGAL, SITE_NAME }: FooterProps) {
       <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-6 gap-y-3 px-6 py-8 text-xs text-[var(--fg-muted)]">
         <span className="lx-display tracking-[0.2em] uppercase text-[var(--accent)]">{SITE_NAME}</span>
         {LEGAL.map((l) => (
-          <Link key={l.href} href={l.href} className="lx-link">
+          <FooterLink key={l.href} href={l.href} className="lx-link">
             {l.label}
-          </Link>
+          </FooterLink>
         ))}
         <span className="ml-auto">© {YEAR}</span>
         <Signature theme={theme} locale={locale} />
