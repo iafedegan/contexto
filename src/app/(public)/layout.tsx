@@ -8,18 +8,14 @@ import { Ga4, Gtm } from "@/components/analytics-ga4";
 import { getGa4Id, getGtmId } from "@/lib/analytics-server";
 
 /**
- * El portal se renderiza en cada petición, no en el build.
+ * El portal se sirve desde caché (ISR), no se renderiza en cada visita.
  *
- * Prerenderizar exige consultar la base una vez por página y en paralelo, y el
- * build de Vercel se caía por agotar los 60 s por página. Además el destino de
- * este portal son 41.000 artículos del archivo histórico: generarlos en cada
- * despliegue nunca fue viable.
- *
- * Coste: cada visita ejecuta sus consultas (medidas en ~100 ms contra el
- * pooler). Cuando el tráfico lo justifique, el paso siguiente es cachear por
- * etiquetas e invalidar al publicar, no volver al prerenderizado masivo.
+ * Cada página fija su `revalidate` y la invalidación real es on-demand: las
+ * Server Actions del panel llaman a `revalidatePath` al publicar. Notas y
+ * secciones usan `generateStaticParams` vacío, así que NO se generan en el
+ * build (el build de Vercel se caía al prerenderizar miles de páginas): cada
+ * una se genera en su primera visita y desde ahí sale de la CDN.
  */
-export const dynamic = "force-dynamic";
 
 export default async function PublicLayout({ children }: { children: React.ReactNode }) {
   const [ga4, gtm] = await Promise.all([
