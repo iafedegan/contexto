@@ -14,7 +14,6 @@ import {
   Monitor,
   Paintbrush,
   Layers,
-  Rows3,
   RotateCcw,
   Save,
   Smartphone,
@@ -33,9 +32,9 @@ import {
   type HomeLayoutEntry,
 } from "@/app/panel/(app)/portada/actions";
 import type { ArticleListItem } from "@/lib/content";
-import type { HomeBackground, HomeLayoutConfig, HomeStyle } from "@/db/schema";
+import type { HomeLayoutConfig, HomeStyle } from "@/db/schema";
 import { HOME_TEMPLATES } from "@/lib/home-layout";
-import { BACKGROUND_PRESETS, homeBackgroundStyle } from "@/lib/home-background";
+import { homeBackgroundStyle } from "@/lib/home-background";
 import { regionsCss, type RegionId } from "@/lib/home-regions";
 import { RegionEditor } from "@/components/panel/region-editor";
 import { PartsEditor } from "@/components/panel/parts-editor";
@@ -359,38 +358,30 @@ export function HomeBuilder({
         </Bloque>
 
         <Bloque titulo="Componentes" icono={<Paintbrush size={13} />} abierto>
+          {/* Tarjeta concreta del lienzo: sus ajustes individuales van dentro
+              de Componentes, encima de los generales de cada pieza. */}
+          {selected !== null && items[selected] && (
+            <div className="mb-5 rounded-[var(--radius)] border border-[var(--accent)] p-3">
+              <p className="meta mb-2 !text-[0.65rem]">Tarjeta #{selected + 1} seleccionada</p>
+              <Inspector
+                item={items[selected]}
+                showSpan={selected >= 6}
+                onChange={(p) => patchStyle(selected, p)}
+                onClear={() => patchStyle(selected, null)}
+                onClose={() => setSelected(null)}
+              />
+            </div>
+          )}
           <RegionEditor
             value={layout.regions ?? {}}
             active={region}
             onActive={setRegion}
             onChange={(regions) => patchLayout({ regions })}
           />
-        </Bloque>
-
-        <Bloque titulo="Disposición y fondo" icono={<Rows3 size={13} />}>
-          <SectionSettings layout={layout} onChange={patchLayout} />
-        </Bloque>
-
-        {/* Se remonta al cambiar la selección para abrirse solo cuando el
-            editor acaba de pulsar una tarjeta. */}
-        <Bloque
-          key={`tarjeta-${selected ?? "vacia"}`}
-          titulo={selected !== null ? `Tarjeta #${selected + 1}` : "Tarjeta"}
-          icono={<Type size={13} />}
-          abierto={selected !== null}
-        >
-          {selected !== null && items[selected] ? (
-            <Inspector
-              item={items[selected]}
-              showSpan={selected >= 6}
-              onChange={(p) => patchStyle(selected, p)}
-              onClear={() => patchStyle(selected, null)}
-              onClose={() => setSelected(null)}
-            />
-          ) : (
-            <p className="text-xs leading-relaxed text-[var(--fg-muted)]">
-              Haz clic en cualquier tarjeta del lienzo para ajustar su tipografía, color, tamaño e
-              imagen. Arrástrala para cambiar su posición en la portada.
+          {selected === null && (
+            <p className="mt-4 text-xs leading-relaxed text-[var(--fg-muted)]">
+              Para cambiar una sola noticia, haz clic en su tarjeta del lienzo. Arrástrala para
+              cambiar su posición en la portada.
             </p>
           )}
         </Bloque>
@@ -777,173 +768,7 @@ function TemplateThumb({ config }: { config: Layout }) {
   );
 }
 
-function SectionSettings({
-  layout,
-  onChange,
-}: {
-  layout: Layout;
-  onChange: (p: Partial<Layout>) => void;
-}) {
-  const horizontal = layout.breveDirection === "horizontal";
-  return (
-    <div className="flex flex-col gap-4">
-      <div>
-        <p className="meta mb-1.5">“En breve”</p>
-        <div className="flex gap-1.5">
-          <SegButton active={!horizontal} onClick={() => onChange({ breveDirection: "vertical" })}>
-            <Rows3 size={13} /> Vertical
-          </SegButton>
-          <SegButton active={horizontal} onClick={() => onChange({ breveDirection: "horizontal" })}>
-            <LayoutGrid size={13} /> Horizontal
-          </SegButton>
-        </div>
-      </div>
 
-      {horizontal && (
-        <div>
-          <p className="meta mb-1.5">Columnas de “En breve”</p>
-          <div className="flex gap-1.5">
-            {[2, 3, 4].map((n) => (
-              <SegButton key={n} active={layout.breveColumns === n} onClick={() => onChange({ breveColumns: n })}>
-                {n}
-              </SegButton>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <div>
-        <p className="meta mb-1.5">Columnas de “Lo más reciente”</p>
-        <div className="flex gap-1.5">
-          {[2, 3, 4].map((n) => (
-            <SegButton key={n} active={layout.riverColumns === n} onClick={() => onChange({ riverColumns: n })}>
-              {n}
-            </SegButton>
-          ))}
-        </div>
-      </div>
-
-      <BackgroundSettings
-        value={layout.background ?? { mode: "theme" }}
-        onChange={(background) => onChange({ background })}
-      />
-    </div>
-  );
-}
-
-/**
- * Fondo de la plantilla: heredado del tema, un color sólido o un degradado.
- * Disponible en las cinco plantillas — los colores del texto se recalculan
- * solos a partir de la luminancia del fondo (ver src/lib/home-background.ts),
- * así que ninguna combinación deja titulares ilegibles.
- */
-function BackgroundSettings({
-  value,
-  onChange,
-}: {
-  value: HomeBackground;
-  onChange: (b: HomeBackground) => void;
-}) {
-  const from = value.from ?? "#0d1117";
-  const to = value.to ?? "#1f2937";
-  const angle = value.angle ?? 160;
-
-  return (
-    <div className="border-t border-[var(--rule)] pt-4">
-      <p className="meta mb-1.5">Fondo de la plantilla</p>
-      <div className="flex gap-1.5">
-        <SegButton active={value.mode === "theme"} onClick={() => onChange({ mode: "theme" })}>
-          Tema
-        </SegButton>
-        <SegButton
-          active={value.mode === "solid"}
-          onClick={() => onChange({ mode: "solid", from, to, angle })}
-        >
-          Sólido
-        </SegButton>
-        <SegButton
-          active={value.mode === "gradient"}
-          onClick={() => onChange({ mode: "gradient", from, to, angle })}
-        >
-          Degradado
-        </SegButton>
-      </div>
-
-      {value.mode !== "theme" && (
-        <div className="mt-3 flex flex-col gap-3">
-          <div className="flex items-center gap-3">
-            <label className="meta flex items-center gap-2">
-              <input
-                type="color"
-                value={from}
-                onChange={(e) => onChange({ ...value, from: e.target.value })}
-                className="size-8 cursor-pointer rounded border border-[var(--rule)] bg-transparent p-0.5"
-                aria-label="Color base"
-              />
-              {value.mode === "gradient" ? "Desde" : "Color"}
-            </label>
-            {value.mode === "gradient" && (
-              <label className="meta flex items-center gap-2">
-                <input
-                  type="color"
-                  value={to}
-                  onChange={(e) => onChange({ ...value, to: e.target.value })}
-                  className="size-8 cursor-pointer rounded border border-[var(--rule)] bg-transparent p-0.5"
-                  aria-label="Color final"
-                />
-                Hasta
-              </label>
-            )}
-            <span
-              aria-hidden
-              className="ml-auto h-8 w-16 rounded border border-[var(--rule)]"
-              style={{
-                background:
-                  value.mode === "gradient"
-                    ? `linear-gradient(${angle}deg, ${from}, ${to})`
-                    : from,
-              }}
-            />
-          </div>
-
-          {value.mode === "gradient" && (
-            <label className="meta flex items-center gap-3">
-              Ángulo
-              <input
-                type="range"
-                min={0}
-                max={360}
-                step={5}
-                value={angle}
-                onChange={(e) => onChange({ ...value, angle: Number(e.target.value) })}
-                className="flex-1 accent-[var(--brand)]"
-              />
-              <span className="tabular-nums">{angle}°</span>
-            </label>
-          )}
-
-          <div className="flex flex-wrap gap-1.5">
-            {BACKGROUND_PRESETS.map((preset) => (
-              <button
-                key={preset.label}
-                type="button"
-                onClick={() => onChange(preset.value)}
-                title={preset.label}
-                className="size-7 rounded-full border border-[var(--rule)] transition hover:scale-110"
-                style={{
-                  background:
-                    preset.value.mode === "gradient"
-                      ? `linear-gradient(${preset.value.angle ?? 160}deg, ${preset.value.from}, ${preset.value.to})`
-                      : preset.value.from,
-                }}
-              />
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
 
 function Inspector({
   item,
