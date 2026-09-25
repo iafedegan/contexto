@@ -1,17 +1,41 @@
 // Service Worker — CONtexto Ganadero
-// Offline shell + caché de lectura para el portal público. No cachea /panel
-// (editorial), /api/assistant (IA) ni mutaciones: solo contenido de solo lectura.
+// Lectura sin conexión del portal público. No cachea /panel (editorial),
+// /api/assistant (IA) ni mutaciones: solo contenido de solo lectura.
+//
+// La versión llega en la URL de registro (/sw.js?v=<build>): cada despliegue
+// cambia la URL, el navegador instala el SW nuevo y se renueva el shell.
+// Páginas, imágenes y estáticos NO llevan versión: así lo descargado para
+// leer sin conexión sobrevive a los despliegues (los estáticos de Next llevan
+// hash en el nombre, así que nunca quedan desactualizados).
 
-const VERSION = "v1";
+const VERSION = new URL(self.location.href).searchParams.get("v") || "dev";
 const SHELL_CACHE = `cg-shell-${VERSION}`;
-const PAGES_CACHE = `cg-pages-${VERSION}`;
-const ASSETS_CACHE = `cg-assets-${VERSION}`;
+const PAGES_CACHE = "cg-pages";
+const IMAGES_CACHE = "cg-images";
+const ASSETS_CACHE = "cg-assets";
+// Índice de notas descargadas (títulos) para listarlas en /offline.
+const META_CACHE = "cg-meta";
+const OFFLINE_INDEX = "/__offline-index";
 const OFFLINE_URL = "/offline";
+
+// Límites de espacio: lo más antiguo sale primero.
+const MAX_PAGES = 60;
+const MAX_IMAGES = 80;
+const MAX_ASSETS = 200;
 
 const APP_SHELL = [OFFLINE_URL, "/manifest.webmanifest"];
 
 // Rutas que nunca deben servirse desde caché (editorial/autenticado/IA/streams).
-const NEVER_CACHE_PREFIXES = ["/panel", "/api/assistant", "/api/auth", "/api/revalidate", "/api/cron"];
+const NEVER_CACHE_PREFIXES = [
+  "/panel",
+  "/vista-previa",
+  "/api/assistant",
+  "/api/auth",
+  "/api/revalidate",
+  "/api/cron",
+  "/api/vista",
+  "/api/offline",
+];
 
 function isNeverCache(pathname) {
   return NEVER_CACHE_PREFIXES.some((p) => pathname.startsWith(p));
@@ -27,7 +51,7 @@ self.addEventListener("install", (event) => {
 });
 
 self.addEventListener("activate", (event) => {
-  const keep = new Set([SHELL_CACHE, PAGES_CACHE, ASSETS_CACHE]);
+  const keep = new Set([SHELL_CACHE, PAGES_CACHE, IMAGES_CACHE, ASSETS_CACHE, META_CACHE]);
   event.waitUntil(
     caches
       .keys()
@@ -50,14 +74,26 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
+  // Fotos optimizadas por Next (/_next/image?url=…): caché primero. Sin red y
+  // sin esa medida exacta, se sirve la original descargada para leer offline.
+  if (url.pathname === "/_next/image") {
+    event.respondWith(optimizedImage(request, url));
+    return;
+  }
+
   // Estáticos de build (_next/static, íconos, manifest): stale-while-revalidate.
   if (
     url.pathname.startsWith("/_next/static") ||
     url.pathname === "/manifest.webmanifest" ||
     url.pathname.startsWith("/api/pwa-icon")
   ) {
-    event.respondWith(staleWhileRevalidate(request, ASSETS_CACHE));
+    event.respondWith(staleWhileRevalidate(request, ASSETS_CACHE, MAX_ASSETS));
     return;
+  }
+
+  // Imágenes propias servidas tal cual (/fotos, /uploads…).
+  if (request.destination === "image") {
+    event.respondWith(staleWhileRevalidate(request, IMAGES_CACHE, MAX_IMAGES));
   }
 });
 
@@ -65,26 +101,113 @@ async function networkFirstNavigation(request) {
   const cache = await caches.open(PAGES_CACHE);
   try {
     const fresh = await fetch(request);
-    if (fresh && fresh.ok) cache.put(request, fresh.clone());
+    if (fresh && fresh.ok) {
+      await cache.put(request, fresh.clone());
+      trim(PAGES_CACHE, MAX_PAGES);
+    }
     return fresh;
   } catch {
-    const cached = await cache.match(request);
+    const cached = await cache.match(request, { ignoreSearch: true });
     if (cached) return cached;
     const shell = await caches.open(SHELL_CACHE);
     return (await shell.match(OFFLINE_URL)) ?? Response.error();
   }
 }
 
-async function staleWhileRevalidate(request, cacheName) {
+async function optimizedImage(request, url) {
+  const cache = await caches.open(IMAGES_CACHE);
+  const cached = await cache.match(request);
+  if (cached) return cached;
+  try {
+    const fresh = await fetch(request);
+    if (fresh && fresh.ok) {
+      await cache.put(request, fresh.clone());
+      trim(IMAGES_CACHE, MAX_IMAGES);
+    }
+    return fresh;
+  } catch {
+    const original = url.searchParams.get("url");
+    const fallback = original ? await cache.match(new URL(original, self.location.origin).href) : null;
+    return fallback ?? Response.error();
+  }
+}
+
+async function staleWhileRevalidate(request, cacheName, max) {
   const cache = await caches.open(cacheName);
   const cached = await cache.match(request);
   const fetchPromise = fetch(request)
-    .then((response) => {
-      if (response && response.ok) cache.put(request, response.clone());
+    .then(async (response) => {
+      if (response && response.ok) {
+        await cache.put(request, response.clone());
+        if (max) trim(cacheName, max);
+      }
       return response;
     })
     .catch(() => undefined);
   return cached ?? (await fetchPromise) ?? Response.error();
+}
+
+/** Borra las entradas más antiguas (orden de inserción) por encima de `max`. */
+async function trim(cacheName, max) {
+  const cache = await caches.open(cacheName);
+  const keys = await cache.keys();
+  for (let i = 0; i < keys.length - max; i++) await cache.delete(keys[i]);
+}
+
+/* ---------------------------------------------------------- Lectura offline
+   La página pide {type: "sync-offline"} cuando hay buena conexión (wifi o
+   desconocida, sin ahorro de datos). Se descargan la portada y las últimas
+   notas con su foto, para leerlas luego sin señal (p. ej. en la finca).
+   ---------------------------------------------------------------------- */
+let syncing = false;
+
+self.addEventListener("message", (event) => {
+  if (event.data && event.data.type === "sync-offline") event.waitUntil(syncOffline());
+});
+
+async function syncOffline() {
+  if (syncing) return;
+  syncing = true;
+  try {
+    const res = await fetch("/api/offline", { cache: "no-store" });
+    if (!res.ok) return;
+    const { pages = [], images = [], articles = [] } = await res.json();
+    const pagesCache = await caches.open(PAGES_CACHE);
+    const imagesCache = await caches.open(IMAGES_CACHE);
+
+    // De a una: descargar sin competir con lo que el lector está viendo.
+    for (const path of pages) {
+      try {
+        const r = await fetch(path, { credentials: "same-origin" });
+        if (r.ok) await pagesCache.put(new Request(new URL(path, self.location.origin).href), r);
+      } catch {
+        /* se reintenta en la próxima sincronización */
+      }
+    }
+    for (const src of images) {
+      try {
+        const abs = new URL(src, self.location.origin).href;
+        if (await imagesCache.match(abs)) continue;
+        const sameOrigin = new URL(abs).origin === self.location.origin;
+        const r = await fetch(abs, sameOrigin ? {} : { mode: "no-cors" });
+        if (r.ok || r.type === "opaque") await imagesCache.put(abs, r);
+      } catch {
+        /* imagen no disponible: la nota se lee igual */
+      }
+    }
+    await trim(PAGES_CACHE, MAX_PAGES);
+    await trim(IMAGES_CACHE, MAX_IMAGES);
+
+    const meta = await caches.open(META_CACHE);
+    await meta.put(
+      OFFLINE_INDEX,
+      new Response(JSON.stringify({ savedAt: Date.now(), articles }), {
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+  } finally {
+    syncing = false;
+  }
 }
 
 /* ------------------------------------------------------------------ Push

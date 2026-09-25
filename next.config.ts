@@ -2,6 +2,13 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+
+  // Identifica cada despliegue: el Service Worker se registra con esta
+  // versión y así los teléfonos toman el diseño nuevo sin intervención manual.
+  env: {
+    NEXT_PUBLIC_BUILD_ID:
+      process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 12) ?? process.env.VERCEL_DEPLOYMENT_ID ?? String(Date.now()),
+  },
   reactStrictMode: true,
 
   // PGlite (Postgres embebido para el MVP local) carga WASM en tiempo de ejecución
