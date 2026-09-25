@@ -10,6 +10,7 @@
 import { relations, sql } from "drizzle-orm";
 import type { HomeTitleFont } from "@/lib/home-fonts";
 import type { RegionStyles } from "@/lib/home-regions";
+import type { TemplateParts } from "@/lib/template-parts";
 import {
   boolean,
   date,
@@ -422,6 +423,8 @@ export type HomeLayoutConfig = {
   background?: HomeBackground;
   /** Estilo por componente: navbar, hero, cuerpo, tarjetas y pie. */
   regions?: RegionStyles;
+  /** Plantilla compuesta: navbar, cuerpo y footer elegidos por separado. */
+  parts?: TemplateParts;
 };
 
 // --- Relaciones ---------------------------------------------------

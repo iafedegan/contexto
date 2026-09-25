@@ -69,7 +69,7 @@ async function AuthorPage({ params, locale }: Params & { locale: Locale }) {
           {t(locale, "author.empty")}
         </p>
       ) : (
-        <SectionGrid theme={site.theme} items={data.items} locale={locale} />
+        <SectionGrid theme={site.parts.body} items={data.items} locale={locale} />
       )}
     </SiteShell>
   );

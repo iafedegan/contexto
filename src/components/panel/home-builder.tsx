@@ -13,6 +13,7 @@ import {
   Megaphone,
   Monitor,
   Paintbrush,
+  Layers,
   Rows3,
   RotateCcw,
   Save,
@@ -37,6 +38,8 @@ import { HOME_TEMPLATES } from "@/lib/home-layout";
 import { BACKGROUND_PRESETS, homeBackgroundStyle } from "@/lib/home-background";
 import { regionsCss, type RegionId } from "@/lib/home-regions";
 import { RegionEditor } from "@/components/panel/region-editor";
+import { PartsEditor } from "@/components/panel/parts-editor";
+import { resolveParts, type FooterId, type NavbarId } from "@/lib/template-parts";
 import { HOME_FONTS, HOME_FONT_GROUPS, type HomeTitleFont } from "@/lib/home-fonts";
 import { cn } from "@/lib/utils";
 
@@ -64,9 +67,11 @@ export function HomeBuilder({
    * elige otra plantilla, sin recargar la página. Las 4 se piden de una
    * sola vez en el servidor y aquí solo se elige cuál montar.
    */
-  headerVariants: Record<Layout["templateId"], React.ReactNode>;
+  /** Un navbar renderizado por cada pieza (NAVBARS). */
+  headerVariants: Record<NavbarId, React.ReactNode>;
   /** El pie también cambia con la plantilla, igual que la cabecera. */
-  footerVariants: Record<Layout["templateId"], React.ReactNode>;
+  /** Un footer renderizado por cada pieza (FOOTERS). */
+  footerVariants: Record<FooterId, React.ReactNode>;
   /** Las 7 zonas de pauta, gestionables sin salir del editor de portada. */
   adsZones: AdsZoneRow[];
   canManagePauta: boolean;
@@ -188,7 +193,10 @@ export function HomeBuilder({
   const second = items[1];
   const rail = items.slice(2, 6);
   const river = items.slice(6);
-  const Template = TEMPLATE_COMPONENTS[layout.templateId] ?? TEMPLATE_COMPONENTS.clasico;
+  // Plantilla compuesta: la paleta es `templateId`; navbar, cuerpo y footer
+  // pueden venir de plantillas distintas.
+  const parts = resolveParts(layout.templateId, layout.parts);
+  const Template = TEMPLATE_COMPONENTS[parts.body] ?? TEMPLATE_COMPONENTS.clasico;
 
   // Misma composición que la portada pública (src/app/(public)/page.tsx),
   // para que esta vista sea un espejo real y no una cuadrícula genérica aparte.
@@ -306,7 +314,7 @@ export function HomeBuilder({
                     `\n[data-site-root] [data-region="${region}"]{outline:2px dashed #b45309;outline-offset:-2px}`,
                 }}
               />
-              {headerVariants[layout.templateId]}
+              {headerVariants[parts.navbar]}
               <main data-region="body" className="shell flex-1 py-8">
                 <div className="flex flex-col gap-10">
                   {layout.templateId === "clasico" && <FeatureStrip items={strip} />}
@@ -324,7 +332,7 @@ export function HomeBuilder({
                   />
                 </div>
               </main>
-              {footerVariants[layout.templateId]}
+              {footerVariants[parts.footer]}
             </div>
           </div>
           </div>
@@ -337,7 +345,11 @@ export function HomeBuilder({
         className="flex flex-col gap-3 text-[var(--fg)] xl:sticky xl:top-24 xl:max-h-[calc(100dvh-7rem)] xl:overflow-y-auto xl:pr-1"
       >
         <Bloque titulo="Plantilla" icono={<LayoutGrid size={13} />}>
-          <TemplatePicker layout={layout} onPick={(config) => patchLayout(config)} compacto />
+          <TemplatePicker layout={layout} onPick={(config) => patchLayout({ ...config, parts: {} })} compacto />
+        </Bloque>
+
+        <Bloque titulo="Crear plantilla" icono={<Layers size={13} />}>
+          <PartsEditor layout={layout} onChange={patchLayout} />
         </Bloque>
 
         <Bloque titulo="Componentes" icono={<Paintbrush size={13} />} abierto>

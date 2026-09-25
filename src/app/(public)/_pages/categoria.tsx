@@ -95,7 +95,7 @@ async function CategoryPage({ params, searchParams, locale }: PageProps & { loca
       />
 
       <SectionHeader
-        theme={site.theme}
+        theme={site.parts.body}
         kicker={t(locale, "section.kicker")}
         title={categoryLabel(locale, slug, category.name)}
         description={category.description}
@@ -216,7 +216,7 @@ async function CategoryPage({ params, searchParams, locale }: PageProps & { loca
           {filtrando ? t(locale, "section.noMatches") : t(locale, "section.empty")}
         </p>
       ) : (
-        <SectionGrid theme={site.theme} items={items} locale={locale} />
+        <SectionGrid theme={site.parts.body} items={items} locale={locale} />
       )}
 
       {/* Continuidad de resultados (C-12): siempre se indica cuántos hay y

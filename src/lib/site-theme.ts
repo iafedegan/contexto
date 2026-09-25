@@ -5,6 +5,7 @@ import { getHomeLayoutConfig } from "@/lib/content";
 import { homeBackgroundStyle } from "@/lib/home-background";
 import { DEFAULT_HOME_LAYOUT } from "@/lib/home-layout";
 import { regionsCss } from "@/lib/home-regions";
+import { resolveParts, PRESET_PARTS, type TemplateParts } from "@/lib/template-parts";
 import type { Theme } from "@/lib/theme";
 
 /**
@@ -18,24 +19,32 @@ import type { Theme } from "@/lib/theme";
  * por separado y solo se paga una consulta.
  */
 export const getSiteTheme = cache(
-  async (): Promise<{ theme: Theme; style?: CSSProperties; css?: string }> => {
+  async (): Promise<{ theme: Theme; style?: CSSProperties; css?: string; parts: Required<TemplateParts> }> => {
     try {
       const layout = await getHomeLayoutConfig();
       // Solo en desarrollo: cookie `cg-tema` para revisar cada plantilla sin
       // cambiar la configuración. En producción nunca se lee (no rompe ISR).
       let override: string | undefined;
+      let devParts: TemplateParts | undefined;
       if (process.env.NODE_ENV === "development") {
         const { cookies } = await import("next/headers");
-        override = (await cookies()).get("cg-tema")?.value;
+        const jar = await cookies();
+        override = jar.get("cg-tema")?.value;
+        // `cg-partes=navbar,cuerpo,footer` (p. ej. glass,clasico,seal).
+        const [navbar, body, footer] = (jar.get("cg-partes")?.value ?? "").split(",");
+        if (navbar) devParts = { navbar, body, footer } as TemplateParts;
       }
       return {
         theme: (override || layout.templateId) as Theme,
         style: homeBackgroundStyle(layout.background),
         css: regionsCss(layout.regions),
+        // Piezas de la plantilla compuesta (navbar, cuerpo, footer). Con la
+        // cookie de desarrollo se ve la plantilla prediseñada entera.
+        parts: resolveParts(override || layout.templateId, devParts ?? (override ? undefined : layout.parts)),
       };
     } catch {
       // Sin base de datos (build local): la plantilla por defecto.
-      return { theme: DEFAULT_HOME_LAYOUT.templateId as Theme };
+      return { theme: DEFAULT_HOME_LAYOUT.templateId as Theme, parts: PRESET_PARTS[DEFAULT_HOME_LAYOUT.templateId] };
     }
   },
 );

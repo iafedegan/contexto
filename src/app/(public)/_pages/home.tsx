@@ -14,6 +14,7 @@ import { SiteShell } from "@/components/site-shell";
 import { getHomeLayoutConfig, getHomepageArticles } from "@/lib/content";
 import { DEFAULT_HOME_LAYOUT, splitHomeSlots } from "@/lib/home-layout";
 import { homeBackgroundStyle } from "@/lib/home-background";
+import { resolveParts } from "@/lib/template-parts";
 
 /**
  * Portada — generación estática con ISR.
@@ -50,6 +51,8 @@ async function HomePage({ locale }: { locale: Locale }) {
   }
 
   const { lead, second, rail, river } = splitHomeSlots(articles);
+  // Cuerpo de la plantilla compuesta; la paleta sigue siendo `templateId`.
+  const body = resolveParts(layout.templateId, layout.parts).body;
   const props = { lead, second, rail, river, layout, locale };
 
   const opinion = articles.find((a) => a.categorySlug === "opinion");
@@ -66,7 +69,7 @@ async function HomePage({ locale }: { locale: Locale }) {
       locale={locale} variant="portada"
     >
       {/* Cintillo de titulares: identidad de la portada esmeralda. */}
-      {layout.templateId === "esmeralda" && (
+      {body === "esmeralda" && (
         <div className="-mt-6 mb-10 overflow-hidden border-y border-[var(--border)] py-2.5">
           <div className="lx-marquee text-[0.68rem] uppercase tracking-[0.25em] text-[var(--fg-muted)]">
             {[...articles, ...articles].map((a, i) => (
@@ -85,7 +88,7 @@ async function HomePage({ locale }: { locale: Locale }) {
 
       {/* La cinta de destacados es parte de la identidad "diario"; el resto de
           plantillas ya destaca con su propio hero o cuadrícula. */}
-      {layout.templateId === "clasico" && (
+      {body === "clasico" && (
         <div className="mb-10">
           <FeatureStrip items={strip} locale={locale} />
         </div>
@@ -98,13 +101,13 @@ async function HomePage({ locale }: { locale: Locale }) {
           {/* Cada plantilla se referencia por su nombre en el JSX (y no por un
               mapa indexado en runtime) para no perder el límite cliente/servidor
               que Next resuelve de forma estática. */}
-          {layout.templateId === "revista" ? (
+          {body === "revista" ? (
             <RevistaTemplate {...props} />
-          ) : layout.templateId === "compacto" ? (
+          ) : body === "compacto" ? (
             <CompactoTemplate {...props} />
-          ) : layout.templateId === "vanguardia" ? (
+          ) : body === "vanguardia" ? (
             <VanguardiaTemplate {...props} />
-          ) : layout.templateId === "clasico" ? (
+          ) : body === "clasico" ? (
             <ClasicoTemplate {...props} />
           ) : (
             <EsmeraldaTemplate {...props} />

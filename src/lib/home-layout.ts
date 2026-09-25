@@ -12,6 +12,7 @@ export const DEFAULT_HOME_LAYOUT: Required<HomeLayoutConfig> = {
   riverColumns: 3,
   background: { mode: "theme" },
   regions: {},
+  parts: {},
 };
 
 export type HomeTemplateId = NonNullable<HomeLayoutConfig["templateId"]>;
@@ -35,31 +36,31 @@ export const HOME_TEMPLATES: HomeTemplate[] = [
     name: "Esmeralda Real",
     description:
       "Obsidiana verde y pan de oro: cabecera centrada con cintillo de titulares, apertura a sangre con lámina metálica y columna «Lo último» numerada.",
-    config: { templateId: "esmeralda", breveDirection: "vertical", breveColumns: 2, riverColumns: 3, background: { mode: "theme" }, regions: {} },
+    config: { templateId: "esmeralda", breveDirection: "vertical", breveColumns: 2, riverColumns: 3, background: { mode: "theme" }, regions: {}, parts: {} },
   },
   {
     id: "clasico",
     name: "Clásico",
     description: "Diario tradicional: principal fija + columna “En breve”. Subrayado sutil al pasar el mouse.",
-    config: { templateId: "clasico", breveDirection: "vertical", breveColumns: 2, riverColumns: 3, background: { mode: "theme" }, regions: {} },
+    config: { templateId: "clasico", breveDirection: "vertical", breveColumns: 2, riverColumns: 3, background: { mode: "theme" }, regions: {}, parts: {} },
   },
   {
     id: "revista",
     name: "Revista",
     description: "Carrusel automático como portada + “En breve” en carrusel horizontal. Fotos grandes, tarjetas que se alzan al pasar el mouse.",
-    config: { templateId: "revista", breveDirection: "horizontal", breveColumns: 3, riverColumns: 3, background: { mode: "theme" }, regions: {} },
+    config: { templateId: "revista", breveDirection: "horizontal", breveColumns: 3, riverColumns: 3, background: { mode: "theme" }, regions: {}, parts: {} },
   },
   {
     id: "compacto",
     name: "Compacto",
     description: "Cuadrícula densa de fichas: la imagen se oscurece y el titular aparece al pasar el mouse. Máxima cantidad de notas visibles.",
-    config: { templateId: "compacto", breveDirection: "horizontal", breveColumns: 4, riverColumns: 4, background: { mode: "theme" }, regions: {} },
+    config: { templateId: "compacto", breveDirection: "horizontal", breveColumns: 4, riverColumns: 4, background: { mode: "theme" }, regions: {}, parts: {} },
   },
   {
     id: "vanguardia",
     name: "Vanguardia",
     description: "Cuadrícula “bento” oscura y asimétrica con orbes de gradiente, esquinas muy redondeadas y fichas que revelan resumen y brillo al pasar el mouse. Lo más moderno.",
-    config: { templateId: "vanguardia", breveDirection: "horizontal", breveColumns: 4, riverColumns: 4, background: { mode: "theme" }, regions: {} },
+    config: { templateId: "vanguardia", breveDirection: "horizontal", breveColumns: 4, riverColumns: 4, background: { mode: "theme" }, regions: {}, parts: {} },
   },
 ];
 

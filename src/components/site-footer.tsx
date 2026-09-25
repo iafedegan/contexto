@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { FooterId } from "@/lib/template-parts";
 import type { NavItem } from "@/components/site-header";
 import { THEME_LABEL, type Theme } from "@/lib/theme";
 import { DEFAULT_IDENTITY, type SiteIdentity } from "@/lib/site-identity";
@@ -36,16 +37,31 @@ export function SiteFooter({
   nav,
   locale = DEFAULT_LOCALE,
   identity = DEFAULT_IDENTITY,
+  variant,
 }: {
   theme: Theme;
   nav: NavItem[];
   locale?: Locale;
   identity?: SiteIdentity;
+  /** Footer elegido al componer la plantilla: manda sobre el de la paleta. */
+  variant?: FooterId;
 }) {
   const LEGAL = legalLinks(locale);
   const TOOLS = toolLinks(locale);
   const ARCHIVE_NOTE = t(locale, "footer.archiveNote");
   const props = { nav, theme, locale, LEGAL, TOOLS, ARCHIVE_NOTE, SITE_NAME: identity.name };
+  switch (variant) {
+    case "grand":
+      return <GrandFooter {...props} />;
+    case "atelier":
+      return <AtelierFooter {...props} />;
+    case "copper":
+      return <CopperFooter {...props} />;
+    case "aurora":
+      return <AuroraFooter {...props} />;
+    case "seal":
+      return <SealFooter {...props} />;
+  }
   switch (theme) {
     case "home":
     case "esmeralda":

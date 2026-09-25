@@ -85,7 +85,7 @@ export async function SiteShell({
       )}
       {/* Última hora por encima de todo: si hay urgencia, es lo primero. */}
       <BreakingBar locale={locale} />
-      <SiteHeader theme={theme} nav={nav} extraNav={extraNav} locale={locale} identity={identity} />
+      <SiteHeader theme={theme} nav={nav} extraNav={extraNav} locale={locale} identity={identity} variant={site.parts.navbar} />
       <main id="contenido" data-region="body" className={mainClassName ?? shell.main}>
         {/* Honestidad con el lector: la interfaz cambia de idioma, las notas no. */}
         {locale === "en" && (
@@ -102,7 +102,7 @@ export async function SiteShell({
       <div className="shell pb-10">
         <AdsBanner zone="footer" className="mx-auto" />
       </div>
-      <SiteFooter theme={theme} nav={nav} locale={locale} identity={identity} />
+      <SiteFooter theme={theme} nav={nav} locale={locale} identity={identity} variant={site.parts.footer} />
     </div>
   );
 }

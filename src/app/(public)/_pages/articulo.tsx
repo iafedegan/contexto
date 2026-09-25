@@ -61,7 +61,7 @@ async function ArticlePage({ params, locale }: Params & { locale: Locale }) {
 
   return (
     <SiteShell theme={site.theme} style={site.style} locale={locale} variant="articulo">
-      <ArticleDocument a={a} related={related} locale={locale} theme={site.theme} />
+      <ArticleDocument a={a} related={related} locale={locale} theme={site.parts.body} />
     </SiteShell>
   );
 }

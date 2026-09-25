@@ -6,6 +6,7 @@ import { db } from "@/db";
 import { articles, siteSettings, type HomeLayoutConfig, type HomeStyle } from "@/db/schema";
 import { requireRole } from "@/lib/auth";
 import { sanitizeRegions } from "@/lib/home-regions";
+import { BODIES, FOOTERS, NAVBARS } from "@/lib/template-parts";
 
 export type HomeLayoutEntry = {
   id: string;
@@ -60,7 +61,12 @@ export async function resetHomeLayout() {
 export async function saveHomeSectionLayout(input: HomeLayoutConfig) {
   await requireRole("editor");
   // El estilo por componente acaba convertido en CSS: se guarda ya validado.
-  const config: HomeLayoutConfig = { ...input, regions: sanitizeRegions(input.regions) };
+  const parts = {
+    navbar: NAVBARS.find((n) => n.id === input.parts?.navbar)?.id,
+    body: BODIES.find((b) => b.id === input.parts?.body)?.id,
+    footer: FOOTERS.find((f) => f.id === input.parts?.footer)?.id,
+  };
+  const config: HomeLayoutConfig = { ...input, regions: sanitizeRegions(input.regions), parts };
   await db
     .insert(siteSettings)
     .values({ key: "home_layout", value: config })

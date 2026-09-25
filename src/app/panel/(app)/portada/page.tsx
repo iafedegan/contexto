@@ -55,18 +55,18 @@ export default async function PortadaPage() {
         adsZones={adsZones}
         canManagePauta={session?.user.role === "administrador"}
         headerVariants={{
-          esmeralda: <SiteHeader theme="esmeralda" nav={nav} />,
-          clasico: <SiteHeader theme="clasico" nav={nav} />,
-          revista: <SiteHeader theme="revista" nav={nav} />,
-          compacto: <SiteHeader theme="compacto" nav={nav} />,
-          vanguardia: <SiteHeader theme="vanguardia" nav={nav} />,
+          masthead: <SiteHeader theme="clasico" nav={nav} variant="masthead" />,
+          couture: <SiteHeader theme="clasico" nav={nav} variant="couture" />,
+          bold: <SiteHeader theme="clasico" nav={nav} variant="bold" />,
+          glass: <SiteHeader theme="clasico" nav={nav} variant="glass" />,
+          crest: <SiteHeader theme="clasico" nav={nav} variant="crest" />,
         }}
         footerVariants={{
-          esmeralda: <SiteFooter theme="esmeralda" nav={nav} />,
-          clasico: <SiteFooter theme="clasico" nav={nav} />,
-          revista: <SiteFooter theme="revista" nav={nav} />,
-          compacto: <SiteFooter theme="compacto" nav={nav} />,
-          vanguardia: <SiteFooter theme="vanguardia" nav={nav} />,
+          grand: <SiteFooter theme="clasico" nav={nav} variant="grand" />,
+          atelier: <SiteFooter theme="clasico" nav={nav} variant="atelier" />,
+          copper: <SiteFooter theme="clasico" nav={nav} variant="copper" />,
+          aurora: <SiteFooter theme="clasico" nav={nav} variant="aurora" />,
+          seal: <SiteFooter theme="clasico" nav={nav} variant="seal" />,
         }}
       />
       </div>

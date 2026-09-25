@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { NavbarId } from "@/lib/template-parts";
 import { ReadingProgress } from "@/components/reading-progress";
 import { LocaleSwitch } from "@/components/locale-switch";
 import type { Theme } from "@/lib/theme";
@@ -27,9 +28,24 @@ export function SiteHeader({
   extraNav = [],
   locale = DEFAULT_LOCALE,
   identity = DEFAULT_IDENTITY,
-}: Props) {
+  variant,
+}: Props & { variant?: NavbarId }) {
   // Las secciones sobrantes viajan con el resto de enlaces del menú «Más».
   const masExtra = extraNav;
+  const props = { nav, extra: masExtra, locale, identity };
+  // Navbar elegido al componer la plantilla: manda sobre el de la paleta.
+  switch (variant) {
+    case "masthead":
+      return <MastheadHeader {...props} />;
+    case "couture":
+      return <CoutureHeader {...props} />;
+    case "bold":
+      return <BoldHeader {...props} />;
+    case "glass":
+      return <GlassHeader {...props} />;
+    case "crest":
+      return <CrestHeader {...props} />;
+  }
   switch (theme) {
     case "home":
     case "esmeralda":
