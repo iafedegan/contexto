@@ -346,10 +346,16 @@ export function HomeBuilder({
       >
         <Bloque titulo="Plantilla" icono={<LayoutGrid size={13} />}>
           <TemplatePicker layout={layout} onPick={(config) => patchLayout({ ...config, parts: {} })} compacto />
-        </Bloque>
-
-        <Bloque titulo="Crear plantilla" icono={<Layers size={13} />}>
-          <PartsEditor layout={layout} onChange={patchLayout} />
+          {/* Crear plantilla desde cero, dentro del mismo bloque. */}
+          <details className="group/crear mt-4 rounded-[var(--radius)] border border-[var(--border)]">
+            <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2.5 text-sm font-semibold">
+              <Layers size={14} className="text-[var(--accent)]" /> Crear plantilla desde cero
+              <ChevronDown size={14} className="ml-auto transition-transform group-open/crear:rotate-180" />
+            </summary>
+            <div className="border-t border-[var(--border)] p-3">
+              <PartsEditor layout={layout} onChange={patchLayout} />
+            </div>
+          </details>
         </Bloque>
 
         <Bloque titulo="Componentes" icono={<Paintbrush size={13} />} abierto>
