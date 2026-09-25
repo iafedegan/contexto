@@ -16,6 +16,9 @@ import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { newsletterSubscribers } from "@/db/schema";
+import { headers } from "next/headers";
+import { clientIp, hit } from "@/lib/rate-limit";
+import { verifyHuman } from "@/lib/turnstile";
 
 export type BoletinState = { ok: boolean; message: string } | null;
 
@@ -30,6 +33,14 @@ export async function suscribirBoletin(
   // Campo trampa, igual que en los formularios institucionales.
   if (String(formData.get("website") ?? "")) {
     return { ok: true, message: es ? "Revisa tu correo." : "Check your inbox." };
+  }
+
+  const ip = clientIp(await headers());
+  if (!(await hit(`boletin:ip:${ip}`, 5, 60 * 60)).allowed) {
+    return { ok: false, message: es ? "Demasiados intentos. Prueba más tarde." : "Too many attempts. Try later." };
+  }
+  if (!(await verifyHuman(String(formData.get("cf-turnstile-response") ?? ""), ip))) {
+    return { ok: false, message: es ? "Confirma que eres una persona." : "Please confirm you are human." };
   }
 
   const email = String(formData.get("email") ?? "").trim().toLowerCase().slice(0, 160);

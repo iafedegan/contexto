@@ -1,4 +1,5 @@
 import "server-only";
+import { sanitizeArticleHtml } from "@/lib/sanitize";
 import { and, desc, eq, inArray, lte, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { articles, authors, categories } from "@/db/schema";
@@ -90,7 +91,7 @@ export async function buildFeed(categorySlug?: string): Promise<{ xml: string } 
     const coverHtml = cover
       ? `<p><img src="${esc(cover)}" alt="${esc(a.coverImageAlt ?? a.title)}"/></p>`
       : "";
-    const content = `${coverHtml}<p><strong>${esc(a.excerpt)}</strong></p>${absolutize(a.body)}<p><a href="${url}">Leer en ${esc(siteName)}</a></p>`;
+    const content = `${coverHtml}<p><strong>${esc(a.excerpt)}</strong></p>${absolutize(sanitizeArticleHtml(a.body))}<p><a href="${url}">Leer en ${esc(siteName)}</a></p>`;
     return [
       "<item>",
       `<title>${esc(a.title)}</title>`,

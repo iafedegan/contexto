@@ -1,5 +1,33 @@
 import type { NextConfig } from "next";
 
+/**
+ * Política de seguridad de contenido (CSP). Va en modo SOLO INFORME: el
+ * navegador no bloquea nada, solo avisa a /api/csp-report de lo que habría
+ * bloqueado. Tras unos días sin avisos legítimos (publicidad, Tag Manager…),
+ * se cambia la cabecera a `Content-Security-Policy` para hacerla obligatoria.
+ *
+ * `'unsafe-inline'` en scripts es necesario sin nonces, y los nonces obligarían
+ * a renderizar cada visita (perderíamos la caché ISR). El resto de directivas
+ * sí cierran lo importante: de dónde se cargan scripts, marcos y formularios.
+ */
+const CSP = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://challenges.cloudflare.com",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "font-src 'self' data: https://fonts.gstatic.com",
+  "img-src 'self' data: blob: https:",
+  "media-src 'self' https:",
+  "connect-src 'self' https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com https://www.googletagmanager.com https://challenges.cloudflare.com",
+  "frame-src https://www.youtube-nocookie.com https://player.vimeo.com https://challenges.cloudflare.com https://www.googletagmanager.com",
+  "worker-src 'self'",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'none'",
+  "upgrade-insecure-requests",
+  "report-uri /api/csp-report",
+].join("; ");
+
 const nextConfig: NextConfig = {
   poweredByHeader: false,
 
@@ -35,6 +63,8 @@ const nextConfig: NextConfig = {
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           { key: "X-DNS-Prefetch-Control", value: "on" },
+          { key: "Content-Security-Policy-Report-Only", value: CSP },
+          { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
         ],
       },
       {

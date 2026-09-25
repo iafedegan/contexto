@@ -1,37 +1,25 @@
 import type { MetadataRoute } from "next";
 import { siteUrl } from "@/lib/utils";
+import { AI_SEARCH_BOTS, AI_TRAINING_BOTS } from "@/lib/bots";
 
 /**
- * robots.txt — CORRIGE el hallazgo del diagnóstico: hoy el rastreo legítimo está
- * bloqueado por error. Aquí se permite EXPLÍCITAMENTE a:
- *  - buscadores (Googlebot, Bingbot, …) vía la regla general
- *  - crawlers de plataformas de IA (GPTBot, ClaudeBot, PerplexityBot, …)
- *
- * Solo se excluye el panel editorial y los endpoints internos.
+ * robots.txt
+ *  - Buscadores (Googlebot, Bingbot…): permitidos, regla general.
+ *  - Buscadores de IA que citan y enlazan (ChatGPT search, Perplexity…):
+ *    permitidos; traen lectores.
+ *  - Crawlers que copian para ENTRENAR modelos (GPTBot, CCBot…): bloqueados.
+ *    El middleware (src/proxy.ts) además los rechaza con 403, porque
+ *    robots.txt es solo una petición y no todos la respetan.
  */
 export default function robots(): MetadataRoute.Robots {
   // `/vista-previa` lleva además `noindex`: son borradores con enlace firmado.
   const disallow = ["/panel", "/api/", "/buscar", "/vista-previa"];
 
-  const aiBots = [
-    "GPTBot",
-    "OAI-SearchBot",
-    "ChatGPT-User",
-    "ClaudeBot",
-    "Claude-User",
-    "anthropic-ai",
-    "PerplexityBot",
-    "Perplexity-User",
-    "Google-Extended",
-    "Applebot-Extended",
-    "CCBot",
-    "Bytespider",
-  ];
-
   return {
     rules: [
       { userAgent: "*", allow: "/", disallow },
-      ...aiBots.map((ua) => ({ userAgent: ua, allow: "/", disallow })),
+      ...AI_SEARCH_BOTS.map((ua) => ({ userAgent: ua, allow: "/", disallow })),
+      ...AI_TRAINING_BOTS.map((ua) => ({ userAgent: ua, disallow: "/" })),
     ],
     // Google News exige su propio sitemap, con las 48 h más recientes.
     sitemap: [siteUrl("/sitemap.xml"), siteUrl("/news-sitemap.xml")],

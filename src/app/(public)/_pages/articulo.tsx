@@ -1,4 +1,5 @@
 import { INTL_LOCALE, categoryLabel, localePath, t, type Locale } from "@/lib/i18n";
+import { sanitizeArticleHtml } from "@/lib/sanitize";
 import { siteUrl } from "@/lib/utils";
 import { notFound } from "next/navigation";
 import Link from "next/link";
@@ -154,7 +155,7 @@ export function ArticleDocument({
           <ReaderMode
             title={a.title}
             excerpt={a.excerpt}
-            body={a.body}
+            body={sanitizeArticleHtml(a.body)}
             cover={a.coverImageUrl}
             coverAlt={a.coverImageAlt}
             kicker={a.categorySlug ? categoryLabel(locale, a.categorySlug, a.categoryName ?? "") : undefined}
@@ -183,7 +184,7 @@ export function ArticleDocument({
         {/* El cuerpo llega como HTML ya sanitizado en el panel editorial. */}
         <div
           className="prose prose-drop mt-12 !max-w-none"
-          dangerouslySetInnerHTML={{ __html: a.body }}
+          dangerouslySetInnerHTML={{ __html: sanitizeArticleHtml(a.body) }}
         />
 
         {/* Zona comercial del artículo. La plantilla es de una sola columna, así

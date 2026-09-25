@@ -7,31 +7,20 @@
  *  1. Campo trampa invisible: descarta bots que rellenan todo el formulario.
  *  2. Tiempo mínimo desde que se pintó el formulario: un envío en menos de
  *     dos segundos no lo ha escrito una persona.
- *  3. Límite por IP y ventana: evita el uso del formulario como amplificador.
- *  4. Validación y recorte de longitudes antes de tocar la base de datos.
- * Nada de esto se delega a un servicio externo ni requiere CAPTCHA.
+ *  3. Límite por IP y ventana (en Postgres, común a todas las instancias).
+ *  4. Verificación humana con Cloudflare Turnstile, si hay claves.
+ *  5. Validación y recorte de longitudes antes de tocar la base de datos.
  */
 
 import { headers } from "next/headers";
 import { db } from "@/db";
 import { contactMessages } from "@/db/schema";
+import { clientIp, hit } from "@/lib/rate-limit";
+import { verifyHuman } from "@/lib/turnstile";
 
 export type ContactState = { ok: boolean; message: string } | null;
 
 const MAX = { name: 120, email: 160, organization: 160, subject: 160, message: 4000 };
-const VENTANA_MS = 10 * 60 * 1000;
-const MAX_POR_VENTANA = 5;
-
-/** Contador en memoria: suficiente para una instancia; en varias, Redis. */
-const enviosPorIp = new Map<string, number[]>();
-
-function demasiados(ip: string): boolean {
-  const ahora = Date.now();
-  const previos = (enviosPorIp.get(ip) ?? []).filter((t) => ahora - t < VENTANA_MS);
-  previos.push(ahora);
-  enviosPorIp.set(ip, previos);
-  return previos.length > MAX_POR_VENTANA;
-}
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
@@ -51,10 +40,12 @@ export async function enviarMensaje(_prev: ContactState, formData: FormData): Pr
   }
 
   // 3. Límite por IP.
-  const h = await headers();
-  const ip = (h.get("x-forwarded-for") ?? "local").split(",")[0].trim();
-  if (demasiados(ip)) {
+  const ip = clientIp(await headers());
+  if (!(await hit(`contacto:ip:${ip}`, 5, 10 * 60)).allowed) {
     return error("Demasiados envíos seguidos. Prueba en unos minutos.", "Too many submissions. Try again in a few minutes.");
+  }
+  if (!(await verifyHuman(String(formData.get("cf-turnstile-response") ?? ""), ip))) {
+    return error("Confirma que eres una persona e inténtalo de nuevo.", "Please confirm you are human and try again.");
   }
 
   // 4. Validación.

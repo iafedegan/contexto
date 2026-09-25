@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { sanitizeArticleHtml } from "@/lib/sanitize";
 import { redirect } from "next/navigation";
 import { eq, sql } from "drizzle-orm";
 import { db } from "@/db";
@@ -27,7 +28,7 @@ export async function approveDraft(draftId: string) {
       slug: slugify(d.title) || slugify(`nota-${Date.now()}`),
       title: d.title,
       excerpt: d.excerpt,
-      body: d.body,
+      body: sanitizeArticleHtml(d.body),
       categoryId: d.suggestedCategoryId,
       status: "borrador",
       createdBy: user.id, // atribución al editor humano

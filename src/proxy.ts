@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { LEGACY_SYSTEM_REDIRECTS, resolveLegacyTaxonomy } from "@/lib/redirects";
+import { isBlockedBot } from "@/lib/bots";
 
 /**
  * Middleware de borde.
@@ -9,6 +10,9 @@ import { LEGACY_SYSTEM_REDIRECTS, resolveLegacyTaxonomy } from "@/lib/redirects"
  *     (tabla `redirects`, cacheada en memoria vía /api/redirects).
  *  2. Cabeceras de seguridad en todas las respuestas.
  *  3. Puerta de acceso al panel editorial (/panel/*).
+ *  4. Anti-scraping: 403 a herramientas de scraping y crawlers de
+ *     entrenamiento de IA (src/lib/bots.ts), y 429 a una IP que pide páginas
+ *     a un ritmo que ninguna persona alcanza.
  *
  * El archivo histórico (artículos individuales del sistema legado) NUNCA se
  * enruta aquí: vive en su dominio y rutas originales.
@@ -22,9 +26,50 @@ const SECURITY_HEADERS: Record<string, string> = {
   "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
 };
 
+/**
+ * Ritmo máximo por IP (por instancia; aproximado a propósito). Una persona
+ * leyendo no pasa de unas pocas páginas por minuto; 120 deja margen para
+ * oficinas que salen a internet por una misma IP. El freno fuerte y global se
+ * configura en el Firewall de Vercel (ver README).
+ */
+const RATE_WINDOW_MS = 60_000;
+const RATE_MAX = 120;
+const hits = new Map<string, { n: number; reset: number }>();
+
+function tooFast(ip: string): boolean {
+  const now = Date.now();
+  const h = hits.get(ip);
+  if (!h || h.reset < now) {
+    hits.set(ip, { n: 1, reset: now + RATE_WINDOW_MS });
+    if (hits.size > 50_000) hits.clear(); // cota de memoria
+    return false;
+  }
+  h.n += 1;
+  return h.n > RATE_MAX;
+}
+
 export async function proxy(req: NextRequest) {
   const { pathname, search } = req.nextUrl;
   const clean = pathname.replace(/\/+$/, "") || "/";
+
+  // --- 0. Anti-scraping -------------------------------------------------
+  // Los feeds RSS quedan fuera: los lectores RSS usan clientes genéricos.
+  // Tampoco las llamadas internas (cron, Inngest, revalidación): van firmadas.
+  const internal = /^\/api\/(cron|inngest|revalidate)\b/.test(pathname);
+  if (!pathname.endsWith("/feed.xml") && !internal) {
+    if (isBlockedBot(req.headers.get("user-agent"))) {
+      return applyHeaders(new NextResponse("Acceso automatizado no permitido.", { status: 403 }));
+    }
+    const ip = (req.headers.get("x-forwarded-for")?.split(",")[0] ?? "").trim();
+    if (ip && tooFast(ip)) {
+      return applyHeaders(
+        new NextResponse("Demasiadas peticiones. Espera un momento.", {
+          status: 429,
+          headers: { "Retry-After": "60" },
+        }),
+      );
+    }
+  }
 
   // --- 1. Redirecciones 301 de taxonomía legada (estáticas, en memoria) ----
   const systemTarget = LEGACY_SYSTEM_REDIRECTS[clean];

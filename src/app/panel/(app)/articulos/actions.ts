@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { sanitizeArticleHtml } from "@/lib/sanitize";
 import { redirect } from "next/navigation";
 import { eq, sql } from "drizzle-orm";
 import { db } from "@/db";
@@ -48,7 +49,7 @@ export async function saveArticle(formData: FormData) {
   const id = String(formData.get("id") ?? "");
   const title = String(formData.get("title") ?? "").trim();
   const excerpt = String(formData.get("excerpt") ?? "").trim();
-  const body = String(formData.get("body") ?? "");
+  const body = sanitizeArticleHtml(String(formData.get("body") ?? ""));
   const categoryId = (formData.get("categoryId") as string) || null;
   const authorId = (formData.get("authorId") as string) || null;
   const isBreaking = String(formData.get("isBreaking") ?? "0") === "1";

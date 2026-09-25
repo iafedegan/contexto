@@ -1,4 +1,5 @@
 import { desc, eq } from "drizzle-orm";
+import { sanitizeArticleHtml } from "@/lib/sanitize";
 import { db } from "@/db";
 import { agentDrafts } from "@/db/schema";
 import { Badge, Button, Card } from "@/components/ui";
@@ -74,7 +75,7 @@ export default async function DraftsQueue() {
             <summary className="cursor-pointer font-medium">Ver cuerpo y verificación</summary>
             <div
               className="prose prose-sm mt-2 max-w-none"
-              dangerouslySetInnerHTML={{ __html: d.body }}
+              dangerouslySetInnerHTML={{ __html: sanitizeArticleHtml(d.body) }}
             />
             <table className="mt-3 w-full text-xs">
               <thead className="text-left text-[var(--fg-muted)]">

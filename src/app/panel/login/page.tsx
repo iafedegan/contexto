@@ -4,6 +4,7 @@ import { Suspense, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { signIn } from "next-auth/react";
+import { Turnstile } from "@/components/turnstile";
 
 /** Acceso al panel — plantilla «Platino». */
 function LoginForm() {
@@ -26,11 +27,16 @@ function LoginForm() {
       email: String(fd.get("email") ?? "").trim(),
       password: String(fd.get("password") ?? "").trim(),
       totp: String(fd.get("totp") ?? "").trim(),
+      captcha: String(fd.get("cf-turnstile-response") ?? ""),
       redirect: false,
     });
     setPending(false);
     if (res?.error) {
-      setError("Credenciales o código de verificación inválidos.");
+      setError(
+        "Credenciales o código de verificación inválidos. Tras 5 intentos fallidos la cuenta se bloquea 15 minutos.",
+      );
+      // El token de Turnstile es de un solo uso: se pide uno nuevo.
+      (window as unknown as { turnstile?: { reset: () => void } }).turnstile?.reset();
       return;
     }
     router.push(next);
@@ -82,6 +88,7 @@ function LoginForm() {
             />
           </label>
           {error && <p className="text-sm text-[var(--danger)]">{error}</p>}
+          <Turnstile />
           <button type="submit" disabled={pending} className="lx-btn mt-2 w-full">
             {pending ? "Entrando…" : "Entrar"}
           </button>

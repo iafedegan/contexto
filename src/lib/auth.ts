@@ -7,6 +7,8 @@ import bcrypt from "bcryptjs";
 import { verifySync as verifyTotp } from "otplib";
 import { db } from "@/db";
 import { users, type UserRole } from "@/db/schema";
+import { clearHits, clientIp, hit } from "@/lib/rate-limit";
+import { verifyHuman } from "@/lib/turnstile";
 
 declare module "next-auth" {
   interface Session {
@@ -64,8 +66,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         email: {},
         password: {},
         totp: {}, // código de 6 dígitos del segundo factor
+        captcha: {}, // token de Cloudflare Turnstile (verificación humana)
       },
-      async authorize(creds) {
+      async authorize(creds, request) {
         const email = String(creds?.email ?? "").toLowerCase().trim();
         const password = String(creds?.password ?? "");
         const totp = String(creds?.totp ?? "").trim();
@@ -84,6 +87,21 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         if (!email || !password) return rechazar("faltan correo o contraseña");
 
+        // Frenos contra la fuerza bruta: 5 intentos por cuenta y 20 por IP
+        // cada 15 minutos. Se cuentan ANTES de comprobar la clave, así que
+        // tampoco sirven para adivinar qué correos existen.
+        const ip = request?.headers ? clientIp(request.headers) : "0.0.0.0";
+        const [porIp, porCuenta] = await Promise.all([
+          hit(`login:ip:${ip}`, 20, 15 * 60),
+          hit(`login:email:${email}`, 5, 15 * 60),
+        ]);
+        if (!porIp.allowed || !porCuenta.allowed) {
+          return rechazar(`demasiados intentos (ip ${ip}); bloqueado ${Math.max(porIp.retryAfter, porCuenta.retryAfter)} s`);
+        }
+        if (!(await verifyHuman(String(creds?.captcha ?? ""), ip))) {
+          return rechazar("verificación humana (Turnstile) fallida");
+        }
+
         const [u] = await db.select().from(users).where(eq(users.email, email)).limit(1);
         if (!u) return rechazar("no hay ninguna cuenta con ese correo");
         if (!u.active) return rechazar("la cuenta está desactivada");
@@ -101,6 +119,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           }
         }
 
+        await clearHits(`login:email:${email}`);
         return { id: u.id, name: u.name, email: u.email, role: u.role };
       },
     }),

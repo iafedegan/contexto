@@ -212,6 +212,15 @@ export const articleViewsDaily = pgTable(
   ],
 );
 
+// Límite de intentos (login, formularios públicos). Una fila por clave
+// ("login:ip:1.2.3.4", "contacto:ip:…"); se comparte entre instancias
+// serverless, a diferencia de un contador en memoria.
+export const rateLimits = pgTable("rate_limits", {
+  key: text("key").primaryKey(),
+  count: integer("count").notNull().default(0),
+  resetAt: timestamp("reset_at", { withTimezone: true }).notNull(),
+});
+
 // --- Espejo de solo lectura del archivo histórico ---------------------
 // NUNCA se escribe de vuelta al sistema origen. Solo lo actualiza el job de
 // sincronización (src/lib/archive-client.ts + inngest).

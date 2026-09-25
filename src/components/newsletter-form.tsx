@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { Turnstile } from "@/components/turnstile";
 import { Check, Loader2, Mail, TriangleAlert } from "lucide-react";
 import { suscribirBoletin, type BoletinState } from "@/app/acciones/boletin";
 import { t, type Locale } from "@/lib/i18n";
@@ -39,6 +40,7 @@ export function NewsletterForm({ locale, compacto = false }: { locale: Locale; c
           placeholder={t(locale, "newsletter.email")}
           className="w-full rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] px-3.5 py-2.5 text-[0.95rem] outline-none transition focus:border-[var(--accent)]"
         />
+        <Turnstile />
         <button
           type="submit"
           disabled={pending}

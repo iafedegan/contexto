@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useRef } from "react";
+import { Turnstile } from "@/components/turnstile";
 import { Check, Loader2, Send, TriangleAlert } from "lucide-react";
 import { enviarMensaje, type ContactState } from "@/app/acciones/contacto";
 import type { Locale } from "@/lib/i18n";
@@ -106,6 +107,7 @@ export function ContactForm({ kind, locale }: { kind: "contacto" | "comercial"; 
         </div>
       </div>
 
+      <Turnstile className="mt-6" />
       <div className="mt-6 flex flex-wrap items-center gap-4">
         <button
           type="submit"
