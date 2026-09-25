@@ -10,6 +10,7 @@ import { ViewCounter } from "@/components/view-counter";
 import { LiveBadge } from "@/components/live-badge";
 import { ShareButtons } from "@/components/share-buttons";
 import { ReaderMode } from "@/components/reader-mode";
+import { ArticleHero, ARTICLE_BODY_CLASS } from "@/components/article/article-hero";
 import { JsonLd } from "@/components/json-ld";
 import { SiteShell } from "@/components/site-shell";
 import { getSiteTheme } from "@/lib/site-theme";
@@ -60,7 +61,7 @@ async function ArticlePage({ params, locale }: Params & { locale: Locale }) {
 
   return (
     <SiteShell theme={site.theme} style={site.style} locale={locale} variant="articulo">
-      <ArticleDocument a={a} related={related} locale={locale} />
+      <ArticleDocument a={a} related={related} locale={locale} theme={site.theme} />
     </SiteShell>
   );
 }
@@ -75,7 +76,10 @@ export function ArticleDocument({
   related,
   locale,
   preview = false,
+  theme = "esmeralda",
 }: {
+  /** Plantilla activa: decide la estructura de la apertura. */
+  theme?: string;
   a: FullArticle;
   related: Awaited<ReturnType<typeof relatedContent>>;
   locale: Locale;
@@ -101,6 +105,13 @@ export function ArticleDocument({
         />
         )}
 
+        <ArticleHero
+          theme={theme}
+          kicker={a.categorySlug ? categoryLabel(locale, a.categorySlug, a.categoryName ?? "") : undefined}
+          title={a.title}
+          excerpt={a.excerpt}
+          live={a.isLive ? <LiveBadge locale={locale} /> : undefined}
+          breadcrumb={
         <nav className="lx-ui flex flex-wrap items-center gap-2 text-[0.68rem] uppercase tracking-[0.2em] text-[var(--fg-muted)]">
           <Link href={localePath(locale, "/")} className="lx-link">
             {t(locale, "article.home")}
@@ -116,19 +127,8 @@ export function ArticleDocument({
             </>
           )}
         </nav>
-
-        {a.isLive && <LiveBadge locale={locale} className="mt-6" />}
-
-        <h1 className="lx-display mt-6 text-[2rem] font-semibold leading-[1.06] tracking-tight sm:text-[2.4rem] md:text-[3.4rem]">
-          {a.title}
-        </h1>
-
-        <p className="mt-5 text-xl leading-relaxed text-[var(--fg-muted)] md:text-[1.35rem]">
-          {a.excerpt}
-        </p>
-
-        <hr className="lx-rule my-8" />
-
+          }
+          byline={
         <div className="flex flex-wrap items-center gap-4">
           <span className="lx-display grid size-11 place-items-center rounded-full bg-[var(--accent)] text-base text-[var(--accent-fg)]">
             {(a.authorName ?? "C").charAt(0)}
@@ -150,8 +150,9 @@ export function ArticleDocument({
             </p>
           </div>
         </div>
-
-        <div className="mt-8 flex flex-wrap items-center gap-4">
+          }
+          actions={
+        <div className="flex flex-wrap items-center gap-4">
           <ReaderMode
             title={a.title}
             excerpt={a.excerpt}
@@ -165,7 +166,8 @@ export function ArticleDocument({
           />
           {!preview && <ShareButtons title={a.title} locale={locale} />}
         </div>
-
+          }
+          cover={
         <figure className="lx-media lx-card mt-10 aspect-[16/9] w-full">
           {a.coverImageUrl ? (
             <Image
@@ -180,10 +182,12 @@ export function ArticleDocument({
             <CoverArt seed={a.slug} label={a.categoryName ?? a.title} className="text-[7rem]" />
           )}
         </figure>
+          }
+        />
 
         {/* El cuerpo llega como HTML ya sanitizado en el panel editorial. */}
         <div
-          className="prose prose-drop mt-12 !max-w-none"
+          className={ARTICLE_BODY_CLASS[theme] ?? "prose prose-drop mt-12 !max-w-none"}
           dangerouslySetInnerHTML={{ __html: sanitizeArticleHtml(a.body) }}
         />
 

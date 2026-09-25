@@ -85,8 +85,31 @@ export function SectionHeader({ theme, kicker, title, description, chips, breadc
           </div>
         </header>
       );
+    case "esmeralda":
+    case "home":
+      // Esmeralda: frontispicio centrado, rombos y filetes de pan de oro.
+      return (
+        <header className="relative mb-14 pt-10 text-center">
+          <div className="flex justify-center">{breadcrumb}</div>
+          <div className="mt-8 flex items-center justify-center gap-4 text-[var(--accent)]">
+            <span className="h-px w-16 bg-gradient-to-r from-transparent to-[var(--accent)] md:w-40" />
+            <span aria-hidden>◆</span>
+            <p className="lx-kicker">{kicker}</p>
+            <span aria-hidden>◆</span>
+            <span className="h-px w-16 bg-gradient-to-l from-transparent to-[var(--accent)] md:w-40" />
+          </div>
+          <h1 className="lx-display mt-5 bg-gradient-to-b from-[var(--fg)] to-[var(--accent)] bg-clip-text text-[2.6rem] font-semibold leading-[1] tracking-tight text-transparent sm:text-6xl md:text-8xl">
+            {title}
+          </h1>
+          {description && (
+            <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-[var(--fg-muted)]">{description}</p>
+          )}
+          <div className="mt-8 flex flex-wrap justify-center gap-3">{chips}</div>
+          <div aria-hidden className="mx-auto mt-10 h-px max-w-3xl bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent" />
+        </header>
+      );
     default:
-      // Esmeralda (y resto): lámina oscura con filete dorado.
+      // Resto: lámina con filete.
       return (
         <header className="relative mb-14 pt-10">
           {breadcrumb}

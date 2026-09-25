@@ -1,7 +1,7 @@
 import { t, type Locale } from "@/lib/i18n";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { ArticleCard } from "@/components/article-card";
+import { SectionGrid } from "@/components/section/section-layout";
 import { JsonLd } from "@/components/json-ld";
 import { authorJsonLd } from "@/lib/seo";
 import { SiteShell } from "@/components/site-shell";
@@ -69,11 +69,7 @@ async function AuthorPage({ params, locale }: Params & { locale: Locale }) {
           {t(locale, "author.empty")}
         </p>
       ) : (
-        <div className="grid gap-8 sm:grid-cols-2">
-          {data.items.map((a) => (
-            <ArticleCard key={a.slug} a={a} locale={locale} variant="pearl" />
-          ))}
-        </div>
+        <SectionGrid theme={site.theme} items={data.items} locale={locale} />
       )}
     </SiteShell>
   );

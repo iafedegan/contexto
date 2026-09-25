@@ -72,7 +72,7 @@ export default async function VistaPreviaPage({
           Volver al editor
         </a>
       </div>
-      <ArticleDocument a={a} related={related} locale="es" preview />
+      <ArticleDocument a={a} related={related} locale="es" preview theme={site.theme} />
     </SiteShell>
   );
 }
