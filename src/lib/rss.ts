@@ -1,5 +1,4 @@
 import "server-only";
-import { sanitizeArticleHtml } from "@/lib/sanitize";
 import { and, desc, eq, inArray, lte, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { articles, authors, categories } from "@/db/schema";
@@ -10,10 +9,11 @@ import { siteUrl } from "@/lib/utils";
  * Feeds RSS 2.0 del sitio: el general (/feed.xml) y uno por sección
  * (/categoria/<slug>/feed.xml).
  *
- * Llevan el texto completo (content:encoded), la foto de portada
- * (media:content + enclosure) y el autor (dc:creator), que es lo que usan
- * lectores como Feedly, Inoreader o Apple News para mostrar la nota entera
- * sin tener que abrir la web.
+ * Solo llevan el RESUMEN, no el cuerpo: el texto completo en un feed es la
+ * forma más fácil de copiar el contenido (y los feeds no pasan por el
+ * bloqueo anti-scraping de src/proxy.ts). Para leer la nota hay que abrirla.
+ * Sí llevan la foto de portada (media:content + enclosure) y el autor
+ * (dc:creator), para que el lector RSS muestre una tarjeta atractiva.
  */
 
 const ITEMS = 40;
@@ -23,10 +23,6 @@ const esc = (s: string) =>
 
 /** CDATA seguro: `]]>` dentro del HTML cerraría la sección antes de tiempo. */
 const cdata = (s: string) => `<![CDATA[${s.replace(/]]>/g, "]]]]><![CDATA[>")}]]>`;
-
-/** Rutas relativas del cuerpo (/uploads/…) a absolutas: el lector no está en nuestro dominio. */
-const absolutize = (html: string) =>
-  html.replace(/(\s(?:src|href|poster)=["'])\/(?!\/)/g, `$1${siteUrl("/")}`);
 
 const absUrl = (u: string) => (/^https?:\/\//.test(u) ? u : siteUrl(u.startsWith("/") ? u : `/${u}`));
 
@@ -63,7 +59,6 @@ export async function buildFeed(categorySlug?: string): Promise<{ xml: string } 
       slug: articles.slug,
       title: articles.title,
       excerpt: articles.excerpt,
-      body: articles.body,
       coverImageUrl: articles.coverImageUrl,
       coverImageAlt: articles.coverImageAlt,
       tags: articles.tags,
@@ -91,7 +86,7 @@ export async function buildFeed(categorySlug?: string): Promise<{ xml: string } 
     const coverHtml = cover
       ? `<p><img src="${esc(cover)}" alt="${esc(a.coverImageAlt ?? a.title)}"/></p>`
       : "";
-    const content = `${coverHtml}<p><strong>${esc(a.excerpt)}</strong></p>${absolutize(sanitizeArticleHtml(a.body))}<p><a href="${url}">Leer en ${esc(siteName)}</a></p>`;
+    const content = `${coverHtml}<p>${esc(a.excerpt)}</p><p><a href="${url}">Leer la nota completa en ${esc(siteName)}</a></p>`;
     return [
       "<item>",
       `<title>${esc(a.title)}</title>`,
