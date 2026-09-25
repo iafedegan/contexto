@@ -11,20 +11,24 @@ import { MENU_SECUNDARIO } from "@/content/institucional";
  * el pie porque es donde el lector lo busca, y en el menú «Más» de la cabecera.
  */
 function legalLinks(locale: Locale) {
-  return MENU_SECUNDARIO.map((m) => ({
-    href: localePath(locale, `/${m.slug}`),
-    label: m.label[locale],
-  }));
+  return [
+    ...MENU_SECUNDARIO.map((m) => ({
+      href: localePath(locale, `/${m.slug}`),
+      label: m.label[locale],
+    })),
+    // El acceso al panel editorial vive siempre en el pie, en todos los
+    // diseños (no en la cabecera).
+    { href: "/panel", label: t(locale, "footer.panel") },
+  ];
 }
 
-/** Herramientas del portal: canales de sindicación y acceso al panel. */
+/** Herramientas del portal: búsqueda y canales de sindicación. */
 function toolLinks(locale: Locale) {
   return [
     { href: localePath(locale, "/buscar"), label: t(locale, "nav.search") },
     { href: "/feeds", label: "RSS" },
     { href: "/sitemap.xml", label: "Sitemap" },
     { href: "/llms.txt", label: "llms.txt" },
-    { href: "/panel", label: t(locale, "footer.panel") },
   ];
 }
 
