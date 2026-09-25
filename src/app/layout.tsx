@@ -66,7 +66,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var m=localStorage.getItem('cg-modo');var o=m?m==='oscuro':window.matchMedia('(prefers-color-scheme: dark)').matches;document.documentElement.dataset.dark=o?'1':'0';}catch(e){}})();`,
+            __html: `(function(){try{var m=localStorage.getItem('cg-modo');if(m){document.documentElement.dataset.dark=m==='oscuro'?'1':'0';}else if(window.matchMedia('(prefers-color-scheme: dark)').matches){document.documentElement.dataset.dark='1';}}catch(e){}})();`,
           }}
         />
       </head>

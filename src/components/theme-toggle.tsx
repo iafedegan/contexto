@@ -23,15 +23,31 @@ function suscribir(alCambiar: () => void) {
   return () => obs.disconnect();
 }
 
+/** Plantillas oscuras de fábrica: sin preferencia del lector, se ven oscuras. */
+const OSCURAS = new Set(["home", "esmeralda", "revista", "vanguardia"]);
+
+/**
+ * Modo efectivo: "1" oscuro, "0" claro (elegidos por el lector); sin
+ * preferencia, el propio de la plantilla que envuelve al botón.
+ */
+function esOscuro(boton: HTMLElement | null): boolean {
+  const d = document.documentElement.dataset.dark;
+  if (d === "1") return true;
+  if (d === "0") return false;
+  const tema = boton?.closest("[data-theme]")?.getAttribute("data-theme")
+    ?? document.querySelector("[data-site-root]")?.getAttribute("data-theme");
+  return OSCURAS.has(tema ?? "");
+}
+
 export function ThemeToggle({ locale, className = "" }: { locale: Locale; className?: string }) {
   const oscuro = useSyncExternalStore(
     suscribir,
-    () => document.documentElement.dataset.dark === "1",
+    () => esOscuro(document.querySelector("[data-site-root]")),
     () => false, // en el servidor aún no se conoce la preferencia
   );
 
   function alternar() {
-    const nuevo = !(document.documentElement.dataset.dark === "1");
+    const nuevo = !esOscuro(document.querySelector("[data-site-root]"));
     document.documentElement.dataset.dark = nuevo ? "1" : "0";
     try {
       localStorage.setItem("cg-modo", nuevo ? "oscuro" : "claro");

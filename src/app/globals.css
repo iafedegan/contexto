@@ -966,6 +966,65 @@ a {
   --link: var(--accent);
 }
 
+/* Modo CLARO de las plantillas oscuras (Esmeralda, Revista, Vanguardia).
+   Solo si el lector lo pide con el botón (data-dark="0"); sin preferencia
+   guardada conservan su identidad oscura. Se mantienen marca y tipografías. */
+:root[data-dark="0"] [data-theme="home"],
+:root[data-dark="0"] [data-theme="esmeralda"] {
+  color-scheme: light;
+  --bg: #f7f5ee;
+  --bg-2: #eeeadf;
+  --surface: #ffffff;
+  --surface-2: rgba(19, 94, 58, 0.07);
+  --fg: #10231a;
+  --fg-muted: #4d6357;
+  --border: rgba(19, 94, 58, 0.18);
+  --border-strong: #9a7a1c;
+  --accent: #8a6d12;
+  --accent-2: #135e3a;
+  --accent-fg: #ffffff;
+  --link: #135e3a;
+  --nav-bg: #f7f5ee;
+  --shadow: 0 1px 2px rgba(16, 35, 26, 0.08);
+  --shadow-hover: 0 24px 46px -30px rgba(16, 35, 26, 0.35);
+}
+:root[data-dark="0"] [data-theme="revista"] {
+  color-scheme: light;
+  --bg: #faf7f1;
+  --bg-2: #f1ebe0;
+  --surface: #ffffff;
+  --surface-2: rgba(160, 112, 30, 0.08);
+  --fg: #1a1611;
+  --fg-muted: #6b5f4d;
+  --border: rgba(160, 112, 30, 0.2);
+  --border-strong: #a0701e;
+  --accent: #9a6816;
+  --accent-2: #5c4415;
+  --accent-fg: #ffffff;
+  --link: #9a6816;
+  --nav-bg: #faf7f1;
+  --shadow: 0 1px 2px rgba(26, 22, 17, 0.08);
+  --shadow-hover: 0 24px 46px -30px rgba(26, 22, 17, 0.35);
+}
+:root[data-dark="0"] [data-theme="vanguardia"] {
+  color-scheme: light;
+  --bg: #f6f6fa;
+  --bg-2: #ecebf3;
+  --surface: #ffffff;
+  --surface-2: rgba(139, 92, 246, 0.08);
+  --fg: #111118;
+  --fg-muted: #5b5e70;
+  --border: rgba(17, 17, 24, 0.1);
+  --border-strong: rgba(139, 92, 246, 0.5);
+  --accent: #e0431f;
+  --accent-2: #6d3fe0;
+  --accent-fg: #ffffff;
+  --link: #6d3fe0;
+  --nav-bg: #f6f6fa;
+  --shadow: 0 1px 2px rgba(17, 17, 24, 0.06);
+  --shadow-hover: 0 24px 46px -30px rgba(17, 17, 24, 0.3);
+}
+
 /* Las fotos a plena luz deslumbran sobre fondo oscuro. */
 :root[data-dark="1"] .lx-media img,
 :root[data-dark="1"] .prose img {

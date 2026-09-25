@@ -2,7 +2,7 @@ import Link from "next/link";
 import { categoryLabel, localePath, t, type Locale } from "@/lib/i18n";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { ArticleCard } from "@/components/article-card";
+import { SectionGrid, SectionHeader } from "@/components/section/section-layout";
 import { JsonLd } from "@/components/json-ld";
 import { breadcrumbJsonLd, collectionJsonLd } from "@/lib/seo";
 import { SiteShell } from "@/components/site-shell";
@@ -94,38 +94,33 @@ async function CategoryPage({ params, searchParams, locale }: PageProps & { loca
         ])}
       />
 
-      <header className="relative mb-14 pt-10">
-        {/* Miga visible (C-02): ubica al lector y alimenta el dato estructurado. */}
-        <nav
-          aria-label="breadcrumb"
-          className="lx-ui mb-6 flex flex-wrap items-center gap-2 text-[0.68rem] uppercase tracking-[0.2em] text-[var(--fg-muted)]"
-        >
-          <Link href={localePath(locale, "/")} className="lx-link">
-            {locale === "es" ? "Inicio" : "Home"}
-          </Link>
-          <span aria-hidden className="text-[var(--accent-2)]">/</span>
-          <span className="text-[var(--accent)]">
-            {categoryLabel(locale, slug, category.name)}
-          </span>
-        </nav>
-
-        <p className="lx-kicker text-[var(--accent)]">{t(locale, "section.kicker")}</p>
-        <h1 className="lx-display mt-3 text-[2.6rem] font-extrabold leading-[0.95] tracking-tight break-words sm:text-5xl md:text-7xl">
-          {categoryLabel(locale, slug, category.name)}
-        </h1>
-        {category.description && (
-          <p className="mt-6 max-w-2xl text-lg leading-relaxed text-[var(--fg-muted)]">
-            {category.description}
-          </p>
-        )}
-        <div className="mt-8 flex flex-wrap items-center gap-3">
-          <span className="lx-chip border-[var(--border-strong)] text-[var(--accent)]">
-            {total} {t(locale, "section.count")}
-          </span>
-          <span className="lx-chip">{t(locale, "section.live")}</span>
-        </div>
-        <hr className="lx-rule-strong mt-10" />
-      </header>
+      <SectionHeader
+        theme={site.theme}
+        kicker={t(locale, "section.kicker")}
+        title={categoryLabel(locale, slug, category.name)}
+        description={category.description}
+        breadcrumb={
+          /* Miga visible (C-02): ubica al lector y alimenta el dato estructurado. */
+          <nav
+            aria-label="breadcrumb"
+            className="lx-ui flex flex-wrap items-center gap-2 text-[0.68rem] uppercase tracking-[0.2em] text-[var(--fg-muted)]"
+          >
+            <Link href={localePath(locale, "/")} className="lx-link">
+              {locale === "es" ? "Inicio" : "Home"}
+            </Link>
+            <span aria-hidden className="text-[var(--accent-2)]">/</span>
+            <span className="text-[var(--accent)]">{categoryLabel(locale, slug, category.name)}</span>
+          </nav>
+        }
+        chips={
+          <>
+            <span className="lx-chip border-[var(--border-strong)] text-[var(--accent)]">
+              {total} {t(locale, "section.count")}
+            </span>
+            <span className="lx-chip">{t(locale, "section.live")}</span>
+          </>
+        }
+      />
 
       {/* Atajos de fecha del C-09. Son enlaces, no botones: cada rango tiene su
           propia URL, cacheable y compartible, y funcionan sin JavaScript. */}
@@ -221,11 +216,7 @@ async function CategoryPage({ params, searchParams, locale }: PageProps & { loca
           {filtrando ? t(locale, "section.noMatches") : t(locale, "section.empty")}
         </p>
       ) : (
-        <div className="grid gap-7 sm:grid-cols-2 lg:grid-cols-3">
-          {items.map((a, i) => (
-            <ArticleCard key={a.slug} a={a} locale={locale} variant="copper" index={i} />
-          ))}
-        </div>
+        <SectionGrid theme={site.theme} items={items} locale={locale} />
       )}
 
       {/* Continuidad de resultados (C-12): siempre se indica cuántos hay y

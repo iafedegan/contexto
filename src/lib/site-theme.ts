@@ -21,8 +21,15 @@ export const getSiteTheme = cache(
   async (): Promise<{ theme: Theme; style?: CSSProperties; css?: string }> => {
     try {
       const layout = await getHomeLayoutConfig();
+      // Solo en desarrollo: cookie `cg-tema` para revisar cada plantilla sin
+      // cambiar la configuración. En producción nunca se lee (no rompe ISR).
+      let override: string | undefined;
+      if (process.env.NODE_ENV === "development") {
+        const { cookies } = await import("next/headers");
+        override = (await cookies()).get("cg-tema")?.value;
+      }
       return {
-        theme: layout.templateId as Theme,
+        theme: (override || layout.templateId) as Theme,
         style: homeBackgroundStyle(layout.background),
         css: regionsCss(layout.regions),
       };
