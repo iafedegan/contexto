@@ -74,7 +74,7 @@ export function HeroCarousel({
             if (e.key === "ArrowRight") go(index + 1);
           }}
         >
-          <AnimatePresence mode="sync">
+          <AnimatePresence mode="sync" initial={false}>
             <motion.div
               key={active.slug}
               className="absolute inset-0"
@@ -144,7 +144,7 @@ export function HeroCarousel({
             siga siendo legible aunque la imagen sea a sangre completa. */}
         <div className="relative z-10 -mt-20 sm:-mt-28">
           <div className="shell">
-            <AnimatePresence mode="wait">
+            <AnimatePresence mode="wait" initial={false}>
               <motion.div
                 key={active.slug}
                 initial={{ opacity: 0, y: 16 }}

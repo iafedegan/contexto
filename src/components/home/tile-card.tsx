@@ -52,10 +52,8 @@ export function TileCard({
 
   return (
     <motion.article
-      initial={{ opacity: 0 }}
-      whileInView={{ opacity: 1 }}
-      viewport={{ once: true }}
-      transition={{ duration: 0.25, delay: Math.min(index, 8) * 0.03 }}
+      // Visible desde el HTML del servidor: una animación de entrada dejaba la
+      // noticia invisible hasta cargar el JS (mala señal = portada en blanco).
       className={cn("group border border-[var(--rule)] bg-[var(--paper)] transition-colors duration-150", className)}
       style={{ ["--tile-accent" as string]: accent }}
     >

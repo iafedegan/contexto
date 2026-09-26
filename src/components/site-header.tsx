@@ -86,10 +86,10 @@ function MastheadHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extr
   return (
     <header data-region="navbar" className="relative z-40 bg-[var(--nav-bg)] sm:sticky sm:top-0">
       <div className="border-b border-[var(--border)]/60">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-2 text-[0.62rem] uppercase tracking-[0.3em] text-[var(--fg-muted)]">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-2 text-[0.58rem] uppercase tracking-[0.16em] text-[var(--fg-muted)] sm:px-6 sm:text-[0.62rem] sm:tracking-[0.3em]">
           <span className="hidden sm:block">{today}</span>
-          <span className="lx-foil font-semibold">{t(locale, "nav.digitalEdition")}</span>
-          <span className="flex items-center gap-3">
+          <span className="lx-foil min-w-0 truncate font-semibold">{t(locale, "nav.digitalEdition")}</span>
+          <span className="flex shrink-0 items-center gap-3">
             <LocaleSwitch locale={locale} />
         <ThemeToggle locale={locale} />
         {identity.radioStreamUrl && <RadioPlayer src={identity.radioStreamUrl} locale={locale} />}
@@ -178,11 +178,15 @@ function ReadingHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extra
 function BoldHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extra: NavItem[]; locale: Locale; identity: SiteIdentity }) {
   return (
     <header data-region="navbar" className="sticky top-0 z-40 bg-[var(--nav-bg)] px-4 py-4">
-      <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-4 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--nav-bg)] px-5 py-4 shadow-[var(--shadow)]">
-        <Link href={localePath(locale, "/")} className="lx-display mr-auto text-xl font-extrabold tracking-tight">
+      <div className="mx-auto flex max-w-7xl items-center gap-2 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--nav-bg)] px-4 py-3 shadow-[var(--shadow)] sm:gap-4 sm:px-5 sm:py-4 lg:flex-wrap">
+        <Link href={localePath(locale, "/")} className="lx-display mr-auto min-w-0 truncate text-lg font-extrabold tracking-tight sm:text-xl">
 {identity.name}
         </Link>
-        <nav aria-label={t(locale, "nav.sections")} className="flex flex-wrap items-center gap-2">
+        {/* Móvil y tablet: todas las secciones en «Más» para no ocupar media pantalla. */}
+        <div className="shrink-0 text-sm lg:hidden">
+          <MoreMenu locale={locale} extra={[...nav, ...extra]} />
+        </div>
+        <nav aria-label={t(locale, "nav.sections")} className="hidden flex-wrap items-center gap-2 lg:flex">
           {nav.map((n) => (
             <Link
               key={n.href}
@@ -194,13 +198,13 @@ function BoldHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extra: N
           ))}
           <MoreMenu locale={locale} extra={extra} />
         </nav>
-        <LocaleSwitch locale={locale} />
+        <LocaleSwitch locale={locale} className="shrink-0" />
         <ThemeToggle locale={locale} />
         {identity.radioStreamUrl && <RadioPlayer src={identity.radioStreamUrl} locale={locale} />}
         <Link
           href={localePath(locale, "/buscar")}
           aria-label={t(locale, "nav.search")}
-          className="lx-ui grid size-10 place-items-center rounded-full bg-gradient-to-br from-[var(--accent)] to-[var(--accent-2)] text-base font-bold text-[var(--accent-fg)] transition hover:scale-105"
+          className="lx-ui grid size-9 shrink-0 place-items-center rounded-full sm:size-10 bg-gradient-to-br from-[var(--accent)] to-[var(--accent-2)] text-base font-bold text-[var(--accent-fg)] transition hover:scale-105"
         >
           ⌕
         </Link>
@@ -212,7 +216,7 @@ function BoldHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extra: N
 /* ------------------------------------------------------------------ AUTOR */
 function CoutureHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extra: NavItem[]; locale: Locale; identity: SiteIdentity }) {
   return (
-    <header data-region="navbar" className="relative z-40 bg-[var(--nav-bg)] px-0 pb-0 pt-8 text-center sm:sticky sm:top-0 sm:px-6 sm:pb-6 sm:pt-10">
+    <header data-region="navbar" className="relative z-40 bg-[var(--nav-bg)] px-0 pb-0 pt-16 text-center sm:sticky sm:top-0 sm:px-6 sm:pb-6 sm:pt-12">
       <div className="mx-auto max-w-4xl px-6">
         <Link href={localePath(locale, "/")} className="lx-display block text-2xl font-light tracking-[0.42em] uppercase">
           {identity.name}
@@ -222,7 +226,8 @@ function CoutureHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extra
           <span className="lx-kicker text-[var(--accent)]">{t(locale, "nav.signatures")}</span>
           <span className="h-px flex-1 bg-[var(--border-strong)]/60" />
         </div>
-        <div className="mt-5 flex justify-center">
+        {/* Idioma y modo: siempre en la esquina superior derecha. */}
+        <div className="absolute right-3 top-3 flex items-center gap-1 sm:right-6">
           <LocaleSwitch locale={locale} />
         <ThemeToggle locale={locale} />
         {identity.radioStreamUrl && <RadioPlayer src={identity.radioStreamUrl} locale={locale} />}
@@ -288,15 +293,15 @@ function CommandHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extra
 function GlassHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extra: NavItem[]; locale: Locale; identity: SiteIdentity }) {
   return (
     <header data-region="navbar" className="sticky top-0 z-40 bg-[var(--nav-bg)] px-4 py-4">
-      <div className="mx-auto flex max-w-4xl items-center gap-3 rounded-full border border-[var(--border)] bg-[var(--nav-bg)] px-5 py-2.5 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.9)]">
-        <Link href={localePath(locale, "/")} className="lx-display whitespace-nowrap text-sm font-semibold tracking-tight">
+      <div className="mx-auto flex max-w-4xl items-center gap-2 rounded-full sm:gap-3 border border-[var(--border)] bg-[var(--nav-bg)] px-4 py-2 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.9)] sm:px-5 sm:py-2.5">
+        <Link href={localePath(locale, "/")} className="lx-display min-w-0 truncate text-sm font-semibold tracking-tight">
           {identity.name}
         </Link>
         <span className="hidden items-center gap-2 whitespace-nowrap rounded-full bg-[var(--surface-2)] px-3 py-1 text-[0.62rem] uppercase tracking-[0.18em] text-[var(--accent-2)] md:flex">
           <span className="lx-pulse size-1.5 rounded-full bg-[var(--accent-2)]" />
           {t(locale, "nav.online")}
         </span>
-        <LocaleSwitch locale={locale} className="ml-auto" />
+        <LocaleSwitch locale={locale} className="ml-auto shrink-0" />
         <ThemeToggle locale={locale} />
         {identity.radioStreamUrl && <RadioPlayer src={identity.radioStreamUrl} locale={locale} />}
         {/* Tablet y móvil: todas las secciones dentro de «Más» (no caben en la píldora). */}
@@ -323,7 +328,7 @@ function GlassHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extra: 
 function CrestHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extra: NavItem[]; locale: Locale; identity: SiteIdentity }) {
   return (
     <header data-region="navbar" className="relative z-40 border-b-2 border-[var(--accent)] bg-[var(--nav-bg)] sm:sticky sm:top-0">
-      <div className="mx-auto max-w-5xl px-6 py-8 text-center">
+      <div className="mx-auto max-w-5xl px-6 pb-8 pt-16 text-center sm:pt-10">
         <Link href={localePath(locale, "/")} className="inline-flex flex-col items-center gap-3">
           <span className="grid size-14 place-items-center rounded-full border-2 border-[var(--accent)] text-lg tracking-[0.1em] text-[var(--accent)]">
             CG
@@ -331,7 +336,8 @@ function CrestHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extra: 
           <span className="lx-display text-xl tracking-[0.3em] uppercase">{identity.name}</span>
         </Link>
         <p className="lx-kicker mt-2 text-[var(--accent-2)]">{t(locale, "nav.institutional")}</p>
-        <div className="mt-4 flex justify-center">
+        {/* Idioma y modo: siempre en la esquina superior derecha. */}
+        <div className="absolute right-3 top-3 flex items-center gap-1 sm:right-6">
           <LocaleSwitch locale={locale} />
         <ThemeToggle locale={locale} />
         {identity.radioStreamUrl && <RadioPlayer src={identity.radioStreamUrl} locale={locale} />}

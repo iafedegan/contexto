@@ -50,7 +50,7 @@ export function BroadsheetCard({
     return (
       <motion.article
         variants={fadeUp}
-        initial="hidden"
+        initial={false}
         whileInView="show"
         viewport={{ once: true, margin: "-40px" }}
         className={cn("group", className)}
@@ -76,7 +76,7 @@ export function BroadsheetCard({
   return (
     <motion.article
       variants={fadeUp}
-      initial="hidden"
+      initial={false}
       whileInView="show"
       viewport={{ once: true, margin: "-60px" }}
       className={cn("group", className)}
