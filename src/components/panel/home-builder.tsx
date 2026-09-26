@@ -320,7 +320,9 @@ export function HomeBuilder({
                 )}
                 {/* Mismo esquema que la portada real: contenido + barra lateral. */}
                 <div className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_19rem]">
-                  <div className="min-w-0">
+                  {/* `lx-bleed-off`, igual que en la portada real: sin él, los héroes a
+                      sangre (carrusel de Revista) se salen de su columna y tapan la lateral. */}
+                  <div className="lx-bleed-off min-w-0">
                     <Template
                       lead={lead}
                       second={second}

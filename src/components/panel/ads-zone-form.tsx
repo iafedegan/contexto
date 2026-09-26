@@ -22,9 +22,12 @@ export function AdsZoneForm({
   canManage,
   onDraft,
   onFocusZone,
+  compact = false,
 }: {
   zone: AdsZoneRow;
   canManage: boolean;
+  /** Dentro de una fila desplegable: sin título propio ni marco. */
+  compact?: boolean;
   /** Cada cambio del formulario, para verlo en vivo en el lienzo. */
   onDraft?: (key: string, draft: AdDraft) => void;
   /** El editor entra en este anuncio: el lienzo marca su posición. */
@@ -47,18 +50,24 @@ export function AdsZoneForm({
       }}
       onFocus={() => onFocusZone?.(zone.key)}
       onBlur={() => onFocusZone?.(null)}
-      className="rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] p-4"
+      className={compact ? "" : "rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] p-4"}
     >
       <input type="hidden" name="key" value={zone.key} />
       <input type="hidden" name="name" value={zone.name} />
 
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <p className="text-sm font-semibold">{zone.name}</p>
-          <p className="mt-0.5 text-xs text-[var(--fg-muted)]">
+        {compact ? (
+          <p className="text-xs text-[var(--fg-muted)]">
             {zone.width} × {zone.height} px · <code className="lx-mono">{zone.key}</code>
           </p>
-        </div>
+        ) : (
+          <div>
+            <p className="text-sm font-semibold">{zone.name}</p>
+            <p className="mt-0.5 text-xs text-[var(--fg-muted)]">
+              {zone.width} × {zone.height} px · <code className="lx-mono">{zone.key}</code>
+            </p>
+          </div>
+        )}
 
         <label className="flex items-center gap-2 text-xs font-medium">
           <input
