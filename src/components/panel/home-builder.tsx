@@ -350,7 +350,7 @@ export function HomeBuilder({
           </details>
         </Bloque>
 
-        <Bloque titulo="Componentes" icono={<Paintbrush size={13} />} abierto>
+        <Bloque titulo="Componentes" icono={<Paintbrush size={13} />}>
           {/* Tarjeta concreta del lienzo: sus ajustes individuales van dentro
               de Componentes, encima de los generales de cada pieza. */}
           {selected !== null && items[selected] && (
@@ -379,8 +379,17 @@ export function HomeBuilder({
           )}
         </Bloque>
 
-        <Bloque titulo="Popup" icono={<MessageSquare size={13} />}>
-          <PopupEditor value={popup} onChange={setPopup} previewing={popupPreview} onPreview={setPopupPreview} />
+        <Bloque titulo="Popup" icono={<MessageSquare size={13} />} onToggle={setPopupPreview}>
+          <PopupEditor
+            value={popup}
+            // Cada cambio se ve al instante: el popup aparece en el lienzo.
+            onChange={(p) => {
+              setPopup(p);
+              setPopupPreview(true);
+            }}
+            previewing={popupPreview}
+            onPreview={setPopupPreview}
+          />
         </Bloque>
 
         {/* Las mismas zonas que en Configuración › Publicidad, aquí también:
@@ -409,16 +418,20 @@ function Bloque({
   icono,
   children,
   abierto = false,
+  onToggle,
 }: {
   titulo: string;
   icono: React.ReactNode;
   children: React.ReactNode;
   /** Estado inicial; después manda el usuario. Por defecto, plegado. */
   abierto?: boolean;
+  /** Avisa al abrir/cerrar (p. ej. mostrar el popup en el lienzo). */
+  onToggle?: (open: boolean) => void;
 }) {
   return (
     <details
       open={abierto}
+      onToggle={(e) => onToggle?.((e.currentTarget as HTMLDetailsElement).open)}
       className="group rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--bg)] shadow-[var(--shadow)]"
     >
       <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3">
