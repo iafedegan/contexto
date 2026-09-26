@@ -6,6 +6,7 @@ import type { Theme } from "@/lib/theme";
 import { DEFAULT_IDENTITY, type SiteIdentity } from "@/lib/site-identity";
 import { DEFAULT_LOCALE, INTL_LOCALE, localePath, t, type Locale } from "@/lib/i18n";
 import { MoreMenu } from "@/components/more-menu";
+import { MobileNav, type MobileLook } from "@/components/mobile-nav";
 import { RadioPlayer } from "@/components/radio-player";
 import { ThemeToggle } from "@/components/theme-toggle";
 
@@ -21,8 +22,55 @@ type Props = {
   identity?: SiteIdentity;
 };
 
+/** Familia de navbar de móvil que corresponde a cada variante o plantilla. */
+function mobileLook(theme: Theme, variant?: NavbarId): MobileLook {
+  if (variant) return variant;
+  switch (theme) {
+    case "home":
+    case "esmeralda":
+    case "clasico":
+    case "articulo":
+      return "masthead";
+    case "revista":
+    case "autor":
+      return "couture";
+    case "vanguardia":
+    case "asistente":
+      return "glass";
+    case "institucional":
+      return "crest";
+    default:
+      return "bold";
+  }
+}
+
+/**
+ * Cabecera del sitio. Debajo de 1024 px se ve el navbar de móvil (barra
+ * compacta + menú a pantalla completa) y desde ahí la cabecera de la
+ * plantilla; ambas viven en el HTML y se alternan con CSS.
+ */
+export function SiteHeader(props: Props & { variant?: NavbarId }) {
+  const { theme, nav, extraNav = [], locale = DEFAULT_LOCALE, identity = DEFAULT_IDENTITY, variant } = props;
+  return (
+    <>
+      <MobileNav
+        look={mobileLook(theme, variant)}
+        name={identity.name}
+        nav={nav}
+        extra={extraNav}
+        locale={locale}
+        radioStreamUrl={identity.radioStreamUrl}
+      />
+      {/* `contents`: la cabecera de escritorio sigue siendo `sticky` respecto a la página. */}
+      <div className="hidden lg:contents">
+        <DesktopHeader {...props} />
+      </div>
+    </>
+  );
+}
+
 /** Cada plantilla estrena navbar: estructura, altura, ritmo y efectos propios. */
-export function SiteHeader({
+function DesktopHeader({
   theme,
   nav,
   extraNav = [],
