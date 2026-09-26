@@ -184,12 +184,25 @@ export function regionsCss(input: RegionStyles | undefined, scope = "[data-site-
       rules.push(`${sel} > *{border-radius:${s.radius}px}`);
     }
     if (s.maxWidth) {
-      decl.push(`--maxw:min(${s.maxWidth}px,94vw)`);
-      rules.push(`${sel} .shell,${sel}.shell{max-width:min(${s.maxWidth}px,94vw)}`);
+      // Cada navbar/footer fija su ancho con su propio contenedor (max-w-5xl,
+      // max-w-7xl…); se sobrescriben esos contenedores principales, no los
+      // pequeños internos (selector de idioma, textos cortos).
+      const w = `min(${s.maxWidth}px,94vw)`;
+      decl.push(`--maxw:${w}`);
+      rules.push(
+        `${sel} .shell,${sel}.shell,${sel} :is(.max-w-3xl,.max-w-4xl,.max-w-5xl,.max-w-6xl,.max-w-7xl){max-width:${w}!important}`,
+      );
     }
     if (s.align) {
+      // Texto y también las filas flexibles (logo, menú, enlaces), que no
+      // obedecen a text-align.
+      const justify = { left: "flex-start", center: "center", right: "flex-end" }[s.align];
       decl.push(`text-align:${s.align}`);
-      if (s.align === "center") rules.push(`${sel} :is(nav ul,nav > div){justify-content:center}`);
+      rules.push(
+        `${sel} :is(p,h1,h2,h3,h4,figcaption,.text-center,.text-left,.text-right){text-align:${s.align}!important}`,
+        `${sel} :is(.flex,.lx-navrail,.inline-flex){justify-content:${justify}!important}`,
+        `${sel} :is(.mx-auto.flex,.lx-navrail){flex-wrap:wrap}`,
+      );
     }
 
     if (decl.length) rules.unshift(`${sel}{${decl.join(";")}}`);
