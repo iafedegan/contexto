@@ -6,6 +6,8 @@ import { db } from "@/db";
 import { articles, siteSettings, type HomeLayoutConfig, type HomeStyle } from "@/db/schema";
 import { requireRole } from "@/lib/auth";
 import { sanitizeRegions } from "@/lib/home-regions";
+import { sanitizePopup, type PopupConfig } from "@/lib/popup-types";
+import { POPUP_KEY } from "@/lib/popup";
 import { BODIES, FOOTERS, NAVBARS } from "@/lib/template-parts";
 
 export type HomeLayoutEntry = {
@@ -75,4 +77,20 @@ export async function saveHomeSectionLayout(input: HomeLayoutConfig) {
   // se revalida el árbol entero y no solo la portada.
   revalidatePath("/", "layout");
   revalidatePath("/panel/portada");
+}
+
+/**
+ * Guarda el popup del portal. Se valida entero (URLs, colores, rangos) porque
+ * lo pinta cualquier página pública; sube la versión para que el popup nuevo
+ * se muestre también a quien ya cerró el anterior.
+ */
+export async function saveSitePopup(input: PopupConfig): Promise<PopupConfig> {
+  await requireRole("editor");
+  const config = sanitizePopup({ ...input, version: (Number(input.version) || 0) + 1 });
+  await db
+    .insert(siteSettings)
+    .values({ key: POPUP_KEY, value: config })
+    .onConflictDoUpdate({ target: siteSettings.key, set: { value: config, updatedAt: sql`now()` } });
+  revalidatePath("/", "layout");
+  return config;
 }

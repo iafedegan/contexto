@@ -288,18 +288,22 @@ function CommandHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extra
 function GlassHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extra: NavItem[]; locale: Locale; identity: SiteIdentity }) {
   return (
     <header data-region="navbar" className="sticky top-0 z-40 bg-[var(--nav-bg)] px-4 py-4">
-      <div className="mx-auto flex max-w-3xl items-center gap-4 rounded-full border border-[var(--border)] bg-[var(--nav-bg)] px-5 py-2.5 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.9)]">
-        <Link href={localePath(locale, "/")} className="lx-display text-sm font-semibold tracking-tight">
+      <div className="mx-auto flex max-w-4xl items-center gap-3 rounded-full border border-[var(--border)] bg-[var(--nav-bg)] px-5 py-2.5 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.9)]">
+        <Link href={localePath(locale, "/")} className="lx-display whitespace-nowrap text-sm font-semibold tracking-tight">
           {identity.name}
         </Link>
-        <span className="flex items-center gap-2 rounded-full bg-[var(--surface-2)] px-3 py-1 text-[0.62rem] uppercase tracking-[0.18em] text-[var(--accent-2)]">
+        <span className="hidden items-center gap-2 whitespace-nowrap rounded-full bg-[var(--surface-2)] px-3 py-1 text-[0.62rem] uppercase tracking-[0.18em] text-[var(--accent-2)] md:flex">
           <span className="lx-pulse size-1.5 rounded-full bg-[var(--accent-2)]" />
           {t(locale, "nav.online")}
         </span>
         <LocaleSwitch locale={locale} className="ml-auto" />
         <ThemeToggle locale={locale} />
         {identity.radioStreamUrl && <RadioPlayer src={identity.radioStreamUrl} locale={locale} />}
-        <nav aria-label={t(locale, "nav.sections")} className="hidden gap-4 text-xs text-[var(--fg-muted)] sm:flex">
+        {/* Tablet y móvil: todas las secciones dentro de «Más» (no caben en la píldora). */}
+        <div className="text-xs text-[var(--fg-muted)] lg:hidden">
+          <MoreMenu locale={locale} extra={[...nav, ...extra]} />
+        </div>
+        <nav aria-label={t(locale, "nav.sections")} className="hidden items-center gap-4 whitespace-nowrap text-xs text-[var(--fg-muted)] lg:flex">
           {nav.slice(0, 3).map((n) => (
             <Link key={n.href} href={localePath(locale, n.href)} className="lx-link">
               {n.label}

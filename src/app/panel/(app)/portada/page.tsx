@@ -8,11 +8,12 @@ import { HomeBuilder } from "@/components/panel/home-builder";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { navItems } from "@/components/site-shell";
+import { getSitePopup } from "@/lib/popup";
 
 export const dynamic = "force-dynamic";
 
 export default async function PortadaPage() {
-  const [session, rows, layout, nav, adsZones] = await Promise.all([
+  const [session, rows, layout, nav, adsZones, popup] = await Promise.all([
     auth(),
     db
       .select({
@@ -38,6 +39,7 @@ export default async function PortadaPage() {
     getHomeLayoutConfig(),
     navItems(),
     getAdsZoneRows(),
+    getSitePopup(),
   ]);
 
   return (
@@ -52,6 +54,7 @@ export default async function PortadaPage() {
         key={rows.map((r) => `${r.id}:${r.homePosition}:${JSON.stringify(r.homeStyle)}`).join("|") + JSON.stringify(layout)}
         initialItems={rows}
         initialLayout={layout}
+        initialPopup={popup}
         adsZones={adsZones}
         canManagePauta={session?.user.role === "administrador"}
         headerVariants={{

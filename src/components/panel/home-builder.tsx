@@ -13,6 +13,7 @@ import {
   Megaphone,
   Monitor,
   Paintbrush,
+  MessageSquare,
   Layers,
   RotateCcw,
   Save,
@@ -38,6 +39,10 @@ import { homeBackgroundStyle } from "@/lib/home-background";
 import { regionsCss, type RegionId } from "@/lib/home-regions";
 import { RegionEditor } from "@/components/panel/region-editor";
 import { PartsEditor } from "@/components/panel/parts-editor";
+import { PopupEditor } from "@/components/panel/popup-editor";
+import { PreviewFrame } from "@/components/panel/preview-frame";
+import { SitePopup } from "@/components/site-popup";
+import type { PopupConfig } from "@/lib/popup-types";
 import { resolveParts, type FooterId, type NavbarId } from "@/lib/template-parts";
 import { HOME_FONTS, HOME_FONT_GROUPS, type HomeTitleFont } from "@/lib/home-fonts";
 import { cn } from "@/lib/utils";
@@ -54,6 +59,7 @@ export function HomeBuilder({
   initialLayout,
   headerVariants,
   footerVariants,
+  initialPopup,
   adsZones,
   canManagePauta,
 }: {
@@ -66,6 +72,8 @@ export function HomeBuilder({
    * elige otra plantilla, sin recargar la página. Las 4 se piden de una
    * sola vez en el servidor y aquí solo se elige cuál montar.
    */
+  /** Popup del portal guardado. */
+  initialPopup: PopupConfig;
   /** Un navbar renderizado por cada pieza (NAVBARS). */
   headerVariants: Record<NavbarId, React.ReactNode>;
   /** El pie también cambia con la plantilla, igual que la cabecera. */
@@ -82,6 +90,8 @@ export function HomeBuilder({
   const [saved, setSaved] = useState(false);
   const [selected, setSelected] = useState<number | null>(null);
   const [region, setRegion] = useState<RegionId>("navbar");
+  const [popup, setPopup] = useState<PopupConfig>(initialPopup);
+  const [popupPreview, setPopupPreview] = useState(false);
   // "template": elegir la plantilla. "content": la página real, editable —
   // clic para estilo, arrastrar para reordenar. La disposición de secciones
   // (columnas, dirección de "En breve") se ajusta desde "content" también,
@@ -286,10 +296,10 @@ export function HomeBuilder({
           {/* El alto se limita FUERA del zoom: dentro de un elemento con
               `zoom`, las unidades (dvh, rem) también se escalan y el lienzo
               quedaba mucho más bajo de lo pedido. */}
-          <div className="h-[calc(100dvh-15rem)] min-h-[26rem] overflow-y-auto overflow-x-hidden rounded-[var(--radius)] border border-[var(--border)] bg-[var(--paper)]">
+          <div className="h-[calc(100dvh-15rem)] min-h-[26rem] overflow-hidden rounded-[var(--radius)] border border-[var(--border)] bg-[var(--paper)]">
+          <PreviewFrame width={anchoPreview} scale={escala}>
           <div
-            className="mx-auto bg-[var(--paper)]"
-            style={{ width: anchoPreview, zoom: escala }}
+            className="bg-[var(--paper)]"
             // Clic en navbar, pie, cuerpo… selecciona ese componente en el panel.
             // Los enlaces de la vista previa no navegan.
             onClickCapture={(e) => {
@@ -300,7 +310,7 @@ export function HomeBuilder({
             }}
           >
             <div
-              className="flex min-h-full flex-col bg-[var(--paper)] text-[var(--ink)] transition-colors"
+              className="relative flex min-h-screen flex-col bg-[var(--paper)] text-[var(--ink)] transition-colors"
               data-theme={layout.templateId}
               data-site-root
               style={homeBackgroundStyle(layout.background)}
@@ -332,8 +342,12 @@ export function HomeBuilder({
                 </div>
               </main>
               {footerVariants[parts.footer]}
+              {popupPreview && (
+                <SitePopup key={JSON.stringify(popup)} config={popup} preview onClose={() => setPopupPreview(false)} />
+              )}
             </div>
           </div>
+          </PreviewFrame>
           </div>
         </div>
       </div>
@@ -384,6 +398,10 @@ export function HomeBuilder({
               cambiar su posición en la portada.
             </p>
           )}
+        </Bloque>
+
+        <Bloque titulo="Popup" icono={<MessageSquare size={13} />}>
+          <PopupEditor value={popup} onChange={setPopup} previewing={popupPreview} onPreview={setPopupPreview} />
         </Bloque>
 
         {/* Las mismas zonas que en Configuración › Publicidad, aquí también:

@@ -1,6 +1,8 @@
 import { getTopLevelCategories } from "@/lib/content";
 import { getSiteIdentity } from "@/lib/site-identity";
 import { getSiteTheme } from "@/lib/site-theme";
+import { getSitePopup } from "@/lib/popup";
+import { SitePopup } from "@/components/site-popup";
 import { ReadingProgress } from "@/components/reading-progress";
 import { BreakingBar } from "@/components/breaking-bar";
 import { AdsBanner } from "@/components/ads-banner";
@@ -65,11 +67,12 @@ export async function SiteShell({
   /** Idioma de la INTERFAZ (el contenido sigue en español). */
   locale?: Locale;
 }) {
-  const [nav, extraNav, identity, site] = await Promise.all([
+  const [nav, extraNav, identity, site, popup] = await Promise.all([
     navItems(locale),
     navOverflow(locale),
     getSiteIdentity(),
     getSiteTheme(),
+    getSitePopup(),
   ]);
   const shell = SHELL[variant];
 
@@ -102,6 +105,8 @@ export async function SiteShell({
       <div className="shell pb-10">
         <AdsBanner zone="footer" className="mx-auto" />
       </div>
+      {/* Popup diseñado en /panel/portada (si está activo). */}
+      {popup.enabled && <SitePopup config={popup} />}
       <SiteFooter theme={theme} nav={nav} locale={locale} identity={identity} variant={site.parts.footer} />
     </div>
   );
