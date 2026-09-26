@@ -54,7 +54,10 @@ export function MoreMenu({
       {open && (
         <div
           role="menu"
-          className="absolute right-0 top-full z-50 mt-1 w-[16rem] overflow-hidden rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] py-2 text-left shadow-[var(--shadow)]"
+          // Fondo SÓLIDO (`--nav-bg` nunca es translúcido): con `--surface`, que en
+          // las plantillas oscuras es un blanco al 4 %, el contenido de detrás se
+          // transparentaba y el menú no se podía leer.
+          className="absolute right-0 top-full z-[60] mt-1 max-h-[70vh] w-[16rem] overflow-y-auto overflow-x-hidden rounded-[var(--radius)] border border-[var(--border-strong)] bg-[var(--nav-bg)] py-2 text-left text-[var(--fg)] opacity-100 shadow-[0_24px_60px_-20px_rgba(0,0,0,0.6)]"
         >
           {extra.length > 0 && (
             <>

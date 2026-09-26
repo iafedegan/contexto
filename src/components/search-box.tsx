@@ -109,7 +109,7 @@ export function SearchBox({
       {abierto && items.length > 0 && (
         <ul
           role="listbox"
-          className="absolute left-0 right-0 top-full z-40 mt-2 overflow-hidden rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow)]"
+          className="absolute left-0 right-0 top-full z-40 mt-2 overflow-hidden rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] shadow-[0_24px_60px_-20px_rgba(0,0,0,0.6)]"
         >
           {items.map((s) => (
             <li key={s.slug}>
