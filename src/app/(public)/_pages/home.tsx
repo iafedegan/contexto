@@ -121,6 +121,8 @@ async function HomePage({ locale }: { locale: Locale }) {
         <SiteSidebar locale={locale} />
       </div>
 
+      <AdsBanner zone="home_bottom" className="mx-auto mt-14" />
+
       {/* Banda de llamada al asistente, común a todas las plantillas. */}
       <section className="lx-card lx-shine relative mt-20 overflow-hidden px-8 py-14 text-center">
         <div className="lx-inlay absolute inset-0" />

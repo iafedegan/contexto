@@ -8,7 +8,7 @@ import { UserRow } from "@/components/panel/user-row";
 import { getKeyStatus } from "@/lib/ai-provider";
 import { ApiKeyForm } from "@/components/panel/api-key-form";
 import { MfaForm } from "@/components/panel/mfa-form";
-import { AdsZoneForm } from "@/components/panel/ads-zone-form";
+import { AdsEditor } from "@/components/panel/ads-editor";
 import { getAdsZoneRows } from "@/lib/ads";
 import { getAnalyticsStatus } from "@/lib/analytics-server";
 import { saveAnalyticsSettings, saveSiteIdentity } from "./actions";
@@ -286,19 +286,16 @@ export default async function ConfiguracionPage() {
         id="publicidad"
         icon={<Megaphone size={14} />}
         title="Publicidad y pauta"
-        hint="Las siete zonas del portal, iguales en las cinco plantillas"
+        hint="Las posiciones del portal, iguales en todas las plantillas"
       >
         <p className="mb-4 text-sm leading-relaxed text-[var(--fg-muted)]">
-          Cada zona vive en todas las plantillas de portada, en el artículo o en el pie. Actívala solo
-          cuando tenga creatividad: una zona sin imagen ni HTML no ocupa espacio en el sitio. Pega la
-          URL de una imagen ya alojada, o el código que entregue el anunciante o el ad server.
+          Cada posición vive en todas las plantillas: portada, barra lateral, notas, secciones o pie.
+          Puedes poner varios anuncios en una misma posición y se apilan por orden. Actívalos solo
+          cuando tengan creatividad: un anuncio sin imagen ni HTML no ocupa espacio en el sitio. Pega
+          la URL de una imagen ya alojada, o el código que entregue el anunciante o el ad server.
         </p>
 
-        <div className="grid gap-4 lg:grid-cols-2">
-          {zonasPauta.map((z) => (
-            <AdsZoneForm key={z.key} zone={z} canManage={isAdmin} />
-          ))}
-        </div>
+        <AdsEditor zones={zonasPauta} canManage={isAdmin} />
 
         {!isAdmin && (
           <p className="mt-4 flex items-start gap-2 rounded-[var(--radius)] bg-[var(--surface-2)] p-3 text-xs leading-relaxed text-[var(--fg-muted)]">

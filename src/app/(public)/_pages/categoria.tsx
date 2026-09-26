@@ -3,6 +3,7 @@ import { categoryLabel, localePath, t, type Locale } from "@/lib/i18n";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { SectionGrid, SectionHeader } from "@/components/section/section-layout";
+import { AdsBanner } from "@/components/ads-banner";
 import { JsonLd } from "@/components/json-ld";
 import { breadcrumbJsonLd, collectionJsonLd } from "@/lib/seo";
 import { SiteShell } from "@/components/site-shell";
@@ -216,7 +217,10 @@ async function CategoryPage({ params, searchParams, locale }: PageProps & { loca
           {filtrando ? t(locale, "section.noMatches") : t(locale, "section.empty")}
         </p>
       ) : (
-        <SectionGrid theme={site.parts.body} items={items} locale={locale} />
+        <>
+          <AdsBanner zone="section_top" className="mx-auto mb-10" />
+          <SectionGrid theme={site.parts.body} items={items} locale={locale} />
+        </>
       )}
 
       {/* Continuidad de resultados (C-12): siempre se indica cuántos hay y
@@ -278,6 +282,8 @@ async function CategoryPage({ params, searchParams, locale }: PageProps & { loca
           )}
         </nav>
       )}
+
+      <AdsBanner zone="section_bottom" className="mx-auto mt-14" />
 
     </SiteShell>
   );

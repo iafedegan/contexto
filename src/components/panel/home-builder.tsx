@@ -23,7 +23,9 @@ import {
   X,
 } from "lucide-react";
 import { FeatureStrip } from "@/components/feature-strip";
-import { AdsZoneForm } from "@/components/panel/ads-zone-form";
+import { AdsEditor } from "@/components/panel/ads-editor";
+import { AdsPreview } from "@/components/panel/ads-preview";
+import type { AdDraft } from "@/components/panel/ads-zone-form";
 import type { AdsZoneRow } from "@/lib/ads";
 import { TEMPLATE_COMPONENTS } from "@/components/home/templates";
 import {
@@ -92,6 +94,12 @@ export function HomeBuilder({
   const [region, setRegion] = useState<RegionId>("navbar");
   const [popup, setPopup] = useState<PopupConfig>(initialPopup);
   const [popupPreview, setPopupPreview] = useState(false);
+  // Anuncios: lo que se escribe (sin guardar) y cuál se está editando, para verlo en el lienzo.
+  const [adDrafts, setAdDrafts] = useState<Record<string, AdDraft>>({});
+  const [adFocus, setAdFocus] = useState<string | null>(null);
+  const ad = (position: import("@/lib/ads-positions").AdPosition, className?: string) => (
+    <AdsPreview position={position} zones={adsZones} drafts={adDrafts} focusKey={adFocus} className={className} />
+  );
   // "template": elegir la plantilla. "content": la página real, editable —
   // clic para estilo, arrastrar para reordenar. La disposición de secciones
   // (columnas, dirección de "En breve") se ajusta desde "content" también,
@@ -304,22 +312,41 @@ export function HomeBuilder({
               />
               {headerVariants[parts.navbar]}
               <main data-region="body" className="shell flex-1 py-8">
-                <div className="flex flex-col gap-10">
-                  {layout.templateId === "clasico" && <FeatureStrip items={strip} />}
-                  <Template
-                    lead={lead}
-                    second={second}
-                    rail={rail}
-                    river={river}
-                    layout={layout}
-                    interactive={false}
-                    builderSelected={selected}
-                    builderOverIndex={overIndex}
-                    builderDragProps={dragProps}
-                    builderHasStyle={hasStyle}
-                  />
+                {ad("home_top", "mx-auto mb-10")}
+                {parts.body === "clasico" && (
+                  <div className="mb-10">
+                    <FeatureStrip items={strip} />
+                  </div>
+                )}
+                {/* Mismo esquema que la portada real: contenido + barra lateral. */}
+                <div className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_19rem]">
+                  <div className="min-w-0">
+                    <Template
+                      lead={lead}
+                      second={second}
+                      rail={rail}
+                      river={river}
+                      layout={layout}
+                      interactive={false}
+                      builderSelected={selected}
+                      builderOverIndex={overIndex}
+                      builderDragProps={dragProps}
+                      builderHasStyle={hasStyle}
+                    />
+                    {ad("home_billboard", "mx-auto mt-14")}
+                  </div>
+                  <aside className="flex flex-col gap-8">
+                    {ad("sidebar_top")}
+                    <div className="grid h-40 place-items-center rounded-[var(--radius)] border border-dashed border-[var(--border)] p-4 text-center text-[0.7rem] text-[var(--fg-muted)]">
+                      Barra lateral: más leídas, boletín y redes
+                    </div>
+                    {ad("sidebar_bottom")}
+                    {ad("sidebar_sticky", "sticky top-4")}
+                  </aside>
                 </div>
+                {ad("home_bottom", "mx-auto mt-14")}
               </main>
+              <div className="shell pb-10">{ad("footer", "mx-auto")}</div>
               {footerVariants[parts.footer]}
               {popupPreview && (
                 <SitePopup key={JSON.stringify(popup)} config={popup} preview onClose={() => setPopupPreview(false)} />
@@ -396,16 +423,12 @@ export function HomeBuilder({
             quien diseña la portada no debería tener que salir a otra pantalla
             para activar o cambiar un banner. */}
         <Bloque titulo="Publicidad" icono={<Megaphone size={13} />}>
-          <div className="flex flex-col gap-3">
-            {adsZones.map((z) => (
-              <AdsZoneForm key={z.key} zone={z} canManage={canManagePauta} />
-            ))}
-          </div>
-          {!canManagePauta && (
-            <p className="mt-2 text-[0.68rem] leading-snug text-[var(--fg-muted)]">
-              Solo un administrador puede cambiar la pauta.
-            </p>
-          )}
+          <AdsEditor
+            zones={adsZones}
+            canManage={canManagePauta}
+            onDraft={(key, draft) => setAdDrafts((d) => ({ ...d, [key]: draft }))}
+            onFocusZone={setAdFocus}
+          />
         </Bloque>
       </aside>
     </div>

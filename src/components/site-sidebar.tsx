@@ -79,6 +79,8 @@ export async function SiteSidebar({ locale }: { locale: Locale }) {
         </ul>
       </section>
 
+      <AdsBanner zone="sidebar_bottom" />
+
       {/* 300 × 600 fija durante el scroll (§9.1). */}
       <AdsBanner zone="sidebar_sticky" className="sticky top-24" />
     </aside>

@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import { Check, Loader2, TriangleAlert, Trash2 } from "lucide-react";
-import { clearAdsZone, saveAdsZone, type AdsZoneState } from "@/app/panel/(app)/configuracion/ads-actions";
+import { clearAdsZone, deleteAdsZone, saveAdsZone, type AdsZoneState } from "@/app/panel/(app)/configuracion/ads-actions";
 import type { AdsZoneRow } from "@/lib/ads";
 
 export type { AdsZoneRow };
@@ -14,16 +14,43 @@ function paraInput(d: Date | null): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-export function AdsZoneForm({ zone, canManage }: { zone: AdsZoneRow; canManage: boolean }) {
+/** Lo que el editor está escribiendo en un anuncio (aún sin guardar). */
+export type AdDraft = { imageUrl: string; clickUrl: string; html: string; active: boolean };
+
+export function AdsZoneForm({
+  zone,
+  canManage,
+  onDraft,
+  onFocusZone,
+}: {
+  zone: AdsZoneRow;
+  canManage: boolean;
+  /** Cada cambio del formulario, para verlo en vivo en el lienzo. */
+  onDraft?: (key: string, draft: AdDraft) => void;
+  /** El editor entra en este anuncio: el lienzo marca su posición. */
+  onFocusZone?: (key: string | null) => void;
+}) {
   const [state, action, pending] = useActionState<AdsZoneState, FormData>(saveAdsZone, null);
   const vacia = !zone.html && !zone.imageUrl;
 
   return (
     <form
       action={action}
+      onInput={(e) => {
+        const fd = new FormData(e.currentTarget);
+        onDraft?.(zone.key, {
+          imageUrl: String(fd.get("imageUrl") ?? "").trim(),
+          clickUrl: String(fd.get("clickUrl") ?? "").trim(),
+          html: String(fd.get("html") ?? "").trim(),
+          active: fd.get("active") === "1",
+        });
+      }}
+      onFocus={() => onFocusZone?.(zone.key)}
+      onBlur={() => onFocusZone?.(null)}
       className="rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] p-4"
     >
       <input type="hidden" name="key" value={zone.key} />
+      <input type="hidden" name="name" value={zone.name} />
 
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
@@ -126,7 +153,19 @@ export function AdsZoneForm({ zone, canManage }: { zone: AdsZoneRow; canManage: 
             Guardar zona
           </button>
 
-          {!vacia && (
+          {zone.extra && (
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => {
+                if (confirm("¿Eliminar este anuncio?")) void deleteAdsZone(zone.key);
+              }}
+              className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border)] px-3 py-1.5 text-xs text-[var(--fg-muted)] transition hover:border-[var(--danger,#b4442e)] hover:text-[var(--danger,#b4442e)]"
+            >
+              <Trash2 size={12} /> Eliminar
+            </button>
+          )}
+          {!vacia && !zone.extra && (
             <button
               type="button"
               disabled={pending}

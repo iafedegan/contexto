@@ -185,6 +185,8 @@ export function ArticleDocument({
           }
         />
 
+        {!preview && <AdsBanner zone="article_top" className="mx-auto mt-10" />}
+
         {/* El cuerpo llega como HTML ya sanitizado en el panel editorial. */}
         <div
           className={ARTICLE_BODY_CLASS[theme] ?? "prose prose-drop mt-12 !max-w-none"}
