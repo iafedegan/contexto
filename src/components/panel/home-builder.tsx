@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   Bold,
@@ -97,8 +97,6 @@ export function HomeBuilder({
   // (columnas, dirección de "En breve") se ajusta desde "content" también,
   // como un panel flotante — es una decisión de contenido, no de plantilla.
   const [viewport, setViewport] = useState<"escritorio" | "tablet" | "movil">("escritorio");
-  const [anchoLienzo, setAnchoLienzo] = useState(1440);
-  const lienzoRef = useRef<HTMLDivElement>(null);
   const dragIndex = useRef<number | null>(null);
   const wasDragged = useRef(false);
   const [overIndex, setOverIndex] = useState<number | null>(null);
@@ -106,15 +104,6 @@ export function HomeBuilder({
   const initialItemsSerialized = useMemo(() => serializeItems(initialItems), [initialItems]);
   const initialLayoutSerialized = useMemo(() => JSON.stringify(initialLayout), [initialLayout]);
   const dirty = serializeItems(items) !== initialItemsSerialized || JSON.stringify(layout) !== initialLayoutSerialized;
-
-  // El lienzo cambia de ancho con la ventana y con la barra lateral.
-  useEffect(() => {
-    const el = lienzoRef.current;
-    if (!el) return;
-    const ro = new ResizeObserver(([entry]) => setAnchoLienzo(entry.contentRect.width));
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
 
   function move(from: number, to: number) {
     setItems((prev) => {
@@ -216,11 +205,8 @@ export function HomeBuilder({
     { label: "Columna destacada", article: opinion ?? items[3] ?? items[0] },
   ].filter((x) => x.article);
 
-  // Anchos REALES de dispositivo. El lienzo es más estrecho que un monitor,
-  // así que se renderiza a tamaño real y se reduce con `zoom` (a diferencia de
-  // `transform: scale`, `zoom` sí afecta al layout y el scroll sigue cuadrando).
-  const anchoPreview = { escritorio: 1440, tablet: 834, movil: 390 }[viewport];
-  const escala = Math.min(1, anchoLienzo / anchoPreview);
+  // Dispositivo de la vista previa: pantalla real de iPhone, iPad o Mac.
+  const device = ({ escritorio: "mac", tablet: "ipad", movil: "iphone" } as const)[viewport];
 
   return (
     <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_23rem]">
@@ -252,9 +238,9 @@ export function HomeBuilder({
           <div className="ml-1 flex items-center gap-0.5 rounded-full border border-[var(--border)] p-0.5">
             {(
               [
-                ["escritorio", Monitor, "Escritorio"],
-                ["tablet", Tablet, "Tablet"],
-                ["movil", Smartphone, "Móvil"],
+                ["escritorio", Monitor, "Mac"],
+                ["tablet", Tablet, "iPad"],
+                ["movil", Smartphone, "iPhone"],
               ] as const
             ).map(([id, Icono, etiqueta]) => (
               <button
@@ -287,17 +273,10 @@ export function HomeBuilder({
 
         {/* Marco del lienzo: la portada real, a escala de su ancho elegido. */}
         <div
-          ref={lienzoRef}
           className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--bg-2)] p-3 shadow-[var(--shadow)]"
         >
-          <p className="mb-2 text-center text-[0.68rem] text-[var(--fg-muted)]">
-            {anchoPreview} px · {Math.round(escala * 100)} %
-          </p>
-          {/* El alto se limita FUERA del zoom: dentro de un elemento con
-              `zoom`, las unidades (dvh, rem) también se escalan y el lienzo
-              quedaba mucho más bajo de lo pedido. */}
-          <div className="h-[calc(100dvh-15rem)] min-h-[26rem] overflow-hidden rounded-[var(--radius)] border border-[var(--border)] bg-[var(--paper)]">
-          <PreviewFrame width={anchoPreview} scale={escala}>
+          <div className="h-[calc(100dvh-13rem)] min-h-[30rem]">
+          <PreviewFrame device={device}>
           <div
             className="bg-[var(--paper)]"
             // Clic en navbar, pie, cuerpo… selecciona ese componente en el panel.
