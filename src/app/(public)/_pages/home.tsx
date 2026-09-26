@@ -13,8 +13,7 @@ import { SiteSidebar } from "@/components/site-sidebar";
 import { SiteShell } from "@/components/site-shell";
 import { getHomeLayoutConfig, getHomepageArticles } from "@/lib/content";
 import { DEFAULT_HOME_LAYOUT, splitHomeSlots } from "@/lib/home-layout";
-import { homeBackgroundStyle } from "@/lib/home-background";
-import { resolveParts } from "@/lib/template-parts";
+import { getSiteTheme } from "@/lib/site-theme";
 
 /**
  * Portada — generación estática con ISR.
@@ -52,7 +51,9 @@ async function HomePage({ locale }: { locale: Locale }) {
 
   const { lead, second, rail, river } = splitHomeSlots(articles);
   // Cuerpo de la plantilla compuesta; la paleta sigue siendo `templateId`.
-  const body = resolveParts(layout.templateId, layout.parts).body;
+  // Se toma de getSiteTheme (misma fuente que el resto del portal).
+  const site = await getSiteTheme();
+  const body = site.parts.body;
   const props = { lead, second, rail, river, layout, locale };
 
   const opinion = articles.find((a) => a.categorySlug === "opinion");
@@ -64,8 +65,8 @@ async function HomePage({ locale }: { locale: Locale }) {
 
   return (
     <SiteShell
-      theme={layout.templateId}
-      style={homeBackgroundStyle(layout.background)}
+      theme={site.theme}
+      style={site.style}
       locale={locale} variant="portada"
     >
       {/* Cintillo de titulares: identidad de la portada esmeralda. */}

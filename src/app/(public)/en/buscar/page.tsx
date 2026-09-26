@@ -6,6 +6,10 @@
 import { makePage } from "../../_pages/buscar";
 import type { Metadata } from "next";
 
+// Se genera en cada visita y nunca en el build: prerenderizar aquí consultaba
+// Supabase desde el servidor de build y el despliegue caía por timeout.
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Search",
   robots: { index: false, follow: true },

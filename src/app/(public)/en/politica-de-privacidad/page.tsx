@@ -1,6 +1,8 @@
 /** Espejo en inglés: cambia la interfaz, no el documento. Va con noindex. */
 import { makePage, makeMetadata } from "../../_pages/institucional";
 
-export const revalidate = 86400;
+// Se genera en cada visita y nunca en el build: prerenderizar aquí consultaba
+// Supabase desde el servidor de build y el despliegue caía por timeout.
+export const dynamic = "force-dynamic";
 export const generateMetadata = makeMetadata("politica-de-privacidad", "en");
 export default makePage("politica-de-privacidad", "en");

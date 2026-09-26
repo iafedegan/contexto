@@ -6,7 +6,9 @@ import { getSiteTheme } from "@/lib/site-theme";
 import { getTopLevelCategories } from "@/lib/content";
 import { siteUrl } from "@/lib/utils";
 
-export const revalidate = 3600;
+// Se genera en cada visita y nunca en el build: prerenderizar aquí consultaba
+// Supabase desde el servidor de build y el despliegue caía por timeout.
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Suscríbete por RSS",
