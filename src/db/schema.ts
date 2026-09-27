@@ -381,6 +381,38 @@ export const redirects = pgTable(
   (t) => [uniqueIndex("redirects_from_idx").on(t.fromPath)],
 );
 
+// --- Boletín: ediciones ------------------------------------------------
+// Cada edición del boletín (borrador o enviada). Los suscriptores viven en
+// `newsletter_subscribers`; el envío es reanudable: `cursor` guarda el último
+// suscriptor procesado, así una lista grande se envía por tandas sin repetir.
+export const newsletterEditions = pgTable(
+  "newsletter_editions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    subject: text("subject").notNull(),
+    // Texto que muestran los clientes de correo junto al asunto.
+    preheader: text("preheader").notNull().default(""),
+    // Saludo o nota del editor, antes de las noticias.
+    intro: text("intro").notNull().default(""),
+    // Notas incluidas, en orden; la primera es la destacada.
+    articleSlugs: jsonb("article_slugs").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+    // borrador | enviando | enviada
+    status: text("status").notNull().default("borrador"),
+    // Número de la edición, asignado al empezar el envío.
+    issue: integer("issue"),
+    cursor: text("cursor"),
+    total: integer("total").notNull().default(0),
+    delivered: integer("delivered").notNull().default(0),
+    failed: integer("failed").notNull().default(0),
+    startedAt: timestamp("started_at", { withTimezone: true }),
+    sentAt: timestamp("sent_at", { withTimezone: true }),
+    createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("newsletter_editions_status_idx").on(t.status, t.createdAt)],
+);
+
 // --- Ajustes de sitio (clave/valor) --------------------------------
 // Mecanismo genérico para configuración editable desde el panel que no es
 // contenido (p. ej. el diseño de las secciones de portada). Una fila por

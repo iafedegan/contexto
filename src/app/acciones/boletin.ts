@@ -19,6 +19,7 @@ import { newsletterSubscribers } from "@/db/schema";
 import { headers } from "next/headers";
 import { clientIp, hit } from "@/lib/rate-limit";
 import { verifyHuman } from "@/lib/turnstile";
+import { sendConfirmationEmail } from "@/lib/newsletter/confirm";
 
 export type BoletinState = { ok: boolean; message: string } | null;
 
@@ -73,6 +74,9 @@ export async function suscribirBoletin(
     } else {
       await db.insert(newsletterSubscribers).values({ email, confirmToken });
     }
+    // El correo de confirmación sale en cuanto hay proveedor configurado. Un
+    // fallo al enviarlo no debe romper el alta: queda pendiente y trazable.
+    await sendConfirmationEmail(email, confirmToken).catch(() => false);
   } catch {
     return {
       ok: false,

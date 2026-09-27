@@ -31,6 +31,7 @@ const GROUPS: Group[] = [
     items: [
       { href: "/panel", label: "Resumen", hint: "Estado editorial de un vistazo" },
       { href: "/panel/articulos", label: "Artículos", hint: "Crear, editar y programar" },
+      { href: "/panel/newsletter", label: "Newsletter", hint: "Configurar y enviar el boletín" },
     ],
   },
   {
