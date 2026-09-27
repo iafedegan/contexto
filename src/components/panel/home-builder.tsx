@@ -93,6 +93,14 @@ export function HomeBuilder({
   const [region, setRegion] = useState<RegionId>("navbar");
   const [popup, setPopup] = useState<PopupConfig>(initialPopup);
   const [popupPreview, setPopupPreview] = useState(false);
+  // Lienzo: «real» = la portada tal cual la ve el público (iframe de /vista-portada
+  // con el borrador aplicado); «edit» = versión aproximada donde se arrastran tarjetas.
+  const [canvasMode, setCanvasMode] = useState<"real" | "edit">("real");
+  const [draftReady, setDraftReady] = useState(false);
+  const [frameNonce, setFrameNonce] = useState(0);
+  const frameDoc = useRef<Document | null>(null);
+  const regionRef = useRef<RegionId>("navbar");
+  const selectedRef = useRef<number | null>(null);
   // Anuncios: lo que se escribe (sin guardar) y cuál se está editando, para verlo en el lienzo.
   const [adDrafts, setAdDrafts] = useState<Record<string, AdDraft>>({});
   const [adFocus, setAdFocus] = useState<string | null>(null);
@@ -109,9 +117,12 @@ export function HomeBuilder({
   const initialLayoutSerialized = useMemo(() => JSON.stringify(initialLayout), [initialLayout]);
   const dirty = serializeItems(items) !== initialItemsSerialized || JSON.stringify(layout) !== initialLayoutSerialized;
 
-  // Borrador para la pestaña «Vista previa» (que renderiza la portada real): se
-  // guarda en el servidor, con un pequeño retraso, cada vez que cambia algo; al
-  // terminar se avisa a la otra pestaña para que se actualice.
+  // Borrador de diseño: se guarda en el servidor (con un pequeño retraso) cada
+  // vez que cambia algo. Lo lee la portada real que se enseña en el lienzo y en
+  // la pestaña «Vista previa». Tras guardar, el lienzo se recarga y se avisa a
+  // la otra pestaña. El primer guardado es inmediato y desbloquea el lienzo,
+  // para no enseñar un borrador viejo de una sesión anterior.
+  const firstDraft = useRef(true);
   useEffect(() => {
     const draft: PortadaDraft = {
       layout,
@@ -119,16 +130,67 @@ export function HomeBuilder({
       popup,
       adDrafts,
     };
-    const id = setTimeout(async () => {
+    const isFirst = firstDraft.current;
+    firstDraft.current = false;
+    const save = async () => {
       try {
         await saveHomeDraft(draft);
         localStorage.setItem(DRAFT_PING_KEY, String(Date.now()));
       } catch {
-        /* sin permiso o sin conexión: la vista previa mostrará lo último guardado */
+        /* sin permiso o sin conexión: el lienzo mostrará lo último guardado */
+      } finally {
+        setDraftReady(true);
+        if (!isFirst) setFrameNonce((n) => n + 1);
       }
-    }, 700);
+    };
+    if (isFirst) {
+      void save();
+      return;
+    }
+    const id = setTimeout(() => void save(), 700);
     return () => clearTimeout(id);
   }, [layout, items, popup, adDrafts]);
+
+  // Marca en la portada real el componente y la tarjeta que se están editando.
+  function paintSelection() {
+    const st = frameDoc.current?.getElementById("cg-sel");
+    if (!st) return;
+    const r = regionRef.current;
+    const c = selectedRef.current;
+    st.textContent =
+      `[data-region="${r}"]{outline:2px dashed #b45309;outline-offset:-2px}` +
+      (c !== null ? `[data-card-index="${c}"]{outline:3px solid #b45309;outline-offset:2px}` : "");
+  }
+  useEffect(() => {
+    regionRef.current = region;
+    selectedRef.current = selected;
+    paintSelection();
+  });
+
+  // Se llama cada vez que carga la portada real del lienzo.
+  function hookFrame(doc: Document) {
+    frameDoc.current = doc;
+    if (!doc.getElementById("cg-sel")) {
+      const st = doc.createElement("style");
+      st.id = "cg-sel";
+      doc.head.appendChild(st);
+    }
+    paintSelection();
+    // Clic en un componente o una tarjeta: se selecciona para editarlo. Los
+    // enlaces no navegan (llevarían fuera del borrador).
+    doc.addEventListener(
+      "click",
+      (e) => {
+        const el = e.target as HTMLElement;
+        if (el.closest("a")) e.preventDefault();
+        const card = el.closest("[data-card-index]")?.getAttribute("data-card-index");
+        if (card !== null && card !== undefined) setSelected(Number(card));
+        const r = el.closest("[data-region]")?.getAttribute("data-region") as RegionId | null;
+        if (r) setRegion(r);
+      },
+      true,
+    );
+  }
 
   // Si en la pestaña de vista previa se aceptó y publicó el diseño, se
   // recarga para partir de lo guardado (y «Cambios sin guardar» desaparece).
@@ -277,6 +339,28 @@ export function HomeBuilder({
             ))}
           </div>
 
+          {/* Vista real (idéntica al sitio) o edición de tarjetas (arrastrar para reordenar). */}
+          <div className="flex items-center gap-0.5 rounded-full border border-[var(--border)] p-0.5 text-xs font-semibold">
+            {(
+              [
+                ["real", "Vista real"],
+                ["edit", "Editar tarjetas"],
+              ] as const
+            ).map(([id, label]) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setCanvasMode(id)}
+                aria-pressed={canvasMode === id}
+                className={`rounded-full px-3 py-1.5 transition ${
+                  canvasMode === id ? "bg-[var(--accent)] text-[var(--accent-fg)]" : "text-[var(--fg-muted)] hover:text-[var(--accent)]"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
           <button
             type="button"
             onClick={() => window.open("/panel/portada?vista=1", "_blank")}
@@ -293,7 +377,7 @@ export function HomeBuilder({
             ) : saved ? (
               <span className="font-semibold text-[var(--accent-2)]">Guardado ✓</span>
             ) : (
-              "Clic en una tarjeta · arrastra para reordenar"
+              canvasMode === "real" ? "Pulsa un componente o una tarjeta para editarlo" : "Pulsa una tarjeta · arrástrala para reordenar"
             )}
           </span>
         </div>
@@ -303,7 +387,19 @@ export function HomeBuilder({
           className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--bg-2)] p-3 shadow-[var(--shadow)]"
         >
           <div className="h-[calc(100dvh-13rem)] min-h-[30rem]">
-          <PreviewFrame device={device}>
+          {canvasMode === "real" ? (
+            draftReady ? (
+              <PreviewFrame
+                key="real"
+                device={device}
+                src={`/vista-portada?popup=${popupPreview ? 1 : 0}&n=${frameNonce}`}
+                onFrameLoad={hookFrame}
+              />
+            ) : (
+              <div className="grid h-full place-items-center text-sm text-[var(--fg-muted)]">Preparando la vista real…</div>
+            )
+          ) : (
+          <PreviewFrame key="edit" device={device}>
           <div
             className="bg-[var(--paper)]"
             // Clic en navbar, pie, cuerpo… selecciona ese componente en el panel.
@@ -334,6 +430,7 @@ export function HomeBuilder({
             />
           </div>
           </PreviewFrame>
+          )}
           </div>
         </div>
       </div>

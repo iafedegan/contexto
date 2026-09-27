@@ -13,7 +13,7 @@ import { AI_SEARCH_BOTS, AI_TRAINING_BOTS } from "@/lib/bots";
  */
 export default function robots(): MetadataRoute.Robots {
   // `/vista-previa` lleva además `noindex`: son borradores con enlace firmado.
-  const disallow = ["/panel", "/api/", "/buscar", "/vista-previa"];
+  const disallow = ["/panel", "/api/", "/buscar", "/vista-previa", "/vista-portada"];
 
   return {
     rules: [

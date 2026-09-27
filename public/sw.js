@@ -29,6 +29,7 @@ const APP_SHELL = [OFFLINE_URL, "/manifest.webmanifest"];
 const NEVER_CACHE_PREFIXES = [
   "/panel",
   "/vista-previa",
+  "/vista-portada",
   "/api/assistant",
   "/api/auth",
   "/api/revalidate",

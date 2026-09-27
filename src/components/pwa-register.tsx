@@ -16,7 +16,7 @@ type NetworkInformation = { saveData?: boolean; effectiveType?: string; type?: s
 export function PwaRegister() {
   useEffect(() => {
     if (!("serviceWorker" in navigator)) return;
-    if (window.location.pathname.startsWith("/panel")) return;
+    if (window.location.pathname.startsWith("/panel") || window.location.pathname.startsWith("/vista-")) return;
 
     const version = process.env.NEXT_PUBLIC_BUILD_ID ?? "dev";
     navigator.serviceWorker

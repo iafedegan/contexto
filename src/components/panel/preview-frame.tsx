@@ -31,7 +31,20 @@ const BEZEL: Record<Device, { pad: number; radius: number; screenRadius: number;
   mac: { pad: 14, radius: 16, screenRadius: 4, base: 22 },
 };
 
-export function PreviewFrame({ device, children }: { device: Device; children: React.ReactNode }) {
+export function PreviewFrame({
+  device,
+  children,
+  src,
+  onFrameLoad,
+}: {
+  device: Device;
+  /** Contenido propio (modo edición). Se ignora si hay `src`. */
+  children?: React.ReactNode;
+  /** Dirección real a cargar en el marco (portada tal cual la ve el público). */
+  src?: string;
+  /** Se llama cada vez que carga el documento del marco (solo con `src`). */
+  onFrameLoad?: (doc: Document) => void;
+}) {
   const area = useRef<HTMLDivElement>(null);
   const frame = useRef<HTMLIFrameElement>(null);
   const [mount, setMount] = useState<HTMLElement | null>(null);
@@ -56,6 +69,8 @@ export function PreviewFrame({ device, children }: { device: Device; children: R
   );
 
   useEffect(() => {
+    // Con `src` el marco carga una página real: no hay nada que montar aquí.
+    if (src !== undefined) return;
     const iframe = frame.current;
     const doc = iframe?.contentDocument;
     if (!doc) return;
@@ -90,6 +105,8 @@ export function PreviewFrame({ device, children }: { device: Device; children: R
       mo.disconnect();
       setMount(null);
     };
+    // El contenido se monta una sola vez; `src` no cambia entre modos (el editor remonta el marco).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const sw = w * scale;
@@ -121,6 +138,11 @@ export function PreviewFrame({ device, children }: { device: Device; children: R
           <div className="relative overflow-hidden bg-[var(--paper)]" style={{ width: sw, height: sh, borderRadius: b.screenRadius }}>
             <iframe
               ref={frame}
+              src={src}
+              onLoad={(e) => {
+                const doc = e.currentTarget.contentDocument;
+                if (src !== undefined && doc) onFrameLoad?.(doc);
+              }}
               title={`Vista previa en ${label}`}
               className="absolute left-0 top-0 origin-top-left border-0"
               style={{ width: w, height: h, transform: `scale(${scale})` }}
@@ -146,7 +168,7 @@ export function PreviewFrame({ device, children }: { device: Device; children: R
       <p className="text-[0.68rem] text-[var(--fg-muted)]">
         {label} · {w}×{h} · {Math.round(scale * 100)} %
       </p>
-      {mount && createPortal(children, mount)}
+      {src === undefined && mount && createPortal(children, mount)}
     </div>
   );
 }

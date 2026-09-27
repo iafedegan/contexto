@@ -35,7 +35,8 @@ function stable(v: unknown): string {
  * el borrador. Las funciones del portal (getHomeLayoutConfig, getSitePopup…)
  * memoizan por petición; llamarlas antes dejaría en caché el diseño publicado.
  */
-export async function HomeRealPreview() {
+/** Carga el borrador del editor, calcula si hay cambios sin publicar y lo fija para esta petición. */
+export async function applyDraftForRequest(opts: { popup?: "auto" | "show" | "hide" } = {}) {
   const user = await requireRole("editor");
 
   const [draftRow] = await db.select({ value: siteSettings.value }).from(siteSettings).where(eq(siteSettings.key, draftKey(user.id))).limit(1);
@@ -59,11 +60,28 @@ export async function HomeRealPreview() {
       stable(savedItems.map((i) => [i.slug, i.homeStyle ?? null])) !== stable(draft.items.map((i) => [i.slug, i.homeStyle ?? null]));
   }
 
-  setPreviewDraft(draft);
+  // El lienzo del editor decide si enseña el popup (botón «Ver en el lienzo»).
+  const applied =
+    draft && opts.popup === "hide"
+      ? { ...draft, popup: { ...draft.popup, enabled: false } }
+      : draft && opts.popup === "show"
+        ? { ...draft, popup: { ...draft.popup, enabled: true } }
+        : draft;
+  setPreviewDraft(applied);
+  return { draft, changed };
+}
 
+export async function HomeRealPreview() {
+  const { draft, changed } = await applyDraftForRequest();
   return (
     <PreviewChrome changed={changed} hasDraft={!!draft}>
       <Home locale="es" />
     </PreviewChrome>
   );
+}
+
+/** La portada real con el borrador aplicado, sin marco: para incrustarla en el lienzo del editor. */
+export async function HomeRealEmbed({ popup }: { popup: "show" | "hide" }) {
+  await applyDraftForRequest({ popup });
+  return <Home locale="es" />;
 }

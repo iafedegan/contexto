@@ -36,7 +36,9 @@ export function EditableCard({
   // La principal es el «hero»; el resto, «tarjetas». Lo usa el estilo por
   // componente de /panel/portada (src/lib/home-regions.ts).
   const region = index === 0 ? "hero" : "cards";
-  if (!builderDragProps) return <div data-region={region} className={className}>{children}</div>;
+  // `data-card-index`: permite al editor saber qué tarjeta se pulsó dentro de la
+  // portada real (vista previa incrustada) para abrir sus ajustes.
+  if (!builderDragProps) return <div data-region={region} data-card-index={index} className={className}>{children}</div>;
 
   const isSelected = builderSelected === index;
   const isOver = builderOverIndex === index;
@@ -44,6 +46,7 @@ export function EditableCard({
     <div
       {...builderDragProps(index)}
       data-region={region}
+      data-card-index={index}
       className={cn(
         "group/editable relative h-full cursor-pointer outline-2 outline-offset-2 transition",
         isSelected
