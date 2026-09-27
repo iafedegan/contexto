@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useRef, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   Bold,
+  ExternalLink,
   ChevronDown,
   Columns2,
   Palette,
@@ -22,12 +23,10 @@ import {
   Type,
   X,
 } from "lucide-react";
-import { FeatureStrip } from "@/components/feature-strip";
 import { AdsEditor } from "@/components/panel/ads-editor";
-import { AdsPreview } from "@/components/panel/ads-preview";
+import { HomeCanvasSite } from "@/components/panel/home-canvas";
 import type { AdDraft } from "@/components/panel/ads-zone-form";
 import type { AdsZoneRow } from "@/lib/ads";
-import { TEMPLATE_COMPONENTS } from "@/components/home/templates";
 import {
   saveHomeLayout,
   resetHomeLayout,
@@ -37,15 +36,14 @@ import {
 import type { ArticleListItem } from "@/lib/content";
 import type { HomeLayoutConfig, HomeStyle } from "@/db/schema";
 import { HOME_TEMPLATES } from "@/lib/home-layout";
-import { homeBackgroundStyle } from "@/lib/home-background";
-import { regionsCss, type RegionId } from "@/lib/home-regions";
+import type { RegionId } from "@/lib/home-regions";
 import { RegionEditor } from "@/components/panel/region-editor";
 import { PartsEditor } from "@/components/panel/parts-editor";
 import { PopupEditor } from "@/components/panel/popup-editor";
 import { PreviewFrame } from "@/components/panel/preview-frame";
-import { SitePopup } from "@/components/site-popup";
 import type { PopupConfig } from "@/lib/popup-types";
-import { resolveParts, type FooterId, type NavbarId } from "@/lib/template-parts";
+import { ACCEPTED_KEY, DRAFT_KEY, type PortadaDraft } from "@/lib/portada-draft";
+import type { FooterId, NavbarId } from "@/lib/template-parts";
 import { HOME_FONTS, HOME_FONT_GROUPS, type HomeTitleFont } from "@/lib/home-fonts";
 import { cn } from "@/lib/utils";
 
@@ -97,9 +95,6 @@ export function HomeBuilder({
   // Anuncios: lo que se escribe (sin guardar) y cuál se está editando, para verlo en el lienzo.
   const [adDrafts, setAdDrafts] = useState<Record<string, AdDraft>>({});
   const [adFocus, setAdFocus] = useState<string | null>(null);
-  const ad = (position: import("@/lib/ads-positions").AdPosition, className?: string) => (
-    <AdsPreview position={position} zones={adsZones} drafts={adDrafts} focusKey={adFocus} className={className} />
-  );
   // "template": elegir la plantilla. "content": la página real, editable —
   // clic para estilo, arrastrar para reordenar. La disposición de secciones
   // (columnas, dirección de "En breve") se ajusta desde "content" también,
@@ -112,6 +107,32 @@ export function HomeBuilder({
   const initialItemsSerialized = useMemo(() => serializeItems(initialItems), [initialItems]);
   const initialLayoutSerialized = useMemo(() => JSON.stringify(initialLayout), [initialLayout]);
   const dirty = serializeItems(items) !== initialItemsSerialized || JSON.stringify(layout) !== initialLayoutSerialized;
+
+  // Borrador para la vista previa a tamaño real (otra pestaña): se escribe en
+  // el navegador cada vez que cambia algo.
+  useEffect(() => {
+    const draft: PortadaDraft = {
+      layout,
+      items: items.map((i) => ({ id: i.id, homeStyle: i.homeStyle ?? null })),
+      popup,
+      adDrafts,
+    };
+    try {
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+    } catch {
+      /* sin almacenamiento: la vista previa mostrará lo guardado */
+    }
+  }, [layout, items, popup, adDrafts]);
+
+  // Si en la pestaña de vista previa se aceptó y publicó el diseño, se
+  // recarga para partir de lo guardado (y «Cambios sin guardar» desaparece).
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === ACCEPTED_KEY) router.refresh();
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, [router]);
 
   function move(from: number, to: number) {
     setItems((prev) => {
@@ -195,24 +216,6 @@ export function HomeBuilder({
     return <p className="meta">No hay artículos publicados todavía.</p>;
   }
 
-  const lead = items[0];
-  const second = items[1];
-  const rail = items.slice(2, 6);
-  const river = items.slice(6);
-  // Plantilla compuesta: la paleta es `templateId`; navbar, cuerpo y footer
-  // pueden venir de plantillas distintas.
-  const parts = resolveParts(layout.templateId, layout.parts);
-  const Template = TEMPLATE_COMPONENTS[parts.body] ?? TEMPLATE_COMPONENTS.clasico;
-
-  // Misma composición que la portada pública (src/app/(public)/page.tsx),
-  // para que esta vista sea un espejo real y no una cuadrícula genérica aparte.
-  const opinion = items.find((a) => a.categorySlug === "opinion");
-  const strip = [
-    { label: "Actualidad", article: items[1] ?? items[0] },
-    { label: "Especiales", article: items[2] ?? items[0] },
-    { label: "Columna destacada", article: opinion ?? items[3] ?? items[0] },
-  ].filter((x) => x.article);
-
   // Dispositivo de la vista previa: pantalla real de iPhone, iPad o Mac.
   const device = ({ escritorio: "mac", tablet: "ipad", movil: "iphone" } as const)[viewport];
 
@@ -268,6 +271,16 @@ export function HomeBuilder({
             ))}
           </div>
 
+          <button
+            type="button"
+            onClick={() => window.open("/panel/portada?vista=1", "_blank")}
+            title="Abre esta vista previa a tamaño real en otra pestaña; se actualiza sola mientras editas"
+            className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border-strong)] px-3.5 py-2 text-xs font-semibold transition hover:border-[var(--accent)] hover:text-[var(--accent)]"
+          >
+            <ExternalLink size={13} />
+            Vista previa en pestaña nueva
+          </button>
+
           <span className="ml-auto text-xs text-[var(--fg-muted)]">
             {dirty ? (
               <span className="font-semibold text-[var(--fg)]">Cambios sin guardar</span>
@@ -296,64 +309,23 @@ export function HomeBuilder({
               if (r) setRegion(r);
             }}
           >
-            <div
-              className="relative flex min-h-screen flex-col bg-[var(--paper)] text-[var(--ink)] transition-colors"
-              data-theme={layout.templateId}
-              data-site-root
-              style={homeBackgroundStyle(layout.background)}
-            >
-              <style
-                dangerouslySetInnerHTML={{
-                  __html:
-                    regionsCss(layout.regions) +
-                    // Marca en el lienzo el componente que se está editando.
-                    `\n[data-site-root] [data-region="${region}"]{outline:2px dashed #b45309;outline-offset:-2px}`,
-                }}
-              />
-              {headerVariants[parts.navbar]}
-              <main data-region="body" className="shell flex-1 py-8">
-                {ad("home_top", "mx-auto mb-10")}
-                {parts.body === "clasico" && (
-                  <div className="mb-10">
-                    <FeatureStrip items={strip} />
-                  </div>
-                )}
-                {/* Mismo esquema que la portada real: contenido + barra lateral. */}
-                <div className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_19rem]">
-                  {/* `lx-bleed-off`, igual que en la portada real: sin él, los héroes a
-                      sangre (carrusel de Revista) se salen de su columna y tapan la lateral. */}
-                  <div className="lx-bleed-off min-w-0">
-                    <Template
-                      lead={lead}
-                      second={second}
-                      rail={rail}
-                      river={river}
-                      layout={layout}
-                      interactive={false}
-                      builderSelected={selected}
-                      builderOverIndex={overIndex}
-                      builderDragProps={dragProps}
-                      builderHasStyle={hasStyle}
-                    />
-                    {ad("home_billboard", "mx-auto mt-14")}
-                  </div>
-                  <aside className="flex flex-col gap-8">
-                    {ad("sidebar_top")}
-                    <div className="grid h-40 place-items-center rounded-[var(--radius)] border border-dashed border-[var(--border)] p-4 text-center text-[0.7rem] text-[var(--fg-muted)]">
-                      Barra lateral: más leídas, boletín y redes
-                    </div>
-                    {ad("sidebar_bottom")}
-                    {ad("sidebar_sticky", "sticky top-4")}
-                  </aside>
-                </div>
-                {ad("home_bottom", "mx-auto mt-14")}
-              </main>
-              <div className="shell pb-10">{ad("footer", "mx-auto")}</div>
-              {footerVariants[parts.footer]}
-              {popupPreview && (
-                <SitePopup key={JSON.stringify(popup)} config={popup} preview onClose={() => setPopupPreview(false)} />
-              )}
-            </div>
+            <HomeCanvasSite
+              layout={layout}
+              items={items}
+              headerVariants={headerVariants}
+              footerVariants={footerVariants}
+              adsZones={adsZones}
+              adDrafts={adDrafts}
+              adFocus={adFocus}
+              region={region}
+              popup={popup}
+              popupPreview={popupPreview}
+              onPopupClose={() => setPopupPreview(false)}
+              selected={selected}
+              overIndex={overIndex}
+              dragProps={dragProps}
+              hasStyle={hasStyle}
+            />
           </div>
           </PreviewFrame>
           </div>

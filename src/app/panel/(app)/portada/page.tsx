@@ -9,10 +9,16 @@ import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { navItems } from "@/components/site-shell";
 import { getSitePopup } from "@/lib/popup";
+import { HomePreviewTab } from "@/components/panel/home-preview-tab";
 
 export const dynamic = "force-dynamic";
 
-export default async function PortadaPage() {
+export default async function PortadaPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ vista?: string }>;
+}) {
+  const { vista } = await searchParams;
   const [session, rows, layout, nav, adsZones, popup] = await Promise.all([
     auth(),
     db
@@ -42,6 +48,35 @@ export default async function PortadaPage() {
     getSitePopup(),
   ]);
 
+  const headerVariants = {
+    masthead: <SiteHeader theme="clasico" nav={nav} variant="masthead" />,
+    couture: <SiteHeader theme="clasico" nav={nav} variant="couture" />,
+    bold: <SiteHeader theme="clasico" nav={nav} variant="bold" />,
+    glass: <SiteHeader theme="clasico" nav={nav} variant="glass" />,
+    crest: <SiteHeader theme="clasico" nav={nav} variant="crest" />,
+  };
+  const footerVariants = {
+    grand: <SiteFooter theme="clasico" nav={nav} variant="grand" />,
+    atelier: <SiteFooter theme="clasico" nav={nav} variant="atelier" />,
+    copper: <SiteFooter theme="clasico" nav={nav} variant="copper" />,
+    aurora: <SiteFooter theme="clasico" nav={nav} variant="aurora" />,
+    seal: <SiteFooter theme="clasico" nav={nav} variant="seal" />,
+  };
+
+  // Vista previa a tamaño real en una pestaña nueva (botón del editor).
+  if (vista === "1") {
+    return (
+      <HomePreviewTab
+        initialItems={rows}
+        initialLayout={layout}
+        initialPopup={popup}
+        headerVariants={headerVariants}
+        footerVariants={footerVariants}
+        adsZones={adsZones}
+      />
+    );
+  }
+
   return (
     // El editor necesita todo el ancho: se sale del contenedor del panel con
     // left-1/2 + w-screen (el padre recorta en horizontal, ver .lx-shell).
@@ -57,20 +92,8 @@ export default async function PortadaPage() {
         initialPopup={popup}
         adsZones={adsZones}
         canManagePauta={session?.user.role === "administrador"}
-        headerVariants={{
-          masthead: <SiteHeader theme="clasico" nav={nav} variant="masthead" />,
-          couture: <SiteHeader theme="clasico" nav={nav} variant="couture" />,
-          bold: <SiteHeader theme="clasico" nav={nav} variant="bold" />,
-          glass: <SiteHeader theme="clasico" nav={nav} variant="glass" />,
-          crest: <SiteHeader theme="clasico" nav={nav} variant="crest" />,
-        }}
-        footerVariants={{
-          grand: <SiteFooter theme="clasico" nav={nav} variant="grand" />,
-          atelier: <SiteFooter theme="clasico" nav={nav} variant="atelier" />,
-          copper: <SiteFooter theme="clasico" nav={nav} variant="copper" />,
-          aurora: <SiteFooter theme="clasico" nav={nav} variant="aurora" />,
-          seal: <SiteFooter theme="clasico" nav={nav} variant="seal" />,
-        }}
+        headerVariants={headerVariants}
+        footerVariants={footerVariants}
       />
       </div>
     </div>
