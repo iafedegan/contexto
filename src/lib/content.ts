@@ -11,9 +11,13 @@ import {
   type HomeStyle,
 } from "@/db/schema";
 import { DEFAULT_HOME_LAYOUT } from "@/lib/home-layout";
+import { getPreviewDraft } from "@/lib/preview-draft";
 
 /** Disposición y plantilla de la portada, configuradas en /panel/portada. */
 export const getHomeLayoutConfig = cache(async (): Promise<Required<HomeLayoutConfig>> => {
+  // Vista previa del editor: el diseño sin publicar (ver src/lib/preview-draft.ts).
+  const draft = getPreviewDraft();
+  if (draft) return { ...DEFAULT_HOME_LAYOUT, ...draft.layout };
   const [row] = await db
     .select({ value: siteSettings.value })
     .from(siteSettings)
@@ -81,6 +85,25 @@ export async function getRecentArticles(limit = 12): Promise<ArticleListItem[]> 
  * portada; RSS, llms.txt y el cintillo siguen el orden cronológico real.
  */
 export async function getHomepageArticles(limit = 13): Promise<ArticleListItem[]> {
+  // Vista previa del editor: el orden y estilo de tarjetas sin publicar.
+  const draft = getPreviewDraft();
+  if (draft) {
+    const rows = await db
+      .select(listSelection)
+      .from(articles)
+      .leftJoin(categories, eq(articles.categoryId, categories.id))
+      .leftJoin(authors, eq(articles.authorId, authors.id))
+      .where(publishedCondition)
+      .orderBy(desc(articles.publishedAt))
+      .limit(80);
+    const bySlug = new Map(rows.map((r) => [r.slug, r]));
+    const ordered = draft.items.flatMap((d) => {
+      const r = bySlug.get(d.slug);
+      return r ? [{ ...r, homeStyle: d.homeStyle }] : [];
+    });
+    const seen = new Set(draft.items.map((d) => d.slug));
+    return [...ordered, ...rows.filter((r) => !seen.has(r.slug))].slice(0, limit);
+  }
   return db
     .select(listSelection)
     .from(articles)

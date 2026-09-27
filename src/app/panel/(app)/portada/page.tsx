@@ -9,7 +9,7 @@ import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { navItems } from "@/components/site-shell";
 import { getSitePopup } from "@/lib/popup";
-import { HomePreviewTab } from "@/components/panel/home-preview-tab";
+import { HomeRealPreview } from "@/components/panel/home-real-preview";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +19,9 @@ export default async function PortadaPage({
   searchParams: Promise<{ vista?: string }>;
 }) {
   const { vista } = await searchParams;
+  // Vista previa REAL en pestaña nueva. Va la primera: las funciones del portal
+  // memoizan por petición y no deben ejecutarse antes de aplicar el borrador.
+  if (vista === "1") return <HomeRealPreview />;
   const [session, rows, layout, nav, adsZones, popup] = await Promise.all([
     auth(),
     db
@@ -62,20 +65,6 @@ export default async function PortadaPage({
     aurora: <SiteFooter theme="clasico" nav={nav} variant="aurora" />,
     seal: <SiteFooter theme="clasico" nav={nav} variant="seal" />,
   };
-
-  // Vista previa a tamaño real en una pestaña nueva (botón del editor).
-  if (vista === "1") {
-    return (
-      <HomePreviewTab
-        initialItems={rows}
-        initialLayout={layout}
-        initialPopup={popup}
-        headerVariants={headerVariants}
-        footerVariants={footerVariants}
-        adsZones={adsZones}
-      />
-    );
-  }
 
   return (
     // El editor necesita todo el ancho: se sale del contenedor del panel con

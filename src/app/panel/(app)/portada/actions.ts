@@ -1,14 +1,14 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { and, eq, isNotNull, notInArray, sql } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, notInArray, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { articles, siteSettings, type HomeLayoutConfig, type HomeStyle } from "@/db/schema";
 import { requireRole } from "@/lib/auth";
-import { sanitizeRegions } from "@/lib/home-regions";
+import { normalizeLayout } from "@/lib/home-layout-normalize";
 import { sanitizePopup, type PopupConfig } from "@/lib/popup-types";
-import { POPUP_KEY } from "@/lib/popup";
-import { BODIES, FOOTERS, NAVBARS } from "@/lib/template-parts";
+import { POPUP_KEY, getSitePopup } from "@/lib/popup";
+import { draftKey, sanitizeDraft } from "@/lib/preview-draft";
 
 export type HomeLayoutEntry = {
   id: string;
@@ -63,12 +63,7 @@ export async function resetHomeLayout() {
 export async function saveHomeSectionLayout(input: HomeLayoutConfig) {
   await requireRole("editor");
   // El estilo por componente acaba convertido en CSS: se guarda ya validado.
-  const parts = {
-    navbar: NAVBARS.find((n) => n.id === input.parts?.navbar)?.id,
-    body: BODIES.find((b) => b.id === input.parts?.body)?.id,
-    footer: FOOTERS.find((f) => f.id === input.parts?.footer)?.id,
-  };
-  const config: HomeLayoutConfig = { ...input, regions: sanitizeRegions(input.regions), parts };
+  const config = normalizeLayout(input);
   await db
     .insert(siteSettings)
     .values({ key: "home_layout", value: config })
@@ -93,4 +88,53 @@ export async function saveSitePopup(input: PopupConfig): Promise<PopupConfig> {
     .onConflictDoUpdate({ target: siteSettings.key, set: { value: config, updatedAt: sql`now()` } });
   revalidatePath("/", "layout");
   return config;
+}
+
+
+/**
+ * Guarda el borrador de diseño del editor en el servidor, para que la pestaña
+ * «Vista previa» pueda renderizar la portada real con él. Es solo del editor que
+ * lo escribe (una fila por usuario) y no afecta al sitio publicado.
+ */
+export async function saveHomeDraft(input: unknown): Promise<void> {
+  const user = await requireRole("editor");
+  const draft = sanitizeDraft(input);
+  if (!draft) return;
+  await db
+    .insert(siteSettings)
+    .values({ key: draftKey(user.id), value: draft })
+    .onConflictDoUpdate({ target: siteSettings.key, set: { value: draft, updatedAt: sql`now()` } });
+}
+
+/**
+ * «Aceptar y publicar»: lo que muestra la vista previa pasa al sitio. Usa el
+ * borrador guardado en el servidor (no lo que mande el navegador) para que se
+ * publique exactamente lo que se estaba viendo.
+ */
+export async function publishHomeDraft(): Promise<{ ok: boolean; message: string }> {
+  const user = await requireRole("editor");
+  const [row] = await db.select({ value: siteSettings.value }).from(siteSettings).where(eq(siteSettings.key, draftKey(user.id))).limit(1);
+  const draft = sanitizeDraft(row?.value);
+  if (!draft) return { ok: false, message: "No hay cambios que publicar." };
+
+  const slugs = draft.items.map((i) => i.slug);
+  const ids = slugs.length
+    ? await db.select({ id: articles.id, slug: articles.slug }).from(articles).where(inArray(articles.slug, slugs))
+    : [];
+  const idBySlug = new Map(ids.map((r) => [r.slug, r.id]));
+  const entries = draft.items.flatMap((i) => {
+    const id = idBySlug.get(i.slug);
+    return id ? [{ id, homeStyle: i.homeStyle }] : [];
+  });
+
+  await saveHomeLayout(entries);
+  await saveHomeSectionLayout(draft.layout);
+  // El popup solo se vuelve a guardar si cambió: al guardarlo se muestra otra vez
+  // a quien ya lo había cerrado.
+  const current = await getSitePopup();
+  if (JSON.stringify({ ...draft.popup, version: 0 }) !== JSON.stringify({ ...current, version: 0 })) {
+    await saveSitePopup(draft.popup);
+  }
+  await db.delete(siteSettings).where(eq(siteSettings.key, draftKey(user.id)));
+  return { ok: true, message: "Publicado en el sitio" };
 }

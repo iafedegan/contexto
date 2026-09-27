@@ -4,6 +4,7 @@ import { and, eq, gte, isNull, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { adsZones } from "@/db/schema";
 import { AD_ZONE_SPECS, positionOf, suffixOf, type AdPosition } from "@/lib/ads-positions";
+import { getPreviewDraft } from "@/lib/preview-draft";
 
 export * from "@/lib/ads-positions";
 
@@ -89,6 +90,19 @@ const activeAds = cache(async (): Promise<AdsZoneContent[]> => {
     .select({ key: adsZones.key, html: adsZones.html, imageUrl: adsZones.imageUrl, clickUrl: adsZones.clickUrl })
     .from(adsZones)
     .where(activeNow);
+
+  // Vista previa del editor: los anuncios que se están escribiendo se ven como
+  // si ya estuvieran publicados (aunque falte marcarlos como activos).
+  const draft = getPreviewDraft();
+  if (draft) {
+    const merged = new Map(rows.map((r) => [r.key, r as AdsZoneContent]));
+    for (const [key, d] of Object.entries(draft.adDrafts)) {
+      if (!positionOf(key)) continue;
+      if (d.html || d.imageUrl) merged.set(key, { key, html: d.html || null, imageUrl: d.imageUrl || null, clickUrl: d.clickUrl || null });
+      else merged.delete(key);
+    }
+    return [...merged.values()].filter((r) => r.html || r.imageUrl);
+  }
   return rows.filter((r) => r.html || r.imageUrl);
 });
 

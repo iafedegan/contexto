@@ -31,6 +31,7 @@ import {
   saveHomeLayout,
   resetHomeLayout,
   saveHomeSectionLayout,
+  saveHomeDraft,
   type HomeLayoutEntry,
 } from "@/app/panel/(app)/portada/actions";
 import type { ArticleListItem } from "@/lib/content";
@@ -42,7 +43,7 @@ import { PartsEditor } from "@/components/panel/parts-editor";
 import { PopupEditor } from "@/components/panel/popup-editor";
 import { PreviewFrame } from "@/components/panel/preview-frame";
 import type { PopupConfig } from "@/lib/popup-types";
-import { ACCEPTED_KEY, DRAFT_KEY, type PortadaDraft } from "@/lib/portada-draft";
+import { ACCEPTED_KEY, DRAFT_PING_KEY, type PortadaDraft } from "@/lib/portada-draft";
 import type { FooterId, NavbarId } from "@/lib/template-parts";
 import { HOME_FONTS, HOME_FONT_GROUPS, type HomeTitleFont } from "@/lib/home-fonts";
 import { cn } from "@/lib/utils";
@@ -108,20 +109,25 @@ export function HomeBuilder({
   const initialLayoutSerialized = useMemo(() => JSON.stringify(initialLayout), [initialLayout]);
   const dirty = serializeItems(items) !== initialItemsSerialized || JSON.stringify(layout) !== initialLayoutSerialized;
 
-  // Borrador para la vista previa a tamaño real (otra pestaña): se escribe en
-  // el navegador cada vez que cambia algo.
+  // Borrador para la pestaña «Vista previa» (que renderiza la portada real): se
+  // guarda en el servidor, con un pequeño retraso, cada vez que cambia algo; al
+  // terminar se avisa a la otra pestaña para que se actualice.
   useEffect(() => {
     const draft: PortadaDraft = {
       layout,
-      items: items.map((i) => ({ id: i.id, homeStyle: i.homeStyle ?? null })),
+      items: items.map((i) => ({ slug: i.slug, homeStyle: i.homeStyle ?? null })),
       popup,
       adDrafts,
     };
-    try {
-      localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
-    } catch {
-      /* sin almacenamiento: la vista previa mostrará lo guardado */
-    }
+    const id = setTimeout(async () => {
+      try {
+        await saveHomeDraft(draft);
+        localStorage.setItem(DRAFT_PING_KEY, String(Date.now()));
+      } catch {
+        /* sin permiso o sin conexión: la vista previa mostrará lo último guardado */
+      }
+    }, 700);
+    return () => clearTimeout(id);
   }, [layout, items, popup, adDrafts]);
 
   // Si en la pestaña de vista previa se aceptó y publicó el diseño, se
