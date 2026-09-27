@@ -20,19 +20,25 @@ type HeaderProps = {
   description?: string | null;
   chips: React.ReactNode;
   breadcrumb: React.ReactNode;
+  /** Atajos de fecha y filtros: van compactos a la derecha del título. */
+  filters?: React.ReactNode;
 };
 
 /** Cabecera de sección en el idioma visual de la plantilla. */
-export function SectionHeader({ theme, kicker, title, description, chips, breadcrumb }: HeaderProps) {
+export function SectionHeader({ theme, kicker, title, description, chips, breadcrumb, filters }: HeaderProps) {
   switch (theme) {
     case "clasico":
       // Diario: cabecera centrada entre filetes dobles, como una sección impresa.
       return (
         <header className="relative mb-12 pt-8 text-center">
           <div className="flex justify-center">{breadcrumb}</div>
-          <div className="mt-2 border-y-4 border-double border-[var(--fg)] py-6">
-            <p className="lx-kicker text-[var(--accent)]">{kicker}</p>
-            <h1 className="lx-display mt-2 text-5xl font-black uppercase tracking-tight md:text-7xl">{title}</h1>
+          <div className="mt-2 border-y-4 border-double border-[var(--fg)] py-6 lg:grid lg:grid-cols-[1fr_auto_1fr] lg:items-end lg:gap-6">
+            <span className="hidden lg:block" />
+            <div>
+              <p className="lx-kicker text-[var(--accent)]">{kicker}</p>
+              <h1 className="lx-display mt-2 text-5xl font-black uppercase tracking-tight md:text-7xl">{title}</h1>
+            </div>
+            <div className="mt-6 text-left lg:mt-0 lg:justify-self-end lg:text-right">{filters}</div>
           </div>
           {description && (
             <p className="mx-auto mt-5 max-w-2xl font-serif text-lg italic text-[var(--fg-muted)]">{description}</p>
@@ -45,8 +51,13 @@ export function SectionHeader({ theme, kicker, title, description, chips, breadc
       return (
         <header className="relative mb-14 pt-12">
           {breadcrumb}
-          <p className="lx-kicker mt-6 text-[var(--accent)]">{kicker}</p>
-          <h1 className="lx-display mt-3 text-6xl font-light italic leading-[0.9] tracking-tight md:text-8xl">{title}</h1>
+          <div className="mt-6 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+            <div className="min-w-0">
+              <p className="lx-kicker text-[var(--accent)]">{kicker}</p>
+              <h1 className="lx-display mt-3 text-6xl font-light italic leading-[0.9] tracking-tight md:text-8xl">{title}</h1>
+            </div>
+            <div className="lg:max-w-[46%] lg:shrink-0">{filters}</div>
+          </div>
           <div className="mt-8 grid gap-6 border-t border-[var(--border-strong)] pt-6 md:grid-cols-[2fr_1fr]">
             {description ? <p className="text-xl leading-relaxed text-[var(--fg-muted)]">{description}</p> : <span />}
             <div className="flex flex-wrap items-start gap-3 md:justify-end">{chips}</div>
@@ -62,8 +73,9 @@ export function SectionHeader({ theme, kicker, title, description, chips, breadc
             <div>
               <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-[var(--accent)]">{kicker}</p>
               <h1 className="text-3xl font-extrabold tracking-tight md:text-4xl">{title}</h1>
+              <div className="mt-2 flex flex-wrap gap-2 font-mono text-[11px]">{chips}</div>
             </div>
-            <div className="flex flex-wrap gap-2 font-mono text-[11px]">{chips}</div>
+            <div className="w-full lg:w-auto lg:max-w-[52%]">{filters}</div>
           </div>
           {description && <p className="mt-2 text-sm text-[var(--fg-muted)]">{description}</p>}
         </header>
@@ -76,10 +88,15 @@ export function SectionHeader({ theme, kicker, title, description, chips, breadc
           <div aria-hidden className="pointer-events-none absolute -bottom-24 left-10 size-72 rounded-full bg-[var(--accent)] opacity-20 blur-3xl" />
           <div className="relative">
             {breadcrumb}
-            <p className="lx-kicker mt-6 text-[var(--accent)]">{kicker}</p>
-            <h1 className="mt-3 bg-gradient-to-r from-[var(--fg)] via-[var(--accent)] to-[var(--accent-2)] bg-clip-text text-5xl font-black tracking-tight text-transparent md:text-7xl">
-              {title}
-            </h1>
+            <div className="mt-6 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+              <div className="min-w-0">
+                <p className="lx-kicker text-[var(--accent)]">{kicker}</p>
+                <h1 className="mt-3 bg-gradient-to-r from-[var(--fg)] via-[var(--accent)] to-[var(--accent-2)] bg-clip-text text-5xl font-black tracking-tight text-transparent md:text-7xl">
+                  {title}
+                </h1>
+              </div>
+              <div className="lg:max-w-[46%] lg:shrink-0">{filters}</div>
+            </div>
             {description && <p className="mt-5 max-w-2xl text-lg text-[var(--fg-muted)]">{description}</p>}
             <div className="mt-6 flex flex-wrap gap-3">{chips}</div>
           </div>
@@ -98,9 +115,13 @@ export function SectionHeader({ theme, kicker, title, description, chips, breadc
             <span aria-hidden>◆</span>
             <span className="h-px w-16 bg-gradient-to-l from-transparent to-[var(--accent)] md:w-40" />
           </div>
-          <h1 className="lx-display mt-5 bg-gradient-to-b from-[var(--fg)] to-[var(--accent)] bg-clip-text text-[2.6rem] font-semibold leading-[1] tracking-tight text-transparent sm:text-6xl md:text-8xl">
-            {title}
-          </h1>
+          <div className="mt-5 lg:grid lg:grid-cols-[1fr_auto_1fr] lg:items-end lg:gap-6">
+            <span className="hidden lg:block" />
+            <h1 className="lx-display bg-gradient-to-b from-[var(--fg)] to-[var(--accent)] bg-clip-text text-[2.6rem] font-semibold leading-[1] tracking-tight text-transparent sm:text-6xl md:text-8xl">
+              {title}
+            </h1>
+            <div className="mt-6 text-left lg:mt-0 lg:justify-self-end lg:text-right">{filters}</div>
+          </div>
           {description && (
             <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-[var(--fg-muted)]">{description}</p>
           )}
@@ -113,10 +134,15 @@ export function SectionHeader({ theme, kicker, title, description, chips, breadc
       return (
         <header className="relative mb-14 pt-10">
           {breadcrumb}
-          <p className="lx-kicker mt-6 text-[var(--accent)]">{kicker}</p>
-          <h1 className="lx-display mt-3 text-[2.6rem] font-extrabold leading-[0.95] tracking-tight break-words sm:text-5xl md:text-7xl">
-            {title}
-          </h1>
+          <div className="mt-6 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+            <div className="min-w-0">
+              <p className="lx-kicker text-[var(--accent)]">{kicker}</p>
+              <h1 className="lx-display mt-3 text-[2.6rem] font-extrabold leading-[0.95] tracking-tight break-words sm:text-5xl md:text-7xl">
+                {title}
+              </h1>
+            </div>
+            <div className="lg:max-w-[46%] lg:shrink-0">{filters}</div>
+          </div>
           {description && <p className="mt-6 max-w-2xl text-lg leading-relaxed text-[var(--fg-muted)]">{description}</p>}
           <div className="mt-8 flex flex-wrap items-center gap-3">{chips}</div>
           <hr className="lx-rule-strong mt-10" />

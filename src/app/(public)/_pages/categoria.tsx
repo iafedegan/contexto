@@ -78,6 +78,99 @@ async function CategoryPage({ params, searchParams, locale }: PageProps & { loca
     return localePath(locale, `/categoria/${slug}${qs ? `?${qs}` : ""}`);
   };
 
+  // Filtros de la sección, compactos y junto al título (ver SectionHeader). Los
+  // atajos de fecha (C-09) son enlaces, no botones: cada rango tiene su propia
+  // URL, cacheable y compartible. El formulario es GET y funciona sin JavaScript.
+  const filters = (
+    <div className="flex flex-col gap-2.5 lg:items-end">
+      <div className="flex flex-wrap items-center gap-1.5 lg:justify-end">
+        {RANGOS.map((r) => {
+          const desdeISO = r.dias === null ? "" : isoHaceDias(r.dias);
+          const activo = r.dias === null ? !desde && !hasta : desde === desdeISO && !hasta;
+          const sp = new URLSearchParams();
+          if (subcategoria) sp.set("subcategoria", subcategoria);
+          if (desdeISO) sp.set("desde", desdeISO);
+          const qs = sp.toString();
+          return (
+            <Link
+              key={r.clave}
+              href={localePath(locale, `/categoria/${slug}${qs ? `?${qs}` : ""}`)}
+              aria-current={activo ? "true" : undefined}
+              className={`lx-ui inline-flex min-h-10 items-center rounded-full border px-3 text-[0.6rem] uppercase tracking-[0.12em] lg:min-h-8 transition ${
+                activo
+                  ? "border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-fg)]"
+                  : "border-[var(--border)] text-[var(--fg-muted)] hover:border-[var(--accent)] hover:text-[var(--accent)]"
+              }`}
+            >
+              {t(locale, r.clave)}
+            </Link>
+          );
+        })}
+      </div>
+      {/* Filtros de la sección. Formulario GET: cada combinación es una URL
+          propia, enlazable y cacheable, y funciona sin JavaScript. */}
+      {subcategories.length > 0 && (
+        <form
+          action={localePath(locale, `/categoria/${slug}`)}
+          method="get"
+          className="flex flex-wrap items-end gap-2 lg:justify-end"
+        >
+          <label className="flex min-w-[8.5rem] flex-col gap-1">
+            <span className="lx-kicker !text-[0.55rem] text-[var(--fg-muted)]">{t(locale, "section.subcategory")}</span>
+            <select
+              name="subcategoria"
+              defaultValue={subcategoria ?? ""}
+              className="lx-ui rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] px-2 py-1.5 text-xs outline-none transition focus:border-[var(--accent)]"
+            >
+              <option value="">{t(locale, "section.all")}</option>
+              {subcategories.map((sc) => (
+                <option key={sc.slug} value={sc.slug}>
+                  {sc.name}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="flex flex-col gap-1">
+            <span className="lx-kicker !text-[0.55rem] text-[var(--fg-muted)]">{t(locale, "section.from")}</span>
+            <input
+              type="date"
+              name="desde"
+              defaultValue={desde ?? ""}
+              className="lx-ui w-[7.6rem] rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] px-2 py-1.5 text-xs outline-none transition focus:border-[var(--accent)]"
+            />
+          </label>
+
+          <label className="flex flex-col gap-1">
+            <span className="lx-kicker !text-[0.55rem] text-[var(--fg-muted)]">{t(locale, "section.to")}</span>
+            <input
+              type="date"
+              name="hasta"
+              defaultValue={hasta ?? ""}
+              className="lx-ui w-[7.6rem] rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] px-2 py-1.5 text-xs outline-none transition focus:border-[var(--accent)]"
+            />
+          </label>
+
+          <button
+            type="submit"
+            className="lx-ui min-h-9 rounded-full bg-[var(--accent)] px-4 text-xs font-semibold lg:min-h-8 text-[var(--accent-fg)] transition hover:opacity-90"
+          >
+            {t(locale, "section.filter")}
+          </button>
+
+          {filtrando && (
+            <Link
+              href={localePath(locale, `/categoria/${slug}`)}
+              className="lx-link text-xs text-[var(--fg-muted)]"
+            >
+              {t(locale, "section.clear")}
+            </Link>
+          )}
+        </form>
+      )}
+    </div>
+  );
+
   return (
     <SiteShell theme={site.theme} style={site.style} locale={locale} variant="seccion">
       <JsonLd
@@ -113,6 +206,7 @@ async function CategoryPage({ params, searchParams, locale }: PageProps & { loca
             <span className="text-[var(--accent)]">{categoryLabel(locale, slug, category.name)}</span>
           </nav>
         }
+        filters={filters}
         chips={
           <>
             <span className="lx-chip border-[var(--border-strong)] text-[var(--accent)]">
@@ -122,95 +216,6 @@ async function CategoryPage({ params, searchParams, locale }: PageProps & { loca
           </>
         }
       />
-
-      {/* Atajos de fecha del C-09. Son enlaces, no botones: cada rango tiene su
-          propia URL, cacheable y compartible, y funcionan sin JavaScript. */}
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        {RANGOS.map((r) => {
-          const desdeISO = r.dias === null ? "" : isoHaceDias(r.dias);
-          const activo = r.dias === null ? !desde && !hasta : desde === desdeISO && !hasta;
-          const sp = new URLSearchParams();
-          if (subcategoria) sp.set("subcategoria", subcategoria);
-          if (desdeISO) sp.set("desde", desdeISO);
-          const qs = sp.toString();
-          return (
-            <Link
-              key={r.clave}
-              href={localePath(locale, `/categoria/${slug}${qs ? `?${qs}` : ""}`)}
-              aria-current={activo ? "true" : undefined}
-              className={`lx-ui inline-flex min-h-11 items-center rounded-full border px-4 text-[0.72rem] uppercase tracking-[0.14em] transition ${
-                activo
-                  ? "border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-fg)]"
-                  : "border-[var(--border)] text-[var(--fg-muted)] hover:border-[var(--accent)] hover:text-[var(--accent)]"
-              }`}
-            >
-              {t(locale, r.clave)}
-            </Link>
-          );
-        })}
-      </div>
-
-      {/* Filtros de la sección. Formulario GET: cada combinación es una URL
-          propia, enlazable y cacheable, y funciona sin JavaScript. */}
-      {subcategories.length > 0 && (
-        <form
-          action={localePath(locale, `/categoria/${slug}`)}
-          method="get"
-          className="lx-card mb-10 flex flex-wrap items-end gap-4 p-5"
-        >
-          <label className="flex min-w-[12rem] flex-col gap-1.5">
-            <span className="lx-kicker text-[var(--fg-muted)]">{t(locale, "section.subcategory")}</span>
-            <select
-              name="subcategoria"
-              defaultValue={subcategoria ?? ""}
-              className="lx-ui rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] px-3 py-2 text-sm outline-none transition focus:border-[var(--accent)]"
-            >
-              <option value="">{t(locale, "section.all")}</option>
-              {subcategories.map((sc) => (
-                <option key={sc.slug} value={sc.slug}>
-                  {sc.name}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="flex flex-col gap-1.5">
-            <span className="lx-kicker text-[var(--fg-muted)]">{t(locale, "section.from")}</span>
-            <input
-              type="date"
-              name="desde"
-              defaultValue={desde ?? ""}
-              className="lx-ui rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] px-3 py-2 text-sm outline-none transition focus:border-[var(--accent)]"
-            />
-          </label>
-
-          <label className="flex flex-col gap-1.5">
-            <span className="lx-kicker text-[var(--fg-muted)]">{t(locale, "section.to")}</span>
-            <input
-              type="date"
-              name="hasta"
-              defaultValue={hasta ?? ""}
-              className="lx-ui rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] px-3 py-2 text-sm outline-none transition focus:border-[var(--accent)]"
-            />
-          </label>
-
-          <button
-            type="submit"
-            className="lx-ui min-h-11 rounded-full bg-[var(--accent)] px-5 text-sm font-semibold text-[var(--accent-fg)] transition hover:opacity-90"
-          >
-            {t(locale, "section.filter")}
-          </button>
-
-          {filtrando && (
-            <Link
-              href={localePath(locale, `/categoria/${slug}`)}
-              className="lx-link text-sm text-[var(--fg-muted)]"
-            >
-              {t(locale, "section.clear")}
-            </Link>
-          )}
-        </form>
-      )}
 
       {items.length === 0 ? (
         <p className="py-16 text-center text-[var(--fg-muted)]">
