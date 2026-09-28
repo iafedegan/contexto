@@ -58,6 +58,10 @@ const es: Dict = {
   "nav.archive": "Archivo histórico",
   "nav.institutional": "Documentos institucionales",
   "nav.online": "en línea",
+  "market.label": "Indicadores",
+  "market.trm": "Dólar (TRM)",
+  "market.oil": "Petróleo Brent",
+  "market.cattle": "Novillo gordo · Medellín",
 
   // --- Pie ---
   "footer.sections": "Secciones",
@@ -205,6 +209,10 @@ const en: Dict = {
   "nav.archive": "Historical archive",
   "nav.institutional": "Institutional documents",
   "nav.online": "online",
+  "market.label": "Market indicators",
+  "market.trm": "USD/COP rate",
+  "market.oil": "Brent crude",
+  "market.cattle": "Fat steer · Medellín",
 
   "footer.sections": "Sections",
   "footer.institutional": "Institutional",

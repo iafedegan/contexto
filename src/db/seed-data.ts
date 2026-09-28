@@ -491,6 +491,31 @@ export async function seed(db: AnyDb): Promise<{ created: boolean }> {
     );
   }
 
+  // Franja económica (H-06): TRM y petróleo se arrancan con un valor
+  // semilla para que la franja no aparezca vacía antes de la primera
+  // corrida del cron `sync-market-data`; luego los reemplaza con datos
+  // reales.
+  const marketSeeds = [
+    { key: "trm_cop_usd", name: "TRM (COP/USD)", unit: "COP", source: "datos.gov.co — Banco de la República", base: 4050, step: 6 },
+    { key: "petroleo_brent", name: "Petróleo Brent", unit: "USD/barril", source: "OilPriceAPI", base: 78, step: 0.4 },
+  ];
+  for (const m of marketSeeds) {
+    const [row] = await db
+      .insert(schema.dataSeries)
+      .values({ key: m.key, name: m.name, unit: m.unit, source: m.source })
+      .onConflictDoNothing()
+      .returning({ id: schema.dataSeries.id });
+    if (row) {
+      await db.insert(schema.dataPoints).values(
+        Array.from({ length: 4 }).map((_, i) => ({
+          seriesId: row.id,
+          observedOn: new Date(now - (3 - i) * 86_400_000).toISOString().slice(0, 10),
+          value: String(m.base + i * m.step),
+        })),
+      );
+    }
+  }
+
   // --- Borrador de agente pendiente de aprobación (demo del flujo) ---
   await db.insert(schema.agentDrafts).values({
     source: "boletin_precios",
