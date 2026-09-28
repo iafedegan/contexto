@@ -9,6 +9,7 @@ import { AddUserForm } from "@/components/panel/add-user-form";
 import { getKeyStatus } from "@/lib/ai-provider";
 import { ApiKeyForm } from "@/components/panel/api-key-form";
 import { MfaForm } from "@/components/panel/mfa-form";
+import { ConfigTabs } from "@/components/panel/config-tabs";
 import { getAnalyticsStatus } from "@/lib/analytics-server";
 import { saveAnalyticsSettings, saveSiteIdentity } from "./actions";
 import { env } from "@/lib/env";
@@ -52,6 +53,15 @@ export default async function ConfiguracionPage() {
         </p>
       </header>
 
+      <ConfigTabs
+        tabs={[
+          { id: "sitio", label: "Identidad del sitio", icon: <Globe size={13} /> },
+          { id: "usuarios", label: "Personas y roles", icon: <Users size={13} /> },
+          { id: "seguridad", label: "Seguridad de mi cuenta", icon: <ShieldCheck size={13} /> },
+          { id: "analitica", label: "Analítica y SEO", icon: <BarChart3 size={13} /> },
+          { id: "asistente", label: "Asistente y agentes de IA", icon: <Sparkles size={13} /> },
+        ]}
+      >
       {/* ------------------------------------------------ Identidad del sitio */}
       <Section
         id="sitio"
@@ -311,6 +321,7 @@ export default async function ConfiguracionPage() {
           IA se publica sin la aprobación de un editor.
         </p>
       </Section>
+      </ConfigTabs>
     </div>
   );
 }
