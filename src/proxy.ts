@@ -93,15 +93,22 @@ export async function proxy(req: NextRequest) {
     if (!hasSession && pathname !== "/panel/login") {
       const url = new URL("/panel/login", req.url);
       url.searchParams.set("next", pathname);
-      return applyHeaders(NextResponse.redirect(url));
+      return applyHeaders(NextResponse.redirect(url), pathname);
     }
   }
 
-  return applyHeaders(NextResponse.next());
+  return applyHeaders(NextResponse.next(), pathname);
 }
 
-function applyHeaders(res: NextResponse): NextResponse {
+/**
+ * Además de las cabeceras de seguridad, reenvía la ruta actual: el layout
+ * del panel (`src/app/panel/(app)/layout.tsx`, en Node.js) la usa para
+ * decidir si forzar el alta del segundo factor sin depender de
+ * `usePathname` en cliente.
+ */
+function applyHeaders(res: NextResponse, pathname?: string): NextResponse {
   for (const [k, v] of Object.entries(SECURITY_HEADERS)) res.headers.set(k, v);
+  if (pathname) res.headers.set("x-pathname", pathname);
   return res;
 }
 
