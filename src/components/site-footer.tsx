@@ -26,6 +26,7 @@ function legalLinks(locale: Locale) {
 function toolLinks(locale: Locale) {
   return [
     { href: localePath(locale, "/buscar"), label: t(locale, "nav.search") },
+    { href: localePath(locale, "/boletin"), label: t(locale, "newsletter.title") },
     { href: "/feeds", label: "RSS" },
     { href: "/sitemap.xml", label: "Sitemap" },
     { href: "/llms.txt", label: "llms.txt" },
