@@ -413,6 +413,31 @@ export const newsletterEditions = pgTable(
   (t) => [index("newsletter_editions_status_idx").on(t.status, t.createdAt)],
 );
 
+// --- API pública para terceros ------------------------------------------
+// Claves de acceso a `/api/v1/*` (artículos, categorías, alta al boletín).
+// Se guarda solo el hash (SHA-256): la clave en texto plano se muestra una
+// única vez, al crearla, igual que un token de GitHub o Stripe — así un
+// volcado de la base nunca la regala.
+export const apiClients = pgTable(
+  "api_clients",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    name: text("name").notNull(),
+    keyHash: text("key_hash").notNull().unique(),
+    // Primeros caracteres de la clave, para reconocerla en la lista sin poder
+    // reconstruirla (`cg_live_a1b2c3d4…`).
+    keyPrefix: text("key_prefix").notNull(),
+    active: boolean("active").notNull().default(true),
+    requestsPerHour: integer("requests_per_hour").notNull().default(600),
+    lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+    createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("api_clients_active_idx").on(t.active)],
+);
+
+export type ApiClient = typeof apiClients.$inferSelect;
+
 // --- Ajustes de sitio (clave/valor) --------------------------------
 // Mecanismo genérico para configuración editable desde el panel que no es
 // contenido (p. ej. el diseño de las secciones de portada). Una fila por

@@ -73,6 +73,11 @@ const GROUPS: Group[] = [
         href: "/panel/configuracion#analitica",
         hint: "GA4 y auditoría de Google",
       },
+      {
+        href: "/panel/api",
+        label: "API pública",
+        hint: "Claves para terceros y documentación",
+      },
     ],
   },
 ];
