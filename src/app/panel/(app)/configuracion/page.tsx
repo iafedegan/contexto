@@ -1,15 +1,14 @@
 import { asc } from "drizzle-orm";
-import { BarChart3, Globe, Megaphone, ShieldCheck, Sparkles, Users } from "lucide-react";
+import { BarChart3, Globe, ShieldCheck, Sparkles, Users } from "lucide-react";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { getSiteIdentity } from "@/lib/site-identity";
 import { UserRow } from "@/components/panel/user-row";
+import { AddUserForm } from "@/components/panel/add-user-form";
 import { getKeyStatus } from "@/lib/ai-provider";
 import { ApiKeyForm } from "@/components/panel/api-key-form";
 import { MfaForm } from "@/components/panel/mfa-form";
-import { AdsEditor } from "@/components/panel/ads-editor";
-import { getAdsZoneRows } from "@/lib/ads";
 import { getAnalyticsStatus } from "@/lib/analytics-server";
 import { saveAnalyticsSettings, saveSiteIdentity } from "./actions";
 import { env } from "@/lib/env";
@@ -23,7 +22,7 @@ export default async function ConfiguracionPage() {
   const session = await auth();
   const isAdmin = session?.user.role === "administrador";
 
-  const [identity, keyStatus, analytics, people, zonasPauta] = await Promise.all([
+  const [identity, keyStatus, analytics, people] = await Promise.all([
     getSiteIdentity(),
     getKeyStatus(),
     getAnalyticsStatus(),
@@ -38,7 +37,6 @@ export default async function ConfiguracionPage() {
       })
       .from(users)
       .orderBy(asc(users.name)),
-    getAdsZoneRows(),
   ]);
 
   const yoMismo = people.find((p) => p.id === session?.user.id || p.email === session?.user.email);
@@ -156,6 +154,12 @@ export default async function ConfiguracionPage() {
             </tbody>
           </table>
         </div>
+
+        {isAdmin && (
+          <div className="mt-4">
+            <AddUserForm />
+          </div>
+        )}
       </Section>
 
 
@@ -279,30 +283,6 @@ export default async function ConfiguracionPage() {
           Google necesita alcanzar la dirección, así que en <code className="lx-mono">localhost</code>{" "}
           solo funciona a través de un túnel.
         </p>
-      </Section>
-
-      {/* ------------------------------------------------ Publicidad y pauta */}
-      <Section
-        id="publicidad"
-        icon={<Megaphone size={14} />}
-        title="Publicidad y pauta"
-        hint="Las posiciones del portal, iguales en todas las plantillas"
-      >
-        <p className="mb-4 text-sm leading-relaxed text-[var(--fg-muted)]">
-          Cada posición vive en todas las plantillas: portada, barra lateral, notas, secciones o pie.
-          Puedes poner varios anuncios en una misma posición y se apilan por orden. Actívalos solo
-          cuando tengan creatividad: un anuncio sin imagen ni HTML no ocupa espacio en el sitio. Pega
-          la URL de una imagen ya alojada, o el código que entregue el anunciante o el ad server.
-        </p>
-
-        <AdsEditor zones={zonasPauta} canManage={isAdmin} />
-
-        {!isAdmin && (
-          <p className="mt-4 flex items-start gap-2 rounded-[var(--radius)] bg-[var(--surface-2)] p-3 text-xs leading-relaxed text-[var(--fg-muted)]">
-            <ShieldCheck size={14} className="mt-px shrink-0 text-[var(--accent-2)]" />
-            Solo un administrador puede cambiar la pauta.
-          </p>
-        )}
       </Section>
 
       {/* ------------------------------------------------ Asistente / agentes */}

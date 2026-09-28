@@ -3,15 +3,28 @@ import { NextResponse } from "next/server";
 import { and, eq, lte, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { articles, authors, categories } from "@/db/schema";
+import { syncMarketData } from "@/lib/sync-market-data";
 
 /**
  * Materializa artículos "programado" cuya hora ya llegó -> "publicado", y
- * dispara la revalidación ISR de las rutas afectadas. Corre cada 5 min (vercel.json).
+ * dispara la revalidación ISR de las rutas afectadas. Corre a diario
+ * (vercel.json).
+ *
+ * También aprovecha para refrescar TRM/petróleo (franja económica, H-06):
+ * el plan Hobby solo permite 2 cron jobs y ya están ocupados, así que en
+ * vez de un tercero cada 6 h se sube de paso aquí una vez al día. Nunca
+ * debe bloquear la publicación programada, así que va aislado en su propio
+ * try/catch.
  */
 export async function GET(req: Request) {
   if (req.headers.get("authorization") !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: "no autorizado" }, { status: 401 });
   }
+
+  const marketData = await syncMarketData().catch((e) => {
+    console.error("publish-scheduled: falló la sincronización de indicadores", e);
+    return null;
+  });
 
   const due = await db
     .select({
@@ -41,5 +54,5 @@ export async function GET(req: Request) {
     revalidatePath("/feed.xml");
   }
 
-  return NextResponse.json({ published: due.map((d) => d.slug) });
+  return NextResponse.json({ published: due.map((d) => d.slug), marketData });
 }

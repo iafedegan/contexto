@@ -5,6 +5,7 @@ import { getSitePopup } from "@/lib/popup";
 import { SitePopup } from "@/components/site-popup";
 import { ReadingProgress } from "@/components/reading-progress";
 import { BreakingBar } from "@/components/breaking-bar";
+import { MarketTicker } from "@/components/market-ticker";
 import { AdsBanner } from "@/components/ads-banner";
 import { SiteHeader, type NavItem } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
@@ -88,6 +89,8 @@ export async function SiteShell({
       )}
       {/* Última hora por encima de todo: si hay urgencia, es lo primero. */}
       <BreakingBar locale={locale} />
+      {/* Franja económica (TRM, petróleo, ganado), justo encima del navbar. */}
+      <MarketTicker locale={locale} />
       <SiteHeader theme={theme} nav={nav} extraNav={extraNav} locale={locale} identity={identity} variant={site.parts.navbar} />
       <main id="contenido" data-region="body" className={mainClassName ?? shell.main}>
         {/* Honestidad con el lector: la interfaz cambia de idioma, las notas no. */}

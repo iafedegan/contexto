@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { eq, sql } from "drizzle-orm";
+import bcrypt from "bcryptjs";
 import { db } from "@/db";
 import { siteSettings, users, type UserRole } from "@/db/schema";
 import { requireRole } from "@/lib/auth";
@@ -66,6 +67,40 @@ export async function toggleUserActive(userId: string, active: boolean) {
 
   await db.update(users).set({ active, updatedAt: new Date() }).where(eq(users.id, userId));
   revalidatePath("/panel/configuracion");
+}
+
+export type CreateUserState = { ok: boolean; message: string } | null;
+
+const ROLES: UserRole[] = ["redactor", "editor", "administrador"];
+
+/**
+ * Alta de una persona nueva, con contraseña temporal que se le entrega a
+ * mano (por ningún canal automático: no hay envío de correo configurado).
+ * Se le pide que la cambie luego — no hay pantalla de "cambiar contraseña"
+ * todavía, así que por ahora queda como tarea del administrador comunicarla
+ * de forma segura.
+ */
+export async function createUser(_prev: CreateUserState, formData: FormData): Promise<CreateUserState> {
+  await requireRole("administrador");
+
+  const name = String(formData.get("name") ?? "").trim();
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const password = String(formData.get("password") ?? "");
+  const role = String(formData.get("role") ?? "redactor") as UserRole;
+
+  if (!name) return { ok: false, message: "Falta el nombre." };
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { ok: false, message: "Correo inválido." };
+  if (password.length < 10) return { ok: false, message: "La contraseña debe tener al menos 10 caracteres." };
+  if (!ROLES.includes(role)) return { ok: false, message: "Rol inválido." };
+
+  const [existente] = await db.select({ id: users.id }).from(users).where(eq(users.email, email));
+  if (existente) return { ok: false, message: "Ya existe una cuenta con ese correo." };
+
+  const passwordHash = await bcrypt.hash(password, 10);
+  await db.insert(users).values({ name, email, passwordHash, role });
+
+  revalidatePath("/panel/configuracion");
+  return { ok: true, message: `Cuenta creada para ${name}. Comparte la contraseña de forma segura.` };
 }
 
 
