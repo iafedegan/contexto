@@ -71,7 +71,7 @@ async function HomePage({ locale }: { locale: Locale }) {
     >
       {/* Cintillo de titulares: identidad de la portada esmeralda. */}
       {body === "esmeralda" && (
-        <div className="-mt-6 mb-10 overflow-hidden border-y border-[var(--border)] py-2.5">
+        <div className="relative left-1/2 -ml-[50vw] w-screen -mt-6 mb-10 overflow-hidden border-y border-[var(--border)] py-2.5">
           <div className="lx-marquee text-[0.68rem] uppercase tracking-[0.25em] text-[var(--fg-muted)]">
             {[...articles, ...articles].map((a, i) => (
               <span key={`${a.slug}-${i}`} className="flex items-center gap-3 whitespace-nowrap">
