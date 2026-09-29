@@ -1,7 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState } from "react";
-import { useSession } from "next-auth/react";
+import { useActionState, useState } from "react";
 import { Check, Loader2, TriangleAlert } from "lucide-react";
 import { actualizarMiPerfil, type MiPerfilState } from "@/app/panel/(app)/configuracion/actions";
 
@@ -11,27 +10,10 @@ import { actualizarMiPerfil, type MiPerfilState } from "@/app/panel/(app)/config
 export function MiPerfilForm({ name, email }: { name: string; email: string }) {
   const [state, action, pending] = useActionState<MiPerfilState, FormData>(actualizarMiPerfil, null);
   const [cambiarPassword, setCambiarPassword] = useState(false);
-  const { update } = useSession();
-  const enviados = useRef<{ name: string; email: string } | null>(null);
-
-  useEffect(() => {
-    // El header (JWT) no se entera del cambio solo porque la Server Action
-    // escribió en la BD: hay que empujarlo explícitamente a la sesión.
-    if (state?.ok && enviados.current) {
-      update(enviados.current);
-      enviados.current = null;
-    }
-  }, [state, update]);
 
   return (
     <form
-      action={(formData) => {
-        enviados.current = {
-          name: String(formData.get("name") ?? "").trim(),
-          email: String(formData.get("email") ?? "").trim().toLowerCase(),
-        };
-        return action(formData);
-      }}
+      action={action}
       className="mb-4 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface-2)] p-4"
     >
       <p className="text-sm font-semibold">Mis datos</p>

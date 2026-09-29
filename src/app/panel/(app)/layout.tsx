@@ -9,8 +9,6 @@ import { users } from "@/db/schema";
 import { auth, signOut } from "@/lib/auth";
 import { PanelNav } from "@/components/panel/panel-nav";
 import { HeaderHeightVar } from "@/components/panel/header-height";
-import { PanelSessionProvider } from "@/components/panel/session-provider";
-import { MiBadge } from "@/components/panel/mi-badge";
 
 /** Panel editorial — plantilla «Grafito & Jade». */
 export const dynamic = "force-dynamic";
@@ -39,7 +37,6 @@ export default async function PanelLayout({ children }: { children: React.ReactN
   }
 
   return (
-    <PanelSessionProvider>
     <div data-theme="panel" className="lx-shell lx-grain">
       {/* La barra del panel va en claro (tema `panel-ui`), igual que la barra
           del editor de portada: es cromo de herramienta, no parte del sitio.
@@ -66,7 +63,9 @@ export default async function PanelLayout({ children }: { children: React.ReactN
 
 
           <div className="ml-auto flex items-center gap-3 text-xs">
-            <MiBadge name={session.user.name ?? ""} role={session.user.role} />
+            <span className="lx-chip border-[var(--border)] text-[var(--fg-muted)]">
+              {session.user.name} · {session.user.role}
+            </span>
             <Link href="/" className="font-medium text-[var(--fg-muted)] transition hover:text-[var(--accent)]">
               Ver sitio
             </Link>
@@ -107,6 +106,5 @@ export default async function PanelLayout({ children }: { children: React.ReactN
         </p>
       </footer>
     </div>
-    </PanelSessionProvider>
   );
 }

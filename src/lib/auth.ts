@@ -141,23 +141,29 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     }),
   ],
   callbacks: {
-    jwt({ token, user, trigger, session }) {
+    jwt({ token, user }) {
       if (user) {
         token.uid = user.id;
         token.role = (user as { role: UserRole }).role;
       }
-      // Disparado por update() desde "Mis datos": el JWT solo lleva el nombre
-      // del login, así que sin esto el header queda con el nombre viejo hasta
-      // que la sesión expire.
-      if (trigger === "update" && session) {
-        if (session.name) token.name = session.name;
-        if (session.email) token.email = session.email;
-      }
       return token;
     },
-    session({ session, token }) {
+    // Nombre/correo/rol se leen de la BD en cada petición, no del JWT: el
+    // JWT solo se refresca al iniciar sesión, así que sin esto un cambio en
+    // "Mis datos" dejaba el header con el nombre viejo hasta un re-login.
+    async session({ session, token }) {
       session.user.id = token.uid as string;
       session.user.role = token.role as UserRole;
+      const [row] = await db
+        .select({ name: users.name, email: users.email, role: users.role })
+        .from(users)
+        .where(eq(users.id, token.uid as string))
+        .limit(1);
+      if (row) {
+        session.user.name = row.name;
+        session.user.email = row.email;
+        session.user.role = row.role;
+      }
       return session;
     },
   },
