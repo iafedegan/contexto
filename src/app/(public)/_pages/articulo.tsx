@@ -10,6 +10,7 @@ import { ViewCounter } from "@/components/view-counter";
 import { LiveBadge } from "@/components/live-badge";
 import { ShareButtons } from "@/components/share-buttons";
 import { ReaderMode } from "@/components/reader-mode";
+import { ListenArticle } from "@/components/listen-article";
 import { ArticleHero, ARTICLE_BODY_CLASS } from "@/components/article/article-hero";
 import { JsonLd } from "@/components/json-ld";
 import { SiteShell } from "@/components/site-shell";
@@ -163,6 +164,12 @@ export function ArticleDocument({
             byline={[a.authorName, a.publishedAt && formatDate(a.publishedAt, INTL_LOCALE[locale]), `${readingMinutes} ${t(locale, "article.readTime")}`]
               .filter(Boolean)
               .join(" · ")}
+          />
+          <ListenArticle
+            title={a.title}
+            excerpt={a.excerpt}
+            body={sanitizeArticleHtml(a.body)}
+            lang={locale === "en" ? "en-US" : "es-CO"}
           />
           {!preview && <ShareButtons title={a.title} locale={locale} />}
         </div>
