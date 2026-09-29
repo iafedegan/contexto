@@ -24,11 +24,24 @@ export function ListenArticle({
   const [supported, setSupported] = useState(false);
   const [state, setState] = useState<"idle" | "playing" | "paused">("idle");
   const utterances = useRef<SpeechSynthesisUtterance[]>([]);
+  // Chrome carga la lista de voces de forma asíncrona: si se lee en el clic
+  // (antes de que dispare "voiceschanged") suele venir vacía y el navegador
+  // usa su voz de sistema por defecto — la más robótica de todas. Por eso se
+  // precarga apenas monta el botón, no al reproducir.
+  const voces = useRef<SpeechSynthesisVoice[]>([]);
 
   useEffect(() => {
-    setSupported(typeof window !== "undefined" && "speechSynthesis" in window);
+    const ok = typeof window !== "undefined" && "speechSynthesis" in window;
+    setSupported(ok);
+    if (!ok) return;
+    const cargar = () => {
+      voces.current = window.speechSynthesis.getVoices();
+    };
+    cargar();
+    window.speechSynthesis.addEventListener("voiceschanged", cargar);
     return () => {
-      if (typeof window !== "undefined" && "speechSynthesis" in window) window.speechSynthesis.cancel();
+      window.speechSynthesis.removeEventListener("voiceschanged", cargar);
+      window.speechSynthesis.cancel();
     };
   }, []);
 
@@ -39,13 +52,17 @@ export function ListenArticle({
     return [title, excerpt, cuerpo].filter(Boolean).join(". ");
   }
 
+  /** De las voces del idioma, prioriza las de mejor calidad: las que NO son
+   * el motor local del sistema operativo (`localService: false`, típicamente
+   * neuronales/en la nube, como "Google español") suenan mucho más naturales
+   * que las locales ("Microsoft ... Desktop", "eSpeak", etc). */
   function elegirVoz(): SpeechSynthesisVoice | undefined {
-    const voces = window.speechSynthesis.getVoices();
-    return (
-      voces.find((v) => v.lang.toLowerCase() === lang.toLowerCase()) ??
-      voces.find((v) => v.lang.toLowerCase().startsWith("es")) ??
-      undefined
-    );
+    const candidatas = voces.current.filter((v) => v.lang.toLowerCase().startsWith(lang.slice(0, 2).toLowerCase()));
+    if (candidatas.length === 0) return undefined;
+    const exactas = candidatas.filter((v) => v.lang.toLowerCase() === lang.toLowerCase());
+    const orden = (lista: SpeechSynthesisVoice[]) =>
+      [...lista].sort((a, b) => Number(a.localService) - Number(b.localService));
+    return orden(exactas)[0] ?? orden(candidatas)[0];
   }
 
   // Se parte en frases: un solo `SpeechSynthesisUtterance` gigante se corta a
@@ -59,7 +76,10 @@ export function ListenArticle({
       const u = new SpeechSynthesisUtterance(frase.trim());
       u.lang = lang;
       if (voz) u.voice = voz;
-      u.rate = 1;
+      // Un pelín más lento que el default: a velocidad 1 la mayoría de voces
+      // suenan apuradas y acentúan lo robótico.
+      u.rate = 0.95;
+      u.pitch = 1;
       return u;
     });
     const ultimo = utterances.current[utterances.current.length - 1];
