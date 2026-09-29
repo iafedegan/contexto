@@ -374,6 +374,32 @@
   --font-ui: var(--f-outfit), ui-sans-serif, sans-serif;
 }
 
+/* Gremial — papel blanco, rojo institucional y verde de sección: estilo
+   sitio de gremio/federación (mockup del cliente). */
+[data-theme="gremial"] {
+  color-scheme: light;
+  --bg: #ffffff;
+  --bg-2: #f6f8f5;
+  --surface: #ffffff;
+  --surface-2: #eef3ec;
+  --fg: #1c211d;
+  --fg-muted: #5b6560;
+  --border: #e2e6e1;
+  --border-strong: #c7cec4;
+  --accent: #c0392b;
+  --accent-2: #2f6b3f;
+  --accent-fg: #fffaf7;
+  --link: #c0392b;
+  --radius: 0.4rem;
+  --radius-lg: 0.6rem;
+  --shadow: 0 1px 2px rgba(20, 30, 20, 0.06);
+  --shadow-hover: 0 22px 44px -28px rgba(20, 30, 20, 0.3);
+  --sheen: rgba(47, 107, 63, 0.14);
+  --font-display: var(--f-grotesk), ui-sans-serif, sans-serif;
+  --font-body: var(--f-inter), system-ui, sans-serif;
+  --font-ui: var(--f-inter), system-ui, sans-serif;
+}
+
 /* ---------------------------------------------------------------- 9. PANEL
    "Grafito & Jade": herramienta de redacción, densa y silenciosa.          */
 [data-theme="panel"] {

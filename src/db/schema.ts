@@ -507,7 +507,7 @@ export type HomeBackground = {
  * portada + ajustes finos de sus secciones. */
 export type HomeLayoutConfig = {
   /** Plantilla: decide componentes, efectos y tipografía (no solo columnas). */
-  templateId?: "esmeralda" | "clasico" | "revista" | "compacto" | "vanguardia";
+  templateId?: "esmeralda" | "clasico" | "revista" | "compacto" | "vanguardia" | "gremial";
   /** "En breve" en la plantilla Clásico: lista vertical o fila horizontal. */
   breveDirection?: "vertical" | "horizontal";
   /** Columnas cuando "En breve" es horizontal (2-4). */

@@ -35,6 +35,7 @@ export const BODIES: Option<BodyId>[] = [
   { id: "revista", label: "Revista", description: "Carrusel a toda anchura y fotos grandes con zoom." },
   { id: "compacto", label: "Fichas densas", description: "Cuadrícula de fichas: muchas notas visibles de un vistazo." },
   { id: "vanguardia", label: "Bento", description: "Cuadrícula asimétrica de esquinas redondeadas." },
+  { id: "gremial", label: "Gremial", description: "Apertura + 3 destacadas, cuadrícula de noticias, accesos por sección, columnistas y boletín." },
 ];
 
 export const FOOTERS: Option<FooterId>[] = [
@@ -52,6 +53,7 @@ export const PRESET_PARTS: Record<BodyId, Required<TemplateParts>> = {
   revista: { navbar: "couture", body: "revista", footer: "atelier" },
   compacto: { navbar: "bold", body: "compacto", footer: "copper" },
   vanguardia: { navbar: "glass", body: "vanguardia", footer: "aurora" },
+  gremial: { navbar: "bold", body: "gremial", footer: "grand" },
 };
 
 /** Piezas efectivas: las elegidas y, si falta alguna, la de la plantilla base. */

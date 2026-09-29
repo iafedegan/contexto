@@ -4,6 +4,7 @@ import {
   ClasicoTemplate,
   CompactoTemplate,
   EsmeraldaTemplate,
+  GremialTemplate,
   RevistaTemplate,
   VanguardiaTemplate,
 } from "@/components/home/templates";
@@ -55,7 +56,6 @@ async function HomePage({ locale }: { locale: Locale }) {
   // Se toma de getSiteTheme (misma fuente que el resto del portal).
   const site = await getSiteTheme();
   const body = site.parts.body;
-  const props = { lead, second, rail, river, layout, locale };
 
   const opinion = articles.find((a) => a.categorySlug === "opinion");
   const strip = [
@@ -65,6 +65,7 @@ async function HomePage({ locale }: { locale: Locale }) {
   ].filter((x) => x.article);
 
   const market = await getMarketTicker().catch(() => []);
+  const props = { lead, second, rail, river, layout, locale, market };
 
   const cintillo = (
     <div className="mb-10 overflow-hidden border-y border-[var(--border)] py-2.5">
@@ -123,6 +124,8 @@ async function HomePage({ locale }: { locale: Locale }) {
             <VanguardiaTemplate {...props} />
           ) : body === "clasico" ? (
             <ClasicoTemplate {...props} />
+          ) : body === "gremial" ? (
+            <GremialTemplate {...props} />
           ) : (
             <EsmeraldaTemplate {...props} />
           )}

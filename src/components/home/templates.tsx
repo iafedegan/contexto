@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+import { BarChart3, BookOpen, ShieldCheck, Wallet } from "lucide-react";
 import { HomeCard } from "@/components/home/home-card";
 import { ArticleCard } from "@/components/article-card";
 import { BroadsheetCard } from "@/components/home/broadsheet-card";
@@ -8,11 +10,14 @@ import { BreveCarousel } from "@/components/home/breve-carousel";
 import { TileCard } from "@/components/home/tile-card";
 import { BentoTile } from "@/components/home/bento-tile";
 import { EditableCard, type BuilderProps } from "@/components/home/editable-card";
+import { NewsletterForm } from "@/components/newsletter-form";
 import type { ArticleListItem } from "@/lib/content";
+import type { MarketTickerEntry } from "@/lib/market-data";
+import { formatMarketValue } from "@/lib/market-data";
 import { BREVE_COLS, RIVER_COLS, type HomeTemplateId } from "@/lib/home-layout";
 import type { HomeLayoutConfig } from "@/db/schema";
 import { cn, formatDate } from "@/lib/utils";
-import { DEFAULT_LOCALE, t, type Locale } from "@/lib/i18n";
+import { DEFAULT_LOCALE, localePath, t, type Locale } from "@/lib/i18n";
 
 type Slots = {
   lead?: ArticleListItem;
@@ -28,6 +33,8 @@ type TemplateProps = Slots &
     interactive?: boolean;
     /** Idioma de la interfaz (rótulos y fechas). */
     locale?: Locale;
+    /** Indicadores para la cabecera de Gremial; el resto de plantillas lo ignora. */
+    market?: MarketTickerEntry[];
   };
 
 /**
@@ -396,10 +403,166 @@ export function EsmeraldaTemplate({
   );
 }
 
+/**
+ * Gremial — mockup del cliente: papel blanco, apertura + 3 destacadas,
+ * cuadrícula de "Últimas noticias", accesos rápidos por sección, columnistas
+ * y boletín. Los 4 accesos ("Para el ganadero") enlazan a secciones
+ * existentes; no hay páginas propias de precios/clima todavía.
+ */
+export function GremialTemplate({
+  lead,
+  second,
+  rail,
+  river,
+  layout,
+  interactive = true,
+  locale = DEFAULT_LOCALE,
+  market = [],
+  builderSelected,
+  builderOverIndex,
+  builderDragProps,
+  builderHasStyle,
+}: TemplateProps) {
+  if (!lead) return null;
+  const all = [lead, second, ...rail, ...river].filter((a): a is ArticleListItem => Boolean(a));
+  const indexOf = (a: ArticleListItem) => all.findIndex((x) => x.slug === a.slug);
+  const wrap = (a: ArticleListItem, node: React.ReactNode, className?: string) => (
+    <EditableCard
+      key={a.slug}
+      index={indexOf(a)}
+      builderSelected={builderSelected}
+      builderOverIndex={builderOverIndex}
+      builderDragProps={builderDragProps}
+      hasStyle={builderHasStyle?.(indexOf(a))}
+      className={className}
+    >
+      {node}
+    </EditableCard>
+  );
+
+  const destacadas = [second, ...rail].filter((a): a is ArticleListItem => Boolean(a)).slice(0, 3);
+  const usadas = new Set([lead.slug, ...destacadas.map((a) => a.slug)]);
+  const restantes = all.filter((a) => !usadas.has(a.slug));
+  const noticias = restantes.slice(0, 4);
+  const columnistas = restantes.filter((a) => a.categorySlug === "opinion").slice(0, 3);
+  const columnistasFinal = columnistas.length > 0 ? columnistas : restantes.slice(4, 7);
+  const sostenible = restantes.find((a) => a.categorySlug === "ganaderia" && !noticias.includes(a)) ?? restantes[7];
+
+  const trm = market.find((m) => m.key === "trm");
+  const ganado = market.find((m) => m.key === "cattle");
+
+  const herramientas = [
+    { icon: Wallet, label: t(locale, "home.tools.prices"), href: localePath(locale, "/categoria/economia") },
+    { icon: BarChart3, label: t(locale, "home.tools.markets"), href: localePath(locale, "/categoria/economia") },
+    { icon: ShieldCheck, label: t(locale, "home.tools.health"), href: localePath(locale, "/categoria/ganaderia") },
+    { icon: BookOpen, label: t(locale, "home.tools.manual"), href: localePath(locale, "/categoria/sistemas-pecuarios") },
+  ];
+
+  return (
+    <div className="flex flex-col gap-14">
+      {/* Cabecera de indicadores: solo los dos que el sitio realmente mide. */}
+      {(trm ?? ganado) && (
+        <div className="-mt-2 flex flex-wrap items-center gap-x-6 gap-y-2 border-b border-[var(--border)] pb-4 text-sm">
+          {ganado && (
+            <span className="font-semibold">
+              {t(locale, "market.cattle")} <span className="text-[var(--accent-2)]">{formatMarketValue(ganado)}</span>
+            </span>
+          )}
+          {trm && (
+            <span className="font-semibold">
+              {t(locale, "market.trm")} <span className="text-[var(--accent-2)]">{formatMarketValue(trm)}</span>
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Apertura + 3 destacadas */}
+      <section className="grid gap-8 lg:grid-cols-[1.6fr_1fr]">
+        {wrap(lead, <ArticleCard a={lead} locale={locale} variant="lead" priority={interactive} />)}
+        <div className="flex flex-col gap-5">
+          {destacadas.map((a) => wrap(a, <ArticleCard a={a} locale={locale} variant="pearl" />))}
+        </div>
+      </section>
+
+      {/* Últimas noticias */}
+      {noticias.length > 0 && (
+        <section>
+          <div className="flex items-end justify-between border-b border-[var(--border)] pb-3">
+            <h2 className="lx-display text-2xl font-semibold tracking-tight">{t(locale, "home.recent")}</h2>
+            <Link href={localePath(locale, "/buscar")} className="lx-link text-sm font-semibold text-[var(--accent)]">
+              {t(locale, "home.viewAll")} →
+            </Link>
+          </div>
+          <div className={cn("mt-6 grid gap-6", RIVER_COLS[layout.riverColumns] ?? RIVER_COLS[4])}>
+            {noticias.map((a) => wrap(a, <ArticleCard a={a} locale={locale} />))}
+          </div>
+        </section>
+      )}
+
+      {/* Para el ganadero: accesos rápidos por sección */}
+      <section>
+        <h2 className="lx-display text-2xl font-semibold tracking-tight text-[var(--accent-2)]">
+          {t(locale, "home.forRancher")}
+        </h2>
+        <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
+          {herramientas.map(({ icon: Icon, label, href }) => (
+            <Link
+              key={label}
+              href={href}
+              className="lx-card flex flex-col items-center gap-3 rounded-[var(--radius-lg)] px-4 py-6 text-center transition hover:border-[var(--accent)]"
+            >
+              <span className="grid size-11 place-items-center rounded-full bg-[var(--surface-2)] text-[var(--accent)]">
+                <Icon size={20} />
+              </span>
+              <span className="text-sm font-semibold">{label}</span>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      {/* Ganadería sostenible: una nota destacada a todo el ancho */}
+      {sostenible && (
+        <section>
+          <h2 className="lx-display text-2xl font-semibold tracking-tight text-[var(--accent-2)]">
+            {t(locale, "home.sustainable")}
+          </h2>
+          <div className="mt-6">{wrap(sostenible, <ArticleCard a={sostenible} locale={locale} variant="copper" />)}</div>
+        </section>
+      )}
+
+      {/* Opinión y columnistas */}
+      {columnistasFinal.length > 0 && (
+        <section>
+          <h2 className="lx-display text-2xl font-semibold tracking-tight">{t(locale, "home.columnists")}</h2>
+          <div className="mt-6 grid gap-6 sm:grid-cols-3">
+            {columnistasFinal.map((a) => (
+              <Link key={a.slug} href={localePath(locale, `/articulo/${a.slug}`)} className="lx-card flex flex-col gap-3 p-5">
+                <span className="lx-display grid size-10 place-items-center rounded-full bg-[var(--accent)] text-sm text-[var(--accent-fg)]">
+                  {(a.authorName ?? "C").charAt(0)}
+                </span>
+                <div>
+                  <p className="text-sm font-semibold">{a.authorName ?? t(locale, "home.columnists")}</p>
+                  <p className="mt-1 line-clamp-2 text-sm text-[var(--fg-muted)]">{a.title}</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Boletín: el mismo formulario que ya usa el resto del sitio. */}
+      <section className="lx-card rounded-[var(--radius-lg)] bg-[var(--surface-2)] p-6 sm:p-8">
+        <NewsletterForm locale={locale} compacto />
+      </section>
+    </div>
+  );
+}
+
 export const TEMPLATE_COMPONENTS: Record<HomeTemplateId, (props: TemplateProps) => React.ReactElement | null> = {
   esmeralda: EsmeraldaTemplate,
   clasico: ClasicoTemplate,
   revista: RevistaTemplate,
   compacto: CompactoTemplate,
   vanguardia: VanguardiaTemplate,
+  gremial: GremialTemplate,
 };

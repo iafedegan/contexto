@@ -9,6 +9,7 @@ export type Theme =
   | "revista"
   | "compacto"
   | "vanguardia"
+  | "gremial"
   | "articulo"
   | "seccion"
   | "autor"
@@ -29,6 +30,7 @@ export const THEME_LABEL: Record<Theme, string> = {
   revista: "Revista · Negro y Oro",
   compacto: "Compacto · Zafiro",
   vanguardia: "Vanguardia · Bento",
+  gremial: "Gremial · Papel & Rojo",
   articulo: "Marfil & Burdeos",
   seccion: "Cobre & Obsidiana",
   autor: "Champán & Perla",

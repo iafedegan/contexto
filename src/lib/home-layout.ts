@@ -62,6 +62,12 @@ export const HOME_TEMPLATES: HomeTemplate[] = [
     description: "Cuadrícula “bento” oscura y asimétrica con orbes de gradiente, esquinas muy redondeadas y fichas que revelan resumen y brillo al pasar el mouse. Lo más moderno.",
     config: { templateId: "vanguardia", breveDirection: "horizontal", breveColumns: 4, riverColumns: 4, background: { mode: "theme" }, regions: {}, parts: {} },
   },
+  {
+    id: "gremial",
+    name: "Gremial",
+    description: "Papel blanco, acento rojo y verde institucional: cabecera con indicadores, apertura + 3 destacadas, cuadrícula de \"Últimas noticias\", accesos rápidos por sección, columnistas y boletín. Estilo sitio de gremio/federación.",
+    config: { templateId: "gremial", breveDirection: "horizontal", breveColumns: 4, riverColumns: 4, background: { mode: "theme" }, regions: {}, parts: {} },
+  },
 ];
 
 /** Reparte una lista ordenada de artículos en los cuatro huecos de la
