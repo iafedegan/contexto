@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { LogoMark } from "@/components/logo-mark";
 
 type Source = { n: number; title: string; url: string; kind: "articulo" | "archivo"; summary: string };
 type Msg = {
@@ -82,9 +83,7 @@ export function AssistantChat() {
             ) : (
               <>
                 <div className="flex items-center gap-3">
-                  <span className="grid size-7 place-items-center rounded-full bg-gradient-to-br from-[var(--accent)] to-[var(--accent-2)] text-[0.6rem] font-bold text-[var(--accent-fg)]">
-                    CG
-                  </span>
+                  <LogoMark size={28} />
                   <span className="lx-kicker text-[var(--fg-muted)]">
                     Asistente{m.mode === "degraded" ? " · modo búsqueda" : ""}
                   </span>

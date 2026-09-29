@@ -8,6 +8,7 @@ import { startAuthentication } from "@simplewebauthn/browser";
 import { Fingerprint, Loader2 } from "lucide-react";
 import { Turnstile } from "@/components/turnstile";
 import { confirmarLoginPasskey, iniciarLoginPasskey } from "./actions";
+import { LogoMark } from "@/components/logo-mark";
 
 /** Acceso al panel — plantilla «Platino». */
 function LoginForm() {
@@ -80,9 +81,7 @@ function LoginForm() {
     <div className="lx-card lx-glass lx-shine w-full p-8">
       <div className="lx-inlay absolute inset-0" />
       <div className="relative">
-        <span className="grid size-11 place-items-center rounded-[var(--radius)] border border-[var(--border-strong)] text-[0.65rem] font-bold tracking-[0.1em]">
-          CG
-        </span>
+        <LogoMark size={44} />
         <h1 className="lx-display mt-6 text-2xl font-semibold tracking-tight">Panel editorial</h1>
         <p className="lx-kicker mt-2 text-[var(--fg-muted)]">CONtexto Ganadero</p>
 
@@ -185,9 +184,7 @@ export default function LoginPage() {
 
         <div className="relative flex h-full flex-col justify-between p-12">
           <span className="flex items-center gap-3">
-            <span className="grid size-10 place-items-center rounded-[var(--radius)] bg-gradient-to-br from-[#4ade9c] to-[#d8b558] text-[0.65rem] font-bold text-[#06170f]">
-              CG
-            </span>
+            <LogoMark size={40} />
             <span className="lx-display text-sm font-semibold tracking-tight text-white">
               CONtexto Ganadero
             </span>

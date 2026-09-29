@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ChevronRight, Menu, Search, X } from "lucide-react";
 import { LocaleSwitch } from "@/components/locale-switch";
+import { LogoMark } from "@/components/logo-mark";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { RadioPlayer } from "@/components/radio-player";
 import { localePath, t, type Locale } from "@/lib/i18n";
@@ -139,9 +140,7 @@ export function MobileNav({
           <div className="grid grid-cols-[2.75rem_1fr_2.75rem] items-center px-2 py-2">
             {menuButton}
             <Link href={localePath(locale, "/")} className="flex min-w-0 items-center justify-center gap-2">
-              <span className="grid size-8 shrink-0 place-items-center rounded-full border-2 border-[var(--accent)] text-[0.6rem] tracking-[0.1em] text-[var(--accent)]">
-                CG
-              </span>
+              <LogoMark size={32} />
               <span className="lx-display truncate text-sm uppercase tracking-[0.22em]">{name}</span>
             </Link>
             {searchLink}
