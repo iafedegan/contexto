@@ -902,6 +902,19 @@ a {
   to { transform: translateX(-50%); }
 }
 
+/* El selector de fecha nativo es minúsculo y casi invisible sobre fondo
+   oscuro por defecto: se agranda el icono y se tiñe con el acento del sitio. */
+.lx-date-input::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  margin-left: 0.5rem;
+  padding: 0.25rem;
+  border-radius: 999px;
+  filter: invert(56%) sepia(46%) saturate(636%) hue-rotate(346deg) brightness(92%) contrast(88%);
+}
+.lx-date-input::-webkit-calendar-picker-indicator:hover {
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+}
+
 .lx-pulse { animation: lx-pulse 2.4s ease-in-out infinite; }
 
 @keyframes lx-pulse {

@@ -54,7 +54,6 @@ export async function suscribirBoletin(
   const firstName = String(formData.get("firstName") ?? "").trim().slice(0, 120) || null;
   const lastName = String(formData.get("lastName") ?? "").trim().slice(0, 120) || null;
   const birthDate = String(formData.get("birthDate") ?? "").trim() || null;
-  const phone = String(formData.get("phone") ?? "").trim().slice(0, 40) || null;
   const mobile = String(formData.get("mobile") ?? "").trim().slice(0, 40) || null;
 
   // Trazabilidad interna (nunca se le muestra al suscriptor): Vercel ya
@@ -87,7 +86,6 @@ export async function suscribirBoletin(
       firstName,
       lastName,
       birthDate,
-      phone,
       mobile,
       signupIp: ip,
       signupCity,

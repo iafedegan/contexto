@@ -291,7 +291,6 @@ export const newsletterSubscribers = pgTable("newsletter_subscribers", {
   firstName: text("first_name"),
   lastName: text("last_name"),
   birthDate: date("birth_date"),
-  phone: text("phone"),
   mobile: text("mobile"),
   // Trazabilidad interna del alta (no se muestra al suscriptor): de dónde y
   // desde qué ciudad se registró, según la cabecera de geo-IP de Vercel.

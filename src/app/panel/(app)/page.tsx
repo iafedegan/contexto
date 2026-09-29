@@ -16,11 +16,13 @@ import { agentDrafts, articles, assistantQueries } from "@/db/schema";
 import { Card } from "@/components/ui";
 import { nf, pctChange, siteDailySeries, siteWeekTotals } from "@/lib/article-stats";
 import { ViewsBarChart } from "@/components/panel/views-chart";
+import { SubscriberMap } from "@/components/panel/subscriber-map";
+import { subscriberCityPoints } from "@/lib/subscriber-map";
 
 export const dynamic = "force-dynamic";
 
 export default async function PanelHome() {
-  const [byStatus, pendingDrafts, queries7d, week, trend] = await Promise.all([
+  const [byStatus, pendingDrafts, queries7d, week, trend, subscriberPoints] = await Promise.all([
     db
       .select({ status: articles.status, n: sql<number>`count(*)::int` })
       .from(articles)
@@ -35,6 +37,7 @@ export default async function PanelHome() {
       .where(sql`${assistantQueries.createdAt} > now() - interval '7 days'`),
     siteWeekTotals(),
     siteDailySeries(7),
+    subscriberCityPoints(),
   ]);
 
   const statusMap = Object.fromEntries(byStatus.map((r) => [r.status, r.n]));
@@ -118,6 +121,18 @@ export default async function PanelHome() {
           icon={<MessagesSquare size={20} />}
         />
       </div>
+
+      <Card className="lx-shine p-6">
+        <div className="flex flex-wrap items-baseline justify-between gap-3">
+          <p className="lx-kicker text-[var(--fg-muted)]">Suscriptores del boletín · de dónde se dan de alta</p>
+          <Link href="/panel/newsletter?tab=suscriptores" className="lx-link text-xs">
+            Ver suscriptores →
+          </Link>
+        </div>
+        <div className="mt-4">
+          <SubscriberMap points={subscriberPoints} />
+        </div>
+      </Card>
     </div>
   );
 }
