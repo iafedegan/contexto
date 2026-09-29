@@ -9,6 +9,7 @@ import { db } from "@/db";
 import { users, type UserRole } from "@/db/schema";
 import { clearHits, clientIp, hit } from "@/lib/rate-limit";
 import { verifyHuman } from "@/lib/turnstile";
+import { verificarTokenPasskey } from "@/lib/passkey";
 
 declare module "next-auth" {
   interface Session {
@@ -67,11 +68,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         password: {},
         totp: {}, // código de 6 dígitos del segundo factor
         captcha: {}, // token de Cloudflare Turnstile (verificación humana)
+        passkeyToken: {}, // puente firmado desde confirmarLoginPasskey (ver src/lib/passkey.ts)
       },
       async authorize(creds, request) {
         const email = String(creds?.email ?? "").toLowerCase().trim();
         const password = String(creds?.password ?? "");
         const totp = String(creds?.totp ?? "").trim();
+        const passkeyToken = String(creds?.passkeyToken ?? "").trim();
 
         /**
          * Hacia fuera, cualquier fallo es indistinguible: decir "ese correo no
@@ -84,6 +87,19 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           console.warn(`[login] rechazado (${email || "sin correo"}): ${motivo}`);
           return null;
         };
+
+        // Login con passkey: la verificación criptográfica ya ocurrió en
+        // confirmarLoginPasskey (src/app/panel/login/actions.ts); este token
+        // firmado y de 60 s solo confirma que fue ESTA petición la que pasó
+        // por ahí, sin repetir contraseña ni TOTP.
+        if (passkeyToken) {
+          const uid = verificarTokenPasskey(passkeyToken);
+          if (!uid) return rechazar("token de passkey inválido o caducado");
+          const [u] = await db.select().from(users).where(eq(users.id, uid)).limit(1);
+          if (!u) return rechazar("passkey de una cuenta que ya no existe");
+          if (!u.active) return rechazar("la cuenta está desactivada");
+          return { id: u.id, name: u.name, email: u.email, role: u.role };
+        }
 
         if (!email || !password) return rechazar("faltan correo o contraseña");
 
