@@ -12,8 +12,6 @@ import { BentoTile } from "@/components/home/bento-tile";
 import { EditableCard, type BuilderProps } from "@/components/home/editable-card";
 import { NewsletterForm } from "@/components/newsletter-form";
 import type { ArticleListItem } from "@/lib/content";
-import type { MarketTickerEntry } from "@/lib/market-data";
-import { formatMarketValue } from "@/lib/market-data";
 import { BREVE_COLS, RIVER_COLS, type HomeTemplateId } from "@/lib/home-layout";
 import type { HomeLayoutConfig } from "@/db/schema";
 import { cn, formatDate } from "@/lib/utils";
@@ -33,8 +31,13 @@ type TemplateProps = Slots &
     interactive?: boolean;
     /** Idioma de la interfaz (rótulos y fechas). */
     locale?: Locale;
-    /** Indicadores para la cabecera de Gremial; el resto de plantillas lo ignora. */
-    market?: MarketTickerEntry[];
+    /**
+     * Indicadores ya formateados para la cabecera de Gremial (el resto de
+     * plantillas lo ignora). Van pre-formateados desde el servidor: este
+     * archivo es "use client" y `@/lib/market-data` es `server-only`, así
+     * que no puede importar su formateador ni su tipo.
+     */
+    market?: { key: "trm" | "cattle"; label: string; value: string }[];
   };
 
 /**
@@ -465,12 +468,12 @@ export function GremialTemplate({
         <div className="-mt-2 flex flex-wrap items-center gap-x-6 gap-y-2 border-b border-[var(--border)] pb-4 text-sm">
           {ganado && (
             <span className="font-semibold">
-              {t(locale, "market.cattle")} <span className="text-[var(--accent-2)]">{formatMarketValue(ganado)}</span>
+              {ganado.label} <span className="text-[var(--accent-2)]">{ganado.value}</span>
             </span>
           )}
           {trm && (
             <span className="font-semibold">
-              {t(locale, "market.trm")} <span className="text-[var(--accent-2)]">{formatMarketValue(trm)}</span>
+              {trm.label} <span className="text-[var(--accent-2)]">{trm.value}</span>
             </span>
           )}
         </div>

@@ -65,7 +65,12 @@ async function HomePage({ locale }: { locale: Locale }) {
   ].filter((x) => x.article);
 
   const market = await getMarketTicker().catch(() => []);
-  const props = { lead, second, rail, river, layout, locale, market };
+  // Gremial es "use client" y market-data.ts es server-only: se le pasan los
+  // valores ya formateados en vez del tipo/formateador del módulo.
+  const marketFormatted = market
+    .filter((m) => m.key === "trm" || m.key === "cattle")
+    .map((m) => ({ key: m.key as "trm" | "cattle", label: t(locale, `market.${m.key}`), value: formatMarketValue(m) }));
+  const props = { lead, second, rail, river, layout, locale, market: marketFormatted };
 
   const cintillo = (
     <div className="mb-10 overflow-hidden border-y border-[var(--border)] py-2.5">
