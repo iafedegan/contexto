@@ -5,7 +5,7 @@ import { eq, sql } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { db } from "@/db";
 import { siteSettings, users, type UserRole } from "@/db/schema";
-import { requireRole } from "@/lib/auth";
+import { auth, requireRole } from "@/lib/auth";
 import { SITE_IDENTITY_KEY, type SiteIdentity } from "@/lib/site-identity";
 import { SECRETS_KEY } from "@/lib/ai-provider";
 import { ANALYTICS_KEY, GA4_ID_RE, GTM_ID_RE, type AnalyticsSettings } from "@/lib/analytics";
@@ -103,6 +103,52 @@ export async function createUser(_prev: CreateUserState, formData: FormData): Pr
   return { ok: true, message: `Cuenta creada para ${name}. Comparte la contraseña de forma segura.` };
 }
 
+export type MiPerfilState = { ok: boolean; message: string } | null;
+
+/**
+ * Cada persona edita sus propios datos (nombre, correo, contraseña) — nadie
+ * más, ni siquiera un administrador: por eso usa `auth()` y el id de la
+ * sesión, no un `userId` que llegara del formulario. Cambiar la contraseña
+ * pide la actual para confirmarla; si alguien deja la sesión abierta en un
+ * equipo compartido, esa comprobación es lo único que evita que cualquiera
+ * se la cambie por otra.
+ */
+export async function actualizarMiPerfil(_prev: MiPerfilState, formData: FormData): Promise<MiPerfilState> {
+  const session = await auth();
+  if (!session?.user) return { ok: false, message: "Sesión expirada, vuelve a entrar." };
+
+  const name = String(formData.get("name") ?? "").trim();
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const passwordActual = String(formData.get("currentPassword") ?? "");
+  const passwordNueva = String(formData.get("newPassword") ?? "");
+
+  if (!name) return { ok: false, message: "Falta el nombre." };
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { ok: false, message: "Correo inválido." };
+
+  const [yo] = await db.select().from(users).where(eq(users.id, session.user.id));
+  if (!yo) return { ok: false, message: "Tu cuenta ya no existe." };
+
+  if (email !== yo.email) {
+    const [existente] = await db.select({ id: users.id }).from(users).where(eq(users.email, email));
+    if (existente) return { ok: false, message: "Ya existe otra cuenta con ese correo." };
+  }
+
+  const cambios: Partial<typeof users.$inferInsert> = { name, email, updatedAt: new Date() };
+
+  if (passwordNueva) {
+    if (passwordNueva.length < 10) {
+      return { ok: false, message: "La contraseña nueva debe tener al menos 10 caracteres." };
+    }
+    if (!yo.passwordHash || !(await bcrypt.compare(passwordActual, yo.passwordHash))) {
+      return { ok: false, message: "La contraseña actual no es correcta." };
+    }
+    cambios.passwordHash = await bcrypt.hash(passwordNueva, 10);
+  }
+
+  await db.update(users).set(cambios).where(eq(users.id, session.user.id));
+  revalidatePath("/panel/configuracion");
+  return { ok: true, message: "Datos actualizados." };
+}
 
 /**
  * Guarda proveedor, modelo y —si se envía— la clave, CIFRADA

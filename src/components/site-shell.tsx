@@ -55,6 +55,7 @@ export async function SiteShell({
   mainClassName,
   style,
   locale = DEFAULT_LOCALE,
+  aboveMain,
 }: {
   /** Plantilla activa: paleta, tipografías, cabecera y pie. */
   theme: Theme;
@@ -66,6 +67,16 @@ export async function SiteShell({
   style?: React.CSSProperties;
   /** Idioma de la INTERFAZ (el contenido sigue en español). */
   locale?: Locale;
+  /**
+   * Contenido a todo el ancho entre la cabecera y `<main class="shell">`
+   * (p. ej. el cintillo de titulares). Va aquí y no dentro de `children`
+   * porque `shell` limita el ancho al del contenido — cualquier cosa que
+   * necesite ir borde a borde tiene que quedar FUERA de ese contenedor, no
+   * forzarse con trucos de `100vw` (que se rompen dentro de vistas previas
+   * incrustadas, como el mockup de /panel/portada, donde 100vw mide la
+   * ventana real del navegador y no el recuadro del mockup).
+   */
+  aboveMain?: React.ReactNode;
 }) {
   const [nav, extraNav, identity, site, popup] = await Promise.all([
     navItems(locale),
@@ -89,6 +100,7 @@ export async function SiteShell({
       {/* Última hora por encima de todo: si hay urgencia, es lo primero. */}
       <BreakingBar locale={locale} />
       <SiteHeader theme={theme} nav={nav} extraNav={extraNav} locale={locale} identity={identity} variant={site.parts.navbar} />
+      {aboveMain}
       <main id="contenido" data-region="body" className={mainClassName ?? shell.main}>
         {/* Honestidad con el lector: la interfaz cambia de idioma, las notas no. */}
         {locale === "en" && (

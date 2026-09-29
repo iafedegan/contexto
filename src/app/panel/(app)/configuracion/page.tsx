@@ -6,6 +6,7 @@ import { auth } from "@/lib/auth";
 import { getSiteIdentity } from "@/lib/site-identity";
 import { UserRow } from "@/components/panel/user-row";
 import { AddUserForm } from "@/components/panel/add-user-form";
+import { MiPerfilForm } from "@/components/panel/mi-perfil-form";
 import { getKeyStatus } from "@/lib/ai-provider";
 import { ApiKeyForm } from "@/components/panel/api-key-form";
 import { MfaForm } from "@/components/panel/mfa-form";
@@ -141,6 +142,8 @@ export default async function ConfiguracionPage() {
         title="Personas y roles"
         hint={`${people.length} cuentas · redactor < editor < administrador`}
       >
+        {yoMismo && <MiPerfilForm name={yoMismo.name} email={yoMismo.email} />}
+
         <div className="overflow-hidden rounded-[var(--radius)] border border-[var(--border)]">
           <table className="w-full border-separate border-spacing-0 text-sm">
             <thead>

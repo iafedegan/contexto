@@ -66,35 +66,36 @@ async function HomePage({ locale }: { locale: Locale }) {
 
   const market = await getMarketTicker().catch(() => []);
 
+  const cintillo = (
+    <div className="mb-10 overflow-hidden border-y border-[var(--border)] py-2.5">
+      <div className="lx-marquee text-[0.68rem] uppercase tracking-[0.25em] text-[var(--fg-muted)]">
+        {[...market, ...articles, ...market, ...articles].map((item, i) =>
+          "value" in item ? (
+            <span
+              key={`market-${item.key}-${i}`}
+              className="flex items-center gap-1.5 whitespace-nowrap font-semibold text-[var(--fg)]"
+            >
+              <span className="text-[var(--accent)]">◆</span>
+              {t(locale, `market.${item.key}`)} {formatMarketValue(item)}
+            </span>
+          ) : (
+            <span key={`${item.slug}-${i}`} className="flex items-center gap-3 whitespace-nowrap">
+              <span className="text-[var(--accent)]">◆</span>
+              {item.title}
+            </span>
+          ),
+        )}
+      </div>
+    </div>
+  );
+
   return (
     <SiteShell
       theme={site.theme}
       style={site.style}
       locale={locale} variant="portada"
+      aboveMain={cintillo}
     >
-      {/* Cintillo de titulares + indicadores económicos, en las cinco
-          plantillas de portada (no solo Esmeralda). */}
-      <div className="relative left-1/2 -ml-[50vw] w-screen -mt-6 mb-10 overflow-hidden border-y border-[var(--border)] py-2.5">
-        <div className="lx-marquee text-[0.68rem] uppercase tracking-[0.25em] text-[var(--fg-muted)]">
-          {[...market, ...articles, ...market, ...articles].map((item, i) =>
-            "value" in item ? (
-              <span
-                key={`market-${item.key}-${i}`}
-                className="flex items-center gap-1.5 whitespace-nowrap font-semibold text-[var(--fg)]"
-              >
-                <span className="text-[var(--accent)]">◆</span>
-                {t(locale, `market.${item.key}`)} {formatMarketValue(item)}
-              </span>
-            ) : (
-              <span key={`${item.slug}-${i}`} className="flex items-center gap-3 whitespace-nowrap">
-                <span className="text-[var(--accent)]">◆</span>
-                {item.title}
-              </span>
-            ),
-          )}
-        </div>
-      </div>
-
       {/* Zona comercial de portada. No ocupa sitio si no hay creatividad
           activa y vigente (ver src/lib/ads.ts). */}
       <AdsBanner zone="home_top" className="mx-auto mb-10" />
