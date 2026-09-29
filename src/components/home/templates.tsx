@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { BarChart3, BookOpen, ShieldCheck, Wallet } from "lucide-react";
+import { BarChart3, BookOpen, CloudSun, ShieldCheck, Wallet } from "lucide-react";
 import { HomeCard } from "@/components/home/home-card";
 import { ArticleCard } from "@/components/article-card";
 import { BroadsheetCard } from "@/components/home/broadsheet-card";
@@ -11,11 +11,12 @@ import { TileCard } from "@/components/home/tile-card";
 import { BentoTile } from "@/components/home/bento-tile";
 import { EditableCard, type BuilderProps } from "@/components/home/editable-card";
 import { NewsletterForm } from "@/components/newsletter-form";
+import { CoverArt } from "@/components/cover-art";
 import type { ArticleListItem } from "@/lib/content";
 import { BREVE_COLS, RIVER_COLS, type HomeTemplateId } from "@/lib/home-layout";
 import type { HomeLayoutConfig } from "@/db/schema";
 import { cn, formatDate } from "@/lib/utils";
-import { DEFAULT_LOCALE, localePath, t, type Locale } from "@/lib/i18n";
+import { DEFAULT_LOCALE, INTL_LOCALE, categoryLabel, localePath, t, type Locale } from "@/lib/i18n";
 
 type Slots = {
   lead?: ArticleListItem;
@@ -406,11 +407,76 @@ export function EsmeraldaTemplate({
   );
 }
 
+/** Color de la etiqueta de categoría en Gremial — cada sección un color fijo,
+ * como en el mockup (roja/verde/teal/café), no el acento único del resto de
+ * plantillas. */
+const GREMIAL_TAG: Record<string, { bg: string; fg: string }> = {
+  ganaderia: { bg: "#2f6b3f", fg: "#ffffff" },
+  economia: { bg: "#1f6e73", fg: "#ffffff" },
+  colombia: { bg: "#7a2530", fg: "#ffffff" },
+  "sistemas-pecuarios": { bg: "#8a5a2f", fg: "#ffffff" },
+  mundo: { bg: "#3d4f8a", fg: "#ffffff" },
+  opinion: { bg: "#5b4a8a", fg: "#ffffff" },
+};
+const GREMIAL_TAG_DEFAULT = { bg: "#c0392b", fg: "#ffffff" };
+
+function GremialTag({ a, locale }: { a: ArticleListItem; locale: Locale }) {
+  if (!a.categorySlug) return null;
+  const c = GREMIAL_TAG[a.categorySlug] ?? GREMIAL_TAG_DEFAULT;
+  return (
+    <span
+      className="inline-block rounded px-2 py-0.5 text-[0.65rem] font-bold uppercase tracking-wider"
+      style={{ background: c.bg, color: c.fg }}
+    >
+      {a.categoryName ?? categoryLabel(locale, a.categorySlug, a.categoryName ?? "")}
+    </span>
+  );
+}
+
+/** Igual al patrón `interactive` del resto de plantillas (BroadsheetCard,
+ * HomeCard, TileCard…): dentro del editor de portada (`interactive=false`)
+ * no debe navegar — un <a> real sacaría al usuario del panel al hacer clic
+ * para seleccionar o arrastrar la tarjeta. */
+function GremialCardLink({
+  a,
+  locale,
+  interactive,
+  className,
+  children,
+}: {
+  a: ArticleListItem;
+  locale: Locale;
+  interactive: boolean;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  const Wrapper: React.ElementType = interactive ? Link : "div";
+  const wrapperProps = interactive ? { href: localePath(locale, `/articulo/${a.slug}`) } : {};
+  return (
+    <Wrapper {...wrapperProps} className={className}>
+      {children}
+    </Wrapper>
+  );
+}
+
+function GremialThumb({ a, sizes, priority = false }: { a: ArticleListItem; sizes: string; priority?: boolean }) {
+  if (!a.coverImageUrl) return <CoverArt seed={a.slug} label={a.title} className="text-3xl" />;
+  return (
+    // eslint-disable-next-line @next/next/no-img-element -- miniaturas dentro
+    // del editor de portada (sin dominio conocido en build); en el sitio
+    // público next/image ya sirve estas mismas URLs en otras plantillas.
+    <img src={a.coverImageUrl} alt={a.coverImageAlt ?? a.title} sizes={sizes} className="size-full object-cover" loading={priority ? "eager" : "lazy"} />
+  );
+}
+
 /**
- * Gremial — mockup del cliente: papel blanco, apertura + 3 destacadas,
- * cuadrícula de "Últimas noticias", accesos rápidos por sección, columnistas
- * y boletín. Los 4 accesos ("Para el ganadero") enlazan a secciones
- * existentes; no hay páginas propias de precios/clima todavía.
+ * Gremial — mockup del cliente, reproducido tal cual: apertura a sangre con
+ * texto sobre la foto, 3 destacadas en miniatura, cuadrícula de "Últimas
+ * noticias" con etiqueta de color por sección, accesos rápidos por sección,
+ * "Ganadería sostenible", columnistas con foto y boletín en franja verde.
+ * Los 5 accesos ("Para el ganadero") enlazan a secciones existentes; no hay
+ * páginas propias de precios/clima todavía, así que dos de ellos comparten
+ * destino con la cabecera de indicadores de esta misma portada.
  */
 export function GremialTemplate({
   lead,
@@ -453,69 +519,124 @@ export function GremialTemplate({
 
   const trm = market.find((m) => m.key === "trm");
   const ganado = market.find((m) => m.key === "cattle");
+  const indicadoresHref = "#indicadores";
 
   const herramientas = [
-    { icon: Wallet, label: t(locale, "home.tools.prices"), href: localePath(locale, "/categoria/economia") },
-    { icon: BarChart3, label: t(locale, "home.tools.markets"), href: localePath(locale, "/categoria/economia") },
-    { icon: ShieldCheck, label: t(locale, "home.tools.health"), href: localePath(locale, "/categoria/ganaderia") },
-    { icon: BookOpen, label: t(locale, "home.tools.manual"), href: localePath(locale, "/categoria/sistemas-pecuarios") },
+    { icon: Wallet, color: "#7a2530", label: t(locale, "home.tools.prices"), href: indicadoresHref },
+    { icon: CloudSun, color: "#2b5f9e", label: t(locale, "home.tools.weather"), href: indicadoresHref },
+    { icon: BarChart3, color: "#2f6b3f", label: t(locale, "home.tools.markets"), href: localePath(locale, "/categoria/economia") },
+    { icon: ShieldCheck, color: "#8a5a2f", label: t(locale, "home.tools.health"), href: localePath(locale, "/categoria/ganaderia") },
+    { icon: BookOpen, color: "#1f6e73", label: t(locale, "home.tools.manual"), href: localePath(locale, "/categoria/sistemas-pecuarios") },
   ];
 
   return (
-    <div className="flex flex-col gap-14">
-      {/* Cabecera de indicadores: solo los dos que el sitio realmente mide. */}
+    <div className="flex flex-col gap-12">
+      {/* Cabecera de indicadores: solo los dos que el sitio realmente mide
+          (el mockup también pedía leche y clima, que no existen como fuente
+          de datos todavía). */}
       {(trm ?? ganado) && (
-        <div className="-mt-2 flex flex-wrap items-center gap-x-6 gap-y-2 border-b border-[var(--border)] pb-4 text-sm">
+        <div id="indicadores" className="-mt-2 flex flex-wrap items-center gap-x-6 gap-y-2 border-b border-[var(--border)] pb-4 text-sm scroll-mt-24">
           {ganado && (
             <span className="font-semibold">
-              {ganado.label} <span className="text-[var(--accent-2)]">{ganado.value}</span>
+              {ganado.label} <span className="font-bold text-[var(--accent-2)]">{ganado.value}</span>
             </span>
           )}
           {trm && (
             <span className="font-semibold">
-              {trm.label} <span className="text-[var(--accent-2)]">{trm.value}</span>
+              {trm.label} <span className="font-bold text-[var(--accent-2)]">{trm.value}</span>
             </span>
           )}
         </div>
       )}
 
-      {/* Apertura + 3 destacadas */}
-      <section className="grid gap-8 lg:grid-cols-[1.6fr_1fr]">
-        {wrap(lead, <ArticleCard a={lead} locale={locale} variant="lead" priority={interactive} />)}
-        <div className="flex flex-col gap-5">
-          {destacadas.map((a) => wrap(a, <ArticleCard a={a} locale={locale} variant="pearl" />))}
+      {/* Apertura a sangre + 3 destacadas en miniatura */}
+      <section className="grid gap-6 lg:grid-cols-[1.7fr_1fr]">
+        {wrap(
+          lead,
+          <GremialCardLink a={lead} locale={locale} interactive={interactive} className="group relative block aspect-[16/10] overflow-hidden rounded-[var(--radius-lg)] sm:aspect-[16/9]">
+            <div className="absolute inset-0">
+              <GremialThumb a={lead} sizes="(min-width: 1024px) 60vw, 100vw" priority={interactive} />
+            </div>
+            <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent" />
+            <div className="absolute inset-x-0 bottom-0 p-5 sm:p-8">
+              <GremialTag a={lead} locale={locale} />
+              <h1 className="lx-display mt-3 text-2xl font-bold leading-tight text-white sm:text-3xl md:text-4xl">{lead.title}</h1>
+              <p className="mt-3 line-clamp-2 max-w-2xl text-sm text-white/85 sm:text-base">{lead.excerpt}</p>
+              <span className="mt-4 inline-flex items-center gap-2 rounded-[var(--radius)] bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--accent-fg)] transition group-hover:opacity-90">
+                {t(locale, "home.readNews")} →
+              </span>
+            </div>
+          </GremialCardLink>,
+        )}
+        <div className="flex flex-col gap-4">
+          {destacadas.map((a) =>
+            wrap(
+              a,
+              <GremialCardLink a={a} locale={locale} interactive={interactive} className="group flex gap-3 rounded-[var(--radius)] p-1 transition hover:bg-[var(--surface-2)]">
+                <div className="relative size-20 shrink-0 overflow-hidden rounded-[var(--radius)]">
+                  <GremialThumb a={a} sizes="80px" />
+                </div>
+                <div className="min-w-0">
+                  <GremialTag a={a} locale={locale} />
+                  <p className="mt-1.5 line-clamp-2 text-sm font-semibold leading-snug transition group-hover:text-[var(--accent)]">
+                    {a.title}
+                  </p>
+                </div>
+              </GremialCardLink>,
+            ),
+          )}
         </div>
       </section>
 
       {/* Últimas noticias */}
       {noticias.length > 0 && (
         <section>
-          <div className="flex items-end justify-between border-b border-[var(--border)] pb-3">
-            <h2 className="lx-display text-2xl font-semibold tracking-tight">{t(locale, "home.recent")}</h2>
+          <div className="flex items-end justify-between border-b border-[var(--border-strong)] pb-3">
+            <h2 className="lx-display text-xl font-bold tracking-tight sm:text-2xl">{t(locale, "home.recent")}</h2>
             <Link href={localePath(locale, "/buscar")} className="lx-link text-sm font-semibold text-[var(--accent)]">
               {t(locale, "home.viewAll")} →
             </Link>
           </div>
           <div className={cn("mt-6 grid gap-6", RIVER_COLS[layout.riverColumns] ?? RIVER_COLS[4])}>
-            {noticias.map((a) => wrap(a, <ArticleCard a={a} locale={locale} />))}
+            {noticias.map((a) =>
+              wrap(
+                a,
+                <GremialCardLink a={a} locale={locale} interactive={interactive} className="group flex flex-col">
+                  <div className="relative aspect-[3/2] overflow-hidden rounded-[var(--radius)]">
+                    <GremialThumb a={a} sizes="(min-width: 1024px) 25vw, 50vw" />
+                    <div className="absolute left-2 top-2">
+                      <GremialTag a={a} locale={locale} />
+                    </div>
+                  </div>
+                  <p className="mt-3 line-clamp-2 text-[0.95rem] font-semibold leading-snug transition group-hover:text-[var(--accent)]">
+                    {a.title}
+                  </p>
+                  <p className="mt-1.5 text-xs text-[var(--fg-muted)]">
+                    {a.authorName}
+                    {a.authorName && a.publishedAt ? " · " : ""}
+                    {a.publishedAt && formatDate(a.publishedAt, INTL_LOCALE[locale])}
+                  </p>
+                </GremialCardLink>,
+              ),
+            )}
           </div>
         </section>
       )}
 
       {/* Para el ganadero: accesos rápidos por sección */}
       <section>
-        <h2 className="lx-display text-2xl font-semibold tracking-tight text-[var(--accent-2)]">
+        <h2 className="lx-display text-xl font-bold tracking-tight text-[var(--accent-2)] sm:text-2xl">
           {t(locale, "home.forRancher")}
         </h2>
-        <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
-          {herramientas.map(({ icon: Icon, label, href }) => (
+        <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+          {herramientas.map(({ icon: Icon, color, label, href }) => (
             <Link
               key={label}
               href={href}
-              className="lx-card flex flex-col items-center gap-3 rounded-[var(--radius-lg)] px-4 py-6 text-center transition hover:border-[var(--accent)]"
+              className="flex flex-col items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] px-4 py-6 text-center shadow-[var(--shadow)] transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-hover)]"
             >
-              <span className="grid size-11 place-items-center rounded-full bg-[var(--surface-2)] text-[var(--accent)]">
-                <Icon size={20} />
+              <span className="grid size-12 place-items-center rounded-[var(--radius)] text-white" style={{ background: color }}>
+                <Icon size={22} />
               </span>
               <span className="text-sm font-semibold">{label}</span>
             </Link>
@@ -523,38 +644,85 @@ export function GremialTemplate({
         </div>
       </section>
 
-      {/* Ganadería sostenible: una nota destacada a todo el ancho */}
+      {/* Ganadería sostenible: una nota destacada a todo el ancho, sobre
+          fondo verde claro como en el mockup. */}
       {sostenible && (
-        <section>
-          <h2 className="lx-display text-2xl font-semibold tracking-tight text-[var(--accent-2)]">
+        <section className="rounded-[var(--radius-lg)] bg-[var(--surface-2)] p-5 sm:p-8">
+          <h2 className="lx-display text-xl font-bold tracking-tight text-[var(--accent-2)] sm:text-2xl">
             {t(locale, "home.sustainable")}
           </h2>
-          <div className="mt-6">{wrap(sostenible, <ArticleCard a={sostenible} locale={locale} variant="copper" />)}</div>
+          {wrap(
+            sostenible,
+            <GremialCardLink
+              a={sostenible}
+              locale={locale}
+              interactive={interactive}
+              className="group mt-6 grid gap-6 sm:grid-cols-[1fr_1.2fr] sm:items-center"
+            >
+              <div className="relative aspect-[4/3] overflow-hidden rounded-[var(--radius-lg)]">
+                <GremialThumb a={sostenible} sizes="(min-width: 640px) 40vw, 100vw" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold leading-snug transition group-hover:text-[var(--accent)] sm:text-2xl">
+                  {sostenible.title}
+                </h3>
+                <p className="mt-3 line-clamp-3 text-sm text-[var(--fg-muted)] sm:text-base">{sostenible.excerpt}</p>
+                <span className="mt-5 inline-flex items-center gap-2 rounded-[var(--radius)] bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--accent-fg)]">
+                  {t(locale, "home.explore")} →
+                </span>
+              </div>
+            </GremialCardLink>,
+          )}
         </section>
       )}
 
-      {/* Opinión y columnistas */}
+      {/* Opinión y columnistas: foto real cuando el autor tiene avatar. */}
       {columnistasFinal.length > 0 && (
         <section>
-          <h2 className="lx-display text-2xl font-semibold tracking-tight">{t(locale, "home.columnists")}</h2>
+          <h2 className="lx-display text-xl font-bold tracking-tight sm:text-2xl">{t(locale, "home.columnists")}</h2>
           <div className="mt-6 grid gap-6 sm:grid-cols-3">
-            {columnistasFinal.map((a) => (
-              <Link key={a.slug} href={localePath(locale, `/articulo/${a.slug}`)} className="lx-card flex flex-col gap-3 p-5">
-                <span className="lx-display grid size-10 place-items-center rounded-full bg-[var(--accent)] text-sm text-[var(--accent-fg)]">
-                  {(a.authorName ?? "C").charAt(0)}
-                </span>
-                <div>
-                  <p className="text-sm font-semibold">{a.authorName ?? t(locale, "home.columnists")}</p>
-                  <p className="mt-1 line-clamp-2 text-sm text-[var(--fg-muted)]">{a.title}</p>
-                </div>
-              </Link>
-            ))}
+            {columnistasFinal.map((a) =>
+              wrap(
+                a,
+                <GremialCardLink
+                  a={a}
+                  locale={locale}
+                  interactive={interactive}
+                  className="group flex flex-col items-center rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-6 text-center shadow-[var(--shadow)] transition hover:shadow-[var(--shadow-hover)]"
+                >
+                  {a.authorAvatarUrl ? (
+                    <div className="relative size-16 overflow-hidden rounded-full">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={a.authorAvatarUrl} alt={a.authorName ?? ""} className="size-full object-cover" />
+                    </div>
+                  ) : (
+                    <span className="lx-display grid size-16 place-items-center rounded-full bg-[var(--accent)] text-xl text-[var(--accent-fg)]">
+                      {(a.authorName ?? "C").charAt(0)}
+                    </span>
+                  )}
+                  <p className="mt-3 text-sm font-bold">{a.authorName ?? t(locale, "home.columnists")}</p>
+                  <p className="mt-1 line-clamp-2 text-sm text-[var(--fg-muted)] transition group-hover:text-[var(--accent)]">
+                    {a.title}
+                  </p>
+                </GremialCardLink>,
+              ),
+            )}
           </div>
         </section>
       )}
 
-      {/* Boletín: el mismo formulario que ya usa el resto del sitio. */}
-      <section className="lx-card rounded-[var(--radius-lg)] bg-[var(--surface-2)] p-6 sm:p-8">
+      {/* Boletín en franja verde, como el pie del mockup — mismo formulario
+          y misma Server Action que el resto del sitio; solo se le cambian
+          los tokens de color en este contenedor. */}
+      <section
+        className="rounded-[var(--radius-lg)] p-6 text-white sm:p-8"
+        style={{
+          background: "#1e4d2b",
+          ["--bg-2" as string]: "#296339",
+          ["--fg-muted" as string]: "rgba(255,255,255,.75)",
+          ["--border" as string]: "rgba(255,255,255,.3)",
+        }}
+      >
         <NewsletterForm locale={locale} compacto />
       </section>
     </div>

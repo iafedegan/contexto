@@ -35,6 +35,8 @@ export default async function PortadaPage({
         categoryName: categories.name,
         categorySlug: categories.slug,
         authorName: authors.name,
+        authorSlug: authors.slug,
+        authorAvatarUrl: authors.avatarUrl,
         homePosition: articles.homePosition,
         isLive: articles.isLive,
         homeStyle: articles.homeStyle,

@@ -47,6 +47,8 @@ export type ArticleListItem = {
   categoryName: string | null;
   categorySlug: string | null;
   authorName: string | null;
+  authorSlug: string | null;
+  authorAvatarUrl: string | null;
   /** Estilo manual fijado en /panel/portada. null = todo por defecto. */
   homeStyle: HomeStyle | null;
   /** Etiqueta "En Vivo" activada por la redacción (AI-03 / FM-06). */
@@ -63,6 +65,8 @@ const listSelection = {
   categoryName: categories.name,
   categorySlug: categories.slug,
   authorName: authors.name,
+  authorSlug: authors.slug,
+  authorAvatarUrl: authors.avatarUrl,
   homeStyle: articles.homeStyle,
   isLive: articles.isLive,
 };
