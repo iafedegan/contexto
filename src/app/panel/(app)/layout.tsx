@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { ShieldAlert } from "lucide-react";
 import { db } from "@/db";
+import { LogoMark } from "@/components/logo-mark";
 import { users } from "@/db/schema";
 import { auth, signOut } from "@/lib/auth";
 import { PanelNav } from "@/components/panel/panel-nav";
@@ -52,9 +53,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
         />
         <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-5 px-6 py-3.5">
           <Link href="/panel" className="flex items-center gap-2.5">
-            <span className="grid size-8 place-items-center rounded-[var(--radius)] bg-gradient-to-br from-[#4ade9c] to-[#d8b558] text-[0.6rem] font-bold text-[#06170f]">
-              CG
-            </span>
+            <LogoMark size={32} />
             <span className="lx-display text-sm font-semibold tracking-tight">
               Panel editorial
             </span>

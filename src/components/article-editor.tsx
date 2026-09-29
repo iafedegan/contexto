@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import { LogoMark } from "@/components/logo-mark";
 import {
   AlignLeft,
   CalendarClock,
@@ -728,9 +729,7 @@ export function ArticleEditor({
           <Panel title="Así se verá en Google" icon={<Search size={13} />}>
             <div className="rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] p-3">
               <p className="flex items-center gap-1.5 text-[0.68rem] text-[var(--fg-muted)]">
-                <span className="grid size-4 place-items-center rounded-full bg-[var(--accent)] text-[0.5rem] font-bold text-[var(--accent-fg)]">
-                  CG
-                </span>
+                <LogoMark size={16} />
                 contextoganadero.com › articulo
               </p>
               <p className="mt-1 line-clamp-2 text-[0.95rem] font-medium text-[#1a0dab]">

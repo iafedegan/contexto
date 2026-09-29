@@ -5,6 +5,7 @@ import { THEME_LABEL, type Theme } from "@/lib/theme";
 import { DEFAULT_IDENTITY, type SiteIdentity } from "@/lib/site-identity";
 import { DEFAULT_LOCALE, localePath, t, type Locale } from "@/lib/i18n";
 import { MENU_SECUNDARIO } from "@/content/institucional";
+import { LogoMark } from "@/components/logo-mark";
 
 /**
  * Menú secundario completo del §2.2: institucional, legal y comercial. Vive en
@@ -369,9 +370,7 @@ function SealFooter({ theme, locale, LEGAL, ARCHIVE_NOTE, SITE_NAME }: FooterPro
   return (
     <footer data-region="footer" className="mt-24 border-t-2 border-[var(--accent)] bg-[var(--surface)]">
       <div className="mx-auto grid max-w-5xl gap-8 px-6 py-12 md:grid-cols-[auto_1fr]">
-        <span className="grid size-16 place-items-center rounded-full border border-[var(--accent)] text-sm tracking-[0.1em] text-[var(--accent)]">
-          CG
-        </span>
+        <LogoMark size={64} />
         <div>
           <p className="text-sm leading-relaxed text-[var(--fg-muted)]">
 {t(locale, "footer.about")} {ARCHIVE_NOTE}

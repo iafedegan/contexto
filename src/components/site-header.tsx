@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { NavbarId } from "@/lib/template-parts";
 import { ReadingProgress } from "@/components/reading-progress";
 import { LocaleSwitch } from "@/components/locale-switch";
+import { LogoMark } from "@/components/logo-mark";
 import type { Theme } from "@/lib/theme";
 import { DEFAULT_IDENTITY, type SiteIdentity } from "@/lib/site-identity";
 import { DEFAULT_LOCALE, INTL_LOCALE, localePath, t, type Locale } from "@/lib/i18n";
@@ -378,9 +379,7 @@ function CrestHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extra: 
     <header data-region="navbar" className="relative z-40 border-b-2 border-[var(--accent)] bg-[var(--nav-bg)] sm:sticky sm:top-0">
       <div className="mx-auto max-w-5xl px-6 pb-8 pt-16 text-center sm:pt-10">
         <Link href={localePath(locale, "/")} className="inline-flex flex-col items-center gap-3">
-          <span className="grid size-14 place-items-center rounded-full border-2 border-[var(--accent)] text-lg tracking-[0.1em] text-[var(--accent)]">
-            CG
-          </span>
+          <LogoMark size={56} />
           <span className="lx-display text-xl tracking-[0.3em] uppercase">{identity.name}</span>
         </Link>
         <p className="lx-kicker mt-2 text-[var(--accent-2)]">{t(locale, "nav.institutional")}</p>

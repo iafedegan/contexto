@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { ImageResponse } from "next/og";
 import { NextRequest } from "next/server";
 
@@ -5,6 +7,10 @@ export const runtime = "nodejs";
 
 const BRAND = "#1f6d3a";
 const BRAND_FG = "#ffffff";
+
+const LOGO_DATA_URL = `data:image/jpeg;base64,${readFileSync(
+  join(process.cwd(), "public/logo/contexto-ganadero-logo.jpg"),
+).toString("base64")}`;
 
 /**
  * Genera los íconos PNG del manifest (192/512, incl. variante "maskable")
@@ -32,25 +38,21 @@ export async function GET(req: NextRequest) {
         <div
           style={{
             display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
             width: size - pad * 2,
             height: size - pad * 2,
             borderRadius: size * 0.18,
             border: `${Math.max(2, Math.round(size * 0.02))}px solid ${BRAND_FG}`,
+            overflow: "hidden",
           }}
         >
-          <span
-            style={{
-              fontSize: (size - pad * 2) * 0.42,
-              fontWeight: 800,
-              color: BRAND_FG,
-              letterSpacing: -2,
-              fontFamily: "sans-serif",
-            }}
-          >
-            CG
-          </span>
+          {/* eslint-disable-next-line @next/next/no-img-element -- next/og no admite next/image */}
+          <img
+            src={LOGO_DATA_URL}
+            width={size - pad * 2}
+            height={size - pad * 2}
+            style={{ objectFit: "cover" }}
+            alt=""
+          />
         </div>
       </div>
     ),
