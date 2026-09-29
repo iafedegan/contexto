@@ -96,7 +96,18 @@ async function Suscriptores({ admin }: { admin: boolean }) {
       <ul className="divide-y divide-[var(--border)] rounded-[var(--radius)] border border-[var(--border)]">
         {rows.map((r) => (
           <li key={r.id} className="flex flex-wrap items-center justify-between gap-2 p-3 text-sm">
-            <span>{r.email}</span>
+            <span>
+              {r.firstName || r.lastName ? `${r.firstName ?? ""} ${r.lastName ?? ""}`.trim() + " · " : ""}
+              {r.email}
+              {(r.phone || r.mobile) && (
+                <span className="ml-2 text-xs text-[var(--fg-muted)]">
+                  {[r.phone, r.mobile].filter(Boolean).join(" / ")}
+                </span>
+              )}
+              {r.signupCity && (
+                <span className="ml-2 text-xs text-[var(--fg-muted)]">· {r.signupCity}</span>
+              )}
+            </span>
             <span className="flex items-center gap-3 text-xs text-[var(--fg-muted)]">
               {r.unsubscribedAt ? "Baja" : r.confirmed ? "Activo" : "Pendiente"} · {fmt(r.createdAt)}
               {!r.unsubscribedAt && <form action={unsubscribeSubscriber.bind(null, r.id)}><button className="underline">Dar de baja</button></form>}

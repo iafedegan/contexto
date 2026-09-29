@@ -28,6 +28,55 @@ export function NewsletterForm({ locale, compacto = false }: { locale: Locale; c
       </div>
 
       <div className="mt-4 flex flex-col gap-2">
+        {!compacto && (
+          <>
+            <div className="grid grid-cols-2 gap-2">
+              <input
+                name="firstName"
+                required
+                autoComplete="given-name"
+                placeholder={locale === "en" ? "First name" : "Nombre"}
+                className="w-full rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] px-3.5 py-2.5 text-[0.95rem] outline-none transition focus:border-[var(--accent)]"
+              />
+              <input
+                name="lastName"
+                required
+                autoComplete="family-name"
+                placeholder={locale === "en" ? "Last name" : "Apellidos"}
+                className="w-full rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] px-3.5 py-2.5 text-[0.95rem] outline-none transition focus:border-[var(--accent)]"
+              />
+            </div>
+            <label className="flex flex-col gap-1 text-xs text-[var(--fg-muted)]">
+              {locale === "en" ? "Date of birth" : "Fecha de nacimiento"}
+              <input
+                name="birthDate"
+                type="date"
+                required
+                autoComplete="bday"
+                className="w-full rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] px-3.5 py-2.5 text-[0.95rem] text-[var(--fg)] outline-none transition focus:border-[var(--accent)]"
+              />
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              <input
+                name="phone"
+                type="tel"
+                required
+                autoComplete="tel"
+                placeholder={locale === "en" ? "Phone" : "Teléfono"}
+                className="w-full rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] px-3.5 py-2.5 text-[0.95rem] outline-none transition focus:border-[var(--accent)]"
+              />
+              <input
+                name="mobile"
+                type="tel"
+                required
+                autoComplete="tel-national"
+                placeholder={locale === "en" ? "Mobile" : "Celular"}
+                className="w-full rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] px-3.5 py-2.5 text-[0.95rem] outline-none transition focus:border-[var(--accent)]"
+              />
+            </div>
+          </>
+        )}
+
         <label className="sr-only" htmlFor={`boletin-${compacto ? "c" : "l"}`}>
           {t(locale, "newsletter.email")}
         </label>

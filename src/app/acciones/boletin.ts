@@ -49,6 +49,20 @@ export async function suscribirBoletin(
     return { ok: false, message: es ? "Revisa la dirección de correo." : "Please check the email address." };
   }
 
+  // Los datos completos solo los pide el formulario largo (/boletin); el
+  // widget compacto de la barra lateral sigue siendo solo-correo.
+  const firstName = String(formData.get("firstName") ?? "").trim().slice(0, 120) || null;
+  const lastName = String(formData.get("lastName") ?? "").trim().slice(0, 120) || null;
+  const birthDate = String(formData.get("birthDate") ?? "").trim() || null;
+  const phone = String(formData.get("phone") ?? "").trim().slice(0, 40) || null;
+  const mobile = String(formData.get("mobile") ?? "").trim().slice(0, 40) || null;
+
+  // Trazabilidad interna (nunca se le muestra al suscriptor): Vercel ya
+  // resuelve la ciudad a partir de la IP en el borde, sin llamar a un
+  // servicio externo ni guardar más que lo que la cabecera trae.
+  const h = await headers();
+  const signupCity = h.get("x-vercel-ip-city") ? decodeURIComponent(h.get("x-vercel-ip-city")!) : null;
+
   try {
     const [existente] = await db
       .select({ id: newsletterSubscribers.id, confirmed: newsletterSubscribers.confirmed })
@@ -66,13 +80,14 @@ export async function suscribirBoletin(
     }
 
     const confirmToken = randomUUID();
+    const datos = { firstName, lastName, birthDate, phone, mobile, signupIp: ip, signupCity };
     if (existente) {
       await db
         .update(newsletterSubscribers)
-        .set({ confirmToken, unsubscribedAt: null })
+        .set({ confirmToken, unsubscribedAt: null, ...datos })
         .where(eq(newsletterSubscribers.id, existente.id));
     } else {
-      await db.insert(newsletterSubscribers).values({ email, confirmToken });
+      await db.insert(newsletterSubscribers).values({ email, confirmToken, ...datos });
     }
     // El correo de confirmación sale en cuanto hay proveedor configurado. Un
     // fallo al enviarlo no debe romper el alta: queda pendiente y trazable.

@@ -288,6 +288,15 @@ export const adsZones = pgTable("ads_zones", {
 export const newsletterSubscribers = pgTable("newsletter_subscribers", {
   id: uuid("id").defaultRandom().primaryKey(),
   email: text("email").notNull().unique(),
+  firstName: text("first_name"),
+  lastName: text("last_name"),
+  birthDate: date("birth_date"),
+  phone: text("phone"),
+  mobile: text("mobile"),
+  // Trazabilidad interna del alta (no se muestra al suscriptor): de dónde y
+  // desde qué ciudad se registró, según la cabecera de geo-IP de Vercel.
+  signupIp: text("signup_ip"),
+  signupCity: text("signup_city"),
   confirmed: boolean("confirmed").notNull().default(false),
   confirmToken: text("confirm_token"),
   unsubscribedAt: timestamp("unsubscribed_at", { withTimezone: true }),

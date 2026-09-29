@@ -48,6 +48,11 @@ const GROUPS: Group[] = [
         hint: "Identidad, personas, seguridad, analítica y asistente",
       },
       {
+        href: "/panel/newsletter?tab=suscriptores",
+        label: "Suscriptores",
+        hint: "Boletín: altas, bajas y confirmados",
+      },
+      {
         href: "/panel/mensajes",
         label: "Mensajes recibidos",
         hint: "Contacto y solicitudes de pauta",

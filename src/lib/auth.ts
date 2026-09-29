@@ -141,10 +141,17 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     }),
   ],
   callbacks: {
-    jwt({ token, user }) {
+    jwt({ token, user, trigger, session }) {
       if (user) {
         token.uid = user.id;
         token.role = (user as { role: UserRole }).role;
+      }
+      // Disparado por update() desde "Mis datos": el JWT solo lleva el nombre
+      // del login, así que sin esto el header queda con el nombre viejo hasta
+      // que la sesión expire.
+      if (trigger === "update" && session) {
+        if (session.name) token.name = session.name;
+        if (session.email) token.email = session.email;
       }
       return token;
     },
