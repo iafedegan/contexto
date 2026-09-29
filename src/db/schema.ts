@@ -295,8 +295,14 @@ export const newsletterSubscribers = pgTable("newsletter_subscribers", {
   mobile: text("mobile"),
   // Trazabilidad interna del alta (no se muestra al suscriptor): de dónde y
   // desde qué ciudad se registró, según la cabecera de geo-IP de Vercel.
+  // Lat/lon vienen de la MISMA cabecera (x-vercel-ip-*): no se llama a ningún
+  // servicio de geocodificación externo, así que solo hay dato para las altas
+  // hechas después de este cambio.
   signupIp: text("signup_ip"),
   signupCity: text("signup_city"),
+  signupCountry: text("signup_country"),
+  signupLat: numeric("signup_lat"),
+  signupLon: numeric("signup_lon"),
   confirmed: boolean("confirmed").notNull().default(false),
   confirmToken: text("confirm_token"),
   unsubscribedAt: timestamp("unsubscribed_at", { withTimezone: true }),

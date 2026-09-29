@@ -62,6 +62,9 @@ export async function suscribirBoletin(
   // servicio externo ni guardar más que lo que la cabecera trae.
   const h = await headers();
   const signupCity = h.get("x-vercel-ip-city") ? decodeURIComponent(h.get("x-vercel-ip-city")!) : null;
+  const signupCountry = h.get("x-vercel-ip-country");
+  const signupLat = h.get("x-vercel-ip-latitude");
+  const signupLon = h.get("x-vercel-ip-longitude");
 
   try {
     const [existente] = await db
@@ -80,7 +83,18 @@ export async function suscribirBoletin(
     }
 
     const confirmToken = randomUUID();
-    const datos = { firstName, lastName, birthDate, phone, mobile, signupIp: ip, signupCity };
+    const datos = {
+      firstName,
+      lastName,
+      birthDate,
+      phone,
+      mobile,
+      signupIp: ip,
+      signupCity,
+      signupCountry,
+      signupLat,
+      signupLon,
+    };
     if (existente) {
       await db
         .update(newsletterSubscribers)

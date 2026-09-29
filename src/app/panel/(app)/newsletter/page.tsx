@@ -6,6 +6,7 @@ import { requireRole } from "@/lib/auth";
 import { getNewsletterSettings, getProviderStatus } from "@/lib/newsletter/settings";
 import { createEdition, deleteSubscriber, unsubscribeSubscriber } from "./actions";
 import { SettingsForm } from "./settings-form";
+import { SubscriberMap, type SubscriberPoint } from "@/components/panel/subscriber-map";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -87,12 +88,28 @@ async function Ediciones() {
 
 async function Suscriptores({ admin }: { admin: boolean }) {
   const rows = await db.select().from(newsletterSubscribers).orderBy(desc(newsletterSubscribers.createdAt)).limit(200);
+
+  // Agrupa por ciudad (redondeando la coordenada) para no poner un círculo
+  // por persona encima del otro: el tamaño del círculo ya dice cuántos son.
+  const porCiudad = new Map<string, SubscriberPoint>();
+  for (const r of rows) {
+    if (r.signupLat == null || r.signupLon == null) continue;
+    const lat = Number(r.signupLat);
+    const lon = Number(r.signupLon);
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+    const key = r.signupCity ?? `${lat.toFixed(1)},${lon.toFixed(1)}`;
+    const actual = porCiudad.get(key);
+    if (actual) actual.n += 1;
+    else porCiudad.set(key, { lat, lon, city: r.signupCity, country: r.signupCountry, n: 1 });
+  }
+
   return (
     <div className="flex flex-col gap-3">
       <div className="flex justify-between text-sm text-[var(--fg-muted)]">
         <span>Últimos {rows.length} suscriptores</span>
         <Link href="/api/boletin/exportar" prefetch={false} className="underline">Exportar CSV</Link>
       </div>
+      <SubscriberMap points={[...porCiudad.values()]} />
       <ul className="divide-y divide-[var(--border)] rounded-[var(--radius)] border border-[var(--border)]">
         {rows.map((r) => (
           <li key={r.id} className="flex flex-wrap items-center justify-between gap-2 p-3 text-sm">
