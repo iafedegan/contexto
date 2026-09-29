@@ -293,7 +293,8 @@ export function HomeBuilder({
       <div className="flex min-w-0 flex-col gap-3">
         <div
           data-theme="panel-ui"
-          className="flex flex-wrap items-center gap-2 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--bg)] px-3 py-2.5 text-[var(--fg)] shadow-[var(--shadow)]"
+          className="sticky z-30 flex flex-wrap items-center gap-2 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--bg)] px-3 py-2.5 text-[var(--fg)] shadow-[var(--shadow)]"
+          style={{ top: "calc(var(--panel-header-h, 0px) + 0.75rem)" }}
         >
           <button
             onClick={save}
