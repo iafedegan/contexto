@@ -9,6 +9,8 @@ import { AddUserForm } from "@/components/panel/add-user-form";
 import { getKeyStatus } from "@/lib/ai-provider";
 import { ApiKeyForm } from "@/components/panel/api-key-form";
 import { MfaForm } from "@/components/panel/mfa-form";
+import { PasskeyForm } from "@/components/panel/passkey-form";
+import { listarPasskeys } from "./passkey-actions";
 import { ConfigTabs } from "@/components/panel/config-tabs";
 import { getAnalyticsStatus } from "@/lib/analytics-server";
 import { saveAnalyticsSettings, saveSiteIdentity } from "./actions";
@@ -23,7 +25,7 @@ export default async function ConfiguracionPage() {
   const session = await auth();
   const isAdmin = session?.user.role === "administrador";
 
-  const [identity, keyStatus, analytics, people] = await Promise.all([
+  const [identity, keyStatus, analytics, people, misPasskeys] = await Promise.all([
     getSiteIdentity(),
     getKeyStatus(),
     getAnalyticsStatus(),
@@ -38,6 +40,7 @@ export default async function ConfiguracionPage() {
       })
       .from(users)
       .orderBy(asc(users.name)),
+    listarPasskeys(),
   ]);
 
   const yoMismo = people.find((p) => p.id === session?.user.id || p.email === session?.user.email);
@@ -181,6 +184,7 @@ export default async function ConfiguracionPage() {
         hint="Segundo factor de acceso al panel"
       >
         <MfaForm activo={yoMismo?.totpEnabled ?? false} />
+        <PasskeyForm passkeys={misPasskeys} />
       </Section>
 
       {/* ---------------------------------------------- Analítica y SEO */}

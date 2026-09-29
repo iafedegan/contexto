@@ -4,7 +4,10 @@ import { Suspense, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { signIn } from "next-auth/react";
+import { startAuthentication } from "@simplewebauthn/browser";
+import { Fingerprint, Loader2 } from "lucide-react";
 import { Turnstile } from "@/components/turnstile";
+import { confirmarLoginPasskey, iniciarLoginPasskey } from "./actions";
 
 /** Acceso al panel — plantilla «Platino». */
 function LoginForm() {
@@ -13,8 +16,38 @@ function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [pendingPasskey, setPendingPasskey] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const isDemo = process.env.NODE_ENV !== "production";
+
+  async function entrarConPasskey() {
+    setError(null);
+    setPendingPasskey(true);
+    try {
+      const options = await iniciarLoginPasskey();
+      const respuesta = await startAuthentication(options);
+      const verificado = await confirmarLoginPasskey(respuesta);
+      if (!verificado.ok || !verificado.token) {
+        setError(verificado.message || "No se pudo verificar la passkey.");
+        return;
+      }
+      const res = await signIn("credentials", { passkeyToken: verificado.token, redirect: false });
+      if (res?.error) {
+        setError("La passkey no corresponde a una cuenta válida.");
+        return;
+      }
+      router.push(next);
+      router.refresh();
+    } catch (e) {
+      setError(
+        e instanceof Error && e.name === "NotAllowedError"
+          ? "Cancelaste el ingreso con passkey."
+          : "Este navegador o dispositivo no soporta passkeys.",
+      );
+    } finally {
+      setPendingPasskey(false);
+    }
+  }
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -93,6 +126,22 @@ function LoginForm() {
             {pending ? "Entrando…" : "Entrar"}
           </button>
         </form>
+
+        <div className="mt-4 flex items-center gap-3 text-[0.68rem] uppercase tracking-[0.14em] text-[var(--fg-muted)]">
+          <span className="h-px flex-1 bg-[var(--border)]" />
+          o
+          <span className="h-px flex-1 bg-[var(--border)]" />
+        </div>
+
+        <button
+          type="button"
+          onClick={entrarConPasskey}
+          disabled={pendingPasskey}
+          className="mt-4 flex w-full items-center justify-center gap-2 rounded-[var(--radius)] border border-[var(--border-strong)] px-4 py-2.5 text-sm font-medium transition hover:border-[var(--accent)] hover:text-[var(--accent)] disabled:opacity-60"
+        >
+          {pendingPasskey ? <Loader2 size={15} className="animate-spin" /> : <Fingerprint size={15} />}
+          Entrar con passkey
+        </button>
 
         {isDemo && (
           <button

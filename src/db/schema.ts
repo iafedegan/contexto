@@ -91,6 +91,30 @@ export const users = pgTable("users", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+/**
+ * Passkeys (WebAuthn) — alternativa sin escribir nada al TOTP: el navegador
+ * pide huella/Face ID/PIN del dispositivo en vez de un código de 6 dígitos.
+ * Una cuenta puede tener varias (celular, laptop…). `credentialId` y
+ * `publicKey` se guardan en base64url, tal como los codifica
+ * `@simplewebauthn/server`; `counter` es la defensa contra reproducir una
+ * misma respuesta capturada (debe subir en cada uso, nunca bajar).
+ */
+export const passkeys = pgTable("passkeys", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  credentialId: text("credential_id").notNull().unique(),
+  publicKey: text("public_key").notNull(),
+  counter: integer("counter").notNull().default(0),
+  deviceType: text("device_type").notNull(), // "singleDevice" | "multiDevice"
+  backedUp: boolean("backed_up").notNull().default(false),
+  transports: text("transports"), // JSON de AuthenticatorTransportFuture[], opcional
+  label: text("label"), // "iPhone de Ana", lo pone la persona al crearla
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+});
+
 // Tablas mínimas requeridas por @auth/drizzle-adapter (sesiones JWT no las usan,
 // pero se dejan para permitir SSO futuro sin migración).
 export const sessions = pgTable("sessions", {
