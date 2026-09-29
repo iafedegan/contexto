@@ -59,6 +59,7 @@ export default async function PortadaPage({
     bold: <SiteHeader theme="clasico" nav={nav} variant="bold" />,
     glass: <SiteHeader theme="clasico" nav={nav} variant="glass" />,
     crest: <SiteHeader theme="clasico" nav={nav} variant="crest" />,
+    gremial: <SiteHeader theme="gremial" nav={nav} variant="gremial" />,
   };
   const footerVariants = {
     grand: <SiteFooter theme="clasico" nav={nav} variant="grand" />,
@@ -66,6 +67,7 @@ export default async function PortadaPage({
     copper: <SiteFooter theme="clasico" nav={nav} variant="copper" />,
     aurora: <SiteFooter theme="clasico" nav={nav} variant="aurora" />,
     seal: <SiteFooter theme="clasico" nav={nav} variant="seal" />,
+    gremial: <SiteFooter theme="gremial" nav={nav} variant="gremial" />,
   };
 
   return (

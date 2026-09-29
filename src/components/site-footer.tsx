@@ -67,12 +67,16 @@ export function SiteFooter({
       return <AuroraFooter {...props} />;
     case "seal":
       return <SealFooter {...props} />;
+    case "gremial":
+      return <GremialFooter {...props} />;
   }
   switch (theme) {
     case "home":
     case "esmeralda":
     case "clasico":
       return <GrandFooter {...props} />;
+    case "gremial":
+      return <GremialFooter {...props} />;
     case "revista":
       return <AtelierFooter {...props} />;
     case "compacto":
@@ -129,6 +133,46 @@ function GrandFooter({ nav, theme, locale, LEGAL, TOOLS, ARCHIVE_NOTE, SITE_NAME
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-[var(--fg-muted)]">
 {t(locale, "footer.blurb")}
             </p>
+            <Link href={localePath(locale, "/asistente")} className="lx-btn mt-6">
+              {t(locale, "footer.consultArchive")}
+            </Link>
+          </div>
+          <FooterColumn title={t(locale, "footer.sections")} items={nav.map((n) => ({ ...n, href: localePath(locale, n.href) }))} />
+          <FooterColumn title={t(locale, "footer.institutional")} items={LEGAL.slice(0, 4)} />
+          <FooterColumn title={t(locale, "footer.legal")} items={LEGAL.slice(4)} />
+          <FooterColumn title={t(locale, "footer.tools")} items={TOOLS} />
+        </div>
+        <div className="mt-14 flex flex-wrap items-center justify-between gap-4 border-t border-[var(--border)] pt-6 text-xs text-[var(--fg-muted)]">
+          <p>
+            © {YEAR} {SITE_NAME}. {ARCHIVE_NOTE}
+          </p>
+          <Signature theme={theme} locale={locale} />
+        </div>
+      </div>
+    </footer>
+  );
+}
+
+/* ---------------------------------------------------------------- GREMIAL
+   Pie del mockup del cliente: franja verde oscuro continua con la de la
+   franja del boletín (ver GremialTemplate). Mismo contenido que GrandFooter
+   (secciones, institucional, legal, herramientas) — solo cambia la piel. */
+function GremialFooter({ nav, theme, locale, LEGAL, TOOLS, ARCHIVE_NOTE, SITE_NAME }: FooterProps) {
+  return (
+    <footer
+      data-region="footer"
+      className="mt-0 text-white"
+      style={{
+        background: "#173b21",
+        ["--fg-muted" as string]: "rgba(255,255,255,.75)",
+        ["--border" as string]: "rgba(255,255,255,.18)",
+      }}
+    >
+      <div className="mx-auto max-w-7xl px-6 py-16">
+        <div className="grid gap-12 md:grid-cols-2 lg:grid-cols-[1.3fr_1fr_1fr_1fr_1fr]">
+          <div>
+            <span className="lx-display text-3xl font-semibold">{SITE_NAME}</span>
+            <p className="mt-4 max-w-xs text-sm leading-relaxed text-[var(--fg-muted)]">{t(locale, "footer.blurb")}</p>
             <Link href={localePath(locale, "/asistente")} className="lx-btn mt-6">
               {t(locale, "footer.consultArchive")}
             </Link>

@@ -25,7 +25,11 @@ type Props = {
 
 /** Familia de navbar de móvil que corresponde a cada variante o plantilla. */
 function mobileLook(theme: Theme, variant?: NavbarId): MobileLook {
+  // Gremial no tiene un navbar de móvil propio todavía: se ve como "bold"
+  // (barra compacta + menú «Más»), la familia más parecida en móvil.
+  if (variant === "gremial") return "bold";
   if (variant) return variant;
+  if (theme === "gremial") return "bold";
   switch (theme) {
     case "home":
     case "esmeralda":
@@ -94,12 +98,16 @@ function DesktopHeader({
       return <GlassHeader {...props} />;
     case "crest":
       return <CrestHeader {...props} />;
+    case "gremial":
+      return <GremialHeader {...props} />;
   }
   switch (theme) {
     case "home":
     case "esmeralda":
     case "clasico":
       return <MastheadHeader nav={nav} extra={masExtra} locale={locale} identity={identity} />;
+    case "gremial":
+      return <GremialHeader nav={nav} extra={masExtra} locale={locale} identity={identity} />;
     case "revista":
       return <CoutureHeader nav={nav} extra={masExtra} locale={locale} identity={identity} />;
     case "compacto":
@@ -224,6 +232,65 @@ function ReadingHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extra
 }
 
 /* --------------------------------------------------------------- SECCIÓN */
+/* ------------------------------------------------------------- GREMIAL
+   Cabecera del mockup del cliente: logotipo rojo + lema, menú horizontal,
+   buscador y "Mi cuenta". Propia de la plantilla Gremial (no la elige
+   ninguna otra por defecto), para no tocar el navbar de las otras 5. */
+function GremialHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extra: NavItem[]; locale: Locale; identity: SiteIdentity }) {
+  return (
+    <header data-region="navbar" className="sticky top-0 z-40 border-b border-[var(--border)] bg-[var(--nav-bg)]">
+      <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-4 px-6 py-3">
+        <Link href={localePath(locale, "/")} className="mr-auto min-w-0">
+          <span className="lx-display block truncate text-xl font-black tracking-tight text-[var(--accent)] sm:text-2xl">
+            {identity.name}
+          </span>
+          <span className="block truncate text-[0.6rem] font-semibold uppercase tracking-[0.14em] text-[var(--fg-muted)]">
+            {identity.tagline || t(locale, "nav.tagline")}
+          </span>
+        </Link>
+
+        <div className="shrink-0 text-sm lg:hidden">
+          <MoreMenu locale={locale} extra={[...nav, ...extra]} />
+        </div>
+
+        <nav aria-label={t(locale, "nav.sections")} className="hidden flex-wrap items-center gap-x-5 gap-y-1 text-sm font-semibold lg:flex">
+          {nav.map((n) => (
+            <Link key={n.href} href={localePath(locale, n.href)} className="lx-ui transition hover:text-[var(--accent)]">
+              {n.label}
+            </Link>
+          ))}
+          <MoreMenu locale={locale} extra={extra} />
+        </nav>
+
+        <div className="flex shrink-0 items-center gap-2">
+          <Link
+            href={localePath(locale, "/buscar")}
+            className="lx-ui hidden items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--bg-2)] px-3.5 py-1.5 text-xs text-[var(--fg-muted)] transition hover:border-[var(--border-strong)] sm:flex"
+          >
+            ⌕ {t(locale, "nav.searchPlaceholder")}
+          </Link>
+          <Link
+            href={localePath(locale, "/buscar")}
+            aria-label={t(locale, "nav.search")}
+            className="lx-ui grid size-9 place-items-center rounded-full border border-[var(--border)] text-[var(--fg-muted)] transition hover:border-[var(--border-strong)] sm:hidden"
+          >
+            ⌕
+          </Link>
+          <LocaleSwitch locale={locale} className="shrink-0" />
+          <ThemeToggle locale={locale} />
+          {identity.radioStreamUrl && <RadioPlayer src={identity.radioStreamUrl} locale={locale} />}
+          <Link
+            href={localePath(locale, "/panel/login")}
+            className="lx-ui rounded-full border border-[var(--border-strong)] px-4 py-1.5 text-xs font-semibold transition hover:border-[var(--accent)] hover:text-[var(--accent)]"
+          >
+            {t(locale, "nav.myAccount")}
+          </Link>
+        </div>
+      </div>
+    </header>
+  );
+}
+
 function BoldHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extra: NavItem[]; locale: Locale; identity: SiteIdentity }) {
   return (
     <header data-region="navbar" className="sticky top-0 z-40 bg-[var(--nav-bg)] px-4 py-4">

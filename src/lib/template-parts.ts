@@ -9,8 +9,8 @@ import type { HomeTemplateId } from "@/lib/home-layout";
  * Sin "server-only": lo usan también el editor (cliente) y la validación.
  */
 
-export type NavbarId = "masthead" | "couture" | "bold" | "glass" | "crest";
-export type FooterId = "grand" | "atelier" | "copper" | "aurora" | "seal";
+export type NavbarId = "masthead" | "couture" | "bold" | "glass" | "crest" | "gremial";
+export type FooterId = "grand" | "atelier" | "copper" | "aurora" | "seal" | "gremial";
 export type BodyId = HomeTemplateId;
 
 export type TemplateParts = {
@@ -27,6 +27,7 @@ export const NAVBARS: Option<NavbarId>[] = [
   { id: "bold", label: "Barra compacta", description: "Una sola línea con logo, menú y utilidades. Máximo espacio para el contenido." },
   { id: "glass", label: "Píldora flotante", description: "Barra redondeada translúcida que flota sobre el contenido." },
   { id: "crest", label: "Escudo institucional", description: "Logo con sello, filete de color y menú clásico." },
+  { id: "gremial", label: "Gremial", description: "Logotipo rojo + lema, menú horizontal, buscador y «Mi cuenta»." },
 ];
 
 export const BODIES: Option<BodyId>[] = [
@@ -44,6 +45,7 @@ export const FOOTERS: Option<FooterId>[] = [
   { id: "copper", label: "Pie de secciones", description: "Todas las secciones en rejilla y bloque legal." },
   { id: "aurora", label: "Pie con degradado", description: "Fondo con brillo de color y enlaces en línea." },
   { id: "seal", label: "Pie institucional", description: "Sello, filete de acento y enlaces legales." },
+  { id: "gremial", label: "Gremial", description: "Franja verde oscuro continua con el boletín, columnas de secciones y legales." },
 ];
 
 /** Piezas de cada plantilla prediseñada (lo que se ve si no se personaliza). */
@@ -53,7 +55,7 @@ export const PRESET_PARTS: Record<BodyId, Required<TemplateParts>> = {
   revista: { navbar: "couture", body: "revista", footer: "atelier" },
   compacto: { navbar: "bold", body: "compacto", footer: "copper" },
   vanguardia: { navbar: "glass", body: "vanguardia", footer: "aurora" },
-  gremial: { navbar: "bold", body: "gremial", footer: "grand" },
+  gremial: { navbar: "gremial", body: "gremial", footer: "gremial" },
 };
 
 /** Piezas efectivas: las elegidas y, si falta alguna, la de la plantilla base. */
