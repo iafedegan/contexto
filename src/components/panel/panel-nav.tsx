@@ -37,41 +37,20 @@ const GROUPS: Group[] = [
   {
     id: "configuracion",
     label: "Configuración",
+    // Identidad, personas, seguridad, analítica y asistente ya no son enlaces
+    // aparte: son pestañas dentro de /panel/configuracion (ver ConfigTabs).
+    // Repetirlos aquí como anclas duplicaba la navegación y, peor, quedaba
+    // desactualizado en cuanto una pestaña cambiaba de nombre o desaparecía.
     items: [
       {
-        href: "/panel/configuracion#sitio",
-        label: "Identidad del sitio",
-        hint: "Nombre, lema, descripción y dominio",
-      },
-      {
-        href: "/panel/configuracion#usuarios",
-        label: "Personas y roles",
-        hint: "Quién entra al panel y con qué permisos",
-      },
-      {
-        href: "/panel/configuracion#asistente",
-        label: "Asistente y agentes",
-        hint: "Estado del modelo y presupuesto",
-      },
-      {
-        href: "/panel/configuracion#publicidad",
-        label: "Publicidad y pauta",
-        hint: "Zonas de anuncios en las cinco plantillas",
-      },
-      {
-        href: "/panel/configuracion#seguridad",
-        label: "Seguridad de mi cuenta",
-        hint: "Verificación en dos pasos",
+        href: "/panel/configuracion",
+        label: "Configuración",
+        hint: "Identidad, personas, seguridad, analítica y asistente",
       },
       {
         href: "/panel/mensajes",
         label: "Mensajes recibidos",
         hint: "Contacto y solicitudes de pauta",
-      },
-      {
-        label: "Analítica y SEO",
-        href: "/panel/configuracion#analitica",
-        hint: "GA4 y auditoría de Google",
       },
       {
         href: "/panel/api",
