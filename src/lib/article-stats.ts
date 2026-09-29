@@ -76,6 +76,28 @@ export async function dailySeries(
   return { days: range, byArticle };
 }
 
+/** Serie diaria del SITIO completo (suma de todos los artículos), para el
+ * resumen editorial — a diferencia de `dailySeries`, que es por artículo. */
+export async function siteDailySeries(days: number): Promise<{ days: string[]; views: number[] }> {
+  const today = await todayIso();
+  const range = lastDays(today, days);
+  if (!(await hasDailyViews())) return { days: range, views: new Array(days).fill(0) };
+
+  const rows = await db
+    .select({ day: articleViewsDaily.day, views: sql<number>`sum(${articleViewsDaily.views})::int` })
+    .from(articleViewsDaily)
+    .where(gte(articleViewsDaily.day, range[0]))
+    .groupBy(articleViewsDaily.day);
+
+  const index = new Map(range.map((d, i) => [d, i]));
+  const views = new Array(days).fill(0);
+  for (const r of rows) {
+    const i = index.get(String(r.day).slice(0, 10));
+    if (i !== undefined) views[i] = r.views;
+  }
+  return { days: range, views };
+}
+
 /** Totales del sitio: lecturas de los últimos 7 días y de los 7 anteriores. */
 export async function siteWeekTotals(): Promise<{ last7: number; prev7: number } | null> {
   if (!(await hasDailyViews())) return null;
