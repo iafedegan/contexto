@@ -77,3 +77,16 @@ export const getMarketTicker = cache(async (): Promise<MarketTickerEntry[]> => {
     return [];
   }
 });
+
+/** Formato de despliegue para cada indicador — un solo lugar para las tres
+ * unidades, en vez de repetir el switch donde sea que se muestre la franja. */
+export function formatMarketValue(entry: MarketTickerEntry): string {
+  switch (entry.key) {
+    case "trm":
+      return `$${entry.value.toLocaleString("es-CO", { maximumFractionDigits: 0 })}`;
+    case "oil":
+      return `US$${entry.value.toLocaleString("es-CO", { maximumFractionDigits: 2 })}/bbl`;
+    case "cattle":
+      return `$${entry.value.toLocaleString("es-CO", { maximumFractionDigits: 0 })}/kg`;
+  }
+}

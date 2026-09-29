@@ -24,8 +24,13 @@ export default async function ApiPage() {
           Expón artículos, categorías y el alta al boletín a sitios y aplicaciones de terceros. Cada integración usa su propia
           clave, con su propio límite de peticiones por hora, para poder identificarla y revocarla sin afectar a las demás.
         </p>
-        <a href="/api-docs" target="_blank" rel="noreferrer" className="lx-link mt-3 inline-block text-sm">
-          Ver la documentación interactiva (/api-docs) →
+        <a
+          href="/api-docs"
+          target="_blank"
+          rel="noreferrer"
+          className="lx-link mt-3 inline-flex items-center gap-1 text-sm font-semibold text-[var(--accent)] hover:text-[var(--accent-2)]"
+        >
+          Ver la documentación interactiva para hacer pruebas →
         </a>
       </header>
 
