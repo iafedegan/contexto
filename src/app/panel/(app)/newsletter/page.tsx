@@ -103,8 +103,8 @@ async function Suscriptores({ admin }: { admin: boolean }) {
               {r.signupCity && (
                 <span className="ml-2 text-xs text-[var(--fg-muted)]">· {r.signupCity}</span>
               )}
-              {r.neighborhood && (
-                <span className="ml-2 text-xs text-[var(--fg-muted)]">· Barrio {r.neighborhood}</span>
+              {r.signupPostal && (
+                <span className="ml-2 text-xs text-[var(--fg-muted)]">· C.P. {r.signupPostal}</span>
               )}
               {r.birthDate && (
                 <span className="ml-2 text-xs text-[var(--fg-muted)]">

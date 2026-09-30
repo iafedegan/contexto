@@ -55,7 +55,6 @@ export async function suscribirBoletin(
   const lastName = String(formData.get("lastName") ?? "").trim().slice(0, 120) || null;
   const birthDate = String(formData.get("birthDate") ?? "").trim() || null;
   const mobile = String(formData.get("mobile") ?? "").trim().slice(0, 40) || null;
-  const neighborhood = String(formData.get("neighborhood") ?? "").trim().slice(0, 120) || null;
 
   // Trazabilidad interna (nunca se le muestra al suscriptor): Vercel ya
   // resuelve la ciudad a partir de la IP en el borde, sin llamar a un
@@ -63,6 +62,7 @@ export async function suscribirBoletin(
   const h = await headers();
   const signupCity = h.get("x-vercel-ip-city") ? decodeURIComponent(h.get("x-vercel-ip-city")!) : null;
   const signupCountry = h.get("x-vercel-ip-country");
+  const signupPostal = h.get("x-vercel-ip-postal-code") ? decodeURIComponent(h.get("x-vercel-ip-postal-code")!).slice(0, 20) : null;
   const signupLat = h.get("x-vercel-ip-latitude");
   const signupLon = h.get("x-vercel-ip-longitude");
 
@@ -88,7 +88,7 @@ export async function suscribirBoletin(
       lastName,
       birthDate,
       mobile,
-      neighborhood,
+      signupPostal,
       signupIp: ip,
       signupCity,
       signupCountry,

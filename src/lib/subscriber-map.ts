@@ -13,7 +13,7 @@ export async function subscriberCityPoints(): Promise<SubscriberPoint[]> {
       signupLon: newsletterSubscribers.signupLon,
       signupCity: newsletterSubscribers.signupCity,
       signupCountry: newsletterSubscribers.signupCountry,
-      neighborhood: newsletterSubscribers.neighborhood,
+      signupPostal: newsletterSubscribers.signupPostal,
     })
     .from(newsletterSubscribers);
 
@@ -25,10 +25,10 @@ export async function subscriberCityPoints(): Promise<SubscriberPoint[]> {
     if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue;
     const key = r.signupCity ?? `${lat.toFixed(1)},${lon.toFixed(1)}`;
     const actual = porCiudad.get(key);
-    const barrio = r.neighborhood?.trim();
+    const postal = r.signupPostal?.trim();
     if (actual) {
       actual.n += 1;
-      if (barrio) actual.barrios[barrio] = (actual.barrios[barrio] ?? 0) + 1;
+      if (postal) actual.postales[postal] = (actual.postales[postal] ?? 0) + 1;
     } else {
       porCiudad.set(key, {
         lat,
@@ -36,7 +36,7 @@ export async function subscriberCityPoints(): Promise<SubscriberPoint[]> {
         city: r.signupCity,
         country: r.signupCountry,
         n: 1,
-        barrios: barrio ? { [barrio]: 1 } : {},
+        postales: postal ? { [postal]: 1 } : {},
       });
     }
   }

@@ -10,5 +10,6 @@ alter table newsletter_subscribers add column if not exists signup_lat numeric;
 alter table newsletter_subscribers add column if not exists signup_lon numeric;
 -- El formulario solo pedía "celular"; "teléfono" se descartó por duplicado.
 alter table newsletter_subscribers drop column if exists phone;
--- Barrio declarado por el suscriptor (la geo-IP solo resuelve ciudad).
-alter table newsletter_subscribers add column if not exists neighborhood text;
+-- Código postal aproximado por geo-IP (sin preguntar nada al suscriptor).
+alter table newsletter_subscribers add column if not exists signup_postal text;
+alter table newsletter_subscribers drop column if exists neighborhood;

@@ -299,8 +299,8 @@ export const newsletterSubscribers = pgTable("newsletter_subscribers", {
   // hechas después de este cambio.
   signupIp: text("signup_ip"),
   signupCity: text("signup_city"),
-  /** Barrio que escribe el propio suscriptor: la IP solo da la ciudad. */
-  neighborhood: text("neighborhood"),
+  /** Código postal aproximado que resuelve Vercel a partir de la IP (puede faltar). */
+  signupPostal: text("signup_postal"),
   signupCountry: text("signup_country"),
   signupLat: numeric("signup_lat"),
   signupLon: numeric("signup_lon"),

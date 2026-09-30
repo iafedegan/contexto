@@ -8,8 +8,8 @@ export type SubscriberPoint = {
   city: string | null;
   country: string | null;
   n: number;
-  /** Barrios declarados por los suscriptores de esa ciudad, con su cuenta. */
-  barrios: Record<string, number>;
+  /** Códigos postales (por geo-IP) de los suscriptores de esa ciudad, con su cuenta. */
+  postales: Record<string, number>;
 };
 
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
@@ -88,11 +88,11 @@ export function SubscriberMap({ points }: { points: SubscriberPoint[] }) {
         })
           .bindPopup(
             `${esc(p.city ?? "Ciudad desconocida")}${p.country ? ", " + esc(p.country) : ""} · ${p.n} suscriptor${p.n === 1 ? "" : "es"}` +
-              (Object.keys(p.barrios).length
+              (Object.keys(p.postales).length
                 ? "<br>" +
-                  Object.entries(p.barrios)
+                  Object.entries(p.postales)
                     .sort((a, b) => b[1] - a[1])
-                    .map(([b, n]) => `${esc(b)} (${n})`)
+                    .map(([b, n]) => `C.P. ${esc(b)} (${n})`)
                     .join("<br>")
                 : ""),
           )
