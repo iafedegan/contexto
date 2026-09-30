@@ -21,7 +21,9 @@ import { uploadMedia } from "@/app/panel/(app)/articulos/media-actions";
 import {
   generateArticleDraft,
   regenerateDraftPart,
+  suggestTitlesAndContexts,
   type DraftPart,
+  type TitleContextOptions,
 } from "@/app/panel/(app)/articulos/ai-actions";
 import { SiteArticlePreview, type SitePreviewChrome } from "@/components/panel/site-article-preview";
 import { auditArticle, scoreLabel, type AuditItem } from "@/lib/seo-audit";
@@ -144,6 +146,11 @@ export function ArticleWizard({
   const STEPS: readonly { key: StepKey; label: string }[] = mode === "ia" ? STEPS_IA : STEPS_MANUAL;
   const [step, setStep] = useState(() => Math.max(0, STEPS.findIndex((x) => x.key === startStep)));
   const [context, setContext] = useState("");
+  // Tema -> la IA propone títulos y contextos -> el redactor elige y genera.
+  const [topic, setTopic] = useState("");
+  const [options, setOptions] = useState<TitleContextOptions | null>(null);
+  const [pickedContext, setPickedContext] = useState<number | null>(null);
+  const prompt = [topic.trim(), context.trim()].filter(Boolean).join("\n\n");
   // Un artículo reabierto ya tiene borrador: se puede revisar y regenerar.
   const [generated, setGenerated] = useState(!!initial);
   const [aiNote, setAiNote] = useState("");
@@ -209,7 +216,7 @@ export function ArticleWizard({
 
   // Qué impide avanzar desde cada paso (solo título y resumen son obligatorios).
   const blocker: Record<string, string | null> = {
-    tema: !generated ? "Genera el borrador con la IA para continuar." : null,
+    tema: !generated ? "Elige un título y un contexto y genera el borrador para continuar." : null,
     titulo: title.trim().length < 5 ? "Escribe un título de al menos 5 caracteres." : null,
     resumen: excerpt.trim().length < 20 ? "El resumen debe tener al menos 20 caracteres." : null,
   };
@@ -250,12 +257,12 @@ export function ArticleWizard({
 
   function generate() {
     if (title.trim().length < 5) return setError("Escribe un título de al menos 5 caracteres.");
-    if (context.trim().length < 20) return setError("Añade un poco más de contexto (mínimo 20 caracteres).");
+    if (prompt.length < 20) return setError("Añade un poco más de contexto (mínimo 20 caracteres).");
     setError("");
     startGenerating(async () => {
       const res = await generateArticleDraft({
         title: title.trim(),
-        prompt: context.trim(),
+        prompt,
         section: categories.find((c) => c.id === categoryId)?.name,
       });
       if (!res.ok) return setError(res.error);
@@ -272,6 +279,19 @@ export function ArticleWizard({
           "Borrador generado. Revísalo paso a paso: lo que la IA no pudo confirmar va entre {{llaves}}.",
       );
       setStep(1);
+    });
+  }
+
+  function suggest() {
+    setError("");
+    startGenerating(async () => {
+      const res = await suggestTitlesAndContexts({
+        topic: topic.trim(),
+        section: categories.find((c) => c.id === categoryId)?.name,
+      });
+      if (!res.ok) return setError(res.error);
+      setOptions({ titles: res.titles, contexts: res.contexts });
+      setPickedContext(null);
     });
   }
 
@@ -294,7 +314,7 @@ export function ArticleWizard({
     startGenerating(async () => {
       const res = await regenerateDraftPart({
         title: title.trim(),
-        prompt: context.trim(),
+        prompt,
         part,
         current,
         section: categories.find((c) => c.id === categoryId)?.name,
@@ -432,33 +452,94 @@ export function ArticleWizard({
         )}
         {current.key === "tema" && (
           <Step
-            title="Título y contexto"
-            hint="Escribe el título y cuéntale a la IA de qué va: cifras, fuentes, lugares, declaraciones. Con eso redacta un borrador que revisarás paso a paso."
+            title="Tema, título y contexto"
+            hint="Cuéntale a la IA el tema. Te propone varios títulos y varios enfoques; eliges los que te sirvan (puedes editarlos) y con eso redacta un borrador que revisarás paso a paso."
           >
-            <input
-              autoFocus
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="El precio del novillo gordo sube 4 % en Medellín"
-              className={`${input} lx-display text-xl font-semibold sm:text-2xl`}
-            />
-            <Counter value={title.length} min={15} max={65} />
             <textarea
-              value={context}
-              onChange={(e) => setContext(e.target.value)}
-              rows={4}
-              placeholder="La Central Ganadera de Medellín reportó 9.850 $/kg en pie para el novillo gordo en la primera quincena de septiembre, 4 % sobre agosto; causas: menor entrada del Magdalena Medio…"
+              autoFocus
+              value={topic}
+              onChange={(e) => setTopic(e.target.value)}
+              rows={3}
+              placeholder="Ej.: el precio del novillo gordo subió 4 % en Medellín en septiembre según la Central Ganadera; menor entrada de ganado del Magdalena Medio…"
               className={`${input} resize-y text-base leading-relaxed`}
             />
             <div className="flex flex-wrap items-center gap-3">
-              <button type="button" onClick={generate} disabled={generating} className="lx-btn">
-                {generating ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
-                {generating ? "Redactando…" : generated ? "Volver a generar" : "Generar borrador"}
+              <button type="button" onClick={suggest} disabled={generating} className="lx-btn">
+                {generating && !options ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
+                {options ? "Proponer otras opciones" : "Proponer títulos y contextos"}
               </button>
-              <span className="text-xs text-[var(--fg-muted)]">
-                Nada se publica sin tu revisión. {generated && "Ya hay un borrador: pulsa Siguiente para revisarlo."}
-              </span>
+              <span className="text-xs text-[var(--fg-muted)]">Nada se publica sin tu revisión.</span>
             </div>
+
+            {options && (
+              <>
+                <p className="lx-kicker mt-2 text-[var(--accent)]">1 · Elige un título</p>
+                <div className="flex flex-col gap-2">
+                  {options.titles.map((t) => (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => setTitle(t)}
+                      aria-pressed={title === t}
+                      className={`rounded-[var(--radius)] border px-4 py-3 text-left text-base font-semibold transition ${
+                        title === t
+                          ? "border-[var(--accent)] bg-[var(--surface-2)]"
+                          : "border-[var(--border)] hover:border-[var(--accent)]"
+                      }`}
+                    >
+                      {t} <span className="ml-1 text-xs font-normal text-[var(--fg-muted)]">{t.length} car.</span>
+                    </button>
+                  ))}
+                </div>
+                <input
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="O escribe el tuyo"
+                  className={`${input} lx-display text-lg font-semibold`}
+                />
+                <Counter value={title.length} min={15} max={65} />
+
+                <p className="lx-kicker mt-2 text-[var(--accent)]">2 · Elige un contexto (enfoque de la nota)</p>
+                <div className="flex flex-col gap-2">
+                  {options.contexts.map((c, i) => (
+                    <button
+                      key={c.label}
+                      type="button"
+                      onClick={() => {
+                        setPickedContext(i);
+                        setContext(c.text);
+                      }}
+                      aria-pressed={pickedContext === i}
+                      className={`rounded-[var(--radius)] border px-4 py-3 text-left transition ${
+                        pickedContext === i
+                          ? "border-[var(--accent)] bg-[var(--surface-2)]"
+                          : "border-[var(--border)] hover:border-[var(--accent)]"
+                      }`}
+                    >
+                      <span className="block text-sm font-semibold">{c.label}</span>
+                      <span className="mt-1 block text-sm text-[var(--fg-muted)]">{c.text}</span>
+                    </button>
+                  ))}
+                </div>
+                <textarea
+                  value={context}
+                  onChange={(e) => setContext(e.target.value)}
+                  rows={3}
+                  placeholder="El contexto elegido aparece aquí y lo puedes ajustar"
+                  className={`${input} resize-y text-base leading-relaxed`}
+                />
+
+                <div className="flex flex-wrap items-center gap-3">
+                  <button type="button" onClick={generate} disabled={generating} className="lx-btn">
+                    {generating ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
+                    {generating ? "Redactando…" : generated ? "Volver a generar" : "Generar borrador con esta selección"}
+                  </button>
+                  {generated && (
+                    <span className="text-xs text-[var(--fg-muted)]">Ya hay un borrador: pulsa Siguiente para revisarlo.</span>
+                  )}
+                </div>
+              </>
+            )}
           </Step>
         )}
 

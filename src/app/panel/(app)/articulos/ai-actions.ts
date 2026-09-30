@@ -204,3 +204,59 @@ export async function regenerateDraftPart(input: {
     return { ok: false, error: detalle ? `El proveedor rechazó la petición: ${detalle.slice(0, 220)}` : "El modelo no respondió." };
   }
 }
+
+// --- Opciones de título y contexto a partir de un tema ----------------------
+
+const optionsSchema = z.object({
+  titles: z.array(z.string().min(15).max(90)).min(4).max(5),
+  contexts: z
+    .array(z.object({ label: z.string().min(3).max(60), text: z.string().min(40).max(700) }))
+    .min(3)
+    .max(4),
+});
+
+export type TitleContextOptions = z.infer<typeof optionsSchema>;
+
+export type SuggestResult = ({ ok: true } & TitleContextOptions) | { ok: false; error: string };
+
+/**
+ * Del tema que da el periodista propone varios títulos y varios contextos
+ * (enfoques de redacción) para que elija. No redacta la nota ni inventa
+ * hechos: los contextos dicen QUÉ enfoque tomar y qué datos hay que
+ * confirmar; lo que el periodista no aportó queda entre {{llaves}}.
+ */
+export async function suggestTitlesAndContexts(input: {
+  topic: string;
+  section?: string;
+}): Promise<SuggestResult> {
+  await requireRole("redactor");
+  const topic = input.topic.trim();
+  if (topic.length < 10) return { ok: false, error: "Cuéntame el tema con un poco más de detalle (mínimo 10 caracteres)." };
+
+  const model = await getAiModel();
+  if (!model) {
+    return { ok: false, error: "Para proponer opciones hace falta la clave del modelo (Configuración → Asistente)." };
+  }
+  try {
+    const { object } = await generateObject({
+      model,
+      schema: optionsSchema,
+      system: EDITOR_ASSIST_SYSTEM,
+      prompt: [
+        input.section ? `SECCIÓN: ${input.section}` : "",
+        `TEMA DEL PERIODISTA:\n${topic}`,
+        "TAREA: propón entre 4 y 5 TÍTULOS distintos entre sí (de 15 a 65 caracteres; uno informativo con el hecho, uno con el dato, uno centrado en la consecuencia para el productor, uno en forma de pregunta o explicación). " +
+          "Propón además entre 3 y 4 CONTEXTOS: cada uno es un enfoque de redacción distinto (p. ej. noticia de última hora, análisis para el productor, explicativo con antecedentes). " +
+          "Cada contexto tiene una etiqueta corta y un texto de 2 a 4 frases que dice qué ángulo tomar, qué datos y fuentes hay que confirmar y a quién le importa. " +
+          "NO inventes cifras, fechas, fuentes ni declaraciones: todo lo que el periodista no dio va como {{por confirmar}}.",
+      ]
+        .filter(Boolean)
+        .join("\n\n"),
+    });
+    return { ok: true, ...object };
+  } catch (err) {
+    console.error("suggestTitlesAndContexts:", err);
+    const detalle = err && typeof err === "object" && "message" in err ? String((err as Error).message) : "";
+    return { ok: false, error: detalle ? `El proveedor rechazó la petición: ${detalle.slice(0, 220)}` : "El modelo no respondió." };
+  }
+}
