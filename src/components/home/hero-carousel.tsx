@@ -91,11 +91,12 @@ export function HeroCarousel({
                 />
               )}
               {active.coverImageUrl && (
-                <motion.div
-                  className="absolute inset-0"
-                  initial={{ scale: 1 }}
-                  animate={{ scale: 1.1 }}
-                  transition={{ duration: AUTOPLAY_MS / 1000 + 1, ease: "linear" }}
+                // CSS puro (no Framer Motion): es un ciclo continuo mientras
+                // el carrusel esté en pantalla, no una transición puntual —
+                // ver el comentario de .lx-kenburns en globals.css.
+                <div
+                  className="lx-kenburns absolute inset-0"
+                  style={{ ["--lx-hero-ms" as string]: `${AUTOPLAY_MS + 1000}ms` }}
                 >
                   <Image
                     src={active.coverImageUrl}
@@ -105,7 +106,7 @@ export function HeroCarousel({
                     sizes="100vw"
                     className="object-cover"
                   />
-                </motion.div>
+                </div>
               )}
               <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/0 to-black/25" />
             </motion.div>
@@ -188,13 +189,17 @@ export function HeroCarousel({
                 onClick={() => go(i)}
                 className="relative h-[3px] flex-1 overflow-hidden bg-[var(--rule)]"
               >
-                {i === index && (
-                  <motion.span
+                {i === index && interactive && (
+                  // CSS puro: se pausa en el punto donde va (no reinicia a 0),
+                  // vía animation-play-state — mismo costo cero de JS por
+                  // fotograma que el zoom Ken Burns de arriba.
+                  <span
                     key={`${active.slug}-progress`}
-                    className="absolute inset-y-0 left-0 bg-[var(--brand)]"
-                    initial={{ width: "0%" }}
-                    animate={{ width: paused || !interactive ? "0%" : "100%" }}
-                    transition={{ duration: AUTOPLAY_MS / 1000, ease: "linear" }}
+                    className="lx-hero-progress absolute inset-y-0 left-0 bg-[var(--brand)]"
+                    style={{
+                      ["--lx-hero-ms" as string]: `${AUTOPLAY_MS}ms`,
+                      ["--lx-hero-play" as string]: paused ? "paused" : "running",
+                    }}
                   />
                 )}
                 {i < index && <span className="absolute inset-0 bg-[var(--brand)]" />}

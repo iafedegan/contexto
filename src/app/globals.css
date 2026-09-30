@@ -928,6 +928,28 @@ a {
   to { transform: translateX(-50%); }
 }
 
+/* Zoom Ken Burns y barra de progreso del carrusel de Revista: antes se
+   animaban con Framer Motion en JS, en un ciclo continuo (no un enter/exit
+   puntual) mientras el carrusel esté en pantalla. Lighthouse capturaba eso
+   como decenas de "tareas largas" y varios segundos de hilo principal — el
+   compositor de CSS anima lo mismo (escala y ancho) sin tocar JS en cada
+   fotograma. La duración la fija `--lx-hero-ms` en línea (AUTOPLAY_MS). */
+.lx-kenburns {
+  animation: lx-kenburns var(--lx-hero-ms, 7000ms) linear forwards;
+}
+@keyframes lx-kenburns {
+  from { transform: scale(1); }
+  to { transform: scale(1.1); }
+}
+.lx-hero-progress {
+  animation: lx-hero-progress var(--lx-hero-ms, 6000ms) linear forwards;
+  animation-play-state: var(--lx-hero-play, running);
+}
+@keyframes lx-hero-progress {
+  from { width: 0%; }
+  to { width: 100%; }
+}
+
 /* El selector de fecha nativo es minúsculo y casi invisible sobre fondo
    oscuro por defecto: se agranda el icono y se tiñe con el acento del sitio. */
 .lx-date-input::-webkit-calendar-picker-indicator {
