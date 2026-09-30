@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { BookOpen, ChevronLeft, ChevronRight, Minus, Plus, Settings2, X } from "lucide-react";
+import { ListenArticle } from "@/components/listen-article";
 
 /**
  * Modo revista: la nota a pantalla completa, paginada en columnas como en una
@@ -53,6 +54,7 @@ export function ReaderMode({
   coverAlt,
   byline,
   kicker,
+  lang = "es-CO",
 }: {
   title: string;
   excerpt: string;
@@ -62,6 +64,7 @@ export function ReaderMode({
   coverAlt?: string | null;
   byline?: string;
   kicker?: string;
+  lang?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [prefs, setPrefs] = useState<Prefs>(DEFAULT);
@@ -174,6 +177,19 @@ export function ReaderMode({
               <span className="min-w-0 flex-1 truncate text-sm" style={{ color: t.muted }}>
                 {title}
               </span>
+              {/* Colores de ListenArticle vienen de --border/--fg-muted/--accent
+                  (el resto del sitio); aquí no aplican esos tokens, así que se
+                  igualan a la paleta que el lector eligió en este momento. */}
+              <div
+                style={{
+                  ["--border" as string]: t.rule,
+                  ["--fg-muted" as string]: t.muted,
+                  ["--accent" as string]: "#b45309",
+                  color: t.fg,
+                }}
+              >
+                <ListenArticle title={title} excerpt={excerpt} body={body} lang={lang} />
+              </div>
               <button
                 type="button"
                 onClick={() => setPanel((v) => !v)}
