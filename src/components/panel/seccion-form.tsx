@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { Check, ChevronDown, Loader2, TriangleAlert } from "lucide-react";
 import { Button, Input, Textarea } from "@/components/ui";
 import { actualizarSeccion, type SeccionState } from "@/app/panel/(app)/secciones/actions";
@@ -16,6 +16,7 @@ export function SeccionForm({
   sortOrder,
   articleCount,
   defaultOpen = false,
+  onSaved,
 }: {
   id: string;
   slug: string;
@@ -24,9 +25,15 @@ export function SeccionForm({
   sortOrder: number;
   articleCount: number;
   defaultOpen?: boolean;
+  onSaved?: () => void;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   const [state, action, pending] = useActionState<SeccionState, FormData>(actualizarSeccion, null);
+
+  useEffect(() => {
+    if (state?.ok) onSaved?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state]);
 
   return (
     <div className="rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)]">

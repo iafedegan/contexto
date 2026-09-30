@@ -1,4 +1,4 @@
-import { and, desc, eq, lte, sql } from "drizzle-orm";
+import { and, asc, desc, eq, lte, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { articles, authors, categories } from "@/db/schema";
 import { auth } from "@/lib/auth";
@@ -53,6 +53,20 @@ export default async function PortadaPage({
     getSitePopup(),
   ]);
 
+  const sections = await db
+    .select({
+      id: categories.id,
+      slug: categories.slug,
+      name: categories.name,
+      description: categories.description,
+      sortOrder: categories.sortOrder,
+      articleCount: sql<number>`count(${articles.id})::int`,
+    })
+    .from(categories)
+    .leftJoin(articles, eq(articles.categoryId, categories.id))
+    .groupBy(categories.id)
+    .orderBy(asc(categories.sortOrder), asc(categories.name));
+
   const headerVariants = {
     masthead: <SiteHeader theme="clasico" nav={nav} variant="masthead" />,
     couture: <SiteHeader theme="clasico" nav={nav} variant="couture" />,
@@ -84,6 +98,7 @@ export default async function PortadaPage({
         initialLayout={layout}
         initialPopup={popup}
         adsZones={adsZones}
+        sections={sections}
         canManagePauta={session?.user.role === "administrador"}
         headerVariants={headerVariants}
         footerVariants={footerVariants}

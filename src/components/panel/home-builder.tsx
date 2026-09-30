@@ -37,6 +37,7 @@ import type { ArticleListItem } from "@/lib/content";
 import type { HomeLayoutConfig, HomeStyle } from "@/db/schema";
 import { HOME_TEMPLATES } from "@/lib/home-layout";
 import type { RegionId } from "@/lib/home-regions";
+import { SeccionForm } from "@/components/panel/seccion-form";
 import { RegionEditor } from "@/components/panel/region-editor";
 import { PartsEditor } from "@/components/panel/parts-editor";
 import { PopupEditor } from "@/components/panel/popup-editor";
@@ -61,6 +62,7 @@ export function HomeBuilder({
   footerVariants,
   initialPopup,
   adsZones,
+  sections,
   canManagePauta,
 }: {
   initialItems: Item[];
@@ -81,6 +83,8 @@ export function HomeBuilder({
   footerVariants: Record<FooterId, React.ReactNode>;
   /** Las 7 zonas de pauta, gestionables sin salir del editor de portada. */
   adsZones: AdsZoneRow[];
+  /** Secciones del menú, para editarlas cuando el lienzo muestra una. */
+  sections: Array<{ id: string; slug: string; name: string; description: string | null; sortOrder: number; articleCount: number }>;
   canManagePauta: boolean;
 }) {
   const router = useRouter();
@@ -97,6 +101,12 @@ export function HomeBuilder({
   const frameDoc = useRef<Document | null>(null);
   const regionRef = useRef<RegionId>("navbar");
   const [previewPath, setPreviewPath] = useState("/vista-portada");
+  const seccion = previewPath.startsWith("/vista-portada/categoria/")
+    ? (sections.find((x) => x.slug === previewPath.split("/").pop()) ?? null)
+    : null;
+  useEffect(() => {
+    if (seccion && region !== "navbar" && region !== "body" && region !== "footer") setRegion("body");
+  }, [seccion, region]);
   const selectedRef = useRef<number | null>(null);
   // Anuncios: lo que se escribe (sin guardar) y cuál se está editando, para verlo en el lienzo.
   const [adDrafts, setAdDrafts] = useState<Record<string, AdDraft>>({});
@@ -368,6 +378,38 @@ export function HomeBuilder({
         data-theme="panel-ui"
         className="flex flex-col gap-3 text-[var(--fg)] xl:sticky xl:top-24 xl:max-h-[calc(100dvh-7rem)] xl:overflow-y-auto xl:pr-1"
       >
+        {seccion ? (
+          <>
+            <Bloque titulo={`Sección · ${seccion.name}`} icono={<LayoutGrid size={13} />} abierto>
+              <p className="mb-3 text-xs leading-relaxed text-[var(--fg-muted)]">
+                Nombre, descripción y orden en el menú. Se guardan al pulsar Guardar en este bloque.
+              </p>
+              <SeccionForm key={seccion.id} {...seccion} defaultOpen onSaved={() => setFrameNonce((n) => n + 1)} />
+            </Bloque>
+            <Bloque titulo="Componentes de la página" icono={<Paintbrush size={13} />} abierto>
+              <RegionEditor
+                value={layout.regions ?? {}}
+                active={region}
+                onActive={setRegion}
+                onChange={(regions) => patchLayout({ regions })}
+                only={["navbar", "body", "footer"]}
+              />
+              <p className="mt-4 text-xs leading-relaxed text-[var(--fg-muted)]">
+                Color, tamaño de texto y tipografía del navbar, el cuerpo y el pie. Se aplican a todas las
+                secciones y a las demás páginas, y se publican con «Guardar diseño».
+              </p>
+            </Bloque>
+            <Bloque titulo="Publicidad de secciones" icono={<Megaphone size={13} />}>
+              <AdsEditor
+                zones={adsZones.filter((z) => z.position.startsWith("section"))}
+                canManage={canManagePauta}
+                onDraft={(key, draft) => setAdDrafts((d) => ({ ...d, [key]: draft }))}
+                onFocusZone={setAdFocus}
+              />
+            </Bloque>
+          </>
+        ) : (
+          <>
         <Bloque titulo="Plantilla" icono={<LayoutGrid size={13} />}>
           <TemplatePicker layout={layout} onPick={(config) => patchLayout({ ...config, parts: {} })} compacto />
           {/* Crear plantilla desde cero, dentro del mismo bloque. */}
@@ -435,6 +477,8 @@ export function HomeBuilder({
             onFocusZone={setAdFocus}
           />
         </Bloque>
+          </>
+        )}
       </aside>
     </div>
   );

@@ -22,12 +22,16 @@ export function RegionEditor({
   active,
   onActive,
   onChange,
+  only,
 }: {
   value: RegionStyles;
   active: RegionId;
   onActive: (id: RegionId) => void;
   onChange: (next: RegionStyles) => void;
+  /** Limita los componentes editables (p. ej. en las secciones no hay Hero ni Tarjetas). */
+  only?: RegionId[];
 }) {
+  const visibles = REGIONS.filter((r) => !only || only.includes(r.id));
   const meta = REGIONS.find((r) => r.id === active)!;
   const s: RegionStyle = value[active] ?? {};
   const has = (k: keyof RegionStyle) => meta.controls.includes(k);
@@ -46,8 +50,8 @@ export function RegionEditor({
   return (
     <div className="flex flex-col gap-4">
       {/* Selector de componente */}
-      <div className="grid grid-cols-5 gap-1 rounded-lg border border-[var(--border)] p-1">
-        {REGIONS.map((r) => (
+      <div className={`grid gap-1 rounded-lg border border-[var(--border)] p-1 ${visibles.length === 3 ? "grid-cols-3" : "grid-cols-5"}`}>
+        {visibles.map((r) => (
           <button
             key={r.id}
             type="button"
