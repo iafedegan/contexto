@@ -38,18 +38,19 @@ export function PreviewChrome({
   const [panel, setPanel] = useState(false);
   const [region, setRegion] = useState<RegionId>("navbar");
   // Posición del formulario flotante: arrastrable y recordada entre visitas.
-  const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
-  const boxRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
+  const [pos, setPos] = useState<{ x: number; y: number } | null>(() => {
+    if (typeof window === "undefined") return null;
     try {
       const v = JSON.parse(localStorage.getItem("cg:editor-flotante") ?? "null");
       if (v && typeof v.x === "number" && typeof v.y === "number") {
-        setPos({ x: Math.min(v.x, window.innerWidth - 80), y: Math.min(v.y, window.innerHeight - 60) });
+        return { x: Math.min(v.x, window.innerWidth - 80), y: Math.min(v.y, window.innerHeight - 60) };
       }
     } catch {
       /* sin almacenamiento */
     }
-  }, []);
+    return null;
+  });
+  const boxRef = useRef<HTMLDivElement>(null);
   function startDrag(e: React.PointerEvent) {
     const box = boxRef.current;
     if (!box) return;
@@ -78,7 +79,9 @@ export function PreviewChrome({
     window.addEventListener("pointerup", up);
   }
   const draftRef = useRef(draft);
-  draftRef.current = draft;
+  useEffect(() => {
+    draftRef.current = draft;
+  });
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Cada ajuste se guarda en el borrador (y se avisa al editor) y la vista se refresca.
@@ -228,6 +231,7 @@ export function PreviewChrome({
       {layout && (
         <div
           ref={boxRef}
+          suppressHydrationWarning
           data-theme="panel-ui"
           style={pos ? { left: pos.x, top: pos.y, maxHeight: `calc(100dvh - ${pos.y}px - 1rem)` } : undefined}
           className={`fixed z-[130] flex w-[22rem] max-w-[calc(100vw-2rem)] flex-col items-end gap-2 text-[var(--fg)] ${pos ? "" : "bottom-4 right-4 max-h-[calc(100dvh-6rem)]"}`}

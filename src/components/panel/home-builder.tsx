@@ -104,9 +104,6 @@ export function HomeBuilder({
   const seccion = previewPath.startsWith("/vista-portada/categoria/")
     ? (sections.find((x) => x.slug === previewPath.split("/").pop()) ?? null)
     : null;
-  useEffect(() => {
-    if (seccion && region !== "navbar" && region !== "body" && region !== "footer") setRegion("body");
-  }, [seccion, region]);
   const selectedRef = useRef<number | null>(null);
   // Anuncios: lo que se escribe (sin guardar) y cuál se está editando, para verlo en el lienzo.
   const [adDrafts, setAdDrafts] = useState<Record<string, AdDraft>>({});
@@ -397,7 +394,7 @@ export function HomeBuilder({
             <Bloque titulo="Componentes de la página" icono={<Paintbrush size={13} />} abierto>
               <RegionEditor
                 value={layout.regions ?? {}}
-                active={region}
+                active={region === "navbar" || region === "footer" ? region : "body"}
                 onActive={setRegion}
                 onChange={(regions) => patchLayout({ regions })}
                 only={["navbar", "body", "footer"]}
