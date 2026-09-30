@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Loader2, Paintbrush, Rocket, X } from "lucide-react";
+import { Check, GripHorizontal, Loader2, Paintbrush, Rocket, X } from "lucide-react";
 import { publishHomeDraft, saveHomeDraft } from "@/app/panel/(app)/portada/actions";
 import { ACCEPTED_KEY, DRAFT_PING_KEY, LAYOUT_EDIT_KEY, type PortadaDraft } from "@/lib/portada-draft";
 import { RegionEditor } from "@/components/panel/region-editor";
@@ -37,6 +37,46 @@ export function PreviewChrome({
   const [layout, setLayout] = useState(draft?.layout ?? null);
   const [panel, setPanel] = useState(false);
   const [region, setRegion] = useState<RegionId>("navbar");
+  // Posición del formulario flotante: arrastrable y recordada entre visitas.
+  const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
+  const boxRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    try {
+      const v = JSON.parse(localStorage.getItem("cg:editor-flotante") ?? "null");
+      if (v && typeof v.x === "number" && typeof v.y === "number") {
+        setPos({ x: Math.min(v.x, window.innerWidth - 80), y: Math.min(v.y, window.innerHeight - 60) });
+      }
+    } catch {
+      /* sin almacenamiento */
+    }
+  }, []);
+  function startDrag(e: React.PointerEvent) {
+    const box = boxRef.current;
+    if (!box) return;
+    e.preventDefault();
+    const r = box.getBoundingClientRect();
+    const dx = e.clientX - r.left;
+    const dy = e.clientY - r.top;
+    let last = { x: r.left, y: r.top };
+    const move = (ev: PointerEvent) => {
+      last = {
+        x: Math.max(0, Math.min(window.innerWidth - 120, ev.clientX - dx)),
+        y: Math.max(0, Math.min(window.innerHeight - 60, ev.clientY - dy)),
+      };
+      setPos(last);
+    };
+    const up = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      try {
+        localStorage.setItem("cg:editor-flotante", JSON.stringify(last));
+      } catch {
+        /* sin almacenamiento */
+      }
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+  }
   const draftRef = useRef(draft);
   draftRef.current = draft;
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -186,12 +226,24 @@ export function PreviewChrome({
       </div>
 
       {layout && (
-        <div data-theme="panel-ui" className="fixed bottom-4 right-4 z-[130] flex max-h-[calc(100dvh-6rem)] w-[22rem] max-w-[calc(100vw-2rem)] flex-col items-end gap-2 text-[var(--fg)]">
+        <div
+          ref={boxRef}
+          data-theme="panel-ui"
+          style={pos ? { left: pos.x, top: pos.y, maxHeight: `calc(100dvh - ${pos.y}px - 1rem)` } : undefined}
+          className={`fixed z-[130] flex w-[22rem] max-w-[calc(100vw-2rem)] flex-col items-end gap-2 text-[var(--fg)] ${pos ? "" : "bottom-4 right-4 max-h-[calc(100dvh-6rem)]"}`}
+        >
           {panel && (
             <div className="w-full overflow-y-auto rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--bg)] p-4 shadow-2xl">
-              <p className="mb-3 text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-[var(--fg-muted)]">
+              <div
+                onPointerDown={startDrag}
+                title="Arrastra para mover el panel"
+                className="-mx-4 -mt-4 mb-3 flex cursor-grab touch-none select-none items-center gap-2 rounded-t-[var(--radius-lg)] bg-[var(--surface-2)] px-4 py-2 active:cursor-grabbing"
+              >
+                <GripHorizontal size={14} className="text-[var(--fg-muted)]" />
+              <p className="text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-[var(--fg-muted)]">
                 {seccion ? `Editar sección · ${seccion.name}` : "Editar esta vista"}
               </p>
+              </div>
               {seccion && (
                 <div className="mb-4">
                   <button
