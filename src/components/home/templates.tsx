@@ -1,14 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { BarChart3, BookOpen, CloudSun, ShieldCheck, Wallet } from "lucide-react";
 import { HomeCard } from "@/components/home/home-card";
 import { ArticleCard } from "@/components/article-card";
-import { BroadsheetCard } from "@/components/home/broadsheet-card";
-import { HeroCarousel } from "@/components/home/hero-carousel";
 import { BreveCarousel } from "@/components/home/breve-carousel";
-import { TileCard } from "@/components/home/tile-card";
-import { BentoTile } from "@/components/home/bento-tile";
 import { EditableCard, type BuilderProps } from "@/components/home/editable-card";
 import { NewsletterForm } from "@/components/newsletter-form";
 import { CoverArt } from "@/components/cover-art";
@@ -17,6 +14,20 @@ import { BREVE_COLS, RIVER_COLS, type HomeTemplateId } from "@/lib/home-layout";
 import type { HomeLayoutConfig } from "@/db/schema";
 import { cn, formatDate } from "@/lib/utils";
 import { DEFAULT_LOCALE, INTL_LOCALE, categoryLabel, localePath, t, type Locale } from "@/lib/i18n";
+
+/**
+ * Estos cuatro usan Framer Motion (~160 KB) para sus animaciones. Solo UNA
+ * plantilla está activa a la vez, pero al importarse arriba de forma
+ * estática los seis componentes de este archivo terminaban en el mismo
+ * paquete — Framer Motion se descargaba y ejecutaba en TODAS las portadas,
+ * aunque la plantilla activa (p. ej. Clásico o Gremial) no la necesite.
+ * `next/dynamic` los separa en su propio fragmento, cargado solo cuando la
+ * plantilla que realmente los usa se renderiza.
+ */
+const HeroCarousel = dynamic(() => import("@/components/home/hero-carousel").then((m) => m.HeroCarousel));
+const TileCard = dynamic(() => import("@/components/home/tile-card").then((m) => m.TileCard));
+const BroadsheetCard = dynamic(() => import("@/components/home/broadsheet-card").then((m) => m.BroadsheetCard));
+const BentoTile = dynamic(() => import("@/components/home/bento-tile").then((m) => m.BentoTile));
 
 type Slots = {
   lead?: ArticleListItem;
