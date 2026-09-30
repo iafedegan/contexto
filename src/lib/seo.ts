@@ -8,7 +8,10 @@ import type { Metadata } from "next";
 import { siteUrl } from "./utils";
 
 const SITE_NAME = process.env.NEXT_PUBLIC_SITE_NAME ?? "CONtexto Ganadero";
-const ORG_LOGO = siteUrl("/logo-512.png");
+// El logo del NewsArticle/Organization apuntaba a /logo-512.png, un archivo
+// que nunca existió en public/ (404): Google Rich Results marcaba el schema
+// como inválido en cada nota. Es el logo real que ya usa el resto del sitio.
+const ORG_LOGO = siteUrl("/logo/contexto-ganadero-logo.jpg");
 
 type ArticleLike = {
   slug: string;

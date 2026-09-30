@@ -30,7 +30,20 @@ export async function generateMetadata(): Promise<Metadata> {
     canonical: "/",
     types: { "application/rss+xml": siteUrl("/feed.xml") },
   },
-  openGraph: { type: "website", siteName: identity.name, locale: "es_CO" },
+  // Imagen por defecto para portada, categorías, autor, institucionales…
+  // cualquier página que no fije su propio openGraph (los artículos sí lo
+  // hacen, con su portada, en articleMetadata). Sin esto compartir el sitio
+  // en WhatsApp/Facebook/X no mostraba ninguna vista previa.
+  openGraph: {
+    type: "website",
+    siteName: identity.name,
+    locale: "es_CO",
+    images: [{ url: siteUrl("/logo/contexto-ganadero-logo.jpg"), width: 447, height: 447, alt: identity.name }],
+  },
+  twitter: {
+    card: "summary",
+    images: [siteUrl("/logo/contexto-ganadero-logo.jpg")],
+  },
   robots: { index: true, follow: true, "max-image-preview": "large" },
   // Verificación de propiedad en Search Console, si está configurada.
   ...(verificacion ? { verification: { google: verificacion } } : {}),

@@ -15,6 +15,7 @@ import { SiteShell } from "@/components/site-shell";
 import { getHomeLayoutConfig, getHomepageArticles } from "@/lib/content";
 import { DEFAULT_HOME_LAYOUT, splitHomeSlots } from "@/lib/home-layout";
 import { getSiteTheme } from "@/lib/site-theme";
+import { getSiteIdentity } from "@/lib/site-identity";
 import { formatMarketValue, getMarketTicker } from "@/lib/market-data";
 
 /**
@@ -54,7 +55,7 @@ async function HomePage({ locale }: { locale: Locale }) {
   const { lead, second, rail, river } = splitHomeSlots(articles);
   // Cuerpo de la plantilla compuesta; la paleta sigue siendo `templateId`.
   // Se toma de getSiteTheme (misma fuente que el resto del portal).
-  const site = await getSiteTheme();
+  const [site, identity] = await Promise.all([getSiteTheme(), getSiteIdentity()]);
   const body = site.parts.body;
 
   const opinion = articles.find((a) => a.categorySlug === "opinion");
@@ -102,6 +103,15 @@ async function HomePage({ locale }: { locale: Locale }) {
       locale={locale} variant="portada"
       aboveMain={cintillo}
     >
+      {/* La portada no tenía ningún <h1>: la estructura de encabezados
+          saltaba directo a los <h2> de cada sección ("Lo último"…), lo que
+          rompe la jerarquía SEO (toda página necesita exactamente un <h1>).
+          Va oculto visualmente porque el nombre del sitio ya está pintado
+          como logo en la cabecera — no hay que duplicarlo en pantalla. */}
+      <h1 className="sr-only">
+        {identity.name} — {identity.tagline || t(locale, "nav.tagline")}
+      </h1>
+
       {/* Zona comercial de portada. No ocupa sitio si no hay creatividad
           activa y vigente (ver src/lib/ads.ts). */}
       <AdsBanner zone="home_top" className="mx-auto mb-10" />

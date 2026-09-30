@@ -151,7 +151,7 @@ function Media({ config }: { config: PopupConfig }) {
   if (!config.mediaUrl) return null;
   if (config.mediaType === "image") {
     // eslint-disable-next-line @next/next/no-img-element
-    return <img src={config.mediaUrl} alt="" className="size-full object-cover" />;
+    return <img src={config.mediaUrl} alt={config.title} className="size-full object-cover" />;
   }
   if (config.mediaType === "video") {
     return <video src={config.mediaUrl} autoPlay muted loop playsInline className="size-full object-cover" />;
