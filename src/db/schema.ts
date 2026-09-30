@@ -301,6 +301,10 @@ export const newsletterSubscribers = pgTable("newsletter_subscribers", {
   signupCity: text("signup_city"),
   /** Código postal aproximado que resuelve Vercel a partir de la IP (puede faltar). */
   signupPostal: text("signup_postal"),
+  /** Barrio por geocodificación inversa; solo con ubicación exacta compartida. */
+  neighborhood: text("neighborhood"),
+  /** "gps" si la persona compartió su ubicación; "ip" si es la aproximada por IP. */
+  signupGeoSource: text("signup_geo_source"),
   signupCountry: text("signup_country"),
   signupLat: numeric("signup_lat"),
   signupLon: numeric("signup_lon"),

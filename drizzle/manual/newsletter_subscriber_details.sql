@@ -12,4 +12,5 @@ alter table newsletter_subscribers add column if not exists signup_lon numeric;
 alter table newsletter_subscribers drop column if exists phone;
 -- Código postal aproximado por geo-IP (sin preguntar nada al suscriptor).
 alter table newsletter_subscribers add column if not exists signup_postal text;
-alter table newsletter_subscribers drop column if exists neighborhood;
+alter table newsletter_subscribers add column if not exists neighborhood text;
+alter table newsletter_subscribers add column if not exists signup_geo_source text;

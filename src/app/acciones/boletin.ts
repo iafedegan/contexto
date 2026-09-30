@@ -63,8 +63,34 @@ export async function suscribirBoletin(
   const signupCity = h.get("x-vercel-ip-city") ? decodeURIComponent(h.get("x-vercel-ip-city")!) : null;
   const signupCountry = h.get("x-vercel-ip-country");
   const signupPostal = h.get("x-vercel-ip-postal-code") ? decodeURIComponent(h.get("x-vercel-ip-postal-code")!).slice(0, 20) : null;
-  const signupLat = h.get("x-vercel-ip-latitude");
-  const signupLon = h.get("x-vercel-ip-longitude");
+  let signupLat: string | null = h.get("x-vercel-ip-latitude");
+  let signupLon: string | null = h.get("x-vercel-ip-longitude");
+  let signupGeoSource: "ip" | "gps" = "ip";
+  let neighborhood: string | null = null;
+  let postal = signupPostal;
+
+  // Ubicación exacta: solo si la persona la compartió con el botón del
+  // formulario (el navegador pide permiso). Reemplaza a la aproximada por IP.
+  const gLat = Number(formData.get("geoLat"));
+  const gLon = Number(formData.get("geoLon"));
+  if (formData.get("geoLat") && Number.isFinite(gLat) && Number.isFinite(gLon) && Math.abs(gLat) <= 90 && Math.abs(gLon) <= 180) {
+    signupLat = gLat.toFixed(6);
+    signupLon = gLon.toFixed(6);
+    signupGeoSource = "gps";
+    try {
+      const r = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=16&addressdetails=1&accept-language=es&lat=${gLat}&lon=${gLon}`,
+        { headers: { "User-Agent": "contexto-ganadero/1.0 (ia@fedegan.org.co)" }, signal: AbortSignal.timeout(3000) },
+      );
+      if (r.ok) {
+        const a = ((await r.json()) as { address?: Record<string, string> }).address ?? {};
+        neighborhood = (a.neighbourhood ?? a.suburb ?? a.quarter ?? a.city_district ?? null)?.slice(0, 120) ?? null;
+        postal = a.postcode?.slice(0, 20) ?? postal;
+      }
+    } catch {
+      /* sin barrio: las coordenadas ya quedan guardadas */
+    }
+  }
 
   try {
     const [existente] = await db
@@ -88,7 +114,9 @@ export async function suscribirBoletin(
       lastName,
       birthDate,
       mobile,
-      signupPostal,
+      signupPostal: postal,
+      neighborhood,
+      signupGeoSource,
       signupIp: ip,
       signupCity,
       signupCountry,

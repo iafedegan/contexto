@@ -10,6 +10,9 @@ export type SubscriberPoint = {
   city: string | null;
   country: string | null;
   postal: string | null;
+  neighborhood: string | null;
+  /** true = ubicación exacta compartida por la persona; false = aproximada por IP. */
+  exact: boolean;
   date: string | null;
 };
 
@@ -84,10 +87,10 @@ export function SubscriberMap({ points }: { points: SubscriberPoint[] }) {
 
       for (const p of points) {
         L.circleMarker([p.lat, p.lon], {
-          radius: 7,
-          color: "#b4622e",
-          fillColor: "#b4622e",
-          fillOpacity: 0.6,
+          radius: p.exact ? 6 : 9,
+          color: p.exact ? "#15803d" : "#b4622e",
+          fillColor: p.exact ? "#15803d" : "#b4622e",
+          fillOpacity: p.exact ? 0.85 : 0.35,
           weight: 1.5,
         })
           .bindPopup(
@@ -95,7 +98,9 @@ export function SubscriberMap({ points }: { points: SubscriberPoint[] }) {
               p.name ? `<strong>${esc(p.name)}</strong>` : "",
               esc(p.email),
               `${esc(p.city ?? "Ciudad desconocida")}${p.country ? ", " + esc(p.country) : ""}`,
+              p.neighborhood ? `Barrio ${esc(p.neighborhood)}` : "",
               p.postal ? `C.P. ${esc(p.postal)}` : "",
+              p.exact ? "Ubicación exacta" : "Ubicación aproximada (IP)",
               p.date ? `Alta: ${esc(p.date)}` : "",
             ]
               .filter(Boolean)
