@@ -2,6 +2,7 @@
 
 import { Suspense, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import Image from "next/image";
 import { signIn } from "next-auth/react";
 import { startAuthentication } from "@simplewebauthn/browser";
@@ -81,7 +82,9 @@ function LoginForm() {
     <div className="lx-card lx-glass lx-shine w-full p-8">
       <div className="lx-inlay absolute inset-0" />
       <div className="relative">
-        <LogoMark size={44} />
+        <Link href="/" aria-label="Ir a la portada" className="inline-block">
+          <LogoMark size={44} />
+        </Link>
         <h1 className="lx-display mt-6 text-2xl font-semibold tracking-tight">Panel editorial</h1>
         <p className="lx-kicker mt-2 text-[var(--fg-muted)]">CONtexto Ganadero</p>
 
@@ -183,12 +186,12 @@ export default function LoginPage() {
         <div className="absolute inset-0 bg-gradient-to-t from-black/92 via-black/55 to-black/35" />
 
         <div className="relative flex h-full flex-col justify-between p-12">
-          <span className="flex items-center gap-3">
+          <Link href="/" className="flex items-center gap-3">
             <LogoMark size={40} />
             <span className="lx-display text-sm font-semibold tracking-tight text-white">
               CONtexto Ganadero
             </span>
-          </span>
+          </Link>
 
           <div>
             <p className="lx-kicker text-[var(--accent-2)]">Panel editorial</p>
