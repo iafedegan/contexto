@@ -227,8 +227,9 @@ export function ArticleWizard({
     // En el paso del tema, «Siguiente» hace lo que toca: proponer opciones y,
     // con título y contexto elegidos, generar el borrador y pasar al resumen.
     if (current.key === "tema" && !generated) {
+      if (generating) return;
       if (!options) return suggest();
-      if (!context.trim()) return setError("Elige un contexto (o escribe el tuyo) y vuelve a pulsar Siguiente.");
+      // El contexto es opcional: con solo el título elegido se redacta a partir del tema.
       return generate();
     }
     const b = blocker[current.key];
@@ -455,6 +456,27 @@ export function ArticleWizard({
             <button type="button" onClick={next} disabled={generating} className="lx-btn !py-1.5 text-xs">
               <Check size={13} /> Me gusta
             </button>
+          </div>
+        )}
+        {current.key === "tema" && (generating || error) && (
+          <div
+            role="status"
+            className={`sticky top-0 z-10 mx-auto mb-4 flex max-w-2xl items-center gap-3 rounded-[var(--radius)] border px-4 py-3 text-sm font-medium shadow-md ${
+              generating
+                ? "border-[var(--accent)] bg-[var(--surface-2)]"
+                : "border-[var(--danger,#b4442e)] bg-[var(--surface-2)] text-[var(--danger,#b4442e)]"
+            }`}
+          >
+            {generating ? (
+              <>
+                <Loader2 size={18} className="shrink-0 animate-spin text-[var(--accent)]" />
+                {options || generated
+                  ? "La IA está redactando el borrador… puede tardar unos segundos; al terminar pasas al resumen."
+                  : "La IA está buscando títulos y contextos…"}
+              </>
+            ) : (
+              error
+            )}
           </div>
         )}
         {current.key === "tema" && (
@@ -780,7 +802,7 @@ export function ArticleWizard({
             <Sparkles size={13} className="mt-0.5 shrink-0 text-[var(--accent)]" /> {aiNote}
           </p>
         )}
-        {error && <p className="mt-4 text-sm text-[var(--danger,#b4442e)]">{error}</p>}
+        {error && current.key !== "tema" && <p className="mt-4 text-sm text-[var(--danger,#b4442e)]">{error}</p>}
       </div>
 
       {current.key !== "vista" && <SeoPanel score={audit.score} items={audit.items} focus={tags[0]} />}
@@ -817,8 +839,16 @@ export function ArticleWizard({
             )}
           </div>
         ) : (
-          <button type="button" onClick={next} className="lx-btn">
-            {STEPS[step + 1].key === "vista" ? "Ver vista previa" : "Siguiente"} <ArrowRight size={15} />
+          <button type="button" onClick={next} disabled={generating && current.key === "tema"} className="lx-btn disabled:opacity-70">
+            {generating && current.key === "tema" ? (
+              <>
+                <Loader2 size={15} className="animate-spin" /> Generando…
+              </>
+            ) : (
+              <>
+                {STEPS[step + 1].key === "vista" ? "Ver vista previa" : "Siguiente"} <ArrowRight size={15} />
+              </>
+            )}
           </button>
         )}
       </div>
