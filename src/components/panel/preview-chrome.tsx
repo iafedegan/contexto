@@ -6,6 +6,7 @@ import { Check, Loader2, Paintbrush, Rocket, X } from "lucide-react";
 import { publishHomeDraft, saveHomeDraft } from "@/app/panel/(app)/portada/actions";
 import { ACCEPTED_KEY, DRAFT_PING_KEY, LAYOUT_EDIT_KEY, type PortadaDraft } from "@/lib/portada-draft";
 import { RegionEditor } from "@/components/panel/region-editor";
+import { SeccionForm } from "@/components/panel/seccion-form";
 import { TemplatePicker } from "@/components/panel/home-builder";
 import type { RegionId } from "@/lib/home-regions";
 
@@ -19,12 +20,15 @@ export function PreviewChrome({
   changed,
   hasDraft,
   draft,
+  seccion = null,
   children,
 }: {
   changed: boolean;
   hasDraft: boolean;
   /** Borrador del editor: con él se habilita el formulario flotante. */
   draft?: PortadaDraft | null;
+  /** Sección que se está viendo (null = la portada). */
+  seccion?: { id: string; slug: string; name: string; description: string | null; sortOrder: number; articleCount: number } | null;
   children: React.ReactNode;
 }) {
   const router = useRouter();
@@ -165,7 +169,15 @@ export function PreviewChrome({
         onClickCapture={(e) => {
           // Los enlaces de la vista previa no navegan: llevarían a la página publicada.
           const el = e.target as HTMLElement;
-          if (el.closest("a")) e.preventDefault();
+          const link = el.closest("a");
+          if (link) {
+            e.preventDefault();
+            const url = new URL(link.href, "https://x.invalid");
+            const sec = url.pathname.match(/^\/(?:en\/)?categoria\/([^/]+)\/?$/);
+            if (sec) router.push(`/panel/portada?vista=1&seccion=${sec[1]}`);
+            else if (url.pathname === "/" || url.pathname === "/en") router.push("/panel/portada?vista=1");
+            return;
+          }
           const r = el.closest("[data-region]")?.getAttribute("data-region") as RegionId | null;
           if (r && panel) setRegion(r);
         }}
@@ -177,14 +189,36 @@ export function PreviewChrome({
         <div data-theme="panel-ui" className="fixed bottom-4 right-4 z-[130] flex max-h-[calc(100dvh-6rem)] w-[22rem] max-w-[calc(100vw-2rem)] flex-col items-end gap-2 text-[var(--fg)]">
           {panel && (
             <div className="w-full overflow-y-auto rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--bg)] p-4 shadow-2xl">
-              <p className="mb-3 text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-[var(--fg-muted)]">Editar esta vista</p>
+              <p className="mb-3 text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-[var(--fg-muted)]">
+                {seccion ? `Editar sección · ${seccion.name}` : "Editar esta vista"}
+              </p>
+              {seccion && (
+                <div className="mb-4">
+                  <button
+                    type="button"
+                    onClick={() => router.push("/panel/portada?vista=1")}
+                    className="mb-3 text-xs font-semibold text-[var(--accent)]"
+                  >
+                    ← Volver al inicio
+                  </button>
+                  <SeccionForm key={seccion.id} {...seccion} defaultOpen onSaved={() => router.refresh()} />
+                </div>
+              )}
+              {!seccion && (
               <details className="mb-4 rounded-[var(--radius)] border border-[var(--border)]">
                 <summary className="cursor-pointer px-3 py-2 text-sm font-semibold">Plantilla</summary>
                 <div className="border-t border-[var(--border)] p-3">
                   <TemplatePicker layout={layout} onPick={(config) => editLayout({ ...config, parts: {} })} compacto />
                 </div>
               </details>
-              <RegionEditor value={layout.regions ?? {}} active={region} onActive={setRegion} onChange={(regions) => editLayout({ ...layout, regions })} />
+              )}
+              <RegionEditor
+                value={layout.regions ?? {}}
+                active={seccion && region !== "navbar" && region !== "body" && region !== "footer" ? "body" : region}
+                onActive={setRegion}
+                onChange={(regions) => editLayout({ ...layout, regions })}
+                only={seccion ? ["navbar", "body", "footer"] : undefined}
+              />
               <p className="mt-3 text-xs text-[var(--fg-muted)]">Pulsa un componente de la página para elegirlo. Los cambios quedan en el borrador; se publican con «Aceptar y publicar».</p>
             </div>
           )}

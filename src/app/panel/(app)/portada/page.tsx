@@ -16,12 +16,12 @@ export const dynamic = "force-dynamic";
 export default async function PortadaPage({
   searchParams,
 }: {
-  searchParams: Promise<{ vista?: string }>;
+  searchParams: Promise<{ vista?: string; seccion?: string }>;
 }) {
-  const { vista } = await searchParams;
+  const { vista, seccion } = await searchParams;
   // Vista previa REAL en pestaña nueva. Va la primera: las funciones del portal
   // memoizan por petición y no deben ejecutarse antes de aplicar el borrador.
-  if (vista === "1") return <HomeRealPreview />;
+  if (vista === "1") return <HomeRealPreview seccion={seccion} />;
   const [session, rows, layout, nav, adsZones, popup] = await Promise.all([
     auth(),
     db

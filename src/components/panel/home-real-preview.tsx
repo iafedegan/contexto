@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
-import { articles, siteSettings } from "@/db/schema";
+import { articles, categories, siteSettings } from "@/db/schema";
 import { requireRole } from "@/lib/auth";
 import { DEFAULT_HOME_LAYOUT } from "@/lib/home-layout";
 import { normalizeLayout } from "@/lib/home-layout-normalize";
@@ -10,8 +10,10 @@ import { POPUP_KEY } from "@/lib/popup";
 import { makePage } from "@/app/(public)/_pages/home";
 import { PreviewChrome } from "@/components/panel/preview-chrome";
 import { sql } from "drizzle-orm";
+import { makePage as makeCategoryPage } from "@/app/(public)/_pages/categoria";
 
 const Home = makePage("es");
+const Categoria = makeCategoryPage("es");
 
 /** JSON con las claves ordenadas: compara contenido, no el orden en que se escribió. */
 function stable(v: unknown): string {
@@ -71,11 +73,28 @@ export async function applyDraftForRequest(opts: { popup?: "auto" | "show" | "hi
   return { draft, changed };
 }
 
-export async function HomeRealPreview() {
+export async function HomeRealPreview({ seccion }: { seccion?: string } = {}) {
   const { draft, changed } = await applyDraftForRequest();
+  let row: { id: string; slug: string; name: string; description: string | null; sortOrder: number; articleCount: number } | null = null;
+  if (seccion) {
+    const [r] = await db
+      .select({
+        id: categories.id,
+        slug: categories.slug,
+        name: categories.name,
+        description: categories.description,
+        sortOrder: categories.sortOrder,
+        articleCount: sql<number>`count(${articles.id})::int`,
+      })
+      .from(categories)
+      .leftJoin(articles, eq(articles.categoryId, categories.id))
+      .where(eq(categories.slug, seccion))
+      .groupBy(categories.id);
+    row = r ?? null;
+  }
   return (
-    <PreviewChrome changed={changed} hasDraft={!!draft} draft={draft}>
-      <Home locale="es" />
+    <PreviewChrome changed={changed} hasDraft={!!draft} draft={draft} seccion={row}>
+      {row ? <Categoria params={Promise.resolve({ slug: row.slug })} searchParams={Promise.resolve({})} locale="es" /> : <Home locale="es" />}
     </PreviewChrome>
   );
 }
