@@ -1,44 +1,57 @@
 import "server-only";
+import { asc } from "drizzle-orm";
 import { db } from "@/db";
 import { newsletterSubscribers } from "@/db/schema";
 import type { SubscriberPoint } from "@/components/panel/subscriber-map";
 
-/** Agrupa las altas del boletín con lat/lon por ciudad, para el mapa del
- * panel (Resumen editorial y Newsletter → Suscriptores comparten esta
- * agregación). Un círculo por ciudad, no uno por persona. */
-export async function subscriberCityPoints(): Promise<SubscriberPoint[]> {
+/** Un punto por suscripción con ubicación, para el mapa del panel (Resumen y
+ * Newsletter → Suscriptores). La geo-IP da coordenadas a nivel de ciudad, así
+ * que varias altas caen en el mismo punto exacto: a las repetidas se les
+ * separa ~250 m en espiral para que cada una se vea y se pueda pulsar. */
+export async function subscriberPoints(): Promise<SubscriberPoint[]> {
   const rows = await db
     .select({
+      email: newsletterSubscribers.email,
+      firstName: newsletterSubscribers.firstName,
+      lastName: newsletterSubscribers.lastName,
       signupLat: newsletterSubscribers.signupLat,
       signupLon: newsletterSubscribers.signupLon,
       signupCity: newsletterSubscribers.signupCity,
       signupCountry: newsletterSubscribers.signupCountry,
       signupPostal: newsletterSubscribers.signupPostal,
+      createdAt: newsletterSubscribers.createdAt,
     })
-    .from(newsletterSubscribers);
+    .from(newsletterSubscribers)
+    .orderBy(asc(newsletterSubscribers.createdAt));
 
-  const porCiudad = new Map<string, SubscriberPoint>();
+  const usados = new Map<string, number>();
+  const out: SubscriberPoint[] = [];
   for (const r of rows) {
     if (r.signupLat == null || r.signupLon == null) continue;
-    const lat = Number(r.signupLat);
-    const lon = Number(r.signupLon);
+    let lat = Number(r.signupLat);
+    let lon = Number(r.signupLon);
     if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue;
-    const key = r.signupCity ?? `${lat.toFixed(1)},${lon.toFixed(1)}`;
-    const actual = porCiudad.get(key);
-    const postal = r.signupPostal?.trim();
-    if (actual) {
-      actual.n += 1;
-      if (postal) actual.postales[postal] = (actual.postales[postal] ?? 0) + 1;
-    } else {
-      porCiudad.set(key, {
-        lat,
-        lon,
-        city: r.signupCity,
-        country: r.signupCountry,
-        n: 1,
-        postales: postal ? { [postal]: 1 } : {},
-      });
+
+    const key = `${lat.toFixed(4)},${lon.toFixed(4)}`;
+    const k = usados.get(key) ?? 0;
+    usados.set(key, k + 1);
+    if (k > 0) {
+      const ang = k * 2.4;
+      const dist = 0.0022 * Math.sqrt(k);
+      lat += dist * Math.sin(ang);
+      lon += (dist * Math.cos(ang)) / Math.max(0.2, Math.cos((lat * Math.PI) / 180));
     }
+
+    out.push({
+      lat,
+      lon,
+      name: `${r.firstName ?? ""} ${r.lastName ?? ""}`.trim() || null,
+      email: r.email,
+      city: r.signupCity,
+      country: r.signupCountry,
+      postal: r.signupPostal?.trim() || null,
+      date: r.createdAt ? new Date(r.createdAt).toISOString().slice(0, 10) : null,
+    });
   }
-  return [...porCiudad.values()];
+  return out;
 }

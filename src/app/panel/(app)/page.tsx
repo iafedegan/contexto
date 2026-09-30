@@ -17,7 +17,7 @@ import { Card } from "@/components/ui";
 import { nf, pctChange, siteDailySeries, siteWeekTotals } from "@/lib/article-stats";
 import { ViewsBarChart } from "@/components/panel/views-chart";
 import { SubscriberMap } from "@/components/panel/subscriber-map";
-import { subscriberCityPoints } from "@/lib/subscriber-map";
+import { subscriberPoints as loadSubscriberPoints } from "@/lib/subscriber-map";
 
 export const dynamic = "force-dynamic";
 
@@ -37,7 +37,7 @@ export default async function PanelHome() {
       .where(sql`${assistantQueries.createdAt} > now() - interval '7 days'`),
     siteWeekTotals(),
     siteDailySeries(7),
-    subscriberCityPoints(),
+    loadSubscriberPoints(),
   ]);
 
   const statusMap = Object.fromEntries(byStatus.map((r) => [r.status, r.n]));

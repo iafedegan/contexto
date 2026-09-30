@@ -5,11 +5,12 @@ import { useEffect, useRef } from "react";
 export type SubscriberPoint = {
   lat: number;
   lon: number;
+  name: string | null;
+  email: string;
   city: string | null;
   country: string | null;
-  n: number;
-  /** Códigos postales (por geo-IP) de los suscriptores de esa ciudad, con su cuenta. */
-  postales: Record<string, number>;
+  postal: string | null;
+  date: string | null;
 };
 
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
@@ -20,7 +21,11 @@ const LEAFLET_JS = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
 // Leaflet no está instalado como dependencia (se carga por CDN, ver arriba),
 // así que no hay tipos suyos disponibles: se tipa aquí lo mínimo que se usa.
 type LeafletLib = {
-  map(el: HTMLElement): { setView(c: [number, number], z: number): unknown; remove(): void };
+  map(el: HTMLElement): {
+    setView(c: [number, number], z: number): unknown;
+    fitBounds(b: [number, number][], o?: Record<string, unknown>): unknown;
+    remove(): void;
+  };
   tileLayer(url: string, opts: Record<string, unknown>): { addTo(map: unknown): unknown };
   circleMarker(
     c: [number, number],
@@ -69,34 +74,40 @@ export function SubscriberMap({ points }: { points: SubscriberPoint[] }) {
 
       // Colombia por defecto (es donde vive casi toda la audiencia); si hay
       // puntos fuera se ve igual, el usuario puede alejar el zoom.
-      const map = L.map(elRef.current).setView([4.5, -74.1], 5);
+      const map = L.map(elRef.current);
+      map.setView([4.5, -74.1], 5);
       mapRef.current = map;
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         attribution: "© OpenStreetMap",
         maxZoom: 18,
       }).addTo(map);
 
-      const max = Math.max(1, ...points.map((p) => p.n));
       for (const p of points) {
-        const radio = 6 + (p.n / max) * 18;
         L.circleMarker([p.lat, p.lon], {
-          radius: radio,
+          radius: 7,
           color: "#b4622e",
           fillColor: "#b4622e",
-          fillOpacity: 0.45,
+          fillOpacity: 0.6,
           weight: 1.5,
         })
           .bindPopup(
-            `${esc(p.city ?? "Ciudad desconocida")}${p.country ? ", " + esc(p.country) : ""} · ${p.n} suscriptor${p.n === 1 ? "" : "es"}` +
-              (Object.keys(p.postales).length
-                ? "<br>" +
-                  Object.entries(p.postales)
-                    .sort((a, b) => b[1] - a[1])
-                    .map(([b, n]) => `C.P. ${esc(b)} (${n})`)
-                    .join("<br>")
-                : ""),
+            [
+              p.name ? `<strong>${esc(p.name)}</strong>` : "",
+              esc(p.email),
+              `${esc(p.city ?? "Ciudad desconocida")}${p.country ? ", " + esc(p.country) : ""}`,
+              p.postal ? `C.P. ${esc(p.postal)}` : "",
+              p.date ? `Alta: ${esc(p.date)}` : "",
+            ]
+              .filter(Boolean)
+              .join("<br>"),
           )
           .addTo(map);
+      }
+      if (points.length > 0) {
+        map.fitBounds(
+          points.map((p) => [p.lat, p.lon] as [number, number]),
+          { padding: [40, 40], maxZoom: 13 },
+        );
       }
     }
 
