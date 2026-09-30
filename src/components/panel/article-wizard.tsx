@@ -224,6 +224,13 @@ export function ArticleWizard({
   const isLast = step === STEPS.length - 1;
 
   function next() {
+    // En el paso del tema, «Siguiente» hace lo que toca: proponer opciones y,
+    // con título y contexto elegidos, generar el borrador y pasar al resumen.
+    if (current.key === "tema" && !generated) {
+      if (!options) return suggest();
+      if (!context.trim()) return setError("Elige un contexto (o escribe el tuyo) y vuelve a pulsar Siguiente.");
+      return generate();
+    }
     const b = blocker[current.key];
     if (b) return setError(b);
     setError("");
