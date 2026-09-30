@@ -24,7 +24,6 @@ import {
   X,
 } from "lucide-react";
 import { AdsEditor } from "@/components/panel/ads-editor";
-import { HomeCanvasSite } from "@/components/panel/home-canvas";
 import type { AdDraft } from "@/components/panel/ads-zone-form";
 import type { AdsZoneRow } from "@/lib/ads";
 import {
@@ -93,9 +92,6 @@ export function HomeBuilder({
   const [region, setRegion] = useState<RegionId>("navbar");
   const [popup, setPopup] = useState<PopupConfig>(initialPopup);
   const [popupPreview, setPopupPreview] = useState(false);
-  // Lienzo: «real» = la portada tal cual la ve el público (iframe de /vista-portada
-  // con el borrador aplicado); «edit» = versión aproximada donde se arrastran tarjetas.
-  const [canvasMode, setCanvasMode] = useState<"real" | "edit">("real");
   const [draftReady, setDraftReady] = useState(false);
   const [frameNonce, setFrameNonce] = useState(0);
   const frameDoc = useRef<Document | null>(null);
@@ -109,9 +105,6 @@ export function HomeBuilder({
   // (columnas, dirección de "En breve") se ajusta desde "content" también,
   // como un panel flotante — es una decisión de contenido, no de plantilla.
   const [viewport, setViewport] = useState<"escritorio" | "tablet" | "movil">("escritorio");
-  const dragIndex = useRef<number | null>(null);
-  const wasDragged = useRef(false);
-  const [overIndex, setOverIndex] = useState<number | null>(null);
 
   const initialItemsSerialized = useMemo(() => serializeItems(initialItems), [initialItems]);
   const initialLayoutSerialized = useMemo(() => JSON.stringify(initialLayout), [initialLayout]);
@@ -202,16 +195,6 @@ export function HomeBuilder({
     return () => window.removeEventListener("storage", onStorage);
   }, [router]);
 
-  function move(from: number, to: number) {
-    setItems((prev) => {
-      const next = prev.slice();
-      const [row] = next.splice(from, 1);
-      next.splice(to, 0, row);
-      return next;
-    });
-    setSaved(false);
-  }
-
   function patchStyle(index: number, partial: Partial<HomeStyle> | null) {
     setItems((prev) => {
       const next = prev.slice();
@@ -228,39 +211,6 @@ export function HomeBuilder({
   function patchLayout(partial: Partial<Layout>) {
     setLayout((prev) => ({ ...prev, ...partial }));
     setSaved(false);
-  }
-
-  function dragProps(index: number): React.HTMLAttributes<HTMLDivElement> {
-    return {
-      draggable: true,
-      onDragStart: () => {
-        dragIndex.current = index;
-        wasDragged.current = false;
-      },
-      onDragEnter: () => {
-        setOverIndex(index);
-        wasDragged.current = true;
-      },
-      onDragOver: (e: React.DragEvent) => e.preventDefault(),
-      onDrop: () => {
-        if (dragIndex.current !== null && dragIndex.current !== index) move(dragIndex.current, index);
-        dragIndex.current = null;
-        setOverIndex(null);
-      },
-      onDragEnd: () => {
-        dragIndex.current = null;
-        setOverIndex(null);
-        setTimeout(() => (wasDragged.current = false), 0);
-      },
-      onClick: () => {
-        if (wasDragged.current) return;
-        setSelected(index);
-      },
-    };
-  }
-
-  function hasStyle(index: number) {
-    return Boolean(items[index]?.homeStyle);
   }
 
   function save() {
@@ -340,28 +290,6 @@ export function HomeBuilder({
             ))}
           </div>
 
-          {/* Vista real (idéntica al sitio) o edición de tarjetas (arrastrar para reordenar). */}
-          <div className="flex items-center gap-0.5 rounded-full border border-[var(--border)] p-0.5 text-xs font-semibold">
-            {(
-              [
-                ["real", "Vista real"],
-                ["edit", "Editar tarjetas"],
-              ] as const
-            ).map(([id, label]) => (
-              <button
-                key={id}
-                type="button"
-                onClick={() => setCanvasMode(id)}
-                aria-pressed={canvasMode === id}
-                className={`rounded-full px-3 py-1.5 transition ${
-                  canvasMode === id ? "bg-[var(--accent)] text-[var(--accent-fg)]" : "text-[var(--fg-muted)] hover:text-[var(--accent)]"
-                }`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-
           <button
             type="button"
             onClick={() => window.open("/panel/portada?vista=1", "_blank")}
@@ -378,7 +306,7 @@ export function HomeBuilder({
             ) : saved ? (
               <span className="font-semibold text-[var(--accent-2)]">Guardado ✓</span>
             ) : (
-              canvasMode === "real" ? "Pulsa un componente o una tarjeta para editarlo" : "Pulsa una tarjeta · arrástrala para reordenar"
+              "Pulsa un componente o una tarjeta para editarlo"
             )}
           </span>
         </div>
@@ -388,49 +316,15 @@ export function HomeBuilder({
           className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--bg-2)] p-3 shadow-[var(--shadow)]"
         >
           <div className="h-[calc(100dvh-13rem)] min-h-[30rem]">
-          {canvasMode === "real" ? (
-            draftReady ? (
-              <PreviewFrame
-                key="real"
-                device={device}
-                src={`/vista-portada?popup=${popupPreview ? 1 : 0}&n=${frameNonce}`}
-                onFrameLoad={hookFrame}
-              />
-            ) : (
-              <div className="grid h-full place-items-center text-sm text-[var(--fg-muted)]">Preparando la vista real…</div>
-            )
-          ) : (
-          <PreviewFrame key="edit" device={device}>
-          <div
-            className="bg-[var(--paper)]"
-            // Clic en navbar, pie, cuerpo… selecciona ese componente en el panel.
-            // Los enlaces de la vista previa no navegan.
-            onClickCapture={(e) => {
-              const el = e.target as HTMLElement;
-              if (el.closest("a")) e.preventDefault();
-              const r = el.closest("[data-region]")?.getAttribute("data-region") as RegionId | null;
-              if (r) setRegion(r);
-            }}
-          >
-            <HomeCanvasSite
-              layout={layout}
-              items={items}
-              headerVariants={headerVariants}
-              footerVariants={footerVariants}
-              adsZones={adsZones}
-              adDrafts={adDrafts}
-              adFocus={adFocus}
-              region={region}
-              popup={popup}
-              popupPreview={popupPreview}
-              onPopupClose={() => setPopupPreview(false)}
-              selected={selected}
-              overIndex={overIndex}
-              dragProps={dragProps}
-              hasStyle={hasStyle}
+          {draftReady ? (
+            <PreviewFrame
+              key="real"
+              device={device}
+              src={`/vista-portada?popup=${popupPreview ? 1 : 0}&n=${frameNonce}`}
+              onFrameLoad={hookFrame}
             />
-          </div>
-          </PreviewFrame>
+          ) : (
+            <div className="grid h-full place-items-center text-sm text-[var(--fg-muted)]">Preparando la vista real…</div>
           )}
           </div>
         </div>
