@@ -15,6 +15,7 @@ export function SeccionForm({
   description,
   sortOrder,
   articleCount,
+  defaultOpen = false,
 }: {
   id: string;
   slug: string;
@@ -22,8 +23,9 @@ export function SeccionForm({
   description: string | null;
   sortOrder: number;
   articleCount: number;
+  defaultOpen?: boolean;
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(defaultOpen);
   const [state, action, pending] = useActionState<SeccionState, FormData>(actualizarSeccion, null);
 
   return (
@@ -67,6 +69,14 @@ export function SeccionForm({
               {pending && <Loader2 size={13} className="animate-spin" />}
               Guardar
             </Button>
+            <a
+              href={`/categoria/${slug}`}
+              target="_blank"
+              rel="noreferrer"
+              className="lx-link text-xs text-[var(--accent)]"
+            >
+              Ver la página ↗
+            </a>
             {state && (
               <p
                 role="status"

@@ -13,8 +13,13 @@ export const dynamic = "force-dynamic";
  * editando la base de datos a mano — no había ninguna pantalla del panel
  * para su nombre o descripción, a diferencia de la portada.
  */
-export default async function SeccionesPage() {
+export default async function SeccionesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ abrir?: string }>;
+}) {
   await requireRole("editor");
+  const { abrir } = await searchParams;
 
   const rows = await db
     .select({
@@ -54,6 +59,7 @@ export default async function SeccionesPage() {
             description={r.description}
             sortOrder={r.sortOrder}
             articleCount={r.articleCount}
+            defaultOpen={r.slug === abrir}
           />
         ))}
         {rows.length === 0 && (

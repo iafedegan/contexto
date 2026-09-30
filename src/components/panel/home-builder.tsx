@@ -96,6 +96,7 @@ export function HomeBuilder({
   const [frameNonce, setFrameNonce] = useState(0);
   const frameDoc = useRef<Document | null>(null);
   const regionRef = useRef<RegionId>("navbar");
+  const dirtyRef = useRef(false);
   const selectedRef = useRef<number | null>(null);
   // Anuncios: lo que se escribe (sin guardar) y cuál se está editando, para verlo en el lienzo.
   const [adDrafts, setAdDrafts] = useState<Record<string, AdDraft>>({});
@@ -156,6 +157,7 @@ export function HomeBuilder({
   }
   useEffect(() => {
     regionRef.current = region;
+    dirtyRef.current = dirty;
     selectedRef.current = selected;
     paintSelection();
   });
@@ -175,7 +177,16 @@ export function HomeBuilder({
       "click",
       (e) => {
         const el = e.target as HTMLElement;
-        if (el.closest("a")) e.preventDefault();
+        const link = el.closest("a");
+        if (link) e.preventDefault();
+        // Opción del menú: lleva a editar esa sección (nombre, descripción, orden).
+        const sec = link?.closest('[data-region="navbar"]') ? link.getAttribute("href")?.match(/\/categoria\/([^/?#]+)/) : null;
+        if (sec) {
+          if (!dirtyRef.current || window.confirm("Tienes cambios sin guardar en la portada. ¿Salir de todos modos?")) {
+            router.push(`/panel/secciones?abrir=${sec[1]}`);
+          }
+          return;
+        }
         const card = el.closest("[data-card-index]")?.getAttribute("data-card-index");
         if (card !== null && card !== undefined) setSelected(Number(card));
         const r = el.closest("[data-region]")?.getAttribute("data-region") as RegionId | null;
