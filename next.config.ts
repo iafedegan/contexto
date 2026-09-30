@@ -46,6 +46,14 @@ const nextConfig: NextConfig = {
   // Imágenes remotas del CDN de medios. Ajustar al dominio real de assets.
   images: {
     formats: ["image/avif", "image/webp"],
+    // Sin esto, Next usa su default de 60 s: con un carrusel rotando cada
+    // pocos segundos (Revista) o cualquier página donde la misma foto se
+    // vea más de un minuto, el navegador la vuelve a pedir y decodificar de
+    // la nada — Lighthouse lo capturaba como trabajo del hilo principal muy
+    // variable entre corridas. Un día es suficiente para eliminar eso sin
+    // arriesgar servir una portada vieja mucho tiempo si un editor la
+    // reemplaza en la misma URL.
+    minimumCacheTTL: 86400,
     remotePatterns: [
       { protocol: "https", hostname: "**.contextoganadero.com" },
       { protocol: "https", hostname: "**.supabase.co" },
