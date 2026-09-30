@@ -96,7 +96,7 @@ export function HomeBuilder({
   const [frameNonce, setFrameNonce] = useState(0);
   const frameDoc = useRef<Document | null>(null);
   const regionRef = useRef<RegionId>("navbar");
-  const dirtyRef = useRef(false);
+  const [previewPath, setPreviewPath] = useState("/vista-portada");
   const selectedRef = useRef<number | null>(null);
   // Anuncios: lo que se escribe (sin guardar) y cuál se está editando, para verlo en el lienzo.
   const [adDrafts, setAdDrafts] = useState<Record<string, AdDraft>>({});
@@ -157,7 +157,6 @@ export function HomeBuilder({
   }
   useEffect(() => {
     regionRef.current = region;
-    dirtyRef.current = dirty;
     selectedRef.current = selected;
     paintSelection();
   });
@@ -179,13 +178,19 @@ export function HomeBuilder({
         const el = e.target as HTMLElement;
         const link = el.closest("a");
         if (link) e.preventDefault();
-        // Opción del menú: lleva a editar esa sección (nombre, descripción, orden).
-        const sec = link?.closest('[data-region="navbar"]') ? link.getAttribute("href")?.match(/\/categoria\/([^/?#]+)/) : null;
-        if (sec) {
-          if (!dirtyRef.current || window.confirm("Tienes cambios sin guardar en la portada. ¿Salir de todos modos?")) {
-            router.push(`/panel/secciones?abrir=${sec[1]}`);
+        // Opción del menú o enlace interno: el lienzo muestra esa página (con el
+        // borrador aplicado) para verla y ajustar su navbar, cuerpo y pie.
+        if (link) {
+          const url = new URL(link.href, "https://x.invalid");
+          const sec = url.pathname.match(/^\/(?:en\/)?categoria\/([^/]+)\/?$/);
+          if (sec) {
+            setPreviewPath(`/vista-portada/categoria/${sec[1]}`);
+            return;
           }
-          return;
+          if (url.pathname === "/" || url.pathname === "/en") {
+            setPreviewPath("/vista-portada");
+            return;
+          }
         }
         const card = el.closest("[data-card-index]")?.getAttribute("data-card-index");
         if (card !== null && card !== undefined) setSelected(Number(card));
@@ -301,6 +306,23 @@ export function HomeBuilder({
             ))}
           </div>
 
+          {previewPath !== "/vista-portada" && (
+            <>
+              <button
+                type="button"
+                onClick={() => setPreviewPath("/vista-portada")}
+                className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border-strong)] px-3.5 py-2 text-xs font-semibold transition hover:border-[var(--accent)] hover:text-[var(--accent)]"
+              >
+                ← Inicio
+              </button>
+              <a
+                href={`/panel/secciones?abrir=${previewPath.split("/").pop()}`}
+                className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border-strong)] px-3.5 py-2 text-xs font-semibold transition hover:border-[var(--accent)] hover:text-[var(--accent)]"
+              >
+                Nombre y descripción de la sección
+              </a>
+            </>
+          )}
           <button
             type="button"
             onClick={() => window.open("/panel/portada?vista=1", "_blank")}
@@ -331,7 +353,7 @@ export function HomeBuilder({
             <PreviewFrame
               key="real"
               device={device}
-              src={`/vista-portada?popup=${popupPreview ? 1 : 0}&n=${frameNonce}`}
+              src={`${previewPath}?popup=${popupPreview ? 1 : 0}&n=${frameNonce}`}
               onFrameLoad={hookFrame}
             />
           ) : (
