@@ -23,6 +23,11 @@ const GROUPS: Group[] = [
         label: "Portada y plantillas",
         hint: "Plantilla, fondo, orden y estilo de las tarjetas",
       },
+      {
+        href: "/panel/secciones",
+        label: "Secciones",
+        hint: "Nombre, descripción y orden de cada categoría del menú",
+      },
     ],
   },
   {
