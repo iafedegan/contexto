@@ -64,6 +64,14 @@ export function NewsletterForm({ locale, compacto = false }: { locale: Locale; c
               placeholder={locale === "en" ? "Mobile" : "Celular"}
               className="w-full rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] px-3.5 py-2.5 text-[0.95rem] outline-none transition focus:border-[var(--accent)]"
             />
+            <input
+              name="neighborhood"
+              type="text"
+              maxLength={120}
+              autoComplete="address-level3"
+              placeholder={locale === "en" ? "Neighborhood" : "Barrio"}
+              className="w-full rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] px-3.5 py-2.5 text-[0.95rem] outline-none transition focus:border-[var(--accent)]"
+            />
           </>
         )}
 

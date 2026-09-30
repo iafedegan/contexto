@@ -8,7 +8,11 @@ export type SubscriberPoint = {
   city: string | null;
   country: string | null;
   n: number;
+  /** Barrios declarados por los suscriptores de esa ciudad, con su cuenta. */
+  barrios: Record<string, number>;
 };
+
+const esc = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
 const LEAFLET_CSS = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
 const LEAFLET_JS = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
@@ -82,7 +86,16 @@ export function SubscriberMap({ points }: { points: SubscriberPoint[] }) {
           fillOpacity: 0.45,
           weight: 1.5,
         })
-          .bindPopup(`${p.city ?? "Ciudad desconocida"}${p.country ? ", " + p.country : ""} · ${p.n} suscriptor${p.n === 1 ? "" : "es"}`)
+          .bindPopup(
+            `${esc(p.city ?? "Ciudad desconocida")}${p.country ? ", " + esc(p.country) : ""} · ${p.n} suscriptor${p.n === 1 ? "" : "es"}` +
+              (Object.keys(p.barrios).length
+                ? "<br>" +
+                  Object.entries(p.barrios)
+                    .sort((a, b) => b[1] - a[1])
+                    .map(([b, n]) => `${esc(b)} (${n})`)
+                    .join("<br>")
+                : ""),
+          )
           .addTo(map);
       }
     }

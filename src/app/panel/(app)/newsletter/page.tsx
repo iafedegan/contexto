@@ -103,6 +103,9 @@ async function Suscriptores({ admin }: { admin: boolean }) {
               {r.signupCity && (
                 <span className="ml-2 text-xs text-[var(--fg-muted)]">· {r.signupCity}</span>
               )}
+              {r.neighborhood && (
+                <span className="ml-2 text-xs text-[var(--fg-muted)]">· Barrio {r.neighborhood}</span>
+              )}
               {r.birthDate && (
                 <span className="ml-2 text-xs text-[var(--fg-muted)]">
                   · {new Date(`${r.birthDate}T00:00:00`).toLocaleDateString("es-CO", { dateStyle: "medium" })}

@@ -299,6 +299,8 @@ export const newsletterSubscribers = pgTable("newsletter_subscribers", {
   // hechas después de este cambio.
   signupIp: text("signup_ip"),
   signupCity: text("signup_city"),
+  /** Barrio que escribe el propio suscriptor: la IP solo da la ciudad. */
+  neighborhood: text("neighborhood"),
   signupCountry: text("signup_country"),
   signupLat: numeric("signup_lat"),
   signupLon: numeric("signup_lon"),
