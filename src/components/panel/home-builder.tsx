@@ -43,7 +43,7 @@ import { PartsEditor } from "@/components/panel/parts-editor";
 import { PopupEditor } from "@/components/panel/popup-editor";
 import { PreviewFrame } from "@/components/panel/preview-frame";
 import type { PopupConfig } from "@/lib/popup-types";
-import { ACCEPTED_KEY, DRAFT_PING_KEY, type PortadaDraft } from "@/lib/portada-draft";
+import { ACCEPTED_KEY, DRAFT_PING_KEY, LAYOUT_EDIT_KEY, type PortadaDraft } from "@/lib/portada-draft";
 import type { FooterId, NavbarId } from "@/lib/template-parts";
 import { HOME_FONTS, HOME_FONT_GROUPS, type HomeTitleFont } from "@/lib/home-fonts";
 import { cn } from "@/lib/utils";
@@ -216,6 +216,14 @@ export function HomeBuilder({
   useEffect(() => {
     const onStorage = (e: StorageEvent) => {
       if (e.key === ACCEPTED_KEY) router.refresh();
+      if (e.key === LAYOUT_EDIT_KEY && e.newValue) {
+        try {
+          setLayout(JSON.parse(e.newValue) as Layout);
+          setSaved(false);
+        } catch {
+          /* ignorado */
+        }
+      }
     };
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
@@ -722,7 +730,7 @@ function FontOption({
   );
 }
 
-function TemplatePicker({
+export function TemplatePicker({
   layout,
   onPick,
   compacto = false,

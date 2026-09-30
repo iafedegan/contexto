@@ -10,6 +10,8 @@ import type { PopupConfig } from "@/lib/popup-types";
  * hasta pulsar «Aceptar y publicar».
  */
 export const DRAFT_PING_KEY = "cg-portada-borrador-ts";
+/** La vista previa (otra pestaña) avisa al editor del diseño que se editó allí. */
+export const LAYOUT_EDIT_KEY = "cg-portada-diseno-editado";
 export const ACCEPTED_KEY = "cg-portada-aceptado";
 
 export type PortadaDraft = {

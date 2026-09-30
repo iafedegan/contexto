@@ -74,7 +74,7 @@ export async function applyDraftForRequest(opts: { popup?: "auto" | "show" | "hi
 export async function HomeRealPreview() {
   const { draft, changed } = await applyDraftForRequest();
   return (
-    <PreviewChrome changed={changed} hasDraft={!!draft}>
+    <PreviewChrome changed={changed} hasDraft={!!draft} draft={draft}>
       <Home locale="es" />
     </PreviewChrome>
   );

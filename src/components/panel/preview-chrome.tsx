@@ -1,10 +1,13 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Loader2, Rocket, X } from "lucide-react";
-import { publishHomeDraft } from "@/app/panel/(app)/portada/actions";
-import { ACCEPTED_KEY, DRAFT_PING_KEY } from "@/lib/portada-draft";
+import { Check, Loader2, Paintbrush, Rocket, X } from "lucide-react";
+import { publishHomeDraft, saveHomeDraft } from "@/app/panel/(app)/portada/actions";
+import { ACCEPTED_KEY, DRAFT_PING_KEY, LAYOUT_EDIT_KEY, type PortadaDraft } from "@/lib/portada-draft";
+import { RegionEditor } from "@/components/panel/region-editor";
+import { TemplatePicker } from "@/components/panel/home-builder";
+import type { RegionId } from "@/lib/home-regions";
 
 /**
  * Marco de la pestaña «Vista previa»: barra con Cerrar y «Aceptar y publicar»
@@ -15,15 +18,48 @@ import { ACCEPTED_KEY, DRAFT_PING_KEY } from "@/lib/portada-draft";
 export function PreviewChrome({
   changed,
   hasDraft,
+  draft,
   children,
 }: {
   changed: boolean;
   hasDraft: boolean;
+  /** Borrador del editor: con él se habilita el formulario flotante. */
+  draft?: PortadaDraft | null;
   children: React.ReactNode;
 }) {
   const router = useRouter();
   const [confirming, setConfirming] = useState(false);
   const [pending, start] = useTransition();
+  const [layout, setLayout] = useState(draft?.layout ?? null);
+  const [panel, setPanel] = useState(false);
+  const [region, setRegion] = useState<RegionId>("navbar");
+  const draftRef = useRef(draft);
+  draftRef.current = draft;
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Cada ajuste se guarda en el borrador (y se avisa al editor) y la vista se refresca.
+  function editLayout(next: NonNullable<typeof layout>) {
+    setLayout(next);
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(async () => {
+      timer.current = null;
+      const base = draftRef.current;
+      if (!base) return;
+      try {
+        await saveHomeDraft({ ...base, layout: next });
+        localStorage.setItem(LAYOUT_EDIT_KEY, JSON.stringify(next));
+        router.refresh();
+      } catch {
+        /* sin permiso o sin conexión */
+      }
+    }, 600);
+  }
+
+  // Si el editor cambia el diseño en la otra pestaña, el formulario lo refleja.
+  useEffect(() => {
+    if (!timer.current && draft) setLayout(draft.layout);
+  }, [draft]);
+
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   useEffect(() => {
@@ -128,11 +164,39 @@ export function PreviewChrome({
         className="absolute inset-x-0 bottom-0 top-14 overflow-y-auto"
         onClickCapture={(e) => {
           // Los enlaces de la vista previa no navegan: llevarían a la página publicada.
-          if ((e.target as HTMLElement).closest("a")) e.preventDefault();
+          const el = e.target as HTMLElement;
+          if (el.closest("a")) e.preventDefault();
+          const r = el.closest("[data-region]")?.getAttribute("data-region") as RegionId | null;
+          if (r && panel) setRegion(r);
         }}
       >
         {children}
       </div>
+
+      {layout && (
+        <div data-theme="panel-ui" className="fixed bottom-4 right-4 z-[130] flex max-h-[calc(100dvh-6rem)] w-[22rem] max-w-[calc(100vw-2rem)] flex-col items-end gap-2 text-[var(--fg)]">
+          {panel && (
+            <div className="w-full overflow-y-auto rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--bg)] p-4 shadow-2xl">
+              <p className="mb-3 text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-[var(--fg-muted)]">Editar esta vista</p>
+              <details className="mb-4 rounded-[var(--radius)] border border-[var(--border)]">
+                <summary className="cursor-pointer px-3 py-2 text-sm font-semibold">Plantilla</summary>
+                <div className="border-t border-[var(--border)] p-3">
+                  <TemplatePicker layout={layout} onPick={(config) => editLayout({ ...config, parts: {} })} compacto />
+                </div>
+              </details>
+              <RegionEditor value={layout.regions ?? {}} active={region} onActive={setRegion} onChange={(regions) => editLayout({ ...layout, regions })} />
+              <p className="mt-3 text-xs text-[var(--fg-muted)]">Pulsa un componente de la página para elegirlo. Los cambios quedan en el borrador; se publican con «Aceptar y publicar».</p>
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={() => setPanel((v) => !v)}
+            className="inline-flex items-center gap-1.5 rounded-full bg-[var(--accent)] px-4 py-2.5 text-xs font-semibold text-[var(--accent-fg)] shadow-lg"
+          >
+            <Paintbrush size={14} /> {panel ? "Cerrar editor" : "Editar"}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
