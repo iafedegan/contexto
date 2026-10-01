@@ -408,13 +408,13 @@ export function HomeBuilder({
       >
         {seccion ? (
           <>
-            <Bloque titulo={`Sección · ${seccion.name}`} icono={<LayoutGrid size={13} />} abierto>
+            <Bloque titulo={`Sección · ${seccion.name}`} icono={<LayoutGrid size={13} />}>
               <p className="mb-3 text-xs leading-relaxed text-[var(--fg-muted)]">
                 Nombre, descripción y orden en el menú. Se guardan al pulsar Guardar en este bloque.
               </p>
               <SeccionForm key={`${seccion.id}:${seccion.sortOrder}`} id={seccion.id} slug={seccion.slug} name={seccion.name} description={seccion.description} sortOrder={seccion.sortOrder} articleCount={seccion.articleCount} defaultOpen onSaved={() => setFrameNonce((n) => n + 1)} />
             </Bloque>
-            <Bloque titulo="Componentes de la página" icono={<Paintbrush size={13} />} abierto>
+            <Bloque titulo="Componentes de la página" icono={<Paintbrush size={13} />}>
               <RegionEditor
                 value={layout.regions ?? {}}
                 active={region === "navbar" || region === "footer" ? region : "body"}
