@@ -31,6 +31,8 @@ export type AiProviderId = (typeof AI_PROVIDERS)[number]["id"];
 export type AiSettings = {
   provider: AiProviderId;
   model: string;
+  /** Modelo de Gemini para las gráficas con búsqueda en Google; vacío = el principal. */
+  chartModel?: string;
   /** Claves cifradas, una por proveedor. */
   keys: Partial<Record<AiProviderId, string>>;
   /**
@@ -44,6 +46,7 @@ export type AiSettings = {
 export type KeyStatus = {
   provider: AiProviderId;
   model: string;
+  chartModel: string;
   /** Catálogo real de la cuenta; vacío si aún no se ha validado la clave. */
   models: string[];
   present: boolean;

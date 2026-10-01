@@ -116,6 +116,32 @@ export function ApiKeyForm({ status, canManage }: { status: KeyStatus; canManage
               )}
             </label>
 
+            {provider === "google" && (
+              <label className="block sm:col-span-2">
+                <span className="mb-1.5 flex items-baseline gap-2">
+                  <span className="text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-[var(--fg-muted)]">
+                    Modelo para gráficas
+                  </span>
+                  <span className="text-[0.7rem] text-[var(--fg-muted)]/75">
+                    busca cifras en Google y dibuja la gráfica; elige uno que admita búsqueda (los «lite» pueden no hacerlo)
+                  </span>
+                </span>
+                <select
+                  name="chartModel"
+                  defaultValue={status.chartModel}
+                  key={`chart-${provider}`}
+                  className="lx-input lx-mono text-xs"
+                >
+                  <option value="">Igual que el modelo principal</option>
+                  {catalogo.map((m) => (
+                    <option key={m} value={m}>
+                      {m}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+
             <label className="block sm:col-span-2">
               <span className="mb-1.5 flex items-baseline gap-2">
                 <span className="text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-[var(--fg-muted)]">

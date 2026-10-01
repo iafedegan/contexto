@@ -63,6 +63,7 @@ export async function getKeyStatus(): Promise<KeyStatus> {
   return {
     provider: settings.provider,
     model: settings.model,
+    chartModel: settings.chartModel ?? "",
     models: settings.models?.[settings.provider] ?? [],
     present: Boolean(key),
     source,
@@ -96,5 +97,5 @@ export async function getGroundedAi() {
   if (!key) return null;
   if (settings.provider !== "google") return "otro-proveedor" as const;
   const google = createGoogleGenerativeAI({ apiKey: key });
-  return { model: google(settings.model), tools: { google_search: google.tools.googleSearch({}) } };
+  return { model: google(settings.chartModel || settings.model), tools: { google_search: google.tools.googleSearch({}) } };
 }

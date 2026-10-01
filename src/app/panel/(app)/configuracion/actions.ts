@@ -167,6 +167,7 @@ export async function saveAiSettings(formData: FormData) {
   }
   const meta = providerMeta(provider);
   const model = String(formData.get("model") ?? "").trim();
+  const chartModel = String(formData.get("chartModel") ?? "").trim();
   const raw = String(formData.get("apiKey") ?? "").trim();
 
   const [row] = await db
@@ -204,7 +205,16 @@ export async function saveAiSettings(formData: FormData) {
     );
   }
 
-  const value: AiSettings = { provider, model: modeloFinal, keys, models };
+  if (chartModel && catalogo.length > 0 && !catalogo.includes(chartModel)) {
+    throw new Error(`${meta.label} no ofrece «${chartModel}» para las gráficas.`);
+  }
+  const value: AiSettings = {
+    provider,
+    model: modeloFinal,
+    ...(provider === "google" && chartModel ? { chartModel } : {}),
+    keys,
+    models,
+  };
   await db
     .insert(siteSettings)
     .values({ key: SECRETS_KEY, value })
@@ -229,6 +239,7 @@ export async function deleteApiKey(provider: AiProviderId) {
   const value: AiSettings = {
     provider: current.provider ?? "anthropic",
     model: current.model ?? providerMeta(provider).defaultModel,
+    ...(current.chartModel ? { chartModel: current.chartModel } : {}),
     keys,
   };
   await db
