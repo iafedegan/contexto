@@ -16,6 +16,7 @@ import {
   Paintbrush,
   MessageSquare,
   Layers,
+  ListTree,
   RotateCcw,
   Save,
   Smartphone,
@@ -456,6 +457,25 @@ export function HomeBuilder({
               cambiar su posición en la portada.
             </p>
           )}
+        </Bloque>
+
+        <Bloque titulo="Secciones" icono={<ListTree size={13} />}>
+          <p className="mb-3 text-xs leading-relaxed text-[var(--fg-muted)]">
+            Nombre, descripción y orden de cada categoría del menú. Se guardan al pulsar Guardar en cada una.
+          </p>
+          <div className="flex flex-col gap-2">
+            {sections.map((x) => (
+              <SeccionForm
+                key={x.id}
+                {...x}
+                onSaved={() => {
+                  setFrameNonce((n) => n + 1);
+                  router.refresh();
+                }}
+              />
+            ))}
+            {sections.length === 0 && <p className="text-xs text-[var(--fg-muted)]">Todavía no hay secciones creadas.</p>}
+          </div>
         </Bloque>
 
         <Bloque titulo="Popup" icono={<MessageSquare size={13} />} onToggle={setPopupPreview}>
