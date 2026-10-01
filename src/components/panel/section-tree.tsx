@@ -335,7 +335,7 @@ function Detail({
         </button>
       )}
 
-      <SeccionForm key={sel.id} {...pick(sel)} defaultOpen onSaved={onSaved} />
+      <SeccionForm key={`${sel.id}:${sel.sortOrder}`} {...pick(sel)} defaultOpen onSaved={onSaved} />
 
       <button
         type="button"

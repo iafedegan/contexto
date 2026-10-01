@@ -46,7 +46,7 @@ import { PartsEditor } from "@/components/panel/parts-editor";
 import { PopupEditor } from "@/components/panel/popup-editor";
 import { PreviewFrame } from "@/components/panel/preview-frame";
 import type { PopupConfig } from "@/lib/popup-types";
-import { ACCEPTED_KEY, DRAFT_PING_KEY, LAYOUT_EDIT_KEY, type PortadaDraft } from "@/lib/portada-draft";
+import { ACCEPTED_KEY, DRAFT_PING_KEY, LAYOUT_EDIT_KEY, SECCIONES_KEY, type PortadaDraft } from "@/lib/portada-draft";
 import type { FooterId, NavbarId } from "@/lib/template-parts";
 import { HOME_FONTS, HOME_FONT_GROUPS, type HomeTitleFont } from "@/lib/home-fonts";
 import { cn } from "@/lib/utils";
@@ -216,6 +216,11 @@ export function HomeBuilder({
   useEffect(() => {
     const onStorage = (e: StorageEvent) => {
       if (e.key === ACCEPTED_KEY) router.refresh();
+      // Otra pestaña (la vista previa) cambió una sección: se recarga el árbol y el lienzo.
+      if (e.key === SECCIONES_KEY) {
+        setFrameNonce((n) => n + 1);
+        router.refresh();
+      }
       if (e.key === LAYOUT_EDIT_KEY && e.newValue) {
         try {
           setLayout(JSON.parse(e.newValue) as Layout);
@@ -392,7 +397,7 @@ export function HomeBuilder({
               <p className="mb-3 text-xs leading-relaxed text-[var(--fg-muted)]">
                 Nombre, descripción y orden en el menú. Se guardan al pulsar Guardar en este bloque.
               </p>
-              <SeccionForm key={seccion.id} id={seccion.id} slug={seccion.slug} name={seccion.name} description={seccion.description} sortOrder={seccion.sortOrder} articleCount={seccion.articleCount} defaultOpen onSaved={() => setFrameNonce((n) => n + 1)} />
+              <SeccionForm key={`${seccion.id}:${seccion.sortOrder}`} id={seccion.id} slug={seccion.slug} name={seccion.name} description={seccion.description} sortOrder={seccion.sortOrder} articleCount={seccion.articleCount} defaultOpen onSaved={() => setFrameNonce((n) => n + 1)} />
             </Bloque>
             <Bloque titulo="Componentes de la página" icono={<Paintbrush size={13} />} abierto>
               <RegionEditor

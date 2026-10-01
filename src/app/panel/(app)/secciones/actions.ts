@@ -52,6 +52,7 @@ export async function actualizarSeccion(_prev: SeccionState, formData: FormData)
   revalidatePath(`/en/categoria/${row.slug}`);
   // El menú principal y el pie leen las categorías en cada página.
   revalidatePath("/", "layout");
+  revalidatePath("/panel/portada");
 
   return { ok: true, message: "Guardado ✓" };
 }

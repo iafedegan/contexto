@@ -12,6 +12,8 @@ import type { PopupConfig } from "@/lib/popup-types";
 export const DRAFT_PING_KEY = "cg-portada-borrador-ts";
 /** La vista previa (otra pestaña) avisa al editor del diseño que se editó allí. */
 export const LAYOUT_EDIT_KEY = "cg-portada-diseno-editado";
+/** Se editó una sección (nombre, orden…) en otra pestaña: el árbol del editor debe recargarse. */
+export const SECCIONES_KEY = "cg-secciones-editadas";
 export const ACCEPTED_KEY = "cg-portada-aceptado";
 
 export type PortadaDraft = {

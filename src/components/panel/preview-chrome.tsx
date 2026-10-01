@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Check, GripHorizontal, Loader2, Paintbrush, Rocket, X } from "lucide-react";
 import { publishHomeDraft, saveHomeDraft } from "@/app/panel/(app)/portada/actions";
-import { ACCEPTED_KEY, DRAFT_PING_KEY, LAYOUT_EDIT_KEY, type PortadaDraft } from "@/lib/portada-draft";
+import { ACCEPTED_KEY, DRAFT_PING_KEY, LAYOUT_EDIT_KEY, SECCIONES_KEY, type PortadaDraft } from "@/lib/portada-draft";
 import { RegionEditor } from "@/components/panel/region-editor";
 import { SectionFiltersPicker } from "@/components/panel/section-filters-picker";
 import { SeccionForm } from "@/components/panel/seccion-form";
@@ -262,7 +262,19 @@ export function PreviewChrome({
                   >
                     ← Volver al inicio
                   </button>
-                  <SeccionForm key={seccion.id} {...seccion} defaultOpen onSaved={() => router.refresh()} />
+                  <SeccionForm
+                    key={`${seccion.id}:${seccion.sortOrder}`}
+                    {...seccion}
+                    defaultOpen
+                    onSaved={() => {
+                      try {
+                        localStorage.setItem(SECCIONES_KEY, String(Date.now()));
+                      } catch {
+                        /* sin almacenamiento */
+                      }
+                      router.refresh();
+                    }}
+                  />
                 </div>
               )}
               {!seccion && (
