@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { ChevronDown, ImageOff, Loader2, Plus } from "lucide-react";
 import { addAdsZone } from "@/app/panel/(app)/configuracion/ads-actions";
 import { AdsZoneForm, type AdDraft, type AdsZoneRow } from "@/components/panel/ads-zone-form";
@@ -19,16 +19,28 @@ export function AdsEditor({
   canManage,
   onDraft,
   onFocusZone,
+  request,
 }: {
   zones: AdsZoneRow[];
   canManage: boolean;
   onDraft?: (key: string, draft: AdDraft) => void;
   onFocusZone?: (key: string | null) => void;
+  /** Abre desde fuera el anuncio `key` (p. ej. al pulsarlo en el plano); `n` cambia en cada petición. */
+  request?: { key: string; n: number } | null;
 }) {
   const [pending, start] = useTransition();
   const [msg, setMsg] = useState("");
   const [openKey, setOpenKey] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Record<string, AdDraft>>({});
+  // Petición externa (ajuste de estado durante el render, patrón recomendado por React).
+  const [seenRequest, setSeenRequest] = useState(request?.n ?? 0);
+  if (request && request.n !== seenRequest) {
+    setSeenRequest(request.n);
+    setOpenKey(request.key);
+  }
+  useEffect(() => {
+    if (request) document.getElementById(`ad-zone-${request.key}`)?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }, [request]);
   const positions = [...new Set(zones.map((z) => z.position))] as AdPosition[];
 
   function toggle(key: string) {
@@ -72,7 +84,7 @@ export function AdsEditor({
                 const hasCreative = (image && isHttp(image)) || !!html;
                 const open = openKey === z.key;
                 return (
-                  <li key={z.key} className={open ? "bg-[var(--surface-2)]" : ""}>
+                  <li key={z.key} id={`ad-zone-${z.key}`} className={open ? "bg-[var(--surface-2)]" : ""}>
                     <button
                       type="button"
                       onClick={() => toggle(z.key)}

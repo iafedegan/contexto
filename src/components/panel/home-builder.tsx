@@ -38,6 +38,8 @@ import type { ArticleListItem } from "@/lib/content";
 import type { HomeLayoutConfig, HomeStyle } from "@/db/schema";
 import { HOME_TEMPLATES } from "@/lib/home-layout";
 import type { RegionId } from "@/lib/home-regions";
+import { TemplateBlueprint, type AdState } from "@/components/panel/template-blueprint";
+import type { AdPosition } from "@/lib/ads-positions";
 import { SectionFiltersPicker } from "@/components/panel/section-filters-picker";
 import { SeccionForm } from "@/components/panel/seccion-form";
 import { SectionTree, type SectionNode } from "@/components/panel/section-tree";
@@ -111,6 +113,19 @@ export function HomeBuilder({
   // Anuncios: lo que se escribe (sin guardar) y cuál se está editando, para verlo en el lienzo.
   const [adDrafts, setAdDrafts] = useState<Record<string, AdDraft>>({});
   const [adFocus, setAdFocus] = useState<string | null>(null);
+  const [adRequest, setAdRequest] = useState<{ key: string; n: number } | null>(null);
+  // Estado de cada posición para el plano: activo > borrador > vacío (con lo que se está escribiendo).
+  const adStates: Partial<Record<AdPosition, AdState>> = {};
+  for (const z of adsZones) {
+    const d = adDrafts[z.key];
+    const image = d ? d.imageUrl : (z.imageUrl ?? "");
+    const html = d ? d.html : (z.html ?? "");
+    const active = d ? d.active : z.active;
+    const has = /^https?:\/\//i.test(image) || !!html;
+    const st: AdState = has && active ? "activo" : has ? "borrador" : "vacio";
+    const cur = adStates[z.position];
+    if (!cur || st === "activo" || (st === "borrador" && cur === "vacio")) adStates[z.position] = st;
+  }
   // "template": elegir la plantilla. "content": la página real, editable —
   // clic para estilo, arrastrar para reordenar. La disposición de secciones
   // (columnas, dirección de "En breve") se ajusta desde "content" también,
@@ -482,29 +497,48 @@ export function HomeBuilder({
           />
         </Bloque>
 
-        <Bloque titulo="Popup" icono={<MessageSquare size={13} />} onToggle={setPopupPreview}>
-          <PopupEditor
-            value={popup}
-            // Cada cambio se ve al instante: el popup aparece en el lienzo.
-            onChange={(p) => {
-              setPopup(p);
-              setPopupPreview(true);
+        {/* Las mismas zonas que en Configuración › Publicidad, aquí también, con un
+            plano de la plantilla que muestra dónde cae cada una, y el popup. */}
+        <Bloque titulo="Publicidad y popup" icono={<Megaphone size={13} />}>
+          <TemplateBlueprint
+            layout={layout}
+            adStates={adStates}
+            focus={(adFocus ? (adFocus.split("__")[0] as AdPosition) : null)}
+            onPick={(pos) => {
+              setAdFocus(pos);
+              setAdRequest((r) => ({ key: pos, n: (r?.n ?? 0) + 1 }));
             }}
-            previewing={popupPreview}
-            onPreview={setPopupPreview}
           />
-        </Bloque>
-
-        {/* Las mismas zonas que en Configuración › Publicidad, aquí también:
-            quien diseña la portada no debería tener que salir a otra pantalla
-            para activar o cambiar un banner. */}
-        <Bloque titulo="Publicidad" icono={<Megaphone size={13} />}>
-          <AdsEditor
-            zones={adsZones}
-            canManage={canManagePauta}
-            onDraft={(key, draft) => setAdDrafts((d) => ({ ...d, [key]: draft }))}
-            onFocusZone={setAdFocus}
-          />
+          <div className="mt-5">
+            <AdsEditor
+              zones={adsZones}
+              canManage={canManagePauta}
+              onDraft={(key, draft) => setAdDrafts((d) => ({ ...d, [key]: draft }))}
+              onFocusZone={setAdFocus}
+              request={adRequest}
+            />
+          </div>
+          <details
+            className="mt-5 rounded-[var(--radius)] border border-[var(--border)]"
+            onToggle={(e) => setPopupPreview((e.currentTarget as HTMLDetailsElement).open)}
+          >
+            <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2.5 text-sm font-semibold">
+              <MessageSquare size={14} className="text-[var(--accent)]" /> Popup del sitio
+              <ChevronDown size={14} className="ml-auto" />
+            </summary>
+            <div className="border-t border-[var(--border)] p-3">
+              <PopupEditor
+                value={popup}
+                // Cada cambio se ve al instante: el popup aparece en el lienzo.
+                onChange={(p) => {
+                  setPopup(p);
+                  setPopupPreview(true);
+                }}
+                previewing={popupPreview}
+                onPreview={setPopupPreview}
+              />
+            </div>
+          </details>
         </Bloque>
           </>
         )}
