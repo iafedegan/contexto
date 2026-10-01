@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
-import { Maximize2, X } from "lucide-react";
+import { Maximize2 } from "lucide-react";
 import { CoverArt } from "@/components/cover-art";
 
 export type SitePreviewChrome = {
@@ -22,7 +21,9 @@ export type SitePreviewChrome = {
  * plantilla activa (cabecera, pie, colores, tipografías) y se reduce con
  * `zoom` hasta caber en el panel. Mismo marcado que la página del artículo.
  */
-type Props = {
+export const PREVIEW_STORAGE_KEY = "cg:vista-articulo";
+
+export type Props = {
   chrome: SitePreviewChrome;
   title: string;
   excerpt: string;
@@ -36,66 +37,38 @@ type Props = {
 };
 
 /**
- * Vista previa en el paso del asistente; al hacer clic se abre en una ventana
- * flotante casi a pantalla completa para verla con más amplitud.
+ * Vista previa en el paso del asistente; «Ampliar» la abre en una pestaña
+ * nueva a pantalla completa. Los datos viajan por localStorage (la pestaña
+ * nueva pone la cabecera y el pie reales por su cuenta) y se actualizan
+ * mientras el asistente siga mostrando este paso.
  */
 export function SiteArticlePreview(props: Props) {
-  const [expanded, setExpanded] = useState(false);
-
+  const { chrome: _chrome, ...data } = props;
+  void _chrome;
+  const serialized = JSON.stringify(data);
   useEffect(() => {
-    if (!expanded) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setExpanded(false);
-    window.addEventListener("keydown", onKey);
-    return () => {
-      document.body.style.overflow = prev;
-      window.removeEventListener("keydown", onKey);
-    };
-  }, [expanded]);
+    try {
+      localStorage.setItem(PREVIEW_STORAGE_KEY, serialized);
+    } catch {
+      /* sin almacenamiento: la pestaña nueva mostrará lo último guardado */
+    }
+  }, [serialized]);
 
   return (
-    <>
-      <div
-        className="group relative h-full cursor-zoom-in"
-        onClick={() => setExpanded(true)}
-        title="Clic para ampliar"
-      >
-        <Frame {...props} />
-        <span className="pointer-events-none absolute bottom-3 right-3 inline-flex items-center gap-1.5 rounded-full bg-black/75 px-3 py-1.5 text-xs font-semibold text-white opacity-80 transition group-hover:opacity-100">
-          <Maximize2 size={13} /> Ampliar
-        </span>
-      </div>
-
-      {expanded &&
-        createPortal(
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-label="Vista previa ampliada"
-            className="fixed inset-0 z-[100] flex flex-col bg-black/70 p-3 backdrop-blur-sm sm:p-6"
-            onClick={() => setExpanded(false)}
-          >
-            <div className="mb-2 flex items-center justify-end">
-              <button
-                type="button"
-                onClick={() => setExpanded(false)}
-                className="inline-flex items-center gap-1.5 rounded-full bg-white px-4 py-2 text-sm font-semibold text-black shadow"
-              >
-                <X size={15} /> Cerrar
-              </button>
-            </div>
-            <div className="min-h-0 flex-1 bg-white" onClick={(e) => e.stopPropagation()} data-theme="panel-amber">
-              <Frame {...props} />
-            </div>
-          </div>,
-          document.body,
-        )}
-    </>
+    <div
+      className="group relative h-full cursor-zoom-in"
+      onClick={() => window.open("/panel/articulos/vista-previa", "_blank")}
+      title="Clic para ver en una pestaña nueva"
+    >
+      <Frame {...props} />
+      <span className="pointer-events-none absolute bottom-3 right-3 inline-flex items-center gap-1.5 rounded-full bg-black/75 px-3 py-1.5 text-xs font-semibold text-white opacity-80 transition group-hover:opacity-100">
+        <Maximize2 size={13} /> Ampliar
+      </span>
+    </div>
   );
 }
 
-function Frame({
+export function Frame({
   chrome,
   title,
   excerpt,

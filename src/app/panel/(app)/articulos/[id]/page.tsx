@@ -7,12 +7,7 @@ import Link from "next/link";
 import { ArrowLeft, PenLine, Sparkles } from "lucide-react";
 import { ArticleEditor } from "@/components/article-editor";
 import { ArticleWizard } from "@/components/panel/article-wizard";
-import type { SitePreviewChrome } from "@/components/panel/site-article-preview";
-import { SiteHeader } from "@/components/site-header";
-import { SiteFooter } from "@/components/site-footer";
-import { navItems, navOverflow } from "@/components/site-shell";
-import { getSiteTheme } from "@/lib/site-theme";
-import { getSiteIdentity } from "@/lib/site-identity";
+import { siteChrome } from "@/components/panel/site-chrome";
 import { ViewsBarChart } from "@/components/panel/views-chart";
 import { articleSeries, bestDay, nf, pctChange } from "@/lib/article-stats";
 import { formatDate } from "@/lib/utils";
@@ -57,23 +52,6 @@ const EMPTY: Initial = {
   isBreaking: false,
   isLive: false,
 };
-
-/** Cabecera, pie y tema reales del sitio para la vista previa del asistente. */
-async function siteChrome(): Promise<SitePreviewChrome> {
-  const [site, nav, extra, identity] = await Promise.all([
-    getSiteTheme(),
-    navItems(),
-    navOverflow(),
-    getSiteIdentity(),
-  ]);
-  return {
-    theme: site.theme,
-    style: site.style,
-    css: site.css,
-    header: <SiteHeader theme={site.theme} nav={nav} extraNav={extra} identity={identity} />,
-    footer: <SiteFooter theme={site.theme} nav={nav} identity={identity} />,
-  };
-}
 
 export default async function ArticleEditorPage({
   params,
