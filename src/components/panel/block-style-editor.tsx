@@ -21,6 +21,8 @@ export type ZoneBundle = {
   onChange: (z: ZoneStyle | undefined) => void;
   onSelect: (item: ZoneMapItem) => void;
   onMoveBlock?: (item: ZoneMapItem, cell: { col: number; row: number }) => void;
+  level?: number;
+  onLevel?: (n: number) => void;
 };
 
 export function BlockStyleEditor({
@@ -76,7 +78,7 @@ export function BlockStyleEditor({
 
       {zone && (
         <Group title="Mapa de la zona">
-          <ZonePanel map={zone.map} style={zone.style} selectedSlug={zone.selectedSlug} onChange={zone.onChange} onSelect={zone.onSelect} onMoveBlock={zone.onMoveBlock} />
+          <ZonePanel map={zone.map} style={zone.style} selectedSlug={zone.selectedSlug} onChange={zone.onChange} onSelect={zone.onSelect} onMoveBlock={zone.onMoveBlock} level={zone.level} onLevel={zone.onLevel} />
         </Group>
       )}
 

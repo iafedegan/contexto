@@ -113,6 +113,7 @@ export function HomeBuilder({
   const inSectionRef = useRef(false);
   const itemsRef = useRef<Item[]>(initialItems);
   const [zoneMap, setZoneMap] = useState<ZoneMapData | null>(null);
+  const [zoneUp, setZoneUp] = useState(0);
   const patchRef = useRef<(i: number, p: Partial<HomeStyle>) => void>(() => {});
   const moveRef = useRef<(from: number, to: number) => void>(() => {});
   const [previewPath, setPreviewPath] = useState("/vista-portada");
@@ -323,10 +324,10 @@ export function HomeBuilder({
       const doc = frameDoc.current;
       if (!doc || !selectedSlug || !/^[\w-]+$/.test(selectedSlug)) return setZoneMap(null);
       const el = doc.querySelector<HTMLElement>(`[data-bslug="${selectedSlug}"]`) ?? doc.querySelector<HTMLElement>(`[data-bs-root="${selectedSlug}"]`);
-      setZoneMap(el ? measureZone(el) : null);
+      setZoneMap(el ? measureZone(el, zoneUp) : null);
     }, 2200);
     return () => clearTimeout(id);
-  }, [selectedSlug, frameNonce, previewPath]);
+  }, [selectedSlug, frameNonce, previewPath, zoneUp]);
 
   function setZone(key: string, z: ZoneStyle | undefined) {
     const zones = { ...(layout.zones ?? {}) };
@@ -340,6 +341,8 @@ export function HomeBuilder({
           map: zoneMap,
           style: layout.zones?.[zoneMap.key],
           selectedSlug,
+          level: zoneUp,
+          onLevel: setZoneUp,
           onChange: (z) => setZone(zoneMap.key!, z),
           onSelect: (it) => {
             const idx = it.slug ? items.findIndex((i) => i.slug === it.slug) : it.index ?? -1;

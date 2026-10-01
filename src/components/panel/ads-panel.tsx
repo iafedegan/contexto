@@ -19,6 +19,7 @@ export function AdsPanel({
   drafts,
   onDraft,
   view = "portada",
+  views,
   only,
 }: {
   layout: Required<HomeLayoutConfig>;
@@ -27,6 +28,8 @@ export function AdsPanel({
   drafts: Record<string, AdDraft>;
   onDraft: (key: string, draft: AdDraft) => void;
   view?: "portada" | "seccion" | "nota";
+  /** Vistas del plano disponibles (por defecto, las tres). */
+  views?: Array<"portada" | "seccion" | "nota">;
   only?: AdPosition[];
 }) {
   const [focus, setFocus] = useState<string | null>(null);
@@ -50,6 +53,7 @@ export function AdsPanel({
       <TemplateBlueprint
         layout={layout}
         view={view}
+        views={views}
         adStates={states}
         focus={focus ? (focus.split("__")[0] as AdPosition) : null}
         onPick={(pos) => {

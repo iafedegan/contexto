@@ -35,6 +35,8 @@ export function ZonePanel({
   onChange,
   onSelect,
   onMoveBlock,
+  level = 0,
+  onLevel,
 }: {
   map: ZoneMapData | null;
   style: ZoneStyle | undefined;
@@ -43,6 +45,9 @@ export function ZonePanel({
   onSelect: (item: ZoneMapItem) => void;
   /** Se suelta un bloque en otra celda del mapa (columna y fila empiezan en 1). */
   onMoveBlock?: (item: ZoneMapItem, cell: { col: number; row: number }) => void;
+  /** Nivel de la zona: 0 = el contenedor del bloque; más = contenedores superiores. */
+  level?: number;
+  onLevel?: (n: number) => void;
 }) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [drag, setDrag] = useState<{ id: string; dx: number; dy: number; col: number; row: number } | null>(null);
@@ -120,9 +125,21 @@ export function ZonePanel({
         <svg ref={svgRef} viewBox={`0 0 ${map.w} ${map.h}`} className="block w-full touch-none select-none" role="img" aria-label="Mapa de la zona del bloque" style={{ maxHeight: 360 }}>
           <rect x={0} y={0} width={map.w} height={map.h} rx={fs * 0.4} fill="#ffffff" stroke="#9fb04a" strokeWidth={Math.max(1, map.w / 300)} strokeDasharray="6 4" />
           {canDrag &&
-            colT.map((c, i) => (
-              <rect key={`c${i}`} x={c.start} y={0} width={c.size} height={map.h} fill="none" stroke="#c9d49a" strokeWidth={Math.max(1, map.w / 500)} strokeDasharray="4 4" />
-            ))}
+            (rowT.length ? rowT : [{ start: 0, size: map.h }]).map((r, ri) =>
+              colT.map((c, ci) => {
+                const occupied = map.items.some((it) => it.kind === "block" && it.x < c.start + c.size - 2 && it.x + it.w > c.start + 2 && it.y < r.start + r.size - 2 && it.y + it.h > r.start + 2);
+                return (
+                  <g key={`cell${ri}-${ci}`}>
+                    <rect x={c.start} y={r.start} width={c.size} height={r.size} rx={fs * 0.3} fill={occupied ? "none" : "#f5f8e3"} stroke="#c9d49a" strokeWidth={Math.max(1, map.w / 450)} strokeDasharray="5 4" />
+                    {!occupied && (
+                      <text x={c.start + c.size / 2} y={r.start + r.size / 2} fontSize={fs * 0.85} textAnchor="middle" fill="#8c9860">
+                        {`Columna ${ci + 1}${rowT.length > 1 ? ` · fila ${ri + 1}` : ""} · libre`}
+                      </text>
+                    )}
+                  </g>
+                );
+              }),
+            )}
           {drag && canDrag && (() => {
             const it = map.items.find((x) => x.id === drag.id);
             if (!it) return null;
@@ -150,7 +167,7 @@ export function ZonePanel({
                   width={Math.max(it.w, 2)}
                   height={Math.max(it.h, 2)}
                   rx={fs * 0.3}
-                  fill={it.kind === "block" ? (sel ? "#b9d35a" : "#d9e7a3") : "#eef0e0"}
+                  fill={it.kind === "block" ? (sel ? "#b9d35a" : "#d9e7a3") : it.kind === "group" ? "none" : "#eef0e0"}
                   stroke={sel ? "#556b2f" : "#8c9860"}
                   strokeWidth={sel ? Math.max(2, map.w / 160) : Math.max(1, map.w / 400)}
                 />
@@ -174,6 +191,28 @@ export function ZonePanel({
       <p className="text-[0.7rem] text-[var(--fg-muted)]">
         {canDrag ? "Arrastra un bloque a otra celda para moverlo. " : "Para mover bloques en el mapa, la zona debe ser una cuadrícula (elige columnas abajo). "}Ahora: {map.display.includes("grid") ? `cuadrícula de ${map.cols} columna${map.cols === 1 ? "" : "s"}` : "lista"} · {map.items.filter((i) => i.kind === "block").length} bloques. Pulsa un bloque del mapa para elegirlo.
       </p>
+
+      {onLevel && (
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="text-xs font-semibold">Zona:</span>
+          <button type="button" onClick={() => onLevel(Math.max(0, level - 1))} disabled={level === 0} className="rounded-md border border-[var(--border)] bg-white px-2.5 py-1 text-xs font-semibold disabled:opacity-40">
+            ↓ Más interna
+          </button>
+          <button type="button" onClick={() => onLevel(level + 1)} disabled={!map.canGoUp || level >= 3} className="rounded-md border border-[var(--border)] bg-white px-2.5 py-1 text-xs font-semibold disabled:opacity-40">
+            ↑ Zona superior
+          </button>
+          <span className="text-[0.7rem] text-[var(--fg-muted)]">nivel {level + 1}</span>
+        </div>
+      )}
+
+      {(map.items.some((i) => i.kind === "group") || z.flat) && (
+        <label className="flex items-start gap-2 rounded-[var(--radius)] bg-[var(--surface-2)] p-2 text-xs">
+          <input type="checkbox" checked={!!z.flat} onChange={(e) => patch({ flat: e.target.checked || undefined })} className="mt-0.5" />
+          <span>
+            <strong>Colocar aquí los bloques de los grupos internos.</strong> Cada nota pasa a ser una celda de esta cuadrícula y la puedes arrastrar a cualquier columna.
+          </span>
+        </label>
+      )}
 
       <div>
         <p className="mb-1.5 text-xs font-semibold">Columnas de la zona</p>

@@ -98,6 +98,7 @@ export function SectionPanel({
           drafts={ads.drafts}
           onDraft={ads.onDraft}
           view="seccion"
+          views={["seccion"]}
           only={["section_top", "section_bottom", "footer"]}
         />
       ) : tab === "encabezado" ? (

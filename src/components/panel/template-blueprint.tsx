@@ -39,9 +39,12 @@ export function TemplateBlueprint({
   focus,
   onPick,
   view: initialView = "portada",
+  views = ["portada", "seccion", "nota"],
 }: {
   layout: Required<HomeLayoutConfig>;
   view?: View;
+  /** Vistas que se pueden ver (si es una sola, no hay pestañas). */
+  views?: View[];
   adStates: Partial<Record<AdPosition, AdState>>;
   focus: AdPosition | null;
   onPick: (p: AdPosition) => void;
@@ -330,15 +333,13 @@ export function TemplateBlueprint({
     y += 32;
     y += footer(y);
   } else if (view === "seccion") {
-    y += header(y);
-    y += 6;
-    const centered = layout.templateId === "clasico";
+    // Arquitectura REAL de la página de sección (ver SectionHeader / SectionGrid en
+    // src/components/section/section-layout.tsx): sin barra lateral, ancho completo.
+    const theme = parts.body;
     const pos = layout.sectionFilters ?? "cabecera";
-    ln(centered ? L + CW / 2 - 30 : L, y, 60, 1, C.line, 3);
-    y += 12;
-    head(centered ? L + CW / 2 - 18 : L, y, 36);
-    y += 12;
-    rect(centered ? L + CW / 2 - 90 : L, y, 180, 14, C.dark, 3);
+    y += header(y);
+    y += 10;
+
     const filterBlock = (x: number, yy: number, w: number): number => {
       for (let i = 0; i < 4; i++) rect(x + i * ((w - 6) / 4 + 2), yy, (w - 6) / 4, 9, i === 0 ? "#cfa84a" : "#fff", 5, C.rule);
       rect(x, yy + 14, w * 0.34, 10, "#fff", 3, C.rule);
@@ -347,10 +348,101 @@ export function TemplateBlueprint({
       rect(x + w * 0.88, yy + 14, w * 0.12, 10, "#cfa84a", 5);
       return 28;
     };
-    if (pos === "cabecera") filterBlock(L + CW - 150, y - 4, 150);
-    y += 24;
-    ln(centered ? L + CW / 2 - 70 : L, y, 140, 2, C.line, 3, 7);
-    y += 22;
+    const chips = (x: number, yy: number) => {
+      rect(x, yy, 56, 10, "#fff", 5, C.rule);
+      rect(x + 62, yy, 74, 10, "#fff", 5, C.rule);
+    };
+    const crumbs = (x: number, yy: number) => {
+      rect(x, yy, 22, 3, C.line, 1.5);
+      rect(x + 28, yy, 4, 3, C.line, 1.5);
+      rect(x + 38, yy, 36, 3, C.head, 1.5);
+    };
+    const hasSlot = pos === "cabecera";
+
+    // ---- Encabezado de cada plantilla ----
+    if (theme === "clasico") {
+      crumbs(L + CW / 2 - 37, y);
+      y += 12;
+      rect(L, y, CW, 4, C.dark, 1);
+      rect(L, y + 7, CW, 1.5, C.dark, 1);
+      rect(L + CW / 2 - 18, y + 16, 36, 4, C.head, 2);
+      rect(L + CW / 2 - (hasSlot ? 48 : 70), y + 26, hasSlot ? 96 : 140, 16, C.dark, 3);
+      if (hasSlot) filterBlock(L + CW - 118, y + 16, 118);
+      rect(L, y + 54, CW, 1.5, C.dark, 1);
+      rect(L, y + 57, CW, 4, C.dark, 1);
+      y += 70;
+      ln(L + CW / 2 - 80, y, 160, 2, C.line, 3, 7);
+      y += 20;
+      chips(L + CW / 2 - 68, y);
+      y += 24;
+    } else if (theme === "revista") {
+      crumbs(L, y);
+      y += 14;
+      head(L, y, 36);
+      rect(L, y + 12, hasSlot ? 170 : 220, 22, C.dark, 4);
+      if (hasSlot) filterBlock(L + CW - 118, y + 6, 118);
+      y += 44;
+      rect(L, y, CW, 1.5, C.rule, 0);
+      y += 10;
+      ln(L, y, 190, 3, C.line, 3.5, 7);
+      chips(L + CW - 138, y);
+      y += 34;
+    } else if (theme === "compacto") {
+      crumbs(L, y);
+      y += 12;
+      head(L, y, 28);
+      rect(L, y + 10, 130, 12, C.dark, 3);
+      chips(L, y + 28);
+      if (hasSlot) filterBlock(L + CW - 150, y + 6, 150);
+      y += 44;
+      rect(L, y, CW, 2, C.dark, 1);
+      y += 8;
+      ln(L, y, 200, 1, C.line, 3);
+      y += 14;
+    } else if (theme === "vanguardia") {
+      rect(L, y, CW, 120, C.band, 22, C.rule);
+      rect(L + CW - 70, y + 8, 56, 56, "#e0e8b4", 28, undefined, 0.6);
+      crumbs(L + 18, y + 16);
+      head(L + 18, y + 34, 36);
+      rect(L + 18, y + 46, hasSlot ? 160 : 190, 20, "#8aa13a", 5);
+      if (hasSlot) filterBlock(L + CW - 136, y + 38, 118);
+      ln(L + 18, y + 76, 170, 2, C.line, 3, 7);
+      chips(L + 18, y + 98);
+      y += 134;
+    } else if (theme === "esmeralda") {
+      crumbs(L + CW / 2 - 37, y);
+      y += 14;
+      rect(L + 20, y + 4, 70, 1.5, C.rule, 0);
+      els.push(<path key={key()} d={`M${L + CW / 2 - 28},${y + 5} l3,-3 l3,3 l-3,3 Z`} fill={C.head} />);
+      rect(L + CW / 2 - 18, y + 3, 36, 4, C.head, 2);
+      els.push(<path key={key()} d={`M${L + CW / 2 + 22},${y + 5} l3,-3 l3,3 l-3,3 Z`} fill={C.head} />);
+      rect(L + CW - 90, y + 4, 70, 1.5, C.rule, 0);
+      y += 18;
+      rect(L + CW / 2 - (hasSlot ? 52 : 78), y, hasSlot ? 104 : 156, 26, C.dark, 5);
+      if (hasSlot) filterBlock(L + CW - 118, y + 4, 118);
+      y += 36;
+      ln(L + CW / 2 - 80, y, 160, 2, C.line, 3, 7);
+      y += 20;
+      chips(L + CW / 2 - 68, y);
+      y += 20;
+      rect(L + 40, y, CW - 80, 1.5, C.rule, 0);
+      y += 14;
+    } else {
+      crumbs(L, y);
+      y += 14;
+      head(L, y, 36);
+      rect(L, y + 12, 200, 24, C.dark, 4);
+      if (hasSlot) filterBlock(L + CW - 118, y + 10, 118);
+      y += 48;
+      ln(L, y, 200, 2, C.line, 3, 7);
+      y += 22;
+      chips(L, y);
+      y += 20;
+      rect(L, y, CW, 2, C.rule, 0);
+      y += 14;
+    }
+
+    // ---- Filtros fuera del encabezado, según la posición elegida ----
     if (pos === "izquierda") { filterBlock(L, y, 170); y += 36; }
     if (pos === "centro") { filterBlock(L + CW / 2 - 85, y, 170); y += 36; }
     if (pos === "derecha") { filterBlock(L + CW - 170, y, 170); y += 36; }
@@ -363,12 +455,121 @@ export function TemplateBlueprint({
       rect(L + 300, y + 7, 14, 12, "#cfa84a", 6);
       y += 36;
     }
+
     ad("section_top", L, y, CW, 24);
-    y += 34;
-    const cw = (CW - 16) / 3;
-    for (let r = 0; r < 2; r++) for (let c = 0; c < 3; c++) card(L + c * (cw + 8), y + r * 78, cw, 46, 2);
-    y += 2 * 78 + 4;
+    y += 36;
+
+    // ---- Lista de notas, con la composición de cada plantilla ----
+    const miniCard = (x: number, yy: number, w: number, ih: number) => card(x, yy, w, ih, 2);
+    if (theme === "clasico") {
+      img(L, y, CW, 84);
+      head(L, y + 92, CW * 0.7, 1);
+      ln(L, y + 104, CW * 0.55, 2);
+      y += 128;
+      rect(L, y, CW, 2, C.dark, 1);
+      y += 10;
+      const cw3 = CW / 3;
+      for (let c = 0; c < 3; c++) {
+        if (c > 0) rect(L + c * cw3, y, 1, 84, C.rule, 0);
+        miniCard(L + c * cw3 + (c ? 8 : 0), y, cw3 - (c ? 16 : 8), 44);
+      }
+      y += 98;
+      rect(L, y, CW, 1.5, C.rule, 0);
+      y += 10;
+      for (let r = 0; r < 3; r++) for (let c = 0; c < 2; c++) {
+        rect(L + c * (CW / 2 + 4), y + r * 22, 10, 4, C.head, 2);
+        ln(L + c * (CW / 2 + 4) + 16, y + r * 22 - 1, CW / 2 - 30, 2, C.line, 3, 6);
+      }
+      y += 70;
+    } else if (theme === "revista") {
+      img(L, y, CW, 120);
+      head(L, y + 128, CW * 0.6, 1);
+      ln(L, y + 140, CW * 0.5, 2);
+      y += 164;
+      for (let c = 0; c < 2; c++) miniCard(L + c * (CW / 2 + 4), y, CW / 2 - 4, 62);
+      y += 96;
+      rect(L, y, CW, 2, C.rule, 0);
+      y += 12;
+      const cw3 = (CW - 12) / 3;
+      for (let r = 0; r < 2; r++) for (let c = 0; c < 3; c++) miniCard(L + c * (cw3 + 6), y + r * 74, cw3, 40);
+      y += 2 * 74;
+    } else if (theme === "compacto") {
+      // Fichas densas: la primera ocupa 2×2 y el resto 1×1 (cuadrícula de 4 columnas).
+      const cw4 = (CW - 3 * 6) / 4, rh = 70;
+      const tile = (c: number, r: number, cs: number, rs: number, big = false) => {
+        const tx = L + c * (cw4 + 6), ty = y + r * (rh + 6), tw = cs * cw4 + (cs - 1) * 6, th = rs * rh + (rs - 1) * 6;
+        rect(tx, ty, tw, th, "#fff", 4, C.rule);
+        img(tx + 4, ty + 4, tw - 8, big ? th * 0.62 : th * 0.5);
+        ln(tx + 4, ty + (big ? th * 0.62 : th * 0.5) + 10, tw - 8, 2, C.head, 3, 6);
+      };
+      tile(0, 0, 2, 2, true);
+      tile(2, 0, 1, 1); tile(3, 0, 1, 1);
+      tile(2, 1, 1, 1); tile(3, 1, 1, 1);
+      for (let r = 2; r < 4; r++) for (let c = 0; c < 4; c++) tile(c, r, 1, 1);
+      y += 4 * (rh + 6);
+    } else if (theme === "vanguardia") {
+      // Bento sobre lámina oscura redondeada, colocado como la rejilla real (6 columnas, relleno por filas).
+      const u = (CW - 16 - 5 * 4) / 6, rh = 52;
+      const occ = new Set<string>();
+      let cr = 0, cc = 0;
+      const place = (cs: number, rs: number) => {
+        for (;;) {
+          if (cc + cs > 6) { cc = 0; cr++; continue; }
+          let free = true;
+          for (let rr = 0; rr < rs; rr++) for (let k = 0; k < cs; k++) if (occ.has(`${cr + rr},${cc + k}`)) free = false;
+          if (free) break;
+          cc++;
+        }
+        for (let rr = 0; rr < rs; rr++) for (let k = 0; k < cs; k++) occ.add(`${cr + rr},${cc + k}`);
+        const at = { c: cc, r: cr };
+        cc += cs;
+        return at;
+      };
+      const specs: [number, number][] = [[4, 2], [2, 2], [2, 1], [2, 1], [3, 1], [3, 1], [2, 1], [2, 1]];
+      const placed = specs.map(([cs, rs]) => ({ ...place(cs, rs), cs, rs }));
+      const rows = Math.max(...placed.map((q) => q.r + q.rs));
+      rect(L, y, CW, rows * (rh + 4) + 14, "#3a4b2a", 18);
+      for (const q of placed) {
+        const tx = L + 8 + q.c * (u + 4), ty = y + 8 + q.r * (rh + 4), tw = q.cs * u + (q.cs - 1) * 4, th = q.rs * rh + (q.rs - 1) * 4;
+        rect(tx, ty, tw, th, "#46583a", 9);
+        img(tx + 3, ty + 3, tw - 6, th - 6, true);
+        rect(tx + 6, ty + th - 14, tw * 0.6, 3.5, "#e6efc4", 2);
+        rect(tx + 6, ty + th - 8, tw * 0.4, 3, "#9fb04a", 2);
+      }
+      y += rows * (rh + 4) + 14;
+    } else if (theme === "esmeralda") {
+      const lw = CW * 0.6, rw = CW - lw - 14;
+      img(L, y, lw, 100);
+      head(L, y + 108, lw, 2);
+      ln(L, y + 128, lw, 2);
+      for (let i = 0; i < 4; i++) {
+        rect(L + lw + 14, y + i * 36 + 2, 12, 5, C.head, 2);
+        img(L + lw + 14 + rw - 26, y + i * 36, 26, 26);
+        ln(L + lw + 14 + 18, y + i * 36 + 1, rw - 54, 3, C.line, 3, 7);
+      }
+      y += 156;
+      const cw3 = (CW - 16) / 3;
+      for (let c = 0; c < 3; c++) card(L + c * (cw3 + 8), y, cw3, 40, 2);
+      y += 76;
+    } else {
+      // Resto de plantillas (incl. Gremial): cuadrícula de 3 columnas de tarjetas.
+      const cw3 = (CW - 16) / 3;
+      for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) {
+        const cx = L + c * (cw3 + 8), cy = y + r * 82;
+        img(cx, cy, cw3, 44);
+        head(cx, cy + 50, cw3, 1);
+        ln(cx, cy + 62, cw3, 2);
+      }
+      y += 3 * 82;
+    }
+
+    // ---- Paginación y cierre ----
+    y += 6;
+    ln(L + CW / 2 - 70, y, 140, 1, C.line, 3);
+    y += 12;
     for (let i = 0; i < 5; i++) els.push(<circle key={key()} cx={L + CW / 2 - 40 + i * 20} cy={y + 8} r={7} fill={i === 0 ? C.accent : "#fff"} stroke={C.rule} />);
+    y += 26;
+    rect(L + CW / 2 - 90, y, 180, 12, "#fff", 6, C.rule);
     y += 26;
     ad("section_bottom", L, y, CW, 24);
     y += 32;
@@ -408,12 +609,12 @@ export function TemplateBlueprint({
   }
 
   const H = y + 8;
-  const tabs: [View, string][] = [["portada", "Portada"], ["seccion", "Sección"], ["nota", "Nota"]];
+  const tabs = ([["portada", "Portada"], ["seccion", "Sección"], ["nota", "Nota"]] as [View, string][]).filter(([id]) => views.includes(id));
 
   return (
     <div>
       <div className="mb-2 flex items-center gap-1.5">
-        {tabs.map(([id, label]) => (
+        {tabs.length > 1 && tabs.map(([id, label]) => (
           <button
             key={id}
             type="button"
@@ -424,7 +625,7 @@ export function TemplateBlueprint({
             {label}
           </button>
         ))}
-        <span className="ml-auto text-[0.68rem] text-[var(--fg-muted)]">Plano de la plantilla activa</span>
+        <span className="ml-auto text-[0.68rem] text-[var(--fg-muted)]">{tabs.length === 1 ? "Plano de la página de sección (estructura real de la plantilla activa)" : "Plano de la plantilla activa"}</span>
       </div>
       <div className="max-h-[34rem] overflow-y-auto rounded-[var(--radius)] border border-[var(--border)] bg-white">
         <svg viewBox={`0 0 ${W} ${H}`} className="block w-full" role="img" aria-label="Plano de la plantilla con la posición de la publicidad" fontFamily="Inter, Helvetica, Arial, sans-serif">

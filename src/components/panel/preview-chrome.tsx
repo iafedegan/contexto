@@ -58,6 +58,7 @@ export function PreviewChrome({
   const [selTitle, setSelTitle] = useState("");
   const contentRef = useRef<HTMLDivElement>(null);
   const [zoneMap, setZoneMap] = useState<ZoneMapData | null>(null);
+  const [zoneUp, setZoneUp] = useState(0);
   // Posición del formulario flotante: arrastrable y recordada entre visitas.
   const [pos, setPos] = useState<{ x: number; y: number } | null>(() => {
     if (typeof window === "undefined") return null;
@@ -185,10 +186,10 @@ export function PreviewChrome({
       const root = contentRef.current;
       if (!root || !selSlug || !/^[\w-]+$/.test(selSlug)) return setZoneMap(null);
       const el = root.querySelector<HTMLElement>(`[data-bslug="${selSlug}"]`) ?? root.querySelector<HTMLElement>(`[data-bs-root="${selSlug}"]`);
-      setZoneMap(el ? measureZone(el) : null);
+      setZoneMap(el ? measureZone(el, zoneUp) : null);
     }, 900);
     return () => clearTimeout(id);
-  }, [selSlug, children]);
+  }, [selSlug, children, zoneUp]);
 
   function setZone(key: string, z: ZoneStyle | undefined) {
     if (!layout) return;
@@ -201,6 +202,8 @@ export function PreviewChrome({
     map: zoneMap,
     style: zoneMap?.key ? layout?.zones?.[zoneMap.key] : undefined,
     selectedSlug: selSlug,
+    level: zoneUp,
+    onLevel: setZoneUp,
     // setZone solo se ejecuta en un manejador de eventos (usa refs), no al renderizar.
     // eslint-disable-next-line react-hooks/refs
     onChange: (z) => zoneMap?.key && setZone(zoneMap.key, z),

@@ -122,7 +122,8 @@ export function enhanceBlocks(doc: Document, root: ParentNode, opts: BlockToolsO
 
 export type ZoneMapItem = {
   id: string;
-  kind: "block" | "other";
+  /** block = una nota; group = un contenedor intermedio con notas dentro; other = texto suelto. */
+  kind: "block" | "group" | "other";
   index?: number;
   slug?: string;
   label: string;
@@ -133,65 +134,91 @@ export type ZoneMapItem = {
 };
 
 export type ZoneMapData = {
-  /** Identificador de la zona (`i<N>` en la portada, `s-<slug>` en secciones). */
+  /** Identificador de la zona (`i<N>u<n>` en la portada, `s-<slug>u<n>` en secciones). */
   key: string | null;
   w: number;
   h: number;
   /** Columnas reales del contenedor ahora mismo. */
   cols: number;
-  /** Ancho (px) de cada columna y alto de cada fila de la cuadrícula, y sus separaciones. */
+  display: string;
+  /** Ancho (px) de cada columna y alto de cada fila, y sus separaciones. */
   colTracks: number[];
   rowTracks: number[];
   colGap: number;
   rowGap: number;
-  display: string;
+  /** Cuántos niveles se puede subir desde este contenedor. */
+  canGoUp: boolean;
   items: ZoneMapItem[];
 };
 
-/** Mide el contenedor que agrupa al bloque `el` y a sus hermanos, tal como se ve ahora. */
-export function measureZone(el: HTMLElement): ZoneMapData | null {
-  const container = el.parentElement;
+const BLOCK_SEL = "[data-bslug],[data-bs-root]";
+const isOuterBlock = (el: Element) => el.hasAttribute("data-bslug") || !el.closest("[data-bslug]");
+
+/**
+ * Mide la zona del bloque `el`: su contenedor (o el de más arriba, con `up`) y
+ * todos los bloques que contiene, a cualquier profundidad, tal como se ven ahora.
+ */
+export function measureZone(el: HTMLElement, up = 0): ZoneMapData | null {
+  let container = el.parentElement;
+  for (let i = 0; i < up && container?.parentElement; i++) container = container.parentElement;
   if (!container) return null;
   const view = el.ownerDocument.defaultView;
   const cs = view?.getComputedStyle(container);
   const cr = container.getBoundingClientRect();
   if (cr.width < 10) return null;
+  const rel = (r: DOMRect) => ({ x: r.left - cr.left, y: r.top - cr.top, w: r.width, h: r.height });
+  const title = (n: Element) => (n.querySelector("h1,h2,h3,.entry-title")?.textContent ?? n.textContent ?? "").trim().slice(0, 40);
+
+  const blocks = Array.from(container.querySelectorAll<HTMLElement>(BLOCK_SEL)).filter(isOuterBlock);
   const items: ZoneMapItem[] = [];
-  let firstIndex: number | null = null;
-  let firstSlug: string | null = null;
-  Array.from(container.children).forEach((c, n) => {
-    const child = c as HTMLElement;
-    if (child.classList.contains("cg-handle")) return;
-    const r = child.getBoundingClientRect();
-    const idxAttr = child.getAttribute("data-card-index");
-    const slug = child.getAttribute("data-bslug") ?? child.getAttribute("data-bs-root") ?? undefined;
-    const isBlock = idxAttr !== null || !!slug;
-    if (isBlock) {
-      if (idxAttr !== null) firstIndex = firstIndex === null ? Number(idxAttr) : Math.min(firstIndex, Number(idxAttr));
-      if (!firstSlug && slug) firstSlug = slug;
-    }
+  blocks.forEach((b, n) => {
+    const idxAttr = b.getAttribute("data-card-index");
     items.push({
-      id: `${n}`,
-      kind: isBlock ? "block" : "other",
+      id: `b${n}`,
+      kind: "block",
       index: idxAttr !== null ? Number(idxAttr) : undefined,
-      slug,
-      label: (child.querySelector("h1,h2,h3,.entry-title")?.textContent ?? child.textContent ?? "").trim().slice(0, 40),
-      x: r.left - cr.left,
-      y: r.top - cr.top,
-      w: r.width,
-      h: r.height,
+      slug: b.getAttribute("data-bslug") ?? b.getAttribute("data-bs-root") ?? undefined,
+      label: title(b),
+      ...rel(b.getBoundingClientRect()),
     });
   });
+  // Hijos directos que no son bloques: grupos (contienen bloques) o texto suelto.
+  Array.from(container.children).forEach((c, n) => {
+    const child = c as HTMLElement;
+    if (child.classList.contains("cg-handle") || child.matches(BLOCK_SEL) || child.hasAttribute("data-card-index")) return;
+    const r = child.getBoundingClientRect();
+    if (r.width < 2 && r.height < 2) return; // display:contents: no ocupa caja propia
+    items.push({ id: `g${n}`, kind: child.querySelector(BLOCK_SEL) ? "group" : "other", label: "", ...rel(r) });
+  });
+
+  // Identidad de la zona: primer bloque en orden del documento y su profundidad bajo el contenedor.
+  let key: string | null = null;
+  const first = blocks[0];
+  if (first) {
+    let depth = 0;
+    let n: Element | null = first.parentElement;
+    while (n && n !== container) {
+      depth++;
+      n = n.parentElement;
+    }
+    const idxAttr = first.getAttribute("data-card-index");
+    const slug = first.getAttribute("data-bslug") ?? first.getAttribute("data-bs-root");
+    const base = idxAttr !== null ? `i${idxAttr}` : slug ? `s-${slug}` : null;
+    if (base && depth <= 3) key = `${base}u${depth}`;
+  }
+
+  const grid = !!cs?.display.includes("grid");
   return {
-    key: firstIndex !== null ? `i${firstIndex}` : firstSlug ? `s-${firstSlug}` : null,
+    key,
     w: cr.width,
     h: Math.max(cr.height, 40),
-    cols: cs?.display.includes("grid") ? cs.gridTemplateColumns.split(" ").length : 1,
-    colTracks: cs?.display.includes("grid") ? cs.gridTemplateColumns.split(" ").map(parseFloat).filter((n) => Number.isFinite(n)) : [],
-    rowTracks: cs?.display.includes("grid") ? cs.gridTemplateRows.split(" ").map(parseFloat).filter((n) => Number.isFinite(n)) : [],
+    cols: grid ? cs!.gridTemplateColumns.split(" ").length : 1,
+    display: cs?.display ?? "block",
+    colTracks: grid ? cs!.gridTemplateColumns.split(" ").map(parseFloat).filter((v) => Number.isFinite(v)) : [],
+    rowTracks: grid ? cs!.gridTemplateRows.split(" ").map(parseFloat).filter((v) => Number.isFinite(v)) : [],
     colGap: parseFloat(cs?.columnGap ?? "0") || 0,
     rowGap: parseFloat(cs?.rowGap ?? "0") || 0,
-    display: cs?.display ?? "block",
+    canGoUp: !!container.parentElement && !container.matches("main,[data-region=\"body\"]"),
     items,
   };
 }

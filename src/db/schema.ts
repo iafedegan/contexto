@@ -569,6 +569,8 @@ export type ZoneStyle = {
   tpl?: string;
   /** Espacio entre bloques en px (0-80). */
   gap?: number;
+  /** Los bloques de los grupos internos pasan a ser celdas de esta cuadrícula. */
+  flat?: boolean;
 };
 
 /** Dónde van los filtros (rangos de fecha y subsección) en la página de una sección. */
