@@ -145,7 +145,7 @@ export function PreviewChrome({
         data-theme="panel-ui"
         className="absolute inset-x-0 top-0 z-[120] flex h-14 items-center gap-3 border-b border-[var(--border)] bg-[var(--bg)] px-4 text-[var(--fg)] shadow-md"
       >
-        <span className="rounded-full bg-[#b45309] px-2.5 py-1 text-[0.65rem] font-bold uppercase tracking-wider text-white">
+        <span className="rounded-full bg-[var(--accent)] px-2.5 py-1 text-[0.65rem] font-bold uppercase tracking-wider text-white">
           Vista previa
         </span>
         <p className="hidden min-w-0 flex-1 truncate text-xs text-[var(--fg-muted)] md:block">

@@ -100,7 +100,7 @@ export function AdsEditor({
                           active && hasCreative
                             ? "bg-[#16a34a]/15 text-[#15803d]"
                             : hasCreative
-                              ? "bg-[#b45309]/15 text-[#b45309]"
+                              ? "bg-[var(--accent)]/15 text-[var(--accent)]"
                               : "bg-[var(--border)] text-[var(--fg-muted)]"
                         }`}
                       >

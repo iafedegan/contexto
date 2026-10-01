@@ -52,11 +52,11 @@ export function AdsPreview({
               <span className="flex w-full items-center gap-2 text-[10px] font-medium uppercase tracking-wide text-[var(--fg-muted)]">
                 Publicidad
                 {!i.active && (
-                  <span className="rounded bg-[#b45309] px-1.5 py-px text-[9px] text-white">Borrador · no visible en el sitio</span>
+                  <span className="rounded bg-[var(--accent)] px-1.5 py-px text-[9px] text-white">Borrador · no visible en el sitio</span>
                 )}
               </span>
               <div
-                className={`w-full overflow-hidden rounded-[var(--radius)] ${focused ? "outline outline-2 outline-offset-2 outline-[#b45309]" : ""}`}
+                className={`w-full overflow-hidden rounded-[var(--radius)] ${focused ? "outline outline-2 outline-offset-2 outline-[var(--accent)]" : ""}`}
                 style={{ aspectRatio: `${spec.width} / ${spec.height}` }}
               >
                 {i.imageUrl && isHttp(i.imageUrl) ? (
@@ -69,7 +69,7 @@ export function AdsPreview({
                     (se ve en el sitio publicado)
                   </div>
                 ) : (
-                  <div className="grid size-full place-items-center border-2 border-dashed border-[#b45309] bg-[var(--surface-2)] p-2 text-center text-xs font-medium text-[#b45309]">
+                  <div className="grid size-full place-items-center border-2 border-dashed border-[var(--accent)] bg-[var(--surface-2)] p-2 text-center text-xs font-medium text-[var(--accent)]">
                     {i.name}
                     <br />
                     <span className="font-normal opacity-80">

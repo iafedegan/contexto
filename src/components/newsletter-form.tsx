@@ -26,7 +26,7 @@ export function NewsletterForm({ locale, compacto = false }: { locale: Locale; c
   const geoRaw = useSyncExternalStore(subscribeGeo, readGeo, () => null);
   const geo = (() => {
     try {
-      const g = geoRaw ? (JSON.parse(geoRaw) as { lat: number; lon: number }) : null;
+      const g = geoRaw ? (JSON.parse(geoRaw) as { lat: number; lon: number; acc?: number }) : null;
       return g && Number.isFinite(g.lat) && Number.isFinite(g.lon) ? g : null;
     } catch {
       return null;
@@ -88,6 +88,7 @@ export function NewsletterForm({ locale, compacto = false }: { locale: Locale; c
               <>
                 <input type="hidden" name="geoLat" value={geo.lat} />
                 <input type="hidden" name="geoLon" value={geo.lon} />
+                {geo.acc !== undefined && <input type="hidden" name="geoAcc" value={geo.acc} />}
               </>
             )}
           </>

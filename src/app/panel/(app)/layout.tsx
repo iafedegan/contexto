@@ -44,8 +44,8 @@ export default async function PanelLayout({ children }: { children: React.ReactN
       <HeaderHeightVar />
       <header
         data-panel-header
-        data-theme="panel-ui"
-        className="sticky top-0 z-40 border-b border-[var(--border)] bg-[var(--nav-bg)] text-[var(--fg)]"
+        data-theme="panel-header"
+        className="sticky top-0 z-40 border-b border-[var(--border)] bg-[var(--bg)] text-[var(--fg)] shadow-[var(--shadow)]"
       >
         <div
           aria-hidden

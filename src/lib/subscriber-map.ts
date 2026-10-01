@@ -21,6 +21,7 @@ export async function subscriberPoints(): Promise<SubscriberPoint[]> {
       signupPostal: newsletterSubscribers.signupPostal,
       neighborhood: newsletterSubscribers.neighborhood,
       signupGeoSource: newsletterSubscribers.signupGeoSource,
+      signupGeoAccuracy: newsletterSubscribers.signupGeoAccuracy,
       createdAt: newsletterSubscribers.createdAt,
     })
     .from(newsletterSubscribers)
@@ -37,7 +38,7 @@ export async function subscriberPoints(): Promise<SubscriberPoint[]> {
     const key = `${lat.toFixed(4)},${lon.toFixed(4)}`;
     const k = usados.get(key) ?? 0;
     usados.set(key, k + 1);
-    if (k > 0 && r.signupGeoSource !== "gps") {
+    if (k > 0 && r.signupGeoSource !== "gps" && r.signupGeoSource !== "red") {
       const ang = k * 2.4;
       const dist = 0.0022 * Math.sqrt(k);
       lat += dist * Math.sin(ang);
@@ -53,7 +54,8 @@ export async function subscriberPoints(): Promise<SubscriberPoint[]> {
       country: r.signupCountry,
       postal: r.signupPostal?.trim() || null,
       neighborhood: r.neighborhood,
-      exact: r.signupGeoSource === "gps",
+      source: r.signupGeoSource === "gps" || r.signupGeoSource === "red" ? r.signupGeoSource : "ip",
+      accuracy: r.signupGeoAccuracy === null ? null : Number(r.signupGeoAccuracy),
       date: r.createdAt ? new Date(r.createdAt).toISOString().slice(0, 10) : null,
     });
   }

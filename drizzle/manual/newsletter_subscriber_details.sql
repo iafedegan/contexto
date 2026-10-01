@@ -14,3 +14,4 @@ alter table newsletter_subscribers drop column if exists phone;
 alter table newsletter_subscribers add column if not exists signup_postal text;
 alter table newsletter_subscribers add column if not exists neighborhood text;
 alter table newsletter_subscribers add column if not exists signup_geo_source text;
+alter table newsletter_subscribers add column if not exists signup_geo_accuracy numeric;

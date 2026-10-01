@@ -20,6 +20,7 @@ import { headers } from "next/headers";
 import { clientIp, hit } from "@/lib/rate-limit";
 import { verifyHuman } from "@/lib/turnstile";
 import { sendConfirmationEmail } from "@/lib/newsletter/confirm";
+import { reverseGeocode, sourceFromAccuracy, validAccuracy, validCoords } from "@/lib/geo-reverse";
 
 export type BoletinState = { ok: boolean; message: string } | null;
 
@@ -65,31 +66,24 @@ export async function suscribirBoletin(
   const signupPostal = h.get("x-vercel-ip-postal-code") ? decodeURIComponent(h.get("x-vercel-ip-postal-code")!).slice(0, 20) : null;
   let signupLat: string | null = h.get("x-vercel-ip-latitude");
   let signupLon: string | null = h.get("x-vercel-ip-longitude");
-  let signupGeoSource: "ip" | "gps" = "ip";
+  let signupGeoSource: "ip" | "gps" | "red" = "ip";
+  let signupGeoAccuracy: string | null = null;
   let neighborhood: string | null = null;
   let postal = signupPostal;
 
-  // Ubicación exacta: solo si la persona la compartió con el botón del
-  // formulario (el navegador pide permiso). Reemplaza a la aproximada por IP.
-  const gLat = Number(formData.get("geoLat"));
-  const gLon = Number(formData.get("geoLon"));
-  if (formData.get("geoLat") && Number.isFinite(gLat) && Number.isFinite(gLon) && Math.abs(gLat) <= 90 && Math.abs(gLon) <= 180) {
-    signupLat = gLat.toFixed(6);
-    signupLon = gLon.toFixed(6);
-    signupGeoSource = "gps";
-    try {
-      const r = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=16&addressdetails=1&accept-language=es&lat=${gLat}&lon=${gLon}`,
-        { headers: { "User-Agent": "contexto-ganadero/1.0 (ia@fedegan.org.co)" }, signal: AbortSignal.timeout(3000) },
-      );
-      if (r.ok) {
-        const a = ((await r.json()) as { address?: Record<string, string> }).address ?? {};
-        neighborhood = (a.neighbourhood ?? a.suburb ?? a.quarter ?? a.city_district ?? null)?.slice(0, 120) ?? null;
-        postal = a.postcode?.slice(0, 20) ?? postal;
-      }
-    } catch {
-      /* sin barrio: las coordenadas ya quedan guardadas */
-    }
+  // Ubicación precisa: solo si la persona la autorizó en el aviso del sitio.
+  // El navegador la saca del GPS o, en su defecto, de redes Wi-Fi y antenas;
+  // la precisión que informa decide cuál fue ("gps" o "red"). Reemplaza a la IP.
+  const g = validCoords(formData.get("geoLat"), formData.get("geoLon"));
+  if (g) {
+    const acc = validAccuracy(formData.get("geoAcc"));
+    signupLat = g.lat.toFixed(6);
+    signupLon = g.lon.toFixed(6);
+    signupGeoSource = sourceFromAccuracy(acc);
+    signupGeoAccuracy = acc === null ? null : String(acc);
+    const rev = await reverseGeocode(g.lat, g.lon);
+    neighborhood = rev.neighborhood;
+    postal = rev.postal ?? postal;
   }
 
   try {
@@ -117,6 +111,7 @@ export async function suscribirBoletin(
       signupPostal: postal,
       neighborhood,
       signupGeoSource,
+      signupGeoAccuracy,
       signupIp: ip,
       signupCity,
       signupCountry,

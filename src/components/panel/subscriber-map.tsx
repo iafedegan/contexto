@@ -11,8 +11,10 @@ export type SubscriberPoint = {
   country: string | null;
   postal: string | null;
   neighborhood: string | null;
-  /** true = ubicación exacta compartida por la persona; false = aproximada por IP. */
-  exact: boolean;
+  /** gps = GPS compartido; red = Wi-Fi/antenas compartido; ip = aproximada por IP. */
+  source: "gps" | "red" | "ip";
+  /** Precisión informada por el navegador, en metros. */
+  accuracy: number | null;
   date: string | null;
 };
 
@@ -30,6 +32,7 @@ type LeafletLib = {
     remove(): void;
   };
   tileLayer(url: string, opts: Record<string, unknown>): { addTo(map: unknown): unknown };
+  circle(c: [number, number], opts: Record<string, unknown>): { addTo(map: unknown): unknown };
   circleMarker(
     c: [number, number],
     opts: Record<string, unknown>,
@@ -86,11 +89,16 @@ export function SubscriberMap({ points }: { points: SubscriberPoint[] }) {
       }).addTo(map);
 
       for (const p of points) {
+        // Radio de precisión (lo que informa el navegador) para GPS y Wi-Fi/antenas.
+        if (p.source !== "ip" && p.accuracy !== null && p.accuracy > 0) {
+          const c = p.source === "gps" ? "#0f766e" : "#1d4ed8";
+          L.circle([p.lat, p.lon], { radius: p.accuracy, color: c, weight: 1, fillColor: c, fillOpacity: 0.08, interactive: false }).addTo(map);
+        }
         L.circleMarker([p.lat, p.lon], {
-          radius: p.exact ? 6 : 9,
-          color: p.exact ? "#15803d" : "#b4622e",
-          fillColor: p.exact ? "#15803d" : "#b4622e",
-          fillOpacity: p.exact ? 0.85 : 0.35,
+          radius: p.source === "ip" ? 9 : 6,
+          color: p.source === "gps" ? "#0f766e" : p.source === "red" ? "#1d4ed8" : "#6b7f2a",
+          fillColor: p.source === "gps" ? "#0f766e" : p.source === "red" ? "#1d4ed8" : "#6b7f2a",
+          fillOpacity: p.source === "ip" ? 0.35 : 0.85,
           weight: 1.5,
         })
           .bindPopup(
@@ -100,7 +108,7 @@ export function SubscriberMap({ points }: { points: SubscriberPoint[] }) {
               `${esc(p.city ?? "Ciudad desconocida")}${p.country ? ", " + esc(p.country) : ""}`,
               p.neighborhood ? `Barrio ${esc(p.neighborhood)}` : "",
               p.postal ? `C.P. ${esc(p.postal)}` : "",
-              p.exact ? "Ubicación exacta" : "Ubicación aproximada (IP)",
+              p.source === "gps" ? `Ubicación GPS${p.accuracy !== null ? ` (±${p.accuracy} m)` : ""}` : p.source === "red" ? `Ubicación por Wi-Fi/antenas${p.accuracy !== null ? ` (±${p.accuracy} m)` : ""}` : "Ubicación aproximada por IP (ciudad)",
               p.date ? `Alta: ${esc(p.date)}` : "",
             ]
               .filter(Boolean)
@@ -135,9 +143,16 @@ export function SubscriberMap({ points }: { points: SubscriberPoint[] }) {
   }
 
   return (
-    <div
-      ref={elRef}
-      className="h-[420px] w-full overflow-hidden rounded-[var(--radius)] border border-[var(--border)]"
-    />
+    <div>
+      <div
+        ref={elRef}
+        className="h-[420px] w-full overflow-hidden rounded-[var(--radius)] border border-[var(--border)]"
+      />
+      <p className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-[var(--fg-muted)]">
+        <span><span className="mr-1 inline-block size-2.5 rounded-full bg-[#0f766e]" />GPS (con permiso)</span>
+        <span><span className="mr-1 inline-block size-2.5 rounded-full bg-[#1d4ed8]" />Wi-Fi / antenas (con permiso)</span>
+        <span><span className="mr-1 inline-block size-2.5 rounded-full bg-[#6b7f2a]/50" />Aproximada por IP (ciudad)</span>
+      </p>
+    </div>
   );
 }

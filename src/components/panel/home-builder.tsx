@@ -159,8 +159,8 @@ export function HomeBuilder({
     const r = regionRef.current;
     const c = selectedRef.current;
     st.textContent =
-      `[data-region="${r}"]{outline:2px dashed #b45309;outline-offset:-2px}` +
-      (c !== null ? `[data-card-index="${c}"]{outline:3px solid #b45309;outline-offset:2px}` : "");
+      `[data-region="${r}"]{outline:2px dashed #84a21f;outline-offset:-2px}` +
+      (c !== null ? `[data-card-index="${c}"]{outline:3px solid #84a21f;outline-offset:2px}` : "");
   }
   useEffect(() => {
     regionRef.current = region;

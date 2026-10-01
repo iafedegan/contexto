@@ -488,43 +488,74 @@
 [data-theme="panel-ui"] {
   color-scheme: light;
   --bg: #ffffff;
-  --bg-2: #f1f5f9;
+  --bg-2: #f1f4e4;
   --surface: #ffffff;
-  --surface-2: #e8edf3;
-  --fg: #0b1220;
-  --fg-muted: #334155;
-  --ink-faint: #475569;
-  --border: #c3ccd8;
-  --border-strong: #64748b;
-  --accent: #b45309;
-  --accent-2: #0f766e;
+  --surface-2: #e4ebc8;
+  --fg: #1c2610;
+  --fg-muted: #44522a;
+  --ink-faint: #5a6a38;
+  --border: #c3cf9c;
+  --border-strong: #6f8238;
+  --accent: #556b2f;
+  --accent-2: #9a7b1c;
   --accent-fg: #ffffff;
-  --link: #b45309;
+  --link: #3f5220;
   --nav-bg: #ffffff;
-  --shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+  --shadow: 0 1px 2px rgba(40, 52, 16, 0.1);
 }
 
-/* Selector de plantillas: lienzo ámbar. */
+/* Barra superior del panel: banda de verde oliva oscuro con texto claro. */
+[data-theme="panel-header"] {
+  color-scheme: dark;
+  --bg: #33401a;
+  --bg-2: #3d4c20;
+  --surface: #3d4c20;
+  --surface-2: rgba(255, 255, 255, 0.12);
+  --fg: #f4f7e4;
+  --fg-muted: #cdd7a6;
+  --ink-faint: #b3c07e;
+  --border: rgba(255, 255, 255, 0.18);
+  --border-strong: #b9cc6a;
+  --accent: #c8dc6c;
+  --accent-2: #e3c35a;
+  --accent-fg: #26300f;
+  --link: #dbe9a0;
+  --nav-bg: #3b4a1e;
+  --shadow: 0 10px 30px -12px rgba(20, 28, 6, 0.6);
+  --shadow-hover: 0 14px 34px -12px rgba(20, 28, 6, 0.7);
+}
+
+/* Lienzo de TODAS las pantallas del panel: fondo verde oliva claro, tarjetas
+   blancas con filete de color y tinta verde muy oscura (nada de gris pálido). */
 [data-theme="panel-amber"] {
-  /* Panel: lienzo blanco y tarjetas blancas con borde neutro y sombra suave
-     (estilo SaaS actual). El naranja queda solo como acento. */
   color-scheme: light;
-  --bg: #ffffff;
+  --bg: #e9efd2;
   --bg-2: #ffffff;
   --surface: #ffffff;
-  --surface-2: #f4f4f5;
-  --fg: #18181b;
-  --fg-muted: #52525b;
-  --ink-faint: #71717a;
-  --border: #e4e4e7;
-  --border-strong: #d97706;
-  --accent: #b45309;
-  --accent-2: #8a6a2f;
+  --surface-2: #dbe5b7;
+  --fg: #1c2610;
+  --fg-muted: #44522a;
+  --ink-faint: #5a6a38;
+  --border: #bccb8f;
+  --border-strong: #6f8238;
+  --accent: #556b2f;
+  --accent-2: #9a7b1c;
   --accent-fg: #ffffff;
-  --link: #92400e;
+  --link: #3f5220;
   --nav-bg: #ffffff;
-  --shadow: 0 1px 2px rgba(24, 24, 27, 0.04), 0 8px 24px -16px rgba(24, 24, 27, 0.18);
-  --shadow-hover: 0 2px 4px rgba(24, 24, 27, 0.05), 0 18px 40px -20px rgba(24, 24, 27, 0.28);
+  --shadow: 0 1px 2px rgba(40, 52, 16, 0.08), 0 10px 26px -16px rgba(40, 52, 16, 0.32);
+  --shadow-hover: 0 2px 4px rgba(40, 52, 16, 0.1), 0 18px 40px -18px rgba(40, 52, 16, 0.42);
+}
+
+[data-theme="panel-amber"] .lx-card:not([data-site-root] *) {
+  border-top: 3px solid var(--accent);
+}
+[data-theme="panel-amber"] thead th:not([data-site-root] *) {
+  background: var(--surface-2);
+  color: var(--fg);
+}
+[data-theme="panel-amber"] tbody tr:hover:not([data-site-root] *) {
+  background: color-mix(in srgb, var(--surface-2) 55%, transparent);
 }
 
 /* ============================ Base ====================================== */

@@ -305,6 +305,8 @@ export const newsletterSubscribers = pgTable("newsletter_subscribers", {
   neighborhood: text("neighborhood"),
   /** "gps" si la persona compartió su ubicación; "ip" si es la aproximada por IP. */
   signupGeoSource: text("signup_geo_source"),
+  /** Precisión de la ubicación compartida, en metros (GPS: pocos; Wi-Fi/antenas: cientos). */
+  signupGeoAccuracy: numeric("signup_geo_accuracy"),
   signupCountry: text("signup_country"),
   signupLat: numeric("signup_lat"),
   signupLon: numeric("signup_lon"),
