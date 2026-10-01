@@ -39,7 +39,8 @@ import type { HomeLayoutConfig, HomeStyle } from "@/db/schema";
 import { HOME_TEMPLATES } from "@/lib/home-layout";
 import type { RegionId } from "@/lib/home-regions";
 import type { SectionElId } from "@/db/schema";
-import { enhanceBlocks } from "@/lib/block-tools";
+import { enhanceBlocks, measureZone, type ZoneMapData } from "@/lib/block-tools";
+import type { ZoneStyle } from "@/db/schema";
 import { SectionPanel } from "@/components/panel/section-panel";
 import { BlockStyleEditor } from "@/components/panel/block-style-editor";
 import { TemplateBlueprint, type AdState } from "@/components/panel/template-blueprint";
@@ -113,6 +114,7 @@ export function HomeBuilder({
   const secElRef = useRef<SectionElId>("title");
   const inSectionRef = useRef(false);
   const itemsRef = useRef<Item[]>(initialItems);
+  const [zoneMap, setZoneMap] = useState<ZoneMapData | null>(null);
   const patchRef = useRef<(i: number, p: Partial<HomeStyle>) => void>(() => {});
   const moveRef = useRef<(from: number, to: number) => void>(() => {});
   const [previewPath, setPreviewPath] = useState("/vista-portada");
@@ -323,6 +325,38 @@ export function HomeBuilder({
     return () => window.removeEventListener("storage", onStorage);
   }, [router]);
 
+  // Mide la zona del bloque elegido cuando el lienzo termina de cargar.
+  const selectedSlug = selected !== null ? (items[selected]?.slug ?? null) : null;
+  useEffect(() => {
+    const id = setTimeout(() => {
+      const doc = frameDoc.current;
+      if (!doc || !selectedSlug || !/^[\w-]+$/.test(selectedSlug)) return setZoneMap(null);
+      const el = doc.querySelector<HTMLElement>(`[data-bslug="${selectedSlug}"]`) ?? doc.querySelector<HTMLElement>(`[data-bs-root="${selectedSlug}"]`);
+      setZoneMap(el ? measureZone(el) : null);
+    }, 2200);
+    return () => clearTimeout(id);
+  }, [selectedSlug, frameNonce, previewPath]);
+
+  function setZone(key: string, z: ZoneStyle | undefined) {
+    const zones = { ...(layout.zones ?? {}) };
+    if (z && Object.keys(z).length) zones[key] = z;
+    else delete zones[key];
+    patchLayout({ zones });
+  }
+  const zoneBundle = (): import("@/components/panel/block-style-editor").ZoneBundle | undefined =>
+    zoneMap?.key
+      ? {
+          map: zoneMap,
+          style: layout.zones?.[zoneMap.key],
+          selectedSlug,
+          onChange: (z) => setZone(zoneMap.key!, z),
+          onSelect: (it) => {
+            const idx = it.slug ? items.findIndex((i) => i.slug === it.slug) : it.index ?? -1;
+            if (idx >= 0) setSelected(idx);
+          },
+        }
+      : { map: null, style: undefined, onChange: () => {}, onSelect: () => {} };
+
   function moveItem(from: number, to: number) {
     if (from === to) return;
     setItems((prev) => {
@@ -515,6 +549,7 @@ export function HomeBuilder({
                         style: items[selected].homeStyle ?? {},
                         onChange: (p) => patchStyle(selected, p),
                         onClear: () => patchStyle(selected, null),
+                        zone: zoneBundle(),
                       }
                     : null
                 }
@@ -567,6 +602,7 @@ export function HomeBuilder({
                   style={items[selected].homeStyle ?? {}}
                   onChange={(p) => patchStyle(selected, p)}
                   onClear={() => patchStyle(selected, null)}
+                  zone={zoneBundle()}
                 />
               </div>
             </div>

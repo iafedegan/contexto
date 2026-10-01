@@ -11,7 +11,9 @@ import { TemplatePicker } from "@/components/panel/home-builder";
 import type { RegionId } from "@/lib/home-regions";
 import type { HomeStyle, SectionElId } from "@/db/schema";
 import { BlockStyleEditor } from "@/components/panel/block-style-editor";
-import { cleanupBlocks, enhanceBlocks } from "@/lib/block-tools";
+import { cleanupBlocks, enhanceBlocks, measureZone, type ZoneMapData } from "@/lib/block-tools";
+import type { ZoneStyle } from "@/db/schema";
+import type { ZoneBundle } from "@/components/panel/block-style-editor";
 import { SectionPanel } from "@/components/panel/section-panel";
 
 /**
@@ -46,6 +48,7 @@ export function PreviewChrome({
   const [selSlug, setSelSlug] = useState<string | null>(null);
   const [selTitle, setSelTitle] = useState("");
   const contentRef = useRef<HTMLDivElement>(null);
+  const [zoneMap, setZoneMap] = useState<ZoneMapData | null>(null);
   // Posición del formulario flotante: arrastrable y recordada entre visitas.
   const [pos, setPos] = useState<{ x: number; y: number } | null>(() => {
     if (typeof window === "undefined") return null;
@@ -158,6 +161,38 @@ export function PreviewChrome({
       setItems(draft.items);
     }
   }, [draft]);
+
+  // Mapa de la zona del bloque elegido (se mide tras cada refresco).
+  useEffect(() => {
+    const id = setTimeout(() => {
+      const root = contentRef.current;
+      if (!root || !selSlug || !/^[\w-]+$/.test(selSlug)) return setZoneMap(null);
+      const el = root.querySelector<HTMLElement>(`[data-bslug="${selSlug}"]`) ?? root.querySelector<HTMLElement>(`[data-bs-root="${selSlug}"]`);
+      setZoneMap(el ? measureZone(el) : null);
+    }, 900);
+    return () => clearTimeout(id);
+  }, [selSlug, children]);
+
+  function setZone(key: string, z: ZoneStyle | undefined) {
+    if (!layout) return;
+    const zones = { ...(layout.zones ?? {}) };
+    if (z && Object.keys(z).length) zones[key] = z;
+    else delete zones[key];
+    editLayout({ ...layout, zones });
+  }
+  const zoneBundle = (): ZoneBundle => ({
+    map: zoneMap,
+    style: zoneMap?.key ? layout?.zones?.[zoneMap.key] : undefined,
+    selectedSlug: selSlug,
+    // setZone solo se ejecuta en un manejador de eventos (usa refs), no al renderizar.
+    // eslint-disable-next-line react-hooks/refs
+    onChange: (z) => zoneMap?.key && setZone(zoneMap.key, z),
+    onSelect: (it) => {
+      if (!it.slug) return;
+      setSelSlug(it.slug);
+      setSelTitle(it.label || it.slug);
+    },
+  });
 
   // Asas de tamaño y arrastre sobre los bloques reales de la página.
   useEffect(() => {
@@ -389,6 +424,7 @@ export function PreviewChrome({
                           style: items.find((i) => i.slug === selSlug)?.homeStyle ?? {},
                           onChange: (p) => patchBlock(selSlug, p),
                           onClear: () => patchBlock(selSlug, null),
+                          zone: zoneBundle(),
                         }
                       : null
                   }
@@ -409,6 +445,7 @@ export function PreviewChrome({
                     style={items.find((i) => i.slug === selSlug)?.homeStyle ?? {}}
                     onChange={(p) => patchBlock(selSlug, p)}
                     onClear={() => patchBlock(selSlug, null)}
+                    zone={zoneBundle()}
                   />
                 </div>
               )}

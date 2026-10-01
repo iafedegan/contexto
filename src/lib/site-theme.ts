@@ -6,6 +6,7 @@ import { homeBackgroundStyle } from "@/lib/home-background";
 import { DEFAULT_HOME_LAYOUT } from "@/lib/home-layout";
 import { regionsCss } from "@/lib/home-regions";
 import { sectionElsCss } from "@/lib/section-els";
+import { zonesCss } from "@/lib/zones";
 import { resolveParts, PRESET_PARTS, type TemplateParts } from "@/lib/template-parts";
 import type { Theme } from "@/lib/theme";
 
@@ -38,7 +39,7 @@ export const getSiteTheme = cache(
       return {
         theme: (override || layout.templateId) as Theme,
         style: homeBackgroundStyle(layout.background),
-        css: [regionsCss(layout.regions), sectionElsCss(layout.sectionEls)].filter(Boolean).join("\n"),
+        css: [regionsCss(layout.regions), sectionElsCss(layout.sectionEls), zonesCss(layout.zones)].filter(Boolean).join("\n"),
         // Piezas de la plantilla compuesta (navbar, cuerpo, footer). Con la
         // cookie de desarrollo se ve la plantilla prediseñada entera.
         parts: resolveParts(override || layout.templateId, devParts ?? (override ? undefined : layout.parts)),

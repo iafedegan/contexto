@@ -4,6 +4,9 @@ import { RotateCcw } from "lucide-react";
 import type { HomeStyle } from "@/db/schema";
 import { GradientEditor } from "@/components/panel/gradient-editor";
 import { ColorRow, FontSelect, Group } from "@/components/panel/region-editor";
+import { ZonePanel } from "@/components/panel/zone-panel";
+import type { ZoneStyle } from "@/db/schema";
+import type { ZoneMapData, ZoneMapItem } from "@/lib/block-tools";
 
 /**
  * Ajustes libres de un bloque (una nota en la página): tamaño, fondo (color o
@@ -11,16 +14,26 @@ import { ColorRow, FontSelect, Group } from "@/components/panel/region-editor";
  * relleno. Funciona igual en todas las plantillas porque se aplica por CSS al
  * bloque real (ver blockStylesCss en src/lib/home-style.ts).
  */
+export type ZoneBundle = {
+  map: ZoneMapData | null;
+  style: ZoneStyle | undefined;
+  selectedSlug?: string | null;
+  onChange: (z: ZoneStyle | undefined) => void;
+  onSelect: (item: ZoneMapItem) => void;
+};
+
 export function BlockStyleEditor({
   title,
   style,
   onChange,
   onClear,
+  zone,
 }: {
   title: string;
   style: HomeStyle;
   onChange: (p: Partial<HomeStyle>) => void;
   onClear: () => void;
+  zone?: ZoneBundle;
 }) {
   const numField = (label: string, value: number | undefined, min: number, max: number, key: keyof HomeStyle, hint?: string) => (
     <div className="flex items-center gap-2">
@@ -59,6 +72,12 @@ export function BlockStyleEditor({
         <p className="truncate text-sm font-bold">{title}</p>
         <p className="mt-1 text-xs text-[var(--fg-muted)]">Arrastra la esquina inferior derecha del bloque en la página para agrandarlo.</p>
       </div>
+
+      {zone && (
+        <Group title="Mapa de la zona">
+          <ZonePanel map={zone.map} style={zone.style} selectedSlug={zone.selectedSlug} onChange={zone.onChange} onSelect={zone.onSelect} />
+        </Group>
+      )}
 
       <Group title="Tamaño">
         {numField("Columnas (1–6)", style.colSpan, 1, 6, "colSpan", "solo en cuadrículas")}

@@ -117,3 +117,72 @@ export function enhanceBlocks(doc: Document, root: ParentNode, opts: BlockToolsO
     });
   }
 }
+
+// --- Mapa de la zona -------------------------------------------------------
+
+export type ZoneMapItem = {
+  id: string;
+  kind: "block" | "other";
+  index?: number;
+  slug?: string;
+  label: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+};
+
+export type ZoneMapData = {
+  /** Identificador de la zona (`i<N>` en la portada, `s-<slug>` en secciones). */
+  key: string | null;
+  w: number;
+  h: number;
+  /** Columnas reales del contenedor ahora mismo. */
+  cols: number;
+  display: string;
+  items: ZoneMapItem[];
+};
+
+/** Mide el contenedor que agrupa al bloque `el` y a sus hermanos, tal como se ve ahora. */
+export function measureZone(el: HTMLElement): ZoneMapData | null {
+  const container = el.parentElement;
+  if (!container) return null;
+  const view = el.ownerDocument.defaultView;
+  const cs = view?.getComputedStyle(container);
+  const cr = container.getBoundingClientRect();
+  if (cr.width < 10) return null;
+  const items: ZoneMapItem[] = [];
+  let firstIndex: number | null = null;
+  let firstSlug: string | null = null;
+  Array.from(container.children).forEach((c, n) => {
+    const child = c as HTMLElement;
+    if (child.classList.contains("cg-handle")) return;
+    const r = child.getBoundingClientRect();
+    const idxAttr = child.getAttribute("data-card-index");
+    const slug = child.getAttribute("data-bslug") ?? child.getAttribute("data-bs-root") ?? undefined;
+    const isBlock = idxAttr !== null || !!slug;
+    if (isBlock) {
+      if (idxAttr !== null) firstIndex = firstIndex === null ? Number(idxAttr) : Math.min(firstIndex, Number(idxAttr));
+      if (!firstSlug && slug) firstSlug = slug;
+    }
+    items.push({
+      id: `${n}`,
+      kind: isBlock ? "block" : "other",
+      index: idxAttr !== null ? Number(idxAttr) : undefined,
+      slug,
+      label: (child.querySelector("h1,h2,h3,.entry-title")?.textContent ?? child.textContent ?? "").trim().slice(0, 40),
+      x: r.left - cr.left,
+      y: r.top - cr.top,
+      w: r.width,
+      h: r.height,
+    });
+  });
+  return {
+    key: firstIndex !== null ? `i${firstIndex}` : firstSlug ? `s-${firstSlug}` : null,
+    w: cr.width,
+    h: Math.max(cr.height, 40),
+    cols: cs?.display.includes("grid") ? cs.gridTemplateColumns.split(" ").length : 1,
+    display: cs?.display ?? "block",
+    items,
+  };
+}

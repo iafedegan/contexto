@@ -2,7 +2,7 @@
 
 import { RotateCcw } from "lucide-react";
 import type { HomeLayoutConfig, HomeStyle, SectionElId, SectionElStyle } from "@/db/schema";
-import { BlockStyleEditor } from "@/components/panel/block-style-editor";
+import { BlockStyleEditor, type ZoneBundle } from "@/components/panel/block-style-editor";
 import { GradientEditor } from "@/components/panel/gradient-editor";
 import { ColorRow, FontSelect, Group, RegionEditor } from "@/components/panel/region-editor";
 import { SectionFiltersPicker } from "@/components/panel/section-filters-picker";
@@ -33,7 +33,7 @@ export function SectionPanel({
   el: SectionElId;
   onEl: (e: SectionElId) => void;
   /** Bloque (nota) seleccionado en la página, si lo hay. */
-  block?: { title: string; style: HomeStyle; onChange: (p: Partial<HomeStyle>) => void; onClear: () => void } | null;
+  block?: { title: string; style: HomeStyle; onChange: (p: Partial<HomeStyle>) => void; onClear: () => void; zone?: ZoneBundle } | null;
 }) {
   const tab: "encabezado" | "body" = region === "encabezado" ? "encabezado" : "body";
   const els = layout.sectionEls ?? {};
@@ -199,7 +199,7 @@ export function SectionPanel({
       ) : (
         <>
           {block ? (
-            <BlockStyleEditor title={block.title} style={block.style} onChange={block.onChange} onClear={block.onClear} />
+            <BlockStyleEditor title={block.title} style={block.style} onChange={block.onChange} onClear={block.onClear} zone={block.zone} />
           ) : (
             <p className="rounded-[var(--radius)] bg-[var(--surface-2)] p-3 text-xs leading-relaxed text-[var(--fg-muted)]">
               Pulsa un bloque (una nota) de la página para editarlo: color o degradado de fondo, fuentes, tamaño exacto del titular y esquinas. Arrastra su esquina inferior derecha para agrandarlo, o todo el bloque para cambiarlo de sitio.

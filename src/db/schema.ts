@@ -558,6 +558,16 @@ export type SectionElStyle = {
   tracking?: number;
 };
 
+/** Una zona del cuerpo (contenedor de varios bloques) convertida en cuadrícula. */
+export type ZoneStyle = {
+  /** Columnas iguales (1-6). */
+  cols?: number;
+  /** Proporciones personalizadas, p. ej. "2fr 1fr" (manda sobre `cols`). */
+  tpl?: string;
+  /** Espacio entre bloques en px (0-80). */
+  gap?: number;
+};
+
 /** Dónde van los filtros (rangos de fecha y subsección) en la página de una sección. */
 export type SectionFiltersPos = "cabecera" | "izquierda" | "centro" | "derecha" | "barra" | "oculto";
 
@@ -566,6 +576,8 @@ export type HomeLayoutConfig = {
   sectionFilters?: SectionFiltersPos;
   /** Estilo por elemento del encabezado de sección (migas, etiqueta, título…). */
   sectionEls?: Partial<Record<SectionElId, SectionElStyle>>;
+  /** Cómo se acomodan los bloques de cada zona del cuerpo (ver src/lib/zones.ts). */
+  zones?: Record<string, ZoneStyle>;
   /** Plantilla: decide componentes, efectos y tipografía (no solo columnas). */
   templateId?: "esmeralda" | "clasico" | "revista" | "compacto" | "vanguardia" | "gremial";
   /** "En breve" en la plantilla Clásico: lista vertical o fila horizontal. */

@@ -2,6 +2,7 @@ import type { HomeLayoutConfig } from "@/db/schema";
 import { HOME_TEMPLATES } from "@/lib/home-layout";
 import { sanitizeRegions } from "@/lib/home-regions";
 import { sanitizeSectionEls } from "@/lib/section-els";
+import { sanitizeZones } from "@/lib/zones";
 import { BODIES, FOOTERS, NAVBARS } from "@/lib/template-parts";
 
 /**
@@ -17,5 +18,5 @@ export function normalizeLayout(input: HomeLayoutConfig): HomeLayoutConfig {
   };
   const templateId = HOME_TEMPLATES.find((t) => t.id === input.templateId)?.id;
   const sectionFilters = (["cabecera", "izquierda", "centro", "derecha", "barra", "oculto"] as const).find((p) => p === input.sectionFilters);
-  return { ...input, ...(templateId ? { templateId } : {}), regions: sanitizeRegions(input.regions), parts, sectionFilters: sectionFilters ?? "cabecera", sectionEls: sanitizeSectionEls(input.sectionEls) };
+  return { ...input, ...(templateId ? { templateId } : {}), regions: sanitizeRegions(input.regions), parts, sectionFilters: sectionFilters ?? "cabecera", sectionEls: sanitizeSectionEls(input.sectionEls), zones: sanitizeZones(input.zones) };
 }
