@@ -174,7 +174,7 @@ function GoldCard({ a, priority, locale }: { a: ArticleListItem; priority?: bool
   const st = cardStyle(a, "gold");
   return (
     <article className="lx-card lx-reveal group flex h-full flex-col">
-      <div className="lx-shine absolute inset-0 z-[3]" />
+      <div className="lx-shine pointer-events-none absolute inset-0 z-[3]" />
       {!st.hideMedia && (
         <Link
           href={localePath(locale, `/articulo/${a.slug}`)}
@@ -250,7 +250,7 @@ function CopperCard({ a, index, locale }: { a: ArticleListItem; index?: number; 
   const st = cardStyle(a, "copper");
   return (
     <article className="lx-card lx-reveal group flex h-full flex-col">
-      <div className="lx-shine absolute inset-0 z-[3]" />
+      <div className="lx-shine pointer-events-none absolute inset-0 z-[3]" />
       <Link
         href={localePath(locale, `/articulo/${a.slug}`)}
         className="relative block"
@@ -303,7 +303,7 @@ function PearlCard({ a, locale }: { a: ArticleListItem; locale: Locale }) {
   const st = cardStyle(a, "pearl");
   return (
     <article className="lx-card lx-reveal group flex h-full flex-col rounded-[var(--radius-lg)]">
-      <div className="lx-shine absolute inset-0 z-[3]" />
+      <div className="lx-shine pointer-events-none absolute inset-0 z-[3]" />
       <Link href={localePath(locale, `/articulo/${a.slug}`)} className="relative block px-3 pt-3">
         <span className="block overflow-hidden rounded-[calc(var(--radius-lg)-0.5rem)]">
           <CardMedia
