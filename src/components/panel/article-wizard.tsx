@@ -116,7 +116,7 @@ function toHtml(text: string): string {
       if (g) {
         const spec = decodeSpec(g[1]);
         if (spec) {
-          return `<figure><img src="${svgDataUri(renderChartSvg(spec))}" alt="${escapeHtml(g[2])}" loading="lazy"><figcaption>${escapeHtml(g[3])}</figcaption></figure>`;
+          return `<figure class="lx-chart" data-chart="${g[1]}"><img src="${svgDataUri(renderChartSvg(spec))}" alt="${escapeHtml(g[2])}" loading="lazy"><figcaption>${escapeHtml(g[3])}</figcaption></figure>`;
         }
       }
       return b.startsWith("## ")

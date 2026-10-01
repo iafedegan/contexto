@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Maximize2 } from "lucide-react";
 import { CoverArt } from "@/components/cover-art";
+import { ArticleBody } from "@/components/article-body";
 
 export type SitePreviewChrome = {
   /** Plantilla activa (`data-theme`). */
@@ -150,7 +151,7 @@ export function Frame({
                   )}
                 </figure>
                 {bodyHtml ? (
-                  <div className="prose prose-drop mt-12 !max-w-none" dangerouslySetInnerHTML={{ __html: bodyHtml }} />
+                  <ArticleBody className="prose prose-drop mt-12 !max-w-none" html={bodyHtml} />
                 ) : (
                   <p className="mt-12 italic text-[var(--fg-muted)]">Sin cuerpo todavía.</p>
                 )}

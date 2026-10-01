@@ -4,6 +4,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react
 import { createPortal } from "react-dom";
 import { BookOpen, ChevronLeft, ChevronRight, Minus, Plus, Settings2, X } from "lucide-react";
 import { ListenArticle } from "@/components/listen-article";
+import { ArticleBody } from "@/components/article-body";
 
 /**
  * Modo revista: la nota a pantalla completa, paginada en columnas como en una
@@ -325,7 +326,7 @@ export function ReaderMode({
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={cover} alt={coverAlt ?? ""} className="mb-6 w-full rounded-lg object-cover" style={{ maxHeight: "45vh", breakInside: "avoid" }} />
               )}
-              <div className="reader-body" dangerouslySetInnerHTML={{ __html: body }} />
+              <ArticleBody className="reader-body" html={body} />
             </div>
             </div>
 

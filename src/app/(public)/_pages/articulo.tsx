@@ -1,5 +1,6 @@
 import { INTL_LOCALE, categoryLabel, localePath, t, type Locale } from "@/lib/i18n";
 import { sanitizeArticleHtml } from "@/lib/sanitize";
+import { ArticleBody } from "@/components/article-body";
 import { siteUrl } from "@/lib/utils";
 import { notFound } from "next/navigation";
 import Link from "next/link";
@@ -189,9 +190,9 @@ export function ArticleDocument({
         {!preview && <AdsBanner zone="article_top" className="mx-auto mt-10" />}
 
         {/* El cuerpo llega como HTML ya sanitizado en el panel editorial. */}
-        <div
+        <ArticleBody
           className={ARTICLE_BODY_CLASS[theme] ?? "prose prose-drop mt-12 !max-w-none"}
-          dangerouslySetInnerHTML={{ __html: sanitizeArticleHtml(a.body) }}
+          html={sanitizeArticleHtml(a.body)}
         />
 
         {/* Zona comercial del artículo. La plantilla es de una sola columna, así
