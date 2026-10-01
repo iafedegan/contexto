@@ -353,9 +353,13 @@ export function TemplateBlueprint({
     if (pos === "centro") { filterBlock(L + CW / 2 - 85, y, 170); y += 36; }
     if (pos === "derecha") { filterBlock(L + CW - 170, y, 170); y += 36; }
     if (pos === "barra") {
-      rect(L, y, CW, 36, C.band, 8, C.rule);
-      filterBlock(L + 10, y + 6, 190);
-      y += 46;
+      rect(L, y, CW, 26, C.band, 8, C.rule);
+      for (let i = 0; i < 4; i++) rect(L + 8 + i * 30, y + 9, 26, 8, i === 0 ? "#cfa84a" : "#fff", 4, C.rule);
+      rect(L + 134, y + 7, 62, 12, "#fff", 3, C.rule);
+      rect(L + 200, y + 7, 46, 12, "#fff", 3, C.rule);
+      rect(L + 250, y + 7, 46, 12, "#fff", 3, C.rule);
+      rect(L + 300, y + 7, 14, 12, "#cfa84a", 6);
+      y += 36;
     }
     ad("section_top", L, y, CW, 24);
     y += 34;
