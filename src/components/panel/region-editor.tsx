@@ -165,7 +165,7 @@ export function RegionEditor({
 export function Group({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <fieldset className="flex flex-col gap-2.5 border-t border-[var(--border)] pt-3">
-      <legend className="meta pr-2 !text-[0.65rem]">{title}</legend>
+      <legend className="pr-2 text-[0.95rem] font-extrabold tracking-normal text-[#0b0b0b]">{title}</legend>
       {children}
     </fieldset>
   );

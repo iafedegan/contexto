@@ -15,7 +15,7 @@ const OPTIONS: { id: SectionFiltersPos; label: string; hint: string }[] = [
 export function SectionFiltersPicker({ value, onChange }: { value: SectionFiltersPos; onChange: (v: SectionFiltersPos) => void }) {
   return (
     <div>
-      <p className="mb-1.5 text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-[var(--fg-muted)]">Posición de los filtros</p>
+      <p className="mb-1.5 text-[0.95rem] font-extrabold text-[#0b0b0b]">Posición de los filtros</p>
       <div className="grid grid-cols-2 gap-1.5">
         {OPTIONS.map((o) => (
           <button

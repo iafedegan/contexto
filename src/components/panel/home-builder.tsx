@@ -371,7 +371,7 @@ export function HomeBuilder({
   }
 
   if (items.length === 0) {
-    return <p className="meta">No hay artículos publicados todavía.</p>;
+    return <p className="text-sm text-[var(--fg-muted)]">No hay artículos publicados todavía.</p>;
   }
 
   // Dispositivo de la vista previa: pantalla real de iPhone, iPad o Mac.
@@ -955,7 +955,7 @@ export function TemplatePicker({
         })}
       </div>
       {!activeId && (
-        <p className="meta">Disposición personalizada (no coincide con ninguna plantilla). Elige una para partir de cero.</p>
+        <p className="text-xs text-[var(--fg-muted)]">Disposición personalizada (no coincide con ninguna plantilla). Elige una para partir de cero.</p>
       )}
     </div>
   );

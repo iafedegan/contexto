@@ -73,7 +73,7 @@ export function SectionPanel({
       {tab === "encabezado" ? (
         <>
           <div>
-            <p className="mb-1.5 text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-[var(--fg-muted)]">Elige una pieza (o púlsala en la página)</p>
+            <p className="mb-1.5 text-[0.95rem] font-extrabold text-[#0b0b0b]">Elige una pieza (o púlsala en la página)</p>
             <div className="flex flex-wrap gap-1.5">
               {SECTION_ELS.map((x) => (
                 <button
