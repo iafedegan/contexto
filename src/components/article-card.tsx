@@ -103,7 +103,7 @@ function Kicker({
       <span className={`inline-flex items-center gap-2 ${className}`}>
         <LiveBadge locale={locale} />
         {a.categorySlug && (
-          <Link href={localePath(locale, `/categoria/${a.categorySlug}`)} className="lx-kicker">
+          <Link href={localePath(locale, `/categoria/${a.categorySlug}`)} className="lx-kicker relative z-[4]">
             {categoryLabel(locale, a.categorySlug, a.categoryName ?? "")}
           </Link>
         )}
@@ -114,7 +114,7 @@ function Kicker({
   return (
     <Link
       href={localePath(locale, `/categoria/${a.categorySlug}`)}
-      className={`lx-kicker ${className}`}
+      className={`lx-kicker relative z-[4] ${className}`}
     >
       {categoryLabel(locale, a.categorySlug, a.categoryName ?? "")}
     </Link>
@@ -152,7 +152,7 @@ function LeadCard({ a, priority, locale }: { a: ArticleListItem; priority?: bool
           className="lx-display mt-3 text-2xl font-semibold leading-[1.12] tracking-tight sm:text-3xl md:text-[2.75rem]"
           style={st.title}
         >
-          <Link href={localePath(locale, `/articulo/${a.slug}`)} className="transition-colors hover:text-[var(--link)]">
+          <Link href={localePath(locale, `/articulo/${a.slug}`)} className="transition-colors hover:text-[var(--link)] after:absolute after:inset-0 after:z-[2]">
             {a.title}
           </Link>
         </h2>
@@ -193,7 +193,7 @@ function GoldCard({ a, priority, locale }: { a: ArticleListItem; priority?: bool
       <div className="flex flex-1 flex-col gap-2.5 p-5">
         <Kicker a={a} locale={locale} className="text-[var(--accent)]" />
         <h3 className="lx-display text-xl font-semibold leading-snug" style={st.title}>
-          <Link href={localePath(locale, `/articulo/${a.slug}`)} className="transition-colors hover:text-[var(--link)]">
+          <Link href={localePath(locale, `/articulo/${a.slug}`)} className="transition-colors hover:text-[var(--link)] after:absolute after:inset-0 after:z-[2]">
             {a.title}
           </Link>
         </h3>
@@ -275,7 +275,7 @@ function CopperCard({ a, index, locale }: { a: ArticleListItem; index?: number; 
           className="lx-display text-2xl font-extrabold leading-[1.1] tracking-tight"
           style={st.title}
         >
-          <Link href={localePath(locale, `/articulo/${a.slug}`)} className="transition-colors hover:text-[var(--accent)]">
+          <Link href={localePath(locale, `/articulo/${a.slug}`)} className="transition-colors hover:text-[var(--accent)] after:absolute after:inset-0 after:z-[2]">
             {a.title}
           </Link>
         </h3>
@@ -318,7 +318,7 @@ function PearlCard({ a, locale }: { a: ArticleListItem; locale: Locale }) {
       <div className="flex flex-1 flex-col gap-2 p-6 text-center">
         <Kicker a={a} locale={locale} className="text-[var(--accent)]" />
         <h3 className="lx-display text-2xl font-light leading-tight" style={st.title}>
-          <Link href={localePath(locale, `/articulo/${a.slug}`)} className="transition-colors hover:text-[var(--accent)]">
+          <Link href={localePath(locale, `/articulo/${a.slug}`)} className="transition-colors hover:text-[var(--accent)] after:absolute after:inset-0 after:z-[2]">
             {a.title}
           </Link>
         </h3>
