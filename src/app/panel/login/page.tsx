@@ -14,7 +14,15 @@ import { LogoMark } from "@/components/logo-mark";
 /** Acceso al panel — plantilla «Platino». */
 function LoginForm() {
   const router = useRouter();
-  const next = useSearchParams().get("next") ?? "/panel";
+  const params = useSearchParams();
+  const next = params.get("next") ?? "/panel";
+  const motivo = params.get("motivo");
+  const aviso =
+    motivo === "sesion"
+      ? "Tu sesión venció o no se pudo leer. Vuelve a entrar."
+      : motivo === "cuenta"
+        ? "Tu sesión no corresponde a una cuenta activa del panel. Si crees que es un error, avisa a un administrador."
+        : null;
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -122,6 +130,7 @@ function LoginForm() {
               className="lx-input lx-mono"
             />
           </label>
+          {aviso && !error && <p className="text-sm text-[var(--fg-muted)]" role="status">{aviso}</p>}
           {error && <p className="text-sm text-[var(--danger)]">{error}</p>}
           <Turnstile />
           <button type="submit" disabled={pending} className="lx-btn mt-2 w-full">

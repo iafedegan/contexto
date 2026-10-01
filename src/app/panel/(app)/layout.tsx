@@ -20,7 +20,7 @@ const RUTA_SEGURIDAD = "/panel/configuracion";
 
 export default async function PanelLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
-  if (!session?.user) redirect("/panel/login");
+  if (!session?.user) redirect("/panel/login?motivo=sesion");
 
   /**
    * El segundo factor es obligatorio para TODAS las cuentas, sin excepción
@@ -29,10 +29,18 @@ export default async function PanelLayout({ children }: { children: React.ReactN
    * poder activarlo — así una cuenta nueva (que siempre arranca sin 2FA)
    * nunca queda sin forma de entrar.
    */
-  const [yo] = await db
+  // Por id y, si el id de la sesión no aparece, por correo (como requireRole):
+  // sin esto una sesión con id desfasado se saltaba la exigencia de 2FA.
+  let [yo] = await db
     .select({ totpEnabled: users.totpEnabled })
     .from(users)
     .where(eq(users.id, session.user.id));
+  if (!yo && session.user.email) {
+    [yo] = await db
+      .select({ totpEnabled: users.totpEnabled })
+      .from(users)
+      .where(eq(users.email, session.user.email.toLowerCase().trim()));
+  }
   const pathname = (await headers()).get("x-pathname") ?? "";
   const debeActivar2fa = yo != null && !yo.totpEnabled;
   // Sin `redirect()`: ver IrASeguridad. Mientras la cuenta no tenga 2FA, fuera

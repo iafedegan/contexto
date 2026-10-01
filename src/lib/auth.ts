@@ -181,7 +181,9 @@ const ROLE_RANK: Record<UserRole, number> = {
 
 export async function requireRole(min: UserRole) {
   const session = await auth();
-  if (!session?.user) redirect("/panel/login");
+  // `motivo` lo muestra la pantalla de login: así un redireccionamiento al
+  // login deja de ser un misterio (¿sesión vencida o cuenta no encontrada?).
+  if (!session?.user) redirect("/panel/login?motivo=sesion");
   if (ROLE_RANK[session.user.role] < ROLE_RANK[min]) throw new Error("SIN_PERMISO");
 
   // La sesión JWT sobrevive a la cuenta: en local la BD se recrea en cada
@@ -207,9 +209,9 @@ export async function requireRole(min: UserRole) {
     }
   }
 
-  // La cuenta ya no existe: login limpio en vez de una excepción en mitad de
-  // una Server Action.
-  redirect("/panel/login");
+  // La cuenta ya no existe (o está desactivada): login limpio en vez de una
+  // excepción en mitad de una Server Action.
+  redirect("/panel/login?motivo=cuenta");
 }
 
 /**
