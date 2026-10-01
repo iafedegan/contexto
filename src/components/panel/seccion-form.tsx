@@ -66,7 +66,7 @@ export function SeccionForm({
           </label>
           <label className="flex flex-col gap-1">
             <span className="text-[0.68rem] uppercase tracking-[0.14em] text-[var(--fg-muted)]">
-              Orden en el menú (menor = más a la izquierda)
+              Posición en el menú (1 = la primera a la izquierda)
             </span>
             <Input name="sortOrder" type="number" defaultValue={sortOrder} className="max-w-32" />
           </label>

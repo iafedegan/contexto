@@ -26,13 +26,24 @@ export async function actualizarSeccion(_prev: SeccionState, formData: FormData)
   if (!name) return { ok: false, message: "Falta el nombre." };
   if (!Number.isFinite(sortOrder)) return { ok: false, message: "Orden inválido." };
 
-  const [row] = await db.select({ slug: categories.slug }).from(categories).where(eq(categories.id, id));
+  const [row] = await db.select({ slug: categories.slug, parentId: categories.parentId }).from(categories).where(eq(categories.id, id));
   if (!row) return { ok: false, message: "Esa sección ya no existe." };
 
   await db
     .update(categories)
     .set({ name, description: description || null, sortOrder })
     .where(eq(categories.id, id));
+
+  // Posiciones limpias (1, 2, 3…) en su nivel: sin empates ni huecos. Si el
+  // número elegido coincide con el de otra, la editada va primero.
+  const sibs = await db
+    .select({ id: categories.id, name: categories.name, sortOrder: categories.sortOrder })
+    .from(categories)
+    .where(row.parentId ? eq(categories.parentId, row.parentId) : isNull(categories.parentId));
+  sibs.sort((a, b) => a.sortOrder - b.sortOrder || (a.id === id ? -1 : b.id === id ? 1 : a.name.localeCompare(b.name, "es")));
+  for (let k = 0; k < sibs.length; k++) {
+    if (sibs[k].sortOrder !== k + 1) await db.update(categories).set({ sortOrder: k + 1 }).where(eq(categories.id, sibs[k].id));
+  }
 
   revalidatePath(`/categoria/${row.slug}`);
   revalidatePath(`/en/categoria/${row.slug}`);
