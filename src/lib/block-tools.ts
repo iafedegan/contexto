@@ -139,6 +139,11 @@ export type ZoneMapData = {
   h: number;
   /** Columnas reales del contenedor ahora mismo. */
   cols: number;
+  /** Ancho (px) de cada columna y alto de cada fila de la cuadrícula, y sus separaciones. */
+  colTracks: number[];
+  rowTracks: number[];
+  colGap: number;
+  rowGap: number;
   display: string;
   items: ZoneMapItem[];
 };
@@ -182,6 +187,10 @@ export function measureZone(el: HTMLElement): ZoneMapData | null {
     w: cr.width,
     h: Math.max(cr.height, 40),
     cols: cs?.display.includes("grid") ? cs.gridTemplateColumns.split(" ").length : 1,
+    colTracks: cs?.display.includes("grid") ? cs.gridTemplateColumns.split(" ").map(parseFloat).filter((n) => Number.isFinite(n)) : [],
+    rowTracks: cs?.display.includes("grid") ? cs.gridTemplateRows.split(" ").map(parseFloat).filter((n) => Number.isFinite(n)) : [],
+    colGap: parseFloat(cs?.columnGap ?? "0") || 0,
+    rowGap: parseFloat(cs?.rowGap ?? "0") || 0,
     display: cs?.display ?? "block",
     items,
   };

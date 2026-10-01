@@ -209,6 +209,14 @@ export function PreviewChrome({
       setSelSlug(it.slug);
       setSelTitle(it.label || it.slug);
     },
+    onMoveBlock: (it, cell) => {
+      if (!it.slug) return;
+      // Solo se ejecuta en un manejador de eventos (usa refs), no al renderizar.
+      // eslint-disable-next-line react-hooks/refs
+      patchBlock(it.slug, { colStart: cell.col, rowStart: cell.row });
+      setSelSlug(it.slug);
+      setSelTitle(it.label || it.slug);
+    },
   });
 
   // Asas de tamaño y arrastre sobre los bloques reales de la página.

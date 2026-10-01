@@ -345,6 +345,13 @@ export function HomeBuilder({
             const idx = it.slug ? items.findIndex((i) => i.slug === it.slug) : it.index ?? -1;
             if (idx >= 0) setSelected(idx);
           },
+          onMoveBlock: (it, cell) => {
+            const idx = it.slug ? items.findIndex((i) => i.slug === it.slug) : it.index ?? -1;
+            if (idx >= 0) {
+              patchStyle(idx, { colStart: cell.col, rowStart: cell.row });
+              setSelected(idx);
+            }
+          },
         }
       : { map: null, style: undefined, onChange: () => {}, onSelect: () => {} };
 

@@ -60,6 +60,8 @@ export function sanitizeHomeStyle(input: unknown): HomeStyle | null {
     color: hex(r.color),
     colSpan: num(r.colSpan, 1, 6),
     height: num(r.height, 60, 1200),
+    colStart: num(r.colStart, 1, 6),
+    rowStart: num(r.rowStart, 1, 12),
     widthPct: num(r.widthPct, 20, 100),
     blockAlign: r.blockAlign === "left" || r.blockAlign === "center" || r.blockAlign === "right" ? r.blockAlign : undefined,
     bg: hex(r.bg),
@@ -87,7 +89,9 @@ export function blockStylesCss(items: Array<{ slug: string; homeStyle?: HomeStyl
     if (!s || !/^[\w-]+$/.test(it.slug)) continue;
     const sel = `${scope} [data-bslug="${it.slug}"],${scope} [data-bs-root="${it.slug}"]:not([data-bslug] *)`;
     const d: string[] = [];
-    if (s.colSpan) d.push(`grid-column:span ${s.colSpan} / span ${s.colSpan}!important`);
+    if (s.colStart) d.push(`grid-column:${s.colStart} / span ${s.colSpan ?? 1}!important`);
+    else if (s.colSpan) d.push(`grid-column:span ${s.colSpan} / span ${s.colSpan}!important`);
+    if (s.rowStart) d.push(`grid-row-start:${s.rowStart}!important`);
     if (s.height) d.push(`min-height:${s.height}px!important`);
     if (s.widthPct && s.widthPct < 100) {
       d.push(`width:${s.widthPct}%!important`);

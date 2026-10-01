@@ -20,6 +20,7 @@ export type ZoneBundle = {
   selectedSlug?: string | null;
   onChange: (z: ZoneStyle | undefined) => void;
   onSelect: (item: ZoneMapItem) => void;
+  onMoveBlock?: (item: ZoneMapItem, cell: { col: number; row: number }) => void;
 };
 
 export function BlockStyleEditor({
@@ -75,12 +76,14 @@ export function BlockStyleEditor({
 
       {zone && (
         <Group title="Mapa de la zona">
-          <ZonePanel map={zone.map} style={zone.style} selectedSlug={zone.selectedSlug} onChange={zone.onChange} onSelect={zone.onSelect} />
+          <ZonePanel map={zone.map} style={zone.style} selectedSlug={zone.selectedSlug} onChange={zone.onChange} onSelect={zone.onSelect} onMoveBlock={zone.onMoveBlock} />
         </Group>
       )}
 
       <Group title="Tamaño">
         {numField("Columnas (1–6)", style.colSpan, 1, 6, "colSpan", "solo en cuadrículas")}
+        {numField("Columna (inicio)", style.colStart, 1, 6, "colStart", "en cuadrículas")}
+        {numField("Fila (inicio)", style.rowStart, 1, 12, "rowStart")}
         {numField("Ancho (%)", style.widthPct, 20, 100, "widthPct", "en listas")}
         <div className="flex items-center gap-2">
           <span className="w-28 shrink-0 text-xs text-[var(--fg-muted)]">Alinear bloque</span>

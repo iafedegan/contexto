@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef, useState } from "react";
 import { RotateCcw } from "lucide-react";
 import type { ZoneStyle } from "@/db/schema";
 import type { ZoneMapData, ZoneMapItem } from "@/lib/block-tools";
@@ -33,17 +34,77 @@ export function ZonePanel({
   selectedSlug,
   onChange,
   onSelect,
+  onMoveBlock,
 }: {
   map: ZoneMapData | null;
   style: ZoneStyle | undefined;
   selectedSlug?: string | null;
   onChange: (z: ZoneStyle | undefined) => void;
   onSelect: (item: ZoneMapItem) => void;
+  /** Se suelta un bloque en otra celda del mapa (columna y fila empiezan en 1). */
+  onMoveBlock?: (item: ZoneMapItem, cell: { col: number; row: number }) => void;
 }) {
+  const svgRef = useRef<SVGSVGElement>(null);
+  const [drag, setDrag] = useState<{ id: string; dx: number; dy: number; col: number; row: number } | null>(null);
   if (!map || !map.key) {
     return <p className="text-xs leading-relaxed text-[var(--fg-muted)]">Midiendo la zona de este bloque… (si no aparece, vuelve a pulsar el bloque).</p>;
   }
   const z = style ?? {};
+
+  // Pistas de la cuadrícula: posición de cada columna y fila (para encajar al soltar).
+  const track = (sizes: number[], gap: number) => {
+    let at = 0;
+    return sizes.map((w) => {
+      const t = { start: at, size: w };
+      at += w + gap;
+      return t;
+    });
+  };
+  const colT = track(map.colTracks, map.colGap);
+  const rowT = track(map.rowTracks, map.rowGap);
+  const canDrag = map.display.includes("grid") && colT.length > 0 && !!onMoveBlock;
+  const cellAt = (arr: { start: number; size: number }[], v: number, gap: number) => {
+    if (!arr.length) return 0;
+    for (let i = 0; i < arr.length; i++) if (v < arr[i].start + arr[i].size + gap / 2) return i;
+    return arr.length; // por debajo de la última: una fila nueva
+  };
+  const toSvg = (e: React.PointerEvent) => {
+    const svg = svgRef.current;
+    const ctm = svg?.getScreenCTM();
+    if (!svg || !ctm) return { x: 0, y: 0 };
+    const pt = svg.createSVGPoint();
+    pt.x = e.clientX;
+    pt.y = e.clientY;
+    const p = pt.matrixTransform(ctm.inverse());
+    return { x: p.x, y: p.y };
+  };
+  function startDrag(e: React.PointerEvent, it: ZoneMapItem) {
+    if (!canDrag) return;
+    e.preventDefault();
+    (e.currentTarget as Element).setPointerCapture(e.pointerId);
+    const start = toSvg(e);
+    let moved = false;
+    const move = (ev: PointerEvent) => {
+      const p = toSvg(ev as unknown as React.PointerEvent);
+      const dx = p.x - start.x, dy = p.y - start.y;
+      if (Math.abs(dx) + Math.abs(dy) > map!.w / 120) moved = true;
+      const cx = it.x + it.w / 2 + dx, cy = it.y + it.h / 2 + dy;
+      setDrag({ id: it.id, dx, dy, col: cellAt(colT, cx - it.w / 2, map!.colGap), row: cellAt(rowT, cy - it.h / 2, map!.rowGap) });
+    };
+    const up = (ev: PointerEvent) => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      const p = toSvg(ev as unknown as React.PointerEvent);
+      const dx = p.x - start.x, dy = p.y - start.y;
+      setDrag(null);
+      if (!moved) return onSelect(it);
+      const col = cellAt(colT, it.x + dx, map!.colGap);
+      const row = cellAt(rowT, it.y + dy, map!.rowGap);
+      onMoveBlock?.(it, { col: Math.min(col, colT.length - 1) + 1, row: row + 1 });
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+  }
   const cols = z.cols ?? (z.tpl ? z.tpl.split(" ").length : undefined);
   const fs = Math.max(10, map.w / 34);
   const patch = (p: Partial<ZoneStyle>) => {
@@ -56,12 +117,32 @@ export function ZonePanel({
   return (
     <div className="flex flex-col gap-3">
       <div className="rounded-[var(--radius)] border border-[var(--border)] bg-[#f4f6e8] p-2">
-        <svg viewBox={`0 0 ${map.w} ${map.h}`} className="block w-full" role="img" aria-label="Mapa de la zona del bloque" style={{ maxHeight: 360 }}>
+        <svg ref={svgRef} viewBox={`0 0 ${map.w} ${map.h}`} className="block w-full touch-none select-none" role="img" aria-label="Mapa de la zona del bloque" style={{ maxHeight: 360 }}>
           <rect x={0} y={0} width={map.w} height={map.h} rx={fs * 0.4} fill="#ffffff" stroke="#9fb04a" strokeWidth={Math.max(1, map.w / 300)} strokeDasharray="6 4" />
+          {canDrag &&
+            colT.map((c, i) => (
+              <rect key={`c${i}`} x={c.start} y={0} width={c.size} height={map.h} fill="none" stroke="#c9d49a" strokeWidth={Math.max(1, map.w / 500)} strokeDasharray="4 4" />
+            ))}
+          {drag && canDrag && (() => {
+            const it = map.items.find((x) => x.id === drag.id);
+            if (!it) return null;
+            const c = colT[Math.min(drag.col, colT.length - 1)];
+            const r = rowT[drag.row];
+            const gy = r ? r.start : (rowT.length ? rowT[rowT.length - 1].start + rowT[rowT.length - 1].size + map.rowGap : 0);
+            return <rect x={c.start} y={gy} width={Math.min(it.w, map.w - c.start)} height={it.h} rx={fs * 0.3} fill="#c9a22733" stroke="#c9a227" strokeWidth={Math.max(2, map.w / 200)} strokeDasharray="6 4" />;
+          })()}
           {map.items.map((it) => {
             const sel = !!selectedSlug && it.slug === selectedSlug;
+            const dragging = drag?.id === it.id;
             return (
-              <g key={it.id} onClick={it.kind === "block" ? () => onSelect(it) : undefined} className={it.kind === "block" ? "cursor-pointer" : undefined}>
+              <g
+                key={it.id}
+                onClick={it.kind === "block" && !canDrag ? () => onSelect(it) : undefined}
+                onPointerDown={it.kind === "block" ? (e) => startDrag(e, it) : undefined}
+                transform={dragging ? `translate(${drag!.dx} ${drag!.dy})` : undefined}
+                opacity={dragging ? 0.85 : 1}
+                className={it.kind === "block" ? (canDrag ? "cursor-grab active:cursor-grabbing" : "cursor-pointer") : undefined}
+              >
                 <title>{it.label || (it.kind === "block" ? "Bloque" : "Texto de la zona")}</title>
                 <rect
                   x={it.x}
@@ -91,7 +172,7 @@ export function ZonePanel({
         </svg>
       </div>
       <p className="text-[0.7rem] text-[var(--fg-muted)]">
-        Ahora: {map.display.includes("grid") ? `cuadrícula de ${map.cols} columna${map.cols === 1 ? "" : "s"}` : "lista"} · {map.items.filter((i) => i.kind === "block").length} bloques. Pulsa un bloque del mapa para elegirlo.
+        {canDrag ? "Arrastra un bloque a otra celda para moverlo. " : "Para mover bloques en el mapa, la zona debe ser una cuadrícula (elige columnas abajo). "}Ahora: {map.display.includes("grid") ? `cuadrícula de ${map.cols} columna${map.cols === 1 ? "" : "s"}` : "lista"} · {map.items.filter((i) => i.kind === "block").length} bloques. Pulsa un bloque del mapa para elegirlo.
       </p>
 
       <div>

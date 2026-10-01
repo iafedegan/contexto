@@ -55,6 +55,9 @@ export type HomeStyle = {
   colSpan?: number;
   /** Alto mínimo del bloque en px (60-1200). */
   height?: number;
+  /** Columna y fila de la cuadrícula donde empieza el bloque (1-6 / 1-12). */
+  colStart?: number;
+  rowStart?: number;
   /** Ancho como % del espacio disponible (20-100): sirve en listas de una columna. */
   widthPct?: number;
   /** Dónde queda el bloque cuando es más estrecho que su espacio. */
