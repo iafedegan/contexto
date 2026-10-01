@@ -1,9 +1,16 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
-import { ChevronDown, ChevronRight, Maximize2, Network, X } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, Loader2, Maximize2, Network, Plus, Trash2, X } from "lucide-react";
 import { SeccionForm } from "@/components/panel/seccion-form";
+import {
+  crearSeccion,
+  eliminarSeccion,
+  moverSeccion,
+  ordenarSeccion,
+  type EstructuraResult,
+} from "@/app/panel/(app)/secciones/actions";
 
 export type SectionNode = {
   id: string;
@@ -34,7 +41,45 @@ export function SectionTree({ sections, onSaved }: { sections: SectionNode[]; on
   const [open, setOpen] = useState<Set<string>>(new Set());
   const [selected, setSelected] = useState<string | null>(null);
   const [wide, setWide] = useState(false);
+  const [msg, setMsg] = useState<EstructuraResult | null>(null);
+  const [busy, startBusy] = useTransition();
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [over, setOver] = useState<string | null>(null);
   const sel = sections.find((s) => s.id === selected) ?? null;
+
+  /** Ejecuta un cambio de estructura, muestra el resultado y refresca. */
+  function run(p: () => Promise<EstructuraResult>) {
+    setMsg(null);
+    startBusy(async () => {
+      try {
+        const r = await p();
+        setMsg(r);
+        if (r.ok) onSaved();
+      } catch {
+        setMsg({ ok: false, message: "No se pudo completar (¿tu rol lo permite?)." });
+      }
+    });
+  }
+  function drop(targetId: string | null) {
+    const id = dragId;
+    setDragId(null);
+    setOver(null);
+    if (id && id !== targetId) run(() => moverSeccion(id, targetId));
+  }
+  const draggedHasKids = !!dragId && (tree.find((b) => b.node.id === dragId)?.kids.length ?? 0) > 0;
+  const dnd = (id: string | null, canDrop: boolean) => ({
+    onDragOver: (e: React.DragEvent) => {
+      if (!dragId || !canDrop) return;
+      e.preventDefault();
+      setOver(id ?? "root");
+    },
+    onDragLeave: () => setOver((o) => (o === (id ?? "root") ? null : o)),
+    onDrop: (e: React.DragEvent) => {
+      if (!canDrop) return;
+      e.preventDefault();
+      drop(id);
+    },
+  });
 
   const toggle = (id: string) =>
     setOpen((o) => {
@@ -60,7 +105,11 @@ export function SectionTree({ sections, onSaved }: { sections: SectionNode[]; on
 
       {/* Árbol compacto */}
       <div className="rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg)] p-3">
-        <div className="inline-flex items-center gap-2 rounded-full bg-[#33401a] px-3 py-1.5 text-xs font-bold text-white">
+        <div
+          {...dnd(null, true)}
+          title="Suelta aquí una sección para volverla principal"
+          className={`inline-flex items-center gap-2 rounded-full bg-[#33401a] px-3 py-1.5 text-xs font-bold text-white ${over === "root" ? "ring-2 ring-[#c9a227] ring-offset-2" : ""}`}
+        >
           <Network size={13} /> Menú principal
           <span className="rounded-full bg-white/20 px-1.5 text-[0.65rem]">{tree.length}</span>
         </div>
@@ -70,7 +119,16 @@ export function SectionTree({ sections, onSaved }: { sections: SectionNode[]; on
             return (
               <li key={node.id} className="relative pl-5 pt-1.5">
                 <span aria-hidden className="absolute left-0 top-[1.15rem] h-0.5 w-5 bg-[var(--border-strong)]/50" />
-                <div className="flex items-center gap-1">
+                <div
+                  className={`flex items-center gap-1 rounded-full ${over === node.id ? "ring-2 ring-[#c9a227] ring-offset-2" : ""}`}
+                  draggable
+                  onDragStart={() => setDragId(node.id)}
+                  onDragEnd={() => {
+                    setDragId(null);
+                    setOver(null);
+                  }}
+                  {...dnd(node.id, dragId !== node.id && !draggedHasKids)}
+                >
                   {kids.length > 0 ? (
                     <button type="button" onClick={() => toggle(node.id)} aria-label={isOpen ? "Contraer" : "Expandir"} className="grid size-6 place-items-center rounded-full hover:bg-[var(--surface-2)]">
                       {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
@@ -85,7 +143,17 @@ export function SectionTree({ sections, onSaved }: { sections: SectionNode[]; on
                     {kids.map((k) => (
                       <li key={k.id} className="relative pl-5 pt-1">
                         <span aria-hidden className="absolute left-0 top-[0.95rem] h-0.5 w-5 bg-[var(--border)]" />
-                        <NodePill s={k} level={2} active={selected === k.id} onClick={() => setSelected(k.id)} />
+                        <div
+                          draggable
+                          onDragStart={() => setDragId(k.id)}
+                          onDragEnd={() => {
+                            setDragId(null);
+                            setOver(null);
+                          }}
+                          className="inline-block"
+                        >
+                          <NodePill s={k} level={2} active={selected === k.id} onClick={() => setSelected(k.id)} />
+                        </div>
                       </li>
                     ))}
                   </ul>
@@ -96,21 +164,14 @@ export function SectionTree({ sections, onSaved }: { sections: SectionNode[]; on
         </ul>
       </div>
 
+      <p className="text-[0.7rem] text-[var(--fg-muted)]">
+        Arrastra una sección sobre otra para colgarla de ella, o sobre «Menú principal» para volverla principal. El menú tiene dos niveles: una sección con subsecciones no puede colgar de otra.
+      </p>
+      <NewSection padreId={null} label="Nueva sección principal" run={run} busy={busy} />
+      {msg && <Msg r={msg} />}
+
       {sel && (
-        <div className="flex flex-col gap-2">
-          <p className="text-xs text-[var(--fg-muted)]">
-            {sel.parentId ? (
-              <>
-                Depende de <strong>{sections.find((s) => s.id === sel.parentId)?.name}</strong> (menú principal › … › {sel.name}).
-              </>
-            ) : (
-              <>
-                Sección principal del menú{tree.find((b) => b.node.id === sel.id)?.kids.length ? `, de la que cuelgan ${tree.find((b) => b.node.id === sel.id)!.kids.length} subsecciones` : ""}.
-              </>
-            )}
-          </p>
-          <SeccionForm key={sel.id} {...pick(sel)} defaultOpen onSaved={onSaved} />
-        </div>
+        <Detail sel={sel} sections={sections} tree={tree} onSelect={setSelected} onSaved={onSaved} run={run} busy={busy} />
       )}
 
       {wide &&
@@ -122,9 +183,147 @@ export function SectionTree({ sections, onSaved }: { sections: SectionNode[]; on
             onSelect={setSelected}
             onClose={() => setWide(false)}
             onSaved={onSaved}
+            run={run}
+            busy={busy}
+            msg={msg}
           />,
           document.body,
         )}
+    </div>
+  );
+}
+
+function Msg({ r }: { r: EstructuraResult }) {
+  return (
+    <p role="status" className={`rounded-[var(--radius)] px-3 py-2 text-xs font-medium ${r.ok ? "bg-[#dbe5b7] text-[#2c3a10]" : "bg-[#f6d9d4] text-[#7a2518]"}`}>
+      {r.message}
+    </p>
+  );
+}
+
+function NewSection({ padreId, label, run, busy }: { padreId: string | null; label: string; run: (p: () => Promise<EstructuraResult>) => void; busy: boolean }) {
+  const [name, setName] = useState("");
+  return (
+    <form
+      className="flex gap-2"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (!name.trim()) return;
+        run(() => crearSeccion(name, padreId));
+        setName("");
+      }}
+    >
+      <input
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        placeholder={label}
+        maxLength={80}
+        className="min-w-0 flex-1 rounded-full border border-[var(--border)] bg-white px-3.5 py-1.5 text-xs outline-none focus:border-[var(--accent)]"
+      />
+      <button type="submit" disabled={busy || !name.trim()} className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[var(--accent)] px-3 py-1.5 text-xs font-semibold text-[var(--accent-fg)] disabled:opacity-50">
+        {busy ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />} Agregar
+      </button>
+    </form>
+  );
+}
+
+/** Todo lo de una sección elegida: dependencia, orden, subsecciones, borrado y sus datos. */
+function Detail({
+  sel,
+  sections,
+  tree,
+  onSelect,
+  onSaved,
+  run,
+  busy,
+}: {
+  sel: SectionNode;
+  sections: SectionNode[];
+  tree: Branch[];
+  onSelect: (id: string | null) => void;
+  onSaved: () => void;
+  run: (p: () => Promise<EstructuraResult>) => void;
+  busy: boolean;
+}) {
+  const parent = sel.parentId ? sections.find((s) => s.id === sel.parentId) : null;
+  const kids = sections.filter((s) => s.parentId === sel.id);
+  const tops = tree.map((b) => b.node).filter((n) => n.id !== sel.id);
+  return (
+    <div className="flex flex-col gap-3 rounded-[var(--radius)] border border-[var(--border)] bg-white p-3">
+      <div>
+        <p className="lx-kicker text-[var(--accent)]">{sel.parentId ? "Subsección" : "Sección principal"}</p>
+        <h3 className="text-base font-bold">{sel.name}</h3>
+        <p className="mt-0.5 text-xs text-[var(--fg-muted)]">
+          Menú principal{parent ? ` › ${parent.name}` : ""} › {sel.name}
+        </p>
+      </div>
+
+      <label className="block">
+        <span className="mb-1 block text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-[var(--fg-muted)]">Depende de</span>
+        <select
+          value={sel.parentId ?? ""}
+          disabled={busy || (kids.length > 0)}
+          onChange={(e) => run(() => moverSeccion(sel.id, e.target.value || null))}
+          className="w-full rounded-[var(--radius)] border border-[var(--border)] bg-white px-3 py-2 text-sm disabled:opacity-60"
+        >
+          <option value="">— Ninguna (sección principal del menú)</option>
+          {tops.map((t) => (
+            <option key={t.id} value={t.id}>
+              {t.name}
+            </option>
+          ))}
+        </select>
+        {kids.length > 0 && <span className="mt-1 block text-[0.7rem] text-[var(--fg-muted)]">Tiene subsecciones, así que no puede colgar de otra.</span>}
+      </label>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-xs font-semibold">Orden en su nivel</span>
+        <button type="button" disabled={busy} onClick={() => run(() => ordenarSeccion(sel.id, "arriba"))} className="inline-flex items-center gap-1 rounded-full border border-[var(--border)] px-3 py-1 text-xs font-semibold hover:border-[var(--accent)] disabled:opacity-50">
+          <ArrowUp size={12} /> Subir
+        </button>
+        <button type="button" disabled={busy} onClick={() => run(() => ordenarSeccion(sel.id, "abajo"))} className="inline-flex items-center gap-1 rounded-full border border-[var(--border)] px-3 py-1 text-xs font-semibold hover:border-[var(--accent)] disabled:opacity-50">
+          <ArrowDown size={12} /> Bajar
+        </button>
+      </div>
+
+      {!sel.parentId && (
+        <div>
+          <p className="mb-1 text-xs font-semibold">Subsecciones ({kids.length})</p>
+          {kids.length > 0 && (
+            <div className="mb-2 flex flex-wrap gap-1.5">
+              {kids.map((c) => (
+                <button key={c.id} type="button" onClick={() => onSelect(c.id)} className="rounded-full border border-[var(--border)] bg-[#f1f5df] px-2.5 py-1 text-xs font-medium hover:border-[var(--accent)]">
+                  {c.name}
+                </button>
+              ))}
+            </div>
+          )}
+          <NewSection padreId={sel.id} label={`Nueva subsección de ${sel.name}`} run={run} busy={busy} />
+        </div>
+      )}
+      {parent && (
+        <button type="button" onClick={() => onSelect(parent.id)} className="self-start text-xs font-semibold text-[var(--accent)]">
+          ← Ir a {parent.name}
+        </button>
+      )}
+
+      <SeccionForm key={sel.id} {...pick(sel)} defaultOpen onSaved={onSaved} />
+
+      <button
+        type="button"
+        disabled={busy}
+        onClick={() => {
+          if (!window.confirm(`¿Eliminar la sección «${sel.name}»? Solo se puede si no tiene notas ni subsecciones.`)) return;
+          run(async () => {
+            const r = await eliminarSeccion(sel.id);
+            if (r.ok) onSelect(null);
+            return r;
+          });
+        }}
+        className="inline-flex items-center gap-1.5 self-start rounded-full border border-[#c8584a] px-3 py-1.5 text-xs font-semibold text-[#9a2f22] hover:bg-[#f6d9d4] disabled:opacity-50"
+      >
+        <Trash2 size={12} /> Eliminar sección
+      </button>
     </div>
   );
 }
@@ -168,13 +367,19 @@ function WideTree({
   onSelect,
   onClose,
   onSaved,
+  run,
+  busy,
+  msg,
 }: {
   tree: Branch[];
   sections: SectionNode[];
   selected: string | null;
-  onSelect: (id: string) => void;
+  onSelect: (id: string | null) => void;
   onClose: () => void;
   onSaved: () => void;
+  run: (p: () => Promise<EstructuraResult>) => void;
+  busy: boolean;
+  msg: EstructuraResult | null;
 }) {
   const ROW = 38, NODE_H = 30, PAD = 28;
   const W0 = 150, W1 = 190, W2 = 190, GAP = 80;
@@ -192,8 +397,6 @@ function WideTree({
   const height = PAD * 2 + Math.max(row, 1) * ROW;
   const rootY = placed.length ? (placed[0].y + placed[placed.length - 1].y) / 2 : PAD;
   const sel = sections.find((s) => s.id === selected) ?? null;
-  const parent = sel?.parentId ? sections.find((s) => s.id === sel.parentId) : null;
-  const children = sel ? sections.filter((s) => s.parentId === sel.id) : [];
 
   const link = (ax: number, ay: number, bx: number, by: number, color: string) =>
     `<path d="M${ax},${ay} C${ax + GAP / 2},${ay} ${bx - GAP / 2},${by} ${bx},${by}" fill="none" stroke="${color}" stroke-width="2"/>`;
@@ -240,37 +443,17 @@ function WideTree({
             <p className="px-5 pb-4 text-xs text-[var(--fg-muted)]">El número de cada caja son las notas publicadas o en preparación de esa sección. Verde fuerte: la sección tiene notas.</p>
           </div>
           <aside className="max-h-[45%] overflow-y-auto border-t border-[var(--border)] p-4 lg:max-h-none lg:w-[24rem] lg:border-l lg:border-t-0">
-            {sel ? (
-              <div className="flex flex-col gap-3">
-                <div>
-                  <p className="lx-kicker text-[var(--accent)]">{sel.parentId ? "Subsección" : "Sección principal"}</p>
-                  <h3 className="text-lg font-bold">{sel.name}</h3>
-                  <p className="mt-1 text-xs text-[var(--fg-muted)]">
-                    Menú principal{parent ? ` › ${parent.name}` : ""} › {sel.name}
-                  </p>
-                </div>
-                {children.length > 0 && (
-                  <div>
-                    <p className="mb-1 text-xs font-semibold">Subsecciones ({children.length})</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {children.map((c) => (
-                        <button key={c.id} type="button" onClick={() => onSelect(c.id)} className="rounded-full border border-[var(--border)] bg-white px-2.5 py-1 text-xs font-medium hover:border-[var(--accent)]">
-                          {c.name}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {parent && (
-                  <button type="button" onClick={() => onSelect(parent.id)} className="self-start text-xs font-semibold text-[var(--accent)]">
-                    ← Ir a {parent.name}
-                  </button>
-                )}
-                <SeccionForm key={sel.id} {...pick(sel)} defaultOpen onSaved={onSaved} />
+            <div className="flex flex-col gap-3">
+              {msg && <Msg r={msg} />}
+              {sel ? (
+                <Detail sel={sel} sections={sections} tree={tree} onSelect={onSelect} onSaved={onSaved} run={run} busy={busy} />
+              ) : (
+                <p className="text-sm text-[var(--fg-muted)]">Pulsa una sección del árbol para ver de cuál depende y para moverla, ordenarla, agregarle subsecciones, editarla o eliminarla.</p>
+              )}
+              <div className="border-t border-[var(--border)] pt-3">
+                <NewSection padreId={null} label="Nueva sección principal" run={run} busy={busy} />
               </div>
-            ) : (
-              <p className="text-sm text-[var(--fg-muted)]">Pulsa una sección del árbol para ver de cuál depende, cuáles cuelgan de ella y editar su nombre, descripción y orden.</p>
-            )}
+            </div>
           </aside>
         </div>
       </div>
