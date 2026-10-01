@@ -12,14 +12,16 @@ import type { NextConfig } from "next";
  */
 const CSP = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://challenges.cloudflare.com https://cdn.jsdelivr.net",
-  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net",
+  // unpkg.com: Leaflet del mapa de suscriptores, cargado por CDN sin instalarlo (ver subscriber-map.tsx).
+  "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://challenges.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://unpkg.com",
   "font-src 'self' data: https://fonts.gstatic.com",
   "img-src 'self' data: blob: https:",
   "media-src 'self' https:",
   // /api-docs (Scalar) llama a su propio worker cargado desde jsdelivr.
   "connect-src 'self' https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com https://www.googletagmanager.com https://challenges.cloudflare.com https://cdn.jsdelivr.net",
-  "frame-src https://www.youtube-nocookie.com https://player.vimeo.com https://challenges.cloudflare.com https://www.googletagmanager.com",
+  // 'self': el editor de portada enmarca /vista-portada del propio sitio.
+  "frame-src 'self' https://www.youtube-nocookie.com https://player.vimeo.com https://challenges.cloudflare.com https://www.googletagmanager.com",
   "worker-src 'self'",
   "object-src 'none'",
   "base-uri 'self'",
