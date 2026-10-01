@@ -32,6 +32,8 @@ export type RegionStyle = {
   textScale?: number;
   /** Relleno vertical, en px (0-120). */
   padY?: number;
+  /** Espacio superior, en px (0-240): lo que separa el contenido de la barra de arriba. Solo el cuerpo. */
+  padTop?: number;
   /** Relleno horizontal, en px (0-120). */
   padX?: number;
   /** Radio de las esquinas, en px (0-48). */
@@ -75,7 +77,7 @@ export const REGIONS: Array<{
     id: "body",
     label: "Cuerpo",
     description: "El lienzo de la página entre la cabecera y el pie.",
-    controls: ["bg", "fg", "accent", "titleFont", "textFont", "titleScale", "textScale", "padY", "maxWidth"],
+    controls: ["bg", "fg", "accent", "titleFont", "textFont", "titleScale", "textScale", "padTop", "padY", "maxWidth"],
   },
   {
     id: "footer",
@@ -89,6 +91,7 @@ export const RANGES = {
   titleScale: { min: 70, max: 160, step: 5, unit: "%" },
   textScale: { min: 80, max: 140, step: 5, unit: "%" },
   padY: { min: 0, max: 120, step: 4, unit: "px" },
+  padTop: { min: 0, max: 240, step: 4, unit: "px" },
   padX: { min: 0, max: 120, step: 4, unit: "px" },
   radius: { min: 0, max: 48, step: 2, unit: "px" },
   maxWidth: { min: 720, max: 1920, step: 40, unit: "px" },
@@ -119,6 +122,7 @@ export function sanitizeRegions(input: unknown): RegionStyles {
       titleScale: num(r.titleScale, "titleScale"),
       textScale: num(r.textScale, "textScale"),
       padY: num(r.padY, "padY"),
+      padTop: num(r.padTop, "padTop"),
       padX: num(r.padX, "padX"),
       radius: num(r.radius, "radius"),
       maxWidth: num(r.maxWidth, "maxWidth"),
@@ -178,6 +182,12 @@ export function regionsCss(input: RegionStyles | undefined, scope = "[data-site-
     if (s.titleScale && s.titleScale !== 100) rules.push(`${sel} ${TITLES}{zoom:${s.titleScale / 100}}`);
     if (s.textScale && s.textScale !== 100) rules.push(`${sel} ${TEXT}{zoom:${s.textScale / 100}}`);
     if (s.padY !== undefined) decl.push(`padding-top:${s.padY}px!important`, `padding-bottom:${s.padY}px!important`);
+    if (s.padTop !== undefined) {
+      // La cabecera de la página (migas + título) trae su propio aire arriba: se
+      // anula para que el espacio superior sea exactamente el elegido.
+      decl.push(`padding-top:${s.padTop}px!important`);
+      rules.push(`${sel} > header:first-of-type{padding-top:0!important}`);
+    }
     if (s.padX !== undefined) decl.push(`padding-left:${s.padX}px!important`, `padding-right:${s.padX}px!important`);
     if (s.radius !== undefined) {
       decl.push(`--radius:${s.radius}px`, `--radius-lg:${s.radius}px`, `border-radius:${s.radius}px`, "overflow:hidden");

@@ -103,6 +103,7 @@ export function RegionEditor({
           </Group>
 
           <Group title="Dimensiones y disposición">
+            {has("padTop") && <Slider label="Espacio superior (bajo la barra)" k="padTop" value={s.padTop} onChange={(padTop) => patch({ padTop })} />}
             {has("padY") && <Slider label="Relleno vertical" k="padY" value={s.padY} onChange={(padY) => patch({ padY })} />}
             {has("padX") && <Slider label="Relleno horizontal" k="padX" value={s.padX} onChange={(padX) => patch({ padX })} />}
             {has("radius") && <Slider label="Esquinas redondeadas" k="radius" value={s.radius} onChange={(radius) => patch({ radius })} />}
