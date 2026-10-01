@@ -2,7 +2,7 @@ import Link from "next/link";
 import { desc, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { newsletterEditions, newsletterSubscribers } from "@/db/schema";
-import { requireRole } from "@/lib/auth";
+import { requirePermiso } from "@/lib/auth";
 import { getNewsletterSettings, getProviderStatus } from "@/lib/newsletter/settings";
 import { createEdition, deleteSubscriber, unsubscribeSubscriber } from "./actions";
 import { SettingsForm } from "./settings-form";
@@ -13,7 +13,7 @@ export const maxDuration = 300;
 const fmt = (d: Date | null) => (d ? new Intl.DateTimeFormat("es-CO", { dateStyle: "medium", timeStyle: "short", timeZone: "America/Bogota" }).format(d) : "—");
 
 export default async function NewsletterPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
-  const user = await requireRole("editor");
+  const user = await requirePermiso("newsletter");
   const { tab = "ediciones" } = await searchParams;
   const [counts] = await db
     .select({

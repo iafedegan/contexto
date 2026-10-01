@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { articles, categories } from "@/db/schema";
-import { requireRole } from "@/lib/auth";
+import { requirePermiso } from "@/lib/auth";
 import { slugify } from "@/lib/utils";
 
 export type SeccionState = { ok: boolean; message: string } | null;
@@ -15,7 +15,7 @@ export type SeccionState = { ok: boolean; message: string } | null;
  * publicadas — eso queda fuera de este formulario a propósito.
  */
 export async function actualizarSeccion(_prev: SeccionState, formData: FormData): Promise<SeccionState> {
-  await requireRole("editor");
+  await requirePermiso("portada");
 
   const id = String(formData.get("id") ?? "");
   const name = String(formData.get("name") ?? "").trim();
@@ -88,7 +88,7 @@ async function hermanas(parentId: string | null) {
  * principal y una sección con subsecciones no puede colgar de otra.
  */
 export async function moverSeccion(id: string, nuevoPadreId: string | null): Promise<EstructuraResult> {
-  await requireRole("editor");
+  await requirePermiso("portada");
   const [s] = await db.select().from(categories).where(eq(categories.id, id)).limit(1);
   if (!s) return { ok: false, message: "Esa sección ya no existe." };
   if ((s.parentId ?? null) === nuevoPadreId) return { ok: true, message: "Sin cambios." };
@@ -113,7 +113,7 @@ export async function moverSeccion(id: string, nuevoPadreId: string | null): Pro
 
 /** Sube o baja una sección dentro de su nivel (renumera a las hermanas). */
 export async function ordenarSeccion(id: string, dir: "arriba" | "abajo"): Promise<EstructuraResult> {
-  await requireRole("editor");
+  await requirePermiso("portada");
   const [s] = await db.select({ parentId: categories.parentId, slug: categories.slug }).from(categories).where(eq(categories.id, id)).limit(1);
   if (!s) return { ok: false, message: "Esa sección ya no existe." };
   const list = await hermanas(s.parentId ?? null);
@@ -130,7 +130,7 @@ export async function ordenarSeccion(id: string, dir: "arriba" | "abajo"): Promi
 
 /** Crea una sección principal o una subsección (con `padreId`). */
 export async function crearSeccion(nombre: string, padreId: string | null): Promise<EstructuraResult> {
-  await requireRole("editor");
+  await requirePermiso("portada");
   const name = String(nombre ?? "").trim().slice(0, 80);
   if (name.length < 2) return { ok: false, message: "Escribe un nombre de al menos 2 caracteres." };
 
@@ -160,7 +160,7 @@ export async function crearSeccion(nombre: string, padreId: string | null): Prom
 
 /** Borra una sección vacía: sin notas ni subsecciones. */
 export async function eliminarSeccion(id: string): Promise<EstructuraResult> {
-  await requireRole("editor");
+  await requirePermiso("portada");
   const [s] = await db.select({ slug: categories.slug, name: categories.name }).from(categories).where(eq(categories.id, id)).limit(1);
   if (!s) return { ok: false, message: "Esa sección ya no existe." };
   const [nota] = await db.select({ id: articles.id }).from(articles).where(eq(articles.categoryId, id)).limit(1);

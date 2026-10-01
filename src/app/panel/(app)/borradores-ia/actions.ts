@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 import { eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { agentDrafts, articles } from "@/db/schema";
-import { requireRole } from "@/lib/auth";
+import { requirePermiso } from "@/lib/auth";
 import { slugify } from "@/lib/utils";
 import { generateDraft } from "@/agents/draft-generator";
 import { getDemoSource } from "@/agents/sources";
@@ -17,7 +17,7 @@ import { getDemoSource } from "@/agents/sources";
  * el editor para que el editor haga la publicación como acción explícita aparte.
  */
 export async function approveDraft(draftId: string) {
-  const user = await requireRole("editor");
+  const user = await requirePermiso("borradores_ia");
 
   const [d] = await db.select().from(agentDrafts).where(eq(agentDrafts.id, draftId)).limit(1);
   if (!d || d.status !== "pendiente") throw new Error("Borrador no disponible.");
@@ -56,7 +56,7 @@ export async function approveDraft(draftId: string) {
  * publica. Muestra el flujo completo aunque no haya proveedor de IA configurado.
  */
 export async function runAgentOnDemoSource(formData: FormData) {
-  await requireRole("editor");
+  await requirePermiso("borradores_ia");
   const key = String(formData.get("sourceKey") ?? "");
   const source = getDemoSource(key);
   if (!source) throw new Error("Fuente de demostración desconocida.");
@@ -68,7 +68,7 @@ export async function runAgentOnDemoSource(formData: FormData) {
 }
 
 export async function rejectDraft(formData: FormData) {
-  const user = await requireRole("editor");
+  const user = await requirePermiso("borradores_ia");
   const draftId = String(formData.get("draftId"));
   const reason = String(formData.get("reason") ?? "").trim();
 

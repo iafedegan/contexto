@@ -1,3 +1,4 @@
+import { requirePermiso } from "@/lib/auth";
 import { desc, eq } from "drizzle-orm";
 import { sanitizeArticleHtml } from "@/lib/sanitize";
 import { db } from "@/db";
@@ -12,6 +13,7 @@ export const dynamic = "force-dynamic";
 const AGENT_MODE = process.env.ANTHROPIC_API_KEY ? "IA (Claude)" : "simulación por plantilla";
 
 export default async function DraftsQueue() {
+  await requirePermiso("borradores_ia");
   const rows = await db
     .select()
     .from(agentDrafts)

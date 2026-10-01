@@ -1,7 +1,7 @@
 import { desc } from "drizzle-orm";
 import { db } from "@/db";
 import { apiClients } from "@/db/schema";
-import { requireRole } from "@/lib/auth";
+import { requirePermiso } from "@/lib/auth";
 import { ApiKeysManager } from "./api-keys-manager";
 
 export const dynamic = "force-dynamic";
@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 const fmt = (d: Date | null) => (d ? new Intl.DateTimeFormat("es-CO", { dateStyle: "medium", timeStyle: "short", timeZone: "America/Bogota" }).format(d) : "Nunca");
 
 export default async function ApiPage() {
-  const user = await requireRole("administrador");
+  const user = await requirePermiso("api");
   const clients = await db
     .select({ id: apiClients.id, name: apiClients.name, keyPrefix: apiClients.keyPrefix, active: apiClients.active, requestsPerHour: apiClients.requestsPerHour, lastUsedAt: apiClients.lastUsedAt, createdAt: apiClients.createdAt })
     .from(apiClients)

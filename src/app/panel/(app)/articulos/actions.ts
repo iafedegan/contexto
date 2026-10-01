@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 import { eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { articles, authors, categories } from "@/db/schema";
-import { requireRole, canPublish } from "@/lib/auth";
+import { canPublish, requirePermiso } from "@/lib/auth";
 import { embed } from "@/lib/embeddings";
 import { slugify } from "@/lib/utils";
 
@@ -45,7 +45,7 @@ async function revalidateArticle(articleId: string) {
 }
 
 export async function saveArticle(formData: FormData) {
-  const user = await requireRole("redactor");
+  const user = await requirePermiso("articulos");
   const id = String(formData.get("id") ?? "");
   const title = String(formData.get("title") ?? "").trim();
   const excerpt = String(formData.get("excerpt") ?? "").trim();
@@ -117,7 +117,7 @@ export async function saveArticle(formData: FormData) {
 }
 
 export async function submitForReview(articleId: string) {
-  await requireRole("redactor");
+  await requirePermiso("articulos");
   await db
     .update(articles)
     .set({ status: "en_revision", updatedAt: sql`now()` })
@@ -126,7 +126,7 @@ export async function submitForReview(articleId: string) {
 }
 
 export async function publishArticle(articleId: string) {
-  const user = await requireRole("editor");
+  const user = await requirePermiso("publicar");
   if (!canPublish(user.role)) throw new Error("Rol sin permiso de publicación.");
 
   await db
@@ -145,7 +145,7 @@ export async function publishArticle(articleId: string) {
 }
 
 export async function scheduleArticle(articleId: string, isoDateTime: string) {
-  await requireRole("editor");
+  await requirePermiso("publicar");
   const when = new Date(isoDateTime);
   if (Number.isNaN(when.getTime()) || when.getTime() < Date.now()) {
     throw new Error("La fecha de programación debe ser futura.");
@@ -158,7 +158,7 @@ export async function scheduleArticle(articleId: string, isoDateTime: string) {
 }
 
 export async function unpublishArticle(articleId: string) {
-  await requireRole("editor");
+  await requirePermiso("publicar");
   await db
     .update(articles)
     .set({ status: "archivado", updatedAt: sql`now()` })
@@ -173,7 +173,7 @@ export async function unpublishArticle(articleId: string) {
  * sin perderlo es «archivar» (unpublishArticle).
  */
 export async function deleteArticle(articleId: string): Promise<{ ok: boolean; message: string }> {
-  await requireRole("editor");
+  await requirePermiso("publicar");
   const [a] = await db.select({ id: articles.id }).from(articles).where(eq(articles.id, articleId)).limit(1);
   if (!a) return { ok: false, message: "Ese artículo ya no existe." };
 

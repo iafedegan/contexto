@@ -1,8 +1,15 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { Fragment, useState, useTransition } from "react";
+import { ChevronDown } from "lucide-react";
 import type { UserRole } from "@/db/schema";
-import { changeUserRole, deleteUser, toggleUserActive } from "@/app/panel/(app)/configuracion/actions";
+import {
+  changeUserRole,
+  deleteUser,
+  resetUserPermissions,
+  setUserPermission,
+  toggleUserActive,
+} from "@/app/panel/(app)/configuracion/actions";
 
 const ROLES: UserRole[] = ["redactor", "editor", "administrador"];
 
@@ -11,10 +18,13 @@ const ROLES: UserRole[] = ["redactor", "editor", "administrador"];
  * guardar): son decisiones de una sola variable y confirmarlas dos veces
  * sobra. Un administrador no puede tocarse a sí mismo — ver `actions.ts`.
  */
+export type PermisoVista = { id: string; label: string; hint: string; activo: boolean; porDefecto: boolean };
+
 export function UserRow({
   user,
   canManage,
   isSelf,
+  permisos = [],
 }: {
   user: {
     id: string;
@@ -26,11 +36,32 @@ export function UserRow({
   };
   canManage: boolean;
   isSelf: boolean;
+  /** Casillas de permisos de esta persona (solo las ve un administrador). */
+  permisos?: PermisoVista[];
 }) {
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [abierto, setAbierto] = useState(false);
+  const [marcas, setMarcas] = useState<Record<string, boolean>>(
+    Object.fromEntries(permisos.map((p) => [p.id, p.activo])),
+  );
+  const esAdmin = user.role === "administrador";
+  const personalizado = permisos.some((p) => marcas[p.id] !== p.porDefecto);
+
+  function marcar(id: string, valor: boolean) {
+    setError(null);
+    setMarcas((m) => ({ ...m, [id]: valor }));
+    start(async () => {
+      const r = await setUserPermission(user.id, id, valor);
+      if (!r.ok) {
+        setMarcas((m) => ({ ...m, [id]: !valor }));
+        setError(r.message);
+      }
+    });
+  }
 
   return (
+    <Fragment>
     <tr className={pending ? "opacity-50" : undefined}>
       <td className="border-b border-[var(--border)] px-4 py-3">
         <span className="block font-medium">
@@ -91,6 +122,16 @@ export function UserRow({
           >
             Eliminar
           </button>
+          <button
+            type="button"
+            onClick={() => setAbierto((v) => !v)}
+            aria-expanded={abierto}
+            className="inline-flex items-center gap-1 rounded-full border border-[var(--border-strong)] px-3 py-1 text-xs font-medium transition hover:border-[var(--accent)] hover:text-[var(--accent)]"
+          >
+            Permisos
+            {personalizado && <span className="size-1.5 rounded-full bg-[var(--accent-2)]" title="Personalizado" />}
+            <ChevronDown size={12} className={`transition-transform ${abierto ? "rotate-180" : ""}`} aria-hidden />
+          </button>
           {error && <span className="basis-full text-xs text-red-700" role="alert">{error}</span>}
           </div>
         ) : (
@@ -98,5 +139,57 @@ export function UserRow({
         )}
       </td>
     </tr>
+    {canManage && abierto && (
+      <tr>
+        <td colSpan={4} className="border-b border-[var(--border)] bg-[var(--surface-2)]/40 px-4 py-4">
+          {esAdmin ? (
+            <p className="text-xs text-[var(--fg-muted)]">
+              Un administrador siempre tiene todos los permisos y no se puede restringir.
+            </p>
+          ) : (
+            <>
+              <div className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
+                {permisos.map((p) => (
+                  <label key={p.id} className="flex cursor-pointer items-start gap-2.5 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={marcas[p.id] ?? false}
+                      disabled={pending}
+                      onChange={(e) => marcar(p.id, e.target.checked)}
+                      className="mt-0.5 size-4 accent-[var(--accent)]"
+                    />
+                    <span>
+                      <span className="block font-medium">{p.label}</span>
+                      <span className="block text-xs text-[var(--fg-muted)]">{p.hint}</span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+              <div className="mt-4 flex flex-wrap items-center gap-3 text-xs text-[var(--fg-muted)]">
+                <span>
+                  {personalizado ? "Permisos personalizados para esta persona." : `Permisos por defecto del rol ${user.role}.`}
+                </span>
+                {personalizado && (
+                  <button
+                    type="button"
+                    disabled={pending}
+                    onClick={() =>
+                      start(async () => {
+                        await resetUserPermissions(user.id);
+                        setMarcas(Object.fromEntries(permisos.map((p) => [p.id, p.porDefecto])));
+                      })
+                    }
+                    className="underline hover:text-[var(--accent)]"
+                  >
+                    Restablecer a los del rol
+                  </button>
+                )}
+              </div>
+            </>
+          )}
+        </td>
+      </tr>
+    )}
+    </Fragment>
   );
 }

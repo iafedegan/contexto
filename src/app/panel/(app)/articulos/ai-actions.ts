@@ -2,7 +2,7 @@
 
 import { generateObject, generateText, type ToolSet } from "ai";
 import { z } from "zod";
-import { requireRole } from "@/lib/auth";
+import { requirePermiso } from "@/lib/auth";
 import { EDITOR_ASSIST_SYSTEM } from "@/agents/prompts";
 import { focusTerms } from "@/lib/seo-audit";
 import { getAiModel, getGroundedAi } from "@/lib/ai-provider";
@@ -51,7 +51,7 @@ export async function generateArticleDraft(input: {
   prompt: string;
   section?: string;
 }): Promise<GenerateResult> {
-  await requireRole("redactor");
+  await requirePermiso("articulos");
 
   const tema = input.title.trim();
   const encargo = input.prompt.trim();
@@ -190,7 +190,7 @@ export async function regenerateDraftPart(input: {
   current: string;
   section?: string;
 }): Promise<RegenerateResult> {
-  await requireRole("redactor");
+  await requirePermiso("articulos");
   const model = await getAiModel();
   if (!model) {
     return { ok: false, error: "Para regenerar hace falta la clave del modelo (Configuración → Asistente)." };
@@ -242,7 +242,7 @@ export async function suggestTitlesAndContexts(input: {
   topic: string;
   section?: string;
 }): Promise<SuggestResult> {
-  await requireRole("redactor");
+  await requirePermiso("articulos");
   const topic = input.topic.trim();
   if (topic.length < 10) return { ok: false, error: "Cuéntame el tema con un poco más de detalle (mínimo 10 caracteres)." };
 
@@ -297,7 +297,7 @@ export type ChartResult =
  * fuentes a la vista para que el periodista las verifique antes de insertarla.
  */
 export async function generateChart(input: { topic: string; section?: string }): Promise<ChartResult> {
-  await requireRole("redactor");
+  await requirePermiso("articulos");
   const topic = input.topic.trim();
   if (topic.length < 10) return { ok: false, error: "Describe qué quieres graficar (mínimo 10 caracteres)." };
 

@@ -11,7 +11,7 @@
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { articles } from "@/db/schema";
-import { requireRole } from "@/lib/auth";
+import { requirePermiso } from "@/lib/auth";
 import { signPreviewToken } from "@/lib/preview-token";
 import { publicBase, runPageSpeed, type PsiResult } from "@/lib/psi";
 
@@ -19,7 +19,7 @@ export async function analizarConGoogle(
   articleId: string,
   strategy: "mobile" | "desktop" = "mobile",
 ): Promise<PsiResult> {
-  await requireRole("redactor");
+  await requirePermiso("articulos");
 
   const [row] = await db
     .select({ id: articles.id, slug: articles.slug, status: articles.status })

@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { asc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { articles, authors, categories } from "@/db/schema";
-import { auth, canPublish } from "@/lib/auth";
+import { auth, canPublish, requirePermiso } from "@/lib/auth";
 import Link from "next/link";
 import { ArrowLeft, PenLine, Sparkles } from "lucide-react";
 import { ArticleEditor } from "@/components/article-editor";
@@ -60,6 +60,7 @@ export default async function ArticleEditorPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ modo?: string; paso?: string; desde?: string; guardado?: string }>;
 }) {
+  await requirePermiso("articulos");
   const { id } = await params;
   const { modo, paso, desde, guardado } = await searchParams;
   const session = await auth();

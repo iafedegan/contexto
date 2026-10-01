@@ -4,13 +4,14 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronDown } from "lucide-react";
+import type { PermisoId } from "@/lib/permisos";
 
 type Item = {
   href: string;
   label: string;
   hint: string;
-  /** Solo el administrador la ve. */
-  adminOnly?: boolean;
+  /** Permiso que hace falta para verla (ver src/lib/permisos.ts). */
+  permiso?: PermisoId;
   /** Cómo la ve quien no es administrador (si sigue viéndola, con otro texto). */
   paraOtros?: { label: string; hint: string };
 };
@@ -30,6 +31,7 @@ const GROUPS: Group[] = [
         href: "/panel/portada",
         label: "Portada y plantillas",
         hint: "Plantilla, fondo, orden y estilo de las tarjetas",
+        permiso: "portada",
       },
     ],
   },
@@ -38,8 +40,8 @@ const GROUPS: Group[] = [
     label: "Redactor",
     items: [
       { href: "/panel", label: "Resumen", hint: "Estado editorial de un vistazo" },
-      { href: "/panel/articulos", label: "Artículos", hint: "Crear, editar y programar" },
-      { href: "/panel/newsletter", label: "Newsletter", hint: "Configurar y enviar el boletín" },
+      { href: "/panel/articulos", label: "Artículos", hint: "Crear, editar y programar", permiso: "articulos" },
+      { href: "/panel/newsletter", label: "Newsletter", hint: "Configurar y enviar el boletín", permiso: "newsletter" },
     ],
   },
   {
@@ -59,31 +61,33 @@ const GROUPS: Group[] = [
         href: "/panel/newsletter?tab=suscriptores",
         label: "Suscriptores",
         hint: "Boletín: altas, bajas y confirmados",
+        permiso: "newsletter",
       },
       {
         href: "/panel/mensajes",
         label: "Mensajes recibidos",
         hint: "Contacto y solicitudes de pauta",
+        permiso: "mensajes",
       },
       {
         href: "/panel/api",
         label: "API pública",
         hint: "Claves para terceros y documentación",
-        adminOnly: true,
+        permiso: "api",
       },
     ],
   },
 ];
 
-export function PanelNav({ role }: { role: string }) {
+export function PanelNav({ role, permisos }: { role: string; permisos: string[] }) {
   const esAdmin = role === "administrador";
   // Lo que el rol no puede usar ni se muestra (el servidor además lo exige).
   const groups = GROUPS.map((g) => ({
     ...g,
     items: g.items
-      .filter((i) => esAdmin || !i.adminOnly)
+      .filter((i) => !i.permiso || permisos.includes(i.permiso))
       .map((i) => (esAdmin || !i.paraOtros ? i : { ...i, ...i.paraOtros })),
-  }));
+  })).filter((g) => g.items.length > 0);
   const pathname = usePathname();
   const [open, setOpen] = useState<string | null>(null);
   const navRef = useRef<HTMLElement>(null);

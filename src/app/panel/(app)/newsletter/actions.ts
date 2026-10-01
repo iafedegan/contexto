@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { and, asc, eq, gt, isNull, lte, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { newsletterEditions, newsletterSubscribers, siteSettings } from "@/db/schema";
-import { requireRole } from "@/lib/auth";
+import { requirePermiso, requireRole } from "@/lib/auth";
 import { encryptSecret } from "@/lib/secrets";
 import { hit } from "@/lib/rate-limit";
 import { buildMessage, nextIssueNumber, prepareRender, type EditionContent } from "@/lib/newsletter/edition";
@@ -31,7 +31,7 @@ function cleanContent(input: Partial<EditionContent>): { ok: true; content: Edit
 // --- Ediciones -----------------------------------------------------------
 
 export async function createEdition() {
-  const user = await requireRole("editor");
+  const user = await requirePermiso("newsletter");
   const fecha = new Intl.DateTimeFormat("es-CO", { day: "numeric", month: "long", timeZone: "America/Bogota" }).format(new Date());
   const [row] = await db
     .insert(newsletterEditions)
@@ -42,7 +42,7 @@ export async function createEdition() {
 }
 
 export async function saveEdition(id: string, input: Partial<EditionContent>): Promise<{ ok: boolean; message: string }> {
-  await requireRole("editor");
+  await requirePermiso("newsletter");
   const c = cleanContent(input);
   if (!c.ok) return { ok: false, message: c.message };
   const res = await db
@@ -56,14 +56,14 @@ export async function saveEdition(id: string, input: Partial<EditionContent>): P
 }
 
 export async function deleteEdition(id: string): Promise<void> {
-  await requireRole("editor");
+  await requirePermiso("newsletter");
   await db.delete(newsletterEditions).where(and(eq(newsletterEditions.id, id), eq(newsletterEditions.status, "borrador")));
   REVALIDATE();
 }
 
 /** El correo tal como lo verá el lector, para la vista previa del editor. */
 export async function previewEdition(input: Partial<EditionContent>): Promise<{ ok: boolean; html?: string; message?: string }> {
-  await requireRole("redactor");
+  await requirePermiso("newsletter");
   const c = cleanContent({ ...input, subject: input.subject?.trim() ? input.subject : "Asunto del boletín" });
   if (!c.ok) return { ok: false, message: c.message };
   const p = await prepareRender(c.content, await nextIssueNumber());
@@ -72,7 +72,7 @@ export async function previewEdition(input: Partial<EditionContent>): Promise<{ 
 
 /** Envía UN correo de prueba, marcado como tal, a la dirección indicada. */
 export async function sendTestEmail(input: Partial<EditionContent>, to: string): Promise<{ ok: boolean; message: string }> {
-  const user = await requireRole("editor");
+  const user = await requirePermiso("newsletter");
   const email = to.trim().toLowerCase();
   if (!EMAIL_RE.test(email)) return { ok: false, message: "Escribe un correo válido para la prueba." };
   const c = cleanContent(input);
@@ -128,7 +128,7 @@ const recipientsWhere = (startedAt: Date | null) =>
  * correos. El cliente la vuelve a llamar hasta que devuelve `done`.
  */
 export async function sendEditionChunk(id: string): Promise<SendProgress> {
-  await requireRole("editor");
+  await requirePermiso("newsletter");
   const t0 = Date.now();
 
   const provider = await getProviderStatus();
@@ -267,7 +267,7 @@ export async function deleteResendKey(): Promise<void> {
 // --- Suscriptores --------------------------------------------------------
 
 export async function unsubscribeSubscriber(id: string): Promise<void> {
-  await requireRole("editor");
+  await requirePermiso("newsletter");
   await db.update(newsletterSubscribers).set({ unsubscribedAt: new Date() }).where(eq(newsletterSubscribers.id, id));
   REVALIDATE();
 }

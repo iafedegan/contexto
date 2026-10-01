@@ -6,13 +6,13 @@ import { desc } from "drizzle-orm";
 import { Mail, Megaphone } from "lucide-react";
 import { db } from "@/db";
 import { contactMessages } from "@/db/schema";
-import { requireRole } from "@/lib/auth";
+import { requirePermiso } from "@/lib/auth";
 import { marcarAtendido } from "./actions";
 
 export const dynamic = "force-dynamic";
 
 export default async function MensajesPage() {
-  await requireRole("editor");
+  await requirePermiso("mensajes");
   const filas = await db
     .select()
     .from(contactMessages)

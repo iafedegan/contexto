@@ -5,7 +5,7 @@ import { and, eq, inArray, isNotNull, notInArray, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { articles, siteSettings, type HomeLayoutConfig, type HomeStyle } from "@/db/schema";
 import { sanitizeHomeStyle } from "@/lib/home-style";
-import { requireRole } from "@/lib/auth";
+import { requirePermiso } from "@/lib/auth";
 import { normalizeLayout } from "@/lib/home-layout-normalize";
 import { sanitizePopup, type PopupConfig } from "@/lib/popup-types";
 import { POPUP_KEY, getSitePopup } from "@/lib/popup";
@@ -23,7 +23,7 @@ export type HomeLayoutEntry = {
  * lista vuelve a su comportamiento por defecto.
  */
 export async function saveHomeLayout(entries: HomeLayoutEntry[]) {
-  await requireRole("editor");
+  await requirePermiso("portada");
 
   await Promise.all(
     entries.map((e, i) =>
@@ -50,7 +50,7 @@ export async function saveHomeLayout(entries: HomeLayoutEntry[]) {
 
 /** Quita todo el diseño manual: la portada vuelve a su comportamiento por defecto. */
 export async function resetHomeLayout() {
-  await requireRole("editor");
+  await requirePermiso("portada");
   await db.update(articles).set({ homePosition: null, homeStyle: null }).where(isNotNull(articles.homePosition));
   revalidatePath("/");
   revalidatePath("/panel/portada");
@@ -62,7 +62,7 @@ export async function resetHomeLayout() {
  * cuántas columnas tiene la cuadrícula "Lo más reciente".
  */
 export async function saveHomeSectionLayout(input: HomeLayoutConfig) {
-  await requireRole("editor");
+  await requirePermiso("portada");
   // El estilo por componente acaba convertido en CSS: se guarda ya validado.
   const config = normalizeLayout(input);
   await db
@@ -81,7 +81,7 @@ export async function saveHomeSectionLayout(input: HomeLayoutConfig) {
  * se muestre también a quien ya cerró el anterior.
  */
 export async function saveSitePopup(input: PopupConfig): Promise<PopupConfig> {
-  await requireRole("editor");
+  await requirePermiso("portada");
   const config = sanitizePopup({ ...input, version: (Number(input.version) || 0) + 1 });
   await db
     .insert(siteSettings)
@@ -98,7 +98,7 @@ export async function saveSitePopup(input: PopupConfig): Promise<PopupConfig> {
  * lo escribe (una fila por usuario) y no afecta al sitio publicado.
  */
 export async function saveHomeDraft(input: unknown): Promise<{ ok: boolean }> {
-  const user = await requireRole("editor");
+  const user = await requirePermiso("portada");
   const draft = sanitizeDraft(input);
   if (!draft) return { ok: false };
   await db
@@ -114,7 +114,7 @@ export async function saveHomeDraft(input: unknown): Promise<{ ok: boolean }> {
  * publique exactamente lo que se estaba viendo.
  */
 export async function publishHomeDraft(): Promise<{ ok: boolean; message: string }> {
-  const user = await requireRole("editor");
+  const user = await requirePermiso("portada");
   const [row] = await db.select({ value: siteSettings.value }).from(siteSettings).where(eq(siteSettings.key, draftKey(user.id))).limit(1);
   const draft = sanitizeDraft(row?.value);
   if (!draft) return { ok: false, message: "No hay cambios que publicar." };

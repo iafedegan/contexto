@@ -3,7 +3,7 @@
 import { and, desc, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { articles } from "@/db/schema";
-import { requireRole } from "@/lib/auth";
+import { requirePermiso } from "@/lib/auth";
 import { enviarAviso, pushConfigurado } from "@/lib/push";
 import { siteUrl } from "@/lib/utils";
 
@@ -18,7 +18,7 @@ export async function enviarAvisoUltimaHora(
   _prev: AvisoState,
   formData: FormData,
 ): Promise<AvisoState> {
-  await requireRole("editor");
+  await requirePermiso("avisos");
 
   if (!pushConfigurado()) {
     return {
@@ -56,7 +56,7 @@ export async function enviarAvisoUltimaHora(
 
 /** Notas publicadas recientes, para elegir cuál anunciar. */
 export async function notasRecientes() {
-  await requireRole("editor");
+  await requirePermiso("avisos");
   return db
     .select({ id: articles.id, title: articles.title })
     .from(articles)

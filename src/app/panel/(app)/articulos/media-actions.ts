@@ -10,7 +10,7 @@
  */
 
 import { randomUUID } from "node:crypto";
-import { requireRole } from "@/lib/auth";
+import { requirePermiso } from "@/lib/auth";
 
 const TIPOS: Record<string, string> = {
   "image/jpeg": "jpg",
@@ -32,7 +32,7 @@ export type UploadResult =
   | { ok: false; error: string };
 
 export async function uploadMedia(formData: FormData): Promise<UploadResult> {
-  await requireRole("redactor");
+  await requirePermiso("articulos");
 
   const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0) {

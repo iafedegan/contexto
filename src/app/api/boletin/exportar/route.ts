@@ -1,13 +1,13 @@
 import { desc } from "drizzle-orm";
 import { db } from "@/db";
 import { newsletterSubscribers } from "@/db/schema";
-import { requireRole } from "@/lib/auth";
+import { requirePermiso } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 /** CSV de suscriptores (solo editores). Neutraliza fórmulas para que Excel no las ejecute. */
 export async function GET() {
-  await requireRole("editor");
+  await requirePermiso("newsletter");
   const rows = await db.select().from(newsletterSubscribers).orderBy(desc(newsletterSubscribers.createdAt));
   const cell = (v: string) => `"${(/^[=+\-@]/.test(v) ? `'${v}` : v).replace(/"/g, '""')}"`;
   const csv = ["correo,estado,alta", ...rows.map((r) => [cell(r.email), r.unsubscribedAt ? "baja" : r.confirmed ? "activo" : "pendiente", r.createdAt.toISOString()].join(","))].join("\n");

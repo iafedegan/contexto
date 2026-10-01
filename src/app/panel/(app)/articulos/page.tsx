@@ -3,7 +3,7 @@ import { and, asc, desc, eq, ilike, inArray, or, sql, type SQL } from "drizzle-o
 import { db } from "@/db";
 import { articles, articleViewsDaily, authors, categories } from "@/db/schema";
 import { Badge, Button } from "@/components/ui";
-import { auth } from "@/lib/auth";
+import { auth, requirePermiso } from "@/lib/auth";
 import { DeleteArticleButton } from "@/components/panel/delete-article-button";
 import { ArticleFilters } from "@/components/panel/article-filters";
 import { ViewsSparkline } from "@/components/panel/views-chart";
@@ -40,6 +40,7 @@ function param(sp: Record<string, string | string[] | undefined>, key: string): 
 }
 
 export default async function ArticlesList({ searchParams }: { searchParams: SearchParams }) {
+  await requirePermiso("articulos");
   const session = await auth();
   const canDelete = session?.user.role === "editor" || session?.user.role === "administrador";
   const sp = await searchParams;

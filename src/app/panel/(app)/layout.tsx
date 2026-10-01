@@ -10,6 +10,8 @@ import { auth, signOut } from "@/lib/auth";
 import { PanelNav } from "@/components/panel/panel-nav";
 import { HeaderHeightVar } from "@/components/panel/header-height";
 import { IrASeguridad } from "@/components/panel/ir-a-seguridad";
+import { efectivos } from "@/lib/permisos";
+import { getAjustes } from "@/lib/permisos-server";
 
 /** Panel editorial — plantilla «Grafito & Jade». */
 export const dynamic = "force-dynamic";
@@ -36,6 +38,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
   // Sin `redirect()`: ver IrASeguridad. Mientras la cuenta no tenga 2FA, fuera
   // de Configuración no se renderiza el contenido (solo la ida a Seguridad) y
   // dentro se oculta el menú para que no pueda salir de ahí.
+  const permisos = efectivos(session.user.role, (await getAjustes())[session.user.id]);
   const bloqueado = debeActivar2fa && !pathname.startsWith(RUTA_SEGURIDAD);
 
   return (
@@ -61,7 +64,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
             </span>
           </Link>
 
-          {!debeActivar2fa && <PanelNav role={session.user.role} />}
+          {!debeActivar2fa && <PanelNav role={session.user.role} permisos={permisos} />}
 
 
           <div className="ml-auto flex items-center gap-3 text-xs">

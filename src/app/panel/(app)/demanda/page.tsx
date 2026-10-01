@@ -1,3 +1,4 @@
+import { requirePermiso } from "@/lib/auth";
 import { sql } from "drizzle-orm";
 import { db, rowsOf } from "@/db";
 import { Card } from "@/components/ui";
@@ -9,6 +10,7 @@ export const dynamic = "force-dynamic";
  * redacción: qué buscan los lectores, qué no encuentra el archivo.
  */
 export default async function DemandaPage() {
+  await requirePermiso("publicar");
   const [top, unanswered, byDay, modes] = await Promise.all([
     db.execute(sql`
       SELECT lower(question) AS q, count(*)::int AS n

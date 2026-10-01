@@ -1,7 +1,7 @@
 import { and, asc, desc, eq, lte, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { articles, authors, categories } from "@/db/schema";
-import { auth } from "@/lib/auth";
+import { auth, requirePermiso } from "@/lib/auth";
 import { getHomeLayoutConfig } from "@/lib/content";
 import { getAdsZoneRows } from "@/lib/ads";
 import { HomeBuilder } from "@/components/panel/home-builder";
@@ -18,6 +18,7 @@ export default async function PortadaPage({
 }: {
   searchParams: Promise<{ vista?: string; seccion?: string }>;
 }) {
+  await requirePermiso("portada");
   const { vista, seccion } = await searchParams;
   // Vista previa REAL en pestaña nueva. Va la primera: las funciones del portal
   // memoizan por petición y no deben ejecutarse antes de aplicar el borrador.

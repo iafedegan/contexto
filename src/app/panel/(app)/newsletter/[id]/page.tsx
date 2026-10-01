@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { newsletterEditions, newsletterSubscribers } from "@/db/schema";
 import { sql } from "drizzle-orm";
-import { requireRole } from "@/lib/auth";
+import { requirePermiso } from "@/lib/auth";
 import { getSelectableArticles } from "@/lib/newsletter/edition";
 import { EditionEditor } from "./edition-editor";
 
@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
 export default async function EditionPage({ params }: { params: Promise<{ id: string }> }) {
-  await requireRole("editor");
+  await requirePermiso("newsletter");
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/.test(id)) notFound();
   const [edition] = await db.select().from(newsletterEditions).where(eq(newsletterEditions.id, id)).limit(1);

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { asc, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { articles, categories } from "@/db/schema";
-import { requireRole } from "@/lib/auth";
+import { requirePermiso } from "@/lib/auth";
 import { SeccionForm } from "@/components/panel/seccion-form";
 
 export const dynamic = "force-dynamic";
@@ -18,7 +18,7 @@ export default async function SeccionesPage({
 }: {
   searchParams: Promise<{ abrir?: string }>;
 }) {
-  await requireRole("editor");
+  await requirePermiso("portada");
   const { abrir } = await searchParams;
 
   const rows = await db

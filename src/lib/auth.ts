@@ -10,6 +10,8 @@ import { users, type UserRole } from "@/db/schema";
 import { clearHits, clientIp, hit } from "@/lib/rate-limit";
 import { verifyHuman } from "@/lib/turnstile";
 import { verificarTokenPasskey } from "@/lib/passkey";
+import { tienePermiso } from "@/lib/permisos-server";
+import type { PermisoId } from "@/lib/permisos";
 
 declare module "next-auth" {
   interface Session {
@@ -208,6 +210,17 @@ export async function requireRole(min: UserRole) {
   // La cuenta ya no existe: login limpio en vez de una excepción en mitad de
   // una Server Action.
   redirect("/panel/login");
+}
+
+/**
+ * Como `requireRole`, pero por permiso: el rol da los de base y el
+ * administrador puede ajustarlos por persona (ver src/lib/permisos.ts). Se usa
+ * en cada pantalla y acción de un área, en vez de un rol mínimo fijo.
+ */
+export async function requirePermiso(id: PermisoId) {
+  const user = await requireRole("redactor");
+  if (!(await tienePermiso(user.id, user.role, id))) throw new Error("SIN_PERMISO");
+  return user;
 }
 
 export function canPublish(role: UserRole): boolean {

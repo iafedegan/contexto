@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { articles, categories, siteSettings } from "@/db/schema";
-import { auth, requireRole } from "@/lib/auth";
+import { auth, requirePermiso } from "@/lib/auth";
 import { getAdsZoneRows } from "@/lib/ads";
 import { DEFAULT_HOME_LAYOUT } from "@/lib/home-layout";
 import { normalizeLayout } from "@/lib/home-layout-normalize";
@@ -40,7 +40,7 @@ function stable(v: unknown): string {
  */
 /** Carga el borrador del editor, calcula si hay cambios sin publicar y lo fija para esta petición. */
 export async function applyDraftForRequest(opts: { popup?: "auto" | "show" | "hide" } = {}) {
-  const user = await requireRole("editor");
+  const user = await requirePermiso("portada");
 
   const [draftRow] = await db.select({ value: siteSettings.value }).from(siteSettings).where(eq(siteSettings.key, draftKey(user.id))).limit(1);
   const draft = sanitizeDraft(draftRow?.value);

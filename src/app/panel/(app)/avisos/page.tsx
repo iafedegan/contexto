@@ -1,5 +1,5 @@
 import { BellRing } from "lucide-react";
-import { requireRole } from "@/lib/auth";
+import { requirePermiso } from "@/lib/auth";
 import { contarSuscriptores, pushConfigurado } from "@/lib/push";
 import { AvisoForm } from "@/components/panel/aviso-form";
 import { notasRecientes } from "./actions";
@@ -7,7 +7,7 @@ import { notasRecientes } from "./actions";
 export const dynamic = "force-dynamic";
 
 export default async function AvisosPage() {
-  await requireRole("editor");
+  await requirePermiso("avisos");
   const [notas, suscriptores] = await Promise.all([
     notasRecientes(),
     contarSuscriptores().catch(() => 0),

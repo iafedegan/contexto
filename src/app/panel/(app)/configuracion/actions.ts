@@ -5,6 +5,8 @@ import { eq, sql } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { db } from "@/db";
 import { siteSettings, users, type UserRole } from "@/db/schema";
+import { PERMISO_IDS, porDefecto, type PermisoId } from "@/lib/permisos";
+import { PERMISOS_KEY, type MapaAjustes } from "@/lib/permisos-server";
 import { auth, requireRole } from "@/lib/auth";
 import { SITE_IDENTITY_KEY, type SiteIdentity } from "@/lib/site-identity";
 import { SECRETS_KEY } from "@/lib/ai-provider";
@@ -81,8 +83,58 @@ export async function deleteUser(userId: string): Promise<{ ok: boolean; message
 
   const borrados = await db.delete(users).where(eq(users.id, userId)).returning({ id: users.id });
   if (borrados.length === 0) return { ok: false, message: "Esa cuenta ya no existe." };
+  await guardarAjustes((m) => {
+    delete m[userId];
+  });
   revalidatePath("/panel/configuracion");
   return { ok: true, message: "Cuenta eliminada." };
+}
+
+/** Lee, modifica y guarda el mapa de ajustes por persona (site_settings). */
+async function guardarAjustes(mut: (m: MapaAjustes) => void) {
+  const [row] = await db.select({ value: siteSettings.value }).from(siteSettings).where(eq(siteSettings.key, PERMISOS_KEY)).limit(1);
+  const v = row?.value;
+  const mapa: MapaAjustes = v && typeof v === "object" && !Array.isArray(v) ? { ...(v as MapaAjustes) } : {};
+  mut(mapa);
+  await db
+    .insert(siteSettings)
+    .values({ key: PERMISOS_KEY, value: mapa })
+    .onConflictDoUpdate({ target: siteSettings.key, set: { value: mapa, updatedAt: sql`now()` } });
+}
+
+/**
+ * Enciende o apaga un permiso para UNA persona. Solo administradores; nunca
+ * sobre otro administrador (siempre tiene todo) ni sobre uno mismo. Solo se
+ * guarda la diferencia con lo que ya da su rol, así cambiar el rol después
+ * no deja ajustes huérfanos.
+ */
+export async function setUserPermission(userId: string, permiso: string, valor: boolean): Promise<{ ok: boolean; message: string }> {
+  const me = await requireRole("administrador");
+  if (!PERMISO_IDS.includes(permiso)) return { ok: false, message: "Permiso desconocido." };
+  if (me.id === userId) return { ok: false, message: "No puedes cambiar tus propios permisos." };
+  const [u] = await db.select({ role: users.role }).from(users).where(eq(users.id, userId)).limit(1);
+  if (!u) return { ok: false, message: "Esa cuenta ya no existe." };
+  if (u.role === "administrador") return { ok: false, message: "Un administrador siempre tiene todos los permisos." };
+
+  const id = permiso as PermisoId;
+  await guardarAjustes((m) => {
+    const a = { ...(m[userId] ?? {}) };
+    if (valor === porDefecto(u.role, id)) delete a[id];
+    else a[id] = valor;
+    if (Object.keys(a).length === 0) delete m[userId];
+    else m[userId] = a;
+  });
+  revalidatePath("/panel", "layout");
+  return { ok: true, message: "Permiso guardado." };
+}
+
+/** Vuelve a los permisos que da el rol, sin ajustes. */
+export async function resetUserPermissions(userId: string): Promise<void> {
+  await requireRole("administrador");
+  await guardarAjustes((m) => {
+    delete m[userId];
+  });
+  revalidatePath("/panel", "layout");
 }
 
 export type CreateUserState = { ok: boolean; message: string } | null;
