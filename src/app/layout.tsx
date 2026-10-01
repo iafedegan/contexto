@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import { fontVariables } from "./fonts";
 import { JsonLd } from "@/components/json-ld";
 import { organizationJsonLd } from "@/lib/seo";
@@ -77,7 +78,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           React, el lector vería un destello de fondo claro en cada carga, que
           es justo lo que hace que un modo oscuro se perciba como mal hecho.
         */}
-        <script
+        <Script
+          id="modo-oscuro-antes-de-pintar"
+          strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
             __html: `(function(){try{var m=localStorage.getItem('cg-modo');if(m){document.documentElement.dataset.dark=m==='oscuro'?'1':'0';}else if(window.matchMedia('(prefers-color-scheme: dark)').matches){document.documentElement.dataset.dark='1';}}catch(e){}})();`,
           }}
