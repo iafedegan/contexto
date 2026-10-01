@@ -10,7 +10,7 @@ import { auth, signOut } from "@/lib/auth";
 import { PanelNav } from "@/components/panel/panel-nav";
 import { HeaderHeightVar } from "@/components/panel/header-height";
 import { IrASeguridad } from "@/components/panel/ir-a-seguridad";
-import { efectivos } from "@/lib/permisos";
+import { efectivos, exige2fa } from "@/lib/permisos";
 import { getAjustes } from "@/lib/permisos-server";
 
 /** Panel editorial — plantilla «Grafito & Jade». */
@@ -42,11 +42,12 @@ export default async function PanelLayout({ children }: { children: React.ReactN
       .where(eq(users.email, session.user.email.toLowerCase().trim()));
   }
   const pathname = (await headers()).get("x-pathname") ?? "";
-  const debeActivar2fa = yo != null && !yo.totpEnabled;
+  const ajustesYo = (await getAjustes())[session.user.id];
+  const debeActivar2fa = yo != null && !yo.totpEnabled && exige2fa(session.user.role, ajustesYo);
   // Sin `redirect()`: ver IrASeguridad. Mientras la cuenta no tenga 2FA, fuera
   // de Configuración no se renderiza el contenido (solo la ida a Seguridad) y
   // dentro se oculta el menú para que no pueda salir de ahí.
-  const permisos = efectivos(session.user.role, (await getAjustes())[session.user.id]);
+  const permisos = efectivos(session.user.role, ajustesYo);
   const bloqueado = debeActivar2fa && !pathname.startsWith(RUTA_SEGURIDAD);
 
   return (

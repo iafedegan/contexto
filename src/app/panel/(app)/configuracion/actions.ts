@@ -5,7 +5,7 @@ import { eq, sql } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { db } from "@/db";
 import { siteSettings, users, type UserRole } from "@/db/schema";
-import { PERMISO_IDS, porDefecto, type PermisoId } from "@/lib/permisos";
+import { DOS_PASOS, PERMISO_IDS, porDefecto, type PermisoId } from "@/lib/permisos";
 import { PERMISOS_KEY, type MapaAjustes } from "@/lib/permisos-server";
 import { auth, requireRole } from "@/lib/auth";
 import { SITE_IDENTITY_KEY, type SiteIdentity } from "@/lib/site-identity";
@@ -110,7 +110,7 @@ async function guardarAjustes(mut: (m: MapaAjustes) => void) {
  */
 export async function setUserPermission(userId: string, permiso: string, valor: boolean): Promise<{ ok: boolean; message: string }> {
   const me = await requireRole("administrador");
-  if (!PERMISO_IDS.includes(permiso)) return { ok: false, message: "Permiso desconocido." };
+  if (permiso !== DOS_PASOS && !PERMISO_IDS.includes(permiso)) return { ok: false, message: "Permiso desconocido." };
   if (me.id === userId) return { ok: false, message: "No puedes cambiar tus propios permisos." };
   const [u] = await db.select({ role: users.role }).from(users).where(eq(users.id, userId)).limit(1);
   if (!u) return { ok: false, message: "Esa cuenta ya no existe." };
@@ -118,14 +118,28 @@ export async function setUserPermission(userId: string, permiso: string, valor: 
 
   const id = permiso as PermisoId;
   await guardarAjustes((m) => {
-    const a = { ...(m[userId] ?? {}) };
-    if (valor === porDefecto(u.role, id)) delete a[id];
-    else a[id] = valor;
+    const a = { ...(m[userId] ?? {}) } as Record<string, boolean>;
+    const base = permiso === DOS_PASOS ? true : porDefecto(u.role, id);
+    if (valor === base) delete a[permiso];
+    else a[permiso] = valor;
     if (Object.keys(a).length === 0) delete m[userId];
     else m[userId] = a;
   });
   revalidatePath("/panel", "layout");
   return { ok: true, message: "Permiso guardado." };
+}
+
+/**
+ * Quita el 2FA de una cuenta (teléfono perdido o cambiado). La persona tendrá
+ * que volver a activarlo al entrar, salvo que esté exenta. Solo administradores;
+ * para el tuyo usa Seguridad de mi cuenta.
+ */
+export async function resetUserTotp(userId: string): Promise<{ ok: boolean; message: string }> {
+  const me = await requireRole("administrador");
+  if (me.id === userId) return { ok: false, message: "Para tu cuenta usa Seguridad de mi cuenta." };
+  await db.update(users).set({ totpEnabled: false, totpSecret: null, updatedAt: new Date() }).where(eq(users.id, userId));
+  revalidatePath("/panel/configuracion");
+  return { ok: true, message: "2FA quitado." };
 }
 
 /** Vuelve a los permisos que da el rol, sin ajustes. */

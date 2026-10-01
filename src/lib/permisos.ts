@@ -26,7 +26,18 @@ export const PERMISOS = [
 
 export type PermisoId = (typeof PERMISOS)[number]["id"];
 export const PERMISO_IDS: readonly string[] = PERMISOS.map((p) => p.id);
-export type Ajustes = Partial<Record<PermisoId, boolean>>;
+export type Ajustes = Partial<Record<PermisoId | typeof DOS_PASOS, boolean>>;
+
+/**
+ * No es un permiso sino una exigencia: por defecto TODA cuenta debe tener 2FA.
+ * El administrador puede eximir a una persona (casilla apagada). Un
+ * administrador nunca queda exento.
+ */
+export const DOS_PASOS = "exigir_2fa";
+export function exige2fa(role: UserRole, ajustes: Ajustes | undefined): boolean {
+  if (role === "administrador") return true;
+  return ajustes?.[DOS_PASOS] ?? true;
+}
 
 /** Lo que el rol da sin ajustes. */
 export function porDefecto(role: UserRole, id: PermisoId): boolean {

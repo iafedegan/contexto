@@ -7,6 +7,7 @@ import {
   changeUserRole,
   deleteUser,
   resetUserPermissions,
+  resetUserTotp,
   setUserPermission,
   toggleUserActive,
 } from "@/app/panel/(app)/configuracion/actions";
@@ -25,6 +26,7 @@ export function UserRow({
   canManage,
   isSelf,
   permisos = [],
+  exige2fa = true,
 }: {
   user: {
     id: string;
@@ -38,6 +40,8 @@ export function UserRow({
   isSelf: boolean;
   /** Casillas de permisos de esta persona (solo las ve un administrador). */
   permisos?: PermisoVista[];
+  /** ¿Se le exige 2FA? (casilla «Exigir 2FA»). */
+  exige2fa?: boolean;
 }) {
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -45,6 +49,7 @@ export function UserRow({
   const [marcas, setMarcas] = useState<Record<string, boolean>>(
     Object.fromEntries(permisos.map((p) => [p.id, p.activo])),
   );
+  const [exigir, setExigir] = useState(exige2fa);
   const esAdmin = user.role === "administrador";
   const personalizado = permisos.some((p) => marcas[p.id] !== p.porDefecto);
 
@@ -164,6 +169,51 @@ export function UserRow({
                     </span>
                   </label>
                 ))}
+              </div>
+              <div className="mt-4 border-t border-[var(--border)] pt-4">
+                <p className="text-sm font-semibold">Verificación en dos pasos (2FA)</p>
+                <label className="mt-2 flex cursor-pointer items-start gap-2.5 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={exigir}
+                    disabled={pending}
+                    onChange={(e) => {
+                      const v = e.target.checked;
+                      setError(null);
+                      setExigir(v);
+                      start(async () => {
+                        const r = await setUserPermission(user.id, "exigir_2fa", v);
+                        if (!r.ok) {
+                          setExigir(!v);
+                          setError(r.message);
+                        }
+                      });
+                    }}
+                    className="mt-0.5 size-4 accent-[var(--accent)]"
+                  />
+                  <span>
+                    <span className="block font-medium">Exigir 2FA a esta persona</span>
+                    <span className="block text-xs text-[var(--fg-muted)]">
+                      Apagada, entra solo con su contraseña y no se le pide activarlo.
+                    </span>
+                  </span>
+                </label>
+                {user.totpEnabled && (
+                  <button
+                    type="button"
+                    disabled={pending}
+                    onClick={() => {
+                      if (!confirm(`¿Quitar el 2FA de ${user.name}? Tendrá que volver a configurarlo (si se le exige) en su próximo ingreso.`)) return;
+                      start(async () => {
+                        const r = await resetUserTotp(user.id);
+                        if (!r.ok) setError(r.message);
+                      });
+                    }}
+                    className="mt-3 rounded-full border border-red-600/40 px-3 py-1 text-xs font-medium text-red-700 transition hover:bg-red-600/10"
+                  >
+                    Quitar su 2FA actual
+                  </button>
+                )}
               </div>
               <div className="mt-4 flex flex-wrap items-center gap-3 text-xs text-[var(--fg-muted)]">
                 <span>

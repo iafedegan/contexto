@@ -3,7 +3,7 @@ import { BarChart3, Globe, ShieldCheck, Sparkles, Users } from "lucide-react";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import { auth } from "@/lib/auth";
-import { PERMISOS, efectivo, porDefecto } from "@/lib/permisos";
+import { PERMISOS, efectivo, exige2fa, porDefecto } from "@/lib/permisos";
 import { getAjustes } from "@/lib/permisos-server";
 import { getSiteIdentity } from "@/lib/site-identity";
 import { UserRow } from "@/components/panel/user-row";
@@ -176,6 +176,7 @@ export default async function ConfiguracionPage() {
                   user={p}
                   canManage={isAdmin && p.id !== session?.user.id}
                   isSelf={p.id === session?.user.id}
+                  exige2fa={exige2fa(p.role, ajustes[p.id])}
                   permisos={PERMISOS.map((x) => ({
                     id: x.id,
                     label: x.label,
