@@ -63,7 +63,17 @@ export async function proxy(req: NextRequest) {
       return applyHeaders(new NextResponse("Acceso automatizado no permitido.", { status: 403 }));
     }
     const ip = (req.headers.get("x-forwarded-for")?.split(",")[0] ?? "").trim();
-    if (ip && tooFast(ip)) {
+    // No cuentan: los prefetch y navegaciones internas de Next (cabeceras `rsc` y
+    // `next-router-prefetch`; Next quita `?_rsc=` antes de llegar aquí; una
+    // sola página visible dispara decenas, y bloquearlos deja a un lector
+    // normal en pantalla negra) ni el panel, que ya exige sesión y limita el
+    // login por su cuenta. El raspado va por documentos HTML, que sí cuentan.
+    const esNavegacionInterna =
+      req.headers.has("rsc") ||
+      req.headers.has("next-router-prefetch") ||
+      req.headers.get("purpose") === "prefetch";
+    const esPanel = pathname.startsWith("/panel");
+    if (ip && !esNavegacionInterna && !esPanel && tooFast(ip)) {
       return applyHeaders(
         new NextResponse("Demasiadas peticiones. Espera un momento.", {
           status: 429,

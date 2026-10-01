@@ -9,6 +9,7 @@ import { users } from "@/db/schema";
 import { auth, signOut } from "@/lib/auth";
 import { PanelNav } from "@/components/panel/panel-nav";
 import { HeaderHeightVar } from "@/components/panel/header-height";
+import { IrASeguridad } from "@/components/panel/ir-a-seguridad";
 
 /** Panel editorial — plantilla «Grafito & Jade». */
 export const dynamic = "force-dynamic";
@@ -32,9 +33,10 @@ export default async function PanelLayout({ children }: { children: React.ReactN
     .where(eq(users.id, session.user.id));
   const pathname = (await headers()).get("x-pathname") ?? "";
   const debeActivar2fa = yo != null && !yo.totpEnabled;
-  if (debeActivar2fa && !pathname.startsWith(RUTA_SEGURIDAD)) {
-    redirect(`${RUTA_SEGURIDAD}#seguridad`);
-  }
+  // Sin `redirect()`: ver IrASeguridad. Mientras la cuenta no tenga 2FA, fuera
+  // de Configuración no se renderiza el contenido (solo la ida a Seguridad) y
+  // dentro se oculta el menú para que no pueda salir de ahí.
+  const bloqueado = debeActivar2fa && !pathname.startsWith(RUTA_SEGURIDAD);
 
   return (
     <div data-theme="panel" className="lx-shell lx-grain">
@@ -59,7 +61,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
             </span>
           </Link>
 
-          <PanelNav />
+          {!debeActivar2fa && <PanelNav />}
 
 
           <div className="ml-auto flex items-center gap-3 text-xs">
@@ -95,7 +97,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
               para poder usar el resto del panel.
             </p>
           )}
-          {children}
+          {bloqueado ? <IrASeguridad href={`${RUTA_SEGURIDAD}#seguridad`} /> : children}
         </div>
       </main>
 
