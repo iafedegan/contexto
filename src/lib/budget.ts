@@ -1,7 +1,7 @@
 import "server-only";
-import { and, gte, sql } from "drizzle-orm";
+import { and, eq, gte, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { assistantQueries } from "@/db/schema";
+import { assistantQueries, siteSettings } from "@/db/schema";
 
 /**
  * Control de consumo del asistente conversacional.
@@ -20,8 +20,30 @@ export function estimateCostUsd(inputTokens: number, outputTokens: number): numb
   );
 }
 
-const MONTHLY_BUDGET = Number(process.env.ASSISTANT_MONTHLY_BUDGET_USD ?? "150");
-const SESSION_LIMIT = Number(process.env.ASSISTANT_SESSION_QUERY_LIMIT ?? "15");
+/**
+ * Límites del asistente público. Los edita un administrador en Configuración →
+ * Asistente (se guardan en `site_settings`); las variables de entorno solo
+ * sirven de valor inicial mientras nadie los haya cambiado.
+ */
+export const LIMITES_KEY = "assistant_limits";
+export type LimitesAsistente = { presupuestoMensualUsd: number; topePorSesion: number };
+
+export async function getLimites(): Promise<LimitesAsistente> {
+  const porDefecto = {
+    presupuestoMensualUsd: Number(process.env.ASSISTANT_MONTHLY_BUDGET_USD ?? "150"),
+    topePorSesion: Number(process.env.ASSISTANT_SESSION_QUERY_LIMIT ?? "15"),
+  };
+  try {
+    const [row] = await db.select({ value: siteSettings.value }).from(siteSettings).where(eq(siteSettings.key, LIMITES_KEY)).limit(1);
+    const v = (row?.value ?? {}) as Partial<LimitesAsistente>;
+    return {
+      presupuestoMensualUsd: typeof v.presupuestoMensualUsd === "number" ? v.presupuestoMensualUsd : porDefecto.presupuestoMensualUsd,
+      topePorSesion: typeof v.topePorSesion === "number" ? v.topePorSesion : porDefecto.topePorSesion,
+    };
+  } catch {
+    return porDefecto;
+  }
+}
 
 export type BudgetState = {
   allowGeneration: boolean;
@@ -31,6 +53,7 @@ export type BudgetState = {
 };
 
 export async function checkBudget(sessionId: string): Promise<BudgetState> {
+  const { presupuestoMensualUsd: MONTHLY_BUDGET, topePorSesion: SESSION_LIMIT } = await getLimites();
   const startOfMonth = new Date();
   startOfMonth.setUTCDate(1);
   startOfMonth.setUTCHours(0, 0, 0, 0);

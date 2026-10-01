@@ -6,6 +6,8 @@ import { auth } from "@/lib/auth";
 import { PERMISOS, efectivo, exige2fa, porDefecto } from "@/lib/permisos";
 import { getAjustes } from "@/lib/permisos-server";
 import { cuotaDe, getCuotas, getGastos } from "@/lib/ai-cuota";
+import { getLimites } from "@/lib/budget";
+import { LimitesAsistenteForm } from "@/components/panel/limites-asistente-form";
 import { CuotaIaPredeterminada } from "@/components/panel/cuota-ia-form";
 import { getSiteIdentity } from "@/lib/site-identity";
 import { UserRow } from "@/components/panel/user-row";
@@ -23,12 +25,11 @@ import { env } from "@/lib/env";
 
 export const dynamic = "force-dynamic";
 
-const MONTHLY_BUDGET = env(process.env.ASSISTANT_MONTHLY_BUDGET_USD, "150");
-const SESSION_LIMIT = env(process.env.ASSISTANT_SESSION_QUERY_LIMIT, "15");
 
 export default async function ConfiguracionPage() {
   const session = await auth();
   const isAdmin = session?.user.role === "administrador";
+  const limites = await getLimites();
 
   const [identity, keyStatus, analytics, people, misPasskeys] = await Promise.all([
     getSiteIdentity(),
@@ -344,9 +345,10 @@ export default async function ConfiguracionPage() {
             ok={keyStatus.present}
           />
           <Stat label="Modelo" value={keyStatus.model} />
-          <Stat label="Presupuesto mensual" value={`US$ ${MONTHLY_BUDGET}`} />
-          <Stat label="Tope por sesión" value={`${SESSION_LIMIT} consultas`} />
+          <Stat label="Presupuesto mensual" value={`US$ ${limites.presupuestoMensualUsd}`} />
+          <Stat label="Tope por sesión" value={`${limites.topePorSesion} consultas`} />
         </div>
+        {isAdmin && <LimitesAsistenteForm presupuesto={limites.presupuestoMensualUsd} tope={limites.topePorSesion} />}
         <p className="mt-4 flex items-start gap-2 rounded-[var(--radius)] bg-[var(--surface-2)] p-3 text-xs leading-relaxed text-[var(--fg-muted)]">
           <ShieldCheck size={14} className="mt-px shrink-0 text-[var(--accent-2)]" />
           Sin clave, el asistente responde en modo búsqueda (recupera y cita fuentes, sin generar) y

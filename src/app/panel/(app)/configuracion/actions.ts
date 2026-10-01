@@ -6,6 +6,7 @@ import bcrypt from "bcryptjs";
 import { db } from "@/db";
 import { siteSettings, users, type UserRole } from "@/db/schema";
 import { CUOTAS_KEY, type Cuotas } from "@/lib/ai-cuota";
+import { LIMITES_KEY } from "@/lib/budget";
 import { DOS_PASOS, PERMISO_IDS, porDefecto, type PermisoId } from "@/lib/permisos";
 import { PERMISOS_KEY, type MapaAjustes } from "@/lib/permisos-server";
 import { auth, requireRole } from "@/lib/auth";
@@ -174,6 +175,24 @@ export async function setAiQuota(userId: string | null, usd: number | null): Pro
     .onConflictDoUpdate({ target: siteSettings.key, set: { value: c, updatedAt: sql`now()` } });
   revalidatePath("/panel/configuracion");
   return { ok: true, message: "Cuota guardada." };
+}
+
+/** Presupuesto mensual (USD) y tope de consultas por sesión del asistente público. Solo administradores. */
+export async function saveAssistantLimits(presupuesto: number, tope: number): Promise<{ ok: boolean; message: string }> {
+  await requireRole("administrador");
+  if (!Number.isFinite(presupuesto) || presupuesto < 0 || presupuesto > 1_000_000) {
+    return { ok: false, message: "El presupuesto debe ser un monto en dólares entre 0 y 1.000.000." };
+  }
+  if (!Number.isInteger(tope) || tope < 1 || tope > 1000) {
+    return { ok: false, message: "El tope por sesión debe ser un número entero entre 1 y 1000." };
+  }
+  const value = { presupuestoMensualUsd: Math.round(presupuesto * 100) / 100, topePorSesion: tope };
+  await db
+    .insert(siteSettings)
+    .values({ key: LIMITES_KEY, value })
+    .onConflictDoUpdate({ target: siteSettings.key, set: { value, updatedAt: sql`now()` } });
+  revalidatePath("/panel/configuracion");
+  return { ok: true, message: "Límites guardados." };
 }
 
 export type CreateUserState = { ok: boolean; message: string } | null;
