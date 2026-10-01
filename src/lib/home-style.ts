@@ -60,6 +60,8 @@ export function sanitizeHomeStyle(input: unknown): HomeStyle | null {
     color: hex(r.color),
     colSpan: num(r.colSpan, 1, 6),
     height: num(r.height, 60, 1200),
+    widthPct: num(r.widthPct, 20, 100),
+    blockAlign: r.blockAlign === "left" || r.blockAlign === "center" || r.blockAlign === "right" ? r.blockAlign : undefined,
     bg: hex(r.bg),
     bgGradient: sanitizeGradient(r.bgGradient),
     fg: hex(r.fg),
@@ -87,6 +89,11 @@ export function blockStylesCss(items: Array<{ slug: string; homeStyle?: HomeStyl
     const d: string[] = [];
     if (s.colSpan) d.push(`grid-column:span ${s.colSpan} / span ${s.colSpan}!important`);
     if (s.height) d.push(`min-height:${s.height}px!important`);
+    if (s.widthPct && s.widthPct < 100) {
+      d.push(`width:${s.widthPct}%!important`);
+      const al = s.blockAlign ?? "left";
+      d.push(al === "center" ? "margin-inline:auto!important" : al === "right" ? "margin-left:auto!important" : "margin-right:auto!important");
+    }
     if (s.bgGradient) d.push(`background:${gradientCss(s.bgGradient)}!important`);
     else if (s.bg) d.push(`background:${s.bg}!important`);
     if (s.fg) d.push(`color:${s.fg}!important`, `--fg:${s.fg}`, `--ink:${s.fg}`);

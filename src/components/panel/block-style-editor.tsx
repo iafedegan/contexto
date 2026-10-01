@@ -61,7 +61,23 @@ export function BlockStyleEditor({
       </div>
 
       <Group title="Tamaño">
-        {numField("Columnas (1–6)", style.colSpan, 1, 6, "colSpan", "en cuadrículas")}
+        {numField("Columnas (1–6)", style.colSpan, 1, 6, "colSpan", "solo en cuadrículas")}
+        {numField("Ancho (%)", style.widthPct, 20, 100, "widthPct", "en listas")}
+        <div className="flex items-center gap-2">
+          <span className="w-28 shrink-0 text-xs text-[var(--fg-muted)]">Alinear bloque</span>
+          <select
+            value={style.blockAlign ?? ""}
+            onChange={(e) => onChange({ blockAlign: (e.target.value || undefined) as HomeStyle["blockAlign"] })}
+            className="min-w-0 flex-1 rounded-lg border border-[var(--border-strong)] bg-[var(--surface-2)] px-2 py-1.5 text-sm"
+          >
+            <option value="">Izquierda</option>
+            <option value="center">Centro</option>
+            <option value="right">Derecha</option>
+          </select>
+        </div>
+        <p className="text-[0.7rem] leading-snug text-[var(--fg-muted)]">
+          «Columnas» solo cambia algo si el bloque está en una cuadrícula (p. ej. «Lo más reciente»). En una lista de una sola columna, como esta, el bloque ya ocupa todo el ancho: úsalo para hacerlo más estrecho con «Ancho (%)».
+        </p>
         {numField("Alto mínimo (px)", style.height, 60, 1200, "height")}
       </Group>
 

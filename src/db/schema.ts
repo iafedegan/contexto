@@ -55,6 +55,10 @@ export type HomeStyle = {
   colSpan?: number;
   /** Alto mínimo del bloque en px (60-1200). */
   height?: number;
+  /** Ancho como % del espacio disponible (20-100): sirve en listas de una columna. */
+  widthPct?: number;
+  /** Dónde queda el bloque cuando es más estrecho que su espacio. */
+  blockAlign?: "left" | "center" | "right";
   /** Fondo del bloque (#rrggbb) o degradado (manda el degradado). */
   bg?: string;
   bgGradient?: Gradient;

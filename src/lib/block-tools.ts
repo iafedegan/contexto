@@ -7,7 +7,7 @@
  */
 export type BlockToolsOptions = {
   /** Se llama al soltar el asa: alto mínimo y, en cuadrículas, columnas ocupadas. */
-  onResize: (slug: string, patch: { height: number; colSpan?: number }) => void;
+  onResize: (slug: string, patch: { height?: number; colSpan?: number; widthPct?: number }) => void;
   /** Se llama al soltar un bloque de la portada sobre otro (índices de posición). */
   onMove: (from: number, to: number) => void;
   /** Para saber si el documento sigue siendo el actual (el lienzo se recarga). */
@@ -58,22 +58,31 @@ export function enhanceBlocks(doc: Document, root: ParentNode, opts: BlockToolsO
       const gap = isGrid ? parseFloat(cs!.columnGap) || 0 : 0;
       const colW = isGrid ? (parent!.clientWidth - gap * (cols - 1)) / cols : r0.width;
       let span: number | undefined;
+      let widthPct: number | undefined;
       let h = r0.height;
+      let moved = false;
       const sx = ev.clientX, sy = ev.clientY;
       const scale = r0.width / (el.offsetWidth || r0.width) || 1;
       const move = (e: PointerEvent) => {
+        if (Math.abs(e.clientX - sx) + Math.abs(e.clientY - sy) > 4) moved = true;
         h = Math.max(60, r0.height + (e.clientY - sy) / scale);
         el.style.minHeight = `${Math.round(h)}px`;
+        const w = r0.width + (e.clientX - sx) / scale;
         if (isGrid) {
-          const w = r0.width + (e.clientX - sx) / scale;
           span = Math.min(cols, Math.max(1, Math.round((w + gap) / (colW + gap))));
           el.style.gridColumn = `span ${span} / span ${span}`;
+        } else if (parent) {
+          // Lista de una columna: no hay columnas que ocupar, el ancho es un % del espacio.
+          widthPct = Math.min(100, Math.max(20, Math.round((w / parent.clientWidth) * 100)));
+          el.style.width = `${widthPct}%`;
         }
       };
       const up = () => {
         handle.removeEventListener("pointermove", move);
         handle.removeEventListener("pointerup", up);
-        opts.onResize(slug, { height: Math.round(h), ...(span ? { colSpan: span } : {}) });
+        // Un clic sin arrastrar no debe fijar medidas.
+        if (!moved) return;
+        opts.onResize(slug, { height: Math.round(h), ...(span ? { colSpan: span } : {}), ...(widthPct !== undefined ? { widthPct: widthPct >= 100 ? undefined : widthPct } : {}) });
       };
       handle.addEventListener("pointermove", move);
       handle.addEventListener("pointerup", up);
