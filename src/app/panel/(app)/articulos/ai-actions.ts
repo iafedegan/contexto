@@ -72,19 +72,25 @@ export async function generateArticleDraft(input: {
   }
 
   try {
-    const { object } = await generateObject({
-      model,
-      schema: draftSchema,
-      system: EDITOR_ASSIST_SYSTEM,
-      prompt: [
-        tema ? `TÍTULO PROPUESTO POR EL PERIODISTA: ${tema}` : "El periodista no fijó título.",
-        input.section ? `SECCIÓN: ${input.section}` : "",
-        `ENCARGO Y NOTAS:\n${encargo}`,
-      ]
-        .filter(Boolean)
-        .join("\n\n"),
-    });
-    return { ok: true, mode: "ia", draft: object };
+    const prompt = [
+      tema ? `TÍTULO PROPUESTO POR EL PERIODISTA: ${tema}` : "El periodista no fijó título.",
+      input.section ? `SECCIÓN: ${input.section}` : "",
+      `ENCARGO Y NOTAS:\n${encargo}`,
+    ]
+      .filter(Boolean)
+      .join("\n\n");
+    let { object } = await generateObject({ model, schema: draftSchema, system: EDITOR_ASSIST_SYSTEM, prompt });
+    // Debe salir listo para publicar: si aun así trae marcadores {{…}}, un
+    // segundo intento lo exige y, de persistir, se quitan.
+    if (hasMarkers(object)) {
+      ({ object } = await generateObject({
+        model,
+        schema: draftSchema,
+        system: EDITOR_ASSIST_SYSTEM,
+        prompt: `${prompt}\n\nIMPORTANTE: tu borrador anterior traía marcadores entre llaves. Reescríbelo SIN ningún marcador: redacta solo con lo que sí consta en el encargo y omite lo que falte.`,
+      }));
+    }
+    return { ok: true, mode: "ia", draft: stripMarkers(object) };
   } catch (err) {
     console.error("generateArticleDraft:", err);
     // El mensaje del proveedor dice exactamente qué pasa («este modelo ya no
@@ -99,6 +105,12 @@ export async function generateArticleDraft(input: {
         : "El modelo no respondió. Revisa la clave o inténtalo de nuevo en un momento.",
     };
   }
+}
+
+const MARKER = /\s*\{\{[^}]*\}\}/g;
+const hasMarkers = (o: unknown) => JSON.stringify(o).includes("{{");
+function stripMarkers<T>(o: T): T {
+  return JSON.parse(JSON.stringify(o).replace(MARKER, "")) as T;
 }
 
 /** Esqueleto determinista: estructura y ficha, sin hechos inventados. */
@@ -157,7 +169,7 @@ const PART_SCHEMAS = {
 const PART_TASK: Record<DraftPart, string> = {
   excerpt: "Escribe SOLO una nueva entradilla (2-3 líneas, 70-155 caracteres ideal) que explique por qué importa la noticia.",
   tags: "Propón SOLO un nuevo conjunto de 3 a 6 palabras clave o etiquetas, en minúsculas, específicas del tema. La primera debe ser la palabra clave principal.",
-  body: "Redacta SOLO un nuevo cuerpo en HTML (<p>, <h2>), de al menos 250 palabras, con intertítulos. Marca entre {{llaves}} todo dato que no esté en las notas.",
+  body: "Redacta SOLO un nuevo cuerpo en HTML (<p>, <h2>), de al menos 250 palabras, con intertítulos. Sin llaves ni marcadores: el texto sale listo para publicar; si falta un dato, redacta sin él en vez de inventarlo.",
   seo: "Propón SOLO un nuevo título SEO (15-65 caracteres) y una meta descripción en prosa (70-155 caracteres).",
 };
 
@@ -197,7 +209,7 @@ export async function regenerateDraftPart(input: {
         .filter(Boolean)
         .join("\n\n"),
     });
-    return { ok: true, part: input.part, value: object };
+    return { ok: true, part: input.part, value: stripMarkers(object) };
   } catch (err) {
     console.error("regenerateDraftPart:", err);
     const detalle = err && typeof err === "object" && "message" in err ? String((err as Error).message) : "";
@@ -248,7 +260,7 @@ export async function suggestTitlesAndContexts(input: {
         "TAREA: propón entre 4 y 5 TÍTULOS distintos entre sí (de 15 a 65 caracteres; uno informativo con el hecho, uno con el dato, uno centrado en la consecuencia para el productor, uno en forma de pregunta o explicación). " +
           "Propón además entre 3 y 4 CONTEXTOS: cada uno es un enfoque de redacción distinto (p. ej. noticia de última hora, análisis para el productor, explicativo con antecedentes). " +
           "Cada contexto tiene una etiqueta corta y un texto de 2 a 4 frases que dice qué ángulo tomar, qué datos y fuentes hay que confirmar y a quién le importa. " +
-          "NO inventes cifras, fechas, fuentes ni declaraciones: todo lo que el periodista no dio va como {{por confirmar}}.",
+          "NO inventes cifras, fechas, fuentes ni declaraciones y no uses llaves ni marcadores: si falta un dato, el contexto dice qué enfoque tomar sin él.",
       ]
         .filter(Boolean)
         .join("\n\n"),

@@ -284,7 +284,7 @@ export function ArticleWizard({
       setGenerated(true);
       setAiNote(
         res.note ??
-          "Borrador generado. Revísalo paso a paso: lo que la IA no pudo confirmar va entre {{llaves}}.",
+          "Borrador generado. Revísalo paso a paso antes de publicar.",
       );
       setStep(1);
     });
@@ -439,7 +439,7 @@ export function ArticleWizard({
 
       {/* --- Pantalla del paso + panel SEO lateral (escritorio) --- */}
       <div className="flex min-h-0 flex-1 gap-3">
-      <div className="lx-card min-h-0 flex-1 overflow-y-auto p-5 sm:p-6">
+      <div className="lx-card min-h-0 flex-1 p-5 sm:p-6" style={{ overflowY: "auto", transform: "none" }}>
         {mode === "ia" && generated && PART_OF[current.key] && (
           <div className="mx-auto mb-4 flex max-w-2xl flex-wrap items-center gap-2 rounded-[var(--radius)] border border-[var(--border-strong)] bg-[var(--surface-2)] px-3 py-2">
             <Sparkles size={14} className="text-[var(--accent)]" />
