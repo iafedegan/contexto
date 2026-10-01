@@ -513,12 +513,34 @@ export type HomeBackground = {
 
 /** Valor de site_settings con key = "home_layout": plantilla visual de la
  * portada + ajustes finos de sus secciones. */
+/** Degradado lineal entre dos colores (#rrggbb) con ángulo en grados. */
+export type Gradient = { from: string; to: string; angle: number };
+
+/** Cada elemento suelto del encabezado de una sección que se puede estilar por separado. */
+export type SectionElId = "breadcrumb" | "kicker" | "title" | "description" | "chips" | "filters";
+
+export type SectionElStyle = {
+  font?: HomeTitleFont;
+  /** Tamaño exacto en px (8-220). */
+  size?: number;
+  /** Grosor 300-900. */
+  weight?: number;
+  color?: string;
+  /** Degradado en el texto (solo etiqueta, título y descripción). */
+  gradient?: Gradient;
+  upper?: boolean;
+  /** Espaciado entre letras en px (-2 a 20). */
+  tracking?: number;
+};
+
 /** Dónde van los filtros (rangos de fecha y subsección) en la página de una sección. */
 export type SectionFiltersPos = "cabecera" | "izquierda" | "centro" | "derecha" | "barra" | "oculto";
 
 export type HomeLayoutConfig = {
   /** Posición de los filtros en las páginas de sección. */
   sectionFilters?: SectionFiltersPos;
+  /** Estilo por elemento del encabezado de sección (migas, etiqueta, título…). */
+  sectionEls?: Partial<Record<SectionElId, SectionElStyle>>;
   /** Plantilla: decide componentes, efectos y tipografía (no solo columnas). */
   templateId?: "esmeralda" | "clasico" | "revista" | "compacto" | "vanguardia" | "gremial";
   /** "En breve" en la plantilla Clásico: lista vertical o fila horizontal. */

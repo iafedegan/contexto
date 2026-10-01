@@ -1,4 +1,6 @@
+import type { Gradient } from "@/db/schema";
 import type { HomeTitleFont } from "@/lib/home-fonts";
+import { gradientCss, sanitizeGradient } from "@/lib/section-els";
 import { homeFontFamily } from "@/lib/home-fonts";
 import { derivePalette, mutedOf } from "@/lib/home-background";
 
@@ -13,11 +15,13 @@ import { derivePalette, mutedOf } from "@/lib/home-background";
  * la base de datos y no debe poder inyectar reglas.
  */
 
-export type RegionId = "navbar" | "hero" | "body" | "cards" | "footer";
+export type RegionId = "navbar" | "hero" | "body" | "cards" | "footer" | "encabezado";
 
 export type RegionStyle = {
   /** Fondo del componente. */
   bg?: string;
+  /** Degradado de fondo (si está, manda sobre `bg`). */
+  bgGradient?: Gradient;
   /** Color del texto. */
   fg?: string;
   /** Color de acento (enlaces, filetes, etiquetas). */
@@ -77,7 +81,13 @@ export const REGIONS: Array<{
     id: "body",
     label: "Cuerpo",
     description: "El lienzo de la página entre la cabecera y el pie.",
-    controls: ["bg", "fg", "accent", "titleFont", "textFont", "titleScale", "textScale", "padTop", "padY", "maxWidth"],
+    controls: ["bg", "bgGradient", "fg", "accent", "titleFont", "textFont", "titleScale", "textScale", "padTop", "padY", "maxWidth"],
+  },
+  {
+    id: "encabezado",
+    label: "Encabezado",
+    description: "Migas, etiqueta, título, descripción, datos y filtros de la sección.",
+    controls: ["bg", "bgGradient", "fg", "accent", "padY", "padX", "radius", "align"],
   },
   {
     id: "footer",
@@ -115,6 +125,7 @@ export function sanitizeRegions(input: unknown): RegionStyles {
     const r = raw as Record<string, unknown>;
     const s: RegionStyle = {
       bg: color(r.bg),
+      bgGradient: sanitizeGradient(r.bgGradient),
       fg: color(r.fg),
       accent: color(r.accent),
       titleFont: homeFontFamily(r.titleFont as HomeTitleFont) ? (r.titleFont as HomeTitleFont) : undefined,
@@ -153,12 +164,20 @@ export function regionsCss(input: RegionStyles | undefined, scope = "[data-site-
       rules.push(`${sel}{display:none!important}`);
       continue;
     }
+    if (s.bgGradient && !s.bg) {
+      // Degradado de fondo: el texto se deriva del primer color y el fondo se pinta aparte.
+      const p = derivePalette(s.bgGradient.from);
+      for (const [k, v] of Object.entries(p)) decl.push(`${k}:${v}`);
+      decl.push(`--paper:${s.bgGradient.from}`, `--ink:${p["--fg"]}`, `color:${p["--fg"]}`);
+    }
+    if (s.bgGradient) decl.push(`background:${gradientCss(s.bgGradient)}!important`);
     if (s.bg) {
       const p = derivePalette(s.bg);
       for (const [k, v] of Object.entries(p)) decl.push(`${k}:${v}`);
       decl.push(`--paper:${s.bg}`, `--paper-2:${p["--bg-2"]}`, `--rule:${p["--border"]}`);
       decl.push(`--ink:${p["--fg"]}`, `--ink-soft:${p["--fg-muted"]}`, `--ink-faint:${p["--fg-muted"]}`);
-      decl.push(`background:${s.bg}!important`, `color:${p["--fg"]}`);
+      if (!s.bgGradient) decl.push(`background:${s.bg}!important`);
+      decl.push(`color:${p["--fg"]}`);
     }
     if (s.fg) {
       const muted = mutedOf(s.fg);

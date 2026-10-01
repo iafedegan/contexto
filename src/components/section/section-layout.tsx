@@ -30,75 +30,75 @@ export function SectionHeader({ theme, kicker, title, description, chips, breadc
     case "clasico":
       // Diario: cabecera centrada entre filetes dobles, como una sección impresa.
       return (
-        <header className="relative mb-12 pt-8 text-center">
+        <header data-region="encabezado" className="relative mb-12 pt-8 text-center">
           <div className="flex justify-center">{breadcrumb}</div>
           <div className="mt-2 border-y-4 border-double border-[var(--fg)] py-6 lg:grid lg:grid-cols-[1fr_auto_1fr] lg:items-end lg:gap-6">
             <span className="hidden lg:block" />
             <div>
-              <p className="lx-kicker text-[var(--accent)]">{kicker}</p>
-              <h1 className="lx-display mt-2 text-5xl font-black uppercase tracking-tight md:text-7xl">{title}</h1>
+              <p data-el="kicker" className="lx-kicker text-[var(--accent)]">{kicker}</p>
+              <h1 data-el="title" className="lx-display mt-2 text-5xl font-black uppercase tracking-tight md:text-7xl">{title}</h1>
             </div>
             <div className="mt-6 text-left lg:mt-0 lg:justify-self-end lg:text-right">{filters}</div>
           </div>
           {description && (
-            <p className="mx-auto mt-5 max-w-2xl font-serif text-lg italic text-[var(--fg-muted)]">{description}</p>
+            <p data-el="description" className="mx-auto mt-5 max-w-2xl font-serif text-lg italic text-[var(--fg-muted)]">{description}</p>
           )}
-          <div className="mt-5 flex flex-wrap justify-center gap-3">{chips}</div>
+          <div data-el="chips" className="mt-5 flex flex-wrap justify-center gap-3">{chips}</div>
         </header>
       );
     case "revista":
       // Revista: título enorme en cursiva, alineado a la izquierda, con aire.
       return (
-        <header className="relative mb-14 pt-12">
+        <header data-region="encabezado" className="relative mb-14 pt-12">
           {breadcrumb}
           <div className="mt-6 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div className="min-w-0">
-              <p className="lx-kicker text-[var(--accent)]">{kicker}</p>
-              <h1 className="lx-display mt-3 text-6xl font-light italic leading-[0.9] tracking-tight md:text-8xl">{title}</h1>
+              <p data-el="kicker" className="lx-kicker text-[var(--accent)]">{kicker}</p>
+              <h1 data-el="title" className="lx-display mt-3 text-6xl font-light italic leading-[0.9] tracking-tight md:text-8xl">{title}</h1>
             </div>
             <div className="lg:max-w-[46%] lg:shrink-0">{filters}</div>
           </div>
           <div className="mt-8 grid gap-6 border-t border-[var(--border-strong)] pt-6 md:grid-cols-[2fr_1fr]">
-            {description ? <p className="text-xl leading-relaxed text-[var(--fg-muted)]">{description}</p> : <span />}
-            <div className="flex flex-wrap items-start gap-3 md:justify-end">{chips}</div>
+            {description ? <p data-el="description" className="text-xl leading-relaxed text-[var(--fg-muted)]">{description}</p> : <span />}
+            <div data-el="chips" className="flex flex-wrap items-start gap-3 md:justify-end">{chips}</div>
           </div>
         </header>
       );
     case "compacto":
       // Compacto: barra densa tipo panel de datos.
       return (
-        <header className="mb-6 pt-4">
+        <header data-region="encabezado" className="mb-6 pt-4">
           {breadcrumb}
           <div className="mt-3 flex flex-wrap items-end justify-between gap-3 border-b-2 border-[var(--fg)] pb-3">
             <div>
-              <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-[var(--accent)]">{kicker}</p>
-              <h1 className="text-3xl font-extrabold tracking-tight md:text-4xl">{title}</h1>
-              <div className="mt-2 flex flex-wrap gap-2 font-mono text-[11px]">{chips}</div>
+              <p data-el="kicker" className="font-mono text-[11px] uppercase tracking-[0.12em] text-[var(--accent)]">{kicker}</p>
+              <h1 data-el="title" className="text-3xl font-extrabold tracking-tight md:text-4xl">{title}</h1>
+              <div data-el="chips" className="mt-2 flex flex-wrap gap-2 font-mono text-[11px]">{chips}</div>
             </div>
             <div className="w-full lg:w-auto lg:max-w-[52%]">{filters}</div>
           </div>
-          {description && <p className="mt-2 text-sm text-[var(--fg-muted)]">{description}</p>}
+          {description && <p data-el="description" className="mt-2 text-sm text-[var(--fg-muted)]">{description}</p>}
         </header>
       );
     case "vanguardia":
       // Vanguardia: titular en degradado dentro de una tarjeta redondeada.
       return (
-        <header className="relative mb-8 overflow-hidden rounded-[2rem] border border-[var(--border)] bg-[var(--bg-2)] p-8 md:p-12">
+        <header data-region="encabezado" className="relative mb-8 overflow-hidden rounded-[2rem] border border-[var(--border)] bg-[var(--bg-2)] p-8 md:p-12">
           <div aria-hidden className="pointer-events-none absolute -right-20 -top-24 size-80 rounded-full bg-[var(--accent-2)] opacity-25 blur-3xl" />
           <div aria-hidden className="pointer-events-none absolute -bottom-24 left-10 size-72 rounded-full bg-[var(--accent)] opacity-20 blur-3xl" />
           <div className="relative">
             {breadcrumb}
             <div className="mt-6 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
               <div className="min-w-0">
-                <p className="lx-kicker text-[var(--accent)]">{kicker}</p>
-                <h1 className="mt-3 bg-gradient-to-r from-[var(--fg)] via-[var(--accent)] to-[var(--accent-2)] bg-clip-text text-5xl font-black tracking-tight text-transparent md:text-7xl">
+                <p data-el="kicker" className="lx-kicker text-[var(--accent)]">{kicker}</p>
+                <h1 data-el="title" className="mt-3 bg-gradient-to-r from-[var(--fg)] via-[var(--accent)] to-[var(--accent-2)] bg-clip-text text-5xl font-black tracking-tight text-transparent md:text-7xl">
                   {title}
                 </h1>
               </div>
               <div className="lg:max-w-[46%] lg:shrink-0">{filters}</div>
             </div>
-            {description && <p className="mt-5 max-w-2xl text-lg text-[var(--fg-muted)]">{description}</p>}
-            <div className="mt-6 flex flex-wrap gap-3">{chips}</div>
+            {description && <p data-el="description" className="mt-5 max-w-2xl text-lg text-[var(--fg-muted)]">{description}</p>}
+            <div data-el="chips" className="mt-6 flex flex-wrap gap-3">{chips}</div>
           </div>
         </header>
       );
@@ -106,45 +106,45 @@ export function SectionHeader({ theme, kicker, title, description, chips, breadc
     case "home":
       // Esmeralda: frontispicio centrado, rombos y filetes de pan de oro.
       return (
-        <header className="relative mb-14 pt-10 text-center">
+        <header data-region="encabezado" className="relative mb-14 pt-10 text-center">
           <div className="flex justify-center">{breadcrumb}</div>
           <div className="mt-8 flex items-center justify-center gap-4 text-[var(--accent)]">
             <span className="h-px w-16 bg-gradient-to-r from-transparent to-[var(--accent)] md:w-40" />
             <span aria-hidden>◆</span>
-            <p className="lx-kicker">{kicker}</p>
+            <p data-el="kicker" className="lx-kicker">{kicker}</p>
             <span aria-hidden>◆</span>
             <span className="h-px w-16 bg-gradient-to-l from-transparent to-[var(--accent)] md:w-40" />
           </div>
           <div className="mt-5 lg:grid lg:grid-cols-[1fr_auto_1fr] lg:items-end lg:gap-6">
             <span className="hidden lg:block" />
-            <h1 className="lx-display bg-gradient-to-b from-[var(--fg)] to-[var(--accent)] bg-clip-text text-[2.6rem] font-semibold leading-[1] tracking-tight text-transparent sm:text-6xl md:text-8xl">
+            <h1 data-el="title" className="lx-display bg-gradient-to-b from-[var(--fg)] to-[var(--accent)] bg-clip-text text-[2.6rem] font-semibold leading-[1] tracking-tight text-transparent sm:text-6xl md:text-8xl">
               {title}
             </h1>
             <div className="mt-6 text-left lg:mt-0 lg:justify-self-end lg:text-right">{filters}</div>
           </div>
           {description && (
-            <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-[var(--fg-muted)]">{description}</p>
+            <p data-el="description" className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-[var(--fg-muted)]">{description}</p>
           )}
-          <div className="mt-8 flex flex-wrap justify-center gap-3">{chips}</div>
+          <div data-el="chips" className="mt-8 flex flex-wrap justify-center gap-3">{chips}</div>
           <div aria-hidden className="mx-auto mt-10 h-px max-w-3xl bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent" />
         </header>
       );
     default:
       // Resto: lámina con filete.
       return (
-        <header className="relative mb-14 pt-10">
+        <header data-region="encabezado" className="relative mb-14 pt-10">
           {breadcrumb}
           <div className="mt-6 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div className="min-w-0">
-              <p className="lx-kicker text-[var(--accent)]">{kicker}</p>
-              <h1 className="lx-display mt-3 text-[2.6rem] font-extrabold leading-[0.95] tracking-tight break-words sm:text-5xl md:text-7xl">
+              <p data-el="kicker" className="lx-kicker text-[var(--accent)]">{kicker}</p>
+              <h1 data-el="title" className="lx-display mt-3 text-[2.6rem] font-extrabold leading-[0.95] tracking-tight break-words sm:text-5xl md:text-7xl">
                 {title}
               </h1>
             </div>
             <div className="lg:max-w-[46%] lg:shrink-0">{filters}</div>
           </div>
-          {description && <p className="mt-6 max-w-2xl text-lg leading-relaxed text-[var(--fg-muted)]">{description}</p>}
-          <div className="mt-8 flex flex-wrap items-center gap-3">{chips}</div>
+          {description && <p data-el="description" className="mt-6 max-w-2xl text-lg leading-relaxed text-[var(--fg-muted)]">{description}</p>}
+          <div data-el="chips" className="mt-8 flex flex-wrap items-center gap-3">{chips}</div>
           <hr className="lx-rule-strong mt-10" />
         </header>
       );

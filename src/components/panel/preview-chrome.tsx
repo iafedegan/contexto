@@ -10,6 +10,8 @@ import { SectionFiltersPicker } from "@/components/panel/section-filters-picker"
 import { SeccionForm } from "@/components/panel/seccion-form";
 import { TemplatePicker } from "@/components/panel/home-builder";
 import type { RegionId } from "@/lib/home-regions";
+import type { SectionElId } from "@/db/schema";
+import { SectionPanel } from "@/components/panel/section-panel";
 
 /**
  * Marco de la pestaña «Vista previa»: barra con Cerrar y «Aceptar y publicar»
@@ -38,6 +40,7 @@ export function PreviewChrome({
   const [layout, setLayout] = useState(draft?.layout ?? null);
   const [panel, setPanel] = useState(false);
   const [region, setRegion] = useState<RegionId>("navbar");
+  const [secEl, setSecEl] = useState<SectionElId>("title");
   // Posición del formulario flotante: arrastrable y recordada entre visitas.
   const [pos, setPos] = useState<{ x: number; y: number } | null>(() => {
     if (typeof window === "undefined") return null;
@@ -226,8 +229,14 @@ export function PreviewChrome({
             else if (url.pathname === "/" || url.pathname === "/en") router.push("/panel/portada?vista=1");
             return;
           }
+          const piece = el.closest("[data-el]")?.getAttribute("data-el") as SectionElId | null;
+          if (piece && panel) {
+            setSecEl(piece);
+            setRegion("encabezado");
+            return;
+          }
           const r = el.closest("[data-region]")?.getAttribute("data-region") as RegionId | null;
-          if (r && panel) setRegion(r);
+          if (r && panel && (!seccion || r === "encabezado" || r === "body")) setRegion(r);
         }}
       >
         {children}
@@ -285,17 +294,23 @@ export function PreviewChrome({
                 </div>
               </details>
               )}
-              <RegionEditor
-                value={layout.regions ?? {}}
-                active={seccion && region !== "navbar" && region !== "body" && region !== "footer" ? "body" : region}
-                onActive={setRegion}
-                onChange={(regions) => editLayout({ ...layout, regions })}
-                only={seccion ? ["navbar", "body", "footer"] : undefined}
-              />
-              {seccion && (
-                <div className="mt-4 border-t border-[var(--border)] pt-4">
-                  <SectionFiltersPicker value={layout.sectionFilters ?? "cabecera"} onChange={(sectionFilters) => editLayout({ ...layout, sectionFilters })} />
-                </div>
+              {seccion ? (
+                <SectionPanel
+                  layout={layout}
+                  onChange={(partial) => editLayout({ ...layout, ...partial })}
+                  region={region}
+                  onRegion={setRegion}
+                  el={secEl}
+                  onEl={setSecEl}
+                />
+              ) : (
+                <RegionEditor
+                  value={layout.regions ?? {}}
+                  active={region}
+                  onActive={setRegion}
+                  onChange={(regions) => editLayout({ ...layout, regions })}
+                  only={["navbar", "hero", "cards", "body", "footer"]}
+                />
               )}
               <p role="status" className={`mt-3 text-xs font-semibold ${saveState === "error" ? "text-[#9a2f22]" : "text-[var(--accent)]"}`}>
                 {saveState === "saving" && "Guardando cambios…"}

@@ -1,6 +1,7 @@
 "use client";
 
 import { AlignCenter, AlignLeft, AlignRight, EyeOff, RotateCcw } from "lucide-react";
+import { GradientEditor } from "@/components/panel/gradient-editor";
 import { HOME_FONT_GROUPS, HOME_FONTS, type HomeTitleFont } from "@/lib/home-fonts";
 import {
   RANGES,
@@ -23,6 +24,7 @@ export function RegionEditor({
   onActive,
   onChange,
   only,
+  hideTabs = false,
 }: {
   value: RegionStyles;
   active: RegionId;
@@ -30,6 +32,8 @@ export function RegionEditor({
   onChange: (next: RegionStyles) => void;
   /** Limita los componentes editables (p. ej. en las secciones no hay Hero ni Tarjetas). */
   only?: RegionId[];
+  /** Oculta el selector de componente (cuando solo hay uno que editar). */
+  hideTabs?: boolean;
 }) {
   const visibles = REGIONS.filter((r) => !only || only.includes(r.id));
   const meta = REGIONS.find((r) => r.id === active)!;
@@ -50,7 +54,7 @@ export function RegionEditor({
   return (
     <div className="flex flex-col gap-4">
       {/* Selector de componente */}
-      <div className={`grid gap-1 rounded-lg border border-[var(--border)] p-1 ${visibles.length === 3 ? "grid-cols-3" : "grid-cols-5"}`}>
+      {!hideTabs && (<div className={`grid gap-1 rounded-lg border border-[var(--border)] p-1 ${visibles.length === 3 ? "grid-cols-3" : visibles.length === 2 ? "grid-cols-2" : "grid-cols-5"}`}>
         {visibles.map((r) => (
           <button
             key={r.id}
@@ -69,7 +73,7 @@ export function RegionEditor({
             )}
           </button>
         ))}
-      </div>
+      </div>)}
       <p className="-mt-2 text-xs leading-snug text-[var(--fg-muted)]">{meta.description}</p>
 
       {has("hidden") && (
@@ -83,6 +87,7 @@ export function RegionEditor({
         <>
           <Group title="Colores">
             {has("bg") && <ColorRow label="Fondo" value={s.bg} onChange={(bg) => patch({ bg })} />}
+            {has("bgGradient") && <GradientEditor label="Degradado de fondo" value={s.bgGradient} onChange={(bgGradient) => patch({ bgGradient })} />}
             {has("fg") && <ColorRow label="Texto" value={s.fg} onChange={(fg) => patch({ fg })} />}
             {has("accent") && <ColorRow label="Acento" value={s.accent} onChange={(accent) => patch({ accent })} />}
           </Group>
@@ -157,7 +162,7 @@ export function RegionEditor({
   );
 }
 
-function Group({ title, children }: { title: string; children: React.ReactNode }) {
+export function Group({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <fieldset className="flex flex-col gap-2.5 border-t border-[var(--border)] pt-3">
       <legend className="meta pr-2 !text-[0.65rem]">{title}</legend>
@@ -166,7 +171,7 @@ function Group({ title, children }: { title: string; children: React.ReactNode }
   );
 }
 
-function ColorRow({
+export function ColorRow({
   label,
   value,
   onChange,
@@ -213,7 +218,7 @@ function ColorRow({
   );
 }
 
-function FontSelect({
+export function FontSelect({
   label,
   value,
   onChange,

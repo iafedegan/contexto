@@ -23,7 +23,16 @@ export type HomeTitleFont =
   | "inter"
   | "jost"
   | "outfit"
-  | "mono";
+  | "mono"
+  | "arial"
+  | "helvetica"
+  | "georgia"
+  | "times"
+  | "verdana"
+  | "trebuchet"
+  | "tahoma"
+  | "courier"
+  | "systemui";
 
 export type HomeFontOption = {
   id: HomeTitleFont;
@@ -32,7 +41,7 @@ export type HomeFontOption = {
   /** Variable CSS con la familia. */
   cssVar: string;
   /** Familia visual: sirve para agrupar el selector. */
-  group: "tema" | "serif" | "sans";
+  group: "tema" | "serif" | "sans" | "sistema";
 };
 
 export const HOME_FONTS: HomeFontOption[] = [
@@ -55,6 +64,17 @@ export const HOME_FONTS: HomeFontOption[] = [
   { id: "jost", label: "Jost", cssVar: "var(--f-jost)", group: "sans" },
   { id: "outfit", label: "Outfit", cssVar: "var(--f-outfit)", group: "sans" },
   { id: "mono", label: "JetBrains Mono", cssVar: "var(--f-mono)", group: "sans" },
+
+  // Fuentes del sistema: las trae el dispositivo del lector, no se descargan.
+  { id: "arial", label: "Arial", cssVar: "Arial, Helvetica, sans-serif", group: "sistema" },
+  { id: "helvetica", label: "Helvetica", cssVar: "'Helvetica Neue', Helvetica, Arial, sans-serif", group: "sistema" },
+  { id: "verdana", label: "Verdana", cssVar: "Verdana, Geneva, sans-serif", group: "sistema" },
+  { id: "tahoma", label: "Tahoma", cssVar: "Tahoma, Geneva, sans-serif", group: "sistema" },
+  { id: "trebuchet", label: "Trebuchet MS", cssVar: "'Trebuchet MS', Helvetica, sans-serif", group: "sistema" },
+  { id: "georgia", label: "Georgia", cssVar: "Georgia, 'Times New Roman', serif", group: "sistema" },
+  { id: "times", label: "Times New Roman", cssVar: "'Times New Roman', Times, serif", group: "sistema" },
+  { id: "courier", label: "Courier New", cssVar: "'Courier New', Courier, monospace", group: "sistema" },
+  { id: "systemui", label: "Sistema (system-ui)", cssVar: "system-ui, -apple-system, 'Segoe UI', sans-serif", group: "sistema" },
 ];
 
 const BY_ID = new Map(HOME_FONTS.map((f) => [f.id, f]));
@@ -69,4 +89,5 @@ export const HOME_FONT_GROUPS: Array<{ id: HomeFontOption["group"]; label: strin
   { id: "tema", label: "Del tema" },
   { id: "serif", label: "Serif" },
   { id: "sans", label: "Sans y mono" },
+  { id: "sistema", label: "Del sistema (Arial, Georgia…)" },
 ];

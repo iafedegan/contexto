@@ -38,6 +38,8 @@ import type { ArticleListItem } from "@/lib/content";
 import type { HomeLayoutConfig, HomeStyle } from "@/db/schema";
 import { HOME_TEMPLATES } from "@/lib/home-layout";
 import type { RegionId } from "@/lib/home-regions";
+import type { SectionElId } from "@/db/schema";
+import { SectionPanel } from "@/components/panel/section-panel";
 import { TemplateBlueprint, type AdState } from "@/components/panel/template-blueprint";
 import type { AdPosition } from "@/lib/ads-positions";
 import { SectionFiltersPicker } from "@/components/panel/section-filters-picker";
@@ -105,6 +107,9 @@ export function HomeBuilder({
   const [frameNonce, setFrameNonce] = useState(0);
   const frameDoc = useRef<Document | null>(null);
   const regionRef = useRef<RegionId>("navbar");
+  const [secEl, setSecEl] = useState<SectionElId>("title");
+  const secElRef = useRef<SectionElId>("title");
+  const inSectionRef = useRef(false);
   const [previewPath, setPreviewPath] = useState("/vista-portada");
   const seccion = previewPath.startsWith("/vista-portada/categoria/")
     ? (sections.find((x) => x.slug === previewPath.split("/").pop()) ?? null)
@@ -176,12 +181,16 @@ export function HomeBuilder({
     if (!st) return;
     const r = regionRef.current;
     const c = selectedRef.current;
+    const e = secElRef.current;
     st.textContent =
       `[data-region="${r}"]{outline:2px dashed #84a21f;outline-offset:-2px}` +
+      (r === "encabezado" ? `[data-el="${e}"]{outline:2px solid #84a21f;outline-offset:3px}` : "") +
       (c !== null ? `[data-card-index="${c}"]{outline:3px solid #84a21f;outline-offset:2px}` : "");
   }
   useEffect(() => {
     regionRef.current = region;
+    secElRef.current = secEl;
+    inSectionRef.current = previewPath.startsWith("/vista-portada/categoria/");
     selectedRef.current = selected;
     paintSelection();
   });
@@ -217,10 +226,18 @@ export function HomeBuilder({
             return;
           }
         }
+        // Pieza suelta del encabezado de una sección (migas, título…): abre su editor.
+        const piece = el.closest("[data-el]")?.getAttribute("data-el") as SectionElId | null;
+        if (piece) {
+          setSecEl(piece);
+          setRegion("encabezado");
+          return;
+        }
         const card = el.closest("[data-card-index]")?.getAttribute("data-card-index");
         if (card !== null && card !== undefined) setSelected(Number(card));
         const r = el.closest("[data-region]")?.getAttribute("data-region") as RegionId | null;
-        if (r) setRegion(r);
+        // En una sección solo hay dos piezas editables: encabezado y cuerpo.
+        if (r && (!inSectionRef.current || r === "encabezado" || r === "body")) setRegion(r);
       },
       true,
     );
@@ -414,20 +431,10 @@ export function HomeBuilder({
               </p>
               <SeccionForm key={`${seccion.id}:${seccion.sortOrder}`} id={seccion.id} slug={seccion.slug} name={seccion.name} description={seccion.description} sortOrder={seccion.sortOrder} articleCount={seccion.articleCount} defaultOpen onSaved={() => setFrameNonce((n) => n + 1)} />
             </Bloque>
-            <Bloque titulo="Componentes de la página" icono={<Paintbrush size={13} />}>
-              <RegionEditor
-                value={layout.regions ?? {}}
-                active={region === "navbar" || region === "footer" ? region : "body"}
-                onActive={setRegion}
-                onChange={(regions) => patchLayout({ regions })}
-                only={["navbar", "body", "footer"]}
-              />
-              <div className="mt-4 border-t border-[var(--border)] pt-4">
-                <SectionFiltersPicker value={layout.sectionFilters ?? "cabecera"} onChange={(sectionFilters) => patchLayout({ sectionFilters })} />
-              </div>
+            <Bloque titulo="Encabezado y cuerpo" icono={<Paintbrush size={13} />}>
+              <SectionPanel layout={layout} onChange={patchLayout} region={region} onRegion={setRegion} el={secEl} onEl={setSecEl} />
               <p className="mt-4 text-xs leading-relaxed text-[var(--fg-muted)]">
-                Color, tamaño de texto y tipografía del navbar, el cuerpo y el pie. Se aplican a todas las
-                secciones y a las demás páginas, y se publican con «Guardar diseño».
+                Pulsa una pieza en la página para editarla. Se aplica a todas las secciones y plantillas, y se publica con «Guardar diseño».
               </p>
             </Bloque>
             <Bloque titulo="Publicidad de secciones" icono={<Megaphone size={13} />}>
@@ -475,6 +482,7 @@ export function HomeBuilder({
             active={region}
             onActive={setRegion}
             onChange={(regions) => patchLayout({ regions })}
+            only={["navbar", "hero", "cards", "body", "footer"]}
           />
           {selected === null && (
             <p className="mt-4 text-xs leading-relaxed text-[var(--fg-muted)]">

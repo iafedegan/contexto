@@ -90,7 +90,7 @@ async function CategoryPage({ params, searchParams, locale }: PageProps & { loca
   // atajos de fecha (C-09) son enlaces, no botones: cada rango tiene su propia
   // URL, cacheable y compartible. El formulario es GET y funciona sin JavaScript.
   const filters = (
-    <div className={pos === "barra" ? "flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between lg:gap-6" : `flex flex-col gap-2.5 ${A.items}`}>
+    <div data-el="filters" className={pos === "barra" ? "flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between lg:gap-6" : `flex flex-col gap-2.5 ${A.items}`}>
       <div className={`flex flex-wrap items-center gap-1.5 ${A.justify}`}>
         {RANGOS.map((r) => {
           const desdeISO = r.dias === null ? "" : isoHaceDias(r.dias);
@@ -204,6 +204,7 @@ async function CategoryPage({ params, searchParams, locale }: PageProps & { loca
         breadcrumb={
           /* Miga visible (C-02): ubica al lector y alimenta el dato estructurado. */
           <nav
+            data-el="breadcrumb"
             aria-label="breadcrumb"
             className="lx-ui flex flex-wrap items-center gap-2 text-[0.68rem] uppercase tracking-[0.2em] text-[var(--fg-muted)]"
           >
