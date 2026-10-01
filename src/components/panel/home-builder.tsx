@@ -38,6 +38,7 @@ import type { ArticleListItem } from "@/lib/content";
 import type { HomeLayoutConfig, HomeStyle } from "@/db/schema";
 import { HOME_TEMPLATES } from "@/lib/home-layout";
 import type { RegionId } from "@/lib/home-regions";
+import { SectionFiltersPicker } from "@/components/panel/section-filters-picker";
 import { SeccionForm } from "@/components/panel/seccion-form";
 import { SectionTree, type SectionNode } from "@/components/panel/section-tree";
 import { RegionEditor } from "@/components/panel/region-editor";
@@ -401,6 +402,9 @@ export function HomeBuilder({
                 onChange={(regions) => patchLayout({ regions })}
                 only={["navbar", "body", "footer"]}
               />
+              <div className="mt-4 border-t border-[var(--border)] pt-4">
+                <SectionFiltersPicker value={layout.sectionFilters ?? "cabecera"} onChange={(sectionFilters) => patchLayout({ sectionFilters })} />
+              </div>
               <p className="mt-4 text-xs leading-relaxed text-[var(--fg-muted)]">
                 Color, tamaño de texto y tipografía del navbar, el cuerpo y el pie. Se aplican a todas las
                 secciones y a las demás páginas, y se publican con «Guardar diseño».
@@ -418,7 +422,7 @@ export function HomeBuilder({
         ) : (
           <>
         <Bloque titulo="Plantilla" icono={<LayoutGrid size={13} />}>
-          <TemplatePicker layout={layout} onPick={(config) => patchLayout({ ...config, parts: {} })} compacto />
+          <TemplatePicker layout={layout} onPick={(config) => patchLayout({ ...config, parts: {}, sectionFilters: layout.sectionFilters })} compacto />
           {/* Crear plantilla desde cero, dentro del mismo bloque. */}
           <details className="group/crear mt-4 rounded-[var(--radius)] border border-[var(--border)]">
             <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2.5 text-sm font-semibold">

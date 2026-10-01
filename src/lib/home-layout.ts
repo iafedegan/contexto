@@ -13,6 +13,7 @@ export const DEFAULT_HOME_LAYOUT: Required<HomeLayoutConfig> = {
   background: { mode: "theme" },
   regions: {},
   parts: {},
+  sectionFilters: "cabecera",
 };
 
 export type HomeTemplateId = NonNullable<HomeLayoutConfig["templateId"]>;
@@ -36,37 +37,37 @@ export const HOME_TEMPLATES: HomeTemplate[] = [
     name: "Esmeralda Real",
     description:
       "Obsidiana verde y pan de oro: cabecera centrada con cintillo de titulares, apertura a sangre con lámina metálica y columna «Lo último» numerada.",
-    config: { templateId: "esmeralda", breveDirection: "vertical", breveColumns: 2, riverColumns: 3, background: { mode: "theme" }, regions: {}, parts: {} },
+    config: { templateId: "esmeralda", breveDirection: "vertical", breveColumns: 2, riverColumns: 3, background: { mode: "theme" }, regions: {}, parts: {}, sectionFilters: "cabecera" },
   },
   {
     id: "clasico",
     name: "Clásico",
     description: "Diario tradicional: principal fija + columna “En breve”. Subrayado sutil al pasar el mouse.",
-    config: { templateId: "clasico", breveDirection: "vertical", breveColumns: 2, riverColumns: 3, background: { mode: "theme" }, regions: {}, parts: {} },
+    config: { templateId: "clasico", breveDirection: "vertical", breveColumns: 2, riverColumns: 3, background: { mode: "theme" }, regions: {}, parts: {}, sectionFilters: "cabecera" },
   },
   {
     id: "revista",
     name: "Revista",
     description: "Carrusel automático como portada + “En breve” en carrusel horizontal. Fotos grandes, tarjetas que se alzan al pasar el mouse.",
-    config: { templateId: "revista", breveDirection: "horizontal", breveColumns: 3, riverColumns: 3, background: { mode: "theme" }, regions: {}, parts: {} },
+    config: { templateId: "revista", breveDirection: "horizontal", breveColumns: 3, riverColumns: 3, background: { mode: "theme" }, regions: {}, parts: {}, sectionFilters: "cabecera" },
   },
   {
     id: "compacto",
     name: "Compacto",
     description: "Cuadrícula densa de fichas: la imagen se oscurece y el titular aparece al pasar el mouse. Máxima cantidad de notas visibles.",
-    config: { templateId: "compacto", breveDirection: "horizontal", breveColumns: 4, riverColumns: 4, background: { mode: "theme" }, regions: {}, parts: {} },
+    config: { templateId: "compacto", breveDirection: "horizontal", breveColumns: 4, riverColumns: 4, background: { mode: "theme" }, regions: {}, parts: {}, sectionFilters: "cabecera" },
   },
   {
     id: "vanguardia",
     name: "Vanguardia",
     description: "Cuadrícula “bento” oscura y asimétrica con orbes de gradiente, esquinas muy redondeadas y fichas que revelan resumen y brillo al pasar el mouse. Lo más moderno.",
-    config: { templateId: "vanguardia", breveDirection: "horizontal", breveColumns: 4, riverColumns: 4, background: { mode: "theme" }, regions: {}, parts: {} },
+    config: { templateId: "vanguardia", breveDirection: "horizontal", breveColumns: 4, riverColumns: 4, background: { mode: "theme" }, regions: {}, parts: {}, sectionFilters: "cabecera" },
   },
   {
     id: "gremial",
     name: "Gremial",
     description: "Papel blanco, acento rojo y verde institucional: cabecera con indicadores, apertura + 3 destacadas, cuadrícula de \"Últimas noticias\", accesos rápidos por sección, columnistas y boletín. Estilo sitio de gremio/federación.",
-    config: { templateId: "gremial", breveDirection: "horizontal", breveColumns: 4, riverColumns: 4, background: { mode: "theme" }, regions: {}, parts: {} },
+    config: { templateId: "gremial", breveDirection: "horizontal", breveColumns: 4, riverColumns: 4, background: { mode: "theme" }, regions: {}, parts: {}, sectionFilters: "cabecera" },
   },
 ];
 

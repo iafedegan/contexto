@@ -8,7 +8,7 @@ import { JsonLd } from "@/components/json-ld";
 import { breadcrumbJsonLd, collectionJsonLd } from "@/lib/seo";
 import { SiteShell } from "@/components/site-shell";
 import { getSiteTheme } from "@/lib/site-theme";
-import { getArticlesByCategory } from "@/lib/content";
+import { getArticlesByCategory, getHomeLayoutConfig } from "@/lib/content";
 import { siteUrl } from "@/lib/utils";
 
 /** Sección — plantilla «Cobre & Obsidiana». */
@@ -64,6 +64,14 @@ async function CategoryPage({ params, searchParams, locale }: PageProps & { loca
   if (!category) notFound();
 
   const site = await getSiteTheme();
+  // Dónde van los filtros lo elige el editor en /panel/portada (por defecto, junto al título).
+  const pos = (await getHomeLayoutConfig()).sectionFilters ?? "cabecera";
+  const A =
+    pos === "izquierda" || pos === "barra"
+      ? { items: "lg:items-start", justify: "lg:justify-start" }
+      : pos === "centro"
+        ? { items: "lg:items-center", justify: "lg:justify-center" }
+        : { items: "lg:items-end", justify: "lg:justify-end" };
   const filtrando = Boolean(subcategoria || desde || hasta);
   const paginas = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
@@ -82,8 +90,8 @@ async function CategoryPage({ params, searchParams, locale }: PageProps & { loca
   // atajos de fecha (C-09) son enlaces, no botones: cada rango tiene su propia
   // URL, cacheable y compartible. El formulario es GET y funciona sin JavaScript.
   const filters = (
-    <div className="flex flex-col gap-2.5 lg:items-end">
-      <div className="flex flex-wrap items-center gap-1.5 lg:justify-end">
+    <div className={`flex flex-col gap-2.5 ${A.items}`}>
+      <div className={`flex flex-wrap items-center gap-1.5 ${A.justify}`}>
         {RANGOS.map((r) => {
           const desdeISO = r.dias === null ? "" : isoHaceDias(r.dias);
           const activo = r.dias === null ? !desde && !hasta : desde === desdeISO && !hasta;
@@ -113,7 +121,7 @@ async function CategoryPage({ params, searchParams, locale }: PageProps & { loca
         <form
           action={localePath(locale, `/categoria/${slug}`)}
           method="get"
-          className="flex flex-wrap items-end gap-2 lg:justify-end"
+          className={`flex flex-wrap items-end gap-2 ${A.justify}`}
         >
           <label className="flex min-w-[8.5rem] flex-col gap-1">
             <span className="lx-kicker !text-[0.55rem] text-[var(--fg-muted)]">{t(locale, "section.subcategory")}</span>
@@ -206,7 +214,7 @@ async function CategoryPage({ params, searchParams, locale }: PageProps & { loca
             <span className="text-[var(--accent)]">{categoryLabel(locale, slug, category.name)}</span>
           </nav>
         }
-        filters={filters}
+        filters={pos === "cabecera" ? filters : undefined}
         chips={
           <>
             <span className="lx-chip border-[var(--border-strong)] text-[var(--accent)]">
@@ -216,6 +224,18 @@ async function CategoryPage({ params, searchParams, locale }: PageProps & { loca
           </>
         }
       />
+
+      {pos !== "cabecera" && pos !== "oculto" && (
+        <div
+          className={
+            pos === "barra"
+              ? "mb-8 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--bg-2)] p-4"
+              : `mb-8 flex ${pos === "centro" ? "justify-center" : pos === "derecha" ? "justify-end" : "justify-start"}`
+          }
+        >
+          {filters}
+        </div>
+      )}
 
       {items.length === 0 ? (
         <p className="py-16 text-center text-[var(--fg-muted)]">

@@ -6,6 +6,7 @@ import { Check, GripHorizontal, Loader2, Paintbrush, Rocket, X } from "lucide-re
 import { publishHomeDraft, saveHomeDraft } from "@/app/panel/(app)/portada/actions";
 import { ACCEPTED_KEY, DRAFT_PING_KEY, LAYOUT_EDIT_KEY, type PortadaDraft } from "@/lib/portada-draft";
 import { RegionEditor } from "@/components/panel/region-editor";
+import { SectionFiltersPicker } from "@/components/panel/section-filters-picker";
 import { SeccionForm } from "@/components/panel/seccion-form";
 import { TemplatePicker } from "@/components/panel/home-builder";
 import type { RegionId } from "@/lib/home-regions";
@@ -268,7 +269,7 @@ export function PreviewChrome({
               <details className="mb-4 rounded-[var(--radius)] border border-[var(--border)]">
                 <summary className="cursor-pointer px-3 py-2 text-sm font-semibold">Plantilla</summary>
                 <div className="border-t border-[var(--border)] p-3">
-                  <TemplatePicker layout={layout} onPick={(config) => editLayout({ ...config, parts: {} })} compacto />
+                  <TemplatePicker layout={layout} onPick={(config) => editLayout({ ...config, parts: {}, sectionFilters: layout.sectionFilters })} compacto />
                 </div>
               </details>
               )}
@@ -279,6 +280,11 @@ export function PreviewChrome({
                 onChange={(regions) => editLayout({ ...layout, regions })}
                 only={seccion ? ["navbar", "body", "footer"] : undefined}
               />
+              {seccion && (
+                <div className="mt-4 border-t border-[var(--border)] pt-4">
+                  <SectionFiltersPicker value={layout.sectionFilters ?? "cabecera"} onChange={(sectionFilters) => editLayout({ ...layout, sectionFilters })} />
+                </div>
+              )}
               <p role="status" className={`mt-3 text-xs font-semibold ${saveState === "error" ? "text-[#9a2f22]" : "text-[var(--accent)]"}`}>
                 {saveState === "saving" && "Guardando cambios…"}
                 {saveState === "saved" && "Cambios guardados en el borrador ✓ (se ven en la página)"}

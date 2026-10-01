@@ -513,7 +513,12 @@ export type HomeBackground = {
 
 /** Valor de site_settings con key = "home_layout": plantilla visual de la
  * portada + ajustes finos de sus secciones. */
+/** Dónde van los filtros (rangos de fecha y subsección) en la página de una sección. */
+export type SectionFiltersPos = "cabecera" | "izquierda" | "centro" | "derecha" | "barra" | "oculto";
+
 export type HomeLayoutConfig = {
+  /** Posición de los filtros en las páginas de sección. */
+  sectionFilters?: SectionFiltersPos;
   /** Plantilla: decide componentes, efectos y tipografía (no solo columnas). */
   templateId?: "esmeralda" | "clasico" | "revista" | "compacto" | "vanguardia" | "gremial";
   /** "En breve" en la plantilla Clásico: lista vertical o fila horizontal. */
