@@ -49,6 +49,27 @@ export type HomeStyle = {
   imageScale?: number;
   /** Color del titular (#rrggbb). Sin valor = el del tema de la plantilla. */
   color?: string;
+
+  // --- Bloque libre: tamaño, fondo y texto de cada tarjeta ---
+  /** Columnas que ocupa en una cuadrícula (1-6). */
+  colSpan?: number;
+  /** Alto mínimo del bloque en px (60-1200). */
+  height?: number;
+  /** Fondo del bloque (#rrggbb) o degradado (manda el degradado). */
+  bg?: string;
+  bgGradient?: Gradient;
+  /** Color del texto del bloque. */
+  fg?: string;
+  /** Esquinas redondeadas en px (0-60). */
+  radius?: number;
+  /** Relleno interior en px (0-80). */
+  pad?: number;
+  /** Fuente del texto corrido del bloque. */
+  textFont?: HomeTitleFont;
+  /** Tamaño EXACTO del titular en px (10-160). */
+  titlePx?: number;
+  /** Degradado en el texto del titular. */
+  titleGradient?: Gradient;
 };
 
 // --- Enums -----------------------------------------------------------------

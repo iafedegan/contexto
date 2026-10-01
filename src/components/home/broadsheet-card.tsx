@@ -48,7 +48,7 @@ export function BroadsheetCard({
 
   if (variant === "compact") {
     return (
-      <motion.article
+      <motion.article data-bs-root={a.slug}
         variants={fadeUp}
         initial={false}
         whileInView="show"
@@ -74,7 +74,7 @@ export function BroadsheetCard({
   }
 
   return (
-    <motion.article
+    <motion.article data-bs-root={a.slug}
       variants={fadeUp}
       initial={false}
       whileInView="show"

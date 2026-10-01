@@ -40,6 +40,7 @@ import { HOME_TEMPLATES } from "@/lib/home-layout";
 import type { RegionId } from "@/lib/home-regions";
 import type { SectionElId } from "@/db/schema";
 import { SectionPanel } from "@/components/panel/section-panel";
+import { BlockStyleEditor } from "@/components/panel/block-style-editor";
 import { TemplateBlueprint, type AdState } from "@/components/panel/template-blueprint";
 import type { AdPosition } from "@/lib/ads-positions";
 import { SectionFiltersPicker } from "@/components/panel/section-filters-picker";
@@ -110,6 +111,9 @@ export function HomeBuilder({
   const [secEl, setSecEl] = useState<SectionElId>("title");
   const secElRef = useRef<SectionElId>("title");
   const inSectionRef = useRef(false);
+  const itemsRef = useRef<Item[]>(initialItems);
+  const patchRef = useRef<(i: number, p: Partial<HomeStyle>) => void>(() => {});
+  const moveRef = useRef<(from: number, to: number) => void>(() => {});
   const [previewPath, setPreviewPath] = useState("/vista-portada");
   const seccion = previewPath.startsWith("/vista-portada/categoria/")
     ? (sections.find((x) => x.slug === previewPath.split("/").pop()) ?? null)
@@ -185,12 +189,20 @@ export function HomeBuilder({
     st.textContent =
       `[data-region="${r}"]{outline:2px dashed #84a21f;outline-offset:-2px}` +
       (r === "encabezado" ? `[data-el="${e}"]{outline:2px solid #84a21f;outline-offset:3px}` : "") +
-      (c !== null ? `[data-card-index="${c}"]{outline:3px solid #84a21f;outline-offset:2px}` : "");
+      (c !== null
+        ? `[data-card-index="${c}"]{outline:3px solid #84a21f;outline-offset:2px}` +
+          (itemsRef.current[c]
+            ? `[data-bs-root="${itemsRef.current[c].slug}"]:not([data-bslug] *){outline:3px solid #84a21f;outline-offset:2px}`
+            : "")
+        : "");
   }
   useEffect(() => {
     regionRef.current = region;
     secElRef.current = secEl;
     inSectionRef.current = previewPath.startsWith("/vista-portada/categoria/");
+    itemsRef.current = items;
+    patchRef.current = (i, p) => patchStyle(i, p);
+    moveRef.current = (from, to) => moveItem(from, to);
     selectedRef.current = selected;
     paintSelection();
   });
@@ -235,12 +247,118 @@ export function HomeBuilder({
         }
         const card = el.closest("[data-card-index]")?.getAttribute("data-card-index");
         if (card !== null && card !== undefined) setSelected(Number(card));
+        else {
+          // Página de sección: la tarjeta no lleva índice, se busca por su slug.
+          const slug = el.closest("[data-bs-root]")?.getAttribute("data-bs-root");
+          const idx = slug ? itemsRef.current.findIndex((i) => i.slug === slug) : -1;
+          if (idx >= 0) {
+            setSelected(idx);
+            if (inSectionRef.current) setRegion("body");
+          }
+        }
         const r = el.closest("[data-region]")?.getAttribute("data-region") as RegionId | null;
         // En una sección solo hay dos piezas editables: encabezado y cuerpo.
         if (r && (!inSectionRef.current || r === "encabezado" || r === "body")) setRegion(r);
       },
       true,
     );
+    // Se espera a que la página termine de hidratarse: tocar su DOM antes
+    // provocaría errores de hidratación.
+    setTimeout(() => {
+      if (frameDoc.current === doc) enhanceBlocks(doc);
+    }, 1800);
+  }
+
+  /**
+   * Hace el cuerpo ajustable: cada bloque (nota) lleva una asa en la esquina
+   * inferior derecha para agrandarlo (columnas y alto), y los de la portada se
+   * pueden arrastrar para cambiarlos de sitio. Se reinstala en cada recarga
+   * del lienzo.
+   */
+  function enhanceBlocks(doc: Document) {
+    const st = doc.createElement("style");
+    st.textContent =
+      ".cg-handle{position:absolute;right:-7px;bottom:-7px;width:16px;height:16px;border-radius:5px;background:#84a21f;border:2px solid #fff;cursor:nwse-resize;z-index:60;box-shadow:0 1px 4px rgba(0,0,0,.45)}" +
+      "[data-cg-block]{position:relative}[data-cg-block]:hover{outline:1px dashed #84a21f;outline-offset:2px}" +
+      ".cg-over{outline:3px dashed #c9a227!important;outline-offset:3px}";
+    doc.head.appendChild(st);
+
+    const blocks = Array.from(doc.querySelectorAll<HTMLElement>("[data-bslug],[data-bs-root]")).filter(
+      (el) => el.hasAttribute("data-bslug") || !el.closest("[data-bslug]"),
+    );
+    for (const el of blocks) {
+      el.setAttribute("data-cg-block", "");
+      const slug = el.getAttribute("data-bslug") ?? el.getAttribute("data-bs-root");
+      const handle = doc.createElement("span");
+      handle.className = "cg-handle";
+      handle.title = "Arrastra para agrandar el bloque";
+      el.appendChild(handle);
+      handle.addEventListener("pointerdown", (ev) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        handle.setPointerCapture(ev.pointerId);
+        const r0 = el.getBoundingClientRect();
+        const parent = el.parentElement;
+        const cs = parent ? doc.defaultView!.getComputedStyle(parent) : null;
+        const isGrid = !!cs && cs.display.includes("grid");
+        const cols = isGrid ? cs!.gridTemplateColumns.split(" ").length : 1;
+        const gap = isGrid ? parseFloat(cs!.columnGap) || 0 : 0;
+        const colW = isGrid ? (parent!.clientWidth - gap * (cols - 1)) / cols : r0.width;
+        let span: number | undefined;
+        let h = r0.height;
+        const sx = ev.clientX, sy = ev.clientY;
+        const scale = r0.width / (el.offsetWidth || r0.width) || 1;
+        const move = (e: PointerEvent) => {
+          h = Math.max(60, r0.height + (e.clientY - sy) / scale);
+          el.style.minHeight = `${Math.round(h)}px`;
+          if (isGrid) {
+            const w = r0.width + (e.clientX - sx) / scale;
+            span = Math.min(cols, Math.max(1, Math.round((w + gap) / (colW + gap))));
+            el.style.gridColumn = `span ${span} / span ${span}`;
+          }
+        };
+        const up = () => {
+          handle.removeEventListener("pointermove", move);
+          handle.removeEventListener("pointerup", up);
+          const idx = itemsRef.current.findIndex((i) => i.slug === slug);
+          if (idx >= 0) {
+            patchRef.current(idx, { height: Math.round(h), ...(span ? { colSpan: span } : {}) });
+            setSelected(idx);
+          }
+        };
+        handle.addEventListener("pointermove", move);
+        handle.addEventListener("pointerup", up);
+      });
+    }
+
+    // Arrastrar para reordenar (solo las tarjetas de la portada, que tienen posición).
+    let from: number | null = null;
+    const wrappers = Array.from(doc.querySelectorAll<HTMLElement>("[data-card-index]"));
+    for (const w of wrappers) {
+      w.draggable = true;
+      w.querySelectorAll("img,a").forEach((n) => ((n as HTMLElement).draggable = false));
+      w.addEventListener("dragstart", (e) => {
+        from = Number(w.getAttribute("data-card-index"));
+        e.dataTransfer?.setData("text/plain", String(from));
+      });
+      w.addEventListener("dragover", (e) => {
+        if (from === null) return;
+        e.preventDefault();
+        w.classList.add("cg-over");
+      });
+      w.addEventListener("dragleave", () => w.classList.remove("cg-over"));
+      w.addEventListener("dragend", () => {
+        from = null;
+        doc.querySelectorAll(".cg-over").forEach((n) => n.classList.remove("cg-over"));
+      });
+      w.addEventListener("drop", (e) => {
+        e.preventDefault();
+        w.classList.remove("cg-over");
+        const to = Number(w.getAttribute("data-card-index"));
+        if (from !== null && from !== to) moveRef.current(from, to);
+        from = null;
+      });
+    }
   }
 
   // Si en la pestaña de vista previa se aceptó y publicó el diseño, se
@@ -265,6 +383,18 @@ export function HomeBuilder({
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
   }, [router]);
+
+  function moveItem(from: number, to: number) {
+    if (from === to) return;
+    setItems((prev) => {
+      const next = prev.slice();
+      const [row] = next.splice(from, 1);
+      next.splice(to, 0, row);
+      return next;
+    });
+    setSelected(to);
+    setSaved(false);
+  }
 
   function patchStyle(index: number, partial: Partial<HomeStyle> | null) {
     setItems((prev) => {
@@ -432,7 +562,24 @@ export function HomeBuilder({
               <SeccionForm key={`${seccion.id}:${seccion.sortOrder}`} id={seccion.id} slug={seccion.slug} name={seccion.name} description={seccion.description} sortOrder={seccion.sortOrder} articleCount={seccion.articleCount} defaultOpen onSaved={() => setFrameNonce((n) => n + 1)} />
             </Bloque>
             <Bloque titulo="Encabezado y cuerpo" icono={<Paintbrush size={13} />}>
-              <SectionPanel layout={layout} onChange={patchLayout} region={region} onRegion={setRegion} el={secEl} onEl={setSecEl} />
+              <SectionPanel
+                layout={layout}
+                onChange={patchLayout}
+                region={region}
+                onRegion={setRegion}
+                el={secEl}
+                onEl={setSecEl}
+                block={
+                  selected !== null && items[selected]
+                    ? {
+                        title: items[selected].title,
+                        style: items[selected].homeStyle ?? {},
+                        onChange: (p) => patchStyle(selected, p),
+                        onClear: () => patchStyle(selected, null),
+                      }
+                    : null
+                }
+              />
               <p className="mt-4 text-xs leading-relaxed text-[var(--fg-muted)]">
                 Pulsa una pieza en la página para editarla. Se aplica a todas las secciones y plantillas, y se publica con «Guardar diseño».
               </p>
@@ -475,6 +622,14 @@ export function HomeBuilder({
                 onClear={() => patchStyle(selected, null)}
                 onClose={() => setSelected(null)}
               />
+              <div className="mt-4">
+                <BlockStyleEditor
+                  title={items[selected].title}
+                  style={items[selected].homeStyle ?? {}}
+                  onChange={(p) => patchStyle(selected, p)}
+                  onClear={() => patchStyle(selected, null)}
+                />
+              </div>
             </div>
           )}
           <RegionEditor

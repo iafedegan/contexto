@@ -10,6 +10,7 @@ import { SiteShell } from "@/components/site-shell";
 import { getSiteTheme } from "@/lib/site-theme";
 import { getArticlesByCategory, getHomeLayoutConfig } from "@/lib/content";
 import { siteUrl } from "@/lib/utils";
+import { blockStylesCss } from "@/lib/home-style";
 
 /** Sección — plantilla «Cobre & Obsidiana». */
 export const revalidate = 600;
@@ -181,6 +182,10 @@ async function CategoryPage({ params, searchParams, locale }: PageProps & { loca
 
   return (
     <SiteShell theme={site.theme} style={site.style} locale={locale} variant="seccion">
+      {(() => {
+        const css = blockStylesCss(items);
+        return css ? <style dangerouslySetInnerHTML={{ __html: css }} /> : null;
+      })()}
       <JsonLd
         data={collectionJsonLd({
           name: category.name,

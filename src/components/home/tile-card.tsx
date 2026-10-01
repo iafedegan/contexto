@@ -51,7 +51,7 @@ export function TileCard({
   const titleStyle = homeStyleTitleCss(a.homeStyle, size === "lg" ? 22 : 14.5, 1.28);
 
   return (
-    <motion.article
+    <motion.article data-bs-root={a.slug}
       // Visible desde el HTML del servidor: una animación de entrada dejaba la
       // noticia invisible hasta cargar el JS (mala señal = portada en blanco).
       className={cn("group border border-[var(--rule)] bg-[var(--paper)] transition-colors duration-150", className)}

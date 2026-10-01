@@ -71,7 +71,7 @@ export function HomeCard({
   const wrapperProps = interactive ? { href: localePath(locale, `/articulo/${a.slug}`) } : {};
 
   return (
-    <article className={cn("group", hover === "zoom" && "hover-zoom", className)}>
+    <article data-bs-root={a.slug} className={cn("group", hover === "zoom" && "hover-zoom", className)}>
       <Wrapper {...wrapperProps} className="entry-link block">
         {showImage && (
           <div

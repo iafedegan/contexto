@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { and, eq, inArray, isNotNull, notInArray, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { articles, siteSettings, type HomeLayoutConfig, type HomeStyle } from "@/db/schema";
+import { sanitizeHomeStyle } from "@/lib/home-style";
 import { requireRole } from "@/lib/auth";
 import { normalizeLayout } from "@/lib/home-layout-normalize";
 import { sanitizePopup, type PopupConfig } from "@/lib/popup-types";
@@ -28,7 +29,7 @@ export async function saveHomeLayout(entries: HomeLayoutEntry[]) {
     entries.map((e, i) =>
       db
         .update(articles)
-        .set({ homePosition: i, homeStyle: e.homeStyle && Object.keys(e.homeStyle).length > 0 ? e.homeStyle : null })
+        .set({ homePosition: i, homeStyle: sanitizeHomeStyle(e.homeStyle) })
         .where(eq(articles.id, e.id)),
     ),
   );

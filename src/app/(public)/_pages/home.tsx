@@ -10,6 +10,8 @@ import {
 } from "@/components/home/templates";
 import { FeatureStrip } from "@/components/feature-strip";
 import { AdsBanner } from "@/components/ads-banner";
+import { CardSlugsProvider } from "@/components/home/card-styles";
+import { blockStylesCss } from "@/lib/home-style";
 import { SiteSidebar } from "@/components/site-sidebar";
 import { SiteShell } from "@/components/site-shell";
 import { getHomeLayoutConfig, getHomepageArticles } from "@/lib/content";
@@ -126,6 +128,12 @@ async function HomePage({ locale }: { locale: Locale }) {
 
       {/* Cuerpo de la portada + barra lateral (§8). En pantallas menores de
           1024 px la lateral baja al final, que es lo que pide M-05. */}
+      {/* Tamaño, fondo y texto de cada bloque, fijados a mano en /panel/portada. */}
+      {(() => {
+        const css = blockStylesCss(articles);
+        return css ? <style dangerouslySetInnerHTML={{ __html: css }} /> : null;
+      })()}
+      <CardSlugsProvider slugs={[lead, second, ...rail, ...river].filter((a): a is NonNullable<typeof a> => Boolean(a)).map((a) => a.slug)}>
       <div className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_19rem]">
         <div className="lx-bleed-off min-w-0">
           {/* Cada plantilla se referencia por su nombre en el JSX (y no por un
@@ -151,6 +159,7 @@ async function HomePage({ locale }: { locale: Locale }) {
 
         <SiteSidebar locale={locale} />
       </div>
+      </CardSlugsProvider>
 
       <AdsBanner zone="home_bottom" className="mx-auto mt-14" />
 

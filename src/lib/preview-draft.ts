@@ -5,6 +5,7 @@ import { normalizeLayout } from "@/lib/home-layout-normalize";
 import { DEFAULT_HOME_LAYOUT } from "@/lib/home-layout";
 import { sanitizePopup } from "@/lib/popup-types";
 import type { PortadaDraft } from "@/lib/portada-draft";
+import { sanitizeHomeStyle } from "@/lib/home-style";
 
 /** Clave de site_settings del borrador de cada editor. */
 export const draftKey = (userId: string) => `home_draft:${userId}`;
@@ -33,7 +34,7 @@ export function sanitizeDraft(input: unknown): PortadaDraft | null {
     .map((i) => {
       const o = (i ?? {}) as Record<string, unknown>;
       return typeof o.slug === "string" && o.slug
-        ? { slug: o.slug.slice(0, 200), homeStyle: (o.homeStyle && typeof o.homeStyle === "object" ? o.homeStyle : null) as PortadaDraft["items"][number]["homeStyle"] }
+        ? { slug: o.slug.slice(0, 200), homeStyle: sanitizeHomeStyle(o.homeStyle) }
         : null;
     })
     .filter((i): i is PortadaDraft["items"][number] => i !== null)

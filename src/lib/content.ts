@@ -186,10 +186,13 @@ export async function getArticlesByCategory(
       : db.select({ count: sql<number>`count(*)::int` }).from(articles).where(where),
   ]);
 
+  // Vista previa del editor: el estilo de bloque sin publicar de cada nota.
+  const draft = getPreviewDraft();
+  const draftStyle = draft ? new Map(draft.items.map((d) => [d.slug, d.homeStyle])) : null;
   return {
     category: { name: cat.name, description: cat.description },
     subcategories: children,
-    items,
+    items: draftStyle ? items.map((r) => (draftStyle.has(r.slug) ? { ...r, homeStyle: draftStyle.get(r.slug) ?? null } : r)) : items,
     total: count,
   };
 }

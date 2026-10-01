@@ -68,6 +68,7 @@ export function BentoTile({
   return (
     <motion.div
       ref={ref}
+      data-bs-root={a.slug}
       onMouseMove={handleMove}
       onMouseLeave={handleLeave}
       style={{ rotateX, rotateY, transformPerspective: 900 }}

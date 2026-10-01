@@ -125,7 +125,7 @@ function Kicker({
 function LeadCard({ a, priority, locale }: { a: ArticleListItem; priority?: boolean; locale: Locale }) {
   const st = cardStyle(a, "lead");
   return (
-    <article className="lx-card lx-reveal group relative">
+    <article data-bs-root={a.slug} className="lx-card lx-reveal group relative">
       <div className="lx-shine pointer-events-none absolute inset-0 z-[3]" />
       <div className="lx-inlay pointer-events-none absolute inset-0 z-[2]" />
       <Link
@@ -173,7 +173,7 @@ function LeadCard({ a, priority, locale }: { a: ArticleListItem; priority?: bool
 function GoldCard({ a, priority, locale }: { a: ArticleListItem; priority?: boolean; locale: Locale }) {
   const st = cardStyle(a, "gold");
   return (
-    <article className="lx-card lx-reveal group flex h-full flex-col">
+    <article data-bs-root={a.slug} className="lx-card lx-reveal group flex h-full flex-col">
       <div className="lx-shine pointer-events-none absolute inset-0 z-[3]" />
       {!st.hideMedia && (
         <Link
@@ -212,7 +212,7 @@ function GoldCard({ a, priority, locale }: { a: ArticleListItem; priority?: bool
 function RailCard({ a, index, locale }: { a: ArticleListItem; index?: number; locale: Locale }) {
   const st = cardStyle(a, "rail");
   return (
-    <article className="lx-reveal group flex gap-4 border-b border-[var(--border)] pb-4 last:border-0">
+    <article data-bs-root={a.slug} className="lx-reveal group flex gap-4 border-b border-[var(--border)] pb-4 last:border-0">
       {typeof index === "number" && (
         <span className="lx-display w-8 shrink-0 text-2xl font-semibold text-[var(--accent)] opacity-60">
           {String(index + 1).padStart(2, "0")}
@@ -249,7 +249,7 @@ function RailCard({ a, index, locale }: { a: ArticleListItem; index?: number; lo
 function CopperCard({ a, index, locale }: { a: ArticleListItem; index?: number; locale: Locale }) {
   const st = cardStyle(a, "copper");
   return (
-    <article className="lx-card lx-reveal group flex h-full flex-col">
+    <article data-bs-root={a.slug} className="lx-card lx-reveal group flex h-full flex-col">
       <div className="lx-shine pointer-events-none absolute inset-0 z-[3]" />
       <Link
         href={localePath(locale, `/articulo/${a.slug}`)}
@@ -302,7 +302,7 @@ function CopperCard({ a, index, locale }: { a: ArticleListItem; index?: number; 
 function PearlCard({ a, locale }: { a: ArticleListItem; locale: Locale }) {
   const st = cardStyle(a, "pearl");
   return (
-    <article className="lx-card lx-reveal group flex h-full flex-col rounded-[var(--radius-lg)]">
+    <article data-bs-root={a.slug} className="lx-card lx-reveal group flex h-full flex-col rounded-[var(--radius-lg)]">
       <div className="lx-shine pointer-events-none absolute inset-0 z-[3]" />
       <Link href={localePath(locale, `/articulo/${a.slug}`)} className="relative block px-3 pt-3">
         <span className="block overflow-hidden rounded-[calc(var(--radius-lg)-0.5rem)]">
