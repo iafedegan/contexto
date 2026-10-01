@@ -18,7 +18,7 @@ import {
   X,
 } from "lucide-react";
 import { saveArticle } from "@/app/panel/(app)/articulos/actions";
-import { saveChartImage, uploadMedia } from "@/app/panel/(app)/articulos/media-actions";
+import { uploadMedia } from "@/app/panel/(app)/articulos/media-actions";
 import {
   generateArticleDraft,
   regenerateDraftPart,
@@ -29,6 +29,7 @@ import {
   type TitleContextOptions,
 } from "@/app/panel/(app)/articulos/ai-actions";
 import { SiteArticlePreview, type SitePreviewChrome } from "@/components/panel/site-article-preview";
+import { decodeSpec, encodeSpec, renderChartSvg, svgDataUri } from "@/lib/chart-svg";
 import { auditArticle, scoreLabel, type AuditItem } from "@/lib/seo-audit";
 
 type Option = { id: string; name: string };
@@ -110,10 +111,13 @@ function toHtml(text: string): string {
     .map((b) => b.trim())
     .filter(Boolean)
     .map((b) => {
-      // Gráfica insertada con IA: [[GRAFICA https://… | texto alternativo | fuente]]
-      const g = /^\[\[GRAFICA (https:\/\/[^\s|\]]+) \| ([^|\]]*) \| ([^\]]*)\]\]$/.exec(b);
+      // Gráfica insertada con IA: [[GRAFICA <datos> | texto alternativo | fuente]]
+      const g = /^\[\[GRAFICA ([\w-]+) \| ([^|\]]*) \| ([^\]]*)\]\]$/.exec(b);
       if (g) {
-        return `<figure><img src="${g[1]}" alt="${escapeHtml(g[2])}" loading="lazy"><figcaption>${escapeHtml(g[3])}</figcaption></figure>`;
+        const spec = decodeSpec(g[1]);
+        if (spec) {
+          return `<figure><img src="${svgDataUri(renderChartSvg(spec))}" alt="${escapeHtml(g[2])}" loading="lazy"><figcaption>${escapeHtml(g[3])}</figcaption></figure>`;
+        }
       }
       return b.startsWith("## ")
         ? `<h2>${escapeHtml(b.slice(3))}</h2>`
@@ -317,15 +321,12 @@ export function ArticleWizard({
   }
   function insertChart() {
     if (!chart) return;
-    startChart(async () => {
-      const up = await saveChartImage(chart.chart);
-      if (!up.ok) return setChartError(up.error);
-      const fuente = `Fuente: ${chart.sourceNote || "Google Search"}. Consultado en: ${chart.sources.slice(0, 3).map((x) => x.title).join(", ")}.`;
-      const alt = chart.chart.title.replace(/[|\]]/g, " ");
-      setBody((b) => `${b.trimEnd()}\n\n[[GRAFICA ${up.url} | ${alt} | ${fuente.replace(/[|\]]/g, " ")}]]\n`);
-      setChart(null);
-      setChartTopic("");
-    });
+    const fuente = `Fuente: ${chart.sourceNote || "Google Search"}. Consultado en: ${chart.sources.slice(0, 3).map((x) => x.title).join(", ")}.`;
+    const alt = chart.chart.title.replace(/[|\]]/g, " ");
+    setBody((b) => `${b.trimEnd()}\n\n[[GRAFICA ${encodeSpec(chart.chart)} | ${alt} | ${fuente.replace(/[|\]]/g, " ")}]]\n`);
+    setChart(null);
+    setChartTopic("");
+    setChartError("");
   }
 
   function suggest() {
@@ -758,8 +759,8 @@ export function ArticleWizard({
                       ))}
                     </ul>
                     <div className="flex gap-2">
-                      <button type="button" onClick={insertChart} disabled={chartBusy} className="lx-btn">
-                        {chartBusy ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />} Insertar en el artículo
+                      <button type="button" onClick={insertChart} className="lx-btn">
+                        <Check size={15} /> Insertar en el artículo
                       </button>
                       <button type="button" onClick={makeChart} disabled={chartBusy} className="lx-btn lx-btn-ghost">
                         <RotateCcw size={14} /> Otra versión

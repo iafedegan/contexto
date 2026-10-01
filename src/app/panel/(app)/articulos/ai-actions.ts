@@ -279,11 +279,11 @@ export async function suggestTitlesAndContexts(input: {
 const chartSchema = z.object({
   enough: z.boolean().describe("false si el texto no trae cifras suficientes para una gráfica"),
   type: z.enum(["bar", "line", "pie"]),
-  title: z.string().max(90),
-  unit: z.string().max(60),
+  title: z.string().max(110),
+  unit: z.string().max(70),
   labels: z.array(z.string()).max(12),
   series: z.array(z.object({ name: z.string(), values: z.array(z.number()) })).max(4),
-  sourceNote: z.string().max(200).describe("Fuente y periodo de las cifras, tal como constan en el texto"),
+  sourceNote: z.string().max(160).describe("Fuente y periodo de las cifras, tal como constan en el texto"),
 });
 
 export type ChartResult =
@@ -328,11 +328,11 @@ export async function generateChart(input: { topic: string; section?: string }):
     const { object } = await generateObject({
       model: ai.model,
       schema: chartSchema,
-      prompt: `Con SOLO las cifras del siguiente texto (no agregues ninguna), arma la gráfica más adecuada (barras para comparar categorías, línea para evolución en el tiempo, torta para partes de un total). Si no hay cifras suficientes marca enough=false.\n\nTEMA: ${topic}\n\nTEXTO:\n${found.text.slice(0, 6000)}`,
+      prompt: `Con SOLO las cifras del siguiente texto (no agregues ninguna), arma la gráfica más adecuada (barras para comparar categorías, línea para evolución en el tiempo, torta SOLO para partes de un total). REGLAS DE LA GRÁFICA: (1) todos los valores deben ser de la MISMA magnitud y unidad y comparables entre sí: NUNCA mezcles hectáreas con cabezas de ganado o con pesos en el mismo gráfico; si el texto trae varias magnitudes, elige UNA y grafica solo esa; (2) prefiere una serie en el tiempo o categorías comparables, de 3 a 8 puntos; (3) etiquetas cortas (máx. 22 caracteres) sin repetir la unidad; (4) ordena las categorías de mayor a menor (si no son cronológicas); (5) title = una frase que diga qué muestra (no «Gráfica de…»), unit = la unidad con su periodo (p. ej. «Miles de cabezas, 2025»). Si no hay cifras suficientes y comparables marca enough=false.\n\nTEMA: ${topic}\n\nTEXTO:\n${found.text.slice(0, 6000)}`,
     });
     if (!object.enough) return { ok: false, error: "Las fuentes encontradas no traen cifras suficientes para una gráfica de ese tema." };
 
-    const chart: ChartSpec = { type: object.type, title: object.title, unit: object.unit, labels: object.labels, series: object.series };
+    const chart: ChartSpec = { type: object.type, title: object.title, unit: object.unit, labels: object.labels, series: object.series, source: object.sourceNote };
     const problem = chartProblem(chart);
     if (problem) return { ok: false, error: `Los datos no sirven para graficar: ${problem}` };
     return { ok: true, chart, sourceNote: object.sourceNote, sources, svg: renderChartSvg(chart) };
