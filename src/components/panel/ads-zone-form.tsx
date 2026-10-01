@@ -14,8 +14,20 @@ function paraInput(d: Date | null): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-/** Lo que el editor está escribiendo en un anuncio (aún sin guardar). */
-export type AdDraft = { imageUrl: string; clickUrl: string; html: string; active: boolean };
+/**
+ * Fecha de un <input type="datetime-local"> como instante ISO. El navegador la
+ * interpreta en la hora del editor; así el servidor recibe el instante exacto y
+ * no la hora «de reloj» sin zona (que se corría tantas horas como la diferencia).
+ */
+function aIso(v: FormDataEntryValue | null): string {
+  const s = String(v ?? "").trim();
+  if (!s) return "";
+  const d = new Date(s);
+  return Number.isNaN(d.getTime()) ? "" : d.toISOString();
+}
+
+/** Lo que el editor está escribiendo en un anuncio (aún sin guardar). Fechas en ISO. */
+export type AdDraft = { imageUrl: string; clickUrl: string; html: string; active: boolean; startsAt?: string; endsAt?: string };
 
 export function AdsZoneForm({
   zone,
@@ -46,6 +58,8 @@ export function AdsZoneForm({
           clickUrl: String(fd.get("clickUrl") ?? "").trim(),
           html: String(fd.get("html") ?? "").trim(),
           active: fd.get("active") === "1",
+          startsAt: aIso(fd.get("startsAt")),
+          endsAt: aIso(fd.get("endsAt")),
         });
       }}
       onFocus={() => onFocusZone?.(zone.key)}
@@ -84,7 +98,7 @@ export function AdsZoneForm({
 
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
         <label className="flex flex-col gap-1">
-          <span className="text-[0.68rem] uppercase tracking-[0.14em] text-[var(--fg-muted)]">
+          <span className="text-[0.72rem] uppercase tracking-[0.14em] text-[var(--fg-muted)]">
             URL de la imagen
           </span>
           <input
@@ -97,7 +111,7 @@ export function AdsZoneForm({
         </label>
 
         <label className="flex flex-col gap-1">
-          <span className="text-[0.68rem] uppercase tracking-[0.14em] text-[var(--fg-muted)]">
+          <span className="text-[0.72rem] uppercase tracking-[0.14em] text-[var(--fg-muted)]">
             Enlace al hacer clic
           </span>
           <input
@@ -111,7 +125,7 @@ export function AdsZoneForm({
       </div>
 
       <label className="mt-3 flex flex-col gap-1">
-        <span className="text-[0.68rem] uppercase tracking-[0.14em] text-[var(--fg-muted)]">
+        <span className="text-[0.72rem] uppercase tracking-[0.14em] text-[var(--fg-muted)]">
           O código HTML del anunciante (script de un ad server) · si lo usas, deja la imagen vacía
         </span>
         <textarea
@@ -126,7 +140,7 @@ export function AdsZoneForm({
 
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
         <label className="flex flex-col gap-1">
-          <span className="text-[0.68rem] uppercase tracking-[0.14em] text-[var(--fg-muted)]">
+          <span className="text-[0.72rem] uppercase tracking-[0.14em] text-[var(--fg-muted)]">
             Empieza (opcional)
           </span>
           <input
@@ -138,7 +152,7 @@ export function AdsZoneForm({
           />
         </label>
         <label className="flex flex-col gap-1">
-          <span className="text-[0.68rem] uppercase tracking-[0.14em] text-[var(--fg-muted)]">
+          <span className="text-[0.72rem] uppercase tracking-[0.14em] text-[var(--fg-muted)]">
             Termina (opcional)
           </span>
           <input
@@ -153,14 +167,20 @@ export function AdsZoneForm({
 
       {canManage && (
         <div className="mt-3 flex flex-wrap items-center gap-3">
-          <button
-            type="submit"
-            disabled={pending}
-            className="inline-flex items-center gap-1.5 rounded-full bg-[var(--accent)] px-4 py-1.5 text-xs font-semibold text-[var(--accent-fg)] transition hover:opacity-90 disabled:opacity-60"
-          >
-            {pending && <Loader2 size={13} className="animate-spin" />}
-            Guardar zona
-          </button>
+          {onDraft ? (
+            <p className="basis-full text-xs text-[var(--fg-muted)]">
+              Los cambios quedan en el borrador y se publican con «Publicar cambios». Para que se vea en el sitio, marca «Activa en el sitio».
+            </p>
+          ) : (
+            <button
+              type="submit"
+              disabled={pending}
+              className="inline-flex items-center gap-1.5 rounded-full bg-[var(--accent)] px-4 py-1.5 text-xs font-semibold text-[var(--accent-fg)] transition hover:opacity-90 disabled:opacity-60"
+            >
+              {pending && <Loader2 size={13} className="animate-spin" />}
+              Guardar zona
+            </button>
+          )}
 
           {zone.extra && (
             <button

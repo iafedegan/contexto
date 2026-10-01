@@ -54,7 +54,8 @@ function toRow(key: string, position: AdPosition, fila?: Fila): AdsZoneRow {
     key,
     position,
     extra: key !== position,
-    name: fila?.name ?? (n > 1 ? `${spec.label} · anuncio ${n}` : spec.label),
+    // El nombre sale siempre de la posición: así un cambio de redacción llega también a los anuncios ya guardados.
+    name: n > 1 ? `${spec.label} · anuncio ${n}` : spec.label,
     html: fila?.html ?? null,
     imageUrl: fila?.imageUrl ?? null,
     clickUrl: fila?.clickUrl ?? null,

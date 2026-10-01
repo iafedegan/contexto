@@ -1,15 +1,15 @@
 import { and, asc, desc, eq, lte, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { articles, authors, categories } from "@/db/schema";
+import { articles, authors, categories, siteSettings } from "@/db/schema";
 import { auth, requirePermiso } from "@/lib/auth";
 import { getHomeLayoutConfig } from "@/lib/content";
 import { getAdsZoneRows } from "@/lib/ads";
 import { HomeBuilder } from "@/components/panel/home-builder";
-import { SiteFooter } from "@/components/site-footer";
-import { SiteHeader } from "@/components/site-header";
-import { navItems } from "@/components/site-shell";
 import { getSitePopup } from "@/lib/popup";
 import { HomeRealPreview } from "@/components/panel/home-real-preview";
+import { draftKey, sanitizeDraft } from "@/lib/preview-draft";
+import { countChanges, summarizeChanges, type PortadaState } from "@/lib/portada-summary";
+import type { AdDraft } from "@/components/panel/ads-zone-form";
 
 export const dynamic = "force-dynamic";
 
@@ -18,12 +18,12 @@ export default async function PortadaPage({
 }: {
   searchParams: Promise<{ vista?: string; seccion?: string }>;
 }) {
-  await requirePermiso("portada");
+  const user = await requirePermiso("portada");
   const { vista, seccion } = await searchParams;
   // Vista previa REAL en pestaña nueva. Va la primera: las funciones del portal
   // memoizan por petición y no deben ejecutarse antes de aplicar el borrador.
   if (vista === "1") return <HomeRealPreview seccion={seccion} />;
-  const [session, rows, layout, nav, adsZones, popup] = await Promise.all([
+  const [session, rows, layout, adsZones, popup, draftRow] = await Promise.all([
     auth(),
     db
       .select({
@@ -49,9 +49,9 @@ export default async function PortadaPage({
       .where(and(eq(articles.status, "publicado"), lte(articles.publishedAt, sql`now()`)))
       .orderBy(sql`(${articles.homePosition} is null)`, articles.homePosition, desc(articles.publishedAt)),
     getHomeLayoutConfig(),
-    navItems(),
     getAdsZoneRows(),
     getSitePopup(),
+    db.select({ value: siteSettings.value, updatedAt: siteSettings.updatedAt }).from(siteSettings).where(eq(siteSettings.key, draftKey(user.id))).limit(1),
   ]);
 
   const sections = await db
@@ -69,27 +69,37 @@ export default async function PortadaPage({
     .groupBy(categories.id)
     .orderBy(asc(categories.sortOrder), asc(categories.name));
 
-  const headerVariants = {
-    masthead: <SiteHeader theme="clasico" nav={nav} variant="masthead" />,
-    couture: <SiteHeader theme="clasico" nav={nav} variant="couture" />,
-    bold: <SiteHeader theme="clasico" nav={nav} variant="bold" />,
-    glass: <SiteHeader theme="clasico" nav={nav} variant="glass" />,
-    crest: <SiteHeader theme="clasico" nav={nav} variant="crest" />,
-    gremial: <SiteHeader theme="gremial" nav={nav} variant="gremial" />,
-  };
-  const footerVariants = {
-    grand: <SiteFooter theme="clasico" nav={nav} variant="grand" />,
-    atelier: <SiteFooter theme="clasico" nav={nav} variant="atelier" />,
-    copper: <SiteFooter theme="clasico" nav={nav} variant="copper" />,
-    aurora: <SiteFooter theme="clasico" nav={nav} variant="aurora" />,
-    seal: <SiteFooter theme="clasico" nav={nav} variant="seal" />,
-    gremial: <SiteFooter theme="gremial" nav={nav} variant="gremial" />,
-  };
+  // ¿Hay un borrador de una sesión anterior que difiera de lo publicado? Se ofrece retomarlo.
+  let resume: { draft: NonNullable<ReturnType<typeof sanitizeDraft>>; at: string; count: number } | null = null;
+  const draft = sanitizeDraft(draftRow[0]?.value);
+  if (draft) {
+    const adsBase: Record<string, AdDraft> = {};
+    for (const z of adsZones) {
+      adsBase[z.key] = { imageUrl: z.imageUrl ?? "", clickUrl: z.clickUrl ?? "", html: z.html ?? "", active: z.active, startsAt: z.startsAt ? z.startsAt.toISOString() : "", endsAt: z.endsAt ? z.endsAt.toISOString() : "" };
+    }
+    const base: PortadaState = {
+      layout,
+      items: rows.map((r) => ({ slug: r.slug, homeStyle: r.homeStyle ?? null })),
+      popup,
+      ads: {},
+      auto: rows.every((r) => r.homePosition === null),
+    };
+    const cur: PortadaState = { layout: draft.layout, items: draft.items, popup: draft.popup, ads: draft.adDrafts, auto: draft.auto };
+    const lines = summarizeChanges(base, cur, {
+      titles: Object.fromEntries(rows.map((r) => [r.slug, r.title])),
+      adsBase,
+      adNames: Object.fromEntries(adsZones.map((z) => [z.key, z.name])),
+    });
+    const n = countChanges(lines);
+    if (n > 0) resume = { draft, at: (draftRow[0]?.updatedAt ?? new Date()).toISOString(), count: n };
+  }
 
   return (
     // El editor necesita todo el ancho: se sale del contenedor del panel con
-    // left-1/2 + w-screen (el padre recorta en horizontal, ver .lx-shell).
-    <div className="relative left-1/2 w-screen -translate-x-1/2 px-5">
+    // left-1/2 + margen negativo + w-screen (el padre recorta en horizontal, ver .lx-shell).
+    // Nada de `translate`: crearía un bloque contenedor y los elementos `fixed` del editor
+    // (aviso, árbol de secciones, panel flotante) se anclarían a este div en vez de a la ventana.
+    <div className="relative left-1/2 -ml-[50vw] w-screen px-5">
       <div className="flex min-h-[calc(100dvh-9rem)] flex-col gap-5">
       {/* `key` fuerza a remontar el builder cuando cambia el diseño real en la
           BD (tras guardar o restablecer), para que su estado interno no quede
@@ -102,8 +112,7 @@ export default async function PortadaPage({
         adsZones={adsZones}
         sections={sections}
         canManagePauta={session?.user.role === "administrador"}
-        headerVariants={headerVariants}
-        footerVariants={footerVariants}
+        resume={resume}
       />
       </div>
     </div>

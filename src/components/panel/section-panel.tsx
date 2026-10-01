@@ -134,9 +134,9 @@ export function SectionPanel({
                 max={EL_RANGES.size.max}
                 step={1}
                 value={style.size ?? ""}
-                placeholder="Auto"
+                placeholder="Automático"
                 onChange={(e) => patchEl({ size: e.target.value === "" ? undefined : Number(e.target.value) })}
-                className="w-24 rounded-lg border border-[var(--border-strong)] bg-[var(--surface-2)] px-2 py-1.5 text-sm tabular-nums"
+                className="w-28 rounded-lg border border-[var(--border-strong)] bg-[var(--surface-2)] px-2 py-1.5 text-sm tabular-nums"
               />
               <span className="text-xs text-[var(--fg-muted)]">ej. 12</span>
               {style.size !== undefined && (
@@ -162,7 +162,7 @@ export function SectionPanel({
                 onChange={(e) => patchEl({ weight: e.target.value ? Number(e.target.value) : undefined })}
                 className="min-w-0 flex-1 rounded-lg border border-[var(--border-strong)] bg-[var(--surface-2)] px-2 py-1.5 text-sm"
               >
-                <option value="">Auto</option>
+                <option value="">Automático</option>
                 {WEIGHTS.map((w) => (
                   <option key={w} value={w}>
                     {w} {w <= 300 ? "· fino" : w === 400 ? "· normal" : w >= 700 ? "· negrita" : ""}
@@ -178,7 +178,7 @@ export function SectionPanel({
                 onChange={(e) => patchEl({ upper: e.target.value === "" ? undefined : e.target.value === "si" })}
                 className="min-w-0 flex-1 rounded-lg border border-[var(--border-strong)] bg-[var(--surface-2)] px-2 py-1.5 text-sm"
               >
-                <option value="">Auto</option>
+                <option value="">Automático</option>
                 <option value="si">TODO EN MAYÚSCULAS</option>
                 <option value="no">Normal</option>
               </select>
@@ -187,7 +187,7 @@ export function SectionPanel({
             <div>
               <div className="flex items-center justify-between text-xs">
                 <span className="text-[var(--fg-muted)]">Espacio entre letras</span>
-                <span className="tabular-nums font-semibold">{style.tracking === undefined ? "Auto" : `${style.tracking} px`}</span>
+                <span className="tabular-nums font-semibold">{style.tracking === undefined ? "Automático" : `${style.tracking} px`}</span>
               </div>
               <input
                 type="range"

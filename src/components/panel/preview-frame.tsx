@@ -31,11 +31,15 @@ const BEZEL: Record<Device, { pad: number; radius: number; screenRadius: number;
   mac: { pad: 14, radius: 16, screenRadius: 4, base: 22 },
 };
 
+export type Zoom = "ajustar" | 0.75 | 1;
+
 export function PreviewFrame({
   device,
   children,
   src,
   onFrameLoad,
+  framed = false,
+  zoom = "ajustar",
 }: {
   device: Device;
   /** Contenido propio (modo edición). Se ignora si hay `src`. */
@@ -44,6 +48,10 @@ export function PreviewFrame({
   src?: string;
   /** Se llama cada vez que carga el documento del marco (solo con `src`). */
   onFrameLoad?: (doc: Document) => void;
+  /** Con marco de iPhone/iPad/Mac (decorativo, ocupa espacio) o solo la página, a todo el ancho. */
+  framed?: boolean;
+  /** «ajustar» llena el ancho disponible; 0.75 y 1 fijan la escala (con desplazamiento si no cabe). */
+  zoom?: Zoom;
 }) {
   const area = useRef<HTMLDivElement>(null);
   const frame = useRef<HTMLIFrameElement>(null);
@@ -51,7 +59,7 @@ export function PreviewFrame({
   const [avail, setAvail] = useState({ w: 800, h: 600 });
 
   const { w, h, label } = DEVICES[device];
-  const b = BEZEL[device];
+  const b = framed ? BEZEL[device] : { pad: 0, radius: 10, screenRadius: 8, base: 0 };
 
   // Espacio disponible: el dispositivo entero (pantalla + marco) debe caber.
   useEffect(() => {
@@ -63,10 +71,12 @@ export function PreviewFrame({
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
-  const scale = Math.max(
-    0.1,
-    Math.min(1, (avail.w - 2 * b.pad - 24) / w, (avail.h - 2 * b.pad - b.base - 40) / h),
-  );
+  // Con marco: todo el dispositivo debe caber (ancho y alto). Sin marco: se ajusta solo al ancho
+  // y la página se desplaza dentro (como en el navegador), así el texto queda lo más grande posible.
+  const fit = framed
+    ? Math.min(1, (avail.w - 2 * b.pad - 24) / w, (avail.h - 2 * b.pad - b.base - 40) / h)
+    : Math.min(1, (avail.w - 4) / w);
+  const scale = Math.max(0.1, zoom === "ajustar" ? fit : zoom);
 
   useEffect(() => {
     // Con `src` el marco carga una página real: no hay nada que montar aquí.
@@ -109,8 +119,52 @@ export function PreviewFrame({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Si cambia la escala (ventana, dispositivo) sin recargar, las pistas del lienzo se ajustan.
+  useEffect(() => {
+    const d = frame.current?.contentDocument;
+    if (d?.documentElement) d.documentElement.style.setProperty("--cg-inv", String(+(1 / scale).toFixed(3)));
+  }, [scale]);
+
   const sw = w * scale;
-  const sh = h * scale;
+  // Sin marco la pantalla llena el alto disponible (la página se desplaza dentro); con marco, la del dispositivo.
+  const sh = framed ? h * scale : Math.max(240, avail.h - 36);
+  const docH = framed ? h : sh / scale;
+
+  const rotulo = `${label} · ${w}px · ${Math.round(scale * 100)} %${zoom === "ajustar" ? " (ajustado al ancho)" : ""}`;
+
+  const pantalla = (
+    <div
+      className={`relative shrink-0 overflow-hidden bg-[var(--paper)] ${framed ? "" : "border border-[var(--border-strong)] shadow-[0_8px_24px_-12px_rgba(0,0,0,0.35)]"}`}
+      style={{ width: sw, height: sh, borderRadius: b.screenRadius }}
+    >
+      <iframe
+        ref={frame}
+        src={src}
+        onLoad={(e) => {
+          const doc = e.currentTarget.contentDocument;
+          if (src !== undefined && doc) {
+            doc.documentElement.style.setProperty("--cg-inv", String(+(1 / scale).toFixed(3)));
+            onFrameLoad?.(doc);
+          }
+        }}
+        title={`Vista previa de la portada en ${label}`}
+        // Fuera del orden de Tab: con el teclado se llega al menú lateral sin recorrer toda la página de dentro.
+        tabIndex={-1}
+        className="absolute left-0 top-0 origin-top-left border-0"
+        style={{ width: w, height: docH, transform: `scale(${scale})` }}
+      />
+    </div>
+  );
+
+  if (!framed) {
+    return (
+      <div ref={area} className="flex h-full w-full flex-col items-center gap-2 overflow-auto">
+        {pantalla}
+        <p className="shrink-0 text-xs text-[var(--fg-muted)]">{rotulo}</p>
+        {src === undefined && mount && createPortal(children, mount)}
+      </div>
+    );
+  }
 
   return (
     <div ref={area} className="flex h-full w-full flex-col items-center justify-center gap-2 overflow-hidden">
@@ -135,19 +189,7 @@ export function PreviewFrame({
           {device === "mac" && (
             <span className="absolute left-1/2 top-[5px] size-1 -translate-x-1/2 rounded-full bg-[#3a3a3c]" />
           )}
-          <div className="relative overflow-hidden bg-[var(--paper)]" style={{ width: sw, height: sh, borderRadius: b.screenRadius }}>
-            <iframe
-              ref={frame}
-              src={src}
-              onLoad={(e) => {
-                const doc = e.currentTarget.contentDocument;
-                if (src !== undefined && doc) onFrameLoad?.(doc);
-              }}
-              title={`Vista previa en ${label}`}
-              className="absolute left-0 top-0 origin-top-left border-0"
-              style={{ width: w, height: h, transform: `scale(${scale})` }}
-            />
-          </div>
+          {pantalla}
           {/* Botones laterales del iPhone */}
           {device === "iphone" && (
             <>
@@ -165,9 +207,7 @@ export function PreviewFrame({
           </div>
         )}
       </div>
-      <p className="text-[0.68rem] text-[var(--fg-muted)]">
-        {label} · {w}×{h} · {Math.round(scale * 100)} %
-      </p>
+      <p className="text-xs text-[var(--fg-muted)]">{rotulo}</p>
       {src === undefined && mount && createPortal(children, mount)}
     </div>
   );

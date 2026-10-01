@@ -6,7 +6,7 @@ import { AD_ZONE_SPECS, type AdPosition } from "@/lib/ads-positions";
 import { resolveParts } from "@/lib/template-parts";
 
 export type AdState = "activo" | "borrador" | "vacio";
-type View = "portada" | "seccion" | "nota";
+export type View = "portada" | "seccion" | "nota";
 
 const C = {
   img: "#dfe6c4",
@@ -38,18 +38,23 @@ export function TemplateBlueprint({
   adStates,
   focus,
   onPick,
-  view: initialView = "portada",
+  view: viewProp = "portada",
+  onView,
   views = ["portada", "seccion", "nota"],
 }: {
   layout: Required<HomeLayoutConfig>;
   view?: View;
+  /** Si se pasa, la vista la lleva quien lo usa (la lista de anuncios se filtra con ella). */
+  onView?: (v: View) => void;
   /** Vistas que se pueden ver (si es una sola, no hay pestañas). */
   views?: View[];
   adStates: Partial<Record<AdPosition, AdState>>;
   focus: AdPosition | null;
   onPick: (p: AdPosition) => void;
 }) {
-  const [view, setView] = useState<View>(initialView);
+  const [innerView, setInnerView] = useState<View>(viewProp);
+  const view = onView ? viewProp : innerView;
+  const setView = (v: View) => (onView ? onView(v) : setInnerView(v));
   const parts = resolveParts(layout.templateId ?? "clasico", layout.parts);
 
   const els: React.ReactNode[] = [];

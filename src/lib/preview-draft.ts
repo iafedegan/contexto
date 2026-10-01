@@ -43,14 +43,17 @@ export function sanitizeDraft(input: unknown): PortadaDraft | null {
   const adDrafts: Record<string, AdDraft> = {};
   for (const [key, v] of Object.entries((r.adDrafts ?? {}) as Record<string, Record<string, unknown>>)) {
     if (!/^[a-z_]+(__\d)?$/.test(key)) continue;
+    const dt = (u: unknown) => (typeof u === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,3})?)?(?:Z|[+-]\d{2}:\d{2})?$/.test(u) ? u : "");
     const http = (u: unknown) => (typeof u === "string" && /^https?:\/\//i.test(u) ? u.slice(0, 600) : "");
     adDrafts[key] = {
       imageUrl: http(v?.imageUrl),
       clickUrl: http(v?.clickUrl),
       html: typeof v?.html === "string" ? v.html.slice(0, 8000) : "",
       active: v?.active === true,
+      startsAt: dt(v?.startsAt),
+      endsAt: dt(v?.endsAt),
     };
   }
 
-  return { layout, items, popup: sanitizePopup(r.popup), adDrafts };
+  return { layout, items, popup: sanitizePopup(r.popup), adDrafts, ...(r.auto === true ? { auto: true } : {}) };
 }

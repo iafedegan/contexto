@@ -1,150 +1,185 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  Bold,
-  ExternalLink,
-  ChevronDown,
-  Columns2,
-  Palette,
-  Image as ImageIcon,
-  Italic,
-  LayoutGrid,
-  Megaphone,
-  Monitor,
-  Paintbrush,
-  MessageSquare,
-  Layers,
-  ListTree,
-  RotateCcw,
-  Save,
-  Smartphone,
-  Tablet,
-  Type,
-  X,
-} from "lucide-react";
+import { ChevronDown, LayoutGrid, Layers, ListOrdered, ListTree, Megaphone, MessageSquare, SlidersHorizontal } from "lucide-react";
 import type { AdDraft } from "@/components/panel/ads-zone-form";
 import type { AdsZoneRow } from "@/lib/ads";
-import {
-  saveHomeLayout,
-  resetHomeLayout,
-  saveHomeSectionLayout,
-  saveHomeDraft,
-  type HomeLayoutEntry,
-} from "@/app/panel/(app)/portada/actions";
-import type { ArticleListItem } from "@/lib/content";
-import type { HomeLayoutConfig, HomeStyle } from "@/db/schema";
-import { HOME_TEMPLATES } from "@/lib/home-layout";
-import type { RegionId } from "@/lib/home-regions";
-import type { SectionElId } from "@/db/schema";
+import { publishHomeDraft, restoreHomeSnapshot, saveHomeDraft } from "@/app/panel/(app)/portada/actions";
+import type { HomeStyle, SectionElId, ZoneStyle } from "@/db/schema";
+import { DEFAULT_HOME_LAYOUT, HOME_TEMPLATES } from "@/lib/home-layout";
+import { REGIONS, type RegionId, type RegionStyles } from "@/lib/home-regions";
+import { SECTION_ELS } from "@/lib/section-els";
 import { enhanceBlocks, measureZone, type ZoneMapData } from "@/lib/block-tools";
-import type { ZoneStyle } from "@/db/schema";
+import { installCanvasHints, type HintLabels } from "@/lib/canvas-hints";
+import { countChanges, summarizeChanges, type PortadaState } from "@/lib/portada-summary";
 import { SectionPanel } from "@/components/panel/section-panel";
-import { BlockStyleEditor } from "@/components/panel/block-style-editor";
+import type { ZoneBundle } from "@/components/panel/block-style-editor";
 import { AdsPanel } from "@/components/panel/ads-panel";
-import { SectionFiltersPicker } from "@/components/panel/section-filters-picker";
 import { SeccionForm } from "@/components/panel/seccion-form";
 import { SectionTree, type SectionNode } from "@/components/panel/section-tree";
-import { RegionEditor } from "@/components/panel/region-editor";
 import { PartsEditor } from "@/components/panel/parts-editor";
 import { PopupEditor } from "@/components/panel/popup-editor";
-import { PreviewFrame } from "@/components/panel/preview-frame";
+import { PreviewFrame, type Zoom } from "@/components/panel/preview-frame";
+import { PortadaToolbar, type Viewport } from "@/components/panel/portada-toolbar";
+import { PortadaToast, type ToastData } from "@/components/panel/portada-toast";
+import { PropiedadesCard, type Foco } from "@/components/panel/propiedades-card";
+import { NotasLista } from "@/components/panel/notas-lista";
+import { PortadaGuia } from "@/components/panel/portada-guia";
+import { TemplatePicker } from "@/components/panel/portada-controls";
+import { usePortadaHistory, type EditorSnap } from "@/components/panel/use-portada-history";
 import type { PopupConfig } from "@/lib/popup-types";
 import { ACCEPTED_KEY, DRAFT_PING_KEY, ADS_EDIT_KEY, ITEMS_EDIT_KEY, LAYOUT_EDIT_KEY, SECCIONES_KEY, type PortadaDraft } from "@/lib/portada-draft";
-import type { FooterId, NavbarId } from "@/lib/template-parts";
-import { HOME_FONTS, HOME_FONT_GROUPS, type HomeTitleFont } from "@/lib/home-fonts";
-import { cn } from "@/lib/utils";
+import type { Anterior, Item, Layout } from "@/components/panel/portada-types";
 
-type Item = ArticleListItem & { id: string; homePosition: number | null };
-type Layout = Required<HomeLayoutConfig>;
+const GUIA_KEY = "cg:portada-guia-v1";
+const PUBLICADO_KEY = "cg:portada-publicado";
+/** Aviso de una sola vez que debe sobrevivir a la recarga de la página (p. ej. «Se volvió a la versión anterior»). */
+const AVISO_KEY = "cg:portada-aviso";
+/** Cómo se ve el lienzo (zoom, marco, ampliado): se recuerda entre visitas. */
+const VISTA_KEY = "cg:portada-vista";
 
-function serializeItems(items: Item[]) {
-  return items.map((i) => `${i.id}:${JSON.stringify(i.homeStyle ?? null)}`).join("|");
+const recortar = (t: string, n: number) => (t.length > n ? `${t.slice(0, n - 1).trimEnd()}…` : t);
+
+/** «hace 5 min», «hace 2 h»… para el aviso de borrador pendiente. */
+function haceCuanto(iso: string): string {
+  const min = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
+  if (min < 1) return "hace un momento";
+  if (min < 60) return `hace ${min} min`;
+  const h = Math.round(min / 60);
+  if (h < 24) return `hace ${h} ${h === 1 ? "hora" : "horas"}`;
+  const d = Math.round(h / 24);
+  return `hace ${d} ${d === 1 ? "día" : "días"}`;
 }
 
 export function HomeBuilder({
   initialItems,
   initialLayout,
-  headerVariants,
-  footerVariants,
   initialPopup,
   adsZones,
   sections,
   canManagePauta,
+  resume: resumeProp,
 }: {
   initialItems: Item[];
   initialLayout: Layout;
-  /**
-   * Una cabecera real (Server Component) ya renderizada por plantilla — la
-   * estructura de la cabecera cambia por plantilla, no solo el color, así
-   * que el editor necesita poder cambiar cuál mostrar en cuanto el usuario
-   * elige otra plantilla, sin recargar la página. Las 4 se piden de una
-   * sola vez en el servidor y aquí solo se elige cuál montar.
-   */
-  /** Popup del portal guardado. */
+  /** Ventana emergente guardada. */
   initialPopup: PopupConfig;
-  /** Un navbar renderizado por cada pieza (NAVBARS). */
-  headerVariants: Record<NavbarId, React.ReactNode>;
-  /** El pie también cambia con la plantilla, igual que la cabecera. */
-  /** Un footer renderizado por cada pieza (FOOTERS). */
-  footerVariants: Record<FooterId, React.ReactNode>;
-  /** Las 7 zonas de pauta, gestionables sin salir del editor de portada. */
+  /** Las zonas de pauta, gestionables sin salir del editor de portada. */
   adsZones: AdsZoneRow[];
   /** Secciones del menú, para editarlas cuando el lienzo muestra una. */
   sections: SectionNode[];
   canManagePauta: boolean;
+  /** Borrador sin publicar de una sesión anterior (si lo hay y difiere de lo publicado). */
+  resume: { draft: PortadaDraft; at: string; count: number } | null;
 }) {
   const router = useRouter();
   const [items, setItems] = useState(initialItems);
   const [layout, setLayout] = useState<Layout>(initialLayout);
-  const [pending, startTransition] = useTransition();
-  const [saved, setSaved] = useState(false);
+  const [popup, setPopup] = useState<PopupConfig>(initialPopup);
+  const [adDrafts, setAdDrafts] = useState<Record<string, AdDraft>>({});
+  /** «Volver al diseño original» pedido: al publicar, las notas vuelven al orden y estilo automáticos. */
+  const [auto, setAuto] = useState(false);
+  const [resume, setResume] = useState(resumeProp);
+
+  // Qué está elegido en la página.
   const [selected, setSelected] = useState<number | null>(null);
   const [region, setRegion] = useState<RegionId>("navbar");
-  const [popup, setPopup] = useState<PopupConfig>(initialPopup);
+  const [foco, setFoco] = useState<Foco>(null);
+  const [flash, setFlash] = useState(0);
+  const [secEl, setSecEl] = useState<SectionElId>("title");
+
   const [popupPreview, setPopupPreview] = useState(false);
   const [draftReady, setDraftReady] = useState(false);
   const [frameNonce, setFrameNonce] = useState(0);
-  const frameDoc = useRef<Document | null>(null);
-  const regionRef = useRef<RegionId>("navbar");
-  const [secEl, setSecEl] = useState<SectionElId>("title");
-  const secElRef = useRef<SectionElId>("title");
-  const inSectionRef = useRef(false);
-  const itemsRef = useRef<Item[]>(initialItems);
+  const [viewport, setViewport] = useState<Viewport>("escritorio");
+  const [zoom, setZoom] = useState<Zoom>("ajustar");
+  const [framed, setFramed] = useState(false);
+  /** Lienzo ampliado: el menú lateral se oculta y sale como panel flotante con el botón «Opciones». */
+  const [ampliado, setAmpliado] = useState(false);
+  const [panelAbierto, setPanelAbierto] = useState(false);
+  const [previewPath, setPreviewPath] = useState("/vista-portada");
+  const [openBlocks, setOpenBlocks] = useState<Record<string, boolean>>({});
+  const [guia, setGuia] = useState(false);
+  const [toast, setToast] = useState<ToastData | null>(null);
+  const [lastPub, setLastPub] = useState<{ at: number; prev: Anterior } | null>(null);
   const [zoneMap, setZoneMap] = useState<ZoneMapData | null>(null);
   const [zoneUp, setZoneUp] = useState(0);
+
+  // Refs que leen los manejadores del lienzo (un iframe: sus eventos no se re-crean en cada render).
+  const frameDoc = useRef<Document | null>(null);
+  const regionRef = useRef<RegionId>("navbar");
+  const secElRef = useRef<SectionElId>("title");
+  const focoRef = useRef<Foco>(null);
+  const inSectionRef = useRef(false);
+  const itemsRef = useRef<Item[]>(initialItems);
+  const selectedRef = useRef<number | null>(null);
   const patchRef = useRef<(i: number, p: Partial<HomeStyle>) => void>(() => {});
   const moveRef = useRef<(from: number, to: number) => void>(() => {});
-  const [previewPath, setPreviewPath] = useState("/vista-portada");
+  const undoRef = useRef<() => void>(() => {});
+  const redoRef = useRef<() => void>(() => {});
+  const toastId = useRef(0);
+
   const seccion = previewPath.startsWith("/vista-portada/categoria/")
     ? (sections.find((x) => x.slug === previewPath.split("/").pop()) ?? null)
     : null;
-  const selectedRef = useRef<number | null>(null);
-  // Anuncios: lo que se escribe (sin guardar) y cuál se está editando, para verlo en el lienzo.
-  const [adDrafts, setAdDrafts] = useState<Record<string, AdDraft>>({});
-  // "template": elegir la plantilla. "content": la página real, editable —
-  // clic para estilo, arrastrar para reordenar. La disposición de secciones
-  // (columnas, dirección de "En breve") se ajusta desde "content" también,
-  // como un panel flotante — es una decisión de contenido, no de plantilla.
-  const [viewport, setViewport] = useState<"escritorio" | "tablet" | "movil">("escritorio");
 
-  const initialItemsSerialized = useMemo(() => serializeItems(initialItems), [initialItems]);
-  const initialLayoutSerialized = useMemo(() => JSON.stringify(initialLayout), [initialLayout]);
-  const dirty = serializeItems(items) !== initialItemsSerialized || JSON.stringify(layout) !== initialLayoutSerialized;
+  const showToast = useCallback((t: Omit<ToastData, "id">) => setToast({ ...t, id: ++toastId.current }), []);
+  const closeToast = useCallback(() => setToast(null), []);
 
-  // Borrador de diseño: se guarda en el servidor (con un pequeño retraso) cada
-  // vez que cambia algo. Lo lee la portada real que se enseña en el lienzo y en
-  // la pestaña «Vista previa». Tras guardar, el lienzo se recarga y se avisa a
-  // la otra pestaña. El primer guardado es inmediato y desbloquea el lienzo,
-  // para no enseñar un borrador viejo de una sesión anterior.
+  // ---------------------------------------------------------------- Estado y cambios
+  const baseState = useMemo<PortadaState>(
+    () => ({
+      layout: initialLayout,
+      items: initialItems.map((i) => ({ slug: i.slug, homeStyle: i.homeStyle ?? null })),
+      popup: initialPopup,
+      ads: {},
+      // Sin ninguna nota fijada a mano, la portada ya es automática.
+      auto: initialItems.every((i) => i.homePosition === null),
+    }),
+    [initialItems, initialLayout, initialPopup],
+  );
+  const adsBase = useMemo(() => {
+    const m: Record<string, AdDraft> = {};
+    for (const z of adsZones) {
+      m[z.key] = { imageUrl: z.imageUrl ?? "", clickUrl: z.clickUrl ?? "", html: z.html ?? "", active: z.active, startsAt: z.startsAt ? z.startsAt.toISOString() : "", endsAt: z.endsAt ? z.endsAt.toISOString() : "" };
+    }
+    return m;
+  }, [adsZones]);
+  const adNames = useMemo(() => Object.fromEntries(adsZones.map((z) => [z.key, z.name])), [adsZones]);
+  const titles = useMemo(() => Object.fromEntries(items.map((i) => [i.slug, i.title])), [items]);
+  const curState = useMemo<PortadaState>(
+    () => ({ layout, items: items.map((i) => ({ slug: i.slug, homeStyle: i.homeStyle ?? null })), popup, ads: adDrafts, auto }),
+    [layout, items, popup, adDrafts, auto],
+  );
+  const changes = useMemo(() => summarizeChanges(baseState, curState, { titles, adsBase, adNames }), [baseState, curState, titles, adsBase, adNames]);
+  const count = countChanges(changes);
+
+  // ---------------------------------------------------------------- Deshacer / rehacer
+  const applySnap = useCallback((s: EditorSnap) => {
+    setItems(s.items);
+    setLayout(s.layout);
+    setPopup(s.popup);
+    setAdDrafts(s.adDrafts);
+    setAuto(s.auto);
+  }, []);
+  const history = usePortadaHistory({ items, layout, popup, adDrafts, auto }, applySnap);
+
+  // ---------------------------------------------------------------- Borrador en el servidor
+  // Se guarda (con un pequeño retraso) cada vez que cambia algo. Lo lee la portada
+  // real del lienzo y la pestaña «Vista previa». El primer guardado es inmediato y
+  // desbloquea el lienzo, para no enseñar un borrador viejo de otra sesión; si hay un
+  // borrador pendiente, no se toca hasta que la persona elija qué hacer con él.
+  const resumePending = resume !== null;
   const firstDraft = useRef(true);
   useEffect(() => {
+    if (resumePending) return;
     const draft: PortadaDraft = {
       layout,
       items: items.map((i) => ({ slug: i.slug, homeStyle: i.homeStyle ?? null })),
       popup,
       adDrafts,
+      ...(auto ? { auto: true } : {}),
     };
     const isFirst = firstDraft.current;
     firstDraft.current = false;
@@ -165,35 +200,67 @@ export function HomeBuilder({
     }
     const id = setTimeout(() => void save(), 700);
     return () => clearTimeout(id);
-  }, [layout, items, popup, adDrafts]);
+  }, [layout, items, popup, adDrafts, auto, resumePending]);
 
-  // Marca en la portada real el componente y la tarjeta que se están editando.
+  // ---------------------------------------------------------------- Selección en la página
+  function focusOn(kind: Foco) {
+    setFoco(kind);
+    setFlash((n) => n + 1);
+    if (inSectionRef.current) setOpenBlocks((o) => ({ ...o, "seccion-diseno": true }));
+  }
+
+  /** Marca en la portada real lo que se está editando (solo si hay algo elegido). */
   function paintSelection() {
     const st = frameDoc.current?.getElementById("cg-sel");
     if (!st) return;
+    const f = focoRef.current;
+    const inSec = inSectionRef.current;
     const r = regionRef.current;
     const c = selectedRef.current;
     const e = secElRef.current;
-    st.textContent =
-      `[data-region="${r}"]{outline:2px dashed #84a21f;outline-offset:-2px}` +
-      (r === "encabezado" ? `[data-el="${e}"]{outline:2px solid #84a21f;outline-offset:3px}` : "") +
-      (c !== null
-        ? `[data-card-index="${c}"]{outline:3px solid #84a21f;outline-offset:2px}` +
-          (itemsRef.current[c]
-            ? `[data-bs-root="${itemsRef.current[c].slug}"]:not([data-bslug] *){outline:3px solid #84a21f;outline-offset:2px}`
-            : "")
-        : "");
+    let css = "";
+    if (f === "parte" || (inSec && f !== null)) {
+      css += `[data-region="${r}"]{outline:2px dashed #84a21f;outline-offset:-2px}`;
+      if (r === "encabezado") css += `[data-el="${e}"]{outline:2px solid #84a21f;outline-offset:3px}`;
+    }
+    if (f === "nota" && c !== null) {
+      css += `[data-card-index="${c}"]{outline:3px solid #84a21f;outline-offset:2px}`;
+      const it = itemsRef.current[c];
+      if (it) css += `[data-bs-root="${it.slug}"]:not([data-bslug] *){outline:3px solid #84a21f;outline-offset:2px}`;
+    }
+    st.textContent = css;
   }
   useEffect(() => {
     regionRef.current = region;
     secElRef.current = secEl;
+    focoRef.current = foco;
     inSectionRef.current = previewPath.startsWith("/vista-portada/categoria/");
     itemsRef.current = items;
     patchRef.current = (i, p) => patchStyle(i, p);
     moveRef.current = (from, to) => moveItem(from, to);
     selectedRef.current = selected;
+    undoRef.current = () => {
+      history.undo();
+    };
+    redoRef.current = () => {
+      history.redo();
+    };
     paintSelection();
   });
+
+  /** Etiquetas de las pistas que salen al pasar el ratón por la portada. */
+  const hintLabels: HintLabels = {
+    region: (id) => (id === "encabezado" ? "Encabezado de la sección" : (REGIONS.find((r) => r.id === id)?.label ?? null)),
+    piece: (id) => SECTION_ELS.find((x) => x.id === id)?.label ?? null,
+    card: (i) => {
+      const it = itemsRef.current[i];
+      return it ? `Nota ${i + 1} · ${recortar(it.title, 38)}` : `Nota ${i + 1}`;
+    },
+    note: (slug) => {
+      const it = itemsRef.current.find((x) => x.slug === slug);
+      return it ? `Nota · ${recortar(it.title, 38)}` : null;
+    },
+  };
 
   // Se llama cada vez que carga la portada real del lienzo.
   function hookFrame(doc: Document) {
@@ -204,6 +271,8 @@ export function HomeBuilder({
       doc.head.appendChild(st);
     }
     paintSelection();
+    // Atajos de deshacer/rehacer también con el foco dentro de la portada.
+    doc.addEventListener("keydown", (e) => hotkey(e));
     // Clic en un componente o una tarjeta: se selecciona para editarlo. Los
     // enlaces no navegan (llevarían fuera del borrador).
     doc.addEventListener(
@@ -213,15 +282,17 @@ export function HomeBuilder({
         const link = el.closest("a");
         if (link) e.preventDefault();
         // Opción del menú o enlace interno: el lienzo muestra esa página (con el
-        // borrador aplicado) para verla y ajustar su navbar, cuerpo y pie.
+        // borrador aplicado) para verla y ajustar su cabecera, cuerpo y pie.
         if (link) {
           const url = new URL(link.href, "https://x.invalid");
           const sec = url.pathname.match(/^\/(?:en\/)?categoria\/([^/]+)\/?$/);
           if (sec) {
+            setFoco(null);
             setPreviewPath(`/vista-portada/categoria/${sec[1]}`);
             return;
           }
           if (url.pathname === "/" || url.pathname === "/en") {
+            setFoco(null);
             setPreviewPath("/vista-portada");
             return;
           }
@@ -231,29 +302,38 @@ export function HomeBuilder({
         if (piece) {
           setSecEl(piece);
           setRegion("encabezado");
+          focusOn("parte");
           return;
         }
+        let nota = false;
         const card = el.closest("[data-card-index]")?.getAttribute("data-card-index");
-        if (card !== null && card !== undefined) setSelected(Number(card));
-        else {
+        if (card !== null && card !== undefined) {
+          setSelected(Number(card));
+          nota = true;
+        } else {
           // Página de sección: la tarjeta no lleva índice, se busca por su slug.
           const slug = el.closest("[data-bs-root]")?.getAttribute("data-bs-root");
           const idx = slug ? itemsRef.current.findIndex((i) => i.slug === slug) : -1;
           if (idx >= 0) {
             setSelected(idx);
             if (inSectionRef.current) setRegion("body");
+            nota = true;
           }
         }
         const r = el.closest("[data-region]")?.getAttribute("data-region") as RegionId | null;
         // En una sección solo hay dos piezas editables: encabezado y cuerpo.
         if (r && (!inSectionRef.current || r === "encabezado" || r === "body")) setRegion(r);
+        if (nota) focusOn("nota");
+        else if (r && (!inSectionRef.current || r === "encabezado" || r === "body")) focusOn("parte");
       },
       true,
     );
     // Se espera a que la página termine de hidratarse: tocar su DOM antes
     // provocaría errores de hidratación.
     setTimeout(() => {
-      if (frameDoc.current === doc) enhanceBlocksIn(doc);
+      if (frameDoc.current !== doc) return;
+      enhanceBlocksIn(doc);
+      installCanvasHints(doc, hintLabels);
     }, 1800);
   }
 
@@ -266,18 +346,20 @@ export function HomeBuilder({
         if (idx >= 0) {
           patchRef.current(idx, patch);
           setSelected(idx);
+          focusOn("nota");
         }
       },
       onMove: (from, to) => moveRef.current(from, to),
     });
   }
 
-  // Si en la pestaña de vista previa se aceptó y publicó el diseño, se
-  // recarga para partir de lo guardado (y «Cambios sin guardar» desaparece).
+  // ---------------------------------------------------------------- Otras pestañas
+  // Lo que se hace en la vista previa (otra pestaña) llega aquí por localStorage.
   useEffect(() => {
     const onStorage = (e: StorageEvent) => {
+      // Se publicó desde la vista previa: se recarga para partir de lo publicado.
       if (e.key === ACCEPTED_KEY) router.refresh();
-      // Otra pestaña (la vista previa) cambió una sección: se recarga el árbol y el lienzo.
+      // Otra pestaña cambió una sección: se recarga el árbol y el lienzo.
       if (e.key === SECCIONES_KEY) {
         setFrameNonce((n) => n + 1);
         router.refresh();
@@ -299,7 +381,7 @@ export function HomeBuilder({
             const seen = new Set(incoming.map((p) => p.slug));
             return [...ordered, ...prev.filter((i) => !seen.has(i.slug))];
           });
-          setSaved(false);
+          setAuto(false);
         } catch {
           /* ignorado */
         }
@@ -307,7 +389,6 @@ export function HomeBuilder({
       if (e.key === LAYOUT_EDIT_KEY && e.newValue) {
         try {
           setLayout(JSON.parse(e.newValue) as Layout);
-          setSaved(false);
         } catch {
           /* ignorado */
         }
@@ -329,13 +410,14 @@ export function HomeBuilder({
     return () => clearTimeout(id);
   }, [selectedSlug, frameNonce, previewPath, zoneUp]);
 
+  // ---------------------------------------------------------------- Ediciones
   function setZone(key: string, z: ZoneStyle | undefined) {
     const zones = { ...(layout.zones ?? {}) };
     if (z && Object.keys(z).length) zones[key] = z;
     else delete zones[key];
     patchLayout({ zones });
   }
-  const zoneBundle = (): import("@/components/panel/block-style-editor").ZoneBundle | undefined =>
+  const zoneBundle = (): ZoneBundle =>
     zoneMap?.key
       ? {
           map: zoneMap,
@@ -345,11 +427,14 @@ export function HomeBuilder({
           onLevel: setZoneUp,
           onChange: (z) => setZone(zoneMap.key!, z),
           onSelect: (it) => {
-            const idx = it.slug ? items.findIndex((i) => i.slug === it.slug) : it.index ?? -1;
-            if (idx >= 0) setSelected(idx);
+            const idx = it.slug ? items.findIndex((i) => i.slug === it.slug) : (it.index ?? -1);
+            if (idx >= 0) {
+              setSelected(idx);
+              focusOn("nota");
+            }
           },
           onMoveBlock: (it, cell) => {
-            const idx = it.slug ? items.findIndex((i) => i.slug === it.slug) : it.index ?? -1;
+            const idx = it.slug ? items.findIndex((i) => i.slug === it.slug) : (it.index ?? -1);
             if (idx >= 0) {
               patchStyle(idx, { colStart: cell.col, rowStart: cell.row });
               setSelected(idx);
@@ -359,15 +444,16 @@ export function HomeBuilder({
       : { map: null, style: undefined, onChange: () => {}, onSelect: () => {} };
 
   function moveItem(from: number, to: number) {
-    if (from === to) return;
+    if (from === to || to < 0) return;
     setItems((prev) => {
+      if (to >= prev.length) return prev;
       const next = prev.slice();
       const [row] = next.splice(from, 1);
       next.splice(to, 0, row);
       return next;
     });
     setSelected(to);
-    setSaved(false);
+    setAuto(false);
   }
 
   function patchStyle(index: number, partial: Partial<HomeStyle> | null) {
@@ -380,29 +466,280 @@ export function HomeBuilder({
       next[index] = { ...next[index], homeStyle: merged && Object.keys(merged).length > 0 ? merged : null };
       return next;
     });
-    setSaved(false);
+    setAuto(false);
   }
 
   function patchLayout(partial: Partial<Layout>) {
     setLayout((prev) => ({ ...prev, ...partial }));
-    setSaved(false);
   }
 
-  function save() {
-    const entries: HomeLayoutEntry[] = items.map((i) => ({ id: i.id, homeStyle: i.homeStyle }));
-    startTransition(async () => {
-      await Promise.all([saveHomeLayout(entries), saveHomeSectionLayout(layout)]);
-      setSaved(true);
-      router.refresh();
+  function pickTemplate(config: Layout) {
+    const teniaComposicion = Object.values(layout.parts ?? {}).some(Boolean);
+    patchLayout({ ...config, parts: {}, sectionFilters: layout.sectionFilters });
+    if (teniaComposicion) {
+      showToast({
+        tone: "info",
+        text: "Cambiaste de plantilla: se quitó tu composición personalizada de cabecera, cuerpo y pie.",
+        actions: [{ label: "Deshacer", onClick: () => history.undo() }],
+        ms: 12000,
+      });
+    }
+  }
+
+  function selectNota(i: number) {
+    setSelected(i);
+    focusOn("nota");
+    frameDoc.current?.querySelector(`[data-card-index="${i}"]`)?.scrollIntoView({ block: "center", behavior: "smooth" });
+  }
+
+  function closeFoco() {
+    setFoco(null);
+    setSelected(null);
+  }
+
+  // ---------------------------------------------------------------- Publicar, descartar, volver
+  function snapshotAnterior(): Anterior {
+    return {
+      auto: baseState.auto ?? false,
+      items: initialItems.map((i) => ({ id: i.id, homeStyle: i.homeStyle ?? null })),
+      layout: initialLayout,
+      popup: initialPopup,
+      ads: Object.keys(adDrafts).flatMap((key) => {
+        const z = adsZones.find((x) => x.key === key);
+        return z
+          ? [{ key, html: z.html, imageUrl: z.imageUrl, clickUrl: z.clickUrl, active: z.active, startsAt: z.startsAt ? z.startsAt.toISOString() : null, endsAt: z.endsAt ? z.endsAt.toISOString() : null }]
+          : [];
+      }),
+    };
+  }
+
+  function mostrarPublicado(prev: Anterior, at: number) {
+    setLastPub({ at, prev });
+    showToast({
+      tone: "ok",
+      text: "Publicado en el sitio ✓",
+      actions: [
+        { label: "Ver en el sitio", onClick: () => {}, href: "/" },
+        { label: "Deshacer", onClick: () => void deshacerPublicacion(prev) },
+      ],
+      ms: 20000,
     });
   }
 
-  function reset() {
-    startTransition(async () => {
-      await Promise.all([resetHomeLayout(), saveHomeSectionLayout({})]);
-      setSelected(null);
+  async function publicar(): Promise<{ ok: boolean; message?: string }> {
+    const draft: PortadaDraft = {
+      layout,
+      items: items.map((i) => ({ slug: i.slug, homeStyle: i.homeStyle ?? null })),
+      popup,
+      adDrafts,
+      ...(auto ? { auto: true } : {}),
+    };
+    // Se guarda lo último que hay en pantalla antes de publicar: lo que se publica es lo que se ve.
+    const saved = await saveHomeDraft(draft);
+    if (!saved.ok) return { ok: false, message: "No se pudo guardar el borrador antes de publicar." };
+    const prev = snapshotAnterior();
+    const res = await publishHomeDraft();
+    if (!res.ok) return { ok: false, message: res.message };
+    const at = Date.now();
+    try {
+      sessionStorage.setItem(PUBLICADO_KEY, JSON.stringify({ at, prev }));
+      localStorage.setItem(ACCEPTED_KEY, String(at));
+    } catch {
+      /* sin almacenamiento: solo se pierde el aviso tras recargar */
+    }
+    history.clear();
+    mostrarPublicado(prev, at);
+    router.refresh();
+    return { ok: true };
+  }
+
+  async function deshacerPublicacion(prev: Anterior) {
+    try {
+      const res = await restoreHomeSnapshot(prev);
+      if (!res.ok) return showToast({ tone: "error", text: res.message, ms: 8000 });
+      try {
+        sessionStorage.removeItem(PUBLICADO_KEY);
+        localStorage.setItem(ACCEPTED_KEY, String(Date.now()));
+      } catch {
+        /* sin almacenamiento */
+      }
+      setLastPub(null);
+      history.clear();
+      const aviso = { at: Date.now(), text: "Se volvió a la versión anterior del sitio ✓" };
+      try {
+        sessionStorage.setItem(AVISO_KEY, JSON.stringify(aviso));
+      } catch {
+        /* sin almacenamiento */
+      }
+      showToast({ tone: "ok", text: aviso.text, ms: 8000 });
       router.refresh();
+    } catch {
+      showToast({ tone: "error", text: "No se pudo deshacer la publicación. Inténtalo otra vez.", ms: 8000 });
+    }
+  }
+
+  function descartar() {
+    applySnap({ items: initialItems, layout: initialLayout, popup: initialPopup, adDrafts: {}, auto: false });
+    closeFoco();
+    showToast({
+      tone: "info",
+      text: "Borrador descartado: la portada vuelve a lo publicado.",
+      actions: [{ label: "Deshacer", onClick: () => history.undo() }],
+      ms: 12000,
     });
+  }
+
+  function volverAlOriginal() {
+    const ordenadas = [...items]
+      .map((i) => ({ ...i, homeStyle: null }))
+      .sort((a, b) => (b.publishedAt ? new Date(b.publishedAt).getTime() : 0) - (a.publishedAt ? new Date(a.publishedAt).getTime() : 0));
+    applySnap({ items: ordenadas, layout: DEFAULT_HOME_LAYOUT, popup, adDrafts, auto: true });
+    closeFoco();
+    showToast({
+      tone: "info",
+      text: "Diseño original cargado como borrador. No se publica solo: revisa y pulsa «Publicar cambios».",
+      actions: [{ label: "Deshacer", onClick: () => history.undo() }],
+      ms: 15000,
+    });
+  }
+
+  // ---------------------------------------------------------------- Borrador pendiente
+  function retomarBorrador() {
+    if (!resume) return;
+    const d = resume.draft;
+    const bySlug = new Map(initialItems.map((i) => [i.slug, i]));
+    const ordenadas = d.items.flatMap((di) => (bySlug.has(di.slug) ? [{ ...bySlug.get(di.slug)!, homeStyle: di.homeStyle }] : []));
+    const vistas = new Set(d.items.map((i) => i.slug));
+    applySnap({ items: [...ordenadas, ...initialItems.filter((i) => !vistas.has(i.slug))], layout: d.layout, popup: d.popup, adDrafts: d.adDrafts, auto: !!d.auto });
+    setResume(null);
+  }
+
+  // ---------------------------------------------------------------- Guardas y atajos
+  // Con cambios sin publicar, salir (recargar, cerrar, navegar a otra pantalla) pide confirmar.
+  useEffect(() => {
+    if (count === 0) return;
+    const antes = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    const clic = (e: MouseEvent) => {
+      if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+      const a = (e.target as HTMLElement | null)?.closest("a[href]") as HTMLAnchorElement | null;
+      if (!a || a.target === "_blank" || a.hasAttribute("download")) return;
+      let url: URL;
+      try {
+        url = new URL(a.href);
+      } catch {
+        return;
+      }
+      if (url.origin !== window.location.origin || url.pathname === window.location.pathname) return;
+      if (!window.confirm("Tienes cambios sin publicar en la portada. Si sales ahora se perderán (quedan como borrador y podrás retomarlos). ¿Salir de todos modos?")) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    };
+    window.addEventListener("beforeunload", antes);
+    document.addEventListener("click", clic, true);
+    return () => {
+      window.removeEventListener("beforeunload", antes);
+      document.removeEventListener("click", clic, true);
+    };
+  }, [count]);
+
+  /** Cmd/Ctrl+Z deshace; Mayús+Cmd/Ctrl+Z o Ctrl+Y rehace. No pisa el deshacer de los campos de texto. */
+  function hotkey(e: KeyboardEvent) {
+    if (!(e.metaKey || e.ctrlKey)) return;
+    const t = e.target as HTMLElement | null;
+    if (t?.closest?.("input, textarea, select, [contenteditable='true']")) return;
+    const k = e.key.toLowerCase();
+    if (k === "z" && !e.shiftKey) {
+      e.preventDefault();
+      undoRef.current();
+    } else if ((k === "z" && e.shiftKey) || k === "y") {
+      e.preventDefault();
+      redoRef.current();
+    }
+  }
+  useEffect(() => {
+    const h = (e: KeyboardEvent) => hotkey(e);
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
+  }, []);
+
+  useEffect(() => {
+    if (!ampliado || flash === 0) return;
+    const id = setTimeout(() => setPanelAbierto(true), 0);
+    return () => clearTimeout(id);
+  }, [flash, ampliado]);
+
+  // Al montar: ¿acaba de publicarse (la página se recargó)? ¿ya vio la guía?
+  useEffect(() => {
+    const id = setTimeout(() => {
+      try {
+        const raw = sessionStorage.getItem(PUBLICADO_KEY);
+        if (raw) {
+          const v = JSON.parse(raw) as { at: number; prev: Anterior };
+          const edad = Date.now() - v.at;
+          if (edad < 10 * 60_000) {
+            setLastPub(v);
+            if (edad < 20_000) mostrarPublicado(v.prev, v.at);
+          } else sessionStorage.removeItem(PUBLICADO_KEY);
+        }
+      } catch {
+        /* sin almacenamiento */
+      }
+      try {
+        const raw = sessionStorage.getItem(AVISO_KEY);
+        if (raw) {
+          sessionStorage.removeItem(AVISO_KEY);
+          const v = JSON.parse(raw) as { at: number; text: string };
+          if (Date.now() - v.at < 20_000) showToast({ tone: "ok", text: v.text, ms: 8000 });
+        }
+      } catch {
+        /* sin almacenamiento */
+      }
+      try {
+        if (!localStorage.getItem(GUIA_KEY)) setGuia(true);
+      } catch {
+        /* sin almacenamiento */
+      }
+      try {
+        const v = JSON.parse(localStorage.getItem(VISTA_KEY) ?? "null") as { zoom?: unknown; framed?: unknown; ampliado?: unknown } | null;
+        if (v) {
+          if (v.zoom === "ajustar" || v.zoom === 0.75 || v.zoom === 1) setZoom(v.zoom);
+          setFramed(v.framed === true);
+          setAmpliado(v.ampliado === true);
+        }
+      } catch {
+        /* sin almacenamiento */
+      }
+    }, 0);
+    return () => clearTimeout(id);
+    // Solo al montar.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function cambiarVista(next: { zoom?: Zoom; framed?: boolean; ampliado?: boolean }) {
+    if (next.zoom !== undefined) setZoom(next.zoom);
+    if (next.framed !== undefined) setFramed(next.framed);
+    if (next.ampliado !== undefined) {
+      setAmpliado(next.ampliado);
+      setPanelAbierto(false);
+    }
+    try {
+      localStorage.setItem(VISTA_KEY, JSON.stringify({ zoom, framed, ampliado, ...next }));
+    } catch {
+      /* sin almacenamiento */
+    }
+  }
+
+  function cerrarGuia() {
+    setGuia(false);
+    try {
+      localStorage.setItem(GUIA_KEY, "1");
+    } catch {
+      /* sin almacenamiento */
+    }
   }
 
   if (items.length === 0) {
@@ -412,112 +749,89 @@ export function HomeBuilder({
   // Dispositivo de la vista previa: pantalla real de iPhone, iPad o Mac.
   const device = ({ escritorio: "mac", tablet: "ipad", movil: "iphone" } as const)[viewport];
 
+  // ---------------------------------------------------------------- Resúmenes de los bloques cerrados
+  const plantillaActiva = HOME_TEMPLATES.find((t) => t.id === layout.templateId);
+  const estiladas = items.filter((i) => i.homeStyle).length;
+  const anunciosActivos = adsZones.filter((z) => {
+    const d = adDrafts[z.key];
+    const image = d ? d.imageUrl : (z.imageUrl ?? "");
+    const html = d ? d.html : (z.html ?? "");
+    const activo = d ? d.active : z.active;
+    return activo && (/^https?:\/\//i.test(image) || !!html);
+  }).length;
+  const formatoPopup = popup.layout === "modal" ? "ventana centrada" : popup.layout === "banner" ? "franja inferior" : "esquina";
+
+  const toggle = (id: string) => (open: boolean) => setOpenBlocks((o) => ({ ...o, [id]: open }));
+
   return (
-    <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_23rem]">
+    <div className={ampliado ? "grid gap-5" : "grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_23rem]"}>
       {/* ------------------------------------------------------- Lienzo */}
       <div className="flex min-w-0 flex-col gap-3">
-        <div
-          data-theme="panel-ui"
-          className="sticky z-30 flex flex-wrap items-center gap-2 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--bg)] px-3 py-2.5 text-[var(--fg)] shadow-[var(--shadow)]"
-          style={{ top: "calc(var(--panel-header-h, 0px) + 0.75rem)" }}
-        >
-          <button
-            onClick={save}
-            disabled={!dirty || pending}
-            className="inline-flex items-center gap-1.5 rounded-full bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--accent-fg)] transition disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            <Save size={15} />
-            {pending ? "Guardando…" : "Guardar diseño"}
-          </button>
-          <button
-            onClick={reset}
-            disabled={pending}
-            className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border-strong)] px-3.5 py-2 text-xs font-semibold transition hover:border-[var(--accent)] hover:text-[var(--accent)] disabled:opacity-40"
-          >
-            <RotateCcw size={13} />
-            Restablecer
-          </button>
+        <PortadaToolbar
+          changes={changes}
+          count={count}
+          onPublish={publicar}
+          onDiscard={descartar}
+          canUndo={history.canUndo}
+          canRedo={history.canRedo}
+          onUndo={() => history.undo()}
+          onRedo={() => history.redo()}
+          viewport={viewport}
+          onViewport={setViewport}
+          inSection={previewPath !== "/vista-portada"}
+          onBackHome={() => {
+            setFoco(null);
+            setPreviewPath("/vista-portada");
+          }}
+          onResetOriginal={volverAlOriginal}
+          zoom={zoom}
+          onZoom={(z) => cambiarVista({ zoom: z })}
+          framed={framed}
+          onFramed={(v) => cambiarVista({ framed: v })}
+          ampliado={ampliado}
+          onAmpliado={(v) => cambiarVista({ ampliado: v })}
+          onGuide={() => setGuia(true)}
+          canUndoPublish={lastPub !== null}
+          onUndoPublish={() => lastPub && void deshacerPublicacion(lastPub.prev)}
+          disabled={resumePending}
+        />
 
-          {/* Vista previa a distintos anchos: la portada se publica igual en
-              móvil que en escritorio y conviene verla antes de guardar. */}
-          <div className="ml-1 flex items-center gap-0.5 rounded-full border border-[var(--border)] p-0.5">
-            {(
-              [
-                ["escritorio", Monitor, "Mac"],
-                ["tablet", Tablet, "iPad"],
-                ["movil", Smartphone, "iPhone"],
-              ] as const
-            ).map(([id, Icono, etiqueta]) => (
-              <button
-                key={id}
-                type="button"
-                onClick={() => setViewport(id)}
-                title={etiqueta}
-                aria-pressed={viewport === id}
-                className={`rounded-full p-1.5 transition ${
-                  viewport === id
-                    ? "bg-[var(--accent)] text-[var(--accent-fg)]"
-                    : "text-[var(--fg-muted)] hover:text-[var(--accent)]"
-                }`}
-              >
-                <Icono size={14} />
-              </button>
-            ))}
-          </div>
-
-          {previewPath !== "/vista-portada" && (
-            <>
-              <button
-                type="button"
-                onClick={() => setPreviewPath("/vista-portada")}
-                className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border-strong)] px-3.5 py-2 text-xs font-semibold transition hover:border-[var(--accent)] hover:text-[var(--accent)]"
-              >
-                ← Inicio
-              </button>
-              <a
-                href={`/panel/secciones?abrir=${previewPath.split("/").pop()}`}
-                className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border-strong)] px-3.5 py-2 text-xs font-semibold transition hover:border-[var(--accent)] hover:text-[var(--accent)]"
-              >
-                Nombre y descripción de la sección
-              </a>
-            </>
-          )}
-          <button
-            type="button"
-            onClick={() => window.open("/panel/portada?vista=1", "_blank")}
-            title="Abre esta vista previa a tamaño real en otra pestaña; se actualiza sola mientras editas"
-            className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border-strong)] px-3.5 py-2 text-xs font-semibold transition hover:border-[var(--accent)] hover:text-[var(--accent)]"
-          >
-            <ExternalLink size={13} />
-            Vista previa en pestaña nueva
-          </button>
-
-          <span className="ml-auto text-xs text-[var(--fg-muted)]">
-            {dirty ? (
-              <span className="font-semibold text-[var(--fg)]">Cambios sin guardar</span>
-            ) : saved ? (
-              <span className="font-semibold text-[var(--accent-2)]">Guardado ✓</span>
-            ) : (
-              "Pulsa un componente o una tarjeta para editarlo"
-            )}
-          </span>
-        </div>
+        <p className="xl:hidden rounded-[var(--radius)] bg-[var(--surface-2)] px-3 py-2 text-xs leading-snug text-[var(--fg-muted)]">
+          Estás en una pantalla angosta: las opciones quedan debajo de la página. Para editar con comodidad usa un computador.
+        </p>
 
         {/* Marco del lienzo: la portada real, a escala de su ancho elegido. */}
-        <div
-          className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--bg-2)] p-3 shadow-[var(--shadow)]"
-        >
+        <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--bg-2)] p-3 shadow-[var(--shadow)]">
           <div className="h-[calc(100dvh-13rem)] min-h-[30rem]">
-          {draftReady ? (
-            <PreviewFrame
-              key="real"
-              device={device}
-              src={`${previewPath}?popup=${popupPreview ? 1 : 0}&n=${frameNonce}`}
-              onFrameLoad={hookFrame}
-            />
-          ) : (
-            <div className="grid h-full place-items-center text-sm text-[var(--fg-muted)]">Preparando la vista real…</div>
-          )}
+            {resume ? (
+              <div className="grid h-full place-items-center p-6" data-theme="panel-ui">
+                <div className="max-w-md text-center">
+                  <p className="text-lg font-bold">Tienes un borrador sin publicar</p>
+                  <p className="mt-2 text-sm leading-relaxed text-[var(--fg-muted)]">
+                    Lo dejaste {haceCuanto(resume.at)}, con {resume.count} {resume.count === 1 ? "cambio" : "cambios"} que aún no están en el sitio. ¿Quieres seguir donde lo dejaste?
+                  </p>
+                  <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
+                    <button type="button" onClick={retomarBorrador} className="inline-flex h-10 items-center rounded-full bg-[var(--accent)] px-5 text-sm font-semibold text-[var(--accent-fg)]">
+                      Retomar mi borrador
+                    </button>
+                    <button type="button" onClick={() => setResume(null)} className="inline-flex h-10 items-center rounded-full border border-[var(--border-strong)] px-5 text-sm font-semibold">
+                      Empezar desde lo publicado
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : draftReady ? (
+              <PreviewFrame
+                key={`real-${framed ? "marco" : "pagina"}`}
+                device={device}
+                framed={framed}
+                zoom={zoom}
+                src={`${previewPath}?popup=${popupPreview ? 1 : 0}&n=${frameNonce}`}
+                onFrameLoad={hookFrame}
+              />
+            ) : (
+              <div className="grid h-full place-items-center text-sm text-[var(--fg-muted)]">Preparando la vista real…</div>
+            )}
           </div>
         </div>
       </div>
@@ -525,17 +839,40 @@ export function HomeBuilder({
       {/* ------------------------------------------------------ Controles */}
       <aside
         data-theme="panel-ui"
-        className="flex flex-col gap-3 text-[var(--fg)] xl:sticky xl:top-24 xl:max-h-[calc(100dvh-7rem)] xl:overflow-y-auto xl:pr-1"
+        // Mientras se decide qué hacer con un borrador pendiente, el menú no se toca: lo que se cambiara se pisaría al retomar.
+        inert={resumePending || undefined}
+        className={`flex flex-col gap-3 text-[var(--fg)] ${resumePending ? "opacity-50" : ""} ${
+          ampliado
+            ? `fixed bottom-[4.75rem] right-4 z-40 max-h-[calc(100dvh-15rem)] w-[23rem] max-w-[calc(100vw-2rem)] overflow-y-auto rounded-[var(--radius-lg)] bg-[var(--bg)] p-2 shadow-2xl ${panelAbierto ? "" : "hidden"}`
+            : "xl:sticky xl:top-24 xl:max-h-[calc(100dvh-7rem)] xl:overflow-y-auto xl:pr-1"
+        }`}
       >
+        {guia && !ampliado && <PortadaGuia onClose={cerrarGuia} />}
+
         {seccion ? (
           <>
-            <Bloque titulo={`Sección · ${seccion.name}`} icono={<LayoutGrid size={13} />}>
+            <Bloque
+              id="seccion-datos"
+              titulo={`Datos de la sección · ${seccion.name}`}
+              resumen="Nombre, descripción y orden en el menú"
+              icono={<LayoutGrid size={13} />}
+              abierto={!!openBlocks["seccion-datos"]}
+              onToggle={toggle("seccion-datos")}
+            >
               <p className="mb-3 text-xs leading-relaxed text-[var(--fg-muted)]">
-                Nombre, descripción y orden en el menú. Se guardan al pulsar Guardar en este bloque.
+                Estos datos se guardan al pulsar «Guardar» aquí mismo: no forman parte del borrador de diseño.
               </p>
               <SeccionForm key={`${seccion.id}:${seccion.sortOrder}`} id={seccion.id} slug={seccion.slug} name={seccion.name} description={seccion.description} sortOrder={seccion.sortOrder} articleCount={seccion.articleCount} onSaved={() => setFrameNonce((n) => n + 1)} />
             </Bloque>
-            <Bloque titulo="Encabezado y cuerpo" icono={<Paintbrush size={13} />}>
+            <Bloque
+              id="seccion-diseno"
+              titulo="Diseño de la sección"
+              resumen="Encabezado y cuerpo de la página"
+              icono={<Layers size={13} />}
+              abierto={!!openBlocks["seccion-diseno"]}
+              onToggle={toggle("seccion-diseno")}
+              destacar={flash}
+            >
               <SectionPanel
                 layout={layout}
                 onChange={patchLayout}
@@ -557,102 +894,107 @@ export function HomeBuilder({
                 }
               />
               <p className="mt-4 text-xs leading-relaxed text-[var(--fg-muted)]">
-                Pulsa una pieza en la página para editarla. Se aplica a todas las secciones y plantillas, y se publica con «Guardar diseño».
+                Pulsa una pieza en la página para editarla. Se aplica a todas las secciones y plantillas, y se publica con «Publicar cambios».
               </p>
             </Bloque>
           </>
         ) : (
           <>
-        <Bloque titulo="Plantilla" icono={<LayoutGrid size={13} />}>
-          <TemplatePicker layout={layout} onPick={(config) => patchLayout({ ...config, parts: {}, sectionFilters: layout.sectionFilters })} compacto />
-          {/* Crear plantilla desde cero, dentro del mismo bloque. */}
-          <details className="group/crear mt-4 rounded-[var(--radius)] border border-[var(--border)]">
-            <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2.5 text-sm font-semibold">
-              <Layers size={14} className="text-[var(--accent)]" /> Crear plantilla desde cero
-              <ChevronDown size={14} className="ml-auto transition-transform group-open/crear:rotate-180" />
-            </summary>
-            <div className="border-t border-[var(--border)] p-3">
-              <PartsEditor layout={layout} onChange={patchLayout} />
-            </div>
-          </details>
-        </Bloque>
+            <PropiedadesCard
+              foco={foco}
+              onFoco={(f) => {
+                setFoco(f);
+                setFlash((n) => n + 1);
+              }}
+              region={region}
+              onRegion={setRegion}
+              layout={layout}
+              onRegions={(regions: RegionStyles) => patchLayout({ regions })}
+              nota={selected !== null && items[selected] ? { index: selected, title: items[selected].title, style: items[selected].homeStyle ?? {} } : null}
+              onNotaChange={(p) => selected !== null && patchStyle(selected, p)}
+              onNotaClear={() => selected !== null && patchStyle(selected, null)}
+              zone={zoneBundle()}
+              onClose={closeFoco}
+              flash={flash}
+            />
 
-        <Bloque titulo="Componentes" icono={<Paintbrush size={13} />}>
-          {/* Tarjeta concreta del lienzo: sus ajustes individuales van dentro
-              de Componentes, encima de los generales de cada pieza. */}
-          {selected !== null && items[selected] && (
-            <div className="mb-5 rounded-[var(--radius)] border border-[var(--accent)] p-3">
-              <p className="meta mb-2 !text-[0.65rem]">Tarjeta #{selected + 1} seleccionada</p>
-              <Inspector
-                item={items[selected]}
-                showSpan={selected >= 6}
-                onChange={(p) => patchStyle(selected, p)}
-                onClear={() => patchStyle(selected, null)}
-                onClose={() => setSelected(null)}
+            <Bloque
+              id="plantilla"
+              titulo="Plantilla"
+              resumen={plantillaActiva ? `${plantillaActiva.name} · activa` : "Disposición personalizada"}
+              icono={<LayoutGrid size={13} />}
+              abierto={!!openBlocks.plantilla}
+              onToggle={toggle("plantilla")}
+            >
+              <TemplatePicker layout={layout} onPick={pickTemplate} compacto />
+              {/* Crear plantilla desde cero, dentro del mismo bloque. */}
+              <details className="group/crear mt-4 rounded-[var(--radius)] border border-[var(--border)]">
+                <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2.5 text-sm font-semibold">
+                  <Layers size={14} className="text-[var(--accent)]" /> Crear una plantilla desde cero
+                  <ChevronDown size={14} className="ml-auto transition-transform group-open/crear:rotate-180" />
+                </summary>
+                <div className="border-t border-[var(--border)] p-3">
+                  <PartsEditor layout={layout} onChange={patchLayout} />
+                </div>
+              </details>
+            </Bloque>
+
+            <Bloque
+              id="notas"
+              titulo="Notas de la portada"
+              resumen={`${items.length} notas · ${estiladas} con estilo propio`}
+              icono={<ListOrdered size={13} />}
+              abierto={!!openBlocks.notas}
+              onToggle={toggle("notas")}
+            >
+              <NotasLista items={items} selected={selected} onSelect={selectNota} onMove={moveItem} />
+            </Bloque>
+
+            <Bloque
+              id="menu"
+              titulo="Menú y secciones"
+              resumen={`${sections.length} secciones en el sitio`}
+              icono={<ListTree size={13} />}
+              abierto={!!openBlocks.menu}
+              onToggle={toggle("menu")}
+            >
+              <p className="mb-3 text-xs leading-relaxed text-[var(--fg-muted)]">
+                Así cuelga cada sección del menú. Pulsa una para ver de cuál depende y editar su nombre, descripción y orden. Estos cambios se guardan al momento, no pasan por el borrador.
+              </p>
+              <SectionTree
+                sections={sections}
+                onSaved={() => {
+                  setFrameNonce((n) => n + 1);
+                  router.refresh();
+                }}
               />
-              <div className="mt-4">
-                <BlockStyleEditor
-                  title={items[selected].title}
-                  style={items[selected].homeStyle ?? {}}
-                  onChange={(p) => patchStyle(selected, p)}
-                  onClear={() => patchStyle(selected, null)}
-                  zone={zoneBundle()}
-                />
-              </div>
-            </div>
-          )}
-          <RegionEditor
-            value={layout.regions ?? {}}
-            active={region}
-            onActive={setRegion}
-            onChange={(regions) => patchLayout({ regions })}
-            only={["navbar", "hero", "cards", "body", "footer"]}
-          />
-          {selected === null && (
-            <p className="mt-4 text-xs leading-relaxed text-[var(--fg-muted)]">
-              Para cambiar una sola noticia, haz clic en su tarjeta del lienzo. Arrástrala para
-              cambiar su posición en la portada.
-            </p>
-          )}
-        </Bloque>
+            </Bloque>
 
-        <Bloque titulo="Secciones" icono={<ListTree size={13} />}>
-          <p className="mb-3 text-xs leading-relaxed text-[var(--fg-muted)]">
-            Así cuelga cada sección del menú. Pulsa una para ver de cuál depende y editar su nombre, descripción y orden.
-          </p>
-          <SectionTree
-            sections={sections}
-            onSaved={() => {
-              setFrameNonce((n) => n + 1);
-              router.refresh();
-            }}
-          />
-        </Bloque>
-
-        {/* Las mismas zonas que en Configuración › Publicidad, aquí también, con un
-            plano de la plantilla que muestra dónde cae cada una, y el popup. */}
-        <Bloque titulo="Publicidad y popup" icono={<Megaphone size={13} />}>
-          <details className="rounded-[var(--radius)] border border-[var(--border)]">
-            <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2.5 text-sm font-semibold">
-              <Megaphone size={14} className="text-[var(--accent)]" /> Publicidad
-              <ChevronDown size={14} className="ml-auto" />
-            </summary>
-            <div className="border-t border-[var(--border)] p-3">
+            <Bloque
+              id="publicidad"
+              titulo="Publicidad"
+              resumen={anunciosActivos ? `${anunciosActivos} ${anunciosActivos === 1 ? "anuncio activo" : "anuncios activos"}` : "Sin anuncios activos"}
+              icono={<Megaphone size={13} />}
+              abierto={!!openBlocks.publicidad}
+              onToggle={toggle("publicidad")}
+            >
               <AdsPanel layout={layout} zones={adsZones} canManage={canManagePauta} drafts={adDrafts} onDraft={(key, draft) => setAdDrafts((d) => ({ ...d, [key]: draft }))} />
-            </div>
-          </details>
-          <details
-            className="mt-3 rounded-[var(--radius)] border border-[var(--border)]"
-            onToggle={(e) => setPopupPreview((e.currentTarget as HTMLDetailsElement).open)}
-          >
-            <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2.5 text-sm font-semibold">
-              <MessageSquare size={14} className="text-[var(--accent)]" /> Popup del sitio
-              <ChevronDown size={14} className="ml-auto" />
-            </summary>
-            <div className="border-t border-[var(--border)] p-3">
+            </Bloque>
+
+            <Bloque
+              id="popup"
+              titulo="Ventana emergente"
+              resumen={popup.enabled ? `Activada · ${formatoPopup}` : "Apagada"}
+              icono={<MessageSquare size={13} />}
+              abierto={!!openBlocks.popup}
+              onToggle={(open) => {
+                toggle("popup")(open);
+                setPopupPreview(open);
+              }}
+            >
               <PopupEditor
                 value={popup}
-                // Cada cambio se ve al instante: el popup aparece en el lienzo.
+                // Cada cambio se ve al instante: la ventana aparece en el lienzo.
                 onChange={(p) => {
                   setPopup(p);
                   setPopupPreview(true);
@@ -660,491 +1002,78 @@ export function HomeBuilder({
                 previewing={popupPreview}
                 onPreview={setPopupPreview}
               />
-            </div>
-          </details>
-        </Bloque>
+            </Bloque>
           </>
         )}
       </aside>
+
+      {ampliado && (
+        <button
+          type="button"
+          onClick={() => setPanelAbierto((v) => !v)}
+          aria-expanded={panelAbierto}
+          data-theme="panel-ui"
+          className="fixed bottom-5 right-5 z-40 inline-flex h-11 items-center gap-2 rounded-full bg-[var(--accent)] px-5 text-sm font-semibold text-[var(--accent-fg)] shadow-xl"
+        >
+          <SlidersHorizontal size={15} /> {panelAbierto ? "Cerrar opciones" : "Opciones"}
+        </button>
+      )}
+
+      <PortadaToast toast={toast} onClose={closeToast} />
     </div>
   );
 }
 
-/** Bloque plegable de la barra lateral. Arranca cerrado salvo que se pida. */
+/** Bloque plegable de la barra lateral. Arranca cerrado salvo que se pida; su estado lo lleva quien lo usa. */
 function Bloque({
+  id,
   titulo,
+  resumen,
   icono,
   children,
   abierto = false,
   onToggle,
+  destacar,
 }: {
+  id: string;
   titulo: string;
+  /** Una línea con el estado actual, visible aunque el bloque esté cerrado. */
+  resumen?: string;
   icono: React.ReactNode;
   children: React.ReactNode;
-  /** Estado inicial; después manda el usuario. Por defecto, plegado. */
   abierto?: boolean;
-  /** Avisa al abrir/cerrar (p. ej. mostrar el popup en el lienzo). */
   onToggle?: (open: boolean) => void;
+  /** Cambia cuando el bloque debe destellar (p. ej. al elegir algo en la página). */
+  destacar?: number;
 }) {
+  const ref = useRef<HTMLDetailsElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || !destacar) return;
+    el.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    el.classList.remove("cg-flash");
+    void el.offsetWidth;
+    el.classList.add("cg-flash");
+    const t = setTimeout(() => el.classList.remove("cg-flash"), 1000);
+    return () => clearTimeout(t);
+  }, [destacar]);
   return (
     <details
+      ref={ref}
+      id={`bloque-${id}`}
       open={abierto}
       onToggle={(e) => onToggle?.((e.currentTarget as HTMLDetailsElement).open)}
       className="group rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--bg)] shadow-[var(--shadow)]"
     >
-      <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3">
-        <span className="text-[var(--accent)]">{icono}</span>
-        <span className="text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-[var(--fg-muted)]">
-          {titulo}
+      <summary className="flex cursor-pointer list-none items-center gap-2.5 px-4 py-3">
+        <span className="shrink-0 text-[var(--accent)]">{icono}</span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-[0.78rem] font-bold uppercase tracking-[0.12em] text-[var(--fg)]">{titulo}</span>
+          {resumen && <span className="mt-0.5 block truncate text-xs text-[var(--fg-muted)]">{resumen}</span>}
         </span>
-        <ChevronDown
-          size={14}
-          aria-hidden
-          className="ml-auto text-[var(--fg-muted)] transition-transform group-open:rotate-180"
-        />
+        <ChevronDown size={14} aria-hidden className="shrink-0 text-[var(--fg-muted)] transition-transform group-open:rotate-180" />
       </summary>
       <div className="border-t border-[var(--border)] p-4">{children}</div>
     </details>
-  );
-}
-
-function SegButton({
-  active,
-  onClick,
-  children,
-  title,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-  title?: string;
-}) {
-  return (
-    <button
-      type="button"
-      title={title}
-      onClick={onClick}
-      className={`inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-xs font-semibold transition ${
-        active ? "bg-[var(--brand)] text-white" : "bg-[var(--paper-2)] text-[var(--ink-soft)] hover:text-[var(--fg)]"
-      }`}
-    >
-      {children}
-    </button>
-  );
-}
-
-/**
- * Selector de tipografía del titular, como lista desplegable.
- *
- * No es un `<select>` nativo: Chrome no respeta `font-family` en las
- * `<option>`, y aquí lo importante es ver cada fuente dibujada con su propia
- * letra. Se despliega EN LÍNEA (no flotando) porque el panel tiene scroll
- * propio y una capa absoluta quedaría recortada por él.
- */
-function FontPicker({
-  value,
-  onChange,
-}: {
-  value: HomeTitleFont | undefined;
-  onChange: (font: HomeTitleFont | undefined) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const actual = HOME_FONTS.find((f) => f.id === value);
-
-  function pick(font: HomeTitleFont | undefined) {
-    onChange(font);
-    setOpen(false);
-  }
-
-  return (
-    <div className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        aria-expanded={open}
-        aria-haspopup="listbox"
-        style={actual ? { fontFamily: actual.cssVar } : undefined}
-        className="flex w-full items-center justify-between gap-2 rounded-lg border border-[var(--border-strong)] bg-[var(--surface-2)] px-3 py-2 text-left text-[0.95rem] transition hover:border-[var(--accent)]"
-      >
-        <span className="min-w-0 truncate">
-          {actual ? actual.label : "Auto · la del diseño de la tarjeta"}
-        </span>
-        <ChevronDown
-          size={14}
-          aria-hidden
-          className={`shrink-0 transition-transform duration-300 ${open ? "rotate-180" : ""}`}
-        />
-      </button>
-
-      {open && (
-        <div
-          role="listbox"
-          aria-label="Tipografía del titular"
-          className="mt-1.5 max-h-64 overflow-y-auto overflow-x-hidden rounded-lg border border-[var(--border)] bg-[var(--bg)] p-1 shadow-lg"
-        >
-          <FontOption selected={!value} onSelect={() => pick(undefined)}>
-            Auto · la del diseño de la tarjeta
-          </FontOption>
-
-          {HOME_FONT_GROUPS.map((group) => (
-            <div key={group.id}>
-              <p className="meta px-2 pb-0.5 pt-2 !text-[0.65rem]">{group.label}</p>
-              {HOME_FONTS.filter((f) => f.group === group.id).map((f) => (
-                <FontOption
-                  key={f.id}
-                  selected={value === f.id}
-                  onSelect={() => pick(f.id)}
-                  fontFamily={f.cssVar}
-                >
-                  {f.label}
-                </FontOption>
-              ))}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-/**
- * Color del titular: muestras rápidas + cuentagotas.
- *
- * "Auto" no guarda color, para que el titular siga heredando el del tema y sus
- * estados de :hover; fijar un color lo congela en todas las plantillas.
- */
-const TITLE_COLORS = [
-  { label: "Tinta", value: "#141210" },
-  { label: "Marfil", value: "#f6f2e8" },
-  { label: "Oro", value: "#d8b558" },
-  { label: "Burdeos", value: "#7b1e2b" },
-  { label: "Esmeralda", value: "#2f9c62" },
-  { label: "Cobre", value: "#c97b3f" },
-  { label: "Zafiro", value: "#1d4ed8" },
-  { label: "Violeta", value: "#8b5cf6" },
-];
-
-function ColorPicker({
-  value,
-  onChange,
-}: {
-  value: string | undefined;
-  onChange: (color: string | undefined) => void;
-}) {
-  return (
-    <div className="flex flex-wrap items-center gap-1.5">
-      <button
-        type="button"
-        onClick={() => onChange(undefined)}
-        className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${
-          !value
-            ? "border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-fg)]"
-            : "border-[var(--border)] bg-[var(--surface-2)] hover:border-[var(--border-strong)]"
-        }`}
-      >
-        Auto
-      </button>
-
-      {TITLE_COLORS.map((c) => (
-        <button
-          key={c.value}
-          type="button"
-          title={c.label}
-          aria-label={c.label}
-          aria-pressed={value?.toLowerCase() === c.value}
-          onClick={() => onChange(c.value)}
-          style={{ background: c.value }}
-          className={`size-7 rounded-full border-2 transition hover:scale-110 ${
-            value?.toLowerCase() === c.value
-              ? "border-[var(--accent)] ring-2 ring-[var(--accent)]/40"
-              : "border-[var(--border-strong)]"
-          }`}
-        />
-      ))}
-
-      <label
-        className="ml-auto flex cursor-pointer items-center gap-1.5 text-xs text-[var(--fg-muted)]"
-        title="Elegir un color exacto"
-      >
-        <input
-          type="color"
-          value={value ?? "#141210"}
-          onChange={(e) => onChange(e.target.value)}
-          className="size-7 cursor-pointer rounded border border-[var(--border)] bg-transparent p-0.5"
-          aria-label="Color personalizado del titular"
-        />
-        Otro
-      </label>
-    </div>
-  );
-}
-
-function FontOption({
-  children,
-  selected,
-  onSelect,
-  fontFamily,
-}: {
-  children: React.ReactNode;
-  selected: boolean;
-  onSelect: () => void;
-  fontFamily?: string;
-}) {
-  return (
-    <button
-      type="button"
-      role="option"
-      aria-selected={selected}
-      onClick={onSelect}
-      style={fontFamily ? { fontFamily } : undefined}
-      className={`block w-full min-w-0 truncate rounded-md px-2.5 py-1.5 text-left text-[0.95rem] transition ${
-        selected
-          ? "bg-[var(--accent)] text-[var(--accent-fg)]"
-          : "hover:bg-[var(--surface-2)]"
-      }`}
-    >
-      {children}
-    </button>
-  );
-}
-
-export function TemplatePicker({
-  layout,
-  onPick,
-  compacto = false,
-}: {
-  layout: Layout;
-  onPick: (config: Layout) => void;
-  /** En la barra lateral: una columna y sin descripción larga. */
-  compacto?: boolean;
-}) {
-  const activeId = HOME_TEMPLATES.find((t) => t.id === layout.templateId)?.id;
-
-  return (
-    <div className={compacto ? "flex flex-col gap-2" : "flex flex-col gap-3"}>
-      {!compacto && <p className="kicker !text-[var(--accent)]">Elige la plantilla de portada</p>}
-      <div className={compacto ? "grid gap-2" : "grid gap-3 sm:grid-cols-3"}>
-        {HOME_TEMPLATES.map((t) => {
-          const active = t.id === activeId;
-          return (
-            <button
-              key={t.id}
-              type="button"
-              onClick={() => onPick(t.config)}
-              className={`flex flex-col gap-2.5 rounded-lg border-2 p-3 text-left transition ${
-                active
-                  ? "border-[var(--accent)] bg-[var(--surface)]"
-                  : "border-[var(--border)] bg-[var(--surface)]/60 hover:border-[var(--border-strong)]"
-              }`}
-            >
-              <div data-theme={t.id} className="overflow-hidden rounded-md">
-                <TemplateThumb config={t.config} />
-              </div>
-              <div>
-                <p className="flex items-center gap-1.5 text-sm font-bold">
-                  {t.name}
-                  {active && (
-                    <span className="rounded-full bg-[var(--accent)] px-1.5 py-0.5 text-[9px] font-bold uppercase text-[var(--accent-fg)]">
-                      Activa
-                    </span>
-                  )}
-                </p>
-                {!compacto && (
-                  <p className="mt-0.5 text-xs leading-snug text-[var(--fg-muted)]">
-                    {t.description}
-                  </p>
-                )}
-              </div>
-            </button>
-          );
-        })}
-      </div>
-      {!activeId && (
-        <p className="text-xs text-[var(--fg-muted)]">Disposición personalizada (no coincide con ninguna plantilla). Elige una para partir de cero.</p>
-      )}
-    </div>
-  );
-}
-
-/** Diagrama en miniatura de cómo se organiza cada plantilla. */
-function TemplateThumb({ config }: { config: Layout }) {
-  const ink = "bg-[color-mix(in_srgb,var(--ink-faint)_40%,transparent)]";
-  const brand = "bg-[color-mix(in_srgb,var(--brand)_35%,transparent)]";
-
-  if (config.templateId === "vanguardia") {
-    return (
-      <div className="grid h-16 grid-cols-6 grid-rows-2 gap-1 rounded-md bg-[#0a0b0d] p-1.5">
-        <div className="col-span-4 row-span-2 rounded-[0.4rem] bg-[color-mix(in_srgb,var(--brand)_45%,#1a1b20)]" />
-        <div className="col-span-2 row-span-2 rounded-[0.4rem] bg-[#22c55e]/40" />
-      </div>
-    );
-  }
-
-  if (config.templateId === "revista") {
-    return (
-      <div className="flex h-16 flex-col gap-1 rounded-md bg-[var(--paper-2)] p-1.5">
-        <div className={cn("relative h-9 w-full rounded-sm", ink)}>
-          <div className="absolute bottom-1 left-1/2 flex -translate-x-1/2 gap-0.5">
-            <span className="h-1 w-2.5 rounded-full bg-white/90" />
-            <span className="h-1 w-1 rounded-full bg-white/50" />
-            <span className="h-1 w-1 rounded-full bg-white/50" />
-          </div>
-        </div>
-        <div className="flex flex-1 gap-1">
-          {Array.from({ length: config.breveColumns }).map((_, i) => (
-            <div key={i} className={cn("flex-1 rounded-sm", brand)} />
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  if (config.templateId === "compacto") {
-    return (
-      <div className="grid h-16 grid-cols-4 grid-rows-2 gap-1 rounded-md bg-[var(--paper-2)] p-1.5">
-        <div className={cn("col-span-2 row-span-2 rounded-sm", ink)} />
-        {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className={cn("rounded-sm", brand)} />
-        ))}
-      </div>
-    );
-  }
-
-  const horizontal = config.breveDirection === "horizontal";
-  return (
-    <div className="flex h-16 gap-1 rounded-md bg-[var(--paper-2)] p-1.5">
-      {horizontal ? (
-        <div className="flex w-full flex-col gap-1">
-          <div className={cn("h-8 w-full rounded-sm", ink)} />
-          <div className="flex flex-1 gap-1">
-            {Array.from({ length: config.breveColumns }).map((_, i) => (
-              <div key={i} className={cn("flex-1 rounded-sm", brand)} />
-            ))}
-          </div>
-        </div>
-      ) : (
-        <>
-          <div className={cn("h-full w-[62%] rounded-sm", ink)} />
-          <div className="flex h-full flex-1 flex-col gap-1">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className={cn("flex-1 rounded-sm", brand)} />
-            ))}
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
-
-
-
-function Inspector({
-  item,
-  showSpan,
-  onChange,
-  onClear,
-  onClose,
-}: {
-  item: Item;
-  showSpan: boolean;
-  onChange: (p: Partial<HomeStyle>) => void;
-  onClear: () => void;
-  onClose: () => void;
-}) {
-  const s = item.homeStyle ?? {};
-  return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-start justify-between gap-2">
-        <p className="truncate text-xs font-semibold">{item.title}</p>
-        <button
-          onClick={onClose}
-          className="shrink-0 rounded-full p-1 text-[var(--fg-muted)] transition hover:text-[var(--accent)]"
-          title="Deseleccionar"
-        >
-          <X size={14} />
-        </button>
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div>
-          <p className="meta mb-1.5 flex items-center gap-1"><Type size={12} /> Tamaño de bloque</p>
-          <div className="flex gap-1.5">
-            <SegButton active={!s.size} onClick={() => onChange({ size: undefined })}>Auto</SegButton>
-            <SegButton active={s.size === "sm"} onClick={() => onChange({ size: "sm" })}>S</SegButton>
-            <SegButton active={s.size === "md"} onClick={() => onChange({ size: "md" })}>M</SegButton>
-            <SegButton active={s.size === "lg"} onClick={() => onChange({ size: "lg" })}>L</SegButton>
-          </div>
-        </div>
-
-        <div className="sm:col-span-2">
-          <p className="meta mb-1.5">Tipo de letra del titular</p>
-          <FontPicker value={s.font} onChange={(font) => onChange({ font })} />
-        </div>
-
-        <div className="sm:col-span-2">
-          <p className="meta mb-1.5 flex items-center gap-1">
-            <Palette size={12} /> Color del titular
-          </p>
-          <ColorPicker value={s.color} onChange={(color) => onChange({ color })} />
-        </div>
-
-        <div>
-          <p className="meta mb-1.5">Estilo del titular</p>
-          <div className="flex gap-1.5">
-            <SegButton active={!!s.bold} onClick={() => onChange({ bold: !s.bold || undefined })} title="Negrilla">
-              <Bold size={13} />
-            </SegButton>
-            <SegButton active={!!s.italic} onClick={() => onChange({ italic: !s.italic || undefined })} title="Cursiva">
-              <Italic size={13} />
-            </SegButton>
-          </div>
-        </div>
-
-        {showSpan && (
-          <div>
-            <p className="meta mb-1.5 flex items-center gap-1"><Columns2 size={12} /> Ancho en la cuadrícula</p>
-            <div className="flex gap-1.5">
-              <SegButton active={s.span !== 2} onClick={() => onChange({ span: undefined })}>1 columna</SegButton>
-              <SegButton active={s.span === 2} onClick={() => onChange({ span: 2 })}>2 columnas</SegButton>
-            </div>
-          </div>
-        )}
-
-        <div>
-          <p className="meta mb-1.5">
-            Escala del titular — <span className="font-semibold text-[var(--fg)]">{s.titleScale ?? 100}%</span>
-          </p>
-          <input
-            type="range"
-            min={70}
-            max={160}
-            step={5}
-            value={s.titleScale ?? 100}
-            onChange={(e) => onChange({ titleScale: Number(e.target.value) === 100 ? undefined : Number(e.target.value) })}
-            className="w-full accent-[var(--brand)]"
-          />
-        </div>
-
-        <div>
-          <p className="meta mb-1.5 flex items-center gap-1">
-            <ImageIcon size={12} /> Tamaño de imagen —{" "}
-            <span className="font-semibold text-[var(--fg)]">{s.imageScale ?? 100}%</span>
-          </p>
-          <input
-            type="range"
-            min={40}
-            max={100}
-            step={5}
-            value={s.imageScale ?? 100}
-            onChange={(e) => onChange({ imageScale: Number(e.target.value) === 100 ? undefined : Number(e.target.value) })}
-            className="w-full accent-[var(--brand)]"
-          />
-        </div>
-      </div>
-
-      <button onClick={onClear} className="self-start text-xs font-medium text-[var(--ink-faint)] hover:text-[var(--danger)]">
-        Quitar todo el estilo de esta tarjeta
-      </button>
-    </div>
   );
 }

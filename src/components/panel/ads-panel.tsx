@@ -4,7 +4,7 @@ import { useState } from "react";
 import type { HomeLayoutConfig } from "@/db/schema";
 import { AdsEditor } from "@/components/panel/ads-editor";
 import type { AdDraft, AdsZoneRow } from "@/components/panel/ads-zone-form";
-import { TemplateBlueprint, type AdState } from "@/components/panel/template-blueprint";
+import { TemplateBlueprint, type AdState, type View } from "@/components/panel/template-blueprint";
 import type { AdPosition } from "@/lib/ads-positions";
 
 /**
@@ -12,13 +12,20 @@ import type { AdPosition } from "@/lib/ads-positions";
  * anuncio y, debajo, la lista para editarlos. `only` limita las posiciones
  * (en una sección solo importan las de sección y el pie).
  */
+/** Qué posiciones de publicidad pertenecen a cada vista del plano (el pie sale en todas). */
+const VIEW_POSITIONS: Record<View, AdPosition[]> = {
+  portada: ["home_top", "home_billboard", "home_bottom", "sidebar_top", "sidebar_bottom", "sidebar_sticky", "footer"],
+  seccion: ["section_top", "section_bottom", "footer"],
+  nota: ["article_top", "article_sidebar", "footer"],
+};
+
 export function AdsPanel({
   layout,
   zones,
   canManage,
   drafts,
   onDraft,
-  view = "portada",
+  view: initialView = "portada",
   views,
   only,
 }: {
@@ -32,9 +39,11 @@ export function AdsPanel({
   views?: Array<"portada" | "seccion" | "nota">;
   only?: AdPosition[];
 }) {
+  const [view, setView] = useState<View>(initialView);
   const [focus, setFocus] = useState<string | null>(null);
   const [request, setRequest] = useState<{ key: string; n: number } | null>(null);
-  const shown = only ? zones.filter((z) => only.includes(z.position)) : zones;
+  // Solo los anuncios de la vista elegida en el plano: la lista entera pasaba de 2.000 px de alto.
+  const shown = zones.filter((z) => (!only || only.includes(z.position)) && VIEW_POSITIONS[view].includes(z.position));
 
   const states: Partial<Record<AdPosition, AdState>> = {};
   for (const z of zones) {
@@ -53,6 +62,7 @@ export function AdsPanel({
       <TemplateBlueprint
         layout={layout}
         view={view}
+        onView={setView}
         views={views}
         adStates={states}
         focus={focus ? (focus.split("__")[0] as AdPosition) : null}

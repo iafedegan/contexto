@@ -115,7 +115,7 @@ export function SectionTree({ sections, onSaved }: { sections: SectionNode[]; on
           ) : (
             <span className="size-6" />
           )}
-          {pos !== null && <span className="w-4 text-center text-[0.65rem] font-bold text-[var(--fg-muted)]">{pos}</span>}
+          {pos !== null && <span className="w-4 text-center text-[0.72rem] font-bold text-[var(--fg-muted)]">{pos}</span>}
           <NodePill s={node} level={1} active={selected === node.id} onClick={() => setSelected(node.id)} extra={kids.length ? `${kids.length} sub` : undefined} />
         </div>
         {isOpen && kids.length > 0 && (
@@ -164,7 +164,7 @@ export function SectionTree({ sections, onSaved }: { sections: SectionNode[]; on
           className={`inline-flex items-center gap-2 rounded-full bg-[#33401a] px-3 py-1.5 text-xs font-bold text-white ${over === "root" ? "ring-2 ring-[#c9a227] ring-offset-2" : ""}`}
         >
           <Network size={13} /> Barra del sitio
-          <span className="rounded-full bg-white/20 px-1.5 text-[0.65rem]">{bar.length + (more.length ? 2 : 1)}</span>
+          <span className="rounded-full bg-white/20 px-1.5 text-[0.72rem]">{bar.length + (more.length ? 2 : 1)}</span>
         </div>
         <ul className="ml-4 border-l-2 border-[var(--border-strong)]/50 pl-0">
           {bar.map((b, i) => renderBranch(b, i + 1))}
@@ -180,7 +180,7 @@ export function SectionTree({ sections, onSaved }: { sections: SectionNode[]; on
                   {open.has("__mas") ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                 </button>
                 <span className="inline-flex items-center gap-2 rounded-full border-2 border-[#33401a] bg-[#eef2d9] px-3 py-1 text-xs font-bold text-[#33401a]">
-                  Más ▾ <span className="rounded-full bg-[#33401a]/15 px-1.5 text-[0.65rem]">{more.length}</span>
+                  Más ▾ <span className="rounded-full bg-[#33401a]/15 px-1.5 text-[0.72rem]">{more.length}</span>
                 </span>
               </div>
               {open.has("__mas") && <ul className="ml-[0.7rem] mt-1 border-l-2 border-[var(--border)] pl-0">{more.map((b) => renderBranch(b, null))}</ul>}
@@ -380,8 +380,8 @@ function NodePill({ s, level, active, onClick, extra }: { s: SectionNode; level:
       className={`flex min-w-0 items-center gap-2 rounded-full border px-3 py-1 text-left text-xs font-semibold transition hover:brightness-95 ${base} ${active ? "ring-2 ring-[#c9a227] ring-offset-1" : ""}`}
     >
       <span className="truncate">{s.name}</span>
-      <span className="shrink-0 rounded-full bg-black/15 px-1.5 text-[0.62rem] font-bold">{s.articleCount}</span>
-      {extra && <span className="shrink-0 text-[0.62rem] opacity-80">{extra}</span>}
+      <span className="shrink-0 rounded-full bg-black/15 px-1.5 text-[0.72rem] font-bold">{s.articleCount}</span>
+      {extra && <span className="shrink-0 text-[0.72rem] opacity-80">{extra}</span>}
     </button>
   );
 }

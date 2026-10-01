@@ -61,14 +61,14 @@ export const REGIONS: Array<{
 }> = [
   {
     id: "navbar",
-    label: "Navbar",
+    label: "Cabecera",
     description: "Cabecera con el logo, la fecha y el menú de secciones.",
     controls: ["bg", "fg", "accent", "titleFont", "textFont", "titleScale", "textScale", "padY", "maxWidth", "align"],
   },
   {
     id: "hero",
-    label: "Hero",
-    description: "La noticia principal de la portada (o el carrusel en Revista).",
+    label: "Principal",
+    description: "La noticia principal de la portada (o el carrusel, en la plantilla Revista).",
     controls: ["bg", "fg", "accent", "titleFont", "textFont", "titleScale", "textScale", "padY", "padX", "radius", "align"],
   },
   {
@@ -91,7 +91,7 @@ export const REGIONS: Array<{
   },
   {
     id: "footer",
-    label: "Footer",
+    label: "Pie",
     description: "Pie con secciones, enlaces legales y firma.",
     controls: ["bg", "fg", "accent", "titleFont", "textFont", "titleScale", "textScale", "padY", "maxWidth", "align", "hidden"],
   },

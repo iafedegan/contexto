@@ -15,15 +15,9 @@ import { db } from "@/db";
 import { adsZones } from "@/db/schema";
 import { requireRole } from "@/lib/auth";
 import { AD_ZONE_SPECS, positionOf, suffixOf } from "@/lib/ads-positions";
+import { parseAdDate, validateAd } from "@/lib/ads-validate";
 
 export type AdsZoneState = { ok: boolean; message: string } | null;
-
-function fechaOpcional(v: FormDataEntryValue | null): Date | null {
-  const s = String(v ?? "").trim();
-  if (!s) return null;
-  const d = new Date(s);
-  return Number.isNaN(d.getTime()) ? null : d;
-}
 
 /**
  * Guarda la creatividad de una zona. La pauta llega a producción en cuanto se
@@ -42,27 +36,10 @@ export async function saveAdsZone(_prev: AdsZoneState, formData: FormData): Prom
   const clickUrl = String(formData.get("clickUrl") ?? "").trim() || null;
   const active = formData.get("active") === "1";
 
-  if (html && imageUrl) {
-    return {
-      ok: false,
-      message: "Usa HTML o imagen, no ambos: si hay HTML, la imagen se ignora y confunde.",
-    };
-  }
-  if (active && !html && !imageUrl) {
-    return { ok: false, message: "No se puede activar una zona sin creatividad (HTML o imagen)." };
-  }
-  if (clickUrl && !/^https?:\/\//i.test(clickUrl)) {
-    return { ok: false, message: "El enlace de destino debe empezar por http:// o https://" };
-  }
-  if (imageUrl && !/^https?:\/\//i.test(imageUrl)) {
-    return { ok: false, message: "La URL de la imagen debe empezar por http:// o https://" };
-  }
-
-  const startsAt = fechaOpcional(formData.get("startsAt"));
-  const endsAt = fechaOpcional(formData.get("endsAt"));
-  if (startsAt && endsAt && startsAt > endsAt) {
-    return { ok: false, message: "La fecha de inicio es posterior a la de fin." };
-  }
+  const startsAt = parseAdDate(formData.get("startsAt"));
+  const endsAt = parseAdDate(formData.get("endsAt"));
+  const problema = validateAd({ html, imageUrl, clickUrl, active, startsAt, endsAt });
+  if (problema) return { ok: false, message: problema };
 
   await db
     .insert(adsZones)

@@ -250,7 +250,7 @@ export function ZonePanel({
       <div>
         <div className="flex items-center justify-between text-xs">
           <span className="font-semibold">Espacio entre bloques</span>
-          <span className="tabular-nums">{z.gap === undefined ? "Auto" : `${z.gap} px`}</span>
+          <span className="tabular-nums">{z.gap === undefined ? "Automático" : `${z.gap} px`}</span>
         </div>
         <input type="range" min={0} max={80} step={2} value={z.gap ?? 16} onChange={(e) => patch({ gap: Number(e.target.value) })} className="mt-1 w-full accent-[var(--accent)]" />
       </div>

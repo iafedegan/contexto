@@ -119,15 +119,18 @@ export function RegionEditor({
                 <div className="flex gap-1">
                   {(
                     [
-                      [undefined, "Auto"],
-                      ["left", <AlignLeft key="l" size={13} />],
-                      ["center", <AlignCenter key="c" size={13} />],
-                      ["right", <AlignRight key="r" size={13} />],
+                      [undefined, "Automático", "Auto"],
+                      ["left", "A la izquierda", <AlignLeft key="l" size={13} />],
+                      ["center", "Centrado", <AlignCenter key="c" size={13} />],
+                      ["right", "A la derecha", <AlignRight key="r" size={13} />],
                     ] as const
-                  ).map(([v, icon]) => (
+                  ).map(([v, nombre, icon]) => (
                     <button
                       key={v ?? "auto"}
                       type="button"
+                      title={nombre}
+                      aria-label={nombre}
+                      aria-pressed={s.align === v}
                       onClick={() => patch({ align: v })}
                       className={`rounded-md border px-2 py-1 text-xs transition ${
                         s.align === v
@@ -273,7 +276,7 @@ function Slider({
       <div className="flex items-center justify-between text-xs">
         <span className="text-[var(--fg-muted)]">{label}</span>
         <span className="flex items-center gap-2">
-          <span className="tabular-nums font-semibold">{value === undefined ? "Auto" : `${value} ${r.unit}`}</span>
+          <span className="tabular-nums font-semibold">{value === undefined ? "Automático" : `${value} ${r.unit}`}</span>
           {value !== undefined && (
             <button type="button" onClick={() => onChange(undefined)} className="text-[var(--fg-muted)] hover:text-[var(--accent)]" aria-label={`${label}: automático`}>
               <RotateCcw size={11} />

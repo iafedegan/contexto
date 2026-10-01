@@ -1,16 +1,15 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { Eye, EyeOff, ImagePlus, Loader2, Save } from "lucide-react";
-import { saveSitePopup } from "@/app/panel/(app)/portada/actions";
+import { useState } from "react";
+import { Eye, EyeOff, ImagePlus, Loader2 } from "lucide-react";
 import { uploadMedia } from "@/app/panel/(app)/articulos/media-actions";
 import { parseEmbed } from "@/lib/embeds";
 import type { PopupConfig } from "@/lib/popup-types";
 
 /**
- * Diseño del popup del portal: formato, imagen o vídeo, textos, botón,
- * colores, tamaño y reglas de aparición. Se ve en vivo en el lienzo con
- * «Ver en el lienzo» y se publica con su propio botón de guardar.
+ * Diseño de la ventana emergente del portal: formato, imagen o vídeo, textos,
+ * botón, colores, tamaño y reglas de aparición. Se ve en vivo en el lienzo con
+ * «Ver en el lienzo» y se publica junto con el resto con «Publicar cambios».
  */
 export function PopupEditor({
   value,
@@ -23,7 +22,6 @@ export function PopupEditor({
   previewing: boolean;
   onPreview: (on: boolean) => void;
 }) {
-  const [saving, startSaving] = useTransition();
   const [uploading, setUploading] = useState(false);
   const [msg, setMsg] = useState("");
   const set = (p: Partial<PopupConfig>) => {
@@ -47,24 +45,12 @@ export function PopupEditor({
     }
   }
 
-  function save() {
-    startSaving(async () => {
-      try {
-        const saved = await saveSitePopup(value);
-        onChange(saved);
-        setMsg(saved.enabled ? "Guardado y publicado ✓" : "Guardado (desactivado) ✓");
-      } catch {
-        setMsg("No se pudo guardar.");
-      }
-    });
-  }
-
   const embedOk = value.mediaType !== "embed" || !value.mediaUrl || !!parseEmbed(value.mediaUrl);
 
   return (
     <div className="flex flex-col gap-4 text-sm">
       <label className="flex items-center justify-between gap-3 rounded-lg border border-[var(--border)] px-3 py-2">
-        <span className="font-semibold">{value.enabled ? "Popup activo" : "Popup desactivado"}</span>
+        <span className="font-semibold">{value.enabled ? "Ventana emergente activada" : "Ventana emergente apagada"}</span>
         <input type="checkbox" checked={value.enabled} onChange={(e) => set({ enabled: e.target.checked })} className="size-4 accent-[var(--accent)]" />
       </label>
 
@@ -193,15 +179,9 @@ export function PopupEditor({
         >
           {previewing ? <EyeOff size={13} /> : <Eye size={13} />} {previewing ? "Ocultar del lienzo" : "Ver en el lienzo"}
         </button>
-        <button
-          type="button"
-          onClick={save}
-          disabled={saving || !embedOk}
-          className="inline-flex items-center gap-1.5 rounded-full bg-[var(--accent)] px-4 py-2 text-xs font-semibold text-[var(--accent-fg)] disabled:opacity-50"
-        >
-          {saving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />} Guardar popup
-        </button>
         {msg && <span className="text-xs text-[var(--fg-muted)]">{msg}</span>}
+        {!embedOk && <span role="alert" className="basis-full text-xs font-semibold text-[#b4442e]">La dirección del vídeo no es de YouTube ni Vimeo: así no se mostrará.</span>}
+        <span className="basis-full text-xs text-[var(--fg-muted)]">Los cambios quedan en el borrador y se publican con «Publicar cambios».</span>
       </div>
     </div>
   );

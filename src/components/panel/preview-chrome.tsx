@@ -1,31 +1,40 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, GripHorizontal, Loader2, Paintbrush, Rocket, X } from "lucide-react";
-import { publishHomeDraft, saveHomeDraft } from "@/app/panel/(app)/portada/actions";
+import { Check, GripHorizontal, Paintbrush, X } from "lucide-react";
+import { publishHomeDraft, restoreHomeSnapshot, saveHomeDraft } from "@/app/panel/(app)/portada/actions";
 import { ACCEPTED_KEY, ADS_EDIT_KEY, DRAFT_PING_KEY, ITEMS_EDIT_KEY, LAYOUT_EDIT_KEY, SECCIONES_KEY, type PortadaDraft } from "@/lib/portada-draft";
-import { RegionEditor } from "@/components/panel/region-editor";
 import { SeccionForm } from "@/components/panel/seccion-form";
-import { TemplatePicker } from "@/components/panel/home-builder";
-import type { RegionId } from "@/lib/home-regions";
+import { TemplatePicker } from "@/components/panel/portada-controls";
+import { PropiedadesCard, type Foco } from "@/components/panel/propiedades-card";
+import { PublicarControles } from "@/components/panel/portada-publicar";
+import type { Anterior } from "@/components/panel/portada-types";
+import { REGIONS, type RegionId } from "@/lib/home-regions";
+import { SECTION_ELS } from "@/lib/section-els";
 import type { HomeStyle, SectionElId } from "@/db/schema";
-import { BlockStyleEditor } from "@/components/panel/block-style-editor";
 import { cleanupBlocks, enhanceBlocks, measureZone, type ZoneMapData } from "@/lib/block-tools";
+import { installCanvasHints, type HintLabels } from "@/lib/canvas-hints";
+import { countChanges, type ChangeLine } from "@/lib/portada-summary";
 import type { ZoneStyle } from "@/db/schema";
 import type { ZoneBundle } from "@/components/panel/block-style-editor";
 import { SectionPanel } from "@/components/panel/section-panel";
 import { AdsPanel } from "@/components/panel/ads-panel";
 import type { AdDraft, AdsZoneRow } from "@/components/panel/ads-zone-form";
 
+const recortar = (t: string, n: number) => (t.length > n ? `${t.slice(0, n - 1).trimEnd()}…` : t);
+
 /**
- * Marco de la pestaña «Vista previa»: barra con Cerrar y «Aceptar y publicar»
- * y, debajo, la portada real (que llega como `children`, renderizada en el
- * servidor con el borrador aplicado). Se refresca sola cuando el editor cambia
- * algo en la otra pestaña.
+ * Marco de la pestaña «Vista previa»: barra con el estado y «Publicar cambios»
+ * (igual que en el editor) y, debajo, la portada real (que llega como
+ * `children`, renderizada en el servidor con el borrador aplicado). Se refresca
+ * sola cuando el editor cambia algo en la otra pestaña. El formulario flotante
+ * «Editar» es el mismo panel «Propiedades» del editor.
  */
 export function PreviewChrome({
   changed,
+  changes = [],
+  anterior = null,
   hasDraft,
   draft,
   seccion = null,
@@ -34,6 +43,10 @@ export function PreviewChrome({
   children,
 }: {
   changed: boolean;
+  /** Qué cambia al publicar (lista legible, calculada en el servidor). */
+  changes?: ChangeLine[];
+  /** Cómo está publicado ahora, para deshacer la publicación. */
+  anterior?: Anterior | null;
   hasDraft: boolean;
   /** Borrador del editor: con él se habilita el formulario flotante. */
   draft?: PortadaDraft | null;
@@ -45,11 +58,11 @@ export function PreviewChrome({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const [confirming, setConfirming] = useState(false);
-  const [pending, start] = useTransition();
   const [layout, setLayout] = useState(draft?.layout ?? null);
   const [panel, setPanel] = useState(false);
   const [region, setRegion] = useState<RegionId>("navbar");
+  const [foco, setFoco] = useState<Foco>(null);
+  const [flash, setFlash] = useState(0);
   const [secEl, setSecEl] = useState<SectionElId>("title");
   const [items, setItems] = useState<PortadaDraft["items"]>(draft?.items ?? []);
   const [adDrafts, setAdDrafts] = useState<Record<string, AdDraft>>(draft?.adDrafts ?? {});
@@ -100,7 +113,7 @@ export function PreviewChrome({
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerup", up);
   }
-  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [msg, setMsg] = useState<{ ok: boolean; text: string; undo?: Anterior } | null>(null);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const draftRef = useRef(draft);
   const layoutRef = useRef(layout);
@@ -211,6 +224,7 @@ export function PreviewChrome({
       if (!it.slug) return;
       setSelSlug(it.slug);
       setSelTitle(it.label || it.slug);
+      setFoco("nota");
     },
     onMoveBlock: (it, cell) => {
       if (!it.slug) return;
@@ -243,6 +257,32 @@ export function PreviewChrome({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [children, panel]);
 
+  // Pistas al pasar el ratón: qué es cada parte y que se puede editar con un clic.
+  useEffect(() => {
+    const titulo = (sel: string) => document.querySelector(sel)?.querySelector("h1,h2,h3")?.textContent?.trim() ?? "";
+    const labels: HintLabels = {
+      region: (id) => (id === "encabezado" ? "Encabezado de la sección" : (REGIONS.find((r) => r.id === id)?.label ?? null)),
+      piece: (id) => SECTION_ELS.find((x) => x.id === id)?.label ?? null,
+      card: (i) => {
+        const t = titulo(`[data-card-index="${i}"]`);
+        return t ? `Nota ${i + 1} · ${recortar(t, 38)}` : `Nota ${i + 1}`;
+      },
+      note: (slug) => {
+        if (!/^[\w-]+$/.test(slug)) return null;
+        const t = titulo(`[data-bs-root="${slug}"]`);
+        return t ? `Nota · ${recortar(t, 38)}` : "Nota";
+      },
+    };
+    // Tras la hidratación: tocar el DOM antes provocaría errores.
+    let limpiar: (() => void) | null = null;
+    const id = setTimeout(() => {
+      limpiar = installCanvasHints(document, labels);
+    }, 1500);
+    return () => {
+      clearTimeout(id);
+      limpiar?.();
+    };
+  }, []);
 
   useEffect(() => {
     const onStorage = (e: StorageEvent) => {
@@ -252,93 +292,96 @@ export function PreviewChrome({
     return () => window.removeEventListener("storage", onStorage);
   }, [router]);
 
-  function accept() {
-    setMsg(null);
-    start(async () => {
-      try {
-        const res = await publishHomeDraft();
-        setConfirming(false);
-        setMsg({ ok: res.ok, text: res.ok ? "Publicado en el sitio ✓" : res.message });
-        if (res.ok) {
-          try {
-            localStorage.setItem(ACCEPTED_KEY, String(Date.now()));
-          } catch {
-            /* el editor se recargará a mano */
-          }
-          router.refresh();
+  // ---------------------------------------------------------------- Publicar
+  const count = countChanges(changes);
+  const prevRef = useRef<Anterior | null>(anterior);
+  useEffect(() => {
+    prevRef.current = anterior;
+  });
+
+  const publicar = useCallback(async (): Promise<{ ok: boolean; message?: string }> => {
+    const previo = prevRef.current;
+    const res = await publishHomeDraft();
+    if (!res.ok) return { ok: false, message: res.message };
+    try {
+      localStorage.setItem(ACCEPTED_KEY, String(Date.now()));
+    } catch {
+      /* el editor se recargará a mano */
+    }
+    setMsg({ ok: true, text: "Publicado en el sitio ✓", undo: previo ?? undefined });
+    router.refresh();
+    return { ok: true };
+  }, [router]);
+
+  async function deshacer(prev: Anterior) {
+    try {
+      const res = await restoreHomeSnapshot(prev);
+      setMsg({ ok: res.ok, text: res.ok ? "Se volvió a la versión anterior del sitio ✓" : res.message });
+      if (res.ok) {
+        try {
+          localStorage.setItem(ACCEPTED_KEY, String(Date.now()));
+        } catch {
+          /* sin almacenamiento */
         }
-      } catch {
-        setConfirming(false);
-        setMsg({ ok: false, text: "No se pudo publicar. Revisa que tu sesión siga activa." });
+        router.refresh();
       }
-    });
+    } catch {
+      setMsg({ ok: false, text: "No se pudo deshacer la publicación. Inténtalo otra vez." });
+    }
   }
+
+  function elegir(kind: Foco) {
+    setFoco(kind);
+    setFlash((n) => n + 1);
+    setPanel(true);
+  }
+
+  const nota =
+    selSlug !== null
+      ? { index: items.findIndex((i) => i.slug === selSlug), title: selTitle || selSlug, style: items.find((i) => i.slug === selSlug)?.homeStyle ?? {} }
+      : null;
 
   return (
     <div className="fixed inset-0 z-[200] bg-white">
       <div
         data-theme="panel-ui"
-        className="absolute inset-x-0 top-0 z-[120] flex h-14 items-center gap-3 border-b border-[var(--border)] bg-[var(--bg)] px-4 text-[var(--fg)] shadow-md"
+        className="absolute inset-x-0 top-0 z-[140] flex h-14 items-center gap-3 border-b border-[var(--border)] bg-[var(--bg)] px-4 text-[var(--fg)] shadow-md"
       >
-        <span className="rounded-full bg-[var(--accent)] px-2.5 py-1 text-[0.65rem] font-bold uppercase tracking-wider text-white">
+        <span className="rounded-full bg-[var(--accent)] px-2.5 py-1 text-[0.7rem] font-bold uppercase tracking-wider text-white">
           Vista previa
         </span>
-        <p className="hidden min-w-0 flex-1 truncate text-xs text-[var(--fg-muted)] md:block">
+        <p className="hidden min-w-0 flex-1 truncate text-xs text-[var(--fg-muted)] lg:block">
           {changed
             ? "Esta es la portada real con tus cambios sin publicar: así se verá en el sitio. Se actualiza sola al editar."
             : hasDraft
               ? "Sin cambios pendientes: esto es exactamente lo que está publicado."
               : "Abre el editor y cambia algo para verlo aquí antes de publicar."}
         </p>
-        <span className="flex-1 md:hidden" />
+        <span className="flex-1 lg:hidden" />
 
         {msg && (
-          <span className={`flex items-center gap-1.5 text-xs font-semibold ${msg.ok ? "text-[#15803d]" : "text-[var(--danger,#b4442e)]"}`}>
+          <span className={`flex items-center gap-2 text-xs font-semibold ${msg.ok ? "text-[#15803d]" : "text-[var(--danger,#b4442e)]"}`} role="status">
             {msg.ok && <Check size={14} />} {msg.text}
+            {msg.undo && (
+              <button type="button" onClick={() => void deshacer(msg.undo!)} className="rounded-full border border-[var(--border-strong)] px-2.5 py-1 text-[var(--fg)] hover:border-[var(--accent)]">
+                Deshacer
+              </button>
+            )}
+            <a href="/" target="_blank" rel="noreferrer" className="rounded-full border border-[var(--border-strong)] px-2.5 py-1 text-[var(--fg)] hover:border-[var(--accent)]">
+              Ver en el sitio
+            </a>
           </span>
         )}
 
-        {confirming ? (
-          <>
-            <span className="text-xs font-semibold">¿Publicar este diseño en el sitio?</span>
-            <button
-              type="button"
-              onClick={accept}
-              disabled={pending}
-              className="inline-flex items-center gap-1.5 rounded-full bg-[var(--accent)] px-4 py-2 text-xs font-semibold text-[var(--accent-fg)] disabled:opacity-60"
-            >
-              {pending ? <Loader2 size={13} className="animate-spin" /> : <Rocket size={13} />} Sí, publicar
-            </button>
-            <button
-              type="button"
-              onClick={() => setConfirming(false)}
-              disabled={pending}
-              className="rounded-full border border-[var(--border-strong)] px-3.5 py-2 text-xs font-semibold"
-            >
-              Cancelar
-            </button>
-          </>
-        ) : (
-          <>
-            <button
-              type="button"
-              onClick={() => window.close()}
-              title="Cierra esta pestaña sin publicar"
-              className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border-strong)] px-3.5 py-2 text-xs font-semibold transition hover:border-[var(--accent)]"
-            >
-              <X size={13} /> Cerrar
-            </button>
-            <button
-              type="button"
-              onClick={() => setConfirming(true)}
-              disabled={!changed}
-              title={changed ? "Publica este diseño en el sitio" : "No hay cambios sin publicar"}
-              className="inline-flex items-center gap-1.5 rounded-full bg-[var(--accent)] px-4 py-2 text-xs font-semibold text-[var(--accent-fg)] transition disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              <Check size={14} /> Aceptar y publicar
-            </button>
-          </>
-        )}
+        <PublicarControles changes={changes} count={count} onPublish={publicar} deshacible={!!anterior} />
+        <button
+          type="button"
+          onClick={() => window.close()}
+          title="Cierra esta pestaña (lo que tengas sin publicar queda como borrador)"
+          className="inline-flex h-9 items-center gap-1.5 rounded-full border border-[var(--border-strong)] px-3.5 text-xs font-semibold transition hover:border-[var(--accent)]"
+        >
+          <X size={13} /> Cerrar
+        </button>
       </div>
 
       {/* Scroll propio: la cabecera pegajosa de la portada queda bajo la barra. */}
@@ -360,27 +403,34 @@ export function PreviewChrome({
               router.push(`/panel/portada?vista=1&seccion=${sec[1]}`);
               return;
             }
-            if ((url.pathname === "/" || url.pathname === "/en") && !el.closest("[data-bslug],[data-bs-root]")) {
+            // Desde una sección, el enlace al inicio vuelve a la portada. En la portada es solo
+            // otra parte que se puede elegir (no navega: el clic selecciona la parte).
+            if (seccion && (url.pathname === "/" || url.pathname === "/en") && !el.closest("[data-bslug],[data-bs-root]")) {
               router.push("/panel/portada?vista=1");
               return;
             }
           }
           const piece = el.closest("[data-el]")?.getAttribute("data-el") as SectionElId | null;
-          if (piece && panel) {
+          if (piece) {
             setSecEl(piece);
             setRegion("encabezado");
+            elegir("parte");
             return;
           }
           const blockEl = el.closest<HTMLElement>("[data-bslug],[data-bs-root]");
           const slug = blockEl?.getAttribute("data-bslug") ?? blockEl?.getAttribute("data-bs-root");
-          if (slug && panel) {
+          if (slug) {
             setSelSlug(slug);
             setSelTitle(blockEl?.querySelector("h1,h2,h3")?.textContent?.trim() ?? slug);
             setRegion("body");
+            elegir("nota");
             return;
           }
           const r = el.closest("[data-region]")?.getAttribute("data-region") as RegionId | null;
-          if (r && panel && (!seccion || r === "encabezado" || r === "body")) setRegion(r);
+          if (r && (!seccion || r === "encabezado" || r === "body")) {
+            setRegion(r);
+            elegir("parte");
+          }
         }}
       >
         {children}
@@ -395,25 +445,22 @@ export function PreviewChrome({
           className={`fixed z-[130] flex w-[22rem] max-w-[calc(100vw-2rem)] flex-col items-end gap-2 text-[var(--fg)] ${pos ? "" : "bottom-4 right-4 max-h-[calc(100dvh-6rem)]"}`}
         >
           {panel && (
-            <div className="w-full overflow-y-auto rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--bg)] p-4 shadow-2xl">
+            <div className="flex w-full flex-col gap-3 overflow-y-auto rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--bg)] p-4 shadow-2xl">
               <div
                 onPointerDown={startDrag}
                 title="Arrastra para mover el panel"
-                className="-mx-4 -mt-4 mb-3 flex cursor-grab touch-none select-none items-center gap-2 rounded-t-[var(--radius-lg)] bg-[var(--surface-2)] px-4 py-2 active:cursor-grabbing"
+                className="sticky -top-4 z-10 -mx-4 -mt-4 flex cursor-grab touch-none select-none items-center gap-2 rounded-t-[var(--radius-lg)] bg-[var(--surface-2)] px-4 py-2 active:cursor-grabbing"
               >
                 <GripHorizontal size={14} className="text-[var(--fg-muted)]" />
-              <p className="text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-[var(--fg-muted)]">
-                {seccion ? `Editar sección · ${seccion.name}` : "Editar esta vista"}
-              </p>
+                <p className="text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-[var(--fg-muted)]">
+                  {seccion ? `Editar sección · ${seccion.name}` : "Editar esta página"}
+                </p>
               </div>
+
               {seccion && (
-                <div className="mb-4">
-                  <button
-                    type="button"
-                    onClick={() => router.push("/panel/portada?vista=1")}
-                    className="mb-3 text-xs font-semibold text-[var(--accent)]"
-                  >
-                    ← Volver al inicio
+                <div>
+                  <button type="button" onClick={() => router.push("/panel/portada?vista=1")} className="mb-3 text-xs font-semibold text-[var(--accent)]">
+                    ← Volver a la portada
                   </button>
                   <SeccionForm
                     key={`${seccion.id}:${seccion.sortOrder}`}
@@ -429,14 +476,7 @@ export function PreviewChrome({
                   />
                 </div>
               )}
-              {!seccion && (
-              <details className="mb-4 rounded-[var(--radius)] border border-[var(--border)]">
-                <summary className="cursor-pointer px-3 py-2 text-sm font-semibold">Plantilla</summary>
-                <div className="border-t border-[var(--border)] p-3">
-                  <TemplatePicker layout={layout} onPick={(config) => editLayout({ ...config, parts: {}, sectionFilters: layout.sectionFilters })} compacto />
-                </div>
-              </details>
-              )}
+
               {seccion ? (
                 <SectionPanel
                   layout={layout}
@@ -459,39 +499,45 @@ export function PreviewChrome({
                   }
                 />
               ) : (
-                <RegionEditor
-                  value={layout.regions ?? {}}
-                  active={region}
-                  onActive={setRegion}
-                  onChange={(regions) => editLayout({ ...layout, regions })}
-                  only={["navbar", "hero", "cards", "body", "footer"]}
-                />
-              )}
-              {!seccion && selSlug && (
-                <div className="mt-4">
-                  <BlockStyleEditor
-                    title={selTitle}
-                    style={items.find((i) => i.slug === selSlug)?.homeStyle ?? {}}
-                    onChange={(p) => patchBlock(selSlug, p)}
-                    onClear={() => patchBlock(selSlug, null)}
+                <>
+                  <PropiedadesCard
+                    foco={foco}
+                    onFoco={elegir}
+                    region={region}
+                    onRegion={setRegion}
+                    layout={layout}
+                    onRegions={(regions) => editLayout({ ...layout, regions })}
+                    nota={nota}
+                    onNotaChange={(p) => selSlug && patchBlock(selSlug, p)}
+                    onNotaClear={() => selSlug && patchBlock(selSlug, null)}
                     zone={zoneBundle()}
+                    onClose={() => {
+                      setFoco(null);
+                      setSelSlug(null);
+                    }}
+                    flash={flash}
                   />
-                </div>
+                  <details className="rounded-[var(--radius)] border border-[var(--border)]">
+                    <summary className="cursor-pointer px-3 py-2.5 text-sm font-semibold">Plantilla</summary>
+                    <div className="border-t border-[var(--border)] p-3">
+                      <TemplatePicker layout={layout} onPick={(config) => editLayout({ ...config, parts: {}, sectionFilters: layout.sectionFilters })} compacto />
+                    </div>
+                  </details>
+                  <details className="rounded-[var(--radius)] border border-[var(--border)]">
+                    <summary className="cursor-pointer px-3 py-2.5 text-sm font-semibold">Publicidad</summary>
+                    <div className="border-t border-[var(--border)] p-3">
+                      <AdsPanel layout={layout} zones={adsZones} canManage={canManagePauta} drafts={adDrafts} onDraft={editAd} />
+                    </div>
+                  </details>
+                </>
               )}
-              {!seccion && (
-                <details className="mt-4 rounded-[var(--radius)] border border-[var(--border)]">
-                  <summary className="cursor-pointer px-3 py-2 text-sm font-semibold">Publicidad</summary>
-                  <div className="border-t border-[var(--border)] p-3">
-                    <AdsPanel layout={layout} zones={adsZones} canManage={canManagePauta} drafts={adDrafts} onDraft={editAd} />
-                  </div>
-                </details>
-              )}
-              <p role="status" className={`mt-3 text-xs font-semibold ${saveState === "error" ? "text-[#9a2f22]" : "text-[var(--accent)]"}`}>
-                {saveState === "saving" && "Guardando cambios…"}
-                {saveState === "saved" && "Cambios guardados en el borrador ✓ (se ven en la página)"}
+
+              <p role="status" className={`text-xs font-semibold ${saveState === "error" ? "text-[#9a2f22]" : "text-[var(--accent)]"}`}>
+                {saveState === "saving" && "Guardando en el borrador…"}
+                {saveState === "saved" && "Guardado en el borrador ✓ (se ve en la página)"}
                 {saveState === "error" && "No se pudo guardar el cambio. Recarga la vista previa desde el editor y vuelve a intentarlo."}
               </p>
-              <p className="mt-3 text-xs text-[var(--fg-muted)]">Pulsa un componente de la página para elegirlo. Los cambios quedan en el borrador; se publican con «Aceptar y publicar».</p>
+              <p className="text-xs text-[var(--fg-muted)]">Haz clic en una parte de la página para elegirla. Los cambios quedan en el borrador; se publican con «Publicar cambios».</p>
             </div>
           )}
           <button

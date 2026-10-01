@@ -1382,3 +1382,15 @@ a {
 }
 .reader-body figcaption { font-size: 0.8em; color: var(--reader-muted); }
 .reader-body blockquote { border-left: 3px solid #b45309; padding-left: 1em; font-style: italic; }
+
+
+/* Panel «Propiedades» del editor de portada: destello al elegir algo en la página. */
+@keyframes cg-flash {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 55%, transparent); }
+  60% { box-shadow: 0 0 0 10px color-mix(in srgb, var(--accent) 0%, transparent); }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+.cg-flash { animation: cg-flash 0.9s ease-out; }
+@media (prefers-reduced-motion: reduce) {
+  .cg-flash { animation: none; }
+}

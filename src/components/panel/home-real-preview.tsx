@@ -1,33 +1,24 @@
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
-import { articles, categories, siteSettings } from "@/db/schema";
+import { adsZones, articles, categories, siteSettings } from "@/db/schema";
 import { auth, requirePermiso } from "@/lib/auth";
 import { getAdsZoneRows } from "@/lib/ads";
 import { DEFAULT_HOME_LAYOUT } from "@/lib/home-layout";
 import { normalizeLayout } from "@/lib/home-layout-normalize";
 import { draftKey, sanitizeDraft, setPreviewDraft } from "@/lib/preview-draft";
-import { sanitizePopup } from "@/lib/popup-types";
+import { DEFAULT_POPUP, sanitizePopup } from "@/lib/popup-types";
 import { POPUP_KEY } from "@/lib/popup";
 import { makePage } from "@/app/(public)/_pages/home";
 import { PreviewChrome } from "@/components/panel/preview-chrome";
+import { AD_ZONE_SPECS, positionOf } from "@/lib/ads-positions";
+import { countChanges, summarizeChanges, type ChangeLine, type PortadaState } from "@/lib/portada-summary";
+import type { Anterior } from "@/components/panel/portada-types";
+import type { AdDraft } from "@/components/panel/ads-zone-form";
 import { sql } from "drizzle-orm";
 import { makePage as makeCategoryPage } from "@/app/(public)/_pages/categoria";
 
 const Home = makePage("es");
 const Categoria = makeCategoryPage("es");
-
-/** JSON con las claves ordenadas: compara contenido, no el orden en que se escribió. */
-function stable(v: unknown): string {
-  if (Array.isArray(v)) return `[${v.map(stable).join(",")}]`;
-  if (v && typeof v === "object") {
-    return `{${Object.entries(v as Record<string, unknown>)
-      .filter(([, x]) => x !== undefined)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([k, x]) => `${JSON.stringify(k)}:${stable(x)}`)
-      .join(",")}}`;
-  }
-  return JSON.stringify(v) ?? "null";
-}
 
 /**
  * Vista previa REAL de la portada: la misma página que ve el público, con el
@@ -46,21 +37,52 @@ export async function applyDraftForRequest(opts: { popup?: "auto" | "show" | "hi
   const draft = sanitizeDraft(draftRow?.value);
 
   let changed = false;
+  let lines: ChangeLine[] = [];
+  let anterior: Anterior | null = null;
   if (draft) {
     const [layoutRow] = await db.select({ value: siteSettings.value }).from(siteSettings).where(eq(siteSettings.key, "home_layout")).limit(1);
     const [popupRow] = await db.select({ value: siteSettings.value }).from(siteSettings).where(eq(siteSettings.key, POPUP_KEY)).limit(1);
     const savedItems = await db
-      .select({ slug: articles.slug, homeStyle: articles.homeStyle })
+      .select({ id: articles.id, slug: articles.slug, title: articles.title, homeStyle: articles.homeStyle, homePosition: articles.homePosition })
       .from(articles)
       .where(eq(articles.status, "publicado"))
       .orderBy(sql`(${articles.homePosition} is null)`, articles.homePosition, sql`${articles.publishedAt} desc`);
+    const adRows = await db.select().from(adsZones);
 
-    const savedLayout = { ...DEFAULT_HOME_LAYOUT, ...normalizeLayout((layoutRow?.value ?? {}) as never) };
-    const savedPopup = sanitizePopup(popupRow?.value);
-    changed =
-      stable(savedLayout) !== stable(draft.layout) ||
-      stable({ ...savedPopup, version: 0 }) !== stable({ ...draft.popup, version: 0 }) ||
-      stable(savedItems.map((i) => [i.slug, i.homeStyle ?? null])) !== stable(draft.items.map((i) => [i.slug, i.homeStyle ?? null]));
+    const toIso = (d: Date | null) => (d ? d.toISOString() : "");
+    const adsBase: Record<string, AdDraft> = {};
+    const adNames: Record<string, string> = {};
+    for (const r of adRows) {
+      adsBase[r.key] = { imageUrl: r.imageUrl ?? "", clickUrl: r.clickUrl ?? "", html: r.html ?? "", active: r.active, startsAt: toIso(r.startsAt), endsAt: toIso(r.endsAt) };
+    }
+    for (const key of Object.keys(draft.adDrafts)) {
+      const pos = positionOf(key);
+      adNames[key] = pos ? AD_ZONE_SPECS[pos].label : key;
+    }
+
+    const base: PortadaState = {
+      layout: { ...DEFAULT_HOME_LAYOUT, ...normalizeLayout((layoutRow?.value ?? {}) as never) },
+      items: savedItems.map((i) => ({ slug: i.slug, homeStyle: i.homeStyle ?? null })),
+      // Igual que getSitePopup(): sin fila publicada, el popup por defecto (apagado).
+      popup: popupRow ? sanitizePopup(popupRow.value) : DEFAULT_POPUP,
+      ads: {},
+      // Sin ninguna nota fijada a mano, la portada ya es automática.
+      auto: savedItems.every((i) => i.homePosition === null),
+    };
+    const cur: PortadaState = { layout: draft.layout, items: draft.items, popup: draft.popup, ads: draft.adDrafts, auto: draft.auto };
+    const titles = Object.fromEntries(savedItems.map((i) => [i.slug, i.title]));
+    lines = summarizeChanges(base, cur, { titles, adsBase, adNames });
+    changed = countChanges(lines) > 0;
+    anterior = {
+      auto: base.auto ?? false,
+      items: savedItems.map((i) => ({ id: i.id, homeStyle: i.homeStyle ?? null })),
+      layout: base.layout,
+      popup: base.popup,
+      ads: Object.keys(draft.adDrafts).flatMap((key) => {
+        const r = adRows.find((x) => x.key === key);
+        return r ? [{ key, html: r.html, imageUrl: r.imageUrl, clickUrl: r.clickUrl, active: r.active, startsAt: r.startsAt ? r.startsAt.toISOString() : null, endsAt: r.endsAt ? r.endsAt.toISOString() : null }] : [];
+      }),
+    };
   }
 
   // El lienzo del editor decide si enseña el popup (botón «Ver en el lienzo»).
@@ -71,11 +93,11 @@ export async function applyDraftForRequest(opts: { popup?: "auto" | "show" | "hi
         ? { ...draft, popup: { ...draft.popup, enabled: true } }
         : draft;
   setPreviewDraft(applied);
-  return { draft, changed };
+  return { draft, changed, lines, anterior };
 }
 
 export async function HomeRealPreview({ seccion }: { seccion?: string } = {}) {
-  const { draft, changed } = await applyDraftForRequest();
+  const { draft, changed, lines, anterior } = await applyDraftForRequest();
   let row: { id: string; slug: string; name: string; description: string | null; sortOrder: number; articleCount: number } | null = null;
   if (seccion) {
     const [r] = await db
@@ -96,7 +118,7 @@ export async function HomeRealPreview({ seccion }: { seccion?: string } = {}) {
   // Zonas de publicidad para el formulario flotante (se leen DESPUÉS de fijar el borrador).
   const [adsZones, session] = await Promise.all([getAdsZoneRows().catch(() => []), auth()]);
   return (
-    <PreviewChrome changed={changed} hasDraft={!!draft} draft={draft} seccion={row} adsZones={adsZones} canManagePauta={session?.user.role === "administrador"}>
+    <PreviewChrome changed={changed} changes={lines} anterior={anterior} hasDraft={!!draft} draft={draft} seccion={row} adsZones={adsZones} canManagePauta={session?.user.role === "administrador"}>
       {row ? <Categoria params={Promise.resolve({ slug: row.slug })} searchParams={Promise.resolve({})} locale="es" /> : <Home locale="es" />}
     </PreviewChrome>
   );

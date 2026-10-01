@@ -28,8 +28,9 @@ export function enhanceBlocks(doc: Document, root: ParentNode, opts: BlockToolsO
     const st = doc.createElement("style");
     st.id = STYLE_ID;
     st.textContent =
-      ".cg-handle{position:absolute;right:-7px;bottom:-7px;width:16px;height:16px;border-radius:5px;background:#84a21f;border:2px solid #fff;cursor:nwse-resize;z-index:60;box-shadow:0 1px 4px rgba(0,0,0,.45)}" +
-      "[data-cg-block]{position:relative}[data-cg-block]:hover{outline:1px dashed #84a21f;outline-offset:2px}" +
+      // Medidas en función de --cg-inv (1 / escala del lienzo): el asa mide lo mismo en pantalla aunque la portada se vea reducida.
+      ".cg-handle{position:absolute;right:calc(-8px*var(--cg-inv,1));bottom:calc(-8px*var(--cg-inv,1));width:calc(18px*var(--cg-inv,1));height:calc(18px*var(--cg-inv,1));border-radius:calc(5px*var(--cg-inv,1));background:#84a21f;border:calc(2px*var(--cg-inv,1)) solid #fff;cursor:nwse-resize;z-index:60;box-shadow:0 1px 4px rgba(0,0,0,.45)}" +
+      "[data-cg-block]{position:relative}[data-cg-block]:hover{outline:calc(1px*var(--cg-inv,1)) dashed #84a21f;outline-offset:calc(2px*var(--cg-inv,1))}" +
       ".cg-over{outline:3px dashed #c9a227!important;outline-offset:3px}";
     doc.head.appendChild(st);
   }

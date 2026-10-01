@@ -26,4 +26,6 @@ export type PortadaDraft = {
   items: { slug: string; homeStyle: HomeStyle | null }[];
   popup: PopupConfig;
   adDrafts: Record<string, AdDraft>;
+  /** «Volver al diseño original»: al publicar, las notas vuelven al orden y estilo automáticos. */
+  auto?: boolean;
 };
