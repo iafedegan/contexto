@@ -69,6 +69,22 @@ export async function toggleUserActive(userId: string, active: boolean) {
   revalidatePath("/panel/configuracion");
 }
 
+/**
+ * Elimina una cuenta para siempre. Solo administradores y nunca la propia
+ * (se quedaría el panel sin nadie que pueda gestionarlo). Lo que la persona
+ * creó se conserva: artículos, borradores y ediciones solo pierden el autor
+ * interno (`set null`); sus sesiones y passkeys se borran con ella (`cascade`).
+ */
+export async function deleteUser(userId: string): Promise<{ ok: boolean; message: string }> {
+  const me = await requireRole("administrador");
+  if (me.id === userId) return { ok: false, message: "No puedes eliminar tu propia cuenta." };
+
+  const borrados = await db.delete(users).where(eq(users.id, userId)).returning({ id: users.id });
+  if (borrados.length === 0) return { ok: false, message: "Esa cuenta ya no existe." };
+  revalidatePath("/panel/configuracion");
+  return { ok: true, message: "Cuenta eliminada." };
+}
+
 export type CreateUserState = { ok: boolean; message: string } | null;
 
 const ROLES: UserRole[] = ["redactor", "editor", "administrador"];

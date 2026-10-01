@@ -525,11 +525,13 @@
   --shadow-hover: 0 14px 34px -12px rgba(20, 28, 6, 0.7);
 }
 
-/* Lienzo de TODAS las pantallas del panel: fondo verde oliva claro, tarjetas
-   blancas con filete de color y tinta verde muy oscura (nada de gris pálido). */
+/* Lienzo de TODAS las pantallas del panel: fondo blanco perla en degradado,
+   tarjetas blancas con filete de color y tinta verde muy oscura (nada de gris
+   pálido). El degradado va en `.lx-pearl-canvas`; `--bg` es el perla plano
+   para lo que necesite un color liso. */
 [data-theme="panel-amber"] {
   color-scheme: light;
-  --bg: #e9efd2;
+  --bg: #f5f3ee;
   --bg-2: #ffffff;
   --surface: #ffffff;
   --surface-2: #dbe5b7;
@@ -545,6 +547,14 @@
   --nav-bg: #ffffff;
   --shadow: 0 1px 2px rgba(40, 52, 16, 0.08), 0 10px 26px -16px rgba(40, 52, 16, 0.32);
   --shadow-hover: 0 2px 4px rgba(40, 52, 16, 0.1), 0 18px 40px -18px rgba(40, 52, 16, 0.42);
+}
+
+.lx-pearl-canvas {
+  background-color: #f5f3ee;
+  background-image:
+    radial-gradient(1100px 480px at 12% -8%, rgba(255, 255, 255, 0.95), transparent 62%),
+    linear-gradient(165deg, #fdfcf9 0%, #f6f3ec 46%, #ebe7dc 100%);
+  background-attachment: fixed;
 }
 
 [data-theme="panel-amber"] .lx-card:not([data-site-root] *) {

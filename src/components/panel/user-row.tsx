@@ -1,8 +1,8 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import type { UserRole } from "@/db/schema";
-import { changeUserRole, toggleUserActive } from "@/app/panel/(app)/configuracion/actions";
+import { changeUserRole, deleteUser, toggleUserActive } from "@/app/panel/(app)/configuracion/actions";
 
 const ROLES: UserRole[] = ["redactor", "editor", "administrador"];
 
@@ -28,6 +28,7 @@ export function UserRow({
   isSelf: boolean;
 }) {
   const [pending, start] = useTransition();
+  const [error, setError] = useState<string | null>(null);
 
   return (
     <tr className={pending ? "opacity-50" : undefined}>
@@ -66,6 +67,7 @@ export function UserRow({
 
       <td className="border-b border-[var(--border)] px-4 py-3">
         {canManage ? (
+          <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
             disabled={pending}
@@ -74,6 +76,23 @@ export function UserRow({
           >
             {user.active ? "Desactivar" : "Activar"}
           </button>
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() => {
+              if (!confirm(`¿Eliminar la cuenta de ${user.name} (${user.email})? No se puede deshacer. Sus artículos se conservan.`)) return;
+              setError(null);
+              start(async () => {
+                const r = await deleteUser(user.id);
+                if (!r.ok) setError(r.message);
+              });
+            }}
+            className="rounded-full border border-red-600/40 px-3 py-1 text-xs font-medium text-red-700 transition hover:bg-red-600/10"
+          >
+            Eliminar
+          </button>
+          {error && <span className="basis-full text-xs text-red-700" role="alert">{error}</span>}
+          </div>
         ) : (
           <span className="text-xs">{user.active ? "Activa" : "Inactiva"}</span>
         )}

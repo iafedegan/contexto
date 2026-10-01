@@ -88,7 +88,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
       {/* Lienzo ámbar para TODAS las pantallas del panel (Resumen, Artículos,
           Diseño…): la barra queda como cromo claro y el contenido comparte un
           mismo fondo, en vez de mezclar pantallas claras y oscuras. */}
-      <main data-theme="panel-amber" className="flex-1 bg-[var(--bg)] text-[var(--fg)]">
+      <main data-theme="panel-amber" className="lx-pearl-canvas flex-1 text-[var(--fg)]">
         <div className="mx-auto w-full max-w-6xl px-6 py-10">
           {debeActivar2fa && (
             <p className="mb-6 flex items-start gap-2 rounded-[var(--radius)] border border-[var(--accent)]/40 bg-[var(--surface-2)] p-4 text-sm leading-relaxed">
