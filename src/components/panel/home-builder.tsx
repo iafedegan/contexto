@@ -500,26 +500,42 @@ export function HomeBuilder({
         {/* Las mismas zonas que en Configuración › Publicidad, aquí también, con un
             plano de la plantilla que muestra dónde cae cada una, y el popup. */}
         <Bloque titulo="Publicidad y popup" icono={<Megaphone size={13} />}>
-          <TemplateBlueprint
-            layout={layout}
-            adStates={adStates}
-            focus={(adFocus ? (adFocus.split("__")[0] as AdPosition) : null)}
-            onPick={(pos) => {
-              setAdFocus(pos);
-              setAdRequest((r) => ({ key: pos, n: (r?.n ?? 0) + 1 }));
-            }}
-          />
-          <div className="mt-5">
-            <AdsEditor
-              zones={adsZones}
-              canManage={canManagePauta}
-              onDraft={(key, draft) => setAdDrafts((d) => ({ ...d, [key]: draft }))}
-              onFocusZone={setAdFocus}
-              request={adRequest}
-            />
-          </div>
           <details
-            className="mt-5 rounded-[var(--radius)] border border-[var(--border)]"
+            className="rounded-[var(--radius)] border border-[var(--border)]"
+            onToggle={(e) => {
+              if (!(e.currentTarget as HTMLDetailsElement).open) setAdFocus(null);
+            }}
+          >
+            <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2.5 text-sm font-semibold">
+              <Megaphone size={14} className="text-[var(--accent)]" /> Publicidad
+              <span className="rounded-full bg-[var(--surface-2)] px-2 py-0.5 text-[0.65rem] font-bold text-[var(--fg-muted)]">
+                {Object.values(adStates).filter((v) => v === "activo").length} activos
+              </span>
+              <ChevronDown size={14} className="ml-auto" />
+            </summary>
+            <div className="border-t border-[var(--border)] p-3">
+              <TemplateBlueprint
+                layout={layout}
+                adStates={adStates}
+                focus={(adFocus ? (adFocus.split("__")[0] as AdPosition) : null)}
+                onPick={(pos) => {
+                  setAdFocus(pos);
+                  setAdRequest((r) => ({ key: pos, n: (r?.n ?? 0) + 1 }));
+                }}
+              />
+              <div className="mt-5">
+                <AdsEditor
+                  zones={adsZones}
+                  canManage={canManagePauta}
+                  onDraft={(key, draft) => setAdDrafts((d) => ({ ...d, [key]: draft }))}
+                  onFocusZone={setAdFocus}
+                  request={adRequest}
+                />
+              </div>
+            </div>
+          </details>
+          <details
+            className="mt-3 rounded-[var(--radius)] border border-[var(--border)]"
             onToggle={(e) => setPopupPreview((e.currentTarget as HTMLDetailsElement).open)}
           >
             <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2.5 text-sm font-semibold">
