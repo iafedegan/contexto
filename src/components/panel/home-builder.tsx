@@ -39,6 +39,7 @@ import type { HomeLayoutConfig, HomeStyle } from "@/db/schema";
 import { HOME_TEMPLATES } from "@/lib/home-layout";
 import type { RegionId } from "@/lib/home-regions";
 import type { SectionElId } from "@/db/schema";
+import { enhanceBlocks } from "@/lib/block-tools";
 import { SectionPanel } from "@/components/panel/section-panel";
 import { BlockStyleEditor } from "@/components/panel/block-style-editor";
 import { TemplateBlueprint, type AdState } from "@/components/panel/template-blueprint";
@@ -51,7 +52,7 @@ import { PartsEditor } from "@/components/panel/parts-editor";
 import { PopupEditor } from "@/components/panel/popup-editor";
 import { PreviewFrame } from "@/components/panel/preview-frame";
 import type { PopupConfig } from "@/lib/popup-types";
-import { ACCEPTED_KEY, DRAFT_PING_KEY, LAYOUT_EDIT_KEY, SECCIONES_KEY, type PortadaDraft } from "@/lib/portada-draft";
+import { ACCEPTED_KEY, DRAFT_PING_KEY, ITEMS_EDIT_KEY, LAYOUT_EDIT_KEY, SECCIONES_KEY, type PortadaDraft } from "@/lib/portada-draft";
 import type { FooterId, NavbarId } from "@/lib/template-parts";
 import { HOME_FONTS, HOME_FONT_GROUPS, type HomeTitleFont } from "@/lib/home-fonts";
 import { cn } from "@/lib/utils";
@@ -265,100 +266,23 @@ export function HomeBuilder({
     // Se espera a que la página termine de hidratarse: tocar su DOM antes
     // provocaría errores de hidratación.
     setTimeout(() => {
-      if (frameDoc.current === doc) enhanceBlocks(doc);
+      if (frameDoc.current === doc) enhanceBlocksIn(doc);
     }, 1800);
   }
 
-  /**
-   * Hace el cuerpo ajustable: cada bloque (nota) lleva una asa en la esquina
-   * inferior derecha para agrandarlo (columnas y alto), y los de la portada se
-   * pueden arrastrar para cambiarlos de sitio. Se reinstala en cada recarga
-   * del lienzo.
-   */
-  function enhanceBlocks(doc: Document) {
-    const st = doc.createElement("style");
-    st.textContent =
-      ".cg-handle{position:absolute;right:-7px;bottom:-7px;width:16px;height:16px;border-radius:5px;background:#84a21f;border:2px solid #fff;cursor:nwse-resize;z-index:60;box-shadow:0 1px 4px rgba(0,0,0,.45)}" +
-      "[data-cg-block]{position:relative}[data-cg-block]:hover{outline:1px dashed #84a21f;outline-offset:2px}" +
-      ".cg-over{outline:3px dashed #c9a227!important;outline-offset:3px}";
-    doc.head.appendChild(st);
-
-    const blocks = Array.from(doc.querySelectorAll<HTMLElement>("[data-bslug],[data-bs-root]")).filter(
-      (el) => el.hasAttribute("data-bslug") || !el.closest("[data-bslug]"),
-    );
-    for (const el of blocks) {
-      el.setAttribute("data-cg-block", "");
-      const slug = el.getAttribute("data-bslug") ?? el.getAttribute("data-bs-root");
-      const handle = doc.createElement("span");
-      handle.className = "cg-handle";
-      handle.title = "Arrastra para agrandar el bloque";
-      el.appendChild(handle);
-      handle.addEventListener("pointerdown", (ev) => {
-        ev.preventDefault();
-        ev.stopPropagation();
-        handle.setPointerCapture(ev.pointerId);
-        const r0 = el.getBoundingClientRect();
-        const parent = el.parentElement;
-        const cs = parent ? doc.defaultView!.getComputedStyle(parent) : null;
-        const isGrid = !!cs && cs.display.includes("grid");
-        const cols = isGrid ? cs!.gridTemplateColumns.split(" ").length : 1;
-        const gap = isGrid ? parseFloat(cs!.columnGap) || 0 : 0;
-        const colW = isGrid ? (parent!.clientWidth - gap * (cols - 1)) / cols : r0.width;
-        let span: number | undefined;
-        let h = r0.height;
-        const sx = ev.clientX, sy = ev.clientY;
-        const scale = r0.width / (el.offsetWidth || r0.width) || 1;
-        const move = (e: PointerEvent) => {
-          h = Math.max(60, r0.height + (e.clientY - sy) / scale);
-          el.style.minHeight = `${Math.round(h)}px`;
-          if (isGrid) {
-            const w = r0.width + (e.clientX - sx) / scale;
-            span = Math.min(cols, Math.max(1, Math.round((w + gap) / (colW + gap))));
-            el.style.gridColumn = `span ${span} / span ${span}`;
-          }
-        };
-        const up = () => {
-          handle.removeEventListener("pointermove", move);
-          handle.removeEventListener("pointerup", up);
-          const idx = itemsRef.current.findIndex((i) => i.slug === slug);
-          if (idx >= 0) {
-            patchRef.current(idx, { height: Math.round(h), ...(span ? { colSpan: span } : {}) });
-            setSelected(idx);
-          }
-        };
-        handle.addEventListener("pointermove", move);
-        handle.addEventListener("pointerup", up);
-      });
-    }
-
-    // Arrastrar para reordenar (solo las tarjetas de la portada, que tienen posición).
-    let from: number | null = null;
-    const wrappers = Array.from(doc.querySelectorAll<HTMLElement>("[data-card-index]"));
-    for (const w of wrappers) {
-      w.draggable = true;
-      w.querySelectorAll("img,a").forEach((n) => ((n as HTMLElement).draggable = false));
-      w.addEventListener("dragstart", (e) => {
-        from = Number(w.getAttribute("data-card-index"));
-        e.dataTransfer?.setData("text/plain", String(from));
-      });
-      w.addEventListener("dragover", (e) => {
-        if (from === null) return;
-        e.preventDefault();
-        w.classList.add("cg-over");
-      });
-      w.addEventListener("dragleave", () => w.classList.remove("cg-over"));
-      w.addEventListener("dragend", () => {
-        from = null;
-        doc.querySelectorAll(".cg-over").forEach((n) => n.classList.remove("cg-over"));
-      });
-      w.addEventListener("drop", (e) => {
-        e.preventDefault();
-        w.classList.remove("cg-over");
-        const to = Number(w.getAttribute("data-card-index"));
-        if (from !== null && from !== to) moveRef.current(from, to);
-        from = null;
-      });
-    }
+  /** Hace el cuerpo ajustable en el lienzo (asas de tamaño y arrastrar para reordenar). */
+  function enhanceBlocksIn(doc: Document) {
+    enhanceBlocks(doc, doc.body, {
+      isCurrent: () => frameDoc.current === doc,
+      onResize: (slug, patch) => {
+        const idx = itemsRef.current.findIndex((i) => i.slug === slug);
+        if (idx >= 0) {
+          patchRef.current(idx, patch);
+          setSelected(idx);
+        }
+      },
+      onMove: (from, to) => moveRef.current(from, to),
+    });
   }
 
   // Si en la pestaña de vista previa se aceptó y publicó el diseño, se
@@ -370,6 +294,21 @@ export function HomeBuilder({
       if (e.key === SECCIONES_KEY) {
         setFrameNonce((n) => n + 1);
         router.refresh();
+      }
+      // La vista previa reordenó o estiló bloques: se aplica aquí (por slug).
+      if (e.key === ITEMS_EDIT_KEY && e.newValue) {
+        try {
+          const incoming = JSON.parse(e.newValue) as { slug: string; homeStyle: HomeStyle | null }[];
+          setItems((prev) => {
+            const bySlug = new Map(prev.map((i) => [i.slug, i]));
+            const ordered = incoming.flatMap((p) => (bySlug.has(p.slug) ? [{ ...bySlug.get(p.slug)!, homeStyle: p.homeStyle ?? null }] : []));
+            const seen = new Set(incoming.map((p) => p.slug));
+            return [...ordered, ...prev.filter((i) => !seen.has(i.slug))];
+          });
+          setSaved(false);
+        } catch {
+          /* ignorado */
+        }
       }
       if (e.key === LAYOUT_EDIT_KEY && e.newValue) {
         try {
@@ -559,7 +498,7 @@ export function HomeBuilder({
               <p className="mb-3 text-xs leading-relaxed text-[var(--fg-muted)]">
                 Nombre, descripción y orden en el menú. Se guardan al pulsar Guardar en este bloque.
               </p>
-              <SeccionForm key={`${seccion.id}:${seccion.sortOrder}`} id={seccion.id} slug={seccion.slug} name={seccion.name} description={seccion.description} sortOrder={seccion.sortOrder} articleCount={seccion.articleCount} defaultOpen onSaved={() => setFrameNonce((n) => n + 1)} />
+              <SeccionForm key={`${seccion.id}:${seccion.sortOrder}`} id={seccion.id} slug={seccion.slug} name={seccion.name} description={seccion.description} sortOrder={seccion.sortOrder} articleCount={seccion.articleCount} onSaved={() => setFrameNonce((n) => n + 1)} />
             </Bloque>
             <Bloque titulo="Encabezado y cuerpo" icono={<Paintbrush size={13} />}>
               <SectionPanel

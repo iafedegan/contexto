@@ -4,13 +4,14 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Check, GripHorizontal, Loader2, Paintbrush, Rocket, X } from "lucide-react";
 import { publishHomeDraft, saveHomeDraft } from "@/app/panel/(app)/portada/actions";
-import { ACCEPTED_KEY, DRAFT_PING_KEY, LAYOUT_EDIT_KEY, SECCIONES_KEY, type PortadaDraft } from "@/lib/portada-draft";
+import { ACCEPTED_KEY, DRAFT_PING_KEY, ITEMS_EDIT_KEY, LAYOUT_EDIT_KEY, SECCIONES_KEY, type PortadaDraft } from "@/lib/portada-draft";
 import { RegionEditor } from "@/components/panel/region-editor";
-import { SectionFiltersPicker } from "@/components/panel/section-filters-picker";
 import { SeccionForm } from "@/components/panel/seccion-form";
 import { TemplatePicker } from "@/components/panel/home-builder";
 import type { RegionId } from "@/lib/home-regions";
-import type { SectionElId } from "@/db/schema";
+import type { HomeStyle, SectionElId } from "@/db/schema";
+import { BlockStyleEditor } from "@/components/panel/block-style-editor";
+import { cleanupBlocks, enhanceBlocks } from "@/lib/block-tools";
 import { SectionPanel } from "@/components/panel/section-panel";
 
 /**
@@ -41,6 +42,10 @@ export function PreviewChrome({
   const [panel, setPanel] = useState(false);
   const [region, setRegion] = useState<RegionId>("navbar");
   const [secEl, setSecEl] = useState<SectionElId>("title");
+  const [items, setItems] = useState<PortadaDraft["items"]>(draft?.items ?? []);
+  const [selSlug, setSelSlug] = useState<string | null>(null);
+  const [selTitle, setSelTitle] = useState("");
+  const contentRef = useRef<HTMLDivElement>(null);
   // Posición del formulario flotante: arrastrable y recordada entre visitas.
   const [pos, setPos] = useState<{ x: number; y: number } | null>(() => {
     if (typeof window === "undefined") return null;
@@ -82,15 +87,18 @@ export function PreviewChrome({
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerup", up);
   }
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const draftRef = useRef(draft);
+  const layoutRef = useRef(layout);
+  const itemsRef = useRef(items);
   useEffect(() => {
     draftRef.current = draft;
   });
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Cada ajuste se guarda en el borrador (y se avisa al editor) y la vista se refresca.
-  function editLayout(next: NonNullable<typeof layout>) {
-    setLayout(next);
+  function persist() {
     setSaveState("saving");
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(async () => {
@@ -98,9 +106,10 @@ export function PreviewChrome({
       const base = draftRef.current;
       if (!base) return setSaveState("error");
       try {
-        const res = await saveHomeDraft({ ...base, layout: next });
+        const res = await saveHomeDraft({ ...base, layout: layoutRef.current ?? base.layout, items: itemsRef.current });
         if (!res.ok) return setSaveState("error");
-        localStorage.setItem(LAYOUT_EDIT_KEY, JSON.stringify(next));
+        localStorage.setItem(LAYOUT_EDIT_KEY, JSON.stringify(layoutRef.current));
+        localStorage.setItem(ITEMS_EDIT_KEY, JSON.stringify(itemsRef.current));
         setSaveState("saved");
         router.refresh();
       } catch {
@@ -108,14 +117,69 @@ export function PreviewChrome({
       }
     }, 600);
   }
+  function editLayout(next: NonNullable<typeof layout>) {
+    layoutRef.current = next;
+    setLayout(next);
+    persist();
+  }
+  /** Cambia el estilo de un bloque (nota); `null` lo restablece. */
+  function patchBlock(slug: string, partial: Partial<HomeStyle> | null) {
+    const cur = itemsRef.current;
+    const apply = (st: HomeStyle | null): HomeStyle | null => {
+      if (partial === null) return null;
+      const merged = { ...(st ?? {}), ...partial } as Record<string, unknown>;
+      for (const k of Object.keys(merged)) if (merged[k] === undefined) delete merged[k];
+      return Object.keys(merged).length ? (merged as HomeStyle) : null;
+    };
+    const next = cur.some((i) => i.slug === slug)
+      ? cur.map((i) => (i.slug === slug ? { ...i, homeStyle: apply(i.homeStyle) } : i))
+      : [...cur, { slug, homeStyle: apply(null) }];
+    itemsRef.current = next;
+    setItems(next);
+    persist();
+  }
+  /** Cambia de sitio un bloque de la portada (índices de posición). */
+  function moveBlock(from: number, to: number) {
+    const next = itemsRef.current.slice();
+    if (from < 0 || from >= next.length || to < 0 || to >= next.length) return;
+    const [row] = next.splice(from, 1);
+    next.splice(to, 0, row);
+    itemsRef.current = next;
+    setItems(next);
+    persist();
+  }
 
   // Si el editor cambia el diseño en la otra pestaña, el formulario lo refleja.
   useEffect(() => {
-    if (!timer.current && draft) setLayout(draft.layout);
+    if (!timer.current && draft) {
+      layoutRef.current = draft.layout;
+      itemsRef.current = draft.items;
+      setLayout(draft.layout);
+      setItems(draft.items);
+    }
   }, [draft]);
 
-  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
-  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  // Asas de tamaño y arrastre sobre los bloques reales de la página.
+  useEffect(() => {
+    const root = contentRef.current;
+    if (!root || !panel) return;
+    const id = setTimeout(() => {
+      enhanceBlocks(document, root, {
+        onResize: (slug, patch) => {
+          patchBlock(slug, patch);
+          setSelSlug(slug);
+        },
+        onMove: (from, to) => moveBlock(from, to),
+      });
+    }, 400);
+    return () => {
+      clearTimeout(id);
+      cleanupBlocks(root);
+    };
+    // patchBlock y moveBlock solo usan refs: no hace falta reinstalar por ellas.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [children, panel]);
+
 
   useEffect(() => {
     const onStorage = (e: StorageEvent) => {
@@ -215,7 +279,11 @@ export function PreviewChrome({
       </div>
 
       {/* Scroll propio: la cabecera pegajosa de la portada queda bajo la barra. */}
+      {selSlug && /^[\w-]+$/.test(selSlug) && (
+        <style>{`[data-bslug="${selSlug}"],[data-bs-root="${selSlug}"]:not([data-bslug] *){outline:3px solid #84a21f!important;outline-offset:2px}`}</style>
+      )}
       <div
+        ref={contentRef}
         className="absolute inset-x-0 bottom-0 top-14 overflow-y-auto"
         onClickCapture={(e) => {
           // Los enlaces de la vista previa no navegan: llevarían a la página publicada.
@@ -225,14 +293,27 @@ export function PreviewChrome({
             e.preventDefault();
             const url = new URL(link.href, "https://x.invalid");
             const sec = url.pathname.match(/^\/(?:en\/)?categoria\/([^/]+)\/?$/);
-            if (sec) router.push(`/panel/portada?vista=1&seccion=${sec[1]}`);
-            else if (url.pathname === "/" || url.pathname === "/en") router.push("/panel/portada?vista=1");
-            return;
+            if (sec && !el.closest("[data-bslug],[data-bs-root]")) {
+              router.push(`/panel/portada?vista=1&seccion=${sec[1]}`);
+              return;
+            }
+            if ((url.pathname === "/" || url.pathname === "/en") && !el.closest("[data-bslug],[data-bs-root]")) {
+              router.push("/panel/portada?vista=1");
+              return;
+            }
           }
           const piece = el.closest("[data-el]")?.getAttribute("data-el") as SectionElId | null;
           if (piece && panel) {
             setSecEl(piece);
             setRegion("encabezado");
+            return;
+          }
+          const blockEl = el.closest<HTMLElement>("[data-bslug],[data-bs-root]");
+          const slug = blockEl?.getAttribute("data-bslug") ?? blockEl?.getAttribute("data-bs-root");
+          if (slug && panel) {
+            setSelSlug(slug);
+            setSelTitle(blockEl?.querySelector("h1,h2,h3")?.textContent?.trim() ?? slug);
+            setRegion("body");
             return;
           }
           const r = el.closest("[data-region]")?.getAttribute("data-region") as RegionId | null;
@@ -274,7 +355,6 @@ export function PreviewChrome({
                   <SeccionForm
                     key={`${seccion.id}:${seccion.sortOrder}`}
                     {...seccion}
-                    defaultOpen
                     onSaved={() => {
                       try {
                         localStorage.setItem(SECCIONES_KEY, String(Date.now()));
@@ -302,6 +382,16 @@ export function PreviewChrome({
                   onRegion={setRegion}
                   el={secEl}
                   onEl={setSecEl}
+                  block={
+                    selSlug
+                      ? {
+                          title: selTitle,
+                          style: items.find((i) => i.slug === selSlug)?.homeStyle ?? {},
+                          onChange: (p) => patchBlock(selSlug, p),
+                          onClear: () => patchBlock(selSlug, null),
+                        }
+                      : null
+                  }
                 />
               ) : (
                 <RegionEditor
@@ -311,6 +401,16 @@ export function PreviewChrome({
                   onChange={(regions) => editLayout({ ...layout, regions })}
                   only={["navbar", "hero", "cards", "body", "footer"]}
                 />
+              )}
+              {!seccion && selSlug && (
+                <div className="mt-4">
+                  <BlockStyleEditor
+                    title={selTitle}
+                    style={items.find((i) => i.slug === selSlug)?.homeStyle ?? {}}
+                    onChange={(p) => patchBlock(selSlug, p)}
+                    onClear={() => patchBlock(selSlug, null)}
+                  />
+                </div>
               )}
               <p role="status" className={`mt-3 text-xs font-semibold ${saveState === "error" ? "text-[#9a2f22]" : "text-[var(--accent)]"}`}>
                 {saveState === "saving" && "Guardando cambios…"}

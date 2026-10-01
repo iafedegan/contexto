@@ -14,6 +14,8 @@ export const DRAFT_PING_KEY = "cg-portada-borrador-ts";
 export const LAYOUT_EDIT_KEY = "cg-portada-diseno-editado";
 /** Se editó una sección (nombre, orden…) en otra pestaña: el árbol del editor debe recargarse. */
 export const SECCIONES_KEY = "cg-secciones-editadas";
+/** La vista previa cambió el orden o el estilo de bloques: el editor debe aplicarlo. */
+export const ITEMS_EDIT_KEY = "cg-portada-bloques-editados";
 export const ACCEPTED_KEY = "cg-portada-aceptado";
 
 export type PortadaDraft = {
