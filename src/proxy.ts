@@ -97,7 +97,12 @@ export async function proxy(req: NextRequest) {
     }
   }
 
-  return applyHeaders(NextResponse.next(), pathname);
+  // La ruta debe viajar en la PETICIÓN (no solo en la respuesta): es lo que
+  // lee `headers()` en el layout del panel. Se sobrescribe siempre, así un
+  // cliente no puede falsearla enviando su propio `x-pathname`.
+  const requestHeaders = new Headers(req.headers);
+  requestHeaders.set("x-pathname", pathname);
+  return applyHeaders(NextResponse.next({ request: { headers: requestHeaders } }), pathname);
 }
 
 /**
