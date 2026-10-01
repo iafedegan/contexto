@@ -60,6 +60,7 @@ export default async function PortadaPage({
       name: categories.name,
       description: categories.description,
       sortOrder: categories.sortOrder,
+      parentId: categories.parentId,
       articleCount: sql<number>`count(${articles.id})::int`,
     })
     .from(categories)

@@ -39,6 +39,7 @@ import type { HomeLayoutConfig, HomeStyle } from "@/db/schema";
 import { HOME_TEMPLATES } from "@/lib/home-layout";
 import type { RegionId } from "@/lib/home-regions";
 import { SeccionForm } from "@/components/panel/seccion-form";
+import { SectionTree, type SectionNode } from "@/components/panel/section-tree";
 import { RegionEditor } from "@/components/panel/region-editor";
 import { PartsEditor } from "@/components/panel/parts-editor";
 import { PopupEditor } from "@/components/panel/popup-editor";
@@ -85,7 +86,7 @@ export function HomeBuilder({
   /** Las 7 zonas de pauta, gestionables sin salir del editor de portada. */
   adsZones: AdsZoneRow[];
   /** Secciones del menú, para editarlas cuando el lienzo muestra una. */
-  sections: Array<{ id: string; slug: string; name: string; description: string | null; sortOrder: number; articleCount: number }>;
+  sections: SectionNode[];
   canManagePauta: boolean;
 }) {
   const router = useRouter();
@@ -390,7 +391,7 @@ export function HomeBuilder({
               <p className="mb-3 text-xs leading-relaxed text-[var(--fg-muted)]">
                 Nombre, descripción y orden en el menú. Se guardan al pulsar Guardar en este bloque.
               </p>
-              <SeccionForm key={seccion.id} {...seccion} defaultOpen onSaved={() => setFrameNonce((n) => n + 1)} />
+              <SeccionForm key={seccion.id} id={seccion.id} slug={seccion.slug} name={seccion.name} description={seccion.description} sortOrder={seccion.sortOrder} articleCount={seccion.articleCount} defaultOpen onSaved={() => setFrameNonce((n) => n + 1)} />
             </Bloque>
             <Bloque titulo="Componentes de la página" icono={<Paintbrush size={13} />} abierto>
               <RegionEditor
@@ -461,21 +462,15 @@ export function HomeBuilder({
 
         <Bloque titulo="Secciones" icono={<ListTree size={13} />}>
           <p className="mb-3 text-xs leading-relaxed text-[var(--fg-muted)]">
-            Nombre, descripción y orden de cada categoría del menú. Se guardan al pulsar Guardar en cada una.
+            Así cuelga cada sección del menú. Pulsa una para ver de cuál depende y editar su nombre, descripción y orden.
           </p>
-          <div className="flex flex-col gap-2">
-            {sections.map((x) => (
-              <SeccionForm
-                key={x.id}
-                {...x}
-                onSaved={() => {
-                  setFrameNonce((n) => n + 1);
-                  router.refresh();
-                }}
-              />
-            ))}
-            {sections.length === 0 && <p className="text-xs text-[var(--fg-muted)]">Todavía no hay secciones creadas.</p>}
-          </div>
+          <SectionTree
+            sections={sections}
+            onSaved={() => {
+              setFrameNonce((n) => n + 1);
+              router.refresh();
+            }}
+          />
         </Bloque>
 
         <Bloque titulo="Popup" icono={<MessageSquare size={13} />} onToggle={setPopupPreview}>
