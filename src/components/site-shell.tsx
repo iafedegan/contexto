@@ -11,6 +11,7 @@ import { SiteFooter } from "@/components/site-footer";
 import type { Theme } from "@/lib/theme";
 import { DEFAULT_LOCALE, categoryLabel, t, type Locale } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
+import { NAV_VISIBLE } from "@/lib/nav-limits";
 
 /**
  * Estructura del contenido por tipo de página (ancho, aire y texturas). Es lo
@@ -128,7 +129,7 @@ export async function SiteShell({
 export async function navOverflow(locale: Locale = DEFAULT_LOCALE): Promise<NavItem[]> {
   try {
     const categories = await getTopLevelCategories();
-    return categories.slice(8).map((c) => ({
+    return categories.slice(NAV_VISIBLE).map((c) => ({
       href: `/categoria/${c.slug}`,
       label: categoryLabel(locale, c.slug, c.name),
     }));
@@ -142,7 +143,7 @@ export async function navItems(locale: Locale = DEFAULT_LOCALE): Promise<NavItem
     // Solo las de primer nivel, y como mucho ocho (N-04): más opciones
     // visibles sobrecargan la navegación. El resto está en el menú «Más».
     const categories = await getTopLevelCategories();
-    return categories.slice(0, 8).map((c) => ({
+    return categories.slice(0, NAV_VISIBLE).map((c) => ({
       href: `/categoria/${c.slug}`,
       label: categoryLabel(locale, c.slug, c.name),
     }));

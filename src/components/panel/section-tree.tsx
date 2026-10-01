@@ -4,6 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, Loader2, Maximize2, Network, Plus, Trash2, X } from "lucide-react";
 import { SeccionForm } from "@/components/panel/seccion-form";
+import { NAV_VISIBLE } from "@/lib/nav-limits";
 import {
   crearSeccion,
   eliminarSeccion,
@@ -24,11 +25,11 @@ export type SectionNode = {
 
 type Branch = { node: SectionNode; kids: SectionNode[] };
 
+/** Respeta el orden que llega del servidor: es el MISMO de la barra del sitio (orden y nombre). */
 function buildTree(sections: SectionNode[]): Branch[] {
-  const byOrder = (a: SectionNode, b: SectionNode) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name, "es");
   const ids = new Set(sections.map((s) => s.id));
-  const roots = sections.filter((s) => !s.parentId || !ids.has(s.parentId)).sort(byOrder);
-  return roots.map((r) => ({ node: r, kids: sections.filter((s) => s.parentId === r.id).sort(byOrder) }));
+  const roots = sections.filter((s) => !s.parentId || !ids.has(s.parentId));
+  return roots.map((r) => ({ node: r, kids: sections.filter((s) => s.parentId === r.id) }));
 }
 
 /**
@@ -89,10 +90,62 @@ export function SectionTree({ sections, onSaved }: { sections: SectionNode[]; on
       return n;
     });
 
+  const bar = tree.slice(0, NAV_VISIBLE);
+  const more = tree.slice(NAV_VISIBLE);
+
+  const renderBranch = ({ node, kids }: Branch, pos: number | null) => {
+    const isOpen = open.has(node.id);
+    return (
+      <li key={node.id} className="relative pl-5 pt-1.5">
+        <span aria-hidden className="absolute left-0 top-[1.15rem] h-0.5 w-5 bg-[var(--border-strong)]/50" />
+        <div
+          className={`flex items-center gap-1 rounded-full ${over === node.id ? "ring-2 ring-[#c9a227] ring-offset-2" : ""}`}
+          draggable
+          onDragStart={() => setDragId(node.id)}
+          onDragEnd={() => {
+            setDragId(null);
+            setOver(null);
+          }}
+          {...dnd(node.id, dragId !== node.id && !draggedHasKids)}
+        >
+          {kids.length > 0 ? (
+            <button type="button" onClick={() => toggle(node.id)} aria-label={isOpen ? "Contraer" : "Expandir"} className="grid size-6 place-items-center rounded-full hover:bg-[var(--surface-2)]">
+              {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+            </button>
+          ) : (
+            <span className="size-6" />
+          )}
+          {pos !== null && <span className="w-4 text-center text-[0.65rem] font-bold text-[var(--fg-muted)]">{pos}</span>}
+          <NodePill s={node} level={1} active={selected === node.id} onClick={() => setSelected(node.id)} extra={kids.length ? `${kids.length} sub` : undefined} />
+        </div>
+        {isOpen && kids.length > 0 && (
+          <ul className="ml-[0.7rem] mt-1 border-l-2 border-[var(--border)] pl-0">
+            {kids.map((k) => (
+              <li key={k.id} className="relative pl-5 pt-1">
+                <span aria-hidden className="absolute left-0 top-[0.95rem] h-0.5 w-5 bg-[var(--border)]" />
+                <div
+                  draggable
+                  onDragStart={() => setDragId(k.id)}
+                  onDragEnd={() => {
+                    setDragId(null);
+                    setOver(null);
+                  }}
+                  className="inline-block"
+                >
+                  <NodePill s={k} level={2} active={selected === k.id} onClick={() => setSelected(k.id)} />
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </li>
+    );
+  };
+
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2">
-        <button type="button" onClick={() => setOpen(new Set(tree.filter((b) => b.kids.length).map((b) => b.node.id)))} className="rounded-full border border-[var(--border)] px-3 py-1 text-xs font-semibold hover:border-[var(--accent)]">
+        <button type="button" onClick={() => setOpen(new Set([...tree.filter((b) => b.kids.length).map((b) => b.node.id), "__mas"]))} className="rounded-full border border-[var(--border)] px-3 py-1 text-xs font-semibold hover:border-[var(--accent)]">
           Expandir todo
         </button>
         <button type="button" onClick={() => setOpen(new Set())} className="rounded-full border border-[var(--border)] px-3 py-1 text-xs font-semibold hover:border-[var(--accent)]">
@@ -103,69 +156,44 @@ export function SectionTree({ sections, onSaved }: { sections: SectionNode[]; on
         </button>
       </div>
 
-      {/* Árbol compacto */}
+      {/* Árbol compacto: calcado de la barra del sitio */}
       <div className="rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg)] p-3">
         <div
           {...dnd(null, true)}
           title="Suelta aquí una sección para volverla principal"
           className={`inline-flex items-center gap-2 rounded-full bg-[#33401a] px-3 py-1.5 text-xs font-bold text-white ${over === "root" ? "ring-2 ring-[#c9a227] ring-offset-2" : ""}`}
         >
-          <Network size={13} /> Menú principal
-          <span className="rounded-full bg-white/20 px-1.5 text-[0.65rem]">{tree.length}</span>
+          <Network size={13} /> Barra del sitio
+          <span className="rounded-full bg-white/20 px-1.5 text-[0.65rem]">{bar.length + (more.length ? 2 : 1)}</span>
         </div>
         <ul className="ml-4 border-l-2 border-[var(--border-strong)]/50 pl-0">
-          {tree.map(({ node, kids }) => {
-            const isOpen = open.has(node.id);
-            return (
-              <li key={node.id} className="relative pl-5 pt-1.5">
-                <span aria-hidden className="absolute left-0 top-[1.15rem] h-0.5 w-5 bg-[var(--border-strong)]/50" />
-                <div
-                  className={`flex items-center gap-1 rounded-full ${over === node.id ? "ring-2 ring-[#c9a227] ring-offset-2" : ""}`}
-                  draggable
-                  onDragStart={() => setDragId(node.id)}
-                  onDragEnd={() => {
-                    setDragId(null);
-                    setOver(null);
-                  }}
-                  {...dnd(node.id, dragId !== node.id && !draggedHasKids)}
-                >
-                  {kids.length > 0 ? (
-                    <button type="button" onClick={() => toggle(node.id)} aria-label={isOpen ? "Contraer" : "Expandir"} className="grid size-6 place-items-center rounded-full hover:bg-[var(--surface-2)]">
-                      {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                    </button>
-                  ) : (
-                    <span className="size-6" />
-                  )}
-                  <NodePill s={node} level={1} active={selected === node.id} onClick={() => setSelected(node.id)} extra={kids.length ? `${kids.length} sub` : undefined} />
-                </div>
-                {isOpen && kids.length > 0 && (
-                  <ul className="ml-[0.7rem] mt-1 border-l-2 border-[var(--border)] pl-0">
-                    {kids.map((k) => (
-                      <li key={k.id} className="relative pl-5 pt-1">
-                        <span aria-hidden className="absolute left-0 top-[0.95rem] h-0.5 w-5 bg-[var(--border)]" />
-                        <div
-                          draggable
-                          onDragStart={() => setDragId(k.id)}
-                          onDragEnd={() => {
-                            setDragId(null);
-                            setOver(null);
-                          }}
-                          className="inline-block"
-                        >
-                          <NodePill s={k} level={2} active={selected === k.id} onClick={() => setSelected(k.id)} />
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </li>
-            );
-          })}
+          {bar.map((b, i) => renderBranch(b, i + 1))}
+          <li className="relative pl-5 pt-1.5">
+            <span aria-hidden className="absolute left-0 top-[1.15rem] h-0.5 w-5 bg-[var(--border-strong)]/50" />
+            <span className="ml-7 inline-flex items-center rounded-full border border-dashed border-[var(--border-strong)] px-3 py-1 text-xs font-semibold text-[var(--fg-muted)]">Buscar · fijo</span>
+          </li>
+          {more.length > 0 && (
+            <li className="relative pl-5 pt-1.5">
+              <span aria-hidden className="absolute left-0 top-[1.15rem] h-0.5 w-5 bg-[var(--border-strong)]/50" />
+              <div className="flex items-center gap-1">
+                <button type="button" onClick={() => toggle("__mas")} aria-label="Mostrar menú Más" className="grid size-6 place-items-center rounded-full hover:bg-[var(--surface-2)]">
+                  {open.has("__mas") ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                </button>
+                <span className="inline-flex items-center gap-2 rounded-full border-2 border-[#33401a] bg-[#eef2d9] px-3 py-1 text-xs font-bold text-[#33401a]">
+                  Más ▾ <span className="rounded-full bg-[#33401a]/15 px-1.5 text-[0.65rem]">{more.length}</span>
+                </span>
+              </div>
+              {open.has("__mas") && <ul className="ml-[0.7rem] mt-1 border-l-2 border-[var(--border)] pl-0">{more.map((b) => renderBranch(b, null))}</ul>}
+            </li>
+          )}
         </ul>
+        <p className="mt-3 text-[0.7rem] leading-relaxed text-[var(--fg-muted)]">
+          Es la barra real del sitio: las {NAV_VISIBLE} primeras secciones principales, en este orden, más «Buscar» y el menú «Más» con el resto. Las subsecciones no se ven en la barra: aparecen al entrar a su sección.
+        </p>
       </div>
 
       <p className="text-[0.7rem] text-[var(--fg-muted)]">
-        Arrastra una sección sobre otra para colgarla de ella, o sobre «Menú principal» para volverla principal. El menú tiene dos niveles: una sección con subsecciones no puede colgar de otra.
+        Arrastra una sección sobre otra para colgarla de ella, o sobre «Barra del sitio» para volverla principal (queda al final: en «Más» si ya hay {NAV_VISIBLE}). El menú tiene dos niveles: una sección con subsecciones no puede colgar de otra.
       </p>
       <NewSection padreId={null} label="Nueva sección principal" run={run} busy={busy} />
       {msg && <Msg r={msg} />}
@@ -382,25 +410,74 @@ function WideTree({
   msg: EstructuraResult | null;
 }) {
   const ROW = 38, NODE_H = 30, PAD = 28;
-  const W0 = 150, W1 = 190, W2 = 190, GAP = 80;
-  const x0 = PAD, x1 = x0 + W0 + GAP, x2 = x1 + W1 + GAP;
-  const width = x2 + W2 + PAD;
+  const CW = 172, GAP = 66;
 
-  // Cada subsección ocupa una fila; la sección se centra frente a sus hijos.
-  let row = 0;
-  const placed = tree.map(({ node, kids }) => {
-    const first = row;
-    const kidRows = kids.length ? kids.map(() => row++) : [row++];
-    const y = PAD + ((first + kidRows[kidRows.length - 1]) / 2) * ROW + NODE_H / 2;
-    return { node, y, kids: kids.map((k, i) => ({ k, y: PAD + kidRows[i] * ROW + NODE_H / 2 })) };
+  // Calco de la barra: 8 secciones, «Buscar» (fijo) y «Más» con el resto.
+  type TNode = { key: string; label: string; kind: "root" | "item" | "extra" | "fixed" | "more" | "sub"; section?: SectionNode; kids: TNode[] };
+  const asNode = (br: Branch, kind: "item" | "extra", pos: number | null): TNode => ({
+    key: br.node.id,
+    label: pos ? `${pos} · ${br.node.name}` : br.node.name,
+    kind,
+    section: br.node,
+    kids: br.kids.map((k) => ({ key: k.id, label: k.name, kind: "sub" as const, section: k, kids: [] })),
   });
+  const bar = tree.slice(0, NAV_VISIBLE);
+  const more = tree.slice(NAV_VISIBLE);
+  const root: TNode = {
+    key: "root",
+    label: "Barra del sitio",
+    kind: "root",
+    kids: [
+      ...bar.map((b, i) => asNode(b, "item", i + 1)),
+      { key: "search", label: "Buscar · fijo", kind: "fixed", kids: [] },
+      ...(more.length ? [{ key: "more", label: "Más ▾", kind: "more" as const, kids: more.map((b) => asNode(b, "extra", null)) }] : []),
+    ],
+  };
+
+  // Cada hoja ocupa una fila; los padres se centran frente a sus hijos.
+  type Placed = { t: TNode; x: number; y: number; depth: number };
+  const placed: Placed[] = [];
+  const links: { ax: number; ay: number; bx: number; by: number }[] = [];
+  let row = 0;
+  let maxDepth = 0;
+  const place = (t: TNode, depth: number): number => {
+    maxDepth = Math.max(maxDepth, depth);
+    const x = PAD + depth * (CW + GAP);
+    let y: number;
+    if (!t.kids.length) y = PAD + row++ * ROW + NODE_H / 2;
+    else {
+      const ys = t.kids.map((k) => place(k, depth + 1));
+      y = (ys[0] + ys[ys.length - 1]) / 2;
+      ys.forEach((ky) => links.push({ ax: x + CW, ay: y, bx: x + CW + GAP, by: ky }));
+    }
+    placed.push({ t, x, y, depth });
+    return y;
+  };
+  place(root, 0);
+  const width = PAD * 2 + (maxDepth + 1) * CW + maxDepth * GAP;
   const height = PAD * 2 + Math.max(row, 1) * ROW;
-  const rootY = placed.length ? (placed[0].y + placed[placed.length - 1].y) / 2 : PAD;
   const sel = sections.find((s) => s.id === selected) ?? null;
 
-  const link = (ax: number, ay: number, bx: number, by: number, color: string) =>
-    `<path d="M${ax},${ay} C${ax + GAP / 2},${ay} ${bx - GAP / 2},${by} ${bx},${by}" fill="none" stroke="${color}" stroke-width="2"/>`;
+  const linkPath = (l: { ax: number; ay: number; bx: number; by: number }) =>
+    `<path d="M${l.ax},${l.ay} C${l.ax + GAP / 2},${l.ay} ${l.bx - GAP / 2},${l.by} ${l.bx},${l.by}" fill="none" stroke="#bccb8f" stroke-width="2"/>`;
   const trunc = (t: string, n: number) => (t.length > n ? t.slice(0, n - 1) + "…" : t);
+  const look = (t: TNode) => {
+    const notes = t.section?.articleCount ?? 0;
+    switch (t.kind) {
+      case "root":
+        return { fill: "#33401a", stroke: "none", text: "#ffffff", num: "#ffffff" };
+      case "item":
+        return { fill: "#556b2f", stroke: "none", text: "#ffffff", num: "#e6efc4" };
+      case "extra":
+        return { fill: "#7d8f45", stroke: "none", text: "#ffffff", num: "#eef2d9" };
+      case "more":
+        return { fill: "#eef2d9", stroke: "#33401a", text: "#33401a", num: "#33401a" };
+      case "fixed":
+        return { fill: "#ffffff", stroke: "#a9b57a", text: "#5a6a38", num: "#5a6a38" };
+      default:
+        return { fill: notes > 0 ? "#cfe08a" : "#f1f5df", stroke: notes > 0 ? "#9fb84a" : "#bccb8f", text: "#1c2610", num: "#44522a" };
+    }
+  };
 
   return (
     <div data-theme="panel-amber" role="dialog" aria-modal="true" aria-label="Árbol de secciones" className="fixed inset-0 z-[300] flex flex-col bg-[#1c2610]/70 p-3 backdrop-blur-sm sm:p-6">
@@ -408,7 +485,7 @@ function WideTree({
         <div className="flex items-center gap-3 border-b border-[var(--border)] bg-[#33401a] px-5 py-3 text-white">
           <Network size={16} />
           <h2 className="text-sm font-bold">Árbol de secciones</h2>
-          <span className="hidden text-xs text-white/70 sm:inline">Menú principal › sección › subsección. Pulsa una para ver y editar sus datos.</span>
+          <span className="hidden text-xs text-white/70 sm:inline">Barra del sitio › sección › subsección. Pulsa una para ver y editar sus datos.</span>
           <button type="button" onClick={onClose} className="ml-auto inline-flex items-center gap-1.5 rounded-full bg-white px-3.5 py-1.5 text-xs font-semibold text-[#1c2610]">
             <X size={13} /> Cerrar
           </button>
@@ -416,31 +493,34 @@ function WideTree({
         <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
           <div className="min-h-0 flex-1 overflow-auto bg-white">
             <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Árbol de secciones del menú" fontFamily="Inter, Helvetica, Arial, sans-serif">
-              <g dangerouslySetInnerHTML={{ __html: placed.map((p) => link(x0 + W0, rootY, x1, p.y, "#bccb8f")).join("") + placed.flatMap((p) => p.kids.map((c) => link(x1 + W1, p.y, x2, c.y, "#d3dcb0"))).join("") }} />
-              <g>
-                <rect x={x0} y={rootY - NODE_H / 2} width={W0} height={NODE_H} rx={NODE_H / 2} fill="#33401a" />
-                <text x={x0 + W0 / 2} y={rootY + 4} textAnchor="middle" fontSize="12.5" fontWeight="700" fill="#fff">Menú principal</text>
-              </g>
-              {placed.map(({ node, y, kids }) => (
-                <g key={node.id}>
-                  <g onClick={() => onSelect(node.id)} className="cursor-pointer" role="button" aria-label={node.name}>
-                    <title>{`${node.name} · ${node.articleCount} notas`}</title>
-                    <rect x={x1} y={y - NODE_H / 2} width={W1} height={NODE_H} rx={NODE_H / 2} fill="#556b2f" stroke={selected === node.id ? "#c9a227" : "none"} strokeWidth={3} />
-                    <text x={x1 + 14} y={y + 4} fontSize="12.5" fontWeight="700" fill="#fff">{trunc(node.name, 20)}</text>
-                    <text x={x1 + W1 - 12} y={y + 4} textAnchor="end" fontSize="11" fontWeight="700" fill="#e6efc4">{node.articleCount}</text>
+              <g dangerouslySetInnerHTML={{ __html: links.map(linkPath).join("") }} />
+              {placed.map(({ t, x, y }) => {
+                const c = look(t);
+                const pick = t.section;
+                const isSel = !!pick && selected === pick.id;
+                return (
+                  <g
+                    key={t.key}
+                    onClick={pick ? () => onSelect(pick.id) : undefined}
+                    className={pick ? "cursor-pointer" : undefined}
+                    role={pick ? "button" : undefined}
+                    aria-label={t.label}
+                  >
+                    {pick && <title>{`${pick.name} · ${pick.articleCount} notas`}</title>}
+                    <rect x={x} y={y - NODE_H / 2} width={CW} height={NODE_H} rx={NODE_H / 2} fill={c.fill} stroke={isSel ? "#c9a227" : c.stroke} strokeWidth={isSel ? 3 : 2} strokeDasharray={t.kind === "fixed" ? "4 3" : undefined} />
+                    <text x={t.kind === "root" || t.kind === "more" || t.kind === "fixed" ? x + CW / 2 : x + 14} y={y + 4} textAnchor={t.kind === "root" || t.kind === "more" || t.kind === "fixed" ? "middle" : "start"} fontSize="12.5" fontWeight={t.kind === "sub" || t.kind === "fixed" ? 600 : 700} fill={c.text}>
+                      {trunc(t.label, 19)}
+                    </text>
+                    {pick && (
+                      <text x={x + CW - 12} y={y + 4} textAnchor="end" fontSize="11" fontWeight="700" fill={c.num}>
+                        {pick.articleCount}
+                      </text>
+                    )}
                   </g>
-                  {kids.map(({ k, y: ky }) => (
-                    <g key={k.id} onClick={() => onSelect(k.id)} className="cursor-pointer" role="button" aria-label={k.name}>
-                      <title>{`${k.name} · ${k.articleCount} notas`}</title>
-                      <rect x={x2} y={ky - NODE_H / 2} width={W2} height={NODE_H} rx={NODE_H / 2} fill={k.articleCount > 0 ? "#cfe08a" : "#f1f5df"} stroke={selected === k.id ? "#c9a227" : k.articleCount > 0 ? "#9fb84a" : "#bccb8f"} strokeWidth={selected === k.id ? 3 : 1.5} />
-                      <text x={x2 + 14} y={ky + 4} fontSize="12.5" fontWeight="600" fill="#1c2610">{trunc(k.name, 20)}</text>
-                      <text x={x2 + W2 - 12} y={ky + 4} textAnchor="end" fontSize="11" fontWeight="700" fill="#44522a">{k.articleCount}</text>
-                    </g>
-                  ))}
-                </g>
-              ))}
+                );
+              })}
             </svg>
-            <p className="px-5 pb-4 text-xs text-[var(--fg-muted)]">El número de cada caja son las notas publicadas o en preparación de esa sección. Verde fuerte: la sección tiene notas.</p>
+            <p className="px-5 pb-4 text-xs text-[var(--fg-muted)]">Es la barra real del sitio: las {NAV_VISIBLE} primeras secciones principales (numeradas, en su orden), «Buscar» y el menú «Más» con el resto. Las subsecciones no se ven en la barra: aparecen al entrar a su sección. El número de cada caja son las notas de esa sección; verde fuerte = tiene notas.</p>
           </div>
           <aside className="max-h-[45%] overflow-y-auto border-t border-[var(--border)] p-4 lg:max-h-none lg:w-[24rem] lg:border-l lg:border-t-0">
             <div className="flex flex-col gap-3">
