@@ -16,6 +16,8 @@ export const LAYOUT_EDIT_KEY = "cg-portada-diseno-editado";
 export const SECCIONES_KEY = "cg-secciones-editadas";
 /** La vista previa cambió el orden o el estilo de bloques: el editor debe aplicarlo. */
 export const ITEMS_EDIT_KEY = "cg-portada-bloques-editados";
+/** La vista previa cambió anuncios: el editor debe aplicarlos. */
+export const ADS_EDIT_KEY = "cg-portada-anuncios-editados";
 export const ACCEPTED_KEY = "cg-portada-aceptado";
 
 export type PortadaDraft = {

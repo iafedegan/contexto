@@ -1,6 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import { RotateCcw } from "lucide-react";
+import { AdsPanel } from "@/components/panel/ads-panel";
+import type { AdDraft, AdsZoneRow } from "@/components/panel/ads-zone-form";
 import type { HomeLayoutConfig, HomeStyle, SectionElId, SectionElStyle } from "@/db/schema";
 import { BlockStyleEditor, type ZoneBundle } from "@/components/panel/block-style-editor";
 import { GradientEditor } from "@/components/panel/gradient-editor";
@@ -25,6 +28,7 @@ export function SectionPanel({
   el,
   onEl,
   block,
+  ads,
 }: {
   layout: Layout;
   onChange: (partial: Partial<Layout>) => void;
@@ -33,9 +37,18 @@ export function SectionPanel({
   el: SectionElId;
   onEl: (e: SectionElId) => void;
   /** Bloque (nota) seleccionado en la página, si lo hay. */
+  /** Publicidad de la página (si se pasa, aparece la pestaña «Publicidad»). */
+  ads?: { zones: AdsZoneRow[]; canManage: boolean; drafts: Record<string, AdDraft>; onDraft: (key: string, d: AdDraft) => void } | null;
   block?: { title: string; style: HomeStyle; onChange: (p: Partial<HomeStyle>) => void; onClear: () => void; zone?: ZoneBundle } | null;
 }) {
-  const tab: "encabezado" | "body" = region === "encabezado" ? "encabezado" : "body";
+  // La pestaña Publicidad es local: al elegir otra pieza (en la página o aquí) se sale de ella.
+  const [adsTab, setAdsTab] = useState(false);
+  const [seenRegion, setSeenRegion] = useState(region);
+  if (seenRegion !== region) {
+    setSeenRegion(region);
+    setAdsTab(false);
+  }
+  const tab: "encabezado" | "body" | "ads" = adsTab ? "ads" : region === "encabezado" ? "encabezado" : "body";
   const els = layout.sectionEls ?? {};
   const style: SectionElStyle = els[el] ?? {};
   const meta = SECTION_ELS.find((x) => x.id === el)!;
@@ -51,17 +64,24 @@ export function SectionPanel({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="grid grid-cols-2 gap-1 rounded-lg border border-[var(--border)] p-1">
+      <div className={`grid gap-1 rounded-lg border border-[var(--border)] p-1 ${ads ? "grid-cols-3" : "grid-cols-2"}`}>
         {(
           [
             ["encabezado", "Encabezado"],
             ["body", "Cuerpo"],
+            ...(ads ? ([["ads", "Publicidad"]] as const) : []),
           ] as const
         ).map(([id, label]) => (
           <button
             key={id}
             type="button"
-            onClick={() => onRegion(id)}
+            onClick={() => {
+              if (id === "ads") setAdsTab(true);
+              else {
+                setAdsTab(false);
+                onRegion(id);
+              }
+            }}
             aria-pressed={tab === id}
             className={`rounded-md px-1 py-1.5 text-xs font-semibold transition ${tab === id ? "bg-[var(--accent)] text-[var(--accent-fg)]" : "text-[var(--fg-muted)] hover:bg-[var(--surface-2)]"}`}
           >
@@ -70,7 +90,17 @@ export function SectionPanel({
         ))}
       </div>
 
-      {tab === "encabezado" ? (
+      {tab === "ads" && ads ? (
+        <AdsPanel
+          layout={layout}
+          zones={ads.zones}
+          canManage={ads.canManage}
+          drafts={ads.drafts}
+          onDraft={ads.onDraft}
+          view="seccion"
+          only={["section_top", "section_bottom", "footer"]}
+        />
+      ) : tab === "encabezado" ? (
         <>
           <div>
             <p className="mb-1.5 text-[0.95rem] font-extrabold text-[#0b0b0b]">Elige una pieza (o púlsala en la página)</p>

@@ -1,7 +1,8 @@
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { articles, categories, siteSettings } from "@/db/schema";
-import { requireRole } from "@/lib/auth";
+import { auth, requireRole } from "@/lib/auth";
+import { getAdsZoneRows } from "@/lib/ads";
 import { DEFAULT_HOME_LAYOUT } from "@/lib/home-layout";
 import { normalizeLayout } from "@/lib/home-layout-normalize";
 import { draftKey, sanitizeDraft, setPreviewDraft } from "@/lib/preview-draft";
@@ -92,8 +93,10 @@ export async function HomeRealPreview({ seccion }: { seccion?: string } = {}) {
       .groupBy(categories.id);
     row = r ?? null;
   }
+  // Zonas de publicidad para el formulario flotante (se leen DESPUÉS de fijar el borrador).
+  const [adsZones, session] = await Promise.all([getAdsZoneRows().catch(() => []), auth()]);
   return (
-    <PreviewChrome changed={changed} hasDraft={!!draft} draft={draft} seccion={row}>
+    <PreviewChrome changed={changed} hasDraft={!!draft} draft={draft} seccion={row} adsZones={adsZones} canManagePauta={session?.user.role === "administrador"}>
       {row ? <Categoria params={Promise.resolve({ slug: row.slug })} searchParams={Promise.resolve({})} locale="es" /> : <Home locale="es" />}
     </PreviewChrome>
   );

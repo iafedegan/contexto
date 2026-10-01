@@ -24,7 +24,6 @@ import {
   Type,
   X,
 } from "lucide-react";
-import { AdsEditor } from "@/components/panel/ads-editor";
 import type { AdDraft } from "@/components/panel/ads-zone-form";
 import type { AdsZoneRow } from "@/lib/ads";
 import {
@@ -43,8 +42,7 @@ import { enhanceBlocks, measureZone, type ZoneMapData } from "@/lib/block-tools"
 import type { ZoneStyle } from "@/db/schema";
 import { SectionPanel } from "@/components/panel/section-panel";
 import { BlockStyleEditor } from "@/components/panel/block-style-editor";
-import { TemplateBlueprint, type AdState } from "@/components/panel/template-blueprint";
-import type { AdPosition } from "@/lib/ads-positions";
+import { AdsPanel } from "@/components/panel/ads-panel";
 import { SectionFiltersPicker } from "@/components/panel/section-filters-picker";
 import { SeccionForm } from "@/components/panel/seccion-form";
 import { SectionTree, type SectionNode } from "@/components/panel/section-tree";
@@ -53,7 +51,7 @@ import { PartsEditor } from "@/components/panel/parts-editor";
 import { PopupEditor } from "@/components/panel/popup-editor";
 import { PreviewFrame } from "@/components/panel/preview-frame";
 import type { PopupConfig } from "@/lib/popup-types";
-import { ACCEPTED_KEY, DRAFT_PING_KEY, ITEMS_EDIT_KEY, LAYOUT_EDIT_KEY, SECCIONES_KEY, type PortadaDraft } from "@/lib/portada-draft";
+import { ACCEPTED_KEY, DRAFT_PING_KEY, ADS_EDIT_KEY, ITEMS_EDIT_KEY, LAYOUT_EDIT_KEY, SECCIONES_KEY, type PortadaDraft } from "@/lib/portada-draft";
 import type { FooterId, NavbarId } from "@/lib/template-parts";
 import { HOME_FONTS, HOME_FONT_GROUPS, type HomeTitleFont } from "@/lib/home-fonts";
 import { cn } from "@/lib/utils";
@@ -124,20 +122,6 @@ export function HomeBuilder({
   const selectedRef = useRef<number | null>(null);
   // Anuncios: lo que se escribe (sin guardar) y cuál se está editando, para verlo en el lienzo.
   const [adDrafts, setAdDrafts] = useState<Record<string, AdDraft>>({});
-  const [adFocus, setAdFocus] = useState<string | null>(null);
-  const [adRequest, setAdRequest] = useState<{ key: string; n: number } | null>(null);
-  // Estado de cada posición para el plano: activo > borrador > vacío (con lo que se está escribiendo).
-  const adStates: Partial<Record<AdPosition, AdState>> = {};
-  for (const z of adsZones) {
-    const d = adDrafts[z.key];
-    const image = d ? d.imageUrl : (z.imageUrl ?? "");
-    const html = d ? d.html : (z.html ?? "");
-    const active = d ? d.active : z.active;
-    const has = /^https?:\/\//i.test(image) || !!html;
-    const st: AdState = has && active ? "activo" : has ? "borrador" : "vacio";
-    const cur = adStates[z.position];
-    if (!cur || st === "activo" || (st === "borrador" && cur === "vacio")) adStates[z.position] = st;
-  }
   // "template": elegir la plantilla. "content": la página real, editable —
   // clic para estilo, arrastrar para reordenar. La disposición de secciones
   // (columnas, dirección de "En breve") se ajusta desde "content" también,
@@ -296,6 +280,13 @@ export function HomeBuilder({
       if (e.key === SECCIONES_KEY) {
         setFrameNonce((n) => n + 1);
         router.refresh();
+      }
+      if (e.key === ADS_EDIT_KEY && e.newValue) {
+        try {
+          setAdDrafts(JSON.parse(e.newValue) as Record<string, AdDraft>);
+        } catch {
+          /* ignorado */
+        }
       }
       // La vista previa reordenó o estiló bloques: se aplica aquí (por slug).
       if (e.key === ITEMS_EDIT_KEY && e.newValue) {
@@ -542,6 +533,7 @@ export function HomeBuilder({
                 onRegion={setRegion}
                 el={secEl}
                 onEl={setSecEl}
+                ads={{ zones: adsZones, canManage: canManagePauta, drafts: adDrafts, onDraft: (key, draft) => setAdDrafts((d) => ({ ...d, [key]: draft })) }}
                 block={
                   selected !== null && items[selected]
                     ? {
@@ -557,14 +549,6 @@ export function HomeBuilder({
               <p className="mt-4 text-xs leading-relaxed text-[var(--fg-muted)]">
                 Pulsa una pieza en la página para editarla. Se aplica a todas las secciones y plantillas, y se publica con «Guardar diseño».
               </p>
-            </Bloque>
-            <Bloque titulo="Publicidad de secciones" icono={<Megaphone size={13} />}>
-              <AdsEditor
-                zones={adsZones.filter((z) => z.position.startsWith("section"))}
-                canManage={canManagePauta}
-                onDraft={(key, draft) => setAdDrafts((d) => ({ ...d, [key]: draft }))}
-                onFocusZone={setAdFocus}
-              />
             </Bloque>
           </>
         ) : (
@@ -638,38 +622,13 @@ export function HomeBuilder({
         {/* Las mismas zonas que en Configuración › Publicidad, aquí también, con un
             plano de la plantilla que muestra dónde cae cada una, y el popup. */}
         <Bloque titulo="Publicidad y popup" icono={<Megaphone size={13} />}>
-          <details
-            className="rounded-[var(--radius)] border border-[var(--border)]"
-            onToggle={(e) => {
-              if (!(e.currentTarget as HTMLDetailsElement).open) setAdFocus(null);
-            }}
-          >
+          <details className="rounded-[var(--radius)] border border-[var(--border)]">
             <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2.5 text-sm font-semibold">
               <Megaphone size={14} className="text-[var(--accent)]" /> Publicidad
-              <span className="rounded-full bg-[var(--surface-2)] px-2 py-0.5 text-[0.65rem] font-bold text-[var(--fg-muted)]">
-                {Object.values(adStates).filter((v) => v === "activo").length} activos
-              </span>
               <ChevronDown size={14} className="ml-auto" />
             </summary>
             <div className="border-t border-[var(--border)] p-3">
-              <TemplateBlueprint
-                layout={layout}
-                adStates={adStates}
-                focus={(adFocus ? (adFocus.split("__")[0] as AdPosition) : null)}
-                onPick={(pos) => {
-                  setAdFocus(pos);
-                  setAdRequest((r) => ({ key: pos, n: (r?.n ?? 0) + 1 }));
-                }}
-              />
-              <div className="mt-5">
-                <AdsEditor
-                  zones={adsZones}
-                  canManage={canManagePauta}
-                  onDraft={(key, draft) => setAdDrafts((d) => ({ ...d, [key]: draft }))}
-                  onFocusZone={setAdFocus}
-                  request={adRequest}
-                />
-              </div>
+              <AdsPanel layout={layout} zones={adsZones} canManage={canManagePauta} drafts={adDrafts} onDraft={(key, draft) => setAdDrafts((d) => ({ ...d, [key]: draft }))} />
             </div>
           </details>
           <details

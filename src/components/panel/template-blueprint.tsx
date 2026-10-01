@@ -38,13 +38,15 @@ export function TemplateBlueprint({
   adStates,
   focus,
   onPick,
+  view: initialView = "portada",
 }: {
   layout: Required<HomeLayoutConfig>;
+  view?: View;
   adStates: Partial<Record<AdPosition, AdState>>;
   focus: AdPosition | null;
   onPick: (p: AdPosition) => void;
 }) {
-  const [view, setView] = useState<View>("portada");
+  const [view, setView] = useState<View>(initialView);
   const parts = resolveParts(layout.templateId ?? "clasico", layout.parts);
 
   const els: React.ReactNode[] = [];

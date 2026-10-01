@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Check, GripHorizontal, Loader2, Paintbrush, Rocket, X } from "lucide-react";
 import { publishHomeDraft, saveHomeDraft } from "@/app/panel/(app)/portada/actions";
-import { ACCEPTED_KEY, DRAFT_PING_KEY, ITEMS_EDIT_KEY, LAYOUT_EDIT_KEY, SECCIONES_KEY, type PortadaDraft } from "@/lib/portada-draft";
+import { ACCEPTED_KEY, ADS_EDIT_KEY, DRAFT_PING_KEY, ITEMS_EDIT_KEY, LAYOUT_EDIT_KEY, SECCIONES_KEY, type PortadaDraft } from "@/lib/portada-draft";
 import { RegionEditor } from "@/components/panel/region-editor";
 import { SeccionForm } from "@/components/panel/seccion-form";
 import { TemplatePicker } from "@/components/panel/home-builder";
@@ -15,6 +15,8 @@ import { cleanupBlocks, enhanceBlocks, measureZone, type ZoneMapData } from "@/l
 import type { ZoneStyle } from "@/db/schema";
 import type { ZoneBundle } from "@/components/panel/block-style-editor";
 import { SectionPanel } from "@/components/panel/section-panel";
+import { AdsPanel } from "@/components/panel/ads-panel";
+import type { AdDraft, AdsZoneRow } from "@/components/panel/ads-zone-form";
 
 /**
  * Marco de la pestaña «Vista previa»: barra con Cerrar y «Aceptar y publicar»
@@ -27,6 +29,8 @@ export function PreviewChrome({
   hasDraft,
   draft,
   seccion = null,
+  adsZones = [],
+  canManagePauta = false,
   children,
 }: {
   changed: boolean;
@@ -35,6 +39,9 @@ export function PreviewChrome({
   draft?: PortadaDraft | null;
   /** Sección que se está viendo (null = la portada). */
   seccion?: { id: string; slug: string; name: string; description: string | null; sortOrder: number; articleCount: number } | null;
+  /** Zonas de publicidad (para la pestaña Publicidad del formulario flotante). */
+  adsZones?: AdsZoneRow[];
+  canManagePauta?: boolean;
   children: React.ReactNode;
 }) {
   const router = useRouter();
@@ -45,6 +52,8 @@ export function PreviewChrome({
   const [region, setRegion] = useState<RegionId>("navbar");
   const [secEl, setSecEl] = useState<SectionElId>("title");
   const [items, setItems] = useState<PortadaDraft["items"]>(draft?.items ?? []);
+  const [adDrafts, setAdDrafts] = useState<Record<string, AdDraft>>(draft?.adDrafts ?? {});
+  const adDraftsRef = useRef(adDrafts);
   const [selSlug, setSelSlug] = useState<string | null>(null);
   const [selTitle, setSelTitle] = useState("");
   const contentRef = useRef<HTMLDivElement>(null);
@@ -109,10 +118,11 @@ export function PreviewChrome({
       const base = draftRef.current;
       if (!base) return setSaveState("error");
       try {
-        const res = await saveHomeDraft({ ...base, layout: layoutRef.current ?? base.layout, items: itemsRef.current });
+        const res = await saveHomeDraft({ ...base, layout: layoutRef.current ?? base.layout, items: itemsRef.current, adDrafts: adDraftsRef.current });
         if (!res.ok) return setSaveState("error");
         localStorage.setItem(LAYOUT_EDIT_KEY, JSON.stringify(layoutRef.current));
         localStorage.setItem(ITEMS_EDIT_KEY, JSON.stringify(itemsRef.current));
+        localStorage.setItem(ADS_EDIT_KEY, JSON.stringify(adDraftsRef.current));
         setSaveState("saved");
         router.refresh();
       } catch {
@@ -123,6 +133,11 @@ export function PreviewChrome({
   function editLayout(next: NonNullable<typeof layout>) {
     layoutRef.current = next;
     setLayout(next);
+    persist();
+  }
+  function editAd(key: string, d: AdDraft) {
+    adDraftsRef.current = { ...adDraftsRef.current, [key]: d };
+    setAdDrafts(adDraftsRef.current);
     persist();
   }
   /** Cambia el estilo de un bloque (nota); `null` lo restablece. */
@@ -157,8 +172,10 @@ export function PreviewChrome({
     if (!timer.current && draft) {
       layoutRef.current = draft.layout;
       itemsRef.current = draft.items;
+      adDraftsRef.current = draft.adDrafts;
       setLayout(draft.layout);
       setItems(draft.items);
+      setAdDrafts(draft.adDrafts);
     }
   }, [draft]);
 
@@ -417,6 +434,7 @@ export function PreviewChrome({
                   onRegion={setRegion}
                   el={secEl}
                   onEl={setSecEl}
+                  ads={{ zones: adsZones, canManage: canManagePauta, drafts: adDrafts, onDraft: editAd }}
                   block={
                     selSlug
                       ? {
@@ -448,6 +466,14 @@ export function PreviewChrome({
                     zone={zoneBundle()}
                   />
                 </div>
+              )}
+              {!seccion && (
+                <details className="mt-4 rounded-[var(--radius)] border border-[var(--border)]">
+                  <summary className="cursor-pointer px-3 py-2 text-sm font-semibold">Publicidad</summary>
+                  <div className="border-t border-[var(--border)] p-3">
+                    <AdsPanel layout={layout} zones={adsZones} canManage={canManagePauta} drafts={adDrafts} onDraft={editAd} />
+                  </div>
+                </details>
               )}
               <p role="status" className={`mt-3 text-xs font-semibold ${saveState === "error" ? "text-[#9a2f22]" : "text-[var(--accent)]"}`}>
                 {saveState === "saving" && "Guardando cambios…"}
