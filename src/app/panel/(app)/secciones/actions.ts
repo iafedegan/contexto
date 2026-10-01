@@ -29,20 +29,23 @@ export async function actualizarSeccion(_prev: SeccionState, formData: FormData)
   const [row] = await db.select({ slug: categories.slug, parentId: categories.parentId }).from(categories).where(eq(categories.id, id));
   if (!row) return { ok: false, message: "Esa sección ya no existe." };
 
-  await db
-    .update(categories)
-    .set({ name, description: description || null, sortOrder })
-    .where(eq(categories.id, id));
+  await db.update(categories).set({ name, description: description || null }).where(eq(categories.id, id));
 
-  // Posiciones limpias (1, 2, 3…) en su nivel: sin empates ni huecos. Si el
-  // número elegido coincide con el de otra, la editada va primero.
+  // La posición elegida es la que ocupará en su nivel (1 = la primera): se
+  // saca de la fila y se inserta ahí, y las demás se corren y se renumeran
+  // 1, 2, 3… sin empates ni huecos.
   const sibs = await db
     .select({ id: categories.id, name: categories.name, sortOrder: categories.sortOrder })
     .from(categories)
     .where(row.parentId ? eq(categories.parentId, row.parentId) : isNull(categories.parentId));
-  sibs.sort((a, b) => a.sortOrder - b.sortOrder || (a.id === id ? -1 : b.id === id ? 1 : a.name.localeCompare(b.name, "es")));
-  for (let k = 0; k < sibs.length; k++) {
-    if (sibs[k].sortOrder !== k + 1) await db.update(categories).set({ sortOrder: k + 1 }).where(eq(categories.id, sibs[k].id));
+  const otras = sibs
+    .filter((x) => x.id !== id)
+    .sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name, "es"));
+  const destino = Math.min(Math.max(Math.round(sortOrder), 1), sibs.length);
+  const orden = [...otras.slice(0, destino - 1).map((x) => x.id), id, ...otras.slice(destino - 1).map((x) => x.id)];
+  for (let k = 0; k < orden.length; k++) {
+    const actual = sibs.find((x) => x.id === orden[k])!.sortOrder;
+    if (actual !== k + 1) await db.update(categories).set({ sortOrder: k + 1 }).where(eq(categories.id, orden[k]));
   }
 
   revalidatePath(`/categoria/${row.slug}`);

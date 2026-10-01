@@ -96,14 +96,15 @@ export async function saveSitePopup(input: PopupConfig): Promise<PopupConfig> {
  * «Vista previa» pueda renderizar la portada real con él. Es solo del editor que
  * lo escribe (una fila por usuario) y no afecta al sitio publicado.
  */
-export async function saveHomeDraft(input: unknown): Promise<void> {
+export async function saveHomeDraft(input: unknown): Promise<{ ok: boolean }> {
   const user = await requireRole("editor");
   const draft = sanitizeDraft(input);
-  if (!draft) return;
+  if (!draft) return { ok: false };
   await db
     .insert(siteSettings)
     .values({ key: draftKey(user.id), value: draft })
     .onConflictDoUpdate({ target: siteSettings.key, set: { value: draft, updatedAt: sql`now()` } });
+  return { ok: true };
 }
 
 /**

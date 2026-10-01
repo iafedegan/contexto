@@ -87,17 +87,20 @@ export function PreviewChrome({
   // Cada ajuste se guarda en el borrador (y se avisa al editor) y la vista se refresca.
   function editLayout(next: NonNullable<typeof layout>) {
     setLayout(next);
+    setSaveState("saving");
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(async () => {
       timer.current = null;
       const base = draftRef.current;
-      if (!base) return;
+      if (!base) return setSaveState("error");
       try {
-        await saveHomeDraft({ ...base, layout: next });
+        const res = await saveHomeDraft({ ...base, layout: next });
+        if (!res.ok) return setSaveState("error");
         localStorage.setItem(LAYOUT_EDIT_KEY, JSON.stringify(next));
+        setSaveState("saved");
         router.refresh();
       } catch {
-        /* sin permiso o sin conexión */
+        setSaveState("error");
       }
     }, 600);
   }
@@ -108,6 +111,7 @@ export function PreviewChrome({
   }, [draft]);
 
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
 
   useEffect(() => {
     const onStorage = (e: StorageEvent) => {
@@ -275,6 +279,11 @@ export function PreviewChrome({
                 onChange={(regions) => editLayout({ ...layout, regions })}
                 only={seccion ? ["navbar", "body", "footer"] : undefined}
               />
+              <p role="status" className={`mt-3 text-xs font-semibold ${saveState === "error" ? "text-[#9a2f22]" : "text-[var(--accent)]"}`}>
+                {saveState === "saving" && "Guardando cambios…"}
+                {saveState === "saved" && "Cambios guardados en el borrador ✓ (se ven en la página)"}
+                {saveState === "error" && "No se pudo guardar el cambio. Recarga la vista previa desde el editor y vuelve a intentarlo."}
+              </p>
               <p className="mt-3 text-xs text-[var(--fg-muted)]">Pulsa un componente de la página para elegirlo. Los cambios quedan en el borrador; se publican con «Aceptar y publicar».</p>
             </div>
           )}
