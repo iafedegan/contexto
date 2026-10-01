@@ -1,11 +1,12 @@
 "use server";
 
-import { generateObject } from "ai";
+import { generateObject, generateText, type ToolSet } from "ai";
 import { z } from "zod";
 import { requireRole } from "@/lib/auth";
 import { EDITOR_ASSIST_SYSTEM } from "@/agents/prompts";
 import { focusTerms } from "@/lib/seo-audit";
-import { getAiModel } from "@/lib/ai-provider";
+import { getAiModel, getGroundedAi } from "@/lib/ai-provider";
+import { chartProblem, renderChartSvg, type ChartSpec } from "@/lib/chart-svg";
 
 
 const draftSchema = z.object({
@@ -39,7 +40,7 @@ export type GenerateResult =
  *
  * Nunca publica: devuelve el texto al editor, que lo revisa y guarda. Es la
  * regla de la casa (AGENTS.md) y también la razón de que todo dato no
- * confirmado salga marcado entre {{llaves}} en lugar de inventado.
+ * confirmado se omita en lugar de inventarse.
  *
  * Sin `ANTHROPIC_API_KEY` no se simula una noticia —sería inventar hechos—:
  * se devuelve un ESQUEMA de trabajo con la estructura, los intertítulos y la
@@ -270,5 +271,74 @@ export async function suggestTitlesAndContexts(input: {
     console.error("suggestTitlesAndContexts:", err);
     const detalle = err && typeof err === "object" && "message" in err ? String((err as Error).message) : "";
     return { ok: false, error: detalle ? `El proveedor rechazó la petición: ${detalle.slice(0, 220)}` : "El modelo no respondió." };
+  }
+}
+
+// --- Gráfica con datos reales (Gemini + búsqueda en Google) ----------------
+
+const chartSchema = z.object({
+  enough: z.boolean().describe("false si el texto no trae cifras suficientes para una gráfica"),
+  type: z.enum(["bar", "line", "pie"]),
+  title: z.string().max(90),
+  unit: z.string().max(60),
+  labels: z.array(z.string()).max(12),
+  series: z.array(z.object({ name: z.string(), values: z.array(z.number()) })).max(4),
+  sourceNote: z.string().max(200).describe("Fuente y periodo de las cifras, tal como constan en el texto"),
+});
+
+export type ChartResult =
+  | { ok: true; chart: ChartSpec; sourceNote: string; sources: { title: string; url: string }[]; svg: string }
+  | { ok: false; error: string };
+
+/**
+ * Pide a Gemini, con búsqueda en Google, cifras reales y recientes del tema y
+ * las convierte en una gráfica. Se rechaza si la búsqueda no devuelve fuentes
+ * citables (regla de la casa: nada sin fuente) y la gráfica sale con sus
+ * fuentes a la vista para que el periodista las verifique antes de insertarla.
+ */
+export async function generateChart(input: { topic: string; section?: string }): Promise<ChartResult> {
+  await requireRole("redactor");
+  const topic = input.topic.trim();
+  if (topic.length < 10) return { ok: false, error: "Describe qué quieres graficar (mínimo 10 caracteres)." };
+
+  const ai = await getGroundedAi();
+  if (!ai) return { ok: false, error: "Falta la clave del modelo (Configuración → Asistente)." };
+  if (ai === "otro-proveedor") {
+    return { ok: false, error: "Las gráficas con datos reales usan Gemini: elige Google (Gemini) en Configuración → Asistente." };
+  }
+
+  try {
+    const found = await generateText({
+      model: ai.model,
+      tools: ai.tools as unknown as ToolSet,
+      system:
+        "Eres un asistente de datos para un medio ganadero colombiano. Busca en la web fuentes oficiales o reconocidas (DANE, FEDEGAN, Ministerio de Agricultura, ICA, FAO, bolsas y centrales ganaderas). Devuelve SOLO cifras que hayas encontrado, con unidad, periodo y fuente. Nunca estimes ni inventes números.",
+      prompt: `${input.section ? `SECCIÓN: ${input.section}\n` : ""}TEMA A GRAFICAR: ${topic}\n\nBusca las cifras más recientes y listalas (de 3 a 12 puntos comparables en el tiempo o entre categorías), con unidad, periodo y fuente de cada una.`,
+    });
+
+    const sources = found.sources
+      .filter((s) => s.sourceType === "url")
+      .map((s) => ({ title: (s.title || new URL(s.url).hostname).slice(0, 120), url: s.url }))
+      .filter((s, i, a) => a.findIndex((x) => x.url === s.url) === i)
+      .slice(0, 8);
+    if (!sources.length) {
+      return { ok: false, error: "La búsqueda no devolvió fuentes citables para ese tema, así que no se genera la gráfica." };
+    }
+
+    const { object } = await generateObject({
+      model: ai.model,
+      schema: chartSchema,
+      prompt: `Con SOLO las cifras del siguiente texto (no agregues ninguna), arma la gráfica más adecuada (barras para comparar categorías, línea para evolución en el tiempo, torta para partes de un total). Si no hay cifras suficientes marca enough=false.\n\nTEMA: ${topic}\n\nTEXTO:\n${found.text.slice(0, 6000)}`,
+    });
+    if (!object.enough) return { ok: false, error: "Las fuentes encontradas no traen cifras suficientes para una gráfica de ese tema." };
+
+    const chart: ChartSpec = { type: object.type, title: object.title, unit: object.unit, labels: object.labels, series: object.series };
+    const problem = chartProblem(chart);
+    if (problem) return { ok: false, error: `Los datos no sirven para graficar: ${problem}` };
+    return { ok: true, chart, sourceNote: object.sourceNote, sources, svg: renderChartSvg(chart) };
+  } catch (err) {
+    console.error("generateChart:", err);
+    const detalle = err && typeof err === "object" && "message" in err ? String((err as Error).message) : "";
+    return { ok: false, error: detalle ? `No se pudo generar la gráfica: ${detalle.slice(0, 220)}` : "El modelo no respondió." };
   }
 }

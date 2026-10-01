@@ -1,10 +1,20 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useSyncExternalStore } from "react";
 import { Turnstile } from "@/components/turnstile";
-import { Check, Loader2, LocateFixed, Mail, TriangleAlert } from "lucide-react";
+import { Check, Loader2, Mail, TriangleAlert } from "lucide-react";
 import { suscribirBoletin, type BoletinState } from "@/app/acciones/boletin";
 import { t, type Locale } from "@/lib/i18n";
+import { GEO_EVENT, readGeo } from "@/lib/geo-consent";
+
+const subscribeGeo = (cb: () => void) => {
+  window.addEventListener(GEO_EVENT, cb);
+  window.addEventListener("storage", cb);
+  return () => {
+    window.removeEventListener(GEO_EVENT, cb);
+    window.removeEventListener("storage", cb);
+  };
+};
 
 /**
  * Alta al boletín (D-08: botón grande y con jerarquía). Se usa en la barra
@@ -12,25 +22,16 @@ import { t, type Locale } from "@/lib/i18n";
  */
 export function NewsletterForm({ locale, compacto = false }: { locale: Locale; compacto?: boolean }) {
   const [state, action, pending] = useActionState<BoletinState, FormData>(suscribirBoletin, null);
-  const [geo, setGeo] = useState<{ lat: number; lon: number } | null>(null);
-  const [geoMsg, setGeoMsg] = useState<string | null>(null);
-  const es = locale !== "en";
-
-  function compartirUbicacion() {
-    if (!navigator.geolocation) {
-      setGeoMsg(es ? "Tu navegador no permite compartir la ubicación." : "Your browser can't share location.");
-      return;
+  // La ubicación la autoriza la persona en el aviso del sitio (cookie cg_loc).
+  const geoRaw = useSyncExternalStore(subscribeGeo, readGeo, () => null);
+  const geo = (() => {
+    try {
+      const g = geoRaw ? (JSON.parse(geoRaw) as { lat: number; lon: number }) : null;
+      return g && Number.isFinite(g.lat) && Number.isFinite(g.lon) ? g : null;
+    } catch {
+      return null;
     }
-    setGeoMsg(es ? "Buscando tu ubicación…" : "Finding your location…");
-    navigator.geolocation.getCurrentPosition(
-      (p) => {
-        setGeo({ lat: p.coords.latitude, lon: p.coords.longitude });
-        setGeoMsg(es ? "Ubicación agregada ✓" : "Location added ✓");
-      },
-      () => setGeoMsg(es ? "No se pudo obtener la ubicación (puedes seguir sin ella)." : "Couldn't get your location (you can continue without it)."),
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 },
-    );
-  }
+  })();
 
   return (
     <form action={action} className={compacto ? "" : "lx-card p-6"}>
@@ -89,19 +90,6 @@ export function NewsletterForm({ locale, compacto = false }: { locale: Locale; c
                 <input type="hidden" name="geoLon" value={geo.lon} />
               </>
             )}
-            <button
-              type="button"
-              onClick={compartirUbicacion}
-              className="inline-flex items-center justify-center gap-2 rounded-[var(--radius)] border border-[var(--border)] px-3.5 py-2.5 text-sm text-[var(--fg-muted)] transition hover:border-[var(--accent)] hover:text-[var(--accent)]"
-            >
-              <LocateFixed size={14} /> {es ? "Compartir mi ubicación exacta (opcional)" : "Share my exact location (optional)"}
-            </button>
-            <p className="text-xs text-[var(--fg-muted)]" role="status">
-              {geoMsg ??
-                (es
-                  ? "Solo la usamos para saber de qué zona nos leen; tu navegador te pedirá permiso."
-                  : "Only used to know which area our readers are in; your browser will ask permission.")}
-            </p>
           </>
         )}
 

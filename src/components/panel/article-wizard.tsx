@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   ArrowLeft,
   ArrowRight,
+  BarChart3,
   Check,
   Eye,
   ImagePlus,
@@ -17,11 +18,13 @@ import {
   X,
 } from "lucide-react";
 import { saveArticle } from "@/app/panel/(app)/articulos/actions";
-import { uploadMedia } from "@/app/panel/(app)/articulos/media-actions";
+import { saveChartImage, uploadMedia } from "@/app/panel/(app)/articulos/media-actions";
 import {
   generateArticleDraft,
   regenerateDraftPart,
   suggestTitlesAndContexts,
+  generateChart,
+  type ChartResult,
   type DraftPart,
   type TitleContextOptions,
 } from "@/app/panel/(app)/articulos/ai-actions";
@@ -106,11 +109,16 @@ function toHtml(text: string): string {
     .split(/\n\s*\n/)
     .map((b) => b.trim())
     .filter(Boolean)
-    .map((b) =>
-      b.startsWith("## ")
+    .map((b) => {
+      // Gráfica insertada con IA: [[GRAFICA https://… | texto alternativo | fuente]]
+      const g = /^\[\[GRAFICA (https:\/\/[^\s|\]]+) \| ([^|\]]*) \| ([^\]]*)\]\]$/.exec(b);
+      if (g) {
+        return `<figure><img src="${g[1]}" alt="${escapeHtml(g[2])}" loading="lazy"><figcaption>${escapeHtml(g[3])}</figcaption></figure>`;
+      }
+      return b.startsWith("## ")
         ? `<h2>${escapeHtml(b.slice(3))}</h2>`
-        : `<p>${linkify(escapeHtml(b)).replace(/\n/g, "<br>")}</p>`,
-    )
+        : `<p>${linkify(escapeHtml(b)).replace(/\n/g, "<br>")}</p>`;
+    })
     .join("\n");
 }
 
@@ -150,6 +158,11 @@ export function ArticleWizard({
   const [topic, setTopic] = useState("");
   const [options, setOptions] = useState<TitleContextOptions | null>(null);
   const [pickedContext, setPickedContext] = useState<number | null>(null);
+  // Gráfica con datos reales (Gemini + búsqueda en Google).
+  const [chartTopic, setChartTopic] = useState("");
+  const [chart, setChart] = useState<Extract<ChartResult, { ok: true }> | null>(null);
+  const [chartBusy, startChart] = useTransition();
+  const [chartError, setChartError] = useState("");
   const prompt = [topic.trim(), context.trim()].filter(Boolean).join("\n\n");
   // Un artículo reabierto ya tiene borrador: se puede revisar y regenerar.
   const [generated, setGenerated] = useState(!!initial);
@@ -287,6 +300,31 @@ export function ArticleWizard({
           "Borrador generado. Revísalo paso a paso antes de publicar.",
       );
       setStep(1);
+    });
+  }
+
+  function makeChart() {
+    setChartError("");
+    setChart(null);
+    startChart(async () => {
+      const res = await generateChart({
+        topic: chartTopic.trim() || title.trim(),
+        section: categories.find((c) => c.id === categoryId)?.name,
+      });
+      if (!res.ok) return setChartError(res.error);
+      setChart(res);
+    });
+  }
+  function insertChart() {
+    if (!chart) return;
+    startChart(async () => {
+      const up = await saveChartImage(chart.chart);
+      if (!up.ok) return setChartError(up.error);
+      const fuente = `Fuente: ${chart.sourceNote || "Google Search"}. Consultado en: ${chart.sources.slice(0, 3).map((x) => x.title).join(", ")}.`;
+      const alt = chart.chart.title.replace(/[|\]]/g, " ");
+      setBody((b) => `${b.trimEnd()}\n\n[[GRAFICA ${up.url} | ${alt} | ${fuente.replace(/[|\]]/g, " ")}]]\n`);
+      setChart(null);
+      setChartTopic("");
     });
   }
 
@@ -683,6 +721,54 @@ export function ArticleWizard({
               placeholder={"Primer párrafo con lo más importante…\n\n## Qué explica el alza\n\nSegundo párrafo…"}
               className={`${input} resize-y text-base leading-relaxed`}
             />
+            <details className="rounded-[var(--radius)] border border-[var(--border)] p-3">
+              <summary className="flex cursor-pointer items-center gap-2 text-sm font-semibold">
+                <BarChart3 size={15} className="text-[var(--accent)]" /> Agregar una gráfica con IA (Gemini)
+              </summary>
+              <div className="mt-3 flex flex-col gap-2.5">
+                <input
+                  value={chartTopic}
+                  onChange={(e) => setChartTopic(e.target.value)}
+                  placeholder={title ? `Ej.: ${title}` : "Qué quieres graficar, p. ej. precio del novillo gordo por mes en 2026"}
+                  className={input}
+                />
+                <button type="button" onClick={makeChart} disabled={chartBusy} className="lx-btn self-start">
+                  {chartBusy && !chart ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
+                  {chartBusy && !chart ? "Buscando datos y dibujando…" : "Generar gráfica"}
+                </button>
+                {chartError && <p className="text-sm text-[var(--danger,#b4442e)]">{chartError}</p>}
+                {chart && (
+                  <div className="flex flex-col gap-2">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={`data:image/svg+xml;utf8,${encodeURIComponent(chart.svg)}`}
+                      alt={chart.chart.title}
+                      className="w-full rounded-[var(--radius)] border border-[var(--border)] bg-white"
+                    />
+                    <p className="text-xs text-[var(--fg-muted)]">
+                      Datos que encontró la IA en la web: <strong>verifica las fuentes antes de publicar.</strong> {chart.sourceNote}
+                    </p>
+                    <ul className="text-xs">
+                      {chart.sources.map((x) => (
+                        <li key={x.url}>
+                          <a href={x.url} target="_blank" rel="noreferrer" className="lx-link">
+                            {x.title} ↗
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                    <div className="flex gap-2">
+                      <button type="button" onClick={insertChart} disabled={chartBusy} className="lx-btn">
+                        {chartBusy ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />} Insertar en el artículo
+                      </button>
+                      <button type="button" onClick={makeChart} disabled={chartBusy} className="lx-btn lx-btn-ghost">
+                        <RotateCcw size={14} /> Otra versión
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </details>
             <p className="text-xs text-[var(--fg-muted)]">
               {words} palabras · {Math.max(1, Math.round(words / 200))} min de lectura
               {words > 0 && words < 250 && " · se recomiendan al menos 250"}

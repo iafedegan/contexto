@@ -84,3 +84,17 @@ export async function getAiModel() {
     ? createGoogleGenerativeAI({ apiKey: key })(settings.model)
     : createAnthropic({ apiKey: key })(settings.model);
 }
+
+/**
+ * Gemini con búsqueda en Google (datos con fuentes citables). Solo existe con
+ * el proveedor Google: Anthropic no tiene esa herramienta. `null` = no hay
+ * clave; `"otro-proveedor"` = hay clave pero de otro proveedor.
+ */
+export async function getGroundedAi() {
+  const settings = await readSettings();
+  const { key } = await resolveKey(settings);
+  if (!key) return null;
+  if (settings.provider !== "google") return "otro-proveedor" as const;
+  const google = createGoogleGenerativeAI({ apiKey: key });
+  return { model: google(settings.model), tools: { google_search: google.tools.googleSearch({}) } };
+}

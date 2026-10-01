@@ -10,7 +10,9 @@
  */
 
 import { randomUUID } from "node:crypto";
+import { z } from "zod";
 import { requireRole } from "@/lib/auth";
+import { chartProblem, renderChartSvg } from "@/lib/chart-svg";
 
 const TIPOS: Record<string, string> = {
   "image/jpeg": "jpg",
@@ -83,4 +85,38 @@ export async function uploadMedia(formData: FormData): Promise<UploadResult> {
     url: `${supabaseUrl}/storage/v1/object/public/${BUCKET}/${name}`,
     kind: file.type.startsWith("video/") ? "video" : "imagen",
   };
+}
+
+const chartSpecSchema = z.object({
+  type: z.enum(["bar", "line", "pie"]),
+  title: z.string().max(90),
+  unit: z.string().max(60),
+  labels: z.array(z.string().max(40)).max(12),
+  series: z.array(z.object({ name: z.string().max(40), values: z.array(z.number()) })).max(4),
+});
+
+/**
+ * Sube una gráfica a Storage. Recibe los DATOS, no un SVG: el servidor la
+ * vuelve a dibujar (y valida) para no publicar nunca un SVG enviado por el cliente.
+ */
+export async function saveChartImage(spec: unknown): Promise<UploadResult> {
+  await requireRole("redactor");
+  const parsed = chartSpecSchema.safeParse(spec);
+  if (!parsed.success) return { ok: false, error: "Datos de gráfica inválidos." };
+  const problem = chartProblem(parsed.data);
+  if (problem) return { ok: false, error: problem };
+
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!supabaseUrl || !serviceKey) {
+    return { ok: false, error: "Falta configurar SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY en el servidor." };
+  }
+  const name = `grafica-${randomUUID()}.svg`;
+  const res = await fetch(`${supabaseUrl}/storage/v1/object/${BUCKET}/${name}`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${serviceKey}`, apikey: serviceKey, "Content-Type": "image/svg+xml", "x-upsert": "false" },
+    body: renderChartSvg(parsed.data),
+  });
+  if (!res.ok) return { ok: false, error: `No se pudo subir la gráfica a Supabase (${res.status}).` };
+  return { ok: true, url: `${supabaseUrl}/storage/v1/object/public/${BUCKET}/${name}`, kind: "imagen" };
 }
