@@ -61,7 +61,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
             </span>
           </Link>
 
-          {!debeActivar2fa && <PanelNav />}
+          {!debeActivar2fa && <PanelNav role={session.user.role} />}
 
 
           <div className="ml-auto flex items-center gap-3 text-xs">

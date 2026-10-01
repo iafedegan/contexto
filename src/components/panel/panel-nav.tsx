@@ -5,7 +5,15 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronDown } from "lucide-react";
 
-type Item = { href: string; label: string; hint: string };
+type Item = {
+  href: string;
+  label: string;
+  hint: string;
+  /** Solo el administrador la ve. */
+  adminOnly?: boolean;
+  /** Cómo la ve quien no es administrador (si sigue viéndola, con otro texto). */
+  paraOtros?: { label: string; hint: string };
+};
 type Group = { id: string; label: string; items: Item[] };
 
 /**
@@ -61,12 +69,21 @@ const GROUPS: Group[] = [
         href: "/panel/api",
         label: "API pública",
         hint: "Claves para terceros y documentación",
+        adminOnly: true,
       },
     ],
   },
 ];
 
-export function PanelNav() {
+export function PanelNav({ role }: { role: string }) {
+  const esAdmin = role === "administrador";
+  // Lo que el rol no puede usar ni se muestra (el servidor además lo exige).
+  const groups = GROUPS.map((g) => ({
+    ...g,
+    items: g.items
+      .filter((i) => esAdmin || !i.adminOnly)
+      .map((i) => (esAdmin || !i.paraOtros ? i : { ...i, ...i.paraOtros })),
+  }));
   const pathname = usePathname();
   const [open, setOpen] = useState<string | null>(null);
   const navRef = useRef<HTMLElement>(null);
@@ -90,7 +107,7 @@ export function PanelNav() {
 
   return (
     <nav ref={navRef} aria-label="Secciones del panel" className="relative flex flex-wrap gap-1.5">
-      {GROUPS.map((group) => {
+      {groups.map((group) => {
         const isOpen = open === group.id;
         // "/panel" es prefijo de todo, así que el grupo activo se decide por
         // coincidencia exacta o por ruta hija, nunca por startsWith a secas.

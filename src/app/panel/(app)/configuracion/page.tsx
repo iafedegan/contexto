@@ -1,4 +1,4 @@
-import { asc } from "drizzle-orm";
+import { asc, eq, or } from "drizzle-orm";
 import { BarChart3, Globe, ShieldCheck, Sparkles, Users } from "lucide-react";
 import { db } from "@/db";
 import { users } from "@/db/schema";
@@ -40,6 +40,13 @@ export default async function ConfiguracionPage() {
         totpEnabled: users.totpEnabled,
       })
       .from(users)
+      // Quien no es administrador solo recibe su propia cuenta: la lista de
+      // personas no debe viajar al navegador de un editor.
+      .where(
+        isAdmin
+          ? undefined
+          : or(eq(users.id, session?.user.id ?? ""), eq(users.email, session?.user.email ?? "")),
+      )
       .orderBy(asc(users.name)),
     listarPasskeys(),
   ]);
@@ -60,7 +67,7 @@ export default async function ConfiguracionPage() {
       <ConfigTabs
         tabs={[
           { id: "sitio", label: "Identidad del sitio", icon: <Globe size={13} /> },
-          { id: "usuarios", label: "Personas y roles", icon: <Users size={13} /> },
+          { id: "usuarios", label: isAdmin ? "Personas y roles" : "Mis datos", icon: <Users size={13} /> },
           { id: "seguridad", label: "Seguridad de mi cuenta", icon: <ShieldCheck size={13} /> },
           { id: "analitica", label: "Analítica y SEO", icon: <BarChart3 size={13} /> },
           { id: "asistente", label: "Asistente y agentes de IA", icon: <Sparkles size={13} /> },
@@ -139,11 +146,12 @@ export default async function ConfiguracionPage() {
       <Section
         id="usuarios"
         icon={<Users size={14} />}
-        title="Personas y roles"
-        hint={`${people.length} cuentas · redactor < editor < administrador`}
+        title={isAdmin ? "Personas y roles" : "Mis datos"}
+        hint={isAdmin ? `${people.length} cuentas · redactor < editor < administrador` : "Tu nombre, correo y contraseña"}
       >
         {yoMismo && <MiPerfilForm name={yoMismo.name} email={yoMismo.email} />}
 
+        {isAdmin && (
         <div className="overflow-hidden rounded-[var(--radius)] border border-[var(--border)]">
           <table className="w-full border-separate border-spacing-0 text-sm">
             <thead>
@@ -170,6 +178,7 @@ export default async function ConfiguracionPage() {
             </tbody>
           </table>
         </div>
+        )}
 
         {isAdmin && (
           <div className="mt-4">
