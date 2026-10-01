@@ -5,6 +5,7 @@ import { eq, sql } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { db } from "@/db";
 import { siteSettings, users, type UserRole } from "@/db/schema";
+import { CUOTAS_KEY, type Cuotas } from "@/lib/ai-cuota";
 import { DOS_PASOS, PERMISO_IDS, porDefecto, type PermisoId } from "@/lib/permisos";
 import { PERMISOS_KEY, type MapaAjustes } from "@/lib/permisos-server";
 import { auth, requireRole } from "@/lib/auth";
@@ -149,6 +150,30 @@ export async function resetUserPermissions(userId: string): Promise<void> {
     delete m[userId];
   });
   revalidatePath("/panel", "layout");
+}
+
+/**
+ * Fija la cuota mensual de IA (USD). `userId` null = la predeterminada de todos;
+ * `usd` null = quitar el tope (predeterminada) o dejar sin límite. Solo administradores.
+ */
+export async function setAiQuota(userId: string | null, usd: number | null): Promise<{ ok: boolean; message: string }> {
+  await requireRole("administrador");
+  if (usd !== null && (!Number.isFinite(usd) || usd < 0 || usd > 100000)) {
+    return { ok: false, message: "Escribe un monto en dólares entre 0 y 100000." };
+  }
+  const [row] = await db.select({ value: siteSettings.value }).from(siteSettings).where(eq(siteSettings.key, CUOTAS_KEY)).limit(1);
+  const v = (row?.value ?? {}) as Partial<Cuotas>;
+  const c: Cuotas = { predeterminada: typeof v.predeterminada === "number" ? v.predeterminada : null, personas: { ...(v.personas ?? {}) } };
+  const monto = usd === null ? null : Math.round(usd * 100) / 100;
+  if (userId === null) c.predeterminada = monto;
+  else if (monto === null) delete c.personas[userId];
+  else c.personas[userId] = monto;
+  await db
+    .insert(siteSettings)
+    .values({ key: CUOTAS_KEY, value: c })
+    .onConflictDoUpdate({ target: siteSettings.key, set: { value: c, updatedAt: sql`now()` } });
+  revalidatePath("/panel/configuracion");
+  return { ok: true, message: "Cuota guardada." };
 }
 
 export type CreateUserState = { ok: boolean; message: string } | null;

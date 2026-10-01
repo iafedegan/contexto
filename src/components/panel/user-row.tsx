@@ -8,6 +8,7 @@ import {
   deleteUser,
   resetUserPermissions,
   resetUserTotp,
+  setAiQuota,
   setUserPermission,
   toggleUserActive,
 } from "@/app/panel/(app)/configuracion/actions";
@@ -27,6 +28,7 @@ export function UserRow({
   isSelf,
   permisos = [],
   exige2fa = true,
+  cuotaIA,
 }: {
   user: {
     id: string;
@@ -42,6 +44,8 @@ export function UserRow({
   permisos?: PermisoVista[];
   /** ¿Se le exige 2FA? (casilla «Exigir 2FA»). */
   exige2fa?: boolean;
+  /** Cuota de IA: la propia (null = usa la predeterminada), la que rige y lo gastado este mes. */
+  cuotaIA?: { propia: number | null; efectiva: number | null; gasto: number };
 }) {
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -50,6 +54,8 @@ export function UserRow({
     Object.fromEntries(permisos.map((p) => [p.id, p.activo])),
   );
   const [exigir, setExigir] = useState(exige2fa);
+  const [cuotaTxt, setCuotaTxt] = useState(cuotaIA?.propia == null ? "" : String(cuotaIA.propia));
+  const [cuotaMsg, setCuotaMsg] = useState("");
   const esAdmin = user.role === "administrador";
   const personalizado = permisos.some((p) => marcas[p.id] !== p.porDefecto);
 
@@ -148,9 +154,37 @@ export function UserRow({
       <tr>
         <td colSpan={4} className="border-b border-[var(--border)] bg-[var(--surface-2)]/40 px-4 py-4">
           {esAdmin ? (
-            <p className="text-xs text-[var(--fg-muted)]">
-              Un administrador siempre tiene todos los permisos y no se puede restringir.
-            </p>
+            <>
+              <p className="text-xs text-[var(--fg-muted)]">
+                Un administrador siempre tiene todos los permisos y no se puede restringir.
+              </p>
+              {cuotaIA && (
+                <div className="mt-4 border-t border-[var(--border)] pt-4">
+                  <p className="text-sm font-semibold">Cuota mensual de IA</p>
+                  <p className="mt-1 text-xs text-[var(--fg-muted)]">
+                    Este mes: US$ {cuotaIA.gasto.toFixed(2)}
+                    {cuotaIA.efectiva === null ? " · sin tope" : ` de US$ ${cuotaIA.efectiva.toFixed(2)}`}
+                    {cuotaIA.propia === null && cuotaIA.efectiva !== null ? " (la predeterminada)" : ""}
+                  </p>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <span className="text-sm">US$</span>
+                    <input type="text" inputMode="decimal" value={cuotaTxt} onChange={(e) => setCuotaTxt(e.target.value)} placeholder="predeterminada" className="lx-input py-1.5 text-sm" style={{ width: "9rem" }} />
+                    <button
+                      type="button"
+                      disabled={pending}
+                      className="rounded-full border border-[var(--border-strong)] px-3 py-1 text-xs font-medium transition hover:border-[var(--accent)] hover:text-[var(--accent)]"
+                      onClick={() => {
+                        const t = cuotaTxt.trim().replace(",", ".");
+                        start(async () => setCuotaMsg((await setAiQuota(user.id, t === "" ? null : Number(t))).message));
+                      }}
+                    >
+                      Guardar
+                    </button>
+                    {cuotaMsg && <span className="text-xs text-[var(--accent)]" role="status">{cuotaMsg}</span>}
+                  </div>
+                </div>
+              )}
+            </>
           ) : (
             <>
               <div className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
@@ -170,6 +204,40 @@ export function UserRow({
                   </label>
                 ))}
               </div>
+              {cuotaIA && (
+                <div className="mt-4 border-t border-[var(--border)] pt-4">
+                  <p className="text-sm font-semibold">Cuota mensual de IA</p>
+                  <p className="mt-1 text-xs text-[var(--fg-muted)]">
+                    Este mes: US$ {cuotaIA.gasto.toFixed(2)}
+                    {cuotaIA.efectiva === null ? " · sin tope" : ` de US$ ${cuotaIA.efectiva.toFixed(2)}`}
+                    {cuotaIA.propia === null && cuotaIA.efectiva !== null ? " (la predeterminada)" : ""}
+                  </p>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <span className="text-sm">US$</span>
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      value={cuotaTxt}
+                      onChange={(e) => setCuotaTxt(e.target.value)}
+                      placeholder="predeterminada"
+                      className="lx-input py-1.5 text-sm" style={{ width: "9rem" }}
+                    />
+                    <button
+                      type="button"
+                      disabled={pending}
+                      className="rounded-full border border-[var(--border-strong)] px-3 py-1 text-xs font-medium transition hover:border-[var(--accent)] hover:text-[var(--accent)]"
+                      onClick={() => {
+                        const t = cuotaTxt.trim().replace(",", ".");
+                        start(async () => setCuotaMsg((await setAiQuota(user.id, t === "" ? null : Number(t))).message));
+                      }}
+                    >
+                      Guardar
+                    </button>
+                    {cuotaMsg && <span className="text-xs text-[var(--accent)]" role="status">{cuotaMsg}</span>}
+                  </div>
+                  <p className="mt-1 text-xs text-[var(--fg-muted)]">Vacío = usa la cuota predeterminada.</p>
+                </div>
+              )}
               <div className="mt-4 border-t border-[var(--border)] pt-4">
                 <p className="text-sm font-semibold">Verificación en dos pasos (2FA)</p>
                 <label className="mt-2 flex cursor-pointer items-start gap-2.5 text-sm">

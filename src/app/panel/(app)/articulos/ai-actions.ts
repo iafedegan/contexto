@@ -6,6 +6,7 @@ import { requirePermiso } from "@/lib/auth";
 import { EDITOR_ASSIST_SYSTEM } from "@/agents/prompts";
 import { focusTerms } from "@/lib/seo-audit";
 import { getAiModel, getGroundedAi } from "@/lib/ai-provider";
+import { registrarUsoIA, verificarCuotaIA } from "@/lib/ai-cuota";
 import { chartProblem, renderChartSvg, type ChartSpec } from "@/lib/chart-svg";
 
 
@@ -51,7 +52,7 @@ export async function generateArticleDraft(input: {
   prompt: string;
   section?: string;
 }): Promise<GenerateResult> {
-  await requirePermiso("articulos");
+  const user = await requirePermiso("articulos");
 
   const tema = input.title.trim();
   const encargo = input.prompt.trim();
@@ -80,16 +81,20 @@ export async function generateArticleDraft(input: {
     ]
       .filter(Boolean)
       .join("\n\n");
-    let { object } = await generateObject({ model, schema: draftSchema, system: EDITOR_ASSIST_SYSTEM, prompt });
+    const cuotaIA = await verificarCuotaIA(user.id);
+    if (!cuotaIA.ok) return { ok: false, error: cuotaIA.message };
+    let { object, usage } = await generateObject({ model, schema: draftSchema, system: EDITOR_ASSIST_SYSTEM, prompt });
+    await registrarUsoIA(user.id, usage);
     // Debe salir listo para publicar: si aun así trae marcadores {{…}}, un
     // segundo intento lo exige y, de persistir, se quitan.
     if (hasMarkers(object)) {
-      ({ object } = await generateObject({
+      ({ object, usage } = await generateObject({
         model,
         schema: draftSchema,
         system: EDITOR_ASSIST_SYSTEM,
         prompt: `${prompt}\n\nIMPORTANTE: tu borrador anterior traía marcadores entre llaves. Reescríbelo SIN ningún marcador: redacta solo con lo que sí consta en el encargo y omite lo que falte.`,
       }));
+      await registrarUsoIA(user.id, usage);
     }
     return { ok: true, mode: "ia", draft: stripMarkers(object) };
   } catch (err) {
@@ -190,13 +195,15 @@ export async function regenerateDraftPart(input: {
   current: string;
   section?: string;
 }): Promise<RegenerateResult> {
-  await requirePermiso("articulos");
+  const user = await requirePermiso("articulos");
   const model = await getAiModel();
   if (!model) {
     return { ok: false, error: "Para regenerar hace falta la clave del modelo (Configuración → Asistente)." };
   }
   try {
-    const { object } = await generateObject({
+    const cuotaIA = await verificarCuotaIA(user.id);
+    if (!cuotaIA.ok) return { ok: false, error: cuotaIA.message };
+    const { object, usage: uso1 } = await generateObject({
       model,
       schema: PART_SCHEMAS[input.part],
       system: EDITOR_ASSIST_SYSTEM,
@@ -210,6 +217,7 @@ export async function regenerateDraftPart(input: {
         .filter(Boolean)
         .join("\n\n"),
     });
+    await registrarUsoIA(user.id, uso1);
     return { ok: true, part: input.part, value: stripMarkers(object) };
   } catch (err) {
     console.error("regenerateDraftPart:", err);
@@ -242,7 +250,7 @@ export async function suggestTitlesAndContexts(input: {
   topic: string;
   section?: string;
 }): Promise<SuggestResult> {
-  await requirePermiso("articulos");
+  const user = await requirePermiso("articulos");
   const topic = input.topic.trim();
   if (topic.length < 10) return { ok: false, error: "Cuéntame el tema con un poco más de detalle (mínimo 10 caracteres)." };
 
@@ -251,7 +259,9 @@ export async function suggestTitlesAndContexts(input: {
     return { ok: false, error: "Para proponer opciones hace falta la clave del modelo (Configuración → Asistente)." };
   }
   try {
-    const { object } = await generateObject({
+    const cuotaIA = await verificarCuotaIA(user.id);
+    if (!cuotaIA.ok) return { ok: false, error: cuotaIA.message };
+    const { object, usage: uso2 } = await generateObject({
       model,
       schema: optionsSchema,
       system: EDITOR_ASSIST_SYSTEM,
@@ -266,6 +276,7 @@ export async function suggestTitlesAndContexts(input: {
         .filter(Boolean)
         .join("\n\n"),
     });
+    await registrarUsoIA(user.id, uso2);
     return { ok: true, ...object };
   } catch (err) {
     console.error("suggestTitlesAndContexts:", err);
@@ -297,7 +308,7 @@ export type ChartResult =
  * fuentes a la vista para que el periodista las verifique antes de insertarla.
  */
 export async function generateChart(input: { topic: string; section?: string }): Promise<ChartResult> {
-  await requirePermiso("articulos");
+  const user = await requirePermiso("articulos");
   const topic = input.topic.trim();
   if (topic.length < 10) return { ok: false, error: "Describe qué quieres graficar (mínimo 10 caracteres)." };
 
@@ -308,6 +319,8 @@ export async function generateChart(input: { topic: string; section?: string }):
   }
 
   try {
+    const cuotaIA = await verificarCuotaIA(user.id);
+    if (!cuotaIA.ok) return { ok: false, error: cuotaIA.message };
     const found = await generateText({
       model: ai.model,
       tools: ai.tools as unknown as ToolSet,
@@ -315,6 +328,7 @@ export async function generateChart(input: { topic: string; section?: string }):
         "Eres un asistente de datos para un medio ganadero colombiano. Busca en la web fuentes oficiales o reconocidas (DANE, FEDEGAN, Ministerio de Agricultura, ICA, FAO, bolsas y centrales ganaderas). Devuelve SOLO cifras que hayas encontrado, con unidad, periodo y fuente. Nunca estimes ni inventes números.",
       prompt: `${input.section ? `SECCIÓN: ${input.section}\n` : ""}TEMA A GRAFICAR: ${topic}\n\nBusca las cifras más recientes y listalas (de 3 a 12 puntos comparables en el tiempo o entre categorías), con unidad, periodo y fuente de cada una.`,
     });
+    await registrarUsoIA(user.id, found.usage);
 
     const sources = found.sources
       .filter((s) => s.sourceType === "url")
@@ -325,11 +339,12 @@ export async function generateChart(input: { topic: string; section?: string }):
       return { ok: false, error: "La búsqueda no devolvió fuentes citables para ese tema, así que no se genera la gráfica." };
     }
 
-    const { object } = await generateObject({
+    const { object, usage: uso4 } = await generateObject({
       model: ai.model,
       schema: chartSchema,
       prompt: `Con SOLO las cifras del siguiente texto (no agregues ninguna), arma la gráfica más adecuada (barras para comparar categorías, línea para evolución en el tiempo, torta SOLO para partes de un total). REGLAS DE LA GRÁFICA: (1) todos los valores deben ser de la MISMA magnitud y unidad y comparables entre sí: NUNCA mezcles hectáreas con cabezas de ganado o con pesos en el mismo gráfico; si el texto trae varias magnitudes, elige UNA y grafica solo esa; (2) prefiere una serie en el tiempo o categorías comparables, de 3 a 8 puntos; (3) etiquetas cortas (máx. 22 caracteres) sin repetir la unidad; (4) ordena las categorías de mayor a menor (si no son cronológicas); (5) title = una frase que diga qué muestra (no «Gráfica de…»), unit = la unidad con su periodo (p. ej. «Miles de cabezas, 2025»). Si no hay cifras suficientes y comparables marca enough=false.\n\nTEMA: ${topic}\n\nTEXTO:\n${found.text.slice(0, 6000)}`,
     });
+    await registrarUsoIA(user.id, uso4);
     if (!object.enough) return { ok: false, error: "Las fuentes encontradas no traen cifras suficientes para una gráfica de ese tema." };
 
     const chart: ChartSpec = { type: object.type, title: object.title, unit: object.unit, labels: object.labels, series: object.series, source: object.sourceNote };
