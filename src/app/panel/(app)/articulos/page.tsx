@@ -3,6 +3,8 @@ import { and, asc, desc, eq, ilike, inArray, or, sql, type SQL } from "drizzle-o
 import { db } from "@/db";
 import { articles, articleViewsDaily, authors, categories } from "@/db/schema";
 import { Badge, Button } from "@/components/ui";
+import { auth } from "@/lib/auth";
+import { DeleteArticleButton } from "@/components/panel/delete-article-button";
 import { ArticleFilters } from "@/components/panel/article-filters";
 import { ViewsSparkline } from "@/components/panel/views-chart";
 import { dailySeries, hasDailyViews, nf, pctChange, siteWeekTotals, TODAY_CO } from "@/lib/article-stats";
@@ -38,6 +40,8 @@ function param(sp: Record<string, string | string[] | undefined>, key: string): 
 }
 
 export default async function ArticlesList({ searchParams }: { searchParams: SearchParams }) {
+  const session = await auth();
+  const canDelete = session?.user.role === "editor" || session?.user.role === "administrador";
   const sp = await searchParams;
   const q = param(sp, "q").slice(0, 120);
   const estado = articles.status.enumValues.includes(param(sp, "estado") as Status)
@@ -227,6 +231,7 @@ export default async function ArticlesList({ searchParams }: { searchParams: Sea
               <Th className="text-right">Lecturas</Th>
               <Th>Últimos {SPARK_DAYS} días</Th>
               <Th>Actualizado</Th>
+              {canDelete && <Th className="text-right">Eliminar</Th>}
             </tr>
           </thead>
           <tbody>
@@ -299,12 +304,17 @@ export default async function ArticlesList({ searchParams }: { searchParams: Sea
                     )}
                   </Td>
                   <Td className="whitespace-nowrap text-[var(--fg-muted)]">{formatDate(r.updatedAt)}</Td>
+                  {canDelete && (
+                    <Td className="text-right">
+                      <DeleteArticleButton id={r.id} title={r.title} published={r.status === "publicado"} />
+                    </Td>
+                  )}
                 </tr>
               );
             })}
             {rows.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-5 py-10 text-center text-[var(--fg-muted)]">
+                <td colSpan={canDelete ? 7 : 6} className="px-5 py-10 text-center text-[var(--fg-muted)]">
                   {where.length ? "Ningún artículo coincide con los filtros." : "Sin artículos. Crea el primero."}
                 </td>
               </tr>

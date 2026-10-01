@@ -166,3 +166,21 @@ export async function unpublishArticle(articleId: string) {
   await revalidateArticle(articleId);
   revalidatePath(`/panel/articulos/${articleId}`);
 }
+
+/**
+ * Borra el artículo para siempre (sus lecturas diarias se van con él; un
+ * borrador de IA que lo originó solo pierde el enlace). Quitarlo del sitio
+ * sin perderlo es «archivar» (unpublishArticle).
+ */
+export async function deleteArticle(articleId: string): Promise<{ ok: boolean; message: string }> {
+  await requireRole("editor");
+  const [a] = await db.select({ id: articles.id }).from(articles).where(eq(articles.id, articleId)).limit(1);
+  if (!a) return { ok: false, message: "Ese artículo ya no existe." };
+
+  // Las rutas se invalidan ANTES: después ya no hay fila de la que leer slug, sección y autor.
+  await revalidateArticle(articleId);
+  await db.delete(articles).where(eq(articles.id, articleId));
+  revalidatePath("/panel/articulos");
+  revalidatePath("/panel");
+  return { ok: true, message: "Artículo eliminado." };
+}
