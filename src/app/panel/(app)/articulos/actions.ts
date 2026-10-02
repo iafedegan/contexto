@@ -183,3 +183,67 @@ export async function deleteArticle(articleId: string): Promise<{ ok: boolean; m
   revalidatePath("/panel");
   return { ok: true, message: "Artículo eliminado." };
 }
+
+export type AutosaveResult =
+  | { ok: true; id: string; savedAt: string }
+  | { ok: false; skipped?: boolean; error?: string };
+
+/**
+ * Autoguardado del asistente: crea o actualiza el BORRADOR a cada paso, sin redirigir ni publicar.
+ * Solo toca notas en borrador o en revisión: una nota ya publicada (o programada) está en línea y
+ * sus cambios solo salen con los botones de guardar/publicar, nunca en silencio.
+ */
+export async function autosaveDraft(input: {
+  id?: string;
+  title: string;
+  excerpt: string;
+  body: string;
+  tags: string[];
+  categoryId?: string | null;
+  authorId?: string | null;
+  coverImageUrl?: string | null;
+  coverImageAlt?: string | null;
+  metaTitle?: string | null;
+  metaDescription?: string | null;
+}): Promise<AutosaveResult> {
+  const user = await requirePermiso("articulos");
+  const title = input.title.trim();
+  if (title.length < 5) return { ok: false, skipped: true };
+
+  const values = {
+    title,
+    excerpt: input.excerpt.trim(),
+    body: sanitizeArticleHtml(input.body ?? ""),
+    categoryId: input.categoryId || null,
+    authorId: input.authorId || null,
+    coverImageUrl: input.coverImageUrl?.trim() || null,
+    coverImageAlt: input.coverImageAlt?.trim() || null,
+    metaTitle: input.metaTitle?.trim() || null,
+    metaDescription: input.metaDescription?.trim() || null,
+    tags: (input.tags ?? []).map((t) => t.trim()).filter(Boolean),
+    updatedAt: sql`now()`,
+  };
+
+  try {
+    if (input.id) {
+      const [row] = await db.select({ status: articles.status }).from(articles).where(eq(articles.id, input.id)).limit(1);
+      if (!row) return { ok: false, error: "La nota ya no existe." };
+      if (row.status !== "borrador" && row.status !== "en_revision") return { ok: false, skipped: true };
+      await db.update(articles).set(values).where(eq(articles.id, input.id));
+      revalidatePath("/panel/articulos");
+      return { ok: true, id: input.id, savedAt: new Date().toISOString() };
+    }
+    let slug = slugify(title) || slugify(`nota-${Date.now()}`);
+    const [dup] = await db.select({ id: articles.id }).from(articles).where(eq(articles.slug, slug)).limit(1);
+    if (dup) slug = `${slug}-${Date.now().toString(36)}`;
+    const [row] = await db
+      .insert(articles)
+      .values({ ...values, slug, status: "borrador", createdBy: user.id })
+      .returning({ id: articles.id });
+    revalidatePath("/panel/articulos");
+    return { ok: true, id: row.id, savedAt: new Date().toISOString() };
+  } catch (err) {
+    console.error("autosaveDraft:", err);
+    return { ok: false, error: "No se pudo autoguardar." };
+  }
+}

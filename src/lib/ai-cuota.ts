@@ -73,8 +73,12 @@ const n = (v: number | { total?: number } | undefined) => (typeof v === "number"
 
 /** Se llama DESPUÉS de cada llamada al modelo con su `usage`. Nunca rompe la acción. */
 export async function registrarUsoIA(userId: string, usage: Uso): Promise<void> {
+  return registrarCostoIA(userId, estimateCostUsd(n(usage?.inputTokens), n(usage?.outputTokens)));
+}
+
+/** Suma un costo ya calculado en USD (p. ej. una imagen generada, que se cobra por unidad y no por tokens). */
+export async function registrarCostoIA(userId: string, costo: number): Promise<void> {
   try {
-    const costo = estimateCostUsd(n(usage?.inputTokens), n(usage?.outputTokens));
     if (!(costo > 0)) return;
     await db.execute(sql`
       insert into site_settings (key, value) values (${spendKey()}, jsonb_build_object(${userId}::text, ${costo}::numeric))

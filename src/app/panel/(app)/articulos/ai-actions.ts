@@ -1,12 +1,14 @@
 "use server";
 
-import { generateObject, generateText, type ToolSet } from "ai";
+import { generateImage, generateObject, generateText, type ToolSet } from "ai";
 import { z } from "zod";
 import { requirePermiso } from "@/lib/auth";
 import { EDITOR_ASSIST_SYSTEM } from "@/agents/prompts";
 import { focusTerms } from "@/lib/seo-audit";
-import { getAiModel, getGroundedAi } from "@/lib/ai-provider";
-import { registrarUsoIA, verificarCuotaIA } from "@/lib/ai-cuota";
+import { getAiModel, getGroundedAi, getImageAi } from "@/lib/ai-provider";
+import { subirImagenGenerada } from "@/app/panel/(app)/articulos/media-actions";
+import { PREFIJO_IMAGEN_IA } from "@/lib/ai-image";
+import { registrarCostoIA, registrarUsoIA, verificarCuotaIA } from "@/lib/ai-cuota";
 import { chartProblem, renderChartSvg, type ChartSpec } from "@/lib/chart-svg";
 
 
@@ -534,5 +536,76 @@ export async function searchNewsAbout(input: { query: string; section?: string }
     console.error("searchNewsAbout:", err);
     const detalle = err && typeof err === "object" && "message" in err ? String((err as Error).message) : "";
     return { ok: false, error: detalle ? `No se pudo buscar: ${detalle.slice(0, 220)}` : "El modelo no respondió." };
+  }
+}
+
+
+/* --------------------------------------------------------------------------
+ * Foto de portada generada con IA (realista, estilo fotograma de cine)
+ * -------------------------------------------------------------------------- */
+
+/** Costo estimado por imagen generada (USD); se descuenta de la cuota mensual de la persona. */
+const COSTO_IMAGEN_USD = 0.04;
+
+export type CoverImageResult =
+  | { ok: true; url: string; alt: string; scene: string }
+  | { ok: false; error: string };
+
+/**
+ * Genera la portada a partir del tema de la nota: primero el modelo de texto redacta la escena
+ * (fotográfica, sin texto, sin personas reales identificables) y luego el modelo de imagen la pinta
+ * en 16:9. Se sube al mismo almacenamiento que las fotos y se etiqueta como generada con IA.
+ */
+export async function generateCoverImage(input: {
+  title: string;
+  excerpt?: string;
+  section?: string;
+  /** Escena escrita por el periodista (opcional): manda sobre la que propondría el modelo. */
+  scene?: string;
+}): Promise<CoverImageResult> {
+  const user = await requirePermiso("articulos");
+  const title = input.title.trim();
+  if (title.length < 5 && !(input.scene ?? "").trim()) {
+    return { ok: false, error: "Escribe primero el título de la nota (o describe la escena) para generar la imagen." };
+  }
+  const imageModel = await getImageAi();
+  if (!imageModel) return { ok: false, error: "Falta la clave del modelo (Configuración → Asistente)." };
+  if (imageModel === "otro-proveedor") {
+    return { ok: false, error: "Las imágenes se generan con Gemini: elige Google (Gemini) en Configuración → Asistente." };
+  }
+  const text = await getAiModel();
+  try {
+    const cuota = await verificarCuotaIA(user.id);
+    if (!cuota.ok) return { ok: false, error: cuota.message };
+
+    let scene = (input.scene ?? "").trim();
+    if (!scene && text) {
+      const r = await generateText({
+        model: text,
+        system:
+          "Eres director de fotografía de un medio ganadero colombiano. Escribes UNA escena fotográfica concreta, en español, de 1-2 frases, que ilustre la noticia: ganadería, paisaje, animales, trabajadores vistos de espaldas o lejos, instalaciones, mercados, clima. Sin texto en la imagen. NUNCA retrates a una persona real identificable (políticos, empresarios, figuras públicas): usa personas anónimas de espaldas, siluetas o planos generales. Sin logotipos ni marcas.",
+        prompt: `TÍTULO: ${title}\n${input.excerpt ? `RESUMEN: ${input.excerpt.slice(0, 400)}\n` : ""}${input.section ? `SECCIÓN: ${input.section}\n` : ""}\nDescribe la escena.`,
+      });
+      await registrarUsoIA(user.id, r.usage);
+      scene = r.text.trim().replace(/^["«]|["»]$/g, "");
+    }
+    if (!scene) scene = `Paisaje ganadero colombiano relacionado con: ${title}`;
+
+    const prompt =
+      `Fotografía fotorrealista con estética de fotograma de cine: ${scene}. ` +
+      "Iluminación natural cinematográfica (luz dorada o contraluz suave), lente anamórfica de 35 mm, poca profundidad de campo, " +
+      "grano de película sutil, colores naturales y ricos, composición editorial amplia en formato horizontal 16:9. " +
+      "Sin texto, sin letras, sin logotipos, sin marcas de agua. Sin personas reales identificables.";
+
+    const { image } = await generateImage({ model: imageModel, prompt, aspectRatio: "16:9" });
+    await registrarCostoIA(user.id, COSTO_IMAGEN_USD);
+    const mime = image.mediaType === "image/jpeg" ? "image/jpeg" : image.mediaType === "image/webp" ? "image/webp" : "image/png";
+    const up = await subirImagenGenerada(image.uint8Array, mime);
+    if (!up.ok) return { ok: false, error: up.error };
+    return { ok: true, url: up.url, alt: `${PREFIJO_IMAGEN_IA} ${scene}`.slice(0, 300), scene };
+  } catch (err) {
+    console.error("generateCoverImage:", err);
+    const detalle = err && typeof err === "object" && "message" in err ? String((err as Error).message) : "";
+    return { ok: false, error: detalle ? `No se pudo generar la imagen: ${detalle.slice(0, 220)}` : "El modelo de imagen no respondió." };
   }
 }

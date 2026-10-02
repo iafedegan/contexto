@@ -84,3 +84,21 @@ export async function uploadMedia(formData: FormData): Promise<UploadResult> {
     kind: file.type.startsWith("video/") ? "video" : "imagen",
   };
 }
+
+/** Sube una imagen ya generada (bytes) al mismo bucket que las fotos del panel. */
+export async function subirImagenGenerada(bytes: Uint8Array, mime: "image/png" | "image/jpeg" | "image/webp"): Promise<UploadResult> {
+  await requirePermiso("articulos");
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!supabaseUrl || !serviceKey) {
+    return { ok: false, error: "Falta configurar SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY en el servidor." };
+  }
+  const name = `${randomUUID()}.${TIPOS[mime]}`;
+  const res = await fetch(`${supabaseUrl}/storage/v1/object/${BUCKET}/${name}`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${serviceKey}`, apikey: serviceKey, "Content-Type": mime, "x-upsert": "false" },
+    body: Buffer.from(bytes),
+  });
+  if (!res.ok) return { ok: false, error: `No se pudo subir la imagen a Supabase (${res.status}).` };
+  return { ok: true, url: `${supabaseUrl}/storage/v1/object/public/${BUCKET}/${name}`, kind: "imagen" };
+}

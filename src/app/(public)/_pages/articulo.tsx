@@ -20,6 +20,7 @@ import { getPublishedArticleBySlug, type FullArticle } from "@/lib/content";
 import { relatedContent } from "@/lib/search";
 import { articleMetadata, breadcrumbJsonLd, newsArticleJsonLd } from "@/lib/seo";
 import { formatDate } from "@/lib/utils";
+import { PREFIJO_IMAGEN_IA } from "@/lib/ai-image";
 
 /** Artículo — plantilla «Marfil & Burdeos». */
 export const revalidate = 3600;
@@ -182,6 +183,11 @@ export function ArticleDocument({
             />
           ) : (
             <CoverArt seed={a.slug} label={a.categoryName ?? a.title} className="text-[7rem]" />
+          )}
+          {a.coverImageAlt?.startsWith(PREFIJO_IMAGEN_IA) && (
+            <figcaption className="absolute bottom-2 right-2 z-[2] rounded-full bg-black/60 px-2.5 py-1 text-[0.6875rem] font-medium text-white/90 backdrop-blur-sm">
+              Imagen generada con IA
+            </figcaption>
           )}
         </figure>
           }

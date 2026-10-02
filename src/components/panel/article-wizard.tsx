@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -18,7 +18,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { saveArticle } from "@/app/panel/(app)/articulos/actions";
+import { autosaveDraft, saveArticle } from "@/app/panel/(app)/articulos/actions";
 import { uploadMedia } from "@/app/panel/(app)/articulos/media-actions";
 import {
   generateArticleDraft,
@@ -26,6 +26,7 @@ import {
   suggestTitlesAndContexts,
   suggestTopicIdeas,
   searchNewsAbout,
+  generateCoverImage,
   type TopicIdea,
   type NewsItem,
   generateChart,
@@ -175,6 +176,9 @@ export function ArticleWizard({
   const [newsError, setNewsError] = useState("");
   const [refs, setRefs] = useState<NewsItem[]>([]);
   const [searchingNews, startNews] = useTransition();
+  const [sceneTxt, setSceneTxt] = useState("");
+  const [imgError, setImgError] = useState("");
+  const [genImg, startImg] = useTransition();
   const [ideasFocus, setIdeasFocus] = useState("");
   const [searchingIdeas, startIdeas] = useTransition();
   const [pickedContext, setPickedContext] = useState<number | null>(null);
@@ -222,6 +226,59 @@ export function ArticleWizard({
       }),
     [title, excerpt, bodyHtml, metaTitle, metaDescription, tags, cover, coverAlt, authorId, authors],
   );
+  // Autoguardado: a cada cambio (con una pausa) y al cambiar de paso se guarda el borrador, sin salir del asistente.
+  const [savedId, setSavedId] = useState(initial?.id ?? "");
+  const [autoEstado, setAutoEstado] = useState<"idle" | "guardando" | "guardado" | "error" | "omitido">("idle");
+  const [autoHora, setAutoHora] = useState("");
+  const savedIdRef = useRef(initial?.id ?? "");
+  const enVuelo = useRef(false);
+  const pendiente = useRef(false);
+  const ultimaFirma = useRef("");
+  const snapshot = {
+    title, excerpt, body: bodyHtml, tags, categoryId, authorId,
+    coverImageUrl: cover, coverImageAlt: coverAlt, metaTitle, metaDescription,
+  };
+  const firma = JSON.stringify(snapshot);
+  const snapRef = useRef(snapshot);
+  snapRef.current = snapshot;
+  useEffect(() => {
+    if (title.trim().length < 5 || firma === ultimaFirma.current) return;
+    const t = setTimeout(async function guardar() {
+      if (enVuelo.current) {
+        pendiente.current = true;
+        return;
+      }
+      enVuelo.current = true;
+      setAutoEstado("guardando");
+      const enviado = JSON.stringify(snapRef.current);
+      try {
+        const res = await autosaveDraft({ id: savedIdRef.current || undefined, ...snapRef.current });
+        if (res.ok) {
+          ultimaFirma.current = enviado;
+          if (!savedIdRef.current) {
+            savedIdRef.current = res.id;
+            setSavedId(res.id);
+            // La dirección pasa a la de la nota: recargar la página retoma este borrador.
+            window.history.replaceState(null, "", `/panel/articulos/${res.id}?modo=${mode}`);
+          }
+          setAutoHora(new Intl.DateTimeFormat("es-CO", { hour: "numeric", minute: "2-digit", hour12: true, timeZone: "America/Bogota" }).format(new Date(res.savedAt)));
+          setAutoEstado("guardado");
+        } else {
+          setAutoEstado(res.skipped ? "omitido" : "error");
+        }
+      } catch {
+        setAutoEstado("error");
+      } finally {
+        enVuelo.current = false;
+        if (pendiente.current) {
+          pendiente.current = false;
+          void guardar();
+        }
+      }
+    }, 1500);
+    return () => clearTimeout(t);
+  }, [firma, title, mode]);
+
   // Recordar el último paso por artículo (en este navegador) para retomar
   // donde se quedó al volver a abrirlo desde la lista.
   const stepKey = initial ? `cg:paso:${initial.id}` : null;
@@ -349,6 +406,21 @@ export function ArticleWizard({
     setChartError("");
   }
 
+  function makeCover() {
+    setImgError("");
+    startImg(async () => {
+      const res = await generateCoverImage({
+        title,
+        excerpt,
+        section: categories.find((c) => c.id === categoryId)?.name,
+        scene: sceneTxt,
+      });
+      if (!res.ok) return setImgError(res.error);
+      setCover(res.url);
+      setCoverAlt(res.alt);
+    });
+  }
+
   function findNews() {
     setNewsError("");
     startNews(async () => {
@@ -457,7 +529,7 @@ export function ArticleWizard({
       className="-my-6 flex h-[calc(100dvh-var(--panel-header-h,61px)-5.75rem)] min-h-[30rem] flex-col gap-3"
     >
       {/* Todo viaja oculto: el formulario solo se envía desde la vista previa. */}
-      <input type="hidden" name="id" value={initial?.id ?? ""} />
+      <input type="hidden" name="id" value={savedId} />
       <input type="hidden" name="desde" value={mode} />
       <input type="hidden" name="title" value={title.trim()} />
       <input type="hidden" name="excerpt" value={excerpt.trim()} />
@@ -503,6 +575,13 @@ export function ArticleWizard({
             ))}
           </ol>
           <span className="ml-auto flex items-center gap-3 text-xs">
+            <span role="status" aria-live="polite" className="text-[var(--fg-muted)]">
+              {autoEstado === "guardando" && "Guardando…"}
+              {autoEstado === "guardado" && `✓ Borrador guardado · ${autoHora}`}
+              {autoEstado === "error" && <span className="text-[var(--danger,#b4442e)]">No se pudo autoguardar</span>}
+              {autoEstado === "omitido" && "Nota publicada: guarda con los botones"}
+              {autoEstado === "idle" && title.trim().length < 5 && "Se guarda solo desde que escribas el título"}
+            </span>
             {initial ? (
               <Link href={`/panel/articulos/${initial.id}`} className="lx-link">
                 Editor completo
@@ -990,6 +1069,26 @@ export function ArticleWizard({
                   className={`${input} text-sm`}
                 />
               </div>
+            </div>
+            <div className="mt-5 rounded-[var(--radius)] border border-dashed border-[var(--border-strong)] bg-[var(--surface-2)]/50 p-4">
+              <p className="text-sm font-semibold">¿Sin foto? Genérala con IA</p>
+              <p className="mt-1 text-xs text-[var(--fg-muted)]">
+                Crea una imagen realista, con estética de fotograma de cine (16:9), a partir del título y el resumen. No retrata personas reales. Se publica rotulada «imagen generada con IA»; si la nota trata de un hecho real, es mejor usar una foto propia o de agencia.
+              </p>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <input
+                  value={sceneTxt}
+                  onChange={(e) => setSceneTxt(e.target.value)}
+                  placeholder="Opcional: describe la escena (si lo dejas vacío, la IA la propone)"
+                  className={`${input} min-w-0 flex-1 !py-2 text-sm`}
+                />
+                <button type="button" onClick={makeCover} disabled={genImg || uploading} className="lx-btn">
+                  {genImg ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
+                  {cover ? "Generar otra" : "Generar foto con IA"}
+                </button>
+              </div>
+              {genImg && <p role="status" className="mt-3 text-xs text-[var(--fg-muted)]">Generando la imagen… puede tardar unos 20 segundos.</p>}
+              {imgError && <p role="alert" className="mt-3 text-sm text-[var(--danger,#b4442e)]">{imgError}</p>}
             </div>
           </Step>
         )}

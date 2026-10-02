@@ -99,3 +99,15 @@ export async function getGroundedAi() {
   const google = createGoogleGenerativeAI({ apiKey: key });
   return { model: google(settings.chartModel || settings.model), tools: { google_search: google.tools.googleSearch({}) } };
 }
+
+/**
+ * Modelo de imagen (Gemini «nano banana»). Solo con el proveedor Google: Anthropic no genera imágenes.
+ * `null` = no hay clave; `"otro-proveedor"` = hay clave pero de otro proveedor.
+ */
+export async function getImageAi() {
+  const settings = await readSettings();
+  const { key } = await resolveKey(settings);
+  if (!key) return null;
+  if (settings.provider !== "google") return "otro-proveedor" as const;
+  return createGoogleGenerativeAI({ apiKey: key }).image("gemini-2.5-flash-image");
+}
