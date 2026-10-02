@@ -21,10 +21,14 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "no autorizado" }, { status: 401 });
   }
 
-  const marketData = await syncMarketData().catch((e) => {
-    console.error("publish-scheduled: falló la sincronización de indicadores", e);
-    return null;
-  });
+  // `?solo=programados`: lo llama un programador externo cada minuto (Supabase pg_cron); no debe tocar las APIs de indicadores.
+  const soloProgramados = new URL(req.url).searchParams.get("solo") === "programados";
+  const marketData = soloProgramados
+    ? null
+    : await syncMarketData().catch((e) => {
+        console.error("publish-scheduled: falló la sincronización de indicadores", e);
+        return null;
+      });
 
   const due = await db
     .select({

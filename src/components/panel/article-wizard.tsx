@@ -6,6 +6,7 @@ import {
   ArrowLeft,
   ArrowRight,
   BarChart3,
+  CalendarClock,
   Check,
   Eye,
   ImagePlus,
@@ -184,6 +185,8 @@ export function ArticleWizard({
   const [refs, setRefs] = useState<NewsItem[]>([]);
   const [newsFiltro, setNewsFiltro] = useState<"todo" | NewsItem["type"]>("todo");
   const [searchingNews, startNews] = useTransition();
+  const [progAbierto, setProgAbierto] = useState(false);
+  const [progFecha, setProgFecha] = useState("");
   const [material, setMaterial] = useState<Material[]>([]);
   const [audioError, setAudioError] = useState("");
   const [audioBusy, startAudio] = useTransition();
@@ -272,8 +275,6 @@ export function ArticleWizard({
           if (!savedIdRef.current) {
             savedIdRef.current = res.id;
             setSavedId(res.id);
-            // La dirección pasa a la de la nota: recargar la página retoma este borrador.
-            window.history.replaceState(null, "", `/panel/articulos/${res.id}?modo=${mode}`);
           }
           setAutoHora(new Intl.DateTimeFormat("es-CO", { hour: "numeric", minute: "2-digit", hour12: true, timeZone: "America/Bogota" }).format(new Date(res.savedAt)));
           setAutoEstado("guardado");
@@ -419,6 +420,22 @@ export function ArticleWizard({
     setChart(null);
     setChartTopic("");
     setChartError("");
+  }
+
+  /** Hora de Colombia (UTC-5, sin horario de verano) como «YYYY-MM-DDTHH:mm» para el campo de fecha. */
+  function presetProgramacion(tipo: "lunes" | "manana-am" | "manana-pm") {
+    const ahora = new Date(Date.now() - 5 * 3600_000); // se leen los campos UTC como hora de pared de Bogotá
+    const base = new Date(ahora);
+    let hora = 20;
+    if (tipo === "lunes") {
+      let dias = (1 - ahora.getUTCDay() + 7) % 7;
+      if (dias === 0 && ahora.getUTCHours() >= 20) dias = 7; // hoy es lunes y ya pasaron las 8 p. m.
+      base.setUTCDate(base.getUTCDate() + dias);
+    } else {
+      base.setUTCDate(base.getUTCDate() + 1);
+      hora = tipo === "manana-am" ? 7 : 20;
+    }
+    setProgFecha(`${base.toISOString().slice(0, 10)}T${String(hora).padStart(2, "0")}:00`);
   }
 
   function subirEntrevista(f: File) {
@@ -1321,8 +1338,41 @@ export function ArticleWizard({
           <div className="flex flex-wrap items-center justify-end gap-2">
             {savedAs && (
               <span className="text-sm font-medium text-[#16a34a]">
-                ✓ {savedAs === "publicar" ? "Publicado" : savedAs === "revision" ? "Enviado a revisión" : "Guardado"}
+                ✓ {savedAs === "publicar" ? "Publicado" : savedAs === "programar" ? "Programado" : savedAs === "revision" ? "Enviado a revisión" : "Guardado"}
               </span>
+            )}
+            {canPublish && (
+              <div className="relative">
+                <input type="hidden" name="programarPara" value={progFecha} />
+                <button type="button" onClick={() => setProgAbierto((v) => !v)} aria-expanded={progAbierto} className="lx-btn lx-btn-ghost">
+                  <CalendarClock size={15} /> Programar
+                </button>
+                {progAbierto && (
+                  <div className="absolute bottom-full right-0 z-30 mb-2 w-[min(25rem,calc(100vw-2rem))] rounded-[var(--radius-lg)] border border-[var(--border-strong)] bg-[var(--bg-2)] p-4 text-left shadow-[var(--shadow-hover)]">
+                    <p className="text-sm font-semibold">Programar la publicación</p>
+                    <p className="mt-1 text-xs text-[var(--fg-muted)]">La nota queda guardada con todo (foto, gráficas, fuentes) y se publica sola a la hora elegida. Hora de Colombia.</p>
+                    <div className="mt-3 flex flex-wrap gap-1.5">
+                      <button type="button" onClick={() => presetProgramacion("lunes")} className="rounded-full border border-[var(--border)] px-3 py-1 text-xs font-medium hover:border-[var(--accent)]">Próximo lunes · 8:00 p. m.</button>
+                      <button type="button" onClick={() => presetProgramacion("manana-am")} className="rounded-full border border-[var(--border)] px-3 py-1 text-xs font-medium hover:border-[var(--accent)]">Mañana · 7:00 a. m.</button>
+                      <button type="button" onClick={() => presetProgramacion("manana-pm")} className="rounded-full border border-[var(--border)] px-3 py-1 text-xs font-medium hover:border-[var(--accent)]">Mañana · 8:00 p. m.</button>
+                    </div>
+                    <input type="datetime-local" value={progFecha} onChange={(e) => setProgFecha(e.target.value)} aria-label="Fecha y hora de publicación" className={`${input} mt-3 text-sm`} />
+                    <ul className="mt-3 flex flex-col gap-1 text-xs">
+                      {[
+                        [Boolean(cover), "Foto de portada"],
+                        [bodyHtml.includes("[[GRAFICA"), "Gráfica con datos (si la nota tiene cifras)"],
+                        [Boolean(authorId), "Firma (autor)"],
+                        [audit.score >= 75, `Puntuación SEO ≥ 75 (ahora ${audit.score})`],
+                      ].map(([ok, txt]) => (
+                        <li key={String(txt)} className={ok ? "text-[#16a34a]" : "text-[var(--fg-muted)]"}>{ok ? "✓" : "○"} {txt as string}</li>
+                      ))}
+                    </ul>
+                    <button type="submit" name="intent" value="programar" disabled={!progFecha} className="lx-btn mt-3 w-full justify-center disabled:opacity-50">
+                      <CalendarClock size={15} /> Programar para {progFecha ? progFecha.replace("T", " · ") : "…"}
+                    </button>
+                  </div>
+                )}
+              </div>
             )}
             <button type="submit" name="intent" value="borrador" className="lx-btn lx-btn-ghost">
               <Save size={15} /> Guardar borrador

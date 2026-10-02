@@ -106,6 +106,12 @@ export async function saveArticle(formData: FormData) {
   const intent = String(formData.get("intent") ?? "");
   if (intent === "publicar") await publishArticle(articleId);
   else if (intent === "revision") await submitForReview(articleId);
+  else if (intent === "programar") {
+    // «YYYY-MM-DDTHH:mm» llega en hora de Colombia (UTC-5, sin horario de verano).
+    const v = String(formData.get("programarPara") ?? "");
+    if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(v)) throw new Error("Elige la fecha y la hora de publicación.");
+    await scheduleArticle(articleId, new Date(`${v}:00-05:00`).toISOString());
+  }
 
   // Desde el asistente se vuelve al asistente, en su vista previa.
   const desde = String(formData.get("desde") ?? "");
