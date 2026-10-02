@@ -1,5 +1,4 @@
-import { localePath, t, type Locale } from "@/lib/i18n";
-import Link from "next/link";
+import { t, type Locale } from "@/lib/i18n";
 import {
   ClasicoTemplate,
   CompactoTemplate,
@@ -12,7 +11,6 @@ import { FeatureStrip } from "@/components/feature-strip";
 import { AdsBanner } from "@/components/ads-banner";
 import { CardSlugsProvider } from "@/components/home/card-styles";
 import { blockStylesCss } from "@/lib/home-style";
-import { ToroBot } from "@/components/toro-bot";
 import { SiteSidebar } from "@/components/site-sidebar";
 import { SiteShell } from "@/components/site-shell";
 import { getHomeLayoutConfig, getHomepageArticles } from "@/lib/content";
@@ -164,37 +162,6 @@ async function HomePage({ locale }: { locale: Locale }) {
 
       <AdsBanner zone="home_bottom" className="mx-auto mt-14" />
 
-      {/* Llamada al asistente, común a todas las plantillas: un toro de caricatura animado que «invita» a preguntarle. */}
-      <section className="lx-card lx-shine relative mt-14 overflow-hidden px-5 py-10 sm:mt-20 sm:px-10 sm:py-12">
-        <div className="lx-inlay absolute inset-0" />
-        <div className="relative grid grid-cols-1 items-center gap-8 md:grid-cols-[17rem_minmax(0,1fr)] md:gap-12">
-          <ToroBot
-            label={locale === "en" ? "Cartoon bull, the archive assistant" : "Toro de caricatura, el asistente del archivo"}
-            questions={
-              locale === "en"
-                ? ["What has the price of fattened steers done this year?", "What did you publish about El Niño and cattle?", "Which rules apply to cattle traceability?"]
-                : ["¿Cómo ha cambiado el precio del novillo gordo este año?", "¿Qué han publicado sobre El Niño y la ganadería?", "¿Qué normas hay sobre trazabilidad del ganado?"]
-            }
-          />
-          <div className="text-center md:text-left">
-            <p className="lx-kicker text-[var(--accent)]">{t(locale, "home.archiveKicker")}</p>
-            <h2 className="lx-display mt-3 max-w-2xl text-3xl font-semibold leading-tight md:text-4xl">
-              {t(locale, "home.ctaTitle")}
-            </h2>
-            <p className="mt-4 max-w-xl text-sm text-[var(--fg-muted)] md:text-base">
-              {t(locale, "home.ctaText")}
-            </p>
-            <div className="mt-7 flex flex-wrap justify-center gap-3 md:justify-start">
-              <Link href={localePath(locale, "/asistente")} className="lx-btn">
-                {t(locale, "home.ctaPrimary")}
-              </Link>
-              <Link href={localePath(locale, "/buscar")} className="lx-btn lx-btn-ghost">
-                {t(locale, "home.ctaSecondary")}
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
     </SiteShell>
   );
 }

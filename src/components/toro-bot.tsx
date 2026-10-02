@@ -3,16 +3,16 @@
  * respira y «sopla» vaho; en el globo rota por ejemplos de preguntas. Con `prefers-reduced-motion`
  * queda quieto y muestra solo la primera pregunta.
  */
-export function ToroBot({ questions, label }: { questions: string[]; label: string }) {
+export function ToroBot({ questions = [], label, bubble = true }: { questions?: string[]; label: string; bubble?: boolean }) {
   return (
-    <div className="relative mx-auto w-full max-w-[17rem] select-none" role="img" aria-label={label}>
+    <div className="relative mx-auto w-full select-none" role="img" aria-label={label}>
       {/* Globo de diálogo */}
-      <div className="relative mx-auto mb-3 grid min-h-[3.4rem] w-[92%] place-items-center rounded-2xl border border-[var(--border-strong)] bg-[var(--bg-2)] px-3 py-2 text-center text-[0.8rem] font-medium leading-snug text-[var(--fg)] shadow-[var(--shadow)]">
+      {bubble && <div className="relative mx-auto mb-3 grid min-h-[3.4rem] w-[92%] place-items-center rounded-2xl border border-[var(--border-strong)] bg-[var(--bg-2)] px-3 py-2 text-center text-[0.8rem] font-medium leading-snug text-[var(--fg)] shadow-[var(--shadow)]">
         {questions.slice(0, 3).map((q) => (
           <span key={q} className="toro-q col-start-1 row-start-1">{q}</span>
         ))}
         <span aria-hidden className="absolute -bottom-2 left-1/2 size-3.5 -translate-x-1/2 rotate-45 border-b border-r border-[var(--border-strong)] bg-[var(--bg-2)]" />
-      </div>
+      </div>}
 
       <svg viewBox="0 0 240 230" className="block h-auto w-full overflow-visible" aria-hidden>
         <ellipse cx="120" cy="222" rx="70" ry="6" fill="#000" opacity="0.18" />

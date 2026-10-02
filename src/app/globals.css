@@ -1586,3 +1586,9 @@ html[data-cg-overlay] .cg-consent { display: none; }
   .toro-q { animation: none; opacity: 0; }
   .toro-q:first-child { opacity: 1; }
 }
+
+.toro-float { animation: toro-float 4.5s ease-in-out infinite; filter: drop-shadow(0 8px 10px rgba(0, 0, 0, 0.28)); }
+@keyframes toro-float { 0%, 100% { translate: 0 0; } 50% { translate: 0 -8px; } }
+@media (prefers-reduced-motion: reduce) { .toro-float { animation: none; } }
+/* El aviso de ubicación ocupa el borde inferior en el teléfono: el toro se sube mientras esté visible. */
+@media (max-width: 639px) { body:has(.cg-consent) .toro-wrap { bottom: 13rem; } }
