@@ -37,6 +37,9 @@ export const AUDIT_GROUPS: Record<AuditGroupId, string> = {
  * Criterios de Google («contenido útil, fiable y pensado para las personas»,
  * políticas de Discover y spam): autoría visible, fuentes y evidencia, informe
  * original con sustancia, titulares sin sensacionalismo, imagen grande ≥ 1200 px.
+ * Guía de Google sobre búsqueda con IA (AI Overviews / modo IA): es SEO normal; contenido único con perspectiva propia,
+ * útil y pensado para personas, párrafos claros, encabezados y HTML semántico, imágenes y vídeo relevantes. NO hay una
+ * longitud de página obligatoria ni hace falta trocear el texto, reescribirlo «para la IA» ni crear archivos especiales.
  * `CRITICAL`: si falla uno, la nota no puede pasar de «Bueno» aunque lo demás esté perfecto,
  * porque son lo que más pesa en la evaluación de calidad (E-E-A-T) y no se compensa con meta etiquetas.
  */
@@ -47,10 +50,10 @@ const GROUP_OF: Record<string, AuditGroupId> = {
   portada: "discover", "portada-alt": "discover", alt: "discover",
   intertitulos: "lectura", parrafos: "lectura", frases: "lectura", etiquetas: "lectura",
 };
-const CRITICAL = new Set(["firma", "fuentes", "cuerpo", "pendientes", "titulo-limpio"]);
+const CRITICAL = new Set(["firma", "fuentes", "pendientes", "titulo-limpio"]);
 /** Peso por criterio: el contenido y la confianza pesan más que las meta etiquetas. */
 const WEIGHT: Record<string, number> = {
-  firma: 4, fuentes: 4, cuerpo: 4, pendientes: 4, "titulo-limpio": 3, "tema-titulo": 2, "tema-entrada": 2, enlaces: 1,
+  firma: 4, fuentes: 4, cuerpo: 2, pendientes: 4, "titulo-limpio": 3, "tema-titulo": 1, "tema-entrada": 1, enlaces: 1,
   "title-len": 1, "desc-len": 1, "desc-prosa": 1, "desc-distinta": 1, excerpt: 1,
   portada: 3, "portada-alt": 1, alt: 1,
   intertitulos: 1, parrafos: 1, frases: 1, etiquetas: 1,
@@ -158,10 +161,10 @@ export function auditArticle(input: AuditInput): AuditResult {
   // --- Estructura del texto -------------------------------------------------
   add(
     "cuerpo",
-    words >= 300,
-    `Cuerpo ${words} palabras (mínimo recomendado 300)`,
+    words >= 150,
+    `Cuerpo con sustancia: ${words} palabras (referencia mínima 150)`,
     2,
-    "Google busca informe original con sustancia: una nota muy corta rara vez responde la necesidad del lector.",
+    "Google no exige una longitud: pide contenido original que deje al lector satisfecho. Por debajo de ~150 palabras rara vez lo logra.",
   );
   add(
     "intertitulos",
@@ -192,9 +195,9 @@ export function auditArticle(input: AuditInput): AuditResult {
   if (terms.length > 0) {
     const inTitle = terms.some((t) => norm(title).includes(t));
     const inFirst = terms.some((t) => firstParagraph.includes(t));
-    add("tema-titulo", inTitle, "El tema aparece en el título", 2,
+    add("tema-titulo", inTitle, "El tema central se reconoce en el título", 1,
       `Términos del tema: ${terms.join(", ")}`);
-    add("tema-entrada", inFirst, "El tema aparece en el primer párrafo", 1);
+    add("tema-entrada", inFirst, "El tema central se reconoce en el primer párrafo", 1, "Google entiende sinónimos: no repitas la palabra, deja claro de qué trata.", true);
   }
 
   // --- Higiene --------------------------------------------------------------
