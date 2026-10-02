@@ -1563,3 +1563,26 @@ html[data-cg-overlay] .cg-consent { display: none; }
     min-height: 2.75rem;
   }
 }
+
+/* ===== Toro asistente (caricatura animada, SVG + CSS puro) ===== */
+.toro-bob { animation: toro-bob 3.6s ease-in-out infinite; transform-origin: 50% 90%; }
+.toro-blink { animation: toro-blink 4.2s infinite; transform-box: fill-box; transform-origin: 50% 50%; }
+.toro-ear-l { animation: toro-ear 5s ease-in-out infinite; transform-box: fill-box; transform-origin: 90% 60%; }
+.toro-ear-r { animation: toro-ear 5s ease-in-out 1.4s infinite reverse; transform-box: fill-box; transform-origin: 10% 60%; }
+.toro-steam { animation: toro-steam 3.6s ease-out infinite; transform-box: fill-box; transform-origin: 50% 100%; opacity: 0; }
+.toro-steam.b { animation-delay: 0.25s; }
+.toro-ring { animation: toro-ring 3.6s ease-in-out infinite; transform-box: fill-box; transform-origin: 50% 0%; }
+.toro-q { opacity: 0; animation: toro-q 15s infinite; }
+.toro-q:nth-child(2) { animation-delay: 5s; }
+.toro-q:nth-child(3) { animation-delay: 10s; }
+@keyframes toro-bob { 0%, 100% { transform: translateY(0) rotate(-1.5deg); } 50% { transform: translateY(-6px) rotate(1.5deg); } }
+@keyframes toro-blink { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(0.08); } }
+@keyframes toro-ear { 0%, 80%, 100% { transform: rotate(0); } 86% { transform: rotate(-14deg); } 92% { transform: rotate(6deg); } }
+@keyframes toro-steam { 0%, 55% { opacity: 0; transform: translateY(2px) scale(0.5); } 70% { opacity: 0.8; } 100% { opacity: 0; transform: translateY(-14px) scale(1.2); } }
+@keyframes toro-ring { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(8deg); } }
+@keyframes toro-q { 0% { opacity: 0; transform: translateY(6px); } 4%, 30% { opacity: 1; transform: none; } 34%, 100% { opacity: 0; transform: translateY(-4px); } }
+@media (prefers-reduced-motion: reduce) {
+  .toro-bob, .toro-blink, .toro-ear-l, .toro-ear-r, .toro-steam, .toro-ring { animation: none; }
+  .toro-q { animation: none; opacity: 0; }
+  .toro-q:first-child { opacity: 1; }
+}
