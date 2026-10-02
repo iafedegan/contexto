@@ -42,6 +42,7 @@ import {
   type DraftPart,
   type TitleContextOptions,
 } from "@/app/panel/(app)/articulos/ai-actions";
+import { ChipPicker } from "@/components/panel/chip-picker";
 import type { Material } from "@/lib/material-types";
 import { SiteArticlePreview, type SitePreviewChrome } from "@/components/panel/site-article-preview";
 import { decodeSpec, encodeSpec, renderChartSvg, svgDataUri } from "@/lib/chart-svg";
@@ -323,6 +324,17 @@ export function ArticleWizard({
   }, [stepKey, step, STEPS]);
 
   const categoryName = categories.find((c) => c.id === categoryId)?.name;
+  // Secciones cuyo nombre aparece en el título, el resumen o las palabras clave: se destacan como «Sugerida».
+  const seccionesSugeridas = useMemo(() => {
+    const t = `${title} ${excerpt} ${tags.join(" ")}`.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
+    return categories
+      .filter((c) => {
+        const n = c.name.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
+        // Coincide si alguna palabra de la sección (raíz de 5+ letras) aparece en el texto: «silvopastoril» ⇢ «silvopastoriles».
+        return n.split(/\s+/).some((w) => w.length >= 5 && t.includes(w.slice(0, Math.max(5, w.length - 2))));
+      })
+      .map((c) => c.id);
+  }, [categories, title, excerpt, tags]);
   const authorName = authors.find((a) => a.id === authorId)?.name;
 
   // Qué impide avanzar desde cada paso (solo título y resumen son obligatorios).
@@ -1129,29 +1141,9 @@ export function ArticleWizard({
 
         {current.key === "seccion" && (
           <Step title="Sección y autor" hint="Dónde se publica y quién firma. Puedes dejarlo para después.">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <label className="flex flex-col gap-1.5">
-                <span className="lx-kicker text-[var(--fg-muted)]">Sección</span>
-                <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} className={input}>
-                  <option value="">— Sin sección —</option>
-                  {categories.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="flex flex-col gap-1.5">
-                <span className="lx-kicker text-[var(--fg-muted)]">Autor</span>
-                <select value={authorId} onChange={(e) => setAuthorId(e.target.value)} className={input}>
-                  <option value="">— Sin autor —</option>
-                  {authors.map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {a.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
+            <div className="flex flex-col gap-7">
+              <ChipPicker label="Sección" options={categories} value={categoryId} onChange={setCategoryId} vacio="Sin sección" sugeridas={seccionesSugeridas} />
+              <ChipPicker label="Autor" options={authors} value={authorId} onChange={setAuthorId} vacio="Sin autor" avatar buscar={false} />
             </div>
           </Step>
         )}
