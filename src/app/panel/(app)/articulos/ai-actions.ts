@@ -357,3 +357,72 @@ export async function generateChart(input: { topic: string; section?: string }):
     return { ok: false, error: detalle ? `No se pudo generar la gráfica: ${detalle.slice(0, 220)}` : "El modelo no respondió." };
   }
 }
+
+/* --------------------------------------------------------------------------
+ * Temas sugeridos por la IA a partir de la tendencia en internet
+ * -------------------------------------------------------------------------- */
+
+const topicIdeasSchema = z.object({
+  ideas: z
+    .array(
+      z.object({
+        title: z.string().min(8).max(140),
+        scope: z.enum(["local", "internacional"]),
+        angle: z.string().min(20).max(300),
+        why: z.string().min(15).max(240),
+      }),
+    )
+    .min(3)
+    .max(8),
+});
+
+export type TopicIdea = z.infer<typeof topicIdeasSchema>["ideas"][number];
+
+export type TopicIdeasResult =
+  | { ok: true; ideas: TopicIdea[]; sources: { title: string; url: string }[] }
+  | { ok: false; error: string };
+
+/**
+ * «Aconséjame temas»: busca en la web qué se está moviendo en el sector ganadero
+ * (Colombia y el mundo) y propone temas con su porqué. Solo con fuentes citables;
+ * el periodista elige uno y sigue el flujo normal (nada se publica sin revisión).
+ */
+export async function suggestTopicIdeas(input: { section?: string; focus?: string }): Promise<TopicIdeasResult> {
+  const user = await requirePermiso("articulos");
+  const ai = await getGroundedAi();
+  if (!ai) return { ok: false, error: "Falta la clave del modelo (Configuración → Asistente)." };
+  if (ai === "otro-proveedor") {
+    return { ok: false, error: "Buscar tendencias en internet usa Gemini: elige Google (Gemini) en Configuración → Asistente." };
+  }
+  try {
+    const cuota = await verificarCuotaIA(user.id);
+    if (!cuota.ok) return { ok: false, error: cuota.message };
+    const hoy = new Intl.DateTimeFormat("es-CO", { dateStyle: "long", timeZone: "America/Bogota" }).format(new Date());
+    const found = await generateText({
+      model: ai.model,
+      tools: ai.tools as unknown as ToolSet,
+      system:
+        "Eres editor de un medio ganadero colombiano. Investiga en la web LO QUE ESTÁ SIENDO NOTICIA O TENDENCIA ahora: (a) en Colombia y sus regiones ganaderas (precios, sanidad animal, política pública, clima, exportaciones, FEDEGAN, ICA, Ministerio de Agricultura) y (b) a nivel internacional (mercados de carne y leche, comercio, enfermedades, tecnología, sostenibilidad, FAO, USDA). Reporta hechos con fecha y fuente; no inventes.",
+      prompt: `Hoy es ${hoy}.${input.section ? ` Sección de interés: ${input.section}.` : ""}${input.focus?.trim() ? ` Enfoque pedido por el periodista: ${input.focus.trim()}.` : ""}\n\nBusca las tendencias y noticias más recientes (últimas semanas) del sector ganadero local e internacional y resume de 8 a 12 temas candidatos con el hecho, la fecha y la fuente.`,
+    });
+    await registrarUsoIA(user.id, found.usage);
+    const sources = found.sources
+      .filter((s) => s.sourceType === "url")
+      .map((s) => ({ title: (s.title || new URL(s.url).hostname).slice(0, 120), url: s.url }))
+      .filter((s, i, a) => a.findIndex((x) => x.url === s.url) === i)
+      .slice(0, 10);
+    if (!sources.length) return { ok: false, error: "La búsqueda no devolvió fuentes citables, así que no se proponen temas." };
+
+    const { object, usage } = await generateObject({
+      model: ai.model,
+      schema: topicIdeasSchema,
+      prompt: `Con SOLO lo que dice el texto, propone de 5 a 8 temas de nota para un medio ganadero colombiano: mezcla temas LOCALES (Colombia) e INTERNACIONALES. Para cada uno: title = titular tentativo claro (máx. 110 caracteres), scope, angle = el enfoque periodístico concreto (qué contar y a quién le importa), why = por qué es tendencia ahora (hecho + fecha). No inventes cifras ni hechos que no estén en el texto.\n\nTEXTO:\n${found.text.slice(0, 7000)}`,
+    });
+    await registrarUsoIA(user.id, usage);
+    return { ok: true, ideas: object.ideas, sources };
+  } catch (err) {
+    console.error("suggestTopicIdeas:", err);
+    const detalle = err && typeof err === "object" && "message" in err ? String((err as Error).message) : "";
+    return { ok: false, error: detalle ? `No se pudieron buscar temas: ${detalle.slice(0, 220)}` : "El modelo no respondió." };
+  }
+}

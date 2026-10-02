@@ -23,6 +23,8 @@ import {
   generateArticleDraft,
   regenerateDraftPart,
   suggestTitlesAndContexts,
+  suggestTopicIdeas,
+  type TopicIdea,
   generateChart,
   type ChartResult,
   type DraftPart,
@@ -161,6 +163,10 @@ export function ArticleWizard({
   // Tema -> la IA propone títulos y contextos -> el redactor elige y genera.
   const [topic, setTopic] = useState("");
   const [options, setOptions] = useState<TitleContextOptions | null>(null);
+  const [ideas, setIdeas] = useState<{ ideas: TopicIdea[]; sources: { title: string; url: string }[] } | null>(null);
+  const [ideasError, setIdeasError] = useState("");
+  const [ideasFocus, setIdeasFocus] = useState("");
+  const [searchingIdeas, startIdeas] = useTransition();
   const [pickedContext, setPickedContext] = useState<number | null>(null);
   // Gráfica con datos reales (Gemini + búsqueda en Google).
   const [chartTopic, setChartTopic] = useState("");
@@ -327,6 +333,18 @@ export function ArticleWizard({
     setChart(null);
     setChartTopic("");
     setChartError("");
+  }
+
+  function findIdeas() {
+    setIdeasError("");
+    startIdeas(async () => {
+      const res = await suggestTopicIdeas({
+        section: categories.find((c) => c.id === categoryId)?.name,
+        focus: ideasFocus,
+      });
+      if (!res.ok) return setIdeasError(res.error);
+      setIdeas({ ideas: res.ideas, sources: res.sources });
+    });
   }
 
   function suggest() {
@@ -523,6 +541,56 @@ export function ArticleWizard({
             title="Tema, título y contexto"
             hint="Cuéntale a la IA el tema. Te propone varios títulos y varios enfoques; eliges los que te sirvan (puedes editarlos) y con eso redacta un borrador que revisarás paso a paso."
           >
+            <div className="rounded-[var(--radius)] border border-dashed border-[var(--border-strong)] bg-[var(--surface-2)]/50 p-4">
+              <p className="text-sm font-semibold">¿No sabes de qué escribir?</p>
+              <p className="mt-1 text-xs text-[var(--fg-muted)]">
+                La IA busca en internet qué es tendencia en el sector ganadero, en Colombia y en el mundo, y te propone temas con sus fuentes.
+              </p>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <input
+                  value={ideasFocus}
+                  onChange={(e) => setIdeasFocus(e.target.value)}
+                  placeholder="Opcional: enfoque (p. ej. leche, exportaciones, sanidad)"
+                  className={`${input} min-w-0 flex-1 !py-2 text-sm`}
+                />
+                <button type="button" onClick={findIdeas} disabled={searchingIdeas || generating} className="lx-btn">
+                  {searchingIdeas ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
+                  {ideas ? "Buscar otros temas" : "Aconséjame temas"}
+                </button>
+              </div>
+              {searchingIdeas && <p role="status" className="mt-3 text-xs text-[var(--fg-muted)]">Buscando tendencias en internet… puede tardar hasta un minuto.</p>}
+              {ideasError && <p role="alert" className="mt-3 text-sm text-[var(--danger,#b4442e)]">{ideasError}</p>}
+              {ideas && (
+                <div className="mt-4 flex flex-col gap-2">
+                  {ideas.ideas.map((i) => (
+                    <button
+                      key={i.title}
+                      type="button"
+                      onClick={() => {
+                        setTopic(`${i.title}. ${i.angle}`);
+                        setOptions(null);
+                      }}
+                      className="rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] p-3 text-left transition hover:border-[var(--accent)]"
+                    >
+                      <span className="flex flex-wrap items-center gap-2">
+                        <span className={`rounded-full px-2 py-0.5 text-[0.6875rem] font-semibold uppercase tracking-wide ${i.scope === "local" ? "bg-[var(--accent)]/12 text-[var(--accent)]" : "bg-[var(--accent-2)]/15 text-[var(--accent-2)]"}`}>
+                          {i.scope === "local" ? "Colombia" : "Internacional"}
+                        </span>
+                        <span className="font-semibold">{i.title}</span>
+                      </span>
+                      <span className="mt-1 block text-sm">{i.angle}</span>
+                      <span className="mt-1 block text-xs text-[var(--fg-muted)]">Tendencia: {i.why}</span>
+                    </button>
+                  ))}
+                  <p className="text-xs text-[var(--fg-muted)]">Pulsa un tema para usarlo; luego «Proponer títulos y contextos». Fuentes consultadas:</p>
+                  <ul className="flex flex-wrap gap-x-3 gap-y-1 text-xs">
+                    {ideas.sources.map((x) => (
+                      <li key={x.url}><a href={x.url} target="_blank" rel="noopener noreferrer" className="lx-link">{x.title}</a></li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
             <textarea
               autoFocus
               value={topic}

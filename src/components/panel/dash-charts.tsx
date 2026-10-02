@@ -15,6 +15,7 @@ export function AreaChart({ labels, values, className }: { labels: string[]; val
   const innerH = H - padB - padT;
   const x = (i: number) => padL + (values.length === 1 ? innerW / 2 : (i / (values.length - 1)) * innerW);
   const y = (v: number) => padT + innerH - (v / top) * innerH;
+  const base = padT + innerH;
   const pts = values.map((v, i) => [x(i), y(v)] as const);
   // Curva Catmull-Rom → Bézier para un trazo suave.
   const path = pts.reduce((d, p, i, a) => {
@@ -23,8 +24,8 @@ export function AreaChart({ labels, values, className }: { labels: string[]; val
     const p1 = a[i - 1];
     const p2 = p;
     const p3 = a[i + 1] ?? p;
-    const c1 = [p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6];
-    const c2 = [p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6];
+    const c1 = [p1[0] + (p2[0] - p0[0]) / 6, Math.min(base, p1[1] + (p2[1] - p0[1]) / 6)];
+    const c2 = [p2[0] - (p3[0] - p1[0]) / 6, Math.min(base, p2[1] - (p3[1] - p1[1]) / 6)];
     return `${d} C${c1[0]},${c1[1]} ${c2[0]},${c2[1]} ${p2[0]},${p2[1]}`;
   }, "");
   const area = `${path} L${x(values.length - 1)},${padT + innerH} L${x(0)},${padT + innerH} Z`;
@@ -51,7 +52,7 @@ export function AreaChart({ labels, values, className }: { labels: string[]; val
       ))}
       {last && <circle cx={last[0]} cy={last[1]} r="11" fill="var(--accent)" opacity="0.15" />}
       {labels.map((l, i) => (
-        <text key={i} x={x(i)} y={H - 8} textAnchor="middle" fontSize="11" fill="var(--fg-muted)">{l}</text>
+        <text key={i} x={x(i)} y={H - 8} textAnchor={i === labels.length - 1 && l.length > 3 ? "end" : "middle"} fontSize="11" fill="var(--fg-muted)">{l}</text>
       ))}
     </svg>
   );

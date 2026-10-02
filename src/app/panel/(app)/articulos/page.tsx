@@ -6,7 +6,7 @@ import { Badge, Button } from "@/components/ui";
 import { auth, requirePermiso } from "@/lib/auth";
 import { DeleteArticleButton } from "@/components/panel/delete-article-button";
 import { ArticleFilters } from "@/components/panel/article-filters";
-import { ViewsSparkline } from "@/components/panel/views-chart";
+import { SparklineZoom } from "@/components/panel/sparkline-zoom";
 import { dailySeries, hasDailyViews, nf, pctChange, siteWeekTotals, TODAY_CO } from "@/lib/article-stats";
 import { formatDate } from "@/lib/utils";
 
@@ -254,7 +254,7 @@ export default async function ArticlesList({ searchParams }: { searchParams: Sea
               <div className="mt-3 flex items-center justify-between gap-3 border-t border-[var(--border)] pt-3">
                 {r.status === "publicado" || Number(r.views) > 0 ? (
                   <div className="flex items-center gap-3">
-                    <ViewsSparkline values={serie} />
+                    <SparklineZoom values={serie} title={r.title} />
                     <div className="text-xs leading-tight">
                       <div className="text-base font-semibold tabular-nums">{nf.format(Number(r.views))}</div>
                       <div className="text-[var(--fg-muted)]">
@@ -355,7 +355,7 @@ export default async function ArticlesList({ searchParams }: { searchParams: Sea
                   <Td>
                     {r.status === "publicado" || Number(r.views) > 0 ? (
                       <div className="flex min-w-[9.5rem] items-center gap-3">
-                        <ViewsSparkline values={serie} />
+                        <SparklineZoom values={serie} title={r.title} />
                         <div className="whitespace-nowrap text-xs leading-tight">
                           <div className="font-semibold tabular-nums">{nf.format(last7)}</div>
                           <div className="text-[var(--fg-muted)]">
