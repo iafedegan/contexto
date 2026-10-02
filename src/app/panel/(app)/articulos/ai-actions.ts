@@ -54,7 +54,7 @@ export async function generateArticleDraft(input: {
   prompt: string;
   section?: string;
   /** Noticias que el periodista eligió referenciar: se citan con enlace en el cuerpo. */
-  references?: { title: string; outlet: string; url: string }[];
+  references?: { title: string; outlet: string; url: string; videoId?: string }[];
 }): Promise<GenerateResult> {
   const user = await requirePermiso("articulos");
 
@@ -124,9 +124,15 @@ export async function generateArticleDraft(input: {
 }
 
 /** Cierra el cuerpo con las noticias de referencia enlazadas (señal de fuentes y evidencia). */
-function fuentesHtml(refs: { title: string; outlet: string; url: string }[]): string {
+function fuentesHtml(refs: { title: string; outlet: string; url: string; videoId?: string }[]): string {
   const esc = (t: string) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-  return `<h2>Fuentes consultadas</h2><ul>${refs
+  const videos = refs.filter((r) => r.videoId && /^[\w-]{6,20}$/.test(r.videoId));
+  const incrustados = videos.length
+    ? `<h2>Videos relacionados</h2>${videos
+        .map((v) => `<p><iframe src="https://www.youtube-nocookie.com/embed/${v.videoId}" title="${esc(v.title)}" loading="lazy" allowfullscreen></iframe></p>`)
+        .join("")}`
+    : "";
+  return `${incrustados}<h2>Fuentes consultadas</h2><ul>${refs
     .map((r) => `<li><a href="${esc(r.url)}" rel="noopener noreferrer" target="_blank">${esc(r.outlet ? `${r.outlet}: ` : "")}${esc(r.title)}</a></li>`)
     .join("")}</ul>`;
 }
@@ -469,21 +475,61 @@ const newsSchema = z.object({
         outlet: z.string(),
         date: z.string().optional().default(""),
         summary: z.string(),
-        /** Posición (0, 1, 2…) de la fuente de la lista que respalda esta noticia; -1 si ninguna. */
+        type: z.enum(["noticia", "video", "oficial"]).catch("noticia"),
+        /** Posición (0, 1, 2…) de la fuente de la lista que respalda este resultado; -1 si ninguna. */
         sourceIndex: z.number().int().catch(-1),
       }),
     )
     .min(1),
 });
 
-export type NewsItem = { title: string; outlet: string; date: string; summary: string; url: string };
+export type NewsItem = {
+  title: string;
+  outlet: string;
+  date: string;
+  summary: string;
+  url: string;
+  type: "noticia" | "video" | "oficial";
+  /** Solo videos de YouTube: permite miniatura e incrustación. */
+  videoId?: string;
+};
 
 export type NewsSearchResult = { ok: true; items: NewsItem[] } | { ok: false; error: string };
 
+/** Id de un video de YouTube a partir de su enlace (watch, youtu.be, shorts, embed). */
+function youtubeId(url: string): string | undefined {
+  try {
+    const u = new URL(url);
+    const h = u.hostname.replace(/^www\./, "");
+    if (h === "youtu.be") return u.pathname.slice(1).split("/")[0] || undefined;
+    if (h.endsWith("youtube.com")) {
+      if (u.pathname === "/watch") return u.searchParams.get("v") ?? undefined;
+      const m = u.pathname.match(/^\/(shorts|embed|live)\/([\w-]{6,})/);
+      if (m) return m[2];
+    }
+  } catch {
+    /* url inválida */
+  }
+  return undefined;
+}
+
+/** Las fuentes de Gemini llegan como redirecciones de Google: se resuelven al enlace real (con tope de tiempo). */
+async function resolverEnlace(url: string): Promise<string> {
+  if (!/vertexaisearch\.cloud\.google\.com|grounding-api-redirect/.test(url)) return url;
+  try {
+    const r = await fetch(url, { redirect: "manual", signal: AbortSignal.timeout(4000) });
+    const loc = r.headers.get("location");
+    return loc && /^https?:\/\//i.test(loc) ? loc : url;
+  } catch {
+    return url;
+  }
+}
+
 /**
- * «Busca noticias sobre X»: investigación en la web (Gemini con Google Search) de lo publicado sobre una
- * persona, empresa o tema. Devuelve noticias con medio, fecha, resumen y enlace verificable (solo URLs
- * que la búsqueda realmente consultó). El periodista decide cuáles referenciar o usar como tema.
+ * «Busca noticias sobre X»: investigación profunda en la web con tres rastreos en paralelo (medios de
+ * comunicación, YouTube y fuentes oficiales/redes/radio). Devuelve resultados con medio, fecha, resumen y
+ * enlace verificable (solo URLs que la búsqueda realmente consultó). El periodista decide cuáles
+ * referenciar o usar como tema.
  */
 export async function searchNewsAbout(input: { query: string; section?: string }): Promise<NewsSearchResult> {
   const user = await requirePermiso("articulos");
@@ -497,40 +543,60 @@ export async function searchNewsAbout(input: { query: string; section?: string }
   try {
     const cuota = await verificarCuotaIA(user.id);
     if (!cuota.ok) return { ok: false, error: cuota.message };
-    const found = await generateText({
-      model: ai.model,
-      tools: ai.tools as unknown as ToolSet,
-      system:
-        "Eres documentalista de un medio ganadero colombiano. Haz una búsqueda profunda en la web de NOTICIAS y publicaciones recientes sobre lo que pide el periodista (varias consultas: nombre completo, cargo, entidad, regiones, sinónimos). Lista cada noticia con titular, medio, fecha y qué dice, solo con lo que encuentres; no inventes. Prioriza medios reconocidos y fuentes oficiales; incluye lo más reciente primero.",
-      prompt: `${input.section ? `Sección de interés: ${input.section}.\n` : ""}BÚSQUEDA: ${query}\n\nEncuentra de 6 a 12 noticias o publicaciones distintas y relevantes (evita duplicados del mismo hecho) con titular, medio, fecha y resumen.`,
-    });
-    await registrarUsoIA(user.id, found.usage);
-    const sources = found.sources
-      .filter((s) => s.sourceType === "url")
-      .map((s) => ({ title: s.title || new URL(s.url).hostname, url: s.url }))
-      .filter((s, i, a) => a.findIndex((x) => x.url === s.url) === i)
-      .slice(0, 20);
+    const base = `${input.section ? `Sección de interés: ${input.section}.\n` : ""}BÚSQUEDA: ${query}\n\n`;
+    const system =
+      "Eres documentalista de un medio ganadero colombiano. Haz una búsqueda profunda en la web (varias consultas: nombre completo, cargo, entidad, regiones, sinónimos, ortografía alternativa) y lista cada resultado con titular o título, medio o canal, fecha y qué dice, solo con lo que encuentres; no inventes. Lo más reciente primero.";
+    const rastreos = [
+      `${base}Encuentra de 6 a 10 NOTICIAS y publicaciones en medios de comunicación (prensa, revistas, portales, agencias), distintas entre sí, con titular, medio, fecha y resumen.`,
+      `${base}Busca VIDEOS en YouTube (usa consultas con «site:youtube.com»): entrevistas, noticieros, intervenciones, reportajes, canales de medios y gremios. Lista de 4 a 8 videos con título, canal, fecha y de qué trata, indicando el enlace de YouTube.`,
+      `${base}Busca FUENTES OFICIALES y de primera mano: comunicados, entidades públicas y gremiales, redes sociales verificadas, radio y televisión regional, documentos. Lista de 3 a 6 con título, quién lo publica, fecha y resumen.`,
+    ];
+    const hallazgos = await Promise.all(
+      rastreos.map((prompt) =>
+        generateText({ model: ai.model, tools: ai.tools as unknown as ToolSet, system, prompt }).catch(() => null),
+      ),
+    );
+    const validos = hallazgos.filter((h): h is NonNullable<typeof h> => h !== null);
+    if (!validos.length) return { ok: false, error: "La búsqueda no respondió. Inténtalo de nuevo en un momento." };
+    for (const h of validos) await registrarUsoIA(user.id, h.usage);
+
+    const crudas = validos
+      .flatMap((h) => h.sources)
+      .filter((x) => x.sourceType === "url")
+      .map((x) => ({ title: x.title || "", url: x.url }))
+      .filter((x, i, a) => a.findIndex((y) => y.url === x.url) === i)
+      .slice(0, 40);
+    const resueltas = await Promise.all(crudas.map(async (x) => ({ title: x.title, url: await resolverEnlace(x.url) })));
+    const sources = resueltas.filter((x, i, a) => a.findIndex((y) => y.url === x.url) === i);
     if (!sources.length) return { ok: false, error: "La búsqueda no devolvió fuentes citables para ese tema." };
 
-    const lista = sources.map((s, i) => `[${i}] ${s.title} — ${s.url}`).join("\n");
+    const lista = sources.map((x, i) => `[${i}] ${x.title || new URL(x.url).hostname} — ${x.url}`).join("\n");
+    const texto = validos.map((h, i) => `--- RASTREO ${i + 1} ---\n${h.text}`).join("\n\n").slice(0, 14000);
     const { object, usage } = await generateObject({
       model: ai.model,
       schema: newsSchema,
-      prompt: `Con SOLO el texto de la investigación, extrae las noticias distintas encontradas sobre «${query}». Para cada una: title = titular, outlet = medio (breve), date = fecha tal como consta (o vacío), summary = 1-2 frases de lo que dice (sin inventar), sourceIndex = número de la fuente de esta lista que mejor la respalda (o -1 si ninguna).\n\nFUENTES CONSULTADAS:\n${lista}\n\nINVESTIGACIÓN:\n${found.text.slice(0, 8000)}`,
+      prompt: `Con SOLO el texto de la investigación, extrae los resultados distintos encontrados sobre «${query}». Para cada uno: title = titular o título, outlet = medio o canal (breve), date = fecha tal como consta (o vacío), summary = 1-2 frases de lo que dice (sin inventar), type = «video» si es un video de YouTube, «oficial» si es comunicado, entidad o red social verificada, «noticia» si es prensa; sourceIndex = número de la fuente de esta lista que mejor lo respalda (o -1 si ninguna). Máximo 20 resultados.\n\nFUENTES CONSULTADAS:\n${lista}\n\nINVESTIGACIÓN:\n${texto}`,
     });
     await registrarUsoIA(user.id, usage);
     const items: NewsItem[] = object.items
-      .map((i) => ({
-        title: i.title.trim().slice(0, 200),
-        outlet: i.outlet.trim().slice(0, 80),
-        date: (i.date ?? "").trim().slice(0, 40),
-        summary: i.summary.trim().slice(0, 500),
-        url: sources[i.sourceIndex]?.url ?? "",
-      }))
+      .map((i) => {
+        const url = sources[i.sourceIndex]?.url ?? "";
+        const videoId = youtubeId(url);
+        return {
+          title: i.title.trim().slice(0, 200),
+          outlet: i.outlet.trim().slice(0, 80),
+          date: (i.date ?? "").trim().slice(0, 40),
+          summary: i.summary.trim().slice(0, 500),
+          url,
+          type: videoId ? ("video" as const) : i.type === "video" ? ("noticia" as const) : i.type,
+          videoId,
+        };
+      })
       // Sin enlace verificable no se ofrece: la regla de la casa es «sin fuente no hay nota».
       .filter((i) => i.title && i.summary && i.url)
-      .slice(0, 12);
-    if (!items.length) return { ok: false, error: "No se encontraron noticias con enlace verificable. Prueba con otro nombre o más contexto." };
+      .filter((i, idx, arr) => arr.findIndex((o) => o.url === i.url) === idx)
+      .slice(0, 20);
+    if (!items.length) return { ok: false, error: "No se encontraron resultados con enlace verificable. Prueba con otro nombre o más contexto." };
     return { ok: true, items };
   } catch (err) {
     console.error("searchNewsAbout:", err);
@@ -538,8 +604,6 @@ export async function searchNewsAbout(input: { query: string; section?: string }
     return { ok: false, error: detalle ? `No se pudo buscar: ${detalle.slice(0, 220)}` : "El modelo no respondió." };
   }
 }
-
-
 /* --------------------------------------------------------------------------
  * Foto de portada generada con IA (realista, estilo fotograma de cine)
  * -------------------------------------------------------------------------- */

@@ -175,6 +175,7 @@ export function ArticleWizard({
   const [newsOpen, setNewsOpen] = useState(true);
   const [newsError, setNewsError] = useState("");
   const [refs, setRefs] = useState<NewsItem[]>([]);
+  const [newsFiltro, setNewsFiltro] = useState<"todo" | NewsItem["type"]>("todo");
   const [searchingNews, startNews] = useTransition();
   const [sceneTxt, setSceneTxt] = useState("");
   const [imgError, setImgError] = useState("");
@@ -365,7 +366,7 @@ export function ArticleWizard({
         title: title.trim(),
         prompt,
         section: categories.find((c) => c.id === categoryId)?.name,
-        references: refs.map((r) => ({ title: r.title, outlet: r.outlet, url: r.url })),
+        references: refs.map((r) => ({ title: r.title, outlet: r.outlet, url: r.url, videoId: r.videoId })),
       });
       if (!res.ok) return setError(res.error);
       const d = res.draft;
@@ -739,7 +740,7 @@ export function ArticleWizard({
                 {refs.length > 0 && (
                   <p className="mt-3 text-xs text-[var(--fg-muted)]">
                     <strong className="text-[var(--fg)]">Referencias elegidas ({refs.length}):</strong>{" "}
-                    {refs.map((r) => r.outlet || r.title).join(" · ")}. Irán enlazadas al final de la nota.
+                    {refs.map((r) => r.outlet || r.title).join(" · ")}. Irán enlazadas al final de la nota (los videos, además, incrustados).
                   </p>
                 )}
                 {news && !newsOpen && (
@@ -750,17 +751,44 @@ export function ArticleWizard({
                 )}
                 {news && newsOpen && (
                   <div className="mt-3 flex flex-col gap-2">
-                    {news.map((n) => (
-                      <div key={n.url} className={`rounded-[var(--radius)] border bg-[var(--bg-2)] p-3 ${isRef(n) ? "border-[var(--accent)]" : "border-[var(--border)]"}`}>
-                        <p className="text-xs text-[var(--fg-muted)]">{n.outlet}{n.date ? ` · ${n.date}` : ""}</p>
+                    <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filtrar resultados">
+                      {(["todo", "noticia", "video", "oficial"] as const).map((f) => {
+                        const cuantos = f === "todo" ? news.length : news.filter((n) => n.type === f).length;
+                        if (f !== "todo" && cuantos === 0) return null;
+                        return (
+                          <button
+                            key={f}
+                            type="button"
+                            onClick={() => setNewsFiltro(f)}
+                            aria-pressed={newsFiltro === f}
+                            className={`rounded-full border px-3 py-1 text-xs font-medium transition ${newsFiltro === f ? "border-[var(--accent)] bg-[var(--surface-2)]" : "border-[var(--border)] hover:border-[var(--accent)]"}`}
+                          >
+                            {f === "todo" ? "Todo" : f === "noticia" ? "Noticias" : f === "video" ? "Videos de YouTube" : "Oficiales y redes"} ({cuantos})
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {news.filter((n) => newsFiltro === "todo" || n.type === newsFiltro).map((n) => (
+                      <div key={n.url} className={`flex gap-3 rounded-[var(--radius)] border bg-[var(--bg-2)] p-3 ${isRef(n) ? "border-[var(--accent)]" : "border-[var(--border)]"}`}>
+                        {n.videoId && (
+                          // eslint-disable-next-line @next/next/no-img-element -- miniatura externa de YouTube
+                          <img src={`https://img.youtube.com/vi/${n.videoId}/mqdefault.jpg`} alt="" loading="lazy" className="hidden h-20 w-36 shrink-0 rounded-md object-cover sm:block" />
+                        )}
+                        <div className="min-w-0 flex-1">
+                        <p className="text-xs text-[var(--fg-muted)]">
+                          {n.type === "video" && <span className="mr-1.5 rounded-full bg-[#dc2626]/12 px-2 py-0.5 font-semibold text-[#b91c1c]">▶ Video</span>}
+                          {n.type === "oficial" && <span className="mr-1.5 rounded-full bg-[var(--accent)]/12 px-2 py-0.5 font-semibold text-[var(--accent)]">Oficial</span>}
+                          {n.outlet}{n.date ? ` · ${n.date}` : ""}
+                        </p>
                         <p className="mt-0.5 font-semibold leading-snug">{n.title}</p>
                         <p className="mt-1 text-sm">{n.summary}</p>
                         <div className="mt-2 flex flex-wrap items-center gap-2">
                           <button type="button" onClick={() => elegirNoticiaComoTema(n)} className="lx-btn !py-1.5 text-xs">Escribir sobre esto</button>
                           <button type="button" onClick={() => toggleRef(n)} aria-pressed={isRef(n)} className="lx-btn lx-btn-ghost !py-1.5 text-xs">
-                            {isRef(n) ? "✓ Referenciada" : "Referenciar"}
+                            {isRef(n) ? "✓ Referenciada" : n.type === "video" ? "Referenciar e incrustar" : "Referenciar"}
                           </button>
-                          <a href={n.url} target="_blank" rel="noopener noreferrer" className="lx-link text-xs">Abrir fuente ↗</a>
+                          <a href={n.url} target="_blank" rel="noopener noreferrer" className="lx-link text-xs">{n.type === "video" ? "Ver en YouTube ↗" : "Abrir fuente ↗"}</a>
+                        </div>
                         </div>
                       </div>
                     ))}
