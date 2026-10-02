@@ -96,7 +96,7 @@ export function AdsZoneForm({
         </label>
       </div>
 
-      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+      <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
         <label className="flex flex-col gap-1">
           <span className="text-[0.72rem] uppercase tracking-[0.14em] text-[var(--fg-muted)]">
             URL de la imagen
@@ -138,7 +138,7 @@ export function AdsZoneForm({
         />
       </label>
 
-      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+      <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
         <label className="flex flex-col gap-1">
           <span className="text-[0.72rem] uppercase tracking-[0.14em] text-[var(--fg-muted)]">
             Empieza (opcional)

@@ -16,12 +16,12 @@ export async function AdsBanner({ zone, className }: { zone: AdPosition; classNa
     <div className={cn("flex flex-col gap-4", className)} style={{ maxWidth: spec.width }}>
       {ads.map((content) => (
         <div key={content.key} className="flex flex-col items-center gap-1">
-          <span className="self-start text-[10px] font-medium uppercase tracking-wide text-[var(--fg-muted)]">
+          <span className="self-start text-[0.6875rem] font-medium uppercase tracking-wide text-[var(--fg-muted)]">
             Publicidad
           </span>
           {content.html ? (
             // Creatividad HTML cargada por un administrador en el panel.
-            <div className="w-full overflow-hidden rounded-[var(--radius)]" dangerouslySetInnerHTML={{ __html: content.html }} />
+            <div className="lx-ad-html w-full overflow-hidden rounded-[var(--radius)]" dangerouslySetInnerHTML={{ __html: content.html }} />
           ) : content.imageUrl ? (
             <AdsCreative imageUrl={content.imageUrl} clickUrl={content.clickUrl} width={spec.width} height={spec.height} />
           ) : null}

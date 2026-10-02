@@ -50,6 +50,31 @@ export default async function PanelLayout({ children }: { children: React.ReactN
   const permisos = efectivos(session.user.role, ajustesYo);
   const bloqueado = debeActivar2fa && !pathname.startsWith(RUTA_SEGURIDAD);
 
+  // La cuenta (nombre, «Ver sitio», «Salir») va en la barra en escritorio y dentro del menú en el teléfono.
+  const cuenta = (
+    <>
+      <span className="lx-chip max-w-full truncate border-[var(--border)] text-[var(--fg-muted)]">
+        {session.user.name} · {session.user.role}
+      </span>
+      <Link
+        href="/"
+        className="inline-flex min-h-11 items-center font-medium text-[var(--fg-muted)] transition hover:text-[var(--accent)] lg:min-h-0"
+      >
+        Ver sitio
+      </Link>
+      <form
+        action={async () => {
+          "use server";
+          await signOut({ redirectTo: "/panel/login" });
+        }}
+      >
+        <button className="min-h-11 rounded-[var(--radius)] border border-[var(--border-strong)] px-4 font-medium transition hover:border-[var(--accent)] hover:text-[var(--accent)] lg:min-h-0 lg:px-3 lg:py-1.5">
+          Salir
+        </button>
+      </form>
+    </>
+  );
+
   return (
     <div data-theme="panel" className="lx-shell lx-grain">
       {/* La barra del panel va en claro (tema `panel-ui`), igual que la barra
@@ -65,35 +90,22 @@ export default async function PanelLayout({ children }: { children: React.ReactN
           aria-hidden
           className="h-px w-full bg-gradient-to-r from-[var(--accent)] via-[var(--accent-2)] to-transparent opacity-70"
         />
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-5 px-6 py-3.5">
-          <Link href="/panel" className="flex items-center gap-2.5">
+        <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-2 sm:px-6 lg:flex-wrap lg:gap-5 lg:py-3.5">
+          <Link href="/panel" className="flex min-h-11 min-w-0 items-center gap-2.5">
             <LogoMark size={32} />
-            <span className="lx-display text-sm font-semibold tracking-tight">
+            <span className="lx-display truncate text-sm font-semibold tracking-tight">
               Panel editorial
             </span>
           </Link>
 
-          {!debeActivar2fa && <PanelNav role={session.user.role} permisos={permisos} />}
+          {!debeActivar2fa && (
+            <PanelNav role={session.user.role} permisos={permisos}>
+              {cuenta}
+            </PanelNav>
+          )}
 
-
-          <div className="ml-auto flex items-center gap-3 text-xs">
-            <span className="lx-chip border-[var(--border)] text-[var(--fg-muted)]">
-              {session.user.name} · {session.user.role}
-            </span>
-            <Link href="/" className="font-medium text-[var(--fg-muted)] transition hover:text-[var(--accent)]">
-              Ver sitio
-            </Link>
-            <form
-              action={async () => {
-                "use server";
-                await signOut({ redirectTo: "/panel/login" });
-              }}
-            >
-              <button className="rounded-[var(--radius)] border border-[var(--border-strong)] px-3 py-1.5 font-medium transition hover:border-[var(--accent)] hover:text-[var(--accent)]">
-                Salir
-              </button>
-            </form>
-          </div>
+          {/* Sin 2FA no hay menú: la cuenta (con «Salir») se queda siempre a la vista. */}
+          <div className={`ml-auto items-center gap-3 text-xs ${debeActivar2fa ? "flex flex-wrap justify-end" : "hidden lg:flex"}`}>{cuenta}</div>
         </div>
       </header>
 
@@ -101,7 +113,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
           Diseño…): la barra queda como cromo claro y el contenido comparte un
           mismo fondo, en vez de mezclar pantallas claras y oscuras. */}
       <main data-theme="panel-amber" className="lx-pearl-canvas flex-1 text-[var(--fg)]">
-        <div className="mx-auto w-full max-w-6xl px-6 py-10">
+        <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-10">
           {debeActivar2fa && (
             <p className="mb-6 flex items-start gap-2 rounded-[var(--radius)] border border-[var(--accent)]/40 bg-[var(--surface-2)] p-4 text-sm leading-relaxed">
               <ShieldAlert size={16} className="mt-0.5 shrink-0 text-[var(--accent)]" />
@@ -113,8 +125,8 @@ export default async function PanelLayout({ children }: { children: React.ReactN
         </div>
       </main>
 
-      <footer className="border-t border-[var(--border)] px-6 py-5">
-        <p className="mx-auto max-w-6xl text-[0.68rem] uppercase tracking-[0.18em] text-[var(--fg-muted)]">
+      <footer className="border-t border-[var(--border)] px-4 py-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:px-6">
+        <p className="mx-auto max-w-6xl text-[0.72rem] uppercase tracking-[0.18em] text-[var(--fg-muted)]">
           CONtexto Ganadero · plantilla «Grafito & Jade» · ningún contenido de IA se publica sin
           aprobación humana
         </p>

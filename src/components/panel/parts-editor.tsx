@@ -34,7 +34,7 @@ export function PartsEditor({ layout, onChange }: { layout: Layout; onChange: (p
               title={t.name}
               onClick={() => onChange({ templateId: t.id, parts })}
               aria-pressed={layout.templateId === t.id}
-              className={`flex flex-col items-center gap-1 rounded-lg border p-1.5 text-[0.62rem] transition ${
+              className={`flex flex-col items-center gap-1 rounded-lg border p-1.5 text-[0.72rem] transition ${
                 layout.templateId === t.id ? "border-[var(--accent)] ring-2 ring-[var(--accent)]/30" : "border-[var(--border)]"
               }`}
             >
@@ -75,7 +75,7 @@ export function PartsEditor({ layout, onChange }: { layout: Layout; onChange: (p
 function Group({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div>
-      <p className="meta mb-2 !text-[0.65rem]">{title}</p>
+      <p className="meta mb-2 !text-xs">{title}</p>
       {children}
     </div>
   );

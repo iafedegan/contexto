@@ -28,10 +28,10 @@ export async function SiteSidebar({ locale }: { locale: Locale }) {
           </h2>
           <ol className="mt-4 flex flex-col">
             {masLeidas.map((a, i) => (
-              <li key={a.slug} className="border-b border-[var(--border)] py-3 last:border-0">
+              <li key={a.slug} className="border-b border-[var(--border)] last:border-0">
                 <Link
                   href={localePath(locale, `/articulo/${a.slug}`)}
-                  className="group flex items-baseline gap-3"
+                  className="group flex items-baseline gap-3 py-3"
                 >
                   <span className="lx-display text-lg leading-none text-[var(--accent-2)]">
                     {String(i + 1).padStart(2, "0")}

@@ -58,17 +58,18 @@ export function LocationConsent() {
     <div
       role="dialog"
       aria-label="Permiso de ubicación"
-      className="fixed inset-x-3 bottom-3 z-[90] mx-auto flex max-w-xl flex-col gap-3 rounded-2xl border border-[#4a4234] bg-[#141210] p-4 text-[#f7f4ee] shadow-2xl sm:flex-row sm:items-center"
+      // `cg-consent`: se oculta mientras hay un popup abierto (globals.css), para que no se apilen.
+      className="cg-consent fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-[90] mx-auto flex max-w-xl flex-col gap-2.5 rounded-2xl border border-[#4a4234] bg-[#141210] p-3 text-[#f7f4ee] shadow-2xl sm:flex-row sm:items-center sm:gap-3 sm:p-4"
     >
       <LocateFixed size={20} className="hidden shrink-0 text-[#d9a05b] sm:block" />
-      <p className="flex-1 text-sm leading-snug">
+      <p className="flex-1 text-[0.8125rem] leading-snug sm:text-sm">
         {msg || "¿Nos dejas saber en qué zona te encuentras? Solo lo usamos para entender de dónde nos leen; tu navegador te pedirá permiso."}
       </p>
       <div className="flex shrink-0 gap-2">
-        <button type="button" onClick={rechazar} className="rounded-full border border-[#4a4234] px-4 py-2 text-xs font-semibold">
+        <button type="button" onClick={rechazar} className="min-h-11 flex-1 rounded-full border border-[#4a4234] px-4 text-xs font-semibold sm:flex-none">
           Ahora no
         </button>
-        <button type="button" onClick={permitir} className="rounded-full bg-[#b4622e] px-4 py-2 text-xs font-semibold text-white">
+        <button type="button" onClick={permitir} className="min-h-11 flex-1 rounded-full bg-[#b4622e] px-4 text-xs font-semibold text-white sm:flex-none">
           Permitir
         </button>
       </div>

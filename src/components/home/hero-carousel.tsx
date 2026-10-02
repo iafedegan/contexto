@@ -33,6 +33,8 @@ export function HeroCarousel({
   const [paused, setPaused] = useState(false);
   const count = items.length;
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Deslizar con el dedo (en el teléfono no hay flechas al alcance ni cursor).
+  const touchStart = useRef<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
     if (!interactive || count <= 1 || paused) return;
@@ -57,13 +59,13 @@ export function HeroCarousel({
           // fija arriba, una imagen que ocupe casi toda la altura del
           // viewport empuja el titular fuera de la pantalla inicial. Así el
           // titular siempre asoma sin necesidad de hacer scroll.
-          className="relative h-[34vh] min-h-[220px] overflow-hidden bg-black sm:h-[42vh] lg:h-[46vh] lg:max-h-[460px]"
+          className="relative h-[34dvh] min-h-[220px] overflow-hidden bg-black sm:h-[42dvh] lg:h-[46dvh] lg:max-h-[460px]"
           // "Tamaño de imagen" del panel: encoge la altura del hero (no su
           // ancho, que es a sangre por diseño) conservando la composición.
           style={
             homeStyleImageScale(active.homeStyle) === 100
               ? undefined
-              : { height: `calc(46vh * ${homeStyleImageScale(active.homeStyle) / 100})` }
+              : { height: `calc(46dvh * ${homeStyleImageScale(active.homeStyle) / 100})` }
           }
           role="region"
           aria-roledescription="carrusel"
@@ -72,6 +74,18 @@ export function HeroCarousel({
           onKeyDown={(e) => {
             if (e.key === "ArrowLeft") go(index - 1);
             if (e.key === "ArrowRight") go(index + 1);
+          }}
+          onTouchStart={(e) => {
+            touchStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+          }}
+          onTouchEnd={(e) => {
+            const s = touchStart.current;
+            touchStart.current = null;
+            if (!s) return;
+            const dx = e.changedTouches[0].clientX - s.x;
+            const dy = e.changedTouches[0].clientY - s.y;
+            // Solo un gesto claramente horizontal: desplazar la página en vertical no cambia de nota.
+            if (Math.abs(dx) > 48 && Math.abs(dx) > Math.abs(dy) * 1.5) go(index + (dx < 0 ? 1 : -1));
           }}
         >
           <AnimatePresence mode="sync" initial={false}>
@@ -187,8 +201,10 @@ export function HeroCarousel({
                 aria-label={`Ir a la nota ${i + 1}`}
                 aria-current={i === index}
                 onClick={() => go(i)}
-                className="relative h-[3px] flex-1 overflow-hidden bg-[var(--rule)]"
+                // La barra mide 3 px: el botón la rodea de aire para poder tocarla (44 px de alto).
+                className="group/punto relative flex-1 py-[1.25rem]"
               >
+                <span className="relative block h-[3px] overflow-hidden bg-[var(--rule)]">
                 {i === index && interactive && (
                   // CSS puro: se pausa en el punto donde va (no reinicia a 0),
                   // vía animation-play-state — mismo costo cero de JS por
@@ -203,6 +219,7 @@ export function HeroCarousel({
                   />
                 )}
                 {i < index && <span className="absolute inset-0 bg-[var(--brand)]" />}
+                </span>
               </button>
             ))}
           </div>

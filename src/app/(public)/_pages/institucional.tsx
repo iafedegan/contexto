@@ -46,7 +46,7 @@ export function makePage(slug: string, locale: Locale) {
         />
 
         <article>
-          <nav className="lx-ui mb-8 flex items-center gap-2 text-[0.68rem] uppercase tracking-[0.2em] text-[var(--fg-muted)]">
+          <nav className="lx-ui mb-8 flex items-center gap-2 text-[0.72rem] uppercase tracking-[0.2em] text-[var(--fg-muted)]">
             <Link href={localePath(locale, "/")} className="lx-link">
               {locale === "es" ? "Inicio" : "Home"}
             </Link>
@@ -121,7 +121,7 @@ function BloqueVista({ bloque }: { bloque: Bloque }) {
     );
   }
   return (
-    <dl className="lx-card grid gap-4 p-6 sm:grid-cols-2">
+    <dl className="lx-card grid grid-cols-1 gap-4 p-6 sm:grid-cols-2">
       {bloque.items.map((d) => (
         <div key={d.etiqueta}>
           <dt className="lx-kicker text-[var(--fg-muted)]">{d.etiqueta}</dt>

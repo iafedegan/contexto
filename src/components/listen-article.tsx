@@ -156,7 +156,7 @@ export function ListenArticle({
       onClick={cambiarVelocidad}
       aria-label="Velocidad de lectura"
       title="Cambiar velocidad"
-      className="inline-flex items-center gap-1 rounded-full px-2 py-1.5 text-xs font-semibold tabular-nums transition hover:text-[var(--accent)]"
+      className="inline-flex min-h-8 items-center gap-1 rounded-full px-2 py-1.5 text-xs font-semibold tabular-nums transition hover:text-[var(--accent)] pointer-coarse:min-h-11 pointer-coarse:px-3"
     >
       <Gauge size={14} /> {rate}x
     </button>
@@ -168,31 +168,31 @@ export function ListenArticle({
         <button
           type="button"
           onClick={reproducir}
-          className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium transition hover:text-[var(--accent)]"
+          className="inline-flex min-h-8 items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium transition hover:text-[var(--accent)] pointer-coarse:min-h-11"
         >
           <Volume2 size={16} /> Escuchar la nota
         </button>
       )}
       {state === "playing" && (
         <>
-          <button type="button" onClick={pausar} aria-label="Pausar" className="rounded-full p-2 transition hover:text-[var(--accent)]">
+          <button type="button" onClick={pausar} aria-label="Pausar" className="grid size-8 place-items-center rounded-full transition hover:text-[var(--accent)] pointer-coarse:size-11">
             <Pause size={16} />
           </button>
           <span className="px-1 text-sm font-medium">Leyendo…</span>
           {velocidadBtn}
-          <button type="button" onClick={detener} aria-label="Detener" className="rounded-full p-2 transition hover:text-[var(--accent)]">
+          <button type="button" onClick={detener} aria-label="Detener" className="grid size-8 place-items-center rounded-full transition hover:text-[var(--accent)] pointer-coarse:size-11">
             <Square size={14} />
           </button>
         </>
       )}
       {state === "paused" && (
         <>
-          <button type="button" onClick={reanudar} aria-label="Reanudar" className="rounded-full p-2 transition hover:text-[var(--accent)]">
+          <button type="button" onClick={reanudar} aria-label="Reanudar" className="grid size-8 place-items-center rounded-full transition hover:text-[var(--accent)] pointer-coarse:size-11">
             <Play size={16} />
           </button>
           <span className="px-1 text-sm font-medium">En pausa</span>
           {velocidadBtn}
-          <button type="button" onClick={detener} aria-label="Detener" className="rounded-full p-2 transition hover:text-[var(--accent)]">
+          <button type="button" onClick={detener} aria-label="Detener" className="grid size-8 place-items-center rounded-full transition hover:text-[var(--accent)] pointer-coarse:size-11">
             <Square size={14} />
           </button>
         </>

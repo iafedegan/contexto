@@ -35,14 +35,14 @@ export type ShellVariant =
  * editorial.
  */
 const SHELL: Record<ShellVariant, { main: string; fx: string }> = {
-  portada: { main: "shell flex-1 py-12", fx: "lx-grain" },
-  articulo: { main: "shell flex-1 py-14", fx: "lx-grain" },
-  seccion: { main: "shell flex-1 py-12", fx: "lx-grain lx-aurora lx-vignette" },
-  autor: { main: "shell flex-1 py-14", fx: "lx-grain" },
-  buscar: { main: "shell flex-1 py-12", fx: "lx-grain lx-aurora" },
-  asistente: { main: "shell flex-1 py-12", fx: "lx-grain lx-aurora" },
-  institucional: { main: "shell flex-1 py-14", fx: "lx-grain" },
-  archivo: { main: "shell flex-1 py-16", fx: "lx-grain lx-aurora" },
+  portada: { main: "shell flex-1 py-8 sm:py-12", fx: "lx-grain" },
+  articulo: { main: "shell flex-1 py-10 sm:py-14", fx: "lx-grain" },
+  seccion: { main: "shell flex-1 py-8 sm:py-12", fx: "lx-grain lx-aurora lx-vignette" },
+  autor: { main: "shell flex-1 py-10 sm:py-14", fx: "lx-grain" },
+  buscar: { main: "shell flex-1 py-8 sm:py-12", fx: "lx-grain lx-aurora" },
+  asistente: { main: "shell flex-1 py-8 sm:py-12", fx: "lx-grain lx-aurora" },
+  institucional: { main: "shell flex-1 py-10 sm:py-14", fx: "lx-grain" },
+  archivo: { main: "shell flex-1 py-10 sm:py-16", fx: "lx-grain lx-aurora" },
 };
 
 /**

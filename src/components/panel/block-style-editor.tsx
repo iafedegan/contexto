@@ -105,7 +105,7 @@ export function BlockStyleEditor({
             <option value="right">Derecha</option>
           </select>
         </div>
-        <p className="text-[0.7rem] leading-snug text-[var(--fg-muted)]">
+        <p className="text-xs leading-snug text-[var(--fg-muted)]">
           «Columnas» solo cambia algo si el bloque está en una cuadrícula (p. ej. «Lo más reciente»). En una lista de una sola columna, como esta, el bloque ya ocupa todo el ancho: úsalo para hacerlo más estrecho con «Ancho (%)».
         </p>
         {numField("Alto mínimo (px)", style.height, 60, 1200, "height")}

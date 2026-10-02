@@ -188,7 +188,7 @@ export function ZonePanel({
           })}
         </svg>
       </div>
-      <p className="text-[0.7rem] text-[var(--fg-muted)]">
+      <p className="text-xs text-[var(--fg-muted)]">
         {canDrag ? "Arrastra un bloque a otra celda para moverlo. " : "Para mover bloques en el mapa, la zona debe ser una cuadrícula (elige columnas abajo). "}Ahora: {map.display.includes("grid") ? `cuadrícula de ${map.cols} columna${map.cols === 1 ? "" : "s"}` : "lista"} · {map.items.filter((i) => i.kind === "block").length} bloques. Pulsa un bloque del mapa para elegirlo.
       </p>
 
@@ -201,7 +201,7 @@ export function ZonePanel({
           <button type="button" onClick={() => onLevel(level + 1)} disabled={!map.canGoUp || level >= 3} className="rounded-md border border-[var(--border)] bg-white px-2.5 py-1 text-xs font-semibold disabled:opacity-40">
             ↑ Zona superior
           </button>
-          <span className="text-[0.7rem] text-[var(--fg-muted)]">nivel {level + 1}</span>
+          <span className="text-xs text-[var(--fg-muted)]">nivel {level + 1}</span>
         </div>
       )}
 
@@ -260,7 +260,7 @@ export function ZonePanel({
           <RotateCcw size={12} /> Restablecer zona
         </button>
       )}
-      <p className="text-[0.7rem] leading-snug text-[var(--fg-muted)]">En el móvil las zonas siempre se apilan en una sola columna.</p>
+      <p className="text-xs leading-snug text-[var(--fg-muted)]">En el móvil las zonas siempre se apilan en una sola columna.</p>
     </div>
   );
 }

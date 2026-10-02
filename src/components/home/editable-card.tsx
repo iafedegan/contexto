@@ -60,7 +60,7 @@ export function EditableCard({
         className,
       )}
     >
-      <span className="pointer-events-none absolute -left-2 -top-2 z-20 flex items-center gap-1 rounded-full bg-white px-1.5 py-0.5 text-[9px] font-bold text-[var(--ink-faint)] opacity-0 shadow-sm ring-1 ring-[var(--rule)] transition-opacity group-hover/editable:opacity-100">
+      <span className="pointer-events-none absolute -left-2 -top-2 z-20 flex items-center gap-1 rounded-full bg-white px-1.5 py-0.5 text-[0.6875rem] font-bold text-[var(--ink-faint)] opacity-0 shadow-sm ring-1 ring-[var(--rule)] transition-opacity group-hover/editable:opacity-100">
         <GripVertical size={10} />
         {index + 1}
       </span>

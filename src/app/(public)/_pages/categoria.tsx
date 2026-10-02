@@ -105,7 +105,7 @@ async function CategoryPage({ params, searchParams, locale }: PageProps & { loca
               key={r.clave}
               href={localePath(locale, `/categoria/${slug}${qs ? `?${qs}` : ""}`)}
               aria-current={activo ? "true" : undefined}
-              className={`lx-ui inline-flex min-h-10 items-center rounded-full border px-3 text-[0.6rem] uppercase tracking-[0.12em] lg:min-h-8 transition ${
+              className={`lx-ui inline-flex min-h-10 items-center rounded-full border px-3 text-[0.72rem] uppercase tracking-[0.12em] lg:min-h-8 transition ${
                 activo
                   ? "border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-fg)]"
                   : "border-[var(--border)] text-[var(--fg-muted)] hover:border-[var(--accent)] hover:text-[var(--accent)]"
@@ -125,11 +125,11 @@ async function CategoryPage({ params, searchParams, locale }: PageProps & { loca
           className={`flex flex-wrap items-end gap-2 ${A.justify}`}
         >
           <label className="flex min-w-[8.5rem] flex-col gap-1">
-            <span className="lx-kicker !text-[0.55rem] text-[var(--fg-muted)]">{t(locale, "section.subcategory")}</span>
+            <span className="lx-kicker !text-[0.72rem] text-[var(--fg-muted)]">{t(locale, "section.subcategory")}</span>
             <select
               name="subcategoria"
               defaultValue={subcategoria ?? ""}
-              className="lx-ui rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] px-2 py-1.5 text-xs outline-none transition focus:border-[var(--accent)]"
+              className="lx-ui rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] px-2 py-1.5 text-xs outline-none transition focus:border-[var(--accent)] pointer-coarse:min-h-11"
             >
               <option value="">{t(locale, "section.all")}</option>
               {subcategories.map((sc) => (
@@ -141,28 +141,28 @@ async function CategoryPage({ params, searchParams, locale }: PageProps & { loca
           </label>
 
           <label className="flex flex-col gap-1">
-            <span className="lx-kicker !text-[0.55rem] text-[var(--fg-muted)]">{t(locale, "section.from")}</span>
+            <span className="lx-kicker !text-[0.72rem] text-[var(--fg-muted)]">{t(locale, "section.from")}</span>
             <input
               type="date"
               name="desde"
               defaultValue={desde ?? ""}
-              className="lx-ui w-[7.6rem] rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] px-2 py-1.5 text-xs outline-none transition focus:border-[var(--accent)]"
+              className="lx-ui w-[8.5rem] rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] px-2 py-1.5 text-xs outline-none transition focus:border-[var(--accent)] pointer-coarse:min-h-11"
             />
           </label>
 
           <label className="flex flex-col gap-1">
-            <span className="lx-kicker !text-[0.55rem] text-[var(--fg-muted)]">{t(locale, "section.to")}</span>
+            <span className="lx-kicker !text-[0.72rem] text-[var(--fg-muted)]">{t(locale, "section.to")}</span>
             <input
               type="date"
               name="hasta"
               defaultValue={hasta ?? ""}
-              className="lx-ui w-[7.6rem] rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] px-2 py-1.5 text-xs outline-none transition focus:border-[var(--accent)]"
+              className="lx-ui w-[8.5rem] rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] px-2 py-1.5 text-xs outline-none transition focus:border-[var(--accent)] pointer-coarse:min-h-11"
             />
           </label>
 
           <button
             type="submit"
-            className="lx-ui min-h-9 rounded-full bg-[var(--accent)] px-4 text-xs font-semibold lg:min-h-8 text-[var(--accent-fg)] transition hover:opacity-90"
+            className="lx-ui min-h-11 rounded-full bg-[var(--accent)] px-4 text-xs font-semibold lg:min-h-8 text-[var(--accent-fg)] transition hover:opacity-90"
           >
             {t(locale, "section.filter")}
           </button>
@@ -211,7 +211,7 @@ async function CategoryPage({ params, searchParams, locale }: PageProps & { loca
           <nav
             data-el="breadcrumb"
             aria-label="breadcrumb"
-            className="lx-ui flex flex-wrap items-center gap-2 text-[0.68rem] uppercase tracking-[0.2em] text-[var(--fg-muted)]"
+            className="lx-ui flex flex-wrap items-center gap-2 text-[0.72rem] uppercase tracking-[0.2em] text-[var(--fg-muted)]"
           >
             <Link href={localePath(locale, "/")} className="lx-link">
               {locale === "es" ? "Inicio" : "Home"}

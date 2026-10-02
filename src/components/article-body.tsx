@@ -4,12 +4,26 @@ import { decodeSpec } from "@/lib/chart-svg";
 const CHART_FIGURE = /<figure\b[^>]*\bdata-chart="([\w-]+)"[^>]*>([\s\S]*?)<\/figure>/g;
 
 /**
+ * Las tablas de las notas (precios por categoría, resultados de subastas…) son
+ * más anchas que un teléfono. Cada una se envuelve en una caja que se desplaza
+ * en horizontal (`.lx-table-wrap`, con tabindex para poder moverla con el
+ * teclado) en vez de ensanchar la página. El HTML ya viene sanitizado: esto
+ * solo añade marcado propio.
+ */
+function envolverTablas(html: string): string {
+  return html
+    .replace(/<table\b/gi, '<div class="lx-table-wrap" role="region" aria-label="Tabla" tabindex="0"><table')
+    .replace(/<\/table>/gi, "</table></div>");
+}
+
+/**
  * Cuerpo de un artículo (HTML ya sanitizado). Las gráficas que inserta el
  * asistente llegan como <figure data-chart="…"> con una imagen estática de
  * respaldo; aquí se sustituyen por la gráfica interactiva. Si los datos no
  * son válidos se deja la imagen estática tal cual.
  */
-export function ArticleBody({ html, className }: { html: string; className?: string }) {
+export function ArticleBody({ html: crudo, className }: { html: string; className?: string }) {
+  const html = envolverTablas(crudo);
   const parts: React.ReactNode[] = [];
   let last = 0;
   let k = 0;

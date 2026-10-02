@@ -40,7 +40,7 @@ export default async function DemandaPage() {
     <div className="flex flex-col gap-6">
       <h1 className="text-xl font-bold">Demanda informativa (30 días)</h1>
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         {rows<{ mode: string; n: number; cost: number }>(modes).map((m) => (
           <Card key={m.mode}>
             <p className="text-sm text-[var(--fg-muted)]">{m.mode}</p>
@@ -50,7 +50,7 @@ export default async function DemandaPage() {
         ))}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Card>
           <h2 className="mb-2 font-semibold">Preguntas más frecuentes</h2>
           <ol className="flex flex-col gap-1 text-sm">

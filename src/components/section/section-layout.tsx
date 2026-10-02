@@ -36,7 +36,7 @@ export function SectionHeader({ theme, kicker, title, description, chips, breadc
             <span className="hidden lg:block" />
             <div>
               <p data-el="kicker" className="lx-kicker text-[var(--accent)]">{kicker}</p>
-              <h1 data-el="title" className="lx-display mt-2 text-5xl font-black uppercase tracking-tight md:text-7xl">{title}</h1>
+              <h1 data-el="title" className="lx-display mt-2 break-words text-[clamp(2rem,9.5vw,3rem)] font-black uppercase tracking-tight md:text-7xl">{title}</h1>
             </div>
             <div className="mt-6 text-left lg:mt-0 lg:justify-self-end lg:text-right">{filters}</div>
           </div>
@@ -54,11 +54,11 @@ export function SectionHeader({ theme, kicker, title, description, chips, breadc
           <div className="mt-6 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div className="min-w-0">
               <p data-el="kicker" className="lx-kicker text-[var(--accent)]">{kicker}</p>
-              <h1 data-el="title" className="lx-display mt-3 text-6xl font-light italic leading-[0.9] tracking-tight md:text-8xl">{title}</h1>
+              <h1 data-el="title" className="lx-display mt-3 break-words text-[clamp(2.25rem,12vw,3.75rem)] font-light italic leading-[0.9] tracking-tight md:text-8xl">{title}</h1>
             </div>
             <div className="lg:max-w-[46%] lg:shrink-0">{filters}</div>
           </div>
-          <div className="mt-8 grid gap-6 border-t border-[var(--border-strong)] pt-6 md:grid-cols-[2fr_1fr]">
+          <div className="mt-8 grid grid-cols-1 gap-6 border-t border-[var(--border-strong)] pt-6 md:grid-cols-[2fr_1fr]">
             {description ? <p data-el="description" className="text-xl leading-relaxed text-[var(--fg-muted)]">{description}</p> : <span />}
             <div data-el="chips" className="flex flex-wrap items-start gap-3 md:justify-end">{chips}</div>
           </div>
@@ -72,7 +72,7 @@ export function SectionHeader({ theme, kicker, title, description, chips, breadc
           <div className="mt-3 flex flex-wrap items-end justify-between gap-3 border-b-2 border-[var(--fg)] pb-3">
             <div>
               <p data-el="kicker" className="font-mono text-[11px] uppercase tracking-[0.12em] text-[var(--accent)]">{kicker}</p>
-              <h1 data-el="title" className="text-3xl font-extrabold tracking-tight md:text-4xl">{title}</h1>
+              <h1 data-el="title" className="break-words text-3xl font-extrabold tracking-tight md:text-4xl">{title}</h1>
               <div data-el="chips" className="mt-2 flex flex-wrap gap-2 font-mono text-[11px]">{chips}</div>
             </div>
             <div className="w-full lg:w-auto lg:max-w-[52%]">{filters}</div>
@@ -83,7 +83,7 @@ export function SectionHeader({ theme, kicker, title, description, chips, breadc
     case "vanguardia":
       // Vanguardia: titular en degradado dentro de una tarjeta redondeada.
       return (
-        <header data-region="encabezado" className="relative mb-8 overflow-hidden rounded-[2rem] border border-[var(--border)] bg-[var(--bg-2)] p-8 md:p-12">
+        <header data-region="encabezado" className="relative mb-8 overflow-hidden rounded-[2rem] border border-[var(--border)] bg-[var(--bg-2)] p-5 sm:p-8 md:p-12">
           <div aria-hidden className="pointer-events-none absolute -right-20 -top-24 size-80 rounded-full bg-[var(--accent-2)] opacity-25 blur-3xl" />
           <div aria-hidden className="pointer-events-none absolute -bottom-24 left-10 size-72 rounded-full bg-[var(--accent)] opacity-20 blur-3xl" />
           <div className="relative">
@@ -91,7 +91,7 @@ export function SectionHeader({ theme, kicker, title, description, chips, breadc
             <div className="mt-6 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
               <div className="min-w-0">
                 <p data-el="kicker" className="lx-kicker text-[var(--accent)]">{kicker}</p>
-                <h1 data-el="title" className="mt-3 bg-gradient-to-r from-[var(--fg)] via-[var(--accent)] to-[var(--accent-2)] bg-clip-text text-5xl font-black tracking-tight text-transparent md:text-7xl">
+                <h1 data-el="title" className="mt-3 bg-gradient-to-r from-[var(--fg)] via-[var(--accent)] to-[var(--accent-2)] bg-clip-text break-words text-[clamp(2rem,10vw,3rem)] font-black tracking-tight text-transparent md:text-7xl">
                   {title}
                 </h1>
               </div>
@@ -117,7 +117,7 @@ export function SectionHeader({ theme, kicker, title, description, chips, breadc
           </div>
           <div className="mt-5 lg:grid lg:grid-cols-[1fr_auto_1fr] lg:items-end lg:gap-6">
             <span className="hidden lg:block" />
-            <h1 data-el="title" className="lx-display bg-gradient-to-b from-[var(--fg)] to-[var(--accent)] bg-clip-text text-[2.6rem] font-semibold leading-[1] tracking-tight text-transparent sm:text-6xl md:text-8xl">
+            <h1 data-el="title" className="lx-display bg-gradient-to-b from-[var(--fg)] to-[var(--accent)] bg-clip-text break-words text-[clamp(2rem,11vw,2.6rem)] font-semibold leading-[1] tracking-tight text-transparent sm:text-6xl md:text-8xl">
               {title}
             </h1>
             <div className="mt-6 text-left lg:mt-0 lg:justify-self-end lg:text-right">{filters}</div>
@@ -137,7 +137,7 @@ export function SectionHeader({ theme, kicker, title, description, chips, breadc
           <div className="mt-6 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div className="min-w-0">
               <p data-el="kicker" className="lx-kicker text-[var(--accent)]">{kicker}</p>
-              <h1 data-el="title" className="lx-display mt-3 text-[2.6rem] font-extrabold leading-[0.95] tracking-tight break-words sm:text-5xl md:text-7xl">
+              <h1 data-el="title" className="lx-display mt-3 break-words text-[clamp(2rem,11vw,2.6rem)] font-extrabold leading-[0.95] tracking-tight sm:text-5xl md:text-7xl">
                 {title}
               </h1>
             </div>
@@ -166,14 +166,14 @@ export function SectionGrid({ theme, items, locale }: { theme: string; items: Ar
         <div className="tpl-broadsheet flex flex-col gap-10">
           <BroadsheetCard a={lead} locale={locale} index={0} variant="lead" priority />
           {top.length > 0 && (
-            <div className="grid gap-8 border-t-2 border-[var(--fg)] pt-6 md:grid-cols-3 md:divide-x md:divide-[var(--border)] [&>*]:md:px-5 [&>*:first-child]:md:pl-0">
+            <div className="grid grid-cols-1 gap-8 border-t-2 border-[var(--fg)] pt-6 md:grid-cols-3 md:divide-x md:divide-[var(--border)] [&>*]:md:px-5 [&>*:first-child]:md:pl-0">
               {top.map((a, i) => (
                 <BroadsheetCard key={a.slug} a={a} locale={locale} index={i + 1} variant="feature" />
               ))}
             </div>
           )}
           {breves.length > 0 && (
-            <div className="grid gap-x-10 gap-y-2 border-t border-[var(--border)] pt-6 md:grid-cols-2">
+            <div className="grid grid-cols-1 gap-x-10 gap-y-2 border-t border-[var(--border)] pt-6 md:grid-cols-2">
               {breves.map((a, i) => (
                 <BroadsheetCard key={a.slug} a={a} locale={locale} index={i + 4} variant="compact" />
               ))}
@@ -190,14 +190,14 @@ export function SectionGrid({ theme, items, locale }: { theme: string; items: Ar
         <div className="flex flex-col gap-12">
           <HomeCard a={lead} locale={locale} variant="lead" hover="zoom" priority />
           {pair.length > 0 && (
-            <div className="grid gap-8 md:grid-cols-2">
+            <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
               {pair.map((a) => (
                 <HomeCard key={a.slug} a={a} locale={locale} variant="feature" hover="zoom" />
               ))}
             </div>
           )}
           {grid.length > 0 && (
-            <div className="grid gap-x-6 gap-y-10 border-t-2 border-[var(--rule-strong)] pt-8 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-x-6 gap-y-10 border-t-2 border-[var(--rule-strong)] pt-8 sm:grid-cols-2 lg:grid-cols-3">
               {grid.map((a) => (
                 <HomeCard key={a.slug} a={a} locale={locale} variant="feature" hover="zoom" />
               ))}
@@ -209,8 +209,8 @@ export function SectionGrid({ theme, items, locale }: { theme: string; items: Ar
     case "compacto":
       // Compacto: fichas densas; la primera ocupa 2×2.
       return (
-        <div className="grid auto-rows-[13rem] grid-cols-2 gap-3 md:grid-cols-4">
-          <div className="col-span-2 row-span-2">
+        <div className="grid grid-cols-2 gap-3 md:auto-rows-[minmax(13rem,auto)] md:grid-cols-4">
+          <div className="col-span-2 md:row-span-2">
             <TileCard a={lead} locale={locale} index={0} size="lg" priority className="h-full" />
           </div>
           {rest.map((a, i) => (
@@ -224,7 +224,7 @@ export function SectionGrid({ theme, items, locale }: { theme: string; items: Ar
       // Vanguardia: bento asimétrico dentro de una lámina oscura redondeada.
       return (
         <div className="relative overflow-hidden rounded-[2rem] bg-[var(--bg-2)] p-3 sm:p-5">
-          <div className="grid auto-rows-[10rem] grid-cols-2 gap-3 sm:auto-rows-[11rem] sm:grid-cols-6 sm:gap-4">
+          <div className="grid auto-rows-[minmax(10rem,auto)] grid-cols-2 gap-3 sm:auto-rows-[minmax(11rem,auto)] sm:grid-cols-6 sm:gap-4">
             <div className="col-span-2 row-span-2 sm:col-span-4">
               <BentoTile a={lead} locale={locale} size="xl" priority className="h-full" />
             </div>
@@ -251,7 +251,7 @@ export function SectionGrid({ theme, items, locale }: { theme: string; items: Ar
       const grid = rest.slice(4);
       return (
         <div className="flex flex-col gap-14">
-          <section className="grid gap-8 lg:grid-cols-[1.55fr_1fr]">
+          <section className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
             <ArticleCard a={lead} locale={locale} variant="lead" priority />
             {rail.length > 0 && (
               <div className="flex flex-col gap-5">
@@ -262,7 +262,7 @@ export function SectionGrid({ theme, items, locale }: { theme: string; items: Ar
             )}
           </section>
           {grid.length > 0 && (
-            <div className="grid gap-7 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-7 sm:grid-cols-2 lg:grid-cols-3">
               {grid.map((a, i) => (
                 <ArticleCard key={a.slug} a={a} locale={locale} variant="gold" index={i} />
               ))}
@@ -273,7 +273,7 @@ export function SectionGrid({ theme, items, locale }: { theme: string; items: Ar
     }
     default:
       return (
-        <div className="grid gap-7 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-7 sm:grid-cols-2 lg:grid-cols-3">
           {items.map((a, i) => (
             <ArticleCard key={a.slug} a={a} locale={locale} variant="copper" index={i} />
           ))}

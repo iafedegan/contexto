@@ -73,12 +73,12 @@ export function TileCard({
             />
           )}
           <span
-            className="absolute left-0 top-0 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.06em] text-white"
+            className="absolute left-0 top-0 max-w-[calc(100%-3rem)] truncate px-2 py-1 text-[0.72rem] font-bold uppercase tracking-[0.06em] text-white"
             style={{ background: accent }}
           >
             {categoryLabel(locale, a.categorySlug, a.categoryName ?? "General")}
           </span>
-          <span className="absolute right-0 top-0 bg-black/55 px-1.5 py-1 font-mono text-[10px] tabular-nums text-white/85">
+          <span className="absolute right-0 top-0 bg-black/55 px-1.5 py-1 font-mono text-[0.72rem] tabular-nums text-white/85">
             #{String(index + 1).padStart(2, "0")}
           </span>
           <span
@@ -94,7 +94,7 @@ export function TileCard({
           >
             {a.title}
           </h3>
-          <p className="mt-1.5 font-mono text-[10px] tabular-nums text-[var(--ink-faint)]">
+          <p className="mt-1.5 font-mono text-xs tabular-nums text-[var(--ink-faint)]">
             {a.publishedAt ? formatDate(a.publishedAt, INTL_LOCALE[locale]) : ""}
             {a.authorName ? ` · ${a.authorName}` : ""}
           </p>

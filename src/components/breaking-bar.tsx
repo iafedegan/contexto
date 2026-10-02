@@ -18,7 +18,7 @@ export async function BreakingBar({ locale }: { locale: Locale }) {
       className="group block border-b border-[var(--danger)]/40 bg-[var(--danger)] text-[var(--accent-fg)]"
     >
       <div className="shell flex items-center gap-3 py-2.5">
-        <span className="lx-ui inline-flex shrink-0 items-center gap-1.5 rounded-full bg-black/20 px-2.5 py-1 text-[0.62rem] font-bold uppercase tracking-[0.16em]">
+        <span className="lx-ui inline-flex shrink-0 items-center gap-1.5 rounded-full bg-black/20 px-2.5 py-1 text-[0.72rem] font-bold uppercase tracking-[0.16em]">
           <Zap size={11} className="animate-pulse" />
           {t(locale, "breaking.label")}
         </span>

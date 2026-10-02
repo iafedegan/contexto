@@ -75,7 +75,7 @@ export function BreveCarousel({
             type="button"
             aria-label="Anterior"
             onClick={() => scrollBy(-1)}
-            className="rounded-full border border-[var(--rule)] p-1.5 text-[var(--ink-soft)] transition hover:border-[var(--brand)] hover:text-[var(--brand)]"
+            className="inline-flex size-[1.875rem] items-center justify-center rounded-full border border-[var(--rule)] text-[var(--ink-soft)] transition hover:border-[var(--brand)] hover:text-[var(--brand)] pointer-coarse:size-11"
           >
             <ChevronLeft size={16} />
           </button>
@@ -83,7 +83,7 @@ export function BreveCarousel({
             type="button"
             aria-label="Siguiente"
             onClick={() => scrollBy(1)}
-            className="rounded-full border border-[var(--rule)] p-1.5 text-[var(--ink-soft)] transition hover:border-[var(--brand)] hover:text-[var(--brand)]"
+            className="inline-flex size-[1.875rem] items-center justify-center rounded-full border border-[var(--rule)] text-[var(--ink-soft)] transition hover:border-[var(--brand)] hover:text-[var(--brand)] pointer-coarse:size-11"
           >
             <ChevronRight size={16} />
           </button>

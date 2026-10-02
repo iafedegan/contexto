@@ -17,9 +17,9 @@ export function MiPerfilForm({ name, email }: { name: string; email: string }) {
       className="mb-4 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface-2)] p-4"
     >
       <p className="text-sm font-semibold">Mis datos</p>
-      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+      <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
         <label className="flex flex-col gap-1">
-          <span className="text-[0.68rem] uppercase tracking-[0.14em] text-[var(--fg-muted)]">Nombre</span>
+          <span className="text-[0.72rem] uppercase tracking-[0.14em] text-[var(--fg-muted)]">Nombre</span>
           <input
             name="name"
             defaultValue={name}
@@ -28,7 +28,7 @@ export function MiPerfilForm({ name, email }: { name: string; email: string }) {
           />
         </label>
         <label className="flex flex-col gap-1">
-          <span className="text-[0.68rem] uppercase tracking-[0.14em] text-[var(--fg-muted)]">Correo</span>
+          <span className="text-[0.72rem] uppercase tracking-[0.14em] text-[var(--fg-muted)]">Correo</span>
           <input
             name="email"
             type="email"
@@ -40,9 +40,9 @@ export function MiPerfilForm({ name, email }: { name: string; email: string }) {
       </div>
 
       {cambiarPassword ? (
-        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
           <label className="flex flex-col gap-1">
-            <span className="text-[0.68rem] uppercase tracking-[0.14em] text-[var(--fg-muted)]">
+            <span className="text-[0.72rem] uppercase tracking-[0.14em] text-[var(--fg-muted)]">
               Contraseña actual
             </span>
             <input
@@ -53,7 +53,7 @@ export function MiPerfilForm({ name, email }: { name: string; email: string }) {
             />
           </label>
           <label className="flex flex-col gap-1">
-            <span className="text-[0.68rem] uppercase tracking-[0.14em] text-[var(--fg-muted)]">
+            <span className="text-[0.72rem] uppercase tracking-[0.14em] text-[var(--fg-muted)]">
               Contraseña nueva
             </span>
             <input

@@ -84,11 +84,11 @@ export function splitHomeSlots<T>(items: T[]): { lead?: T; second?: T; rail: T[]
 // nombres de clase dinámicos), de ahí el mapa explícito en vez de interpolar.
 export const RIVER_COLS: Record<number, string> = {
   2: "sm:grid-cols-2",
-  3: "sm:grid-cols-2 lg:grid-cols-3",
-  4: "sm:grid-cols-2 lg:grid-cols-4",
+  3: "sm:grid-cols-2 xl:grid-cols-3",
+  4: "sm:grid-cols-2 xl:grid-cols-4",
 };
 export const BREVE_COLS: Record<number, string> = {
   2: "sm:grid-cols-2",
-  3: "sm:grid-cols-2 lg:grid-cols-3",
-  4: "sm:grid-cols-2 lg:grid-cols-4",
+  3: "sm:grid-cols-2 xl:grid-cols-3",
+  4: "sm:grid-cols-2 xl:grid-cols-4",
 };

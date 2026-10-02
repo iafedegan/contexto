@@ -47,3 +47,6 @@ next-env.d.ts
 .pglite/
 public/subidas/
 .vscode/
+
+# resultados de la auditoría de adaptabilidad
+.audit/

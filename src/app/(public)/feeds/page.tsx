@@ -26,7 +26,7 @@ export default async function RssPage() {
 
   return (
     <SiteShell theme={site.theme} style={site.style} locale="es" variant="institucional">
-      <nav className="lx-ui mb-8 flex items-center gap-2 text-[0.68rem] uppercase tracking-[0.2em] text-[var(--fg-muted)]">
+      <nav className="lx-ui mb-8 flex items-center gap-2 text-[0.72rem] uppercase tracking-[0.2em] text-[var(--fg-muted)]">
         <Link href="/" className="lx-link">Inicio</Link>
         <span aria-hidden className="text-[var(--accent-2)]">/</span>
         <span className="text-[var(--accent)]">RSS</span>
@@ -41,7 +41,7 @@ export default async function RssPage() {
         sociales. Copia la dirección de la sección que te interese y pégala en tu lector.
       </p>
 
-      <ul className="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <ul className="mt-10 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {feeds.map((f) => (
           <li key={f.url} className="lx-card flex flex-col gap-2 p-5">
             <span className="flex items-center gap-2 font-semibold">

@@ -138,7 +138,7 @@ function LoginForm() {
           </button>
         </form>
 
-        <div className="mt-4 flex items-center gap-3 text-[0.68rem] uppercase tracking-[0.14em] text-[var(--fg-muted)]">
+        <div className="mt-4 flex items-center gap-3 text-[0.72rem] uppercase tracking-[0.14em] text-[var(--fg-muted)]">
           <span className="h-px flex-1 bg-[var(--border)]" />
           o
           <span className="h-px flex-1 bg-[var(--border)]" />
@@ -165,7 +165,7 @@ function LoginForm() {
               (form.elements.namedItem("password") as HTMLInputElement).value = "contexto2026";
               setError(null);
             }}
-            className="lx-mono mt-6 w-full text-center text-[0.68rem] text-[var(--fg-muted)] transition hover:text-[var(--accent)]"
+            className="lx-mono mt-6 w-full text-center text-xs text-[var(--fg-muted)] transition hover:text-[var(--accent)]"
           >
             usar credenciales de demo local →
           </button>
@@ -179,7 +179,7 @@ export default function LoginPage() {
   return (
     <div
       data-theme="acceso"
-      className="lx-grain relative isolate grid min-h-dvh bg-[var(--bg)] text-[var(--fg)] lg:grid-cols-2"
+      className="lx-grain relative isolate grid grid-cols-1 min-h-dvh bg-[var(--bg)] text-[var(--fg)] lg:grid-cols-2"
     >
       {/* Panel de marca. Se oculta en móvil: ahí la pantalla es para el
           formulario, no para una foto que empujaría el teclado fuera de vista. */}
@@ -212,7 +212,7 @@ export default function LoginPage() {
             </p>
           </div>
 
-          <p className="lx-mono text-[0.68rem] text-white/45">
+          <p className="lx-mono text-xs text-white/45">
             acceso restringido · registro de auditoría activo
           </p>
         </div>
@@ -224,7 +224,7 @@ export default function LoginPage() {
           <Suspense>
             <LoginForm />
           </Suspense>
-          <p className="lx-mono mt-8 text-center text-[0.68rem] text-[var(--fg-muted)] lg:hidden">
+          <p className="lx-mono mt-8 text-center text-xs text-[var(--fg-muted)] lg:hidden">
             acceso restringido · registro de auditoría activo
           </p>
         </div>

@@ -87,7 +87,7 @@ export default async function ConfiguracionPage() {
         title="Identidad del sitio"
         hint={isAdmin ? undefined : "Solo un administrador puede modificarla."}
       >
-        <form action={saveSiteIdentity} className="grid gap-4 sm:grid-cols-2">
+        <form action={saveSiteIdentity} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="Nombre" hint="Cabecera, pie y plantilla de títulos">
             <input
               name="name"
@@ -161,8 +161,8 @@ export default async function ConfiguracionPage() {
         {isAdmin && cuotas && <CuotaIaPredeterminada valor={cuotas.predeterminada} />}
 
         {isAdmin && (
-        <div className="overflow-hidden rounded-[var(--radius)] border border-[var(--border)]">
-          <table className="w-full border-separate border-spacing-0 text-sm">
+        <div className="overflow-x-auto rounded-[var(--radius)] border border-[var(--border)]">
+          <table className="w-full min-w-[34rem] border-separate border-spacing-0 text-sm">
             <thead>
               <tr>
                 {["Persona", "Rol", "2FA", "Estado"].map((h) => (
@@ -224,7 +224,7 @@ export default async function ConfiguracionPage() {
         title="Analítica y SEO"
         hint="Medición del portal y auditoría de Google antes de publicar"
       >
-        <form action={saveAnalyticsSettings} className="grid gap-4 sm:grid-cols-2">
+        <form action={saveAnalyticsSettings} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="ID de medición GA4" hint="Del tipo G-XXXXXXXXXX · se carga solo en el portal público">
             <input
               name="ga4Id"
@@ -303,7 +303,7 @@ export default async function ConfiguracionPage() {
           )}
         </form>
 
-        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
           <Stat label="GA4" value={analytics.ga4Id || "Sin configurar"} ok={Boolean(analytics.ga4Id)} />
           <Stat
             label="PageSpeed Insights"
@@ -319,7 +319,7 @@ export default async function ConfiguracionPage() {
           <Stat label="Base para auditar" value={analytics.publicBaseUrl || identity.domain || "Sin dominio"} />
         </div>
 
-        <p className="mt-4 flex items-start gap-2 rounded-[var(--radius)] bg-[var(--surface-2)] p-3 text-xs leading-relaxed text-[var(--fg-muted)]">
+        <p className="mt-4 flex items-start gap-2 rounded-[var(--radius)] bg-[var(--surface-2)] p-3 text-xs leading-relaxed text-[var(--fg-muted)] [overflow-wrap:anywhere]">
           <ShieldCheck size={14} className="mt-px shrink-0 text-[var(--accent-2)]" />
           GA4 mide el portal <strong>después</strong> de publicar y nunca se carga en el panel ni en
           las vistas previas. PageSpeed audita la nota <strong>antes</strong>: para un borrador se le
@@ -338,7 +338,7 @@ export default async function ConfiguracionPage() {
       >
         <ApiKeyForm status={keyStatus} canManage={isAdmin} />
 
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <Stat
             label="Origen de la clave"
             value={keyStatus.source ? `Desde ${keyStatus.source}` : "Sin configurar"}
@@ -383,7 +383,7 @@ function Section({
     >
       <header className="mb-4 flex flex-wrap items-baseline gap-2">
         <span className="text-[var(--accent)]">{icon}</span>
-        <h2 className="text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-[var(--fg-muted)]">
+        <h2 className="text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-[var(--fg-muted)]">
           {title}
         </h2>
         {hint && <span className="text-xs text-[var(--fg-muted)]">· {hint}</span>}
@@ -405,10 +405,10 @@ function Field({
   return (
     <label className="block">
       <span className="mb-1.5 flex items-baseline gap-2">
-        <span className="text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-[var(--fg-muted)]">
+        <span className="text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-[var(--fg-muted)]">
           {label}
         </span>
-        {hint && <span className="text-[0.7rem] text-[var(--fg-muted)]/75">{hint}</span>}
+        {hint && <span className="text-xs text-[var(--fg-muted)]/75">{hint}</span>}
       </span>
       {children}
     </label>

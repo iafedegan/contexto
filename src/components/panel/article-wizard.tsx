@@ -425,7 +425,7 @@ export function ArticleWizard({
           <span className="text-sm font-semibold">
             {initial ? "Editar artículo" : heading} · Paso {step + 1} de {STEPS.length}: {current.label}
             {status && (
-              <span className="ml-2 rounded-full bg-[var(--surface-2)] px-2 py-0.5 text-[0.7rem] font-medium text-[var(--fg-muted)]">
+              <span className="ml-2 rounded-full bg-[var(--surface-2)] px-2 py-0.5 text-xs font-medium text-[var(--fg-muted)]">
                 {STATUS_LABEL[status] ?? status}
               </span>
             )}
@@ -436,7 +436,7 @@ export function ArticleWizard({
                 <button
                   type="button"
                   onClick={() => goTo(i)}
-                  className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[0.7rem] transition ${
+                  className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[0.72rem] transition ${
                     i === step
                       ? "border-[var(--accent)] bg-[var(--accent)] text-white"
                       : i < step
@@ -682,7 +682,7 @@ export function ArticleWizard({
 
         {current.key === "seccion" && (
           <Step title="Sección y autor" hint="Dónde se publica y quién firma. Puedes dejarlo para después.">
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <label className="flex flex-col gap-1.5">
                 <span className="lx-kicker text-[var(--fg-muted)]">Sección</span>
                 <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} className={input}>
@@ -779,7 +779,7 @@ export function ArticleWizard({
 
         {current.key === "portada" && (
           <Step title="Foto de portada" hint="Opcional. Si no subes ninguna, se usa una ilustración con el nombre de la sección.">
-            <div className="grid gap-5 sm:grid-cols-[16rem_minmax(0,1fr)]">
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-[16rem_minmax(0,1fr)]">
               <div className="relative aspect-[16/10] overflow-hidden rounded-[var(--radius)] border border-dashed border-[var(--border)] bg-[var(--surface-2)]">
                 {cover ? (
                   // eslint-disable-next-line @next/next/no-img-element

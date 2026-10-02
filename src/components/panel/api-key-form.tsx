@@ -32,11 +32,11 @@ export function ApiKeyForm({ status, canManage }: { status: KeyStatus; canManage
         </span>
         <span className="text-sm font-semibold">Proveedor de modelo</span>
         {status.present ? (
-          <span className="lx-mono rounded-full bg-[var(--accent-2)]/15 px-2.5 py-1 text-[0.7rem] text-[var(--accent-2)]">
+          <span className="lx-mono rounded-full bg-[var(--accent-2)]/15 px-2.5 py-1 text-xs text-[var(--accent-2)]">
             {status.masked}
           </span>
         ) : (
-          <span className="rounded-full bg-[var(--danger)]/12 px-2.5 py-1 text-[0.7rem] text-[var(--danger)]">
+          <span className="rounded-full bg-[var(--danger)]/12 px-2.5 py-1 text-xs text-[var(--danger)]">
             Sin clave
           </span>
         )}
@@ -61,10 +61,10 @@ export function ApiKeyForm({ status, canManage }: { status: KeyStatus; canManage
                 }
               });
             }}
-            className="mt-4 grid gap-3 sm:grid-cols-2"
+            className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2"
           >
             <label className="block">
-              <span className="mb-1.5 block text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-[var(--fg-muted)]">
+              <span className="mb-1.5 block text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-[var(--fg-muted)]">
                 Proveedor
               </span>
               <select
@@ -83,10 +83,10 @@ export function ApiKeyForm({ status, canManage }: { status: KeyStatus; canManage
 
             <label className="block">
               <span className="mb-1.5 flex items-baseline gap-2">
-                <span className="text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-[var(--fg-muted)]">
+                <span className="text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-[var(--fg-muted)]">
                   Modelo
                 </span>
-                <span className="text-[0.7rem] text-[var(--fg-muted)]/75">
+                <span className="text-xs text-[var(--fg-muted)]/75">
                   {catalogo.length > 0
                     ? `${catalogo.length} disponibles en tu cuenta`
                     : "guarda la clave para ver los tuyos"}
@@ -119,10 +119,10 @@ export function ApiKeyForm({ status, canManage }: { status: KeyStatus; canManage
             {provider === "google" && (
               <label className="block sm:col-span-2">
                 <span className="mb-1.5 flex items-baseline gap-2">
-                  <span className="text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-[var(--fg-muted)]">
+                  <span className="text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-[var(--fg-muted)]">
                     Modelo para gráficas
                   </span>
-                  <span className="text-[0.7rem] text-[var(--fg-muted)]/75">
+                  <span className="text-xs text-[var(--fg-muted)]/75">
                     busca cifras en Google y dibuja la gráfica; elige uno que admita búsqueda (los «lite» pueden no hacerlo)
                   </span>
                 </span>
@@ -144,10 +144,10 @@ export function ApiKeyForm({ status, canManage }: { status: KeyStatus; canManage
 
             <label className="block sm:col-span-2">
               <span className="mb-1.5 flex items-baseline gap-2">
-                <span className="text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-[var(--fg-muted)]">
+                <span className="text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-[var(--fg-muted)]">
                   Clave de la API
                 </span>
-                <span className="text-[0.7rem] text-[var(--fg-muted)]/75">
+                <span className="text-xs text-[var(--fg-muted)]/75">
                   {fromEnv && sameProvider
                     ? `la manda la variable ${meta.envVar} del despliegue`
                     : status.present && sameProvider
@@ -205,7 +205,7 @@ export function ApiKeyForm({ status, canManage }: { status: KeyStatus; canManage
             </p>
           )}
 
-          <p className="mt-3 text-[0.7rem] leading-relaxed text-[var(--fg-muted)]">
+          <p className="mt-3 text-xs leading-relaxed text-[var(--fg-muted)]">
             La clave se guarda cifrada (AES-256-GCM) con el secreto del despliegue, nunca en texto
             plano, y no se devuelve al navegador. Si cambias{" "}
             <code className="lx-mono">AUTH_SECRET</code>, habrá que volver a introducirla.

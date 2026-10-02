@@ -129,7 +129,7 @@ export function NewsletterForm({ locale, compacto = false }: { locale: Locale; c
         </p>
       )}
 
-      <p className="mt-3 text-[0.68rem] leading-snug text-[var(--fg-muted)]">
+      <p className="mt-3 text-xs leading-snug text-[var(--fg-muted)]">
         {t(locale, "newsletter.legal")}
       </p>
     </form>

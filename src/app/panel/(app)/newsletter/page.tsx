@@ -42,7 +42,7 @@ export default async function NewsletterPage({ searchParams }: { searchParams: P
         </div>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {[["Activos", counts.activos], ["Pendientes de confirmar", counts.pendientes], ["Bajas", counts.bajas], ["Nuevos (30 días)", counts.nuevos]].map(([l, v]) => (
           <div key={l} className="rounded-[var(--radius)] border border-[var(--border)] p-4">
             <p className="text-xs text-[var(--fg-muted)]">{l}</p>

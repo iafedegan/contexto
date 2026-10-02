@@ -105,9 +105,9 @@ export function ClasicoTemplate({
           )}
         </>
       ) : (
-        <section className="grid gap-x-10 gap-y-8 lg:grid-cols-[1.8fr_1px_1fr]">
+        <section className="grid grid-cols-1 gap-x-10 gap-y-8 xl:grid-cols-[minmax(0,1.8fr)_1px_minmax(0,1fr)]">
           {leadBlock}
-          <div className="hidden bg-[var(--bw-rule,var(--rule))] lg:block" aria-hidden />
+          <div className="hidden bg-[var(--bw-rule,var(--rule))] xl:block" aria-hidden />
           <aside className="flex flex-col divide-y divide-[var(--bw-rule,var(--rule))]">
             <h2 className="kicker border-b-2 border-[var(--brand-ink)] pb-2">{t(locale, "home.brief")}</h2>
             {rail.map((a) => wrap(a, <BroadsheetCard a={a} locale={locale} index={indexOf(a)} variant="compact" interactive={interactive} />))}
@@ -298,7 +298,7 @@ export function VanguardiaTemplate({
         style={{ background: "#8b5cf6" }}
       />
 
-      <div className="relative grid auto-rows-[9.5rem] grid-cols-2 gap-3 sm:auto-rows-[11rem] sm:grid-cols-6 sm:gap-4">
+      <div className="relative grid auto-rows-[minmax(9.5rem,auto)] grid-cols-2 gap-3 sm:auto-rows-[minmax(11rem,auto)] sm:grid-cols-6 sm:gap-4">
         <EditableCard
           index={0}
           builderSelected={builderSelected}
@@ -386,7 +386,7 @@ export function EsmeraldaTemplate({
 
   return (
     <div className="flex flex-col gap-16">
-      <section className="grid gap-8 lg:grid-cols-[1.55fr_1fr]">
+      <section className="grid grid-cols-1 gap-8 xl:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
         {wrap(lead, <ArticleCard a={lead} locale={locale} variant="lead" priority={interactive} />)}
         <aside>
           <p className="lx-kicker text-[var(--accent)]">{t(locale, "home.cover")}</p>
@@ -436,7 +436,7 @@ function GremialTag({ a, locale }: { a: ArticleListItem; locale: Locale }) {
   const c = GREMIAL_TAG[a.categorySlug] ?? GREMIAL_TAG_DEFAULT;
   return (
     <span
-      className="inline-block rounded px-2 py-0.5 text-[0.65rem] font-bold uppercase tracking-wider"
+      className="inline-block max-w-full truncate rounded px-2 py-0.5 align-bottom text-[0.72rem] font-bold uppercase tracking-wider"
       style={{ background: c.bg, color: c.fg }}
     >
       {a.categoryName ?? categoryLabel(locale, a.categorySlug, a.categoryName ?? "")}
@@ -561,18 +561,22 @@ export function GremialTemplate({
       )}
 
       {/* Apertura a sangre + 3 destacadas en miniatura */}
-      <section className="grid gap-6 lg:grid-cols-[1.7fr_1fr]">
+      <section className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)]">
         {wrap(
           lead,
-          <GremialCardLink a={lead} locale={locale} interactive={interactive} className="group relative block aspect-[16/10] overflow-hidden rounded-[var(--radius-lg)] sm:aspect-[16/9]">
+          /* Foto, degradado y texto comparten UNA celda: la tarjeta mide lo que mida lo
+             mayor entre el 16:9 (separador) y el texto. Con alto fijo y el texto anclado
+             abajo, un titular largo se salía por arriba y quedaba recortado. */
+          <GremialCardLink a={lead} locale={locale} interactive={interactive} className="group relative grid min-h-[21rem] overflow-hidden rounded-[var(--radius-lg)] bg-[#0b0d10] sm:min-h-0 [&>*]:col-start-1 [&>*]:row-start-1">
             <div className="absolute inset-0">
               <GremialThumb a={lead} sizes="(min-width: 1024px) 60vw, 100vw" priority={interactive} />
             </div>
             <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent" />
-            <div className="absolute inset-x-0 bottom-0 p-5 sm:p-8">
+            <div aria-hidden className="hidden w-full sm:block sm:aspect-[16/9]" />
+            <div className="relative self-end p-5 sm:p-8">
               <GremialTag a={lead} locale={locale} />
-              <h1 className="lx-display mt-3 text-2xl font-bold leading-tight text-white sm:text-3xl md:text-4xl">{lead.title}</h1>
-              <p className="mt-3 line-clamp-2 max-w-2xl text-sm text-white/85 sm:text-base">{lead.excerpt}</p>
+              <h1 className="lx-display mt-3 line-clamp-4 text-2xl font-bold leading-tight text-white sm:line-clamp-none sm:text-3xl md:text-4xl">{lead.title}</h1>
+              <p className="mt-3 hidden max-w-2xl line-clamp-2 text-sm text-white/85 sm:block sm:text-base">{lead.excerpt}</p>
               <span className="mt-4 inline-flex items-center gap-2 rounded-[var(--radius)] bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--accent-fg)] transition group-hover:opacity-90">
                 {t(locale, "home.readNews")} →
               </span>
@@ -639,7 +643,7 @@ export function GremialTemplate({
         <h2 className="lx-display text-xl font-bold tracking-tight text-[var(--accent-2)] sm:text-2xl">
           {t(locale, "home.forRancher")}
         </h2>
-        <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+        <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-5">
           {herramientas.map(({ icon: Icon, color, label, href }) => (
             <Link
               key={label}
@@ -668,7 +672,7 @@ export function GremialTemplate({
               a={sostenible}
               locale={locale}
               interactive={interactive}
-              className="group mt-6 grid gap-6 sm:grid-cols-[1fr_1.2fr] sm:items-center"
+              className="group mt-6 grid grid-cols-1 gap-6 sm:grid-cols-[1fr_1.2fr] sm:items-center"
             >
               <div className="relative aspect-[4/3] overflow-hidden rounded-[var(--radius-lg)]">
                 <GremialThumb a={sostenible} sizes="(min-width: 640px) 40vw, 100vw" />
@@ -691,7 +695,7 @@ export function GremialTemplate({
       {columnistasFinal.length > 0 && (
         <section>
           <h2 className="lx-display text-xl font-bold tracking-tight sm:text-2xl">{t(locale, "home.columnists")}</h2>
-          <div className="mt-6 grid gap-6 sm:grid-cols-3">
+          <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-3">
             {columnistasFinal.map((a) =>
               wrap(
                 a,

@@ -141,7 +141,7 @@ export function AssistantChat() {
           setInput("");
           void send(q);
         }}
-        className="lx-card lx-glass sticky bottom-4 flex items-center gap-2 p-2"
+        className="lx-card lx-glass sticky bottom-[max(1rem,env(safe-area-inset-bottom))] flex items-center gap-2 p-2"
       >
         <input
           value={input}

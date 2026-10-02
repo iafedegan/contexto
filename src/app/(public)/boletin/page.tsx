@@ -32,7 +32,7 @@ export default async function BoletinPage() {
 
   return (
     <SiteShell theme={site.theme} style={site.style} locale="es" variant="institucional">
-      <div className="mx-auto grid max-w-4xl gap-10 py-14 lg:grid-cols-[1.1fr_0.9fr] lg:items-start">
+      <div className="mx-auto grid grid-cols-1 max-w-4xl gap-10 py-14 lg:grid-cols-[1.1fr_0.9fr] lg:items-start">
         <div>
           <p className="lx-kicker text-[var(--accent)]">Boletín gratuito</p>
           <h1 className="lx-display mt-3 text-4xl font-semibold leading-tight sm:text-5xl">

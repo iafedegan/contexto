@@ -36,11 +36,11 @@ export function DeleteArticleButton({ id, title, published }: { id: string; titl
         disabled={pending}
         title="Eliminar artículo"
         aria-label={`Eliminar ${title}`}
-        className="inline-flex size-8 items-center justify-center rounded-full border border-[var(--border)] text-[var(--fg-muted)] transition hover:border-[var(--danger,#b4442e)] hover:text-[var(--danger,#b4442e)] disabled:opacity-50"
+        className="inline-flex size-8 items-center justify-center rounded-full pointer-coarse:size-11 border border-[var(--border)] text-[var(--fg-muted)] transition hover:border-[var(--danger,#b4442e)] hover:text-[var(--danger,#b4442e)] disabled:opacity-50"
       >
         {pending ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
       </button>
-      {error && <span className="text-[0.65rem] text-[var(--danger,#b4442e)]">{error}</span>}
+      {error && <span className="text-xs text-[var(--danger,#b4442e)]">{error}</span>}
     </span>
   );
 }

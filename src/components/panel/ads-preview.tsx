@@ -49,7 +49,7 @@ export function AdsPreview({
           const focused = i.key === focusKey;
           return (
             <div key={i.key} className="flex flex-col items-center gap-1">
-              <span className="flex w-full items-center gap-2 text-[10px] font-medium uppercase tracking-wide text-[var(--fg-muted)]">
+              <span className="flex w-full items-center gap-2 text-[0.6875rem] font-medium uppercase tracking-wide text-[var(--fg-muted)]">
                 Publicidad
                 {!i.active && (
                   <span className="rounded bg-[var(--accent)] px-1.5 py-px text-[11px] text-white">Borrador · no visible en el sitio</span>

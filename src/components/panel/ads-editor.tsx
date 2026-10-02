@@ -69,7 +69,7 @@ export function AdsEditor({
         return (
           <section key={position}>
             <div className="mb-1.5 flex items-baseline justify-between gap-2">
-              <p className="meta !text-[0.72rem]">{spec.where}</p>
+              <p className="meta !text-xs">{spec.where}</p>
               <p className="shrink-0 text-[0.74rem] text-[var(--fg-muted)]">
                 {spec.width}×{spec.height}
               </p>
@@ -96,7 +96,7 @@ export function AdsEditor({
                           // eslint-disable-next-line @next/next/no-img-element
                           <img src={image} alt="" className="size-full object-cover" />
                         ) : html ? (
-                          <span className="text-[0.7rem] font-semibold">HTML</span>
+                          <span className="text-xs font-semibold">HTML</span>
                         ) : (
                           <ImageOff size={16} />
                         )}
@@ -108,7 +108,7 @@ export function AdsEditor({
                         <span className="block truncate text-xs text-[var(--fg-muted)]">{z.name}</span>
                       </span>
                       <span
-                        className={`shrink-0 rounded-full px-2 py-0.5 text-[0.7rem] font-semibold uppercase tracking-wide ${
+                        className={`shrink-0 rounded-full px-2 py-0.5 text-[0.72rem] font-semibold uppercase tracking-wide ${
                           active && hasCreative
                             ? "bg-[#16a34a]/15 text-[#15803d]"
                             : hasCreative

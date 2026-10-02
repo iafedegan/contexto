@@ -45,7 +45,7 @@ export default async function MensajesPage() {
               }`}
             >
               <div className="flex flex-wrap items-center gap-3">
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--surface-2)] px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-[var(--fg-muted)]">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--surface-2)] px-3 py-1 text-[0.72rem] font-semibold uppercase tracking-[0.14em] text-[var(--fg-muted)]">
                   {m.kind === "comercial" ? <Megaphone size={12} /> : <Mail size={12} />}
                   {m.kind === "comercial" ? "Pauta" : "Contacto"}
                 </span>

@@ -630,14 +630,14 @@ export function TemplateBlueprint({
             {label}
           </button>
         ))}
-        <span className="ml-auto text-[0.68rem] text-[var(--fg-muted)]">{tabs.length === 1 ? "Plano de la página de sección (estructura real de la plantilla activa)" : "Plano de la plantilla activa"}</span>
+        <span className="ml-auto text-xs text-[var(--fg-muted)]">{tabs.length === 1 ? "Plano de la página de sección (estructura real de la plantilla activa)" : "Plano de la plantilla activa"}</span>
       </div>
       <div className="max-h-[34rem] overflow-y-auto rounded-[var(--radius)] border border-[var(--border)] bg-white">
         <svg viewBox={`0 0 ${W} ${H}`} className="block w-full" role="img" aria-label="Plano de la plantilla con la posición de la publicidad" fontFamily="Inter, Helvetica, Arial, sans-serif">
           {els}
         </svg>
       </div>
-      <p className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-[0.68rem] text-[var(--fg-muted)]">
+      <p className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-xs text-[var(--fg-muted)]">
         <span><span className="mr-1 inline-block size-2.5 rounded-sm border border-dashed border-[#d4b23a] bg-[#fff8e1]" />Vacío</span>
         <span><span className="mr-1 inline-block size-2.5 rounded-sm border border-[#c9a227] bg-[#ffe7a8]" />Borrador</span>
         <span><span className="mr-1 inline-block size-2.5 rounded-sm border border-[#4f8a1f] bg-[#cfe9b0]" />Activo</span>

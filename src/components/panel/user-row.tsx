@@ -187,7 +187,7 @@ export function UserRow({
             </>
           ) : (
             <>
-              <div className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
                 {permisos.map((p) => (
                   <label key={p.id} className="flex cursor-pointer items-start gap-2.5 text-sm">
                     <input

@@ -32,7 +32,7 @@ export function SectionFiltersPicker({ value, onChange }: { value: SectionFilter
           </button>
         ))}
       </div>
-      <p className="mt-1.5 text-[0.7rem] text-[var(--fg-muted)]">{OPTIONS.find((o) => o.id === value)?.hint}</p>
+      <p className="mt-1.5 text-xs text-[var(--fg-muted)]">{OPTIONS.find((o) => o.id === value)?.hint}</p>
     </div>
   );
 }

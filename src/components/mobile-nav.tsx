@@ -52,11 +52,14 @@ export function MobileNav({
     if (!open) return;
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+    // El aviso de ubicación (z-90, fuera de la cabecera) quedaba por encima del menú: se oculta mientras está abierto.
+    document.documentElement.setAttribute("data-cg-overlay", "1");
     closeRef.current?.focus();
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
     window.addEventListener("keydown", onKey);
     return () => {
       document.body.style.overflow = prev;
+      document.documentElement.removeAttribute("data-cg-overlay");
       window.removeEventListener("keydown", onKey);
     };
   }, [open]);
@@ -74,9 +77,10 @@ export function MobileNav({
       <Search size={20} />
     </Link>
   );
+  // El enlace mide 44 px de alto (el texto solo mide ~22); el nombre se recorta dentro con «…».
   const logo = (cls: string) => (
-    <Link href={localePath(locale, "/")} className={`min-w-0 truncate ${cls}`}>
-      {name}
+    <Link href={localePath(locale, "/")} className={`flex min-h-11 min-w-0 items-center ${cls.includes("text-center") ? "justify-center" : ""} ${cls}`}>
+      <span className="truncate">{name}</span>
     </Link>
   );
 
@@ -151,7 +155,7 @@ export function MobileNav({
   }
 
   return (
-    <header data-region="navbar" className="sticky top-0 z-40 bg-[var(--nav-bg)] text-[var(--fg)] lg:hidden">
+    <header data-region="navbar" className="sticky top-0 z-40 bg-[var(--nav-bg)] pt-[env(safe-area-inset-top)] text-[var(--fg)] lg:hidden">
       {bar}
 
       {open && (
@@ -160,9 +164,9 @@ export function MobileNav({
           role="dialog"
           aria-modal="true"
           aria-label={t(locale, "nav.sections")}
-          className="fixed inset-0 z-[100] flex flex-col bg-[var(--bg)] text-[var(--fg)]"
+          className="fixed inset-0 z-[100] flex flex-col bg-[var(--bg)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] text-[var(--fg)]"
         >
-          <div className="flex items-center justify-between gap-3 border-b border-[var(--border)] px-4 py-2">
+          <div className="flex items-center justify-between gap-3 border-b border-[var(--border)] px-4 pb-2 pt-[max(0.5rem,env(safe-area-inset-top))]">
             <Link href={localePath(locale, "/")} onClick={() => setOpen(false)} className="lx-display min-w-0 truncate text-lg font-semibold">
               {name}
             </Link>
@@ -196,7 +200,7 @@ export function MobileNav({
             </Link>
           </nav>
 
-          <div className="flex flex-wrap items-center gap-3 border-t border-[var(--border)] px-4 py-3">
+          <div className="flex flex-wrap items-center gap-3 border-t border-[var(--border)] px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3">
             <LocaleSwitch locale={locale} />
             <ThemeToggle locale={locale} />
             {radioStreamUrl && <RadioPlayer src={radioStreamUrl} locale={locale} />}

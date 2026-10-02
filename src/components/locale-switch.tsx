@@ -26,7 +26,8 @@ export function LocaleSwitch({ locale, className = "" }: { locale: Locale; class
             href={localePath(l, bare)}
             hrefLang={l}
             aria-current={active ? "true" : undefined}
-            className={`px-3 py-2 text-[0.68rem] font-semibold leading-none tracking-[0.12em] transition sm:px-2 sm:py-0.5 sm:text-[0.62rem] ${
+            // 44 px de alto con el dedo; con ratón, la píldora compacta de siempre.
+            className={`inline-flex min-h-11 min-w-11 items-center justify-center px-3 text-[0.72rem] font-semibold leading-none tracking-[0.12em] transition pointer-fine:min-h-0 pointer-fine:min-w-0 pointer-fine:px-2.5 pointer-fine:py-1 ${
               active
                 ? "bg-[var(--accent)] text-[var(--accent-fg)]"
                 : "text-[var(--fg-muted)] hover:text-[var(--accent)]"

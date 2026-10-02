@@ -28,7 +28,7 @@ export function ArticleFilters({
 
   const select = (name: string, value: string, label: string, options: Option[], all?: string) => (
     <label className="flex min-w-0 flex-col gap-0.5">
-      <span className="lx-kicker text-[0.65rem] text-[var(--fg-muted)]">{label}</span>
+      <span className="lx-kicker text-[0.72rem] text-[var(--fg-muted)]">{label}</span>
       <select name={name} defaultValue={value} onChange={submit} className="lx-input min-w-0 !py-1.5 !pl-3 !text-sm leading-normal">
         {all && <option value="">{all}</option>}
         {options.map((o) => (
@@ -47,7 +47,7 @@ export function ArticleFilters({
       className="lx-card grid grid-cols-2 gap-2 px-3 py-2 sm:grid-cols-4 lg:grid-cols-[minmax(0,2fr)_repeat(4,minmax(0,1fr))_auto]"
     >
       <label className="col-span-2 flex min-w-0 flex-col gap-0.5 sm:col-span-4 lg:col-span-1">
-        <span className="lx-kicker text-[0.65rem] text-[var(--fg-muted)]">Buscar</span>
+        <span className="lx-kicker text-[0.72rem] text-[var(--fg-muted)]">Buscar</span>
         <input
           type="search"
           name="q"

@@ -19,7 +19,7 @@ export function SettingsForm({ settings, provider, canManage }: { settings: News
   );
 
   return (
-    <div className="grid gap-6 lg:grid-cols-2">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
       <section className="flex flex-col gap-3 rounded-[var(--radius)] border border-[var(--border)] p-4">
         <h2 className="font-semibold">Remitente y diseño</h2>
         {field("Nombre del remitente", "fromName")}

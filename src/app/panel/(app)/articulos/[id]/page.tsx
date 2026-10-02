@@ -302,7 +302,7 @@ function ModeChooser() {
           ¿Cómo quieres crearlo?
         </h1>
       </div>
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {options.map((o) => (
           <Link
             key={o.href}

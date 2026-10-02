@@ -32,7 +32,7 @@ export function ConfigTabs({ tabs, children }: { tabs: TabDef[]; children: React
     <div>
       <div
         role="tablist"
-        className="mb-6 flex flex-wrap gap-1.5 border-b border-[var(--border)] pb-3"
+        className="lx-navrail mb-6 gap-1.5 border-b border-[var(--border)] pb-3 sm:flex-wrap"
       >
         {tabs.map((t) => {
           const isActive = t.id === active;
@@ -46,7 +46,7 @@ export function ConfigTabs({ tabs, children }: { tabs: TabDef[]; children: React
                 setActive(t.id);
                 history.replaceState(null, "", `#${t.id}`);
               }}
-              className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold transition ${
+              className={`inline-flex min-h-11 items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold transition sm:min-h-0 ${
                 isActive
                   ? "bg-[var(--accent)] text-[var(--accent-fg)]"
                   : "text-[var(--fg-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)]"

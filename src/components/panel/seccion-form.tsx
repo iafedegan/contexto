@@ -55,17 +55,17 @@ export function SeccionForm({
         <form action={action} className="flex flex-col gap-3 border-t border-[var(--border)] p-4">
           <input type="hidden" name="id" value={id} />
           <label className="flex flex-col gap-1">
-            <span className="text-[0.68rem] uppercase tracking-[0.14em] text-[var(--fg-muted)]">Nombre</span>
+            <span className="text-[0.72rem] uppercase tracking-[0.14em] text-[var(--fg-muted)]">Nombre</span>
             <Input name="name" defaultValue={name} required />
           </label>
           <label className="flex flex-col gap-1">
-            <span className="text-[0.68rem] uppercase tracking-[0.14em] text-[var(--fg-muted)]">
+            <span className="text-[0.72rem] uppercase tracking-[0.14em] text-[var(--fg-muted)]">
               Descripción (meta description de la sección)
             </span>
             <Textarea name="description" defaultValue={description ?? ""} rows={2} />
           </label>
           <label className="flex flex-col gap-1">
-            <span className="text-[0.68rem] uppercase tracking-[0.14em] text-[var(--fg-muted)]">
+            <span className="text-[0.72rem] uppercase tracking-[0.14em] text-[var(--fg-muted)]">
               Posición en el menú (1 = la primera a la izquierda)
             </span>
             <Input name="sortOrder" type="number" defaultValue={sortOrder} className="max-w-32" />

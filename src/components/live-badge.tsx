@@ -8,7 +8,7 @@ import { t, type Locale } from "@/lib/i18n";
 export function LiveBadge({ locale, className = "" }: { locale: Locale; className?: string }) {
   return (
     <span
-      className={`lx-ui inline-flex items-center gap-1.5 rounded-full bg-[var(--danger)] px-2.5 py-0.5 text-[0.6rem] font-bold uppercase tracking-[0.16em] text-white ${className}`}
+      className={`lx-ui inline-flex items-center gap-1.5 rounded-full bg-[var(--danger)] px-2.5 py-0.5 text-[0.72rem] font-bold uppercase tracking-[0.16em] text-white ${className}`}
     >
       <Radio size={10} aria-hidden />
       <span className="relative flex size-1.5">

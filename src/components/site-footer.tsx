@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { cn } from "@/lib/utils";
 import type { FooterId } from "@/lib/template-parts";
 import type { NavItem } from "@/components/site-header";
 import { THEME_LABEL, type Theme } from "@/lib/theme";
@@ -112,7 +113,7 @@ type FooterProps = {
 
 function Signature({ theme, locale = "es" }: { theme: Theme; locale?: Locale }) {
   return (
-    <span className="lx-kicker text-[0.58rem] text-[var(--fg-muted)] opacity-70">
+    <span className="lx-kicker text-[0.72rem] text-[var(--fg-muted)] opacity-70">
       {t(locale, "footer.template")} «{THEME_LABEL[theme]}»
     </span>
   );
@@ -121,13 +122,13 @@ function Signature({ theme, locale = "es" }: { theme: Theme; locale?: Locale }) 
 /* ------------------------------------------------------------------ HOME */
 function GrandFooter({ nav, theme, locale, LEGAL, TOOLS, ARCHIVE_NOTE, SITE_NAME }: FooterProps) {
   return (
-    <footer data-region="footer" className="relative mt-24 border-t border-[var(--border)] bg-[var(--bg-2)]">
+    <footer data-region="footer" className="relative mt-16 sm:mt-24 border-t border-[var(--border)] bg-[var(--bg-2)]">
       <div
         aria-hidden
         className="h-px w-full bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent"
       />
       <div className="mx-auto max-w-7xl px-6 py-16">
-        <div className="grid gap-12 md:grid-cols-2 lg:grid-cols-[1.3fr_1fr_1fr_1fr_1fr]">
+        <div className="grid grid-cols-1 gap-12 md:grid-cols-2 lg:grid-cols-[1.3fr_1fr_1fr_1fr_1fr]">
           <div>
             <span className="lx-display lx-foil text-3xl font-semibold">{SITE_NAME}</span>
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-[var(--fg-muted)]">
@@ -169,7 +170,7 @@ function GremialFooter({ nav, theme, locale, LEGAL, TOOLS, ARCHIVE_NOTE, SITE_NA
       }}
     >
       <div className="mx-auto max-w-7xl px-6 py-16">
-        <div className="grid gap-12 md:grid-cols-2 lg:grid-cols-[1.3fr_1fr_1fr_1fr_1fr]">
+        <div className="grid grid-cols-1 gap-12 md:grid-cols-2 lg:grid-cols-[1.3fr_1fr_1fr_1fr_1fr]">
           <div>
             <span className="lx-display text-3xl font-semibold">{SITE_NAME}</span>
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-[var(--fg-muted)]">{t(locale, "footer.blurb")}</p>
@@ -230,15 +231,17 @@ function FooterLink({
   className?: string;
   children: React.ReactNode;
 }) {
+  // Con el dedo, cada enlace del pie mide 44 px de alto (antes ~17 px, imposible de acertar).
+  const tap = cn(className, "pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:min-w-11 pointer-coarse:items-center");
   if (esFichero(href)) {
     return (
-      <a href={href} className={className}>
+      <a href={href} className={tap}>
         {children}
       </a>
     );
   }
   return (
-    <Link href={href} className={className}>
+    <Link href={href} className={tap}>
       {children}
     </Link>
   );
@@ -247,7 +250,7 @@ function FooterLink({
 /* -------------------------------------------------------------- ARTÍCULO */
 function ColophonFooter({ theme, locale, LEGAL, ARCHIVE_NOTE, SITE_NAME }: FooterProps) {
   return (
-    <footer data-region="footer" className="mt-24 border-t border-[var(--border)] bg-[var(--bg-2)]">
+    <footer data-region="footer" className="mt-16 sm:mt-24 border-t border-[var(--border)] bg-[var(--bg-2)]">
       <div className="mx-auto max-w-2xl px-6 py-14 text-center">
         <span className="lx-display text-2xl italic text-[var(--accent)]">{SITE_NAME}</span>
         <hr className="lx-rule mx-auto my-6 w-24" />
@@ -274,7 +277,7 @@ function ColophonFooter({ theme, locale, LEGAL, ARCHIVE_NOTE, SITE_NAME }: Foote
 /* --------------------------------------------------------------- SECCIÓN */
 function CopperFooter({ nav, theme, locale, LEGAL, ARCHIVE_NOTE, SITE_NAME }: FooterProps) {
   return (
-    <footer data-region="footer" className="relative mt-24 overflow-hidden rounded-t-[3rem] border-t border-[var(--border)] bg-[var(--bg-2)]">
+    <footer data-region="footer" className="relative mt-16 sm:mt-24 overflow-hidden rounded-t-[3rem] border-t border-[var(--border)] bg-[var(--bg-2)]">
       <span
         aria-hidden
         className="lx-display pointer-events-none absolute -bottom-10 -right-6 text-[11rem] font-extrabold leading-none text-[var(--accent)] opacity-[0.07]"
@@ -292,7 +295,7 @@ function CopperFooter({ nav, theme, locale, LEGAL, ARCHIVE_NOTE, SITE_NAME }: Fo
                 <Link
                   key={n.href}
                   href={localePath(locale, n.href)}
-                  className="lx-ui rounded-full border border-[var(--border)] px-4 py-1.5 text-xs transition hover:border-[var(--border-strong)] hover:bg-[var(--surface-2)]"
+                  className="lx-ui rounded-full border border-[var(--border)] px-4 py-1.5 text-xs transition hover:border-[var(--border-strong)] hover:bg-[var(--surface-2)] pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:items-center"
                 >
                   {n.label}
                 </Link>
@@ -323,7 +326,7 @@ function CopperFooter({ nav, theme, locale, LEGAL, ARCHIVE_NOTE, SITE_NAME }: Fo
 /* ------------------------------------------------------------------ AUTOR */
 function AtelierFooter({ theme, locale, LEGAL, ARCHIVE_NOTE, SITE_NAME }: FooterProps) {
   return (
-    <footer data-region="footer" className="mt-28 border-t border-[var(--border)] bg-[var(--bg-2)]">
+    <footer data-region="footer" className="mt-20 sm:mt-28 border-t border-[var(--border)] bg-[var(--bg-2)]">
       <div className="mx-auto max-w-3xl px-6 py-16 text-center">
         <p className="lx-display text-2xl font-light italic leading-relaxed text-[var(--fg)]">
           {t(locale, "footer.quote")}
@@ -358,8 +361,8 @@ function AtelierFooter({ theme, locale, LEGAL, ARCHIVE_NOTE, SITE_NAME }: Footer
 /* --------------------------------------------------------------- BUSCADOR */
 function StatusFooter({ theme, locale, LEGAL, SITE_NAME }: FooterProps) {
   return (
-    <footer data-region="footer" className="mt-20 border-t border-[var(--border)] bg-[var(--bg-2)]">
-      <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-3 px-6 py-6 text-[0.7rem] text-[var(--fg-muted)]">
+    <footer data-region="footer" className="mt-14 sm:mt-20 border-t border-[var(--border)] bg-[var(--bg-2)]">
+      <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-3 px-6 py-6 text-xs text-[var(--fg-muted)]">
         <span className="lx-mono flex items-center gap-2 text-[var(--accent)]">
           <span className="lx-pulse size-1.5 rounded-full bg-[var(--accent)]" />
           index: pgvector + fts_es
@@ -380,7 +383,7 @@ function StatusFooter({ theme, locale, LEGAL, SITE_NAME }: FooterProps) {
 /* -------------------------------------------------------------- ASISTENTE */
 function AuroraFooter({ theme, locale, LEGAL, SITE_NAME }: FooterProps) {
   return (
-    <footer data-region="footer" className="relative mt-20">
+    <footer data-region="footer" className="relative mt-14 sm:mt-20">
       <div
         aria-hidden
         className="mx-auto h-px max-w-3xl bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent"
@@ -398,7 +401,7 @@ function AuroraFooter({ theme, locale, LEGAL, SITE_NAME }: FooterProps) {
             </li>
           ))}
         </ul>
-        <p className="mt-6 text-[0.7rem] text-[var(--fg-muted)]">
+        <p className="mt-6 text-xs text-[var(--fg-muted)]">
           © {YEAR} {SITE_NAME}
         </p>
         <div className="mt-2">
@@ -412,8 +415,8 @@ function AuroraFooter({ theme, locale, LEGAL, SITE_NAME }: FooterProps) {
 /* ---------------------------------------------------------- INSTITUCIONAL */
 function SealFooter({ theme, locale, LEGAL, ARCHIVE_NOTE, SITE_NAME }: FooterProps) {
   return (
-    <footer data-region="footer" className="mt-24 border-t-2 border-[var(--accent)] bg-[var(--surface)]">
-      <div className="mx-auto grid max-w-5xl gap-8 px-6 py-12 md:grid-cols-[auto_1fr]">
+    <footer data-region="footer" className="mt-16 sm:mt-24 border-t-2 border-[var(--accent)] bg-[var(--surface)]">
+      <div className="mx-auto grid grid-cols-1 max-w-5xl gap-8 px-6 py-12 md:grid-cols-[auto_1fr]">
         <LogoMark size={64} />
         <div>
           <p className="text-sm leading-relaxed text-[var(--fg-muted)]">
@@ -441,7 +444,7 @@ function SealFooter({ theme, locale, LEGAL, ARCHIVE_NOTE, SITE_NAME }: FooterPro
 /* ---------------------------------------------------------------- ARCHIVO */
 function SepiaFooter({ theme, locale, LEGAL, SITE_NAME }: FooterProps) {
   return (
-    <footer data-region="footer" className="mt-20 border-t border-[var(--border)]">
+    <footer data-region="footer" className="mt-14 sm:mt-20 border-t border-[var(--border)]">
       <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-6 gap-y-3 px-6 py-8 text-xs text-[var(--fg-muted)]">
         <span className="lx-display tracking-[0.2em] uppercase text-[var(--accent)]">{SITE_NAME}</span>
         {LEGAL.map((l) => (

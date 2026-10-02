@@ -45,6 +45,13 @@ export function SitePopup({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
+  // Mientras el popup está abierto, el aviso de ubicación se oculta (ver globals.css).
+  useEffect(() => {
+    if (!open || preview) return;
+    document.documentElement.setAttribute("data-cg-popup", "1");
+    return () => document.documentElement.removeAttribute("data-cg-popup");
+  }, [open, preview]);
+
   function close() {
     setOpen(false);
     if (!preview) remember(config.frequency, storageKey);
@@ -59,19 +66,19 @@ export function SitePopup({
   const side = hasMedia && config.layout === "modal" && config.mediaPosition === "left";
 
   const content = (
-    <div className={`relative flex flex-col gap-3 ${bgMedia ? "p-8 pt-24 text-white" : "p-6"}`}>
+    <div className={`relative flex flex-col gap-3 ${bgMedia ? "p-6 pt-20 text-white sm:p-8 sm:pt-24" : "p-5 sm:p-6"}`}>
       {config.kicker && (
-        <p className="text-[0.7rem] font-bold uppercase tracking-[0.2em]" style={{ color: bgMedia ? "#fff" : config.accent }}>
+        <p className="text-[0.72rem] font-bold uppercase tracking-[0.2em]" style={{ color: bgMedia ? "#fff" : config.accent }}>
           {config.kicker}
         </p>
       )}
-      {config.title && <h2 className="text-2xl font-bold leading-tight">{config.title}</h2>}
+      {config.title && <h2 className="text-xl font-bold leading-tight sm:text-2xl">{config.title}</h2>}
       {config.text && <p className="text-sm leading-relaxed opacity-80">{config.text}</p>}
       {config.ctaLabel && config.ctaUrl && (
         <a
           href={config.ctaUrl}
           onClick={() => !preview && remember(config.frequency, storageKey)}
-          className="mt-2 inline-flex w-fit items-center rounded-full px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-90"
+          className="mt-2 inline-flex min-h-11 w-fit items-center rounded-full px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-90"
           style={{ background: config.accent }}
         >
           {config.ctaLabel}
@@ -85,9 +92,9 @@ export function SitePopup({
       type="button"
       onClick={close}
       aria-label="Cerrar"
-      className="absolute right-3 top-3 z-10 grid size-8 place-items-center rounded-full bg-black/45 text-white backdrop-blur transition hover:bg-black/70"
+      className="absolute right-2 top-2 z-10 grid size-11 place-items-center rounded-full bg-black/45 text-white backdrop-blur transition hover:bg-black/70"
     >
-      <X size={16} />
+      <X size={18} />
     </button>
   );
 
@@ -96,10 +103,10 @@ export function SitePopup({
   // Franja inferior a todo el ancho.
   if (config.layout === "banner") {
     return (
-      <div role="dialog" aria-label={config.title || "Aviso"} className={`fixed inset-x-0 bottom-0 z-[90] p-3`}>
-        <div className="relative mx-auto flex max-w-5xl items-center gap-4 overflow-hidden shadow-2xl" style={box}>
+      <div role="dialog" aria-label={config.title || "Aviso"} className="fixed inset-x-0 bottom-0 z-[90] p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+        <div className="relative mx-auto flex max-h-[70dvh] max-w-5xl items-center gap-4 overflow-hidden shadow-2xl" style={box}>
           {hasMedia && <div className="hidden h-28 w-44 shrink-0 sm:block">{media}</div>}
-          <div className="flex-1">{content}</div>
+          <div className="max-h-[70dvh] min-w-0 flex-1 overflow-y-auto pr-10">{content}</div>
           {closeBtn}
         </div>
       </div>
@@ -109,8 +116,8 @@ export function SitePopup({
   // Tarjeta en la esquina inferior derecha.
   if (config.layout === "corner") {
     return (
-      <div role="dialog" aria-label={config.title || "Aviso"} className={`fixed bottom-4 right-4 z-[90] w-[min(22rem,calc(100%-2rem))]`}>
-        <div className="relative overflow-hidden shadow-2xl" style={box}>
+      <div role="dialog" aria-label={config.title || "Aviso"} className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] right-[max(1rem,env(safe-area-inset-right))] z-[90] w-[min(22rem,calc(100%-2rem))]">
+        <div className="relative max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain shadow-2xl" style={box}>
           {hasMedia && <div className="aspect-video">{media}</div>}
           {content}
           {closeBtn}
@@ -121,27 +128,30 @@ export function SitePopup({
 
   // Ventana centrada con fondo oscurecido.
   return (
+    // La capa se desplaza: en un teléfono en horizontal (~375 px de alto) la ventana no cabe entera.
     <div
       role="dialog"
       aria-modal="true"
       aria-label={config.title || "Aviso"}
-      className={`fixed inset-0 z-[90] grid place-items-center bg-black/60 p-4 backdrop-blur-sm`}
+      className="fixed inset-0 z-[90] overflow-y-auto overscroll-contain bg-black/60 backdrop-blur-sm"
       onClick={close}
     >
-      <div
-        className={`relative w-full overflow-hidden shadow-2xl ${side ? "grid sm:grid-cols-2" : ""}`}
-        style={{ ...box, maxWidth: config.width }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {bgMedia && (
-          <>
-            <div className="absolute inset-0">{media}</div>
-            <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent" />
-          </>
-        )}
-        {hasMedia && !bgMedia && <div className={side ? "min-h-56" : "aspect-video"}>{media}</div>}
-        {content}
-        {closeBtn}
+      <div className="grid min-h-full place-items-center p-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))]">
+        <div
+          className={`relative w-full overflow-hidden shadow-2xl ${side ? "grid sm:grid-cols-2" : ""}`}
+          style={{ ...box, maxWidth: config.width }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {bgMedia && (
+            <>
+              <div className="absolute inset-0">{media}</div>
+              <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent" />
+            </>
+          )}
+          {hasMedia && !bgMedia && <div className={side ? "min-h-56" : "aspect-video"}>{media}</div>}
+          {content}
+          {closeBtn}
+        </div>
       </div>
     </div>
   );

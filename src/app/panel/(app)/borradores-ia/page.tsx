@@ -79,7 +79,8 @@ export default async function DraftsQueue() {
               className="prose prose-sm mt-2 max-w-none"
               dangerouslySetInnerHTML={{ __html: sanitizeArticleHtml(d.body) }}
             />
-            <table className="mt-3 w-full text-xs">
+            <div className="mt-3 overflow-x-auto">
+            <table className="w-full min-w-[30rem] text-xs [&_td]:px-2 [&_td]:py-1.5 [&_th]:px-2 [&_th]:py-1.5">
               <thead className="text-left text-[var(--fg-muted)]">
                 <tr>
                   <th>Afirmación</th>
@@ -101,19 +102,20 @@ export default async function DraftsQueue() {
                 ))}
               </tbody>
             </table>
+            </div>
           </details>
 
           <div className="flex flex-wrap items-end gap-3">
             <form action={approveDraft.bind(null, d.id)}>
               <Button type="submit">Aprobar → crear borrador</Button>
             </form>
-            <form action={rejectDraft} className="flex items-end gap-2">
+            <form action={rejectDraft} className="flex min-w-0 flex-wrap items-end gap-2">
               <input type="hidden" name="draftId" value={d.id} />
-              <label className="text-xs">
+              <label className="min-w-0 flex-1 text-xs">
                 Motivo de rechazo
                 <input
                   name="reason"
-                  className="ml-0 mt-1 block rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg)] px-2 py-1 text-sm"
+                  className="ml-0 mt-1 block w-full rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg)] px-2 py-1 text-sm"
                 />
               </label>
               <Button variant="danger" type="submit">

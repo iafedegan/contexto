@@ -274,7 +274,7 @@ export function ArticleEditor({
 
       {heading}
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_21rem]">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_21rem]">
         {/* ---------------------------------------------------- Redacción */}
         <div className="flex flex-col gap-5">
           {/* Encargo al asistente: el periodista pone el tema y sus notas; la
@@ -284,10 +284,10 @@ export function ArticleEditor({
               <span className="text-[var(--accent)]">
                 <Sparkles size={14} />
               </span>
-              <h2 className="text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-[var(--fg-muted)]">
+              <h2 className="text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-[var(--fg-muted)]">
                 Redacción asistida
               </h2>
-              <span className="ml-auto text-[0.65rem] text-[var(--fg-muted)]">
+              <span className="ml-auto text-xs text-[var(--fg-muted)]">
                 Borrador para revisión humana
               </span>
             </header>
@@ -310,7 +310,7 @@ export function ArticleEditor({
                 <Wand2 size={15} />
                 {generating ? "Redactando…" : "Generar borrador"}
               </button>
-              <p className="text-[0.7rem] leading-snug text-[var(--fg-muted)]">
+              <p className="text-xs leading-snug text-[var(--fg-muted)]">
                 Escribe sobre el título y el cuerpo actuales. Lo que no pueda confirmar queda
                 marcado entre <code className="lx-mono">{"{{llaves}}"}</code>.
               </p>
@@ -329,12 +329,12 @@ export function ArticleEditor({
 
             {keywords.length > 0 && (
               <div className="mt-3">
-                <p className="meta mb-1.5 !text-[0.65rem]">Términos de búsqueda sugeridos</p>
+                <p className="meta mb-1.5 !text-xs">Términos de búsqueda sugeridos</p>
                 <div className="flex flex-wrap gap-1.5">
                   {keywords.map((k) => (
                     <span
                       key={k}
-                      className="rounded-full border border-[var(--border)] bg-[var(--bg)] px-2.5 py-1 text-[0.7rem]"
+                      className="rounded-full border border-[var(--border)] bg-[var(--bg)] px-2.5 py-1 text-xs"
                     >
                       {k}
                     </span>
@@ -345,7 +345,7 @@ export function ArticleEditor({
 
             {seoOptions.length > 0 && (
               <div className="mt-4">
-                <p className="meta mb-2 !text-[0.65rem]">Opciones de posicionamiento</p>
+                <p className="meta mb-2 !text-xs">Opciones de posicionamiento</p>
                 <div className="flex flex-col gap-2">
                   {seoOptions.map((o, i) => {
                     const activa = metaTitle === o.metaTitle;
@@ -367,7 +367,7 @@ export function ArticleEditor({
                         <span className="mt-0.5 block text-[0.75rem] leading-snug text-[var(--fg-muted)]">
                           {o.metaDescription}
                         </span>
-                        <span className="mt-1.5 flex items-center gap-1.5 text-[0.68rem] text-[var(--accent)]">
+                        <span className="mt-1.5 flex items-center gap-1.5 text-xs text-[var(--accent)]">
                           {activa ? <Check size={11} /> : <Sparkles size={11} />}
                           {activa ? "Aplicada" : o.rationale}
                         </span>
@@ -414,7 +414,7 @@ export function ArticleEditor({
           <Panel
             title="Cuerpo"
             icon={<FileCode2 size={13} />}
-            aside={<span className="lx-mono text-[0.7rem] text-[var(--fg-muted)]">HTML</span>}
+            aside={<span className="lx-mono text-xs text-[var(--fg-muted)]">HTML</span>}
           >
             <textarea
               name="body"
@@ -432,7 +432,7 @@ export function ArticleEditor({
             icon={<ImagePlus size={13} />}
             aside={
               subiendo ? (
-                <span className="flex items-center gap-1.5 text-[0.7rem] text-[var(--fg-muted)]">
+                <span className="flex items-center gap-1.5 text-xs text-[var(--fg-muted)]">
                   <Loader2 size={12} className="animate-spin" /> Subiendo…
                 </span>
               ) : null
@@ -440,7 +440,7 @@ export function ArticleEditor({
           >
             <input type="hidden" name="coverImageUrl" value={cover} />
 
-            <div className="grid gap-5 sm:grid-cols-[13rem_minmax(0,1fr)]">
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-[13rem_minmax(0,1fr)]">
               {/* Portada */}
               <div>
                 <div className="relative aspect-[16/10] overflow-hidden rounded-[var(--radius)] border border-dashed border-[var(--border)] bg-[var(--bg-2)]">
@@ -449,7 +449,7 @@ export function ArticleEditor({
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={cover} alt="" className="size-full object-cover" />
                   ) : (
-                    <span className="grid size-full place-items-center text-center text-[0.72rem] leading-relaxed text-[var(--fg-muted)]">
+                    <span className="grid size-full place-items-center text-center text-xs leading-relaxed text-[var(--fg-muted)]">
                       Sin foto de portada
                     </span>
                   )}
@@ -501,7 +501,7 @@ export function ArticleEditor({
                 </Field>
 
                 <div className="rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] p-3">
-                  <p className="text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-[var(--fg-muted)]">
+                  <p className="text-[0.72rem] font-semibold uppercase tracking-[0.14em] text-[var(--fg-muted)]">
                     Dentro del cuerpo
                   </p>
                   <p className="mt-1 text-xs leading-relaxed text-[var(--fg-muted)]">
@@ -528,7 +528,7 @@ export function ArticleEditor({
             {/* YouTube / Vimeo / directos (RT-09). Se guarda el identificador,
                 nunca el HTML que traiga pegado el redactor. */}
             <div className="mt-5 rounded-[var(--radius)] border border-[var(--border)] p-3">
-              <p className="text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-[var(--fg-muted)]">
+              <p className="text-[0.72rem] font-semibold uppercase tracking-[0.14em] text-[var(--fg-muted)]">
                 Vídeo de YouTube o Vimeo
               </p>
               <div className="mt-2 flex flex-wrap gap-2">
@@ -547,7 +547,7 @@ export function ArticleEditor({
                   <Film size={13} /> Insertar vídeo
                 </button>
               </div>
-              <p className="mt-2 text-[0.68rem] leading-snug text-[var(--fg-muted)]">
+              <p className="mt-2 text-xs leading-snug text-[var(--fg-muted)]">
                 Se incrusta por youtube-nocookie: no deja cookies de seguimiento hasta que el lector
                 pulsa play.
               </p>
@@ -558,12 +558,12 @@ export function ArticleEditor({
                 <TriangleAlert size={13} className="mt-0.5 shrink-0" /> {mediaError}
               </p>
             )}
-            <p className="mt-3 text-[0.7rem] text-[var(--fg-muted)]">
+            <p className="mt-3 text-xs text-[var(--fg-muted)]">
               JPG, PNG, WebP, AVIF, GIF, MP4 o WebM · hasta 25 MB.
             </p>
           </Panel>
 
-          <div className="grid gap-5 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
             <Panel title="Sección" icon={<Hash size={13} />}>
               <Select name="categoryId" defaultValue={initial.categoryId ?? ""} options={categories} empty="— Sin sección —" />
             </Panel>
@@ -607,7 +607,7 @@ export function ArticleEditor({
                   {tagList.map((t) => (
                     <span
                       key={t}
-                      className="inline-flex items-center gap-1 rounded-full border border-[var(--border)] bg-[var(--surface-2)] px-2.5 py-1 text-[0.7rem]"
+                      className="inline-flex items-center gap-1 rounded-full border border-[var(--border)] bg-[var(--surface-2)] px-2.5 py-1 text-xs"
                     >
                       <Tag size={10} /> {t}
                     </span>
@@ -642,7 +642,7 @@ export function ArticleEditor({
                       {h.text}
                     </span>
                     {!h.ok && h.help && (
-                      <span className="mt-0.5 block text-[0.68rem] leading-snug text-[var(--fg-muted)]">
+                      <span className="mt-0.5 block text-xs leading-snug text-[var(--fg-muted)]">
                         {h.help}
                       </span>
                     )}
@@ -703,7 +703,7 @@ export function ArticleEditor({
                           </span>
                           <span className="min-w-0">
                             <span className="text-[var(--fg)]">{f.title}</span>
-                            <span className="mt-0.5 block text-[0.68rem] leading-snug text-[var(--fg-muted)]">
+                            <span className="mt-0.5 block text-xs leading-snug text-[var(--fg-muted)]">
                               {f.description.replace(/\[([^\]]+)\]\([^)]+\)/g, "$1").slice(0, 190)}
                             </span>
                           </span>
@@ -716,7 +716,7 @@ export function ArticleEditor({
                     </p>
                   )}
 
-                  <p className="mt-3 break-all text-[0.62rem] leading-snug text-[var(--fg-muted)]">
+                  <p className="mt-3 break-all text-xs leading-snug text-[var(--fg-muted)]">
                     {psi.strategy === "mobile" ? "Móvil" : "Escritorio"} ·{" "}
                     {new Date(psi.fetchedAt).toLocaleTimeString("es-CO")} · {psi.url}
                   </p>
@@ -728,7 +728,7 @@ export function ArticleEditor({
           {/* Maqueta del resultado de Google: se ve el recorte real a 160 car. */}
           <Panel title="Así se verá en Google" icon={<Search size={13} />}>
             <div className="rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] p-3">
-              <p className="flex items-center gap-1.5 text-[0.68rem] text-[var(--fg-muted)]">
+              <p className="flex items-center gap-1.5 text-xs text-[var(--fg-muted)]">
                 <LogoMark size={16} />
                 contextoganadero.com › articulo
               </p>
@@ -784,7 +784,7 @@ export function ArticleEditor({
                     </button>
 
                     <div className="rounded-[var(--radius)] border border-[var(--border)] p-2.5">
-                      <p className="mb-1.5 flex items-center gap-1.5 text-[0.7rem] font-semibold uppercase tracking-[0.12em] text-[var(--fg-muted)]">
+                      <p className="mb-1.5 flex items-center gap-1.5 text-[0.72rem] font-semibold uppercase tracking-[0.12em] text-[var(--fg-muted)]">
                         <CalendarClock size={12} /> Programar
                       </p>
                       <input
@@ -805,7 +805,7 @@ export function ArticleEditor({
                   </>
                 )}
 
-                <p className="text-[0.7rem] leading-relaxed text-[var(--fg-muted)]">
+                <p className="text-xs leading-relaxed text-[var(--fg-muted)]">
                   Publicar regenera las rutas afectadas (ISR) y reindexa el artículo para el
                   asistente.
                 </p>
@@ -836,7 +836,7 @@ function Panel({
       {title && (
         <header className="mb-3 flex items-center gap-2">
           <span className="text-[var(--accent)]">{icon}</span>
-          <h2 className="text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-[var(--fg-muted)]">
+          <h2 className="text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-[var(--fg-muted)]">
             {title}
           </h2>
           {aside && <span className="ml-auto">{aside}</span>}
@@ -883,7 +883,7 @@ function Interruptor({
       </span>
       <span className="min-w-0">
         <span className="block text-sm font-semibold">{titulo}</span>
-        <span className="mt-0.5 block text-[0.7rem] leading-snug text-[var(--fg-muted)]">
+        <span className="mt-0.5 block text-xs leading-snug text-[var(--fg-muted)]">
           {detalle}
         </span>
       </span>
@@ -904,7 +904,7 @@ function PsiScore({ label, value }: { label: string; value: number | null }) {
   return (
     <div className="rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] px-3 py-2">
       <p className={`text-lg font-semibold leading-none ${tono}`}>{value ?? "—"}</p>
-      <p className="mt-1 text-[0.62rem] uppercase tracking-[0.12em] text-[var(--fg-muted)]">{label}</p>
+      <p className="mt-1 text-[0.72rem] uppercase tracking-[0.12em] text-[var(--fg-muted)]">{label}</p>
     </div>
   );
 }
@@ -921,10 +921,10 @@ function Field({
   return (
     <label className="block">
       <span className="flex items-baseline gap-2">
-        <span className="text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-[var(--fg-muted)]">
+        <span className="text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-[var(--fg-muted)]">
           {label}
         </span>
-        {hint && <span className="text-[0.7rem] text-[var(--fg-muted)]/75">{hint}</span>}
+        {hint && <span className="text-xs text-[var(--fg-muted)]/75">{hint}</span>}
       </span>
       {children}
     </label>
@@ -950,7 +950,7 @@ function Meter({ value, min, max }: { value: number; min: number; max: number })
           }}
         />
       </span>
-      <span className="lx-mono text-[0.65rem] tabular-nums text-[var(--fg-muted)]">
+      <span className="lx-mono text-xs tabular-nums text-[var(--fg-muted)]">
         {value}/{max}
       </span>
     </div>

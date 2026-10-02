@@ -190,7 +190,7 @@ export function PopupEditor({
 function Group({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <fieldset className="flex flex-col gap-2 border-t border-[var(--border)] pt-3">
-      <legend className="meta pr-2 !text-[0.65rem]">{title}</legend>
+      <legend className="meta pr-2 !text-xs">{title}</legend>
       {children}
     </fieldset>
   );

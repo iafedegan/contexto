@@ -113,7 +113,7 @@ export function ArticleDocument({
           excerpt={a.excerpt}
           live={a.isLive ? <LiveBadge locale={locale} /> : undefined}
           breadcrumb={
-        <nav className="lx-ui flex flex-wrap items-center gap-2 text-[0.68rem] uppercase tracking-[0.2em] text-[var(--fg-muted)]">
+        <nav className="lx-ui flex flex-wrap items-center gap-2 text-[0.72rem] uppercase tracking-[0.2em] text-[var(--fg-muted)]">
           <Link href={localePath(locale, "/")} className="lx-link">
             {t(locale, "article.home")}
           </Link>
@@ -230,10 +230,10 @@ export function ArticleDocument({
             </h2>
             <ol className="mt-6 flex flex-col">
               {related.map((r, i) => (
-                <li key={`${r.kind}-${r.id}`} className="border-b border-[var(--border)] py-4 last:border-0">
+                <li key={`${r.kind}-${r.id}`} className="border-b border-[var(--border)] last:border-0">
                   <Link
                     href={r.url}
-                    className="group flex items-baseline gap-4"
+                    className="group flex items-baseline gap-4 py-4"
                     {...(r.kind === "archivo" ? { rel: "bookmark" } : {})}
                   >
                     <span className="lx-display text-lg text-[var(--accent-2)]">
@@ -242,7 +242,7 @@ export function ArticleDocument({
                     <span className="lx-display flex-1 text-lg leading-snug transition-colors group-hover:text-[var(--accent)]">
                       {r.title}
                       {r.kind === "archivo" && (
-                        <span className="lx-ui ml-2 align-middle text-[0.62rem] uppercase tracking-[0.18em] text-[var(--fg-muted)]">
+                        <span className="lx-ui ml-2 align-middle text-[0.72rem] uppercase tracking-[0.18em] text-[var(--fg-muted)]">
                           archivo
                         </span>
                       )}

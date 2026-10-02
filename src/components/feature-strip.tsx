@@ -17,7 +17,7 @@ export function FeatureStrip({ locale = DEFAULT_LOCALE, items }: { locale?: Loca
   return (
     <section
       aria-label="Destacados"
-      className="grid gap-x-8 gap-y-6 border-b-2 border-[var(--rule-strong)] pb-8 sm:grid-cols-2 lg:grid-cols-3 lg:divide-x lg:divide-[var(--rule)]"
+      className="grid grid-cols-1 gap-x-8 gap-y-6 border-b-2 border-[var(--rule-strong)] pb-8 sm:grid-cols-2 lg:grid-cols-3 lg:divide-x lg:divide-[var(--rule)]"
     >
       {items.map(({ label, article: a }) => (
         <article key={a.slug} className="group flex gap-4 lg:px-6 lg:first:pl-0 lg:last:pr-0">

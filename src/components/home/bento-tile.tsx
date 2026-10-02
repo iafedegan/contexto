@@ -96,14 +96,19 @@ export function BentoTile({
         <div className="pointer-events-none absolute inset-0 rounded-[1.75rem] opacity-0 shadow-[inset_0_0_0_1.5px_rgba(255,255,255,0.25)] transition-opacity duration-300 group-hover:opacity-100" aria-hidden />
 
         {a.categoryName && (
-          <span className="glass absolute left-3 top-3 rounded-full px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.08em] text-white/90 sm:left-4 sm:top-4">
+          <span className="glass absolute left-3 top-3 max-w-[calc(100%-1.5rem)] truncate rounded-full px-2.5 py-1 text-[0.72rem] font-bold uppercase tracking-[0.08em] text-white/90 sm:left-4 sm:top-4">
             {categoryLabel(locale, a.categorySlug, a.categoryName ?? "")}
           </span>
         )}
 
-        <div className={cn("relative z-[1] p-3 sm:p-4", size === "xl" && "sm:p-6")}>
+        {/* El borde superior reserva el sitio de la etiqueta: las filas crecen con el contenido (minmax) y el texto no la pisa. */}
+        <div className={cn("relative z-[1] p-3 pt-11 sm:p-4 sm:pt-14", size === "xl" && "sm:p-6 sm:pt-16")}>
           <h3
-            className="font-[family-name:var(--font-sans)] font-extrabold tracking-tight text-white"
+            className={cn(
+              "font-[family-name:var(--font-sans)] font-extrabold tracking-tight text-white",
+              // Un titular larguísimo se recorta con puntos suspensivos en vez de estirar la ficha sin límite.
+              size === "xl" ? "line-clamp-5" : size === "lg" ? "line-clamp-4" : "line-clamp-3 sm:line-clamp-4",
+            )}
             style={titleStyle}
           >
             {a.title}
@@ -119,7 +124,7 @@ export function BentoTile({
               {a.excerpt}
             </p>
           )}
-          <p className="mt-2 flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wide text-white/50">
+          <p className="mt-2 flex flex-wrap items-center gap-x-1.5 text-[0.72rem] font-medium uppercase tracking-wide text-white/60">
             {a.authorName && <span>{a.authorName}</span>}
             {a.authorName && a.publishedAt && <span aria-hidden>·</span>}
             {a.publishedAt && <time dateTime={new Date(a.publishedAt).toISOString()}>{formatDate(a.publishedAt, INTL_LOCALE[locale])}</time>}

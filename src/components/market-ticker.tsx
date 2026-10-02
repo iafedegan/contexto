@@ -18,7 +18,7 @@ export async function MarketTicker({ locale }: { locale: Locale }) {
       aria-label={t(locale, "market.label")}
       className="border-b border-[var(--border)] bg-[var(--bg-2)] text-[var(--fg-muted)]"
     >
-      <div className="flex items-center gap-5 overflow-x-auto px-4 py-1.5 text-[0.7rem] font-medium sm:px-6">
+      <div className="flex items-center gap-5 overflow-x-auto px-4 py-1.5 text-xs font-medium sm:px-6">
         {entries.map((entry, i) => (
           <div key={entry.key} className="flex shrink-0 items-center gap-1.5">
             {i > 0 && <span aria-hidden className="mr-3 opacity-40">·</span>}

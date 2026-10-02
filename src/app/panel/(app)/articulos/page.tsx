@@ -163,7 +163,7 @@ export default async function ArticlesList({ searchParams }: { searchParams: Sea
   return (
     <div className="flex flex-col gap-4">
       {/* --- Título, resumen y filtros: fijos bajo la cabecera del panel --- */}
-      <div className="sticky top-[var(--panel-header-h,61px)] z-30 -mx-2 flex flex-col gap-2 rounded-b-[var(--radius)] bg-white px-2 pb-2 pt-3">
+      <div className="z-30 -mx-2 flex flex-col gap-2 rounded-b-[var(--radius)] bg-white px-2 pb-2 pt-3 lg:sticky lg:top-[var(--panel-header-h,61px)]">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="lx-kicker text-[var(--accent)]">Contenido</p>
@@ -221,8 +221,78 @@ export default async function ArticlesList({ searchParams }: { searchParams: Sea
         {rows.length === 200 && " (se muestran los 200 primeros)"} · {nf.format(filteredViews)} lecturas
       </p>
 
-      {/* --- Tabla --- */}
-      <div className="lx-card overflow-x-auto p-0">
+      {/* --- Teléfono: una tarjeta por artículo (la tabla de 960 px obligaba a deslizar en horizontal) --- */}
+      <ul className="flex flex-col gap-3 md:hidden">
+        {rows.map((r) => {
+          const serie = byArticle.get(r.id) ?? new Array(SPARK_DAYS).fill(0);
+          const last7 = serie.slice(-7).reduce((s, v) => s + v, 0);
+          const prev7 = serie.slice(0, 7).reduce((s, v) => s + v, 0);
+          const t = pctChange(last7, prev7);
+          return (
+            <li key={r.id} className="lx-card p-4">
+              <Link href={`/panel/articulos/${r.id}?modo=manual`} className="lx-link block text-base font-semibold leading-snug">
+                {r.title}
+              </Link>
+              <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-[var(--fg-muted)]">
+                {r.category && <span>{r.category}</span>}
+                {r.publishedAt && r.status === "publicado" && (
+                  <>
+                    {r.category && <span aria-hidden>·</span>}
+                    <span>Publicado el {formatDate(r.publishedAt)}</span>
+                  </>
+                )}
+              </div>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <Badge className={r.status === "publicado" ? "border-[var(--border-strong)] text-[var(--accent)]" : ""}>
+                  {STATUS_LABEL[r.status] ?? r.status}
+                </Badge>
+                {r.status === "programado" && r.scheduledFor && (
+                  <span className="text-xs text-[var(--fg-muted)]">{formatDate(r.scheduledFor)}</span>
+                )}
+                <span className="text-xs text-[var(--fg-muted)]">{r.author ?? "Sin autor"}</span>
+              </div>
+              <div className="mt-3 flex items-center justify-between gap-3 border-t border-[var(--border)] pt-3">
+                {r.status === "publicado" || Number(r.views) > 0 ? (
+                  <div className="flex items-center gap-3">
+                    <ViewsSparkline values={serie} />
+                    <div className="text-xs leading-tight">
+                      <div className="text-base font-semibold tabular-nums">{nf.format(Number(r.views))}</div>
+                      <div className="text-[var(--fg-muted)]">
+                        {nf.format(last7)} en 7 días
+                        {t !== null && (
+                          <span className={t >= 0 ? " text-[var(--accent)]" : " text-[var(--danger)]"}>
+                            {" "}
+                            {t >= 0 ? "▲" : "▼"}
+                            {Math.abs(t)} %
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <span className="text-xs text-[var(--fg-muted)]">Sin publicar</span>
+                )}
+                <div className="flex shrink-0 items-center gap-2">
+                  {r.publishedAt && r.status === "publicado" && (
+                    <a href={`/articulo/${r.slug}`} target="_blank" rel="noreferrer" className="lx-link text-xs">
+                      Ver en el sitio ↗
+                    </a>
+                  )}
+                  {canDelete && <DeleteArticleButton id={r.id} title={r.title} published={r.status === "publicado"} />}
+                </div>
+              </div>
+            </li>
+          );
+        })}
+        {rows.length === 0 && (
+          <li className="px-2 py-10 text-center text-[var(--fg-muted)]">
+            {where.length ? "Ningún artículo coincide con los filtros." : "Sin artículos. Crea el primero."}
+          </li>
+        )}
+      </ul>
+
+      {/* --- Tabla (tableta y escritorio) --- */}
+      <div className="lx-card hidden overflow-x-auto p-0 md:block">
         <table className="w-full min-w-[960px] border-separate border-spacing-0 text-sm">
           <thead className="text-left">
             <tr>
@@ -330,11 +400,11 @@ export default async function ArticlesList({ searchParams }: { searchParams: Sea
 function Stat({ label, value, children }: { label: string; value: string; children: React.ReactNode }) {
   return (
     <div className="lx-card flex min-w-0 flex-col gap-0.5 px-3 py-2">
-      <div className="flex items-baseline justify-between gap-2">
-        <span className="lx-kicker truncate text-[0.65rem] text-[var(--fg-muted)]">{label}</span>
+      <div className="flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:justify-between sm:gap-2">
+        <span className="lx-kicker text-[0.72rem] text-[var(--fg-muted)] sm:truncate">{label}</span>
         <span className="lx-display text-lg font-semibold leading-none tabular-nums">{value}</span>
       </div>
-      <span className="hidden truncate text-[0.7rem] text-[var(--fg-muted)] sm:block [&_a]:line-clamp-none">{children}</span>
+      <span className="hidden truncate text-xs text-[var(--fg-muted)] sm:block [&_a]:line-clamp-none">{children}</span>
     </div>
   );
 }

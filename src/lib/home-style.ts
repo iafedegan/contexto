@@ -8,6 +8,18 @@ import { gradientCss, sanitizeGradient } from "@/lib/section-els";
  * que el control por-tarjeta del panel (fuente, negrilla, cursiva, escala)
  * funcione igual sin importar qué tan distinto sea el diseño de la plantilla.
  */
+/**
+ * Tamaño de titular fluido: los grandes (más de 24 px) se reducen en pantallas
+ * estrechas —a ~62 % a 360 px— y llegan a su tamaño completo a ~1100 px. Un
+ * titular de 56 px en un teléfono ocupaba la pantalla entera.
+ */
+function fluidRem(px: number): string {
+  if (px <= 24) return `${px / 16}rem`;
+  const min = Math.max(22, Math.round(px * 0.62));
+  const k = ((px - min) / (1100 - 360)).toFixed(4);
+  return `clamp(${min / 16}rem, calc(${min / 16}rem + (100vw - 22.5rem) * ${k}), ${px / 16}rem)`;
+}
+
 export function homeStyleTitleCss(
   style: HomeStyle | null | undefined,
   basePx: number,
@@ -16,7 +28,7 @@ export function homeStyleTitleCss(
   const scale = (style?.titleScale ?? 100) / 100;
   const grad = style?.titleGradient;
   return {
-    fontSize: style?.titlePx ? `${style.titlePx / 16}rem` : `${(basePx * scale) / 16}rem`,
+    fontSize: style?.titlePx ? `${style.titlePx / 16}rem` : fluidRem(basePx * scale),
     ...(grad
       ? {
           backgroundImage: gradientCss(grad),

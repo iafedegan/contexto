@@ -94,7 +94,7 @@ export function FontPicker({
 
           {HOME_FONT_GROUPS.map((group) => (
             <div key={group.id}>
-              <p className="meta px-2 pb-0.5 pt-2 !text-[0.65rem]">{group.label}</p>
+              <p className="meta px-2 pb-0.5 pt-2 !text-xs">{group.label}</p>
               {HOME_FONTS.filter((f) => f.group === group.id).map((f) => (
                 <FontOption
                   key={f.id}

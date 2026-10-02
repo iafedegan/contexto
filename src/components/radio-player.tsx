@@ -65,7 +65,7 @@ export function RadioPlayer({
       aria-label={sonando ? t(locale, "radio.stop") : t(locale, "radio.listen")}
       title={sonando ? t(locale, "radio.stop") : t(locale, "radio.listen")}
       // 44 px de área táctil (DM-01) aunque el icono sea pequeño.
-      className={`lx-ui inline-flex min-h-11 items-center gap-1.5 rounded-full border border-[var(--border-strong)] px-3 text-[0.65rem] uppercase tracking-[0.14em] transition hover:border-[var(--accent)] hover:text-[var(--accent)] ${
+      className={`lx-ui inline-flex min-h-11 items-center gap-1.5 rounded-full border border-[var(--border-strong)] px-3 text-[0.72rem] uppercase tracking-[0.14em] transition hover:border-[var(--accent)] hover:text-[var(--accent)] ${
         sonando ? "border-[var(--accent)] text-[var(--accent)]" : ""
       } ${className}`}
     >

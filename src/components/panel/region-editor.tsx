@@ -61,7 +61,7 @@ export function RegionEditor({
             type="button"
             onClick={() => onActive(r.id)}
             aria-pressed={active === r.id}
-            className={`relative rounded-md px-1 py-1.5 text-[0.7rem] font-semibold transition ${
+            className={`relative rounded-md px-1 py-1.5 text-[0.72rem] font-semibold transition ${
               active === r.id
                 ? "bg-[var(--accent)] text-[var(--accent-fg)]"
                 : "text-[var(--fg-muted)] hover:bg-[var(--surface-2)]"
@@ -189,7 +189,7 @@ export function ColorRow({
       <button
         type="button"
         onClick={() => onChange(undefined)}
-        className={`rounded-md border px-2 py-1 text-[0.68rem] font-semibold ${
+        className={`rounded-md border px-2 py-1 text-[0.72rem] font-semibold ${
           !value ? "border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-fg)]" : "border-[var(--border)]"
         }`}
       >

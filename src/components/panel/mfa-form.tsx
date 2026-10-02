@@ -39,7 +39,7 @@ export function MfaForm({ activo }: { activo: boolean }) {
 
         <form action={accionBaja} className="mt-3 flex flex-wrap items-end gap-2">
           <label className="flex flex-col gap-1">
-            <span className="text-[0.68rem] uppercase tracking-[0.14em] text-[var(--fg-muted)]">
+            <span className="text-[0.72rem] uppercase tracking-[0.14em] text-[var(--fg-muted)]">
               Código actual
             </span>
             <input
@@ -101,11 +101,11 @@ export function MfaForm({ activo }: { activo: boolean }) {
             <p className="text-xs leading-relaxed text-[var(--fg-muted)]">
               Escanea el código o introduce esta clave a mano:
             </p>
-            <code className="lx-mono block break-all rounded-[var(--radius)] bg-[var(--surface-2)] px-2.5 py-1.5 text-[0.72rem]">
+            <code className="lx-mono block break-all rounded-[var(--radius)] bg-[var(--surface-2)] px-2.5 py-1.5 text-xs">
               {setup.secret}
             </code>
             <label className="mt-1 flex flex-col gap-1">
-              <span className="text-[0.68rem] uppercase tracking-[0.14em] text-[var(--fg-muted)]">
+              <span className="text-[0.72rem] uppercase tracking-[0.14em] text-[var(--fg-muted)]">
                 Código de la aplicación
               </span>
               <input

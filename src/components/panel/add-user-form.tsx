@@ -52,9 +52,9 @@ export function AddUserForm() {
         </button>
       </div>
 
-      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+      <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
         <label className="flex flex-col gap-1">
-          <span className="text-[0.68rem] uppercase tracking-[0.14em] text-[var(--fg-muted)]">Nombre</span>
+          <span className="text-[0.72rem] uppercase tracking-[0.14em] text-[var(--fg-muted)]">Nombre</span>
           <input
             name="name"
             required
@@ -63,7 +63,7 @@ export function AddUserForm() {
           />
         </label>
         <label className="flex flex-col gap-1">
-          <span className="text-[0.68rem] uppercase tracking-[0.14em] text-[var(--fg-muted)]">Correo</span>
+          <span className="text-[0.72rem] uppercase tracking-[0.14em] text-[var(--fg-muted)]">Correo</span>
           <input
             name="email"
             type="email"
@@ -73,7 +73,7 @@ export function AddUserForm() {
           />
         </label>
         <label className="flex flex-col gap-1">
-          <span className="text-[0.68rem] uppercase tracking-[0.14em] text-[var(--fg-muted)]">Rol</span>
+          <span className="text-[0.72rem] uppercase tracking-[0.14em] text-[var(--fg-muted)]">Rol</span>
           <select
             name="role"
             defaultValue="redactor"
@@ -87,7 +87,7 @@ export function AddUserForm() {
           </select>
         </label>
         <label className="flex flex-col gap-1">
-          <span className="text-[0.68rem] uppercase tracking-[0.14em] text-[var(--fg-muted)]">
+          <span className="text-[0.72rem] uppercase tracking-[0.14em] text-[var(--fg-muted)]">
             Contraseña temporal
           </span>
           <div className="flex items-center gap-2">
@@ -102,7 +102,7 @@ export function AddUserForm() {
             <button
               type="button"
               onClick={() => setPassword(passwordTemporal())}
-              className="shrink-0 rounded-full border border-[var(--border)] px-2.5 py-2 text-[0.68rem] transition hover:border-[var(--accent)]"
+              className="shrink-0 rounded-full border border-[var(--border)] px-2.5 py-2 text-xs transition hover:border-[var(--accent)]"
             >
               Otra
             </button>

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronDown } from "lucide-react";
 import type { PermisoId } from "@/lib/permisos";
+import { PanelMobileMenu } from "@/components/panel/panel-mobile-menu";
 
 type Item = {
   href: string;
@@ -79,7 +80,7 @@ const GROUPS: Group[] = [
   },
 ];
 
-export function PanelNav({ role, permisos }: { role: string; permisos: string[] }) {
+export function PanelNav({ role, permisos, children }: { role: string; permisos: string[]; children?: React.ReactNode }) {
   const esAdmin = role === "administrador";
   // Lo que el rol no puede usar ni se muestra (el servidor además lo exige).
   const groups = GROUPS.map((g) => ({
@@ -110,7 +111,10 @@ export function PanelNav({ role, permisos }: { role: string; permisos: string[] 
   }, []);
 
   return (
-    <nav ref={navRef} aria-label="Secciones del panel" className="relative flex flex-wrap gap-1.5">
+    <>
+    {/* Debajo de `lg` los tres desplegables no caben: menú móvil con todas las secciones y la cuenta. */}
+    <PanelMobileMenu groups={groups}>{children}</PanelMobileMenu>
+    <nav ref={navRef} aria-label="Secciones del panel" className="relative hidden flex-wrap gap-1.5 lg:flex">
       {groups.map((group) => {
         const isOpen = open === group.id;
         // "/panel" es prefijo de todo, así que el grupo activo se decide por
@@ -176,5 +180,6 @@ export function PanelNav({ role, permisos }: { role: string; permisos: string[] 
         );
       })}
     </nav>
+    </>
   );
 }

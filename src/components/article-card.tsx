@@ -103,7 +103,7 @@ function Kicker({
       <span className={`inline-flex items-center gap-2 ${className}`}>
         <LiveBadge locale={locale} />
         {a.categorySlug && (
-          <Link href={localePath(locale, `/categoria/${a.categorySlug}`)} className="lx-kicker relative z-[4]">
+          <Link href={localePath(locale, `/categoria/${a.categorySlug}`)} className="lx-kicker relative z-[4] pointer-coarse:before:absolute pointer-coarse:before:inset-x-0 pointer-coarse:before:-inset-y-3.5 pointer-coarse:before:content-['']">
             {categoryLabel(locale, a.categorySlug, a.categoryName ?? "")}
           </Link>
         )}
@@ -114,7 +114,7 @@ function Kicker({
   return (
     <Link
       href={localePath(locale, `/categoria/${a.categorySlug}`)}
-      className={`lx-kicker relative z-[4] ${className}`}
+      className={`lx-kicker relative z-[4] pointer-coarse:before:absolute pointer-coarse:before:inset-x-0 pointer-coarse:before:-inset-y-3.5 pointer-coarse:before:content-[''] ${className}`}
     >
       {categoryLabel(locale, a.categorySlug, a.categoryName ?? "")}
     </Link>
@@ -125,7 +125,10 @@ function Kicker({
 function LeadCard({ a, priority, locale }: { a: ArticleListItem; priority?: boolean; locale: Locale }) {
   const st = cardStyle(a, "lead");
   return (
-    <article data-bs-root={a.slug} className="lx-card lx-reveal group relative">
+    /* Desde md el texto va SOBRE la foto, en la misma celda de cuadrícula: la tarjeta mide lo que
+       mida lo mayor entre el 16:11 de la foto y el texto, y la foto se estira para llenarla. Antes el
+       texto era `absolute` sobre un alto fijo: un titular largo se salía por arriba, recortado. */
+    <article data-bs-root={a.slug} className="lx-card lx-reveal group relative md:grid [&>*]:md:col-start-1 [&>*]:md:row-start-1">
       <div className="lx-shine pointer-events-none absolute inset-0 z-[3]" />
       <div className="lx-inlay pointer-events-none absolute inset-0 z-[2]" />
       <Link
@@ -140,13 +143,13 @@ function LeadCard({ a, priority, locale }: { a: ArticleListItem; priority?: bool
           alt={a.coverImageAlt ?? a.title}
           seed={a.slug}
           label={a.categoryName ?? a.title}
-          ratio="aspect-[16/11]"
+          ratio="aspect-[16/11] md:h-full"
           priority={priority}
           sizes="(min-width: 768px) 60vw, 100vw"
         />
       </Link>
       <div className="pointer-events-none absolute inset-x-0 bottom-0 hidden h-3/4 bg-gradient-to-t from-[var(--bg)] via-[var(--bg)]/80 to-transparent md:block" />
-      <div className="relative z-[4] p-6 md:absolute md:inset-x-0 md:bottom-0 md:p-9">
+      <div className="relative z-[4] p-6 md:self-end md:p-9">
         <Kicker a={a} locale={locale} className="text-[var(--accent)]" />
         <h2
           className="lx-display mt-3 text-2xl font-semibold leading-[1.12] tracking-tight sm:text-3xl md:text-[2.75rem]"
@@ -219,7 +222,7 @@ function RailCard({ a, index, locale }: { a: ArticleListItem; index?: number; lo
         </span>
       )}
       <div className="min-w-0 flex-1">
-        <Kicker a={a} locale={locale} className="text-[0.6rem] text-[var(--fg-muted)]" />
+        <Kicker a={a} locale={locale} className="text-xs text-[var(--fg-muted)]" />
         <h3 className="lx-display mt-1.5 text-lg font-medium leading-snug" style={st.title}>
           <Link href={localePath(locale, `/articulo/${a.slug}`)} className="lx-link">
             {a.title}

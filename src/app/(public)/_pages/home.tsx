@@ -77,7 +77,7 @@ async function HomePage({ locale }: { locale: Locale }) {
 
   const cintillo = (
     <div className="mb-10 overflow-hidden border-y border-[var(--border)] py-2.5">
-      <div className="lx-marquee text-[0.68rem] uppercase tracking-[0.25em] text-[var(--fg-muted)]">
+      <div className="lx-marquee text-[0.72rem] uppercase tracking-[0.25em] text-[var(--fg-muted)]">
         {[...market, ...articles, ...market, ...articles].map((item, i) =>
           "value" in item ? (
             <span
@@ -134,7 +134,7 @@ async function HomePage({ locale }: { locale: Locale }) {
         return css ? <style dangerouslySetInnerHTML={{ __html: css }} /> : null;
       })()}
       <CardSlugsProvider slugs={[lead, second, ...rail, ...river].filter((a): a is NonNullable<typeof a> => Boolean(a)).map((a) => a.slug)}>
-      <div className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_19rem]">
+      <div className="grid grid-cols-1 gap-12 lg:grid-cols-[minmax(0,1fr)_19rem]">
         <div className="lx-bleed-off min-w-0">
           {/* Cada plantilla se referencia por su nombre en el JSX (y no por un
               mapa indexado en runtime) para no perder el límite cliente/servidor
@@ -164,7 +164,7 @@ async function HomePage({ locale }: { locale: Locale }) {
       <AdsBanner zone="home_bottom" className="mx-auto mt-14" />
 
       {/* Banda de llamada al asistente, común a todas las plantillas. */}
-      <section className="lx-card lx-shine relative mt-20 overflow-hidden px-8 py-14 text-center">
+      <section className="lx-card lx-shine relative mt-14 overflow-hidden px-5 py-10 text-center sm:mt-20 sm:px-8 sm:py-14">
         <div className="lx-inlay absolute inset-0" />
         <p className="lx-kicker text-[var(--accent)]">{t(locale, "home.archiveKicker")}</p>
         <h2 className="lx-display mx-auto mt-4 max-w-2xl text-3xl font-semibold leading-tight md:text-4xl">

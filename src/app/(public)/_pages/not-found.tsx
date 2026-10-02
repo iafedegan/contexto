@@ -6,7 +6,7 @@ import { SiteFooter } from "@/components/site-footer";
 /** 404 — plantilla «Sepia & Ámbar», la del archivo histórico (completamente estática, 0 consultas). */
 function NotFound({ locale }: { locale: Locale }) {
   return (
-    <div data-theme="archivo" className="lx-shell lx-grain lx-aurora flex min-h-screen flex-col justify-between">
+    <div data-theme="archivo" className="lx-shell lx-grain lx-aurora flex min-h-dvh flex-col justify-between">
       <SiteHeader theme="archivo" nav={[]} locale={locale} />
       <main id="contenido" className="shell flex-1 py-16 text-center">
         <p className="lx-display text-[7rem] font-normal leading-none text-[var(--accent)] opacity-30">

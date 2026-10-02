@@ -39,7 +39,7 @@ export function AvisoForm({
       </div>
 
       <label className="flex flex-col gap-1.5">
-        <span className="text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-[var(--fg-muted)]">
+        <span className="text-[0.72rem] font-semibold uppercase tracking-[0.14em] text-[var(--fg-muted)]">
           Nota que se anuncia
         </span>
         <select name="articleId" required className="lx-input">
@@ -52,15 +52,15 @@ export function AvisoForm({
         </select>
       </label>
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <label className="flex flex-col gap-1.5">
-          <span className="text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-[var(--fg-muted)]">
+          <span className="text-[0.72rem] font-semibold uppercase tracking-[0.14em] text-[var(--fg-muted)]">
             Título del aviso
           </span>
           <input name="titulo" maxLength={120} placeholder="Por defecto, el titular" className="lx-input" />
         </label>
         <label className="flex flex-col gap-1.5">
-          <span className="text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-[var(--fg-muted)]">
+          <span className="text-[0.72rem] font-semibold uppercase tracking-[0.14em] text-[var(--fg-muted)]">
             Texto
           </span>
           <input name="cuerpo" maxLength={220} placeholder="Por defecto, la entradilla" className="lx-input" />

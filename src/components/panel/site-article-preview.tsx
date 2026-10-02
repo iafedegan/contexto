@@ -104,10 +104,10 @@ export function Frame({
         <span className="size-2.5 rounded-full bg-[#ff5f57]" />
         <span className="size-2.5 rounded-full bg-[#febc2e]" />
         <span className="size-2.5 rounded-full bg-[#28c840]" />
-        <span className="ml-3 truncate rounded-md bg-[var(--surface)] px-3 py-0.5 text-[0.7rem] text-[var(--fg-muted)]">
+        <span className="ml-3 truncate rounded-md bg-[var(--surface)] px-3 py-0.5 text-xs text-[var(--fg-muted)]">
           contextoganadero.com/articulo/…
         </span>
-        <span className="ml-auto text-[0.68rem] text-[var(--fg-muted)]">
+        <span className="ml-auto text-xs text-[var(--fg-muted)]">
           Escritorio · {WIDTH} px · {Math.round(scale * 100)} %
         </span>
       </div>
@@ -119,7 +119,7 @@ export function Frame({
             <div className="contents" onClickCapture={(e) => (e.target as HTMLElement).closest("a") && e.preventDefault()}>
               {chrome.header}
               <main data-region="body" className="shell flex-1 py-14">
-                <nav className="lx-ui flex flex-wrap items-center gap-2 text-[0.68rem] uppercase tracking-[0.2em] text-[var(--fg-muted)]">
+                <nav className="lx-ui flex flex-wrap items-center gap-2 text-[0.72rem] uppercase tracking-[0.2em] text-[var(--fg-muted)]">
                   <span>Inicio</span>
                   {category && (
                     <>

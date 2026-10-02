@@ -167,12 +167,12 @@ export function ReaderMode({
             role="dialog"
             aria-modal="true"
             aria-label={`Modo revista: ${title}`}
-            className="fixed inset-0 z-[100] flex flex-col"
+            className="fixed inset-0 z-[100] flex flex-col pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] pt-[env(safe-area-inset-top)]"
             style={{ background: t.bg, color: t.fg, transition: "background .3s, color .3s" }}
           >
             {/* Barra superior */}
             <div className="flex items-center gap-3 px-4 py-3 sm:px-8" style={{ borderBottom: `1px solid ${t.rule}` }}>
-              <button type="button" onClick={() => setOpen(false)} aria-label="Cerrar" className="rounded-full p-2 hover:opacity-70">
+              <button type="button" onClick={() => setOpen(false)} aria-label="Cerrar" className="grid size-9 place-items-center rounded-full hover:opacity-70 pointer-coarse:size-11">
                 <X size={20} />
               </button>
               <span className="min-w-0 flex-1 truncate text-sm" style={{ color: t.muted }}>
@@ -195,7 +195,7 @@ export function ReaderMode({
                 type="button"
                 onClick={() => setPanel((v) => !v)}
                 aria-expanded={panel}
-                className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium"
+                className="inline-flex min-h-9 items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium pointer-coarse:min-h-11"
                 style={{ border: `1px solid ${t.rule}` }}
               >
                 <Settings2 size={16} /> Aa
@@ -337,7 +337,7 @@ export function ReaderMode({
                 onClick={() => setPage((p) => Math.max(p - 1, 0))}
                 disabled={page === 0}
                 aria-label="Página anterior"
-                className="rounded-full p-2 disabled:opacity-30"
+                className="grid size-10 place-items-center rounded-full disabled:opacity-30 pointer-coarse:size-12"
               >
                 <ChevronLeft size={22} />
               </button>
@@ -354,7 +354,7 @@ export function ReaderMode({
                 onClick={() => setPage((p) => Math.min(p + 1, pages - 1))}
                 disabled={page >= pages - 1}
                 aria-label="Página siguiente"
-                className="rounded-full p-2 disabled:opacity-30"
+                className="grid size-10 place-items-center rounded-full disabled:opacity-30 pointer-coarse:size-12"
               >
                 <ChevronRight size={22} />
               </button>
