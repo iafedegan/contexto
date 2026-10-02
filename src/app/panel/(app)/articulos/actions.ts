@@ -38,7 +38,6 @@ async function revalidateArticle(articleId: string) {
   revalidatePath("/");
   revalidatePath("/sitemap.xml");
   revalidatePath("/feed.xml");
-  revalidatePath("/llms.txt");
   revalidatePath(`/articulo/${a.slug}`);
   if (a.categorySlug) revalidatePath(`/categoria/${a.categorySlug}`);
   if (a.authorSlug) revalidatePath(`/autor/${a.authorSlug}`);

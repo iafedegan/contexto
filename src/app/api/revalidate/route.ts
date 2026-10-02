@@ -22,7 +22,7 @@ export async function POST(req: Request) {
     authorSlug?: string;
   };
 
-  const targets = new Set<string>(["/", "/sitemap.xml", "/feed.xml", "/llms.txt", ...paths]);
+  const targets = new Set<string>(["/", "/sitemap.xml", "/feed.xml", ...paths]);
   if (slug) targets.add(`/articulo/${slug}`);
   if (categorySlug) targets.add(`/categoria/${categorySlug}`);
   if (authorSlug) targets.add(`/autor/${authorSlug}`);

@@ -129,6 +129,6 @@ function applyHeaders(res: NextResponse, pathname?: string): NextResponse {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|_not-found|favicon.ico|robots.txt|sitemap.xml|llms.txt|feed.xml|.*\\.(?:png|jpg|jpeg|gif|webp|svg|ico|css|js)$).*)",
+    "/((?!_next/static|_next/image|_not-found|favicon.ico|robots.txt|sitemap.xml|feed.xml|.*\\.(?:png|jpg|jpeg|gif|webp|svg|ico|css|js)$).*)",
   ],
 };

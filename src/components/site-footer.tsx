@@ -31,7 +31,6 @@ function toolLinks(locale: Locale) {
     { href: localePath(locale, "/boletin"), label: t(locale, "newsletter.title") },
     { href: "/feeds", label: "RSS" },
     { href: "/sitemap.xml", label: "Sitemap" },
-    { href: "/llms.txt", label: "llms.txt" },
   ];
 }
 
