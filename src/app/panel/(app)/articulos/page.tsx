@@ -1,3 +1,4 @@
+import { ensureUserAuthors } from "@/lib/user-authors";
 import Link from "next/link";
 import { and, asc, desc, eq, ilike, inArray, or, sql, type SQL } from "drizzle-orm";
 import { db } from "@/db";
@@ -52,6 +53,7 @@ export default async function ArticlesList({ searchParams }: { searchParams: Sea
   const autor = param(sp, "autor");
   const orden = SORTS.some((s) => s.value === param(sp, "orden")) ? param(sp, "orden") : "actualizado";
 
+  await ensureUserAuthors().catch(() => {});
   const [cats, auths, daily] = await Promise.all([
     db
       .select({ id: categories.id, name: categories.name, parentId: categories.parentId })

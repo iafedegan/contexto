@@ -1,3 +1,4 @@
+import { ensureUserAuthors } from "@/lib/user-authors";
 import { notFound } from "next/navigation";
 import { asc, eq } from "drizzle-orm";
 import { db } from "@/db";
@@ -66,6 +67,7 @@ export default async function ArticleEditorPage({
   const session = await auth();
   const isNew = id === "nuevo";
 
+  await ensureUserAuthors().catch(() => {});
   const [cats, auths] = await Promise.all([
     db.select({ id: categories.id, name: categories.name }).from(categories).orderBy(asc(categories.name)),
     db.select({ id: authors.id, name: authors.name }).from(authors).orderBy(asc(authors.name)),
