@@ -12,6 +12,7 @@ import {
   Loader2,
   RotateCcw,
   Save,
+  Search,
   Send,
   Sparkles,
   Trash2,
@@ -24,7 +25,9 @@ import {
   regenerateDraftPart,
   suggestTitlesAndContexts,
   suggestTopicIdeas,
+  searchNewsAbout,
   type TopicIdea,
+  type NewsItem,
   generateChart,
   type ChartResult,
   type DraftPart,
@@ -166,6 +169,12 @@ export function ArticleWizard({
   const [ideas, setIdeas] = useState<{ ideas: TopicIdea[]; sources: { title: string; url: string }[] } | null>(null);
   const [ideasError, setIdeasError] = useState("");
   const [ideasOpen, setIdeasOpen] = useState(true);
+  const [newsQuery, setNewsQuery] = useState("");
+  const [news, setNews] = useState<NewsItem[] | null>(null);
+  const [newsOpen, setNewsOpen] = useState(true);
+  const [newsError, setNewsError] = useState("");
+  const [refs, setRefs] = useState<NewsItem[]>([]);
+  const [searchingNews, startNews] = useTransition();
   const [ideasFocus, setIdeasFocus] = useState("");
   const [searchingIdeas, startIdeas] = useTransition();
   const [pickedContext, setPickedContext] = useState<number | null>(null);
@@ -299,6 +308,7 @@ export function ArticleWizard({
         title: title.trim(),
         prompt,
         section: categories.find((c) => c.id === categoryId)?.name,
+        references: refs.map((r) => ({ title: r.title, outlet: r.outlet, url: r.url })),
       });
       if (!res.ok) return setError(res.error);
       const d = res.draft;
@@ -337,6 +347,26 @@ export function ArticleWizard({
     setChart(null);
     setChartTopic("");
     setChartError("");
+  }
+
+  function findNews() {
+    setNewsError("");
+    startNews(async () => {
+      const res = await searchNewsAbout({ query: newsQuery, section: categories.find((c) => c.id === categoryId)?.name });
+      if (!res.ok) return setNewsError(res.error);
+      setNews(res.items);
+      setNewsOpen(true);
+    });
+  }
+  const isRef = (n: NewsItem) => refs.some((r) => r.url === n.url);
+  function toggleRef(n: NewsItem) {
+    setRefs((r) => (r.some((x) => x.url === n.url) ? r.filter((x) => x.url !== n.url) : [...r, n]));
+  }
+  function elegirNoticiaComoTema(n: NewsItem) {
+    setTopic(`${n.title}. ${n.summary} (Fuente: ${n.outlet}${n.date ? `, ${n.date}` : ""}).`);
+    setOptions(null);
+    setRefs((r) => (r.some((x) => x.url === n.url) ? r : [...r, n]));
+    setNewsOpen(false);
   }
 
   function findIdeas() {
@@ -602,6 +632,62 @@ export function ArticleWizard({
                   </ul>
                 </div>
               )}
+              <div className="mt-4 border-t border-[var(--border)] pt-4">
+                <p className="text-sm font-semibold">¿Quieres partir de una noticia concreta?</p>
+                <p className="mt-1 text-xs text-[var(--fg-muted)]">
+                  Escribe una persona, empresa o tema (p. ej. «Joaquín Manjarrés»): la IA hace una búsqueda profunda de noticias relacionadas. Eliges cuáles <strong>referenciar</strong> (se citan con enlace en tu nota) o cuál usar <strong>como tema</strong> para escribir sobre ella.
+                </p>
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <input
+                    value={newsQuery}
+                    onChange={(e) => setNewsQuery(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        if (!searchingNews && newsQuery.trim().length >= 3) findNews();
+                      }
+                    }}
+                    placeholder="Persona, empresa o tema a investigar"
+                    className={`${input} min-w-0 flex-1 !py-2 text-sm`}
+                  />
+                  <button type="button" onClick={findNews} disabled={searchingNews || generating || newsQuery.trim().length < 3} className="lx-btn">
+                    {searchingNews ? <Loader2 size={15} className="animate-spin" /> : <Search size={15} />}
+                    {news ? "Buscar de nuevo" : "Buscar noticias"}
+                  </button>
+                </div>
+                {searchingNews && <p role="status" className="mt-3 text-xs text-[var(--fg-muted)]">Investigando en la web… puede tardar hasta un minuto.</p>}
+                {newsError && <p role="alert" className="mt-3 text-sm text-[var(--danger,#b4442e)]">{newsError}</p>}
+                {refs.length > 0 && (
+                  <p className="mt-3 text-xs text-[var(--fg-muted)]">
+                    <strong className="text-[var(--fg)]">Referencias elegidas ({refs.length}):</strong>{" "}
+                    {refs.map((r) => r.outlet || r.title).join(" · ")}. Irán enlazadas al final de la nota.
+                  </p>
+                )}
+                {news && !newsOpen && (
+                  <p className="mt-3 text-xs text-[var(--fg-muted)]">
+                    Tema elegido: revisa el cuadro de abajo y pulsa «Proponer títulos y contextos».{" "}
+                    <button type="button" onClick={() => setNewsOpen(true)} className="lx-link font-semibold">Ver las noticias encontradas</button>
+                  </p>
+                )}
+                {news && newsOpen && (
+                  <div className="mt-3 flex flex-col gap-2">
+                    {news.map((n) => (
+                      <div key={n.url} className={`rounded-[var(--radius)] border bg-[var(--bg-2)] p-3 ${isRef(n) ? "border-[var(--accent)]" : "border-[var(--border)]"}`}>
+                        <p className="text-xs text-[var(--fg-muted)]">{n.outlet}{n.date ? ` · ${n.date}` : ""}</p>
+                        <p className="mt-0.5 font-semibold leading-snug">{n.title}</p>
+                        <p className="mt-1 text-sm">{n.summary}</p>
+                        <div className="mt-2 flex flex-wrap items-center gap-2">
+                          <button type="button" onClick={() => elegirNoticiaComoTema(n)} className="lx-btn !py-1.5 text-xs">Escribir sobre esto</button>
+                          <button type="button" onClick={() => toggleRef(n)} aria-pressed={isRef(n)} className="lx-btn lx-btn-ghost !py-1.5 text-xs">
+                            {isRef(n) ? "✓ Referenciada" : "Referenciar"}
+                          </button>
+                          <a href={n.url} target="_blank" rel="noopener noreferrer" className="lx-link text-xs">Abrir fuente ↗</a>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
             <textarea
               autoFocus

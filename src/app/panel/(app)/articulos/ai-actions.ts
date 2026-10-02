@@ -51,6 +51,8 @@ export async function generateArticleDraft(input: {
   title: string;
   prompt: string;
   section?: string;
+  /** Noticias que el periodista eligió referenciar: se citan con enlace en el cuerpo. */
+  references?: { title: string; outlet: string; url: string }[];
 }): Promise<GenerateResult> {
   const user = await requirePermiso("articulos");
 
@@ -60,6 +62,7 @@ export async function generateArticleDraft(input: {
     return { ok: false, error: "Describe el tema con un poco más de detalle (mínimo 20 caracteres)." };
   }
 
+  const refs = (input.references ?? []).filter((r) => /^https?:\/\//i.test(r.url)).slice(0, 8);
   const model = await getAiModel();
   if (!model) {
     return {
@@ -78,6 +81,9 @@ export async function generateArticleDraft(input: {
       tema ? `TÍTULO PROPUESTO POR EL PERIODISTA: ${tema}` : "El periodista no fijó título.",
       input.section ? `SECCIÓN: ${input.section}` : "",
       `ENCARGO Y NOTAS:\n${encargo}`,
+      refs.length
+        ? `NOTICIAS DE REFERENCIA (las eligió el periodista): ${refs.map((r, i) => `[${i + 1}] ${r.outlet}: «${r.title}»`).join("; ")}. Atribúyelas en el texto («según …») sin copiar frases textuales: redacta con palabras propias.`
+        : "",
     ]
       .filter(Boolean)
       .join("\n\n");
@@ -96,7 +102,9 @@ export async function generateArticleDraft(input: {
       }));
       await registrarUsoIA(user.id, usage);
     }
-    return { ok: true, mode: "ia", draft: stripMarkers(object) };
+    const draft = stripMarkers(object);
+    if (refs.length) draft.body = `${draft.body}${fuentesHtml(refs)}`;
+    return { ok: true, mode: "ia", draft };
   } catch (err) {
     console.error("generateArticleDraft:", err);
     // El mensaje del proveedor dice exactamente qué pasa («este modelo ya no
@@ -111,6 +119,14 @@ export async function generateArticleDraft(input: {
         : "El modelo no respondió. Revisa la clave o inténtalo de nuevo en un momento.",
     };
   }
+}
+
+/** Cierra el cuerpo con las noticias de referencia enlazadas (señal de fuentes y evidencia). */
+function fuentesHtml(refs: { title: string; outlet: string; url: string }[]): string {
+  const esc = (t: string) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  return `<h2>Fuentes consultadas</h2><ul>${refs
+    .map((r) => `<li><a href="${esc(r.url)}" rel="noopener noreferrer" target="_blank">${esc(r.outlet ? `${r.outlet}: ` : "")}${esc(r.title)}</a></li>`)
+    .join("")}</ul>`;
 }
 
 const MARKER = /\s*\{\{[^}]*\}\}/g;
@@ -436,5 +452,87 @@ export async function suggestTopicIdeas(input: { section?: string; focus?: strin
     console.error("suggestTopicIdeas:", err);
     const detalle = err && typeof err === "object" && "message" in err ? String((err as Error).message) : "";
     return { ok: false, error: detalle ? `No se pudieron buscar temas: ${detalle.slice(0, 220)}` : "El modelo no respondió." };
+  }
+}
+
+/* --------------------------------------------------------------------------
+ * Búsqueda profunda de noticias sobre una persona, empresa o tema concreto
+ * -------------------------------------------------------------------------- */
+
+const newsSchema = z.object({
+  items: z
+    .array(
+      z.object({
+        title: z.string(),
+        outlet: z.string(),
+        date: z.string().optional().default(""),
+        summary: z.string(),
+        /** Posición (0, 1, 2…) de la fuente de la lista que respalda esta noticia; -1 si ninguna. */
+        sourceIndex: z.number().int().catch(-1),
+      }),
+    )
+    .min(1),
+});
+
+export type NewsItem = { title: string; outlet: string; date: string; summary: string; url: string };
+
+export type NewsSearchResult = { ok: true; items: NewsItem[] } | { ok: false; error: string };
+
+/**
+ * «Busca noticias sobre X»: investigación en la web (Gemini con Google Search) de lo publicado sobre una
+ * persona, empresa o tema. Devuelve noticias con medio, fecha, resumen y enlace verificable (solo URLs
+ * que la búsqueda realmente consultó). El periodista decide cuáles referenciar o usar como tema.
+ */
+export async function searchNewsAbout(input: { query: string; section?: string }): Promise<NewsSearchResult> {
+  const user = await requirePermiso("articulos");
+  const query = input.query.trim().slice(0, 200);
+  if (query.length < 3) return { ok: false, error: "Escribe a quién o qué buscar (mínimo 3 caracteres)." };
+  const ai = await getGroundedAi();
+  if (!ai) return { ok: false, error: "Falta la clave del modelo (Configuración → Asistente)." };
+  if (ai === "otro-proveedor") {
+    return { ok: false, error: "Buscar noticias usa Gemini: elige Google (Gemini) en Configuración → Asistente." };
+  }
+  try {
+    const cuota = await verificarCuotaIA(user.id);
+    if (!cuota.ok) return { ok: false, error: cuota.message };
+    const found = await generateText({
+      model: ai.model,
+      tools: ai.tools as unknown as ToolSet,
+      system:
+        "Eres documentalista de un medio ganadero colombiano. Haz una búsqueda profunda en la web de NOTICIAS y publicaciones recientes sobre lo que pide el periodista (varias consultas: nombre completo, cargo, entidad, regiones, sinónimos). Lista cada noticia con titular, medio, fecha y qué dice, solo con lo que encuentres; no inventes. Prioriza medios reconocidos y fuentes oficiales; incluye lo más reciente primero.",
+      prompt: `${input.section ? `Sección de interés: ${input.section}.\n` : ""}BÚSQUEDA: ${query}\n\nEncuentra de 6 a 12 noticias o publicaciones distintas y relevantes (evita duplicados del mismo hecho) con titular, medio, fecha y resumen.`,
+    });
+    await registrarUsoIA(user.id, found.usage);
+    const sources = found.sources
+      .filter((s) => s.sourceType === "url")
+      .map((s) => ({ title: s.title || new URL(s.url).hostname, url: s.url }))
+      .filter((s, i, a) => a.findIndex((x) => x.url === s.url) === i)
+      .slice(0, 20);
+    if (!sources.length) return { ok: false, error: "La búsqueda no devolvió fuentes citables para ese tema." };
+
+    const lista = sources.map((s, i) => `[${i}] ${s.title} — ${s.url}`).join("\n");
+    const { object, usage } = await generateObject({
+      model: ai.model,
+      schema: newsSchema,
+      prompt: `Con SOLO el texto de la investigación, extrae las noticias distintas encontradas sobre «${query}». Para cada una: title = titular, outlet = medio (breve), date = fecha tal como consta (o vacío), summary = 1-2 frases de lo que dice (sin inventar), sourceIndex = número de la fuente de esta lista que mejor la respalda (o -1 si ninguna).\n\nFUENTES CONSULTADAS:\n${lista}\n\nINVESTIGACIÓN:\n${found.text.slice(0, 8000)}`,
+    });
+    await registrarUsoIA(user.id, usage);
+    const items: NewsItem[] = object.items
+      .map((i) => ({
+        title: i.title.trim().slice(0, 200),
+        outlet: i.outlet.trim().slice(0, 80),
+        date: (i.date ?? "").trim().slice(0, 40),
+        summary: i.summary.trim().slice(0, 500),
+        url: sources[i.sourceIndex]?.url ?? "",
+      }))
+      // Sin enlace verificable no se ofrece: la regla de la casa es «sin fuente no hay nota».
+      .filter((i) => i.title && i.summary && i.url)
+      .slice(0, 12);
+    if (!items.length) return { ok: false, error: "No se encontraron noticias con enlace verificable. Prueba con otro nombre o más contexto." };
+    return { ok: true, items };
+  } catch (err) {
+    console.error("searchNewsAbout:", err);
+    const detalle = err && typeof err === "object" && "message" in err ? String((err as Error).message) : "";
+    return { ok: false, error: detalle ? `No se pudo buscar: ${detalle.slice(0, 220)}` : "El modelo no respondió." };
   }
 }
