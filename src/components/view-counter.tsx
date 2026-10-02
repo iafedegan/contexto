@@ -25,7 +25,14 @@ export function ViewCounter({ slug }: { slug: string }) {
       void fetch("/api/vista", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ slug }),
+        body: JSON.stringify({
+          slug,
+          // De dónde llegó el lector: UTM de la dirección y sitio de procedencia (la página es estática, se lee aquí).
+          us: new URLSearchParams(location.search).get("utm_source") ?? "",
+          um: new URLSearchParams(location.search).get("utm_medium") ?? "",
+          uc: new URLSearchParams(location.search).get("utm_campaign") ?? "",
+          ref: document.referrer,
+        }),
         keepalive: true,
       }).catch(() => {});
     }, 5000);

@@ -256,7 +256,7 @@ export default async function ArticlesList({ searchParams }: { searchParams: Sea
               <div className="mt-3 flex items-center justify-between gap-3 border-t border-[var(--border)] pt-3">
                 {r.status === "publicado" || Number(r.views) > 0 ? (
                   <div className="flex items-center gap-3">
-                    <SparklineZoom values={serie} title={r.title} />
+                    <SparklineZoom values={serie} title={r.title} articleId={r.id} />
                     <div className="text-xs leading-tight">
                       <div className="text-base font-semibold tabular-nums">{nf.format(Number(r.views))}</div>
                       <div className="text-[var(--fg-muted)]">
@@ -357,7 +357,7 @@ export default async function ArticlesList({ searchParams }: { searchParams: Sea
                   <Td>
                     {r.status === "publicado" || Number(r.views) > 0 ? (
                       <div className="flex min-w-[9.5rem] items-center gap-3">
-                        <SparklineZoom values={serie} title={r.title} />
+                        <SparklineZoom values={serie} title={r.title} articleId={r.id} />
                         <div className="whitespace-nowrap text-xs leading-tight">
                           <div className="font-semibold tabular-nums">{nf.format(last7)}</div>
                           <div className="text-[var(--fg-muted)]">
