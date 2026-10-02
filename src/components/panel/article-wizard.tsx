@@ -165,6 +165,7 @@ export function ArticleWizard({
   const [options, setOptions] = useState<TitleContextOptions | null>(null);
   const [ideas, setIdeas] = useState<{ ideas: TopicIdea[]; sources: { title: string; url: string }[] } | null>(null);
   const [ideasError, setIdeasError] = useState("");
+  const [ideasOpen, setIdeasOpen] = useState(true);
   const [ideasFocus, setIdeasFocus] = useState("");
   const [searchingIdeas, startIdeas] = useTransition();
   const [pickedContext, setPickedContext] = useState<number | null>(null);
@@ -344,6 +345,7 @@ export function ArticleWizard({
       });
       if (!res.ok) return setIdeasError(res.error);
       setIdeas({ ideas: res.ideas, sources: res.sources });
+      setIdeasOpen(true);
     });
   }
 
@@ -560,7 +562,13 @@ export function ArticleWizard({
               </div>
               {searchingIdeas && <p role="status" className="mt-3 text-xs text-[var(--fg-muted)]">Buscando tendencias en internet… puede tardar hasta un minuto.</p>}
               {ideasError && <p role="alert" className="mt-3 text-sm text-[var(--danger,#b4442e)]">{ideasError}</p>}
-              {ideas && (
+              {ideas && !ideasOpen && (
+                <p className="mt-3 text-xs text-[var(--fg-muted)]">
+                  Tema elegido: revisa el cuadro de abajo y pulsa «Proponer títulos y contextos».{" "}
+                  <button type="button" onClick={() => setIdeasOpen(true)} className="lx-link font-semibold">Ver los temas sugeridos</button>
+                </p>
+              )}
+              {ideas && ideasOpen && (
                 <div className="mt-4 flex flex-col gap-2">
                   {ideas.ideas.map((i) => (
                     <button
@@ -569,6 +577,7 @@ export function ArticleWizard({
                       onClick={() => {
                         setTopic(`${i.title}. ${i.angle}`);
                         setOptions(null);
+                        setIdeasOpen(false);
                       }}
                       className="rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] p-3 text-left transition hover:border-[var(--accent)]"
                     >
