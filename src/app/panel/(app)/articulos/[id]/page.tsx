@@ -1,4 +1,4 @@
-import { ensureUserAuthors } from "@/lib/user-authors";
+import { autorDeUsuario, ensureUserAuthors } from "@/lib/user-authors";
 import { notFound } from "next/navigation";
 import { asc, eq } from "drizzle-orm";
 import { db } from "@/db";
@@ -70,6 +70,7 @@ export default async function ArticleEditorPage({
   const isNew = id === "nuevo";
 
   await ensureUserAuthors().catch(() => {});
+  const miAutorId = await autorDeUsuario(session!.user.id);
   const [cats, auths] = await Promise.all([
     db.select({ id: categories.id, name: categories.name, parentId: categories.parentId }).from(categories).orderBy(asc(categories.sortOrder), asc(categories.name)),
     db.select({ id: authors.id, name: authors.name }).from(authors).orderBy(asc(authors.name)),
@@ -82,6 +83,7 @@ export default async function ArticleEditorPage({
         <ArticleWizard
           categories={cats}
           authors={auths}
+          miAutorId={miAutorId}
           mode={modo}
           site={await siteChrome()}
           canPublish={canPublish(session!.user.role)}
@@ -126,6 +128,7 @@ export default async function ArticleEditorPage({
         <ArticleWizard
           categories={cats}
           authors={auths}
+          miAutorId={miAutorId}
           mode={modo}
           startStep={paso}
           site={await siteChrome()}

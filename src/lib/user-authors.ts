@@ -25,3 +25,14 @@ export async function ensureUserAuthors(): Promise<void> {
     await db.insert(authors).values({ slug, name: u.name, userId: u.id }).onConflictDoNothing();
   }
 }
+
+/** Ficha de autor de una cuenta del panel (la crea si falta). La firma de una nota es siempre quien la escribe. */
+export async function autorDeUsuario(userId: string): Promise<string | null> {
+  try {
+    await ensureUserAuthors();
+    const [a] = await db.select({ id: authors.id }).from(authors).where(eq(authors.userId, userId)).limit(1);
+    return a?.id ?? null;
+  } catch {
+    return null;
+  }
+}

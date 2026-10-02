@@ -68,6 +68,7 @@ export function ArticleEditor({
   initial,
   categories,
   authors,
+  miAutorId = null,
   canPublish,
   publishAction,
   scheduleAction,
@@ -78,6 +79,8 @@ export function ArticleEditor({
   initial: Initial;
   categories: Option[];
   authors: Option[];
+  /** Ficha de autor de la persona con sesión: es siempre la firma. */
+  miAutorId?: string | null;
   canPublish: boolean;
   publishAction: () => Promise<void>;
   scheduleAction: (iso: string) => Promise<void>;
@@ -568,7 +571,16 @@ export function ArticleEditor({
               <Select name="categoryId" defaultValue={initial.categoryId ?? ""} options={categories} empty="— Sin sección —" />
             </Panel>
             <Panel title="Autor" icon={<User size={13} />}>
-              <Select name="authorId" defaultValue={initial.authorId ?? ""} options={authors} empty="— Sin autor —" />
+              {(() => {
+                const firma = initial.authorId ?? miAutorId ?? "";
+                return (
+                  <>
+                    <input type="hidden" name="authorId" value={firma} />
+                    <p className="text-sm font-medium">{authors.find((a) => a.id === firma)?.name ?? "Se asigna al guardar"}</p>
+                    <p className="mt-1 text-xs text-[var(--fg-muted)]">La nota la firma quien la escribe (tu usuario).</p>
+                  </>
+                );
+              })()}
             </Panel>
           </div>
 

@@ -42,7 +42,7 @@ import {
   type DraftPart,
   type TitleContextOptions,
 } from "@/app/panel/(app)/articulos/ai-actions";
-import { ChipPicker, SectionTree } from "@/components/panel/chip-picker";
+import { SectionTree } from "@/components/panel/chip-picker";
 import type { Material } from "@/lib/material-types";
 import { SiteArticlePreview, type SitePreviewChrome } from "@/components/panel/site-article-preview";
 import { decodeSpec, encodeSpec, renderChartSvg, svgDataUri } from "@/lib/chart-svg";
@@ -146,6 +146,7 @@ function toHtml(text: string): string {
 export function ArticleWizard({
   categories,
   authors,
+  miAutorId = null,
   mode = "manual",
   initial,
   startStep,
@@ -156,6 +157,8 @@ export function ArticleWizard({
 }: {
   categories: (Option & { parentId?: string | null })[];
   authors: Option[];
+  /** Ficha de autor de la persona con sesión iniciada: es siempre la firma de la nota. */
+  miAutorId?: string | null;
   mode?: "manual" | "ia";
   /** Artículo ya guardado que se reabre en el asistente. */
   initial?: WizardInitial;
@@ -218,7 +221,7 @@ export function ArticleWizard({
   const [tags, setTags] = useState<string[]>(initial?.tags ?? []);
   const [tagDraft, setTagDraft] = useState("");
   const [categoryId, setCategoryId] = useState(initial?.categoryId ?? "");
-  const [authorId, setAuthorId] = useState(initial?.authorId ?? "");
+  const [authorId] = useState(initial?.authorId ?? miAutorId ?? "");
   const [body, setBody] = useState(() => (initial?.body ? toText(initial.body) : ""));
   const [cover, setCover] = useState(initial?.coverImageUrl ?? "");
   const [coverAlt, setCoverAlt] = useState(initial?.coverImageAlt ?? "");
@@ -1143,7 +1146,16 @@ export function ArticleWizard({
           <Step title="Sección y autor" hint="Dónde se publica y quién firma. Puedes dejarlo para después.">
             <div className="flex flex-col gap-7">
               <SectionTree options={categories} value={categoryId} onChange={setCategoryId} sugeridas={seccionesSugeridas} />
-              <ChipPicker label="Autor" options={authors} value={authorId} onChange={setAuthorId} vacio="Sin autor" avatar buscar={false} />
+              <div className="flex flex-col gap-3">
+                <span className="lx-kicker text-[var(--fg-muted)]">Autor</span>
+                <div className="flex items-center gap-3 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] p-3">
+                  <span className="grid size-10 place-items-center rounded-full bg-[var(--accent)] text-base font-bold text-[var(--accent-fg)]">{(authorName ?? "?").charAt(0).toUpperCase()}</span>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold">{authorName ?? "Tu firma se asigna al guardar"}</p>
+                    <p className="text-xs text-[var(--fg-muted)]">La nota la firma quien la escribe: tu usuario. No se puede cambiar.</p>
+                  </div>
+                </div>
+              </div>
             </div>
           </Step>
         )}

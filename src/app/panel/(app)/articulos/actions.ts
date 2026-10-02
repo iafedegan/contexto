@@ -9,6 +9,7 @@ import { articles, authors, categories } from "@/db/schema";
 import { canPublish, requirePermiso } from "@/lib/auth";
 import { embed } from "@/lib/embeddings";
 import { slugify } from "@/lib/utils";
+import { autorDeUsuario } from "@/lib/user-authors";
 
 /** Recalcula y persiste el embedding del artículo (= reindexación para el asistente). */
 async function reindex(articleId: string) {
@@ -50,7 +51,8 @@ export async function saveArticle(formData: FormData) {
   const excerpt = String(formData.get("excerpt") ?? "").trim();
   const body = sanitizeArticleHtml(String(formData.get("body") ?? ""));
   const categoryId = (formData.get("categoryId") as string) || null;
-  const authorId = (formData.get("authorId") as string) || null;
+  // La firma es siempre quien escribe: si la nota no tiene autor, es la persona con sesión iniciada.
+  const authorId = ((formData.get("authorId") as string) || null) ?? (await autorDeUsuario(user.id));
   const isBreaking = String(formData.get("isBreaking") ?? "0") === "1";
   const isLive = String(formData.get("isLive") ?? "0") === "1";
   const coverImageUrl = String(formData.get("coverImageUrl") ?? "").trim() || null;
@@ -221,7 +223,7 @@ export async function autosaveDraft(input: {
     excerpt: input.excerpt.trim(),
     body: sanitizeArticleHtml(input.body ?? ""),
     categoryId: input.categoryId || null,
-    authorId: input.authorId || null,
+    authorId: input.authorId || (await autorDeUsuario(user.id)),
     coverImageUrl: input.coverImageUrl?.trim() || null,
     coverImageAlt: input.coverImageAlt?.trim() || null,
     metaTitle: input.metaTitle?.trim() || null,
