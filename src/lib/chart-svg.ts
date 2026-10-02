@@ -9,6 +9,8 @@
 
 export type ChartSpec = {
   type: "bar" | "line" | "pie";
+  /** Forma concreta dentro del tipo (la elige quien redacta): vertical/horizontal/histograma, línea/área, torta/dona. */
+  variant?: "vertical" | "horizontal" | "histograma" | "area" | "torta" | "dona";
   title: string;
   unit: string;
   labels: string[];
@@ -42,6 +44,30 @@ function compact(n: number): string {
 }
 export const fmt = (n: number) => (Math.abs(n) >= 1e6 ? compact(n) : nf.format(n));
 const fmtTick = (n: number) => compact(n);
+
+export type TipoGrafica = "auto" | "vertical" | "horizontal" | "histograma" | "line" | "area" | "torta" | "dona";
+export const TIPOS_GRAFICA: { id: TipoGrafica; label: string; hint: string }[] = [
+  { id: "auto", label: "Automático", hint: "La IA elige el que mejor cuenta los datos" },
+  { id: "vertical", label: "Barras", hint: "Comparar categorías" },
+  { id: "horizontal", label: "Barras horizontales", hint: "Nombres largos o muchas categorías" },
+  { id: "histograma", label: "Histograma", hint: "Barras pegadas: distribución por rangos o periodos" },
+  { id: "line", label: "Líneas", hint: "Evolución en el tiempo" },
+  { id: "area", label: "Área", hint: "Evolución con volumen" },
+  { id: "torta", label: "Torta", hint: "Partes de un total" },
+  { id: "dona", label: "Dona", hint: "Partes de un total, con el total al centro" },
+];
+
+/** Cambia la forma de una gráfica ya armada sin tocar sus datos. «auto» la deja como está. */
+export function aplicarTipo(c: ChartSpec, tipo: TipoGrafica): { ok: true; chart: ChartSpec } | { ok: false; error: string } {
+  if (tipo === "auto") return { ok: true, chart: c };
+  if (tipo === "torta" || tipo === "dona") {
+    const s = c.series[0];
+    if (!s || s.values.some((v) => v < 0)) return { ok: false, error: "La torta y la dona necesitan valores positivos." };
+    return { ok: true, chart: { ...c, type: "pie", variant: tipo, series: [s] } };
+  }
+  if (tipo === "line" || tipo === "area") return { ok: true, chart: { ...c, type: "line", variant: tipo === "area" ? "area" : undefined } };
+  return { ok: true, chart: { ...c, type: "bar", variant: tipo } };
+}
 
 /** Valida la forma de los datos. Devuelve el motivo si no sirve. */
 export function chartProblem(c: ChartSpec): string | null {
@@ -127,7 +153,7 @@ export function renderChartSvg(c: ChartSpec, opts: RenderOpts = {}): string {
   const source = c.source ? wrap(`Fuente: ${c.source}`, 118, 2) : [];
   const footH = source.length ? 24 + source.length * 15 : 18;
 
-  const horizontal = c.type === "bar" && (c.labels.some((l) => l.length > 14) || c.labels.length > 7);
+  const horizontal = c.type === "bar" && (c.variant === "horizontal" || (c.variant !== "vertical" && c.variant !== "histograma" && (c.labels.some((l) => l.length > 14) || c.labels.length > 7)));
   const bodyH =
     c.type === "pie" ? Math.max(300, 80 + c.labels.length * 28) : horizontal ? 28 + c.labels.length * 44 : 320;
   const H = headH + bodyH + footH;
@@ -208,15 +234,15 @@ function cartesian(c: ChartSpec, top: number, h: number, o: Ctx) {
   });
 
   if (c.type === "bar") {
-    const gap = 6;
-    const bw = Math.min(54, (step * 0.66) / shown.length - gap / 2);
+    const hist = c.variant === "histograma";
+    const gap = hist ? 0 : 6;
+    const bw = hist ? (step * 0.94) / shown.length : Math.min(54, (step * 0.66) / shown.length - gap / 2);
     shown.forEach(({ s, si }, vi) =>
       s.values.forEach((v, i) => {
         const x = cx(i) - ((bw + gap / 2) * shown.length) / 2 + (bw + gap / 2) * vi;
         const y0 = y(Math.max(v, 0));
         const hh = Math.max(Math.abs(y(v) - y(0)), 2);
-        const r = Math.min(8, bw / 2, hh);
-        const color = PALETTE[si % PALETTE.length];
+        const r = Math.min(hist ? 3 : 8, bw / 2, hh);
         const d = `M${x},${y0 + hh} V${y0 + r} Q${x},${y0} ${x + r},${y0} H${x + bw - r} Q${x + bw},${y0} ${x + bw},${y0 + r} V${y0 + hh} Z`;
         out += o.interactive
           ? `<path d="${d}" fill="url(#${o.gid}c${si % 4})" filter="url(#${o.gid}f)" class="mk bar" data-i="${i}" data-s="${si}" tabindex="0" style="animation-delay:${i * 50}ms"/>`
@@ -228,9 +254,10 @@ function cartesian(c: ChartSpec, top: number, h: number, o: Ctx) {
     shown.forEach(({ s, si }) => {
       const color = PALETTE[si % PALETTE.length];
       const pts = s.values.map((v, i) => [cx(i), y(v)] as const);
-      if (shown.length === 1) {
+      if (c.variant === "area") {
         const base = top + padT + ph; // el relleno llega hasta el pie del área de trazado, aunque el eje no parta de cero
-        out += `<path d="M${pts[0][0]},${base} ${pts.map((p) => `L${p[0]},${p[1]}`).join(" ")} L${pts[pts.length - 1][0]},${base} Z" fill="url(#${o.gid})"/>`;
+        const fillA = shown.length === 1 ? `url(#${o.gid})` : color;
+        out += `<path d="M${pts[0][0]},${base} ${pts.map((p) => `L${p[0]},${p[1]}`).join(" ")} L${pts[pts.length - 1][0]},${base} Z" fill="${fillA}"${shown.length === 1 ? "" : ' fill-opacity="0.22"'}/>`;
       }
       out += `<polyline${o.interactive ? ' class="ln" pathLength="1"' : ""} points="${pts.map((p) => p.join(",")).join(" ")}" fill="none" stroke="${color}" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" filter="url(#${o.gid}f)"/>`;
       if (!o.interactive) {
@@ -281,7 +308,6 @@ function hbars(c: ChartSpec, top: number, h: number, o: Ctx) {
       const w = Math.max(x1 - x0, 2);
       const r = Math.min(8, bh / 2, w);
       const d = `M${x0},${by} H${x0 + w - r} Q${x0 + w},${by} ${x0 + w},${by + r} V${by + bh - r} Q${x0 + w},${by + bh} ${x0 + w - r},${by + bh} H${x0} Z`;
-      const color = PALETTE[si % PALETTE.length];
       out += o.interactive
         ? `<path d="${d}" fill="url(#${o.gid}h${si % 4})" filter="url(#${o.gid}f)" class="mk hb" data-i="${i}" data-s="${si}" tabindex="0" style="animation-delay:${i * 45}ms"/>`
         : `<path d="${d}" fill="url(#${o.gid}h${si % 4})" filter="url(#${o.gid}f)"/>`;
@@ -294,7 +320,7 @@ function hbars(c: ChartSpec, top: number, h: number, o: Ctx) {
 function donut(c: ChartSpec, top: number, h: number, o: Ctx) {
   const vals = c.series[0].values;
   const total = vals.reduce((a, b) => a + b, 0) || 1;
-  const cx = 230, cy = top + h / 2, r = 120, ri = 74;
+  const cx = 230, cy = top + h / 2, r = 120, ri = c.variant === "torta" ? 0 : 74;
   let a0 = -Math.PI / 2;
   let out = "";
   vals.forEach((v, i) => {
@@ -306,7 +332,7 @@ function donut(c: ChartSpec, top: number, h: number, o: Ctx) {
     out += `<path d="${d}" fill="url(#${o.gid}c${i % 4})" stroke="${CARD_EDGE}" stroke-width="3"${o.interactive ? ` class="mk sl" data-i="${i}" data-s="0" tabindex="0"` : ""}/>`;
     a0 = a1;
   });
-  out += `<text x="${cx}" y="${cy - 2}" font-size="22" font-weight="700" text-anchor="middle" fill="${INK}" pointer-events="none">${esc(fmt(total))}</text><text x="${cx}" y="${cy + 18}" font-size="12" text-anchor="middle" fill="${MUTED}" pointer-events="none">total</text>`;
+  if (ri > 0) out += `<text x="${cx}" y="${cy - 2}" font-size="22" font-weight="700" text-anchor="middle" fill="${INK}" pointer-events="none">${esc(fmt(total))}</text><text x="${cx}" y="${cy + 18}" font-size="12" text-anchor="middle" fill="${MUTED}" pointer-events="none">total</text>`;
   c.labels.forEach((l, i) => {
     const yy = top + h / 2 - ((c.labels.length - 1) * 28) / 2 + i * 28;
     out += `<g${o.interactive ? ` class="mk" data-i="${i}" data-s="0"` : ""}><rect x="440" y="${yy - 18}" width="${W - 440 - 24}" height="26" fill="transparent"/><circle cx="450" cy="${yy - 4}" r="6" fill="${PALETTE[i % PALETTE.length]}"/><text x="466" y="${yy}" font-size="13.5" fill="${INK}">${esc(l.slice(0, 28))}</text><text x="${W - 32}" y="${yy}" font-size="13.5" font-weight="600" text-anchor="end" fill="${INK}">${esc(fmt(vals[i]))} · ${Math.round((vals[i] / total) * 100)} %</text></g>`;

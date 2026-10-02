@@ -45,7 +45,8 @@ import {
 import { SectionTree } from "@/components/panel/chip-picker";
 import type { Material } from "@/lib/material-types";
 import { SiteArticlePreview, type SitePreviewChrome } from "@/components/panel/site-article-preview";
-import { decodeSpec, encodeSpec, renderChartSvg, svgDataUri } from "@/lib/chart-svg";
+import { aplicarTipo, decodeSpec, encodeSpec, renderChartSvg, svgDataUri, TIPOS_GRAFICA, type ChartSpec, type TipoGrafica } from "@/lib/chart-svg";
+import { InteractiveChart } from "@/components/interactive-chart";
 import { auditArticle, scoreLabel, type AuditItem, type AuditResult } from "@/lib/seo-audit";
 
 type Option = { id: string; name: string };
@@ -78,6 +79,7 @@ const STEPS_MANUAL = [
   { key: "claves", label: "Palabras clave" },
   { key: "seccion", label: "Sección y autor" },
   { key: "cuerpo", label: "Cuerpo" },
+  { key: "grafica", label: "Gráfica" },
   { key: "portada", label: "Portada" },
   { key: "seo", label: "Buscadores" },
   { key: "vista", label: "Vista previa" },
@@ -208,6 +210,8 @@ export function ArticleWizard({
   const [pickedContext, setPickedContext] = useState<number | null>(null);
   // Gráfica con datos reales (Gemini + búsqueda en Google).
   const [chartTopic, setChartTopic] = useState("");
+  const [tipoGrafica, setTipoGrafica] = useState<TipoGrafica>("auto");
+  const [tokenInsertado, setTokenInsertado] = useState<string | null>(null);
   const [chart, setChart] = useState<Extract<ChartResult, { ok: true }> | null>(null);
   const [chartBusy, startChart] = useTransition();
   const [chartError, setChartError] = useState("");
@@ -428,19 +432,42 @@ export function ArticleWizard({
       const res = await generateChart({
         topic: chartTopic.trim() || title.trim(),
         section: categories.find((c) => c.id === categoryId)?.name,
+        tipo: tipoGrafica,
       });
       if (!res.ok) return setChartError(res.error);
       setChart(res);
     });
   }
+  function tokenDe(c: Extract<ChartResult, { ok: true }>, spec: ChartSpec) {
+    const fuente = `Fuente: ${c.sourceNote || "Google Search"}. Consultado en: ${c.sources.slice(0, 3).map((x) => x.title).join(", ")}.`;
+    const alt = spec.title.replace(/[|\]]/g, " ");
+    return `[[GRAFICA ${encodeSpec(spec)} | ${alt} | ${fuente.replace(/[|\]]/g, " ")}]]`;
+  }
+  /** Cambia la forma de la gráfica ya generada sin volver a buscar datos; si ya estaba en la nota, la actualiza ahí. */
+  function cambiarTipo(t: TipoGrafica) {
+    setTipoGrafica(t);
+    setChartError("");
+    if (!chart) return;
+    const r = aplicarTipo(chart.chart, t);
+    if (!r.ok) return setChartError(r.error);
+    const nuevo = { ...chart, chart: r.chart, svg: renderChartSvg(r.chart) };
+    setChart(nuevo);
+    if (tokenInsertado) {
+      const tk = tokenDe(nuevo, r.chart);
+      setBody((b) => (b.includes(tokenInsertado) ? b.replace(tokenInsertado, tk) : b));
+      setTokenInsertado(tk);
+    }
+  }
   function insertChart() {
     if (!chart) return;
-    const fuente = `Fuente: ${chart.sourceNote || "Google Search"}. Consultado en: ${chart.sources.slice(0, 3).map((x) => x.title).join(", ")}.`;
-    const alt = chart.chart.title.replace(/[|\]]/g, " ");
-    setBody((b) => `${b.trimEnd()}\n\n[[GRAFICA ${encodeSpec(chart.chart)} | ${alt} | ${fuente.replace(/[|\]]/g, " ")}]]\n`);
-    setChart(null);
-    setChartTopic("");
+    const tk = tokenDe(chart, chart.chart);
+    setBody((b) => (tokenInsertado && b.includes(tokenInsertado) ? b.replace(tokenInsertado, tk) : `${b.trimEnd()}\n\n${tk}\n`));
+    setTokenInsertado(tk);
     setChartError("");
+  }
+  function quitarGrafica() {
+    if (tokenInsertado) setBody((b) => b.replace(tokenInsertado, "").replace(/\n{3,}/g, "\n\n").trimEnd() + "\n");
+    setTokenInsertado(null);
   }
 
   /** Hora de Colombia (UTC-5, sin horario de verano) como «YYYY-MM-DDTHH:mm» para el campo de fecha. */
@@ -1173,58 +1200,86 @@ export function ArticleWizard({
               placeholder={"Primer párrafo con lo más importante…\n\n## Qué explica el alza\n\nSegundo párrafo…"}
               className={`${input} resize-y text-base leading-relaxed`}
             />
-            <details className="rounded-[var(--radius)] border border-[var(--border)] p-3">
-              <summary className="flex cursor-pointer items-center gap-2 text-sm font-semibold">
-                <BarChart3 size={15} className="text-[var(--accent)]" /> Agregar una gráfica con IA (Gemini)
-              </summary>
-              <div className="mt-3 flex flex-col gap-2.5">
-                <input
-                  value={chartTopic}
-                  onChange={(e) => setChartTopic(e.target.value)}
-                  placeholder={title ? `Ej.: ${title}` : "Qué quieres graficar, p. ej. precio del novillo gordo por mes en 2026"}
-                  className={input}
-                />
-                <button type="button" onClick={makeChart} disabled={chartBusy} className="lx-btn self-start">
-                  {chartBusy && !chart ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
-                  {chartBusy && !chart ? "Buscando datos y dibujando…" : "Generar gráfica"}
-                </button>
-                {chartError && <p className="text-sm text-[var(--danger,#b4442e)]">{chartError}</p>}
-                {chart && (
-                  <div className="flex flex-col gap-2">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={`data:image/svg+xml;utf8,${encodeURIComponent(chart.svg)}`}
-                      alt={chart.chart.title}
-                      className="w-full rounded-[var(--radius)] border border-[var(--border)] bg-white"
-                    />
-                    <p className="text-xs text-[var(--fg-muted)]">
-                      Datos que encontró la IA en la web: <strong>verifica las fuentes antes de publicar.</strong> {chart.sourceNote}
-                    </p>
-                    <ul className="text-xs">
-                      {chart.sources.map((x) => (
-                        <li key={x.url}>
-                          <a href={x.url} target="_blank" rel="noreferrer" className="lx-link">
-                            {x.title} ↗
-                          </a>
-                        </li>
-                      ))}
-                    </ul>
-                    <div className="flex gap-2">
-                      <button type="button" onClick={insertChart} className="lx-btn">
-                        <Check size={15} /> Insertar en el artículo
-                      </button>
-                      <button type="button" onClick={makeChart} disabled={chartBusy} className="lx-btn lx-btn-ghost">
-                        <RotateCcw size={14} /> Otra versión
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </details>
+            <p className="flex items-center gap-2 rounded-[var(--radius)] bg-[var(--surface-2)] p-3 text-xs text-[var(--fg-muted)]">
+              <BarChart3 size={14} className="shrink-0 text-[var(--accent)]" /> ¿La nota tiene cifras? En el siguiente paso, «Gráfica», la IA te arma una (barras, histograma, líneas, área, torta o dona) y la ves antes de insertarla.
+            </p>
             <p className="text-xs text-[var(--fg-muted)]">
               {words} palabras · {Math.max(1, Math.round(words / 200))} min de lectura
               {words > 0 && words < 250 && " · se recomiendan al menos 250"}
             </p>
+          </Step>
+        )}
+
+        {current.key === "grafica" && (
+          <Step title="Gráfica con datos" hint="Opcional. La IA busca cifras en la web, las dibuja y tú eliges el tipo. La ves aquí antes de insertarla en la nota.">
+            <div className="flex flex-col gap-5">
+              <div className="flex flex-col gap-3">
+                <label className="flex flex-col gap-1.5">
+                  <span className="lx-kicker text-[var(--fg-muted)]">¿Qué quieres graficar?</span>
+                  <textarea
+                    value={chartTopic}
+                    onChange={(e) => setChartTopic(e.target.value)}
+                    rows={2}
+                    placeholder={title ? `Ej.: ${title}` : "Ej.: precio del novillo gordo por mes en 2026"}
+                    className={`${input} resize-y text-sm`}
+                  />
+                </label>
+                <div role="radiogroup" aria-label="Tipo de gráfica" className="flex flex-col gap-1.5">
+                  <span className="lx-kicker text-[var(--fg-muted)]">Tipo de gráfica</span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {TIPOS_GRAFICA.map((t) => (
+                      <button
+                        key={t.id}
+                        type="button"
+                        role="radio"
+                        aria-checked={tipoGrafica === t.id}
+                        title={t.hint}
+                        onClick={() => cambiarTipo(t.id)}
+                        className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${tipoGrafica === t.id ? "border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-fg)]" : "border-[var(--border)] bg-[var(--bg-2)] hover:border-[var(--accent)]"}`}
+                      >
+                        {t.label}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-xs text-[var(--fg-muted)]">{TIPOS_GRAFICA.find((t) => t.id === tipoGrafica)?.hint}. {chart ? "Cambiar el tipo redibuja la misma gráfica." : ""}</p>
+                </div>
+                <button type="button" onClick={makeChart} disabled={chartBusy} className="lx-btn self-start">
+                  {chartBusy ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
+                  {chartBusy ? "Buscando datos y dibujando…" : chart ? "Buscar otros datos" : "Generar gráfica"}
+                </button>
+                {chartError && <p role="alert" className="text-sm text-[var(--danger,#b4442e)]">{chartError}</p>}
+              </div>
+              <div className="min-w-0">
+                {chart ? (
+                  <div className="flex flex-col gap-3">
+                    <InteractiveChart key={`${chart.chart.type}-${chart.chart.variant ?? ""}-${chart.chart.title}`} spec={chart.chart} />
+                    <p className="text-xs text-[var(--fg-muted)]">
+                      Datos que encontró la IA en la web: <strong>verifica las fuentes antes de publicar.</strong> {chart.sourceNote}
+                    </p>
+                    <ul className="flex flex-wrap gap-x-3 gap-y-1 text-xs">
+                      {chart.sources.map((x) => (
+                        <li key={x.url}><a href={x.url} target="_blank" rel="noreferrer" className="lx-link">{x.title} ↗</a></li>
+                      ))}
+                    </ul>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button type="button" onClick={insertChart} className="lx-btn">
+                        <Check size={15} /> {tokenInsertado ? "Actualizar en la nota" : "Insertar en la nota"}
+                      </button>
+                      {tokenInsertado && (
+                        <>
+                          <span className="text-xs font-medium text-[#16a34a]">✓ Ya está en la nota</span>
+                          <button type="button" onClick={quitarGrafica} className="lx-link text-xs">Quitar de la nota</button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid min-h-[16rem] place-items-center rounded-[var(--radius)] border border-dashed border-[var(--border-strong)] bg-[var(--surface-2)]/50 p-6 text-center text-sm text-[var(--fg-muted)]">
+                    {chartBusy ? <span className="inline-flex items-center gap-2"><Loader2 size={16} className="animate-spin" /> Buscando datos y dibujando…</span> : "Aquí verás la gráfica en cuanto la generes."}
+                  </div>
+                )}
+              </div>
+            </div>
           </Step>
         )}
 

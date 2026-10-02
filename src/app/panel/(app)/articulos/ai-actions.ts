@@ -10,7 +10,7 @@ import { subirImagenGenerada } from "@/app/panel/(app)/articulos/media-actions";
 import { PREFIJO_IMAGEN_IA } from "@/lib/ai-image";
 import { materialParaPrompt, type Material } from "@/lib/material-types";
 import { registrarCostoIA, registrarUsoIA, verificarCuotaIA } from "@/lib/ai-cuota";
-import { chartProblem, renderChartSvg, type ChartSpec } from "@/lib/chart-svg";
+import { aplicarTipo, chartProblem, renderChartSvg, type ChartSpec, type TipoGrafica } from "@/lib/chart-svg";
 
 
 const draftSchema = z.object({
@@ -339,7 +339,7 @@ export type ChartResult =
  * citables (regla de la casa: nada sin fuente) y la gráfica sale con sus
  * fuentes a la vista para que el periodista las verifique antes de insertarla.
  */
-export async function generateChart(input: { topic: string; section?: string }): Promise<ChartResult> {
+export async function generateChart(input: { topic: string; section?: string; tipo?: TipoGrafica }): Promise<ChartResult> {
   const user = await requirePermiso("articulos");
   const topic = input.topic.trim();
   if (topic.length < 10) return { ok: false, error: "Describe qué quieres graficar (mínimo 10 caracteres)." };
@@ -374,12 +374,16 @@ export async function generateChart(input: { topic: string; section?: string }):
     const { object, usage: uso4 } = await generateObject({
       model: ai.model,
       schema: chartSchema,
-      prompt: `Con SOLO las cifras del siguiente texto (no agregues ninguna), arma la gráfica más adecuada (barras para comparar categorías, línea para evolución en el tiempo, torta SOLO para partes de un total). REGLAS DE LA GRÁFICA: (1) todos los valores deben ser de la MISMA magnitud y unidad y comparables entre sí: NUNCA mezcles hectáreas con cabezas de ganado o con pesos en el mismo gráfico; si el texto trae varias magnitudes, elige UNA y grafica solo esa; (2) prefiere una serie en el tiempo o categorías comparables, de 3 a 8 puntos; (3) etiquetas cortas (máx. 22 caracteres) sin repetir la unidad; (4) ordena las categorías de mayor a menor (si no son cronológicas); (5) title = una frase que diga qué muestra (no «Gráfica de…»), unit = la unidad con su periodo (p. ej. «Miles de cabezas, 2025»). Si no hay cifras suficientes y comparables marca enough=false.\n\nTEMA: ${topic}\n\nTEXTO:\n${found.text.slice(0, 6000)}`,
+      prompt: `Con SOLO las cifras del siguiente texto (no agregues ninguna), arma la gráfica más adecuada (barras para comparar categorías, línea para evolución en el tiempo, torta SOLO para partes de un total). REGLAS DE LA GRÁFICA: (1) todos los valores deben ser de la MISMA magnitud y unidad y comparables entre sí: NUNCA mezcles hectáreas con cabezas de ganado o con pesos en el mismo gráfico; si el texto trae varias magnitudes, elige UNA y grafica solo esa; (2) prefiere una serie en el tiempo o categorías comparables, de 3 a 8 puntos; (3) etiquetas cortas (máx. 22 caracteres) sin repetir la unidad; (4) ordena las categorías de mayor a menor (si no son cronológicas); (5) title = una frase que diga qué muestra (no «Gráfica de…»), unit = la unidad con su periodo (p. ej. «Miles de cabezas, 2025»). Si no hay cifras suficientes y comparables marca enough=false.${input.tipo && input.tipo !== "auto" ? ` El periodista pidió una gráfica de tipo «${input.tipo}»: organiza los datos para que ese tipo tenga sentido.` : ""}\n\nTEMA: ${topic}\n\nTEXTO:\n${found.text.slice(0, 6000)}`,
     });
     await registrarUsoIA(user.id, uso4);
     if (!object.enough) return { ok: false, error: "Las fuentes encontradas no traen cifras suficientes para una gráfica de ese tema." };
 
-    const chart: ChartSpec = { type: object.type, title: object.title, unit: object.unit, labels: object.labels, series: object.series, source: object.sourceNote };
+    const base: ChartSpec = { type: object.type, title: object.title, unit: object.unit, labels: object.labels, series: object.series, source: object.sourceNote };
+    // Si quien redacta eligió una forma concreta (torta, histograma…), se aplica sobre los datos encontrados.
+    const forma = aplicarTipo(base, input.tipo ?? "auto");
+    if (!forma.ok) return { ok: false, error: forma.error };
+    const chart = forma.chart;
     const problem = chartProblem(chart);
     if (problem) return { ok: false, error: `Los datos no sirven para graficar: ${problem}` };
     return { ok: true, chart, sourceNote: object.sourceNote, sources, svg: renderChartSvg(chart) };
