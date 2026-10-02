@@ -37,6 +37,10 @@ export type AuditInput = {
   tags?: string[];
   /** Tema o palabra clave principal; normalmente, el prompt del redactor. */
   focus?: string;
+  /** Opcionales: si no se pasan, no se evalúan las comprobaciones de portada y firma. */
+  coverImageUrl?: string | null;
+  coverImageAlt?: string | null;
+  authorName?: string | null;
 };
 
 const stripTags = (html: string) => html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
@@ -171,6 +175,55 @@ export function auditArticle(input: AuditInput): AuditResult {
     "El generador marca así lo que no pudo verificar: revísalo antes de publicar.",
   );
   add("etiquetas", (input.tags?.length ?? 0) > 0, "Etiquetas asignadas", 1, undefined, true);
+
+  // --- Contenido útil y confiable (E-E-A-T) y requisitos de Discover ------------
+  add(
+    "titulo-limpio",
+    !(/[!?]{2,}/.test(title) || (title.length > 12 && title === title.toUpperCase())),
+    "Título sin MAYÚSCULAS sostenidas ni signos repetidos",
+    1,
+    "Los titulares sensacionalistas se tratan como señuelo y pierden visibilidad.",
+    true,
+  );
+  add(
+    "desc-distinta",
+    norm(desc) !== norm(title) && !norm(desc).startsWith(norm(title)),
+    "Descripción distinta del título",
+    1,
+    "Si repite el título, desperdicias el espacio que convence de hacer clic.",
+    true,
+  );
+  add(
+    "fuentes",
+    /<a\s[^>]*href=["']https?:\/\//i.test(input.body) || words < 300,
+    "Cita o enlaza una fuente externa",
+    1,
+    "Google premia el contenido que muestra de dónde salen los datos (cifras, comunicados, entidades).",
+    true,
+  );
+  if (input.coverImageUrl !== undefined) {
+    add(
+      "portada",
+      Boolean(input.coverImageUrl),
+      "Imagen de portada presente",
+      1,
+      "Discover y los resultados enriquecidos exigen una imagen grande (≥ 1200 px de ancho).",
+      true,
+    );
+    if (input.coverImageUrl) {
+      add("portada-alt", Boolean(input.coverImageAlt?.trim()), "La portada tiene texto alternativo", 1, "Describe la imagen en una frase: accesibilidad y buscador de imágenes.", true);
+    }
+  }
+  if (input.authorName !== undefined) {
+    add(
+      "firma",
+      Boolean(input.authorName?.trim()),
+      "La nota tiene firma (autor)",
+      1,
+      "La autoría visible y enlazada a una página de autor es una señal de confianza para Google.",
+      true,
+    );
+  }
 
   const total = items.reduce((n, i) => n + i.weight, 0);
   const got = items.reduce((n, i) => n + (i.ok ? i.weight : 0), 0);

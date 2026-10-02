@@ -207,8 +207,11 @@ export function ArticleWizard({
         metaDescription,
         tags,
         focus: tags[0] || title,
+        coverImageUrl: cover,
+        coverImageAlt: coverAlt,
+        authorName: authors.find((a) => a.id === authorId)?.name ?? "",
       }),
-    [title, excerpt, bodyHtml, metaTitle, metaDescription, tags],
+    [title, excerpt, bodyHtml, metaTitle, metaDescription, tags, cover, coverAlt, authorId, authors],
   );
   // Recordar el último paso por artículo (en este navegador) para retomar
   // donde se quedó al volver a abrirlo desde la lista.

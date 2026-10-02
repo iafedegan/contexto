@@ -23,6 +23,10 @@ type ArticleLike = {
   publishedAt?: Date | string | null;
   updatedAt?: Date | string | null;
   authorName?: string | null;
+  authorSlug?: string | null;
+  coverImageAlt?: string | null;
+  /** HTML del cuerpo: solo para contar palabras (wordCount). */
+  body?: string | null;
   categoryName?: string | null;
   tags?: string[];
 };
@@ -44,6 +48,8 @@ export function articleMetadata(a: ArticleLike): Metadata {
     title,
     description,
     alternates: { canonical: url },
+    // Vista ampliada de la imagen y fragmentos sin tope: requisito para Discover y los resultados enriquecidos.
+    robots: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1, "max-video-preview": -1 },
     openGraph: {
       type: "article",
       url,
@@ -52,7 +58,7 @@ export function articleMetadata(a: ArticleLike): Metadata {
       siteName: SITE_NAME,
       publishedTime: toIso(a.publishedAt),
       modifiedTime: toIso(a.updatedAt),
-      images: a.coverImageUrl ? [{ url: a.coverImageUrl }] : undefined,
+      images: a.coverImageUrl ? [{ url: a.coverImageUrl, alt: a.coverImageAlt ?? a.title }] : undefined,
       authors: a.authorName ? [a.authorName] : undefined,
       section: a.categoryName ?? undefined,
       tags: a.tags,
@@ -75,17 +81,24 @@ export function newsArticleJsonLd(a: ArticleLike) {
     mainEntityOfPage: { "@type": "WebPage", "@id": url },
     headline: (a.metaTitle?.trim() || a.title).slice(0, 110),
     description: clampDescription(a.metaDescription?.trim() || a.excerpt),
-    image: a.coverImageUrl ? [a.coverImageUrl] : undefined,
+    image: a.coverImageUrl
+      ? [{ "@type": "ImageObject", url: a.coverImageUrl, caption: a.coverImageAlt ?? a.title }]
+      : undefined,
+    inLanguage: "es-CO",
+    isAccessibleForFree: true,
+    ...(a.body ? { wordCount: a.body.replace(/<[^>]+>/g, " ").split(/\s+/).filter(Boolean).length } : {}),
     datePublished: toIso(a.publishedAt),
     dateModified: toIso(a.updatedAt) ?? toIso(a.publishedAt),
     articleSection: a.categoryName ?? undefined,
     keywords: a.tags?.length ? a.tags.join(", ") : undefined,
+    // La firma enlaza a su página de autor: señal de autoría (E-E-A-T) verificable por Google.
     author: a.authorName
-      ? { "@type": "Person", name: a.authorName }
+      ? { "@type": "Person", name: a.authorName, ...(a.authorSlug ? { url: siteUrl(`/autor/${a.authorSlug}`) } : {}) }
       : { "@type": "Organization", name: SITE_NAME },
     publisher: {
       "@type": "Organization",
       name: SITE_NAME,
+      url: siteUrl("/"),
       logo: { "@type": "ImageObject", url: ORG_LOGO },
     },
   };
