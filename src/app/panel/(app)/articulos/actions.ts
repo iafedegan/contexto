@@ -10,6 +10,7 @@ import { canPublish, requirePermiso } from "@/lib/auth";
 import { embed } from "@/lib/embeddings";
 import { slugify } from "@/lib/utils";
 import { autorDeUsuario } from "@/lib/user-authors";
+import { guardarBorradorCore, type BorradorInput } from "@/lib/article-ops";
 
 /** Recalcula y persiste el embedding del artículo (= reindexación para el asistente). */
 async function reindex(articleId: string) {
@@ -197,61 +198,10 @@ export type AutosaveResult =
   | { ok: false; skipped?: boolean; error?: string };
 
 /**
- * Autoguardado del asistente: crea o actualiza el BORRADOR a cada paso, sin redirigir ni publicar.
- * Solo toca notas en borrador o en revisión: una nota ya publicada (o programada) está en línea y
- * sus cambios solo salen con los botones de guardar/publicar, nunca en silencio.
+ * Autoguardado del asistente: crea o actualiza el BORRADOR a cada paso, sin redirigir ni publicar. La lógica está en
+ * `guardarBorradorCore` (la comparte el bot de Telegram).
  */
-export async function autosaveDraft(input: {
-  id?: string;
-  title: string;
-  excerpt: string;
-  body: string;
-  tags: string[];
-  categoryId?: string | null;
-  authorId?: string | null;
-  coverImageUrl?: string | null;
-  coverImageAlt?: string | null;
-  metaTitle?: string | null;
-  metaDescription?: string | null;
-}): Promise<AutosaveResult> {
+export async function autosaveDraft(input: BorradorInput): Promise<AutosaveResult> {
   const user = await requirePermiso("articulos");
-  const title = input.title.trim();
-  if (title.length < 5) return { ok: false, skipped: true };
-
-  const values = {
-    title,
-    excerpt: input.excerpt.trim(),
-    body: sanitizeArticleHtml(input.body ?? ""),
-    categoryId: input.categoryId || null,
-    authorId: input.authorId || (await autorDeUsuario(user.id)),
-    coverImageUrl: input.coverImageUrl?.trim() || null,
-    coverImageAlt: input.coverImageAlt?.trim() || null,
-    metaTitle: input.metaTitle?.trim() || null,
-    metaDescription: input.metaDescription?.trim() || null,
-    tags: (input.tags ?? []).map((t) => t.trim()).filter(Boolean),
-    updatedAt: sql`now()`,
-  };
-
-  try {
-    if (input.id) {
-      const [row] = await db.select({ status: articles.status }).from(articles).where(eq(articles.id, input.id)).limit(1);
-      if (!row) return { ok: false, error: "La nota ya no existe." };
-      if (row.status !== "borrador" && row.status !== "en_revision") return { ok: false, skipped: true };
-      await db.update(articles).set(values).where(eq(articles.id, input.id));
-      revalidatePath("/panel/articulos");
-      return { ok: true, id: input.id, savedAt: new Date().toISOString() };
-    }
-    let slug = slugify(title) || slugify(`nota-${Date.now()}`);
-    const [dup] = await db.select({ id: articles.id }).from(articles).where(eq(articles.slug, slug)).limit(1);
-    if (dup) slug = `${slug}-${Date.now().toString(36)}`;
-    const [row] = await db
-      .insert(articles)
-      .values({ ...values, slug, status: "borrador", createdBy: user.id })
-      .returning({ id: articles.id });
-    revalidatePath("/panel/articulos");
-    return { ok: true, id: row.id, savedAt: new Date().toISOString() };
-  } catch (err) {
-    console.error("autosaveDraft:", err);
-    return { ok: false, error: "No se pudo autoguardar." };
-  }
+  return guardarBorradorCore(user.id, input);
 }

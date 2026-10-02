@@ -1,5 +1,6 @@
 import { asc, eq, or } from "drizzle-orm";
-import { BarChart3, Globe, ShieldCheck, Sparkles, Users } from "lucide-react";
+import { BarChart3, Globe, Send, ShieldCheck, Sparkles, Users } from "lucide-react";
+import { TelegramPanel } from "@/components/panel/telegram-panel";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import { auth } from "@/lib/auth";
@@ -84,6 +85,7 @@ export default async function ConfiguracionPage() {
           { id: "seguridad", label: "Seguridad de mi cuenta", icon: <ShieldCheck size={13} /> },
           { id: "analitica", label: "Analítica y SEO", icon: <BarChart3 size={13} /> },
           { id: "asistente", label: "Asistente y agentes de IA", icon: <Sparkles size={13} /> },
+          { id: "telegram", label: "Telegram", icon: <Send size={13} /> },
         ]}
       >
       {/* ------------------------------------------------ Identidad del sitio */}
@@ -369,6 +371,11 @@ export default async function ConfiguracionPage() {
           Google necesita alcanzar la dirección, así que en <code className="lx-mono">localhost</code>{" "}
           solo funciona a través de un túnel.
         </p>
+      </Section>
+
+      {/* ------------------------------------------------ Telegram */}
+      <Section id="telegram" icon={<Send size={14} />} title="Telegram" hint="Redacta notas desde el celular, paso a paso">
+        <TelegramPanel esAdmin={isAdmin} />
       </Section>
 
       {/* ------------------------------------------------ Asistente / agentes */}

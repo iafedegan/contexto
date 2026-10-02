@@ -5,7 +5,7 @@ import { z } from "zod";
 import { EDITOR_ASSIST_SYSTEM } from "@/agents/prompts";
 import { focusTerms } from "@/lib/seo-audit";
 import { getAiModel, getGroundedAi, getImageAi } from "@/lib/ai-provider";
-import { subirImagenGenerada } from "@/app/panel/(app)/articulos/media-actions";
+import { subirImagenBytes } from "@/lib/media-upload";
 import { PREFIJO_IMAGEN_IA } from "@/lib/ai-image";
 import { materialParaPrompt, type Material } from "@/lib/material-types";
 import { registrarCostoIA, registrarUsoIA, verificarCuotaIA } from "@/lib/ai-cuota";
@@ -683,7 +683,7 @@ export async function generateCoverImageCore(userId: string, input: {
     }
     await registrarCostoIA(userId, COSTO_IMAGEN_USD);
     const mime = image.mediaType === "image/jpeg" ? "image/jpeg" : image.mediaType === "image/webp" ? "image/webp" : "image/png";
-    const up = await subirImagenGenerada(image.uint8Array, mime);
+    const up = await subirImagenBytes(image.uint8Array, mime);
     if (!up.ok) return { ok: false, error: up.error };
     return { ok: true, url: up.url, alt: `${PREFIJO_IMAGEN_IA} ${scene}`.slice(0, 300), scene };
   } catch (err) {
@@ -869,4 +869,17 @@ export async function leerEnlacesCore(userId: string, input: { urls: string }): 
     return { ok: false, error: "No se pudo leer ningún enlace (puede estar protegido, ser un video o exigir suscripción). Pega el texto en el cuadro de tema." };
   }
   return { ok: true, materiales, fallidos };
+}
+
+/** Transcribe un audio ya descargado (bytes): lo usa el bot de Telegram. */
+export async function transcribirAudioBytesCore(userId: string, bytes: Uint8Array, mime: string, nombre: string): Promise<MaterialResult> {
+  const m = mimeAudio(nombre, mime) ?? (mime.startsWith("audio/") ? mime : null);
+  if (!m) return { ok: false, error: "Formato de audio no admitido." };
+  try {
+    return await transcribir(userId, bytes, m, nombre);
+  } catch (err) {
+    console.error("transcribirAudioBytes:", err);
+    const d = err && typeof err === "object" && "message" in err ? String((err as Error).message) : "";
+    return { ok: false, error: d ? `No se pudo transcribir: ${d.slice(0, 220)}` : "El modelo no respondió." };
+  }
 }

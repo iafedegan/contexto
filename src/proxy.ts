@@ -57,7 +57,7 @@ export async function proxy(req: NextRequest) {
   // Tampoco las llamadas internas (cron, Inngest, revalidación): van firmadas.
   // La API pública (v1) es justo lo contrario a lo que bloquea esta sección:
   // clientes automatizados de terceros, ya filtrados por su propia clave.
-  const internal = /^\/api\/(cron|inngest|revalidate|boletin|v1|openapi\.json)\b/.test(pathname);
+  const internal = /^\/api\/(cron|inngest|revalidate|boletin|telegram|v1|openapi\.json)\b/.test(pathname);
   if (!pathname.endsWith("/feed.xml") && !internal) {
     if (isBlockedBot(req.headers.get("user-agent"))) {
       return applyHeaders(new NextResponse("Acceso automatizado no permitido.", { status: 403 }));

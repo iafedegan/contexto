@@ -1,0 +1,470 @@
+import "server-only";
+import { asc, eq } from "drizzle-orm";
+import { db } from "@/db";
+import { categories, users } from "@/db/schema";
+import { canPublish } from "@/lib/auth";
+import { auditArticle, scoreLabel } from "@/lib/seo-audit";
+import { encodeSpec, TIPOS_GRAFICA, type ChartSpec, type TipoGrafica } from "@/lib/chart-svg";
+import {
+  generateArticleDraftCore, generateChartCore, generateCoverImageCore, leerEnlacesCore, regenerateDraftPartCore,
+  suggestTitlesAndContextsCore, transcribirAudioBytesCore,
+} from "@/lib/ai-core";
+import { enviarARevisionCore, guardarBorradorCore, programarCore, publicarCore } from "@/lib/article-ops";
+import { graficaPng } from "@/lib/chart-png";
+import { materialParaPrompt } from "@/lib/material-types";
+import { tienePermiso } from "@/lib/permisos-server";
+import { descargarArchivo, enviar, enviarFoto, esc, escribiendo, responderCallback, tg, type Boton } from "@/lib/telegram";
+import { getEstado, setEstado, vincularConCodigo, vinculoDe, desvincular, type EstadoChat, type Fase } from "@/lib/telegram-store";
+import { siteUrl } from "@/lib/utils";
+import { subirImagenBytes } from "@/lib/media-upload";
+
+/**
+ * Bot de redacción por Telegram: la persona (vinculada a su cuenta del panel) manda el contexto de la noticia —texto,
+ * nota de voz, enlaces— y el bot recorre el MISMO paso a paso del asistente web: títulos y enfoque, borrador,
+ * resumen, palabras clave, sección, cuerpo, gráfica, portada, SEO y publicación. Cada paso se guarda como borrador
+ * en el panel. Nada se publica sin un botón de confirmación y sin el permiso de publicar de esa cuenta.
+ */
+
+type Msg = {
+  message_id: number;
+  chat: { id: number; first_name?: string };
+  from?: { first_name?: string };
+  text?: string;
+  caption?: string;
+  voice?: { file_id: string; mime_type?: string };
+  audio?: { file_id: string; mime_type?: string; file_name?: string };
+  photo?: { file_id: string; width: number }[];
+  document?: { file_id: string; mime_type?: string; file_name?: string };
+};
+export type Update = { update_id: number; message?: Msg; callback_query?: { id: string; data?: string; message?: Msg } };
+
+const PASOS: Fase[] = ["titulo", "resumen", "claves", "seccion", "cuerpo", "grafica", "portada", "seo", "final"];
+const AYUDA =
+  "✍️ <b>Redactor de CONtexto Ganadero</b>\n\nEnvíame el <b>contexto de la noticia</b>: texto, una <b>nota de voz</b> (entrevista) o uno o más <b>enlaces</b>. Yo propongo títulos y enfoques, redacto el borrador y te voy mostrando cada paso para que lo apruebes o lo corrijas.\n\n/nueva — empezar otra nota\n/cancelar — descartar el flujo actual\n/ayuda — esta ayuda\n/desvincular — separar este Telegram de tu cuenta";
+
+const urlsEn = (t: string) => [...new Set(t.match(/https?:\/\/[^\s<>"')]+/gi) ?? [])];
+
+function textoDeHtml(html: string): string {
+  return html
+    .replace(/<h2[^>]*>([\s\S]*?)<\/h2>/gi, "\n\n##$1##\n")
+    .replace(/<li[^>]*>/gi, "\n• ").replace(/<\/p>|<br\s*\/?>/gi, "\n\n").replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'")
+    .replace(/\n{3,}/g, "\n\n").trim();
+}
+/** Cuerpo de la nota → mensaje de Telegram (intertítulos en negrita). */
+const cuerpoParaTelegram = (html: string) => esc(textoDeHtml(html)).replace(/##([\s\S]*?)##/g, "<b>$1</b>");
+/** Texto editado por la persona → HTML de la nota («## » = intertítulo, líneas en blanco = párrafos). */
+function htmlDeTexto(t: string): string {
+  return t.split(/\n{2,}/).map((b) => b.trim()).filter(Boolean).map((b) => {
+    const e = esc(b);
+    return /^##\s+/.test(b) ? `<h2>${e.replace(/^##\s+/, "")}</h2>` : `<p>${e.replace(/\n/g, "<br>")}</p>`;
+  }).join("");
+}
+
+/** «05/10 20:00», «mañana 8pm», «hoy 18:30» → ISO (hora de Colombia, UTC-5). */
+export function parseFecha(txt: string, ahora = new Date()): string | null {
+  const t = txt.toLowerCase().trim();
+  const co = new Date(ahora.getTime() - 5 * 3600_000);
+  let y = co.getUTCFullYear(), m = co.getUTCMonth(), d = co.getUTCDate();
+  const hm = t.match(/(\d{1,2})(?::(\d{2}))?\s*(a\.?\s?m\.?|p\.?\s?m\.?)?\s*$/);
+  if (!hm) return null;
+  let h = Number(hm[1]);
+  const min = Number(hm[2] ?? 0);
+  if (hm[3]) { const pm = hm[3].startsWith("p"); if (pm && h < 12) h += 12; if (!pm && h === 12) h = 0; }
+  if (h > 23 || min > 59) return null;
+  const f = t.match(/(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?/);
+  if (f) { d = Number(f[1]); m = Number(f[2]) - 1; if (f[3]) y = Number(f[3]) < 100 ? 2000 + Number(f[3]) : Number(f[3]); }
+  else if (/ma[ñn]ana/.test(t)) d += 1;
+  else if (!/hoy/.test(t)) return null;
+  const when = new Date(Date.UTC(y, m, d, h + 5, min));
+  return Number.isNaN(when.getTime()) ? null : when.toISOString();
+}
+function proximoLunes8pm(ahora = new Date()): string {
+  const co = new Date(ahora.getTime() - 5 * 3600_000);
+  let dias = (1 - co.getUTCDay() + 7) % 7;
+  if (dias === 0 && co.getUTCHours() >= 20) dias = 7;
+  return new Date(Date.UTC(co.getUTCFullYear(), co.getUTCMonth(), co.getUTCDate() + dias, 25)).toISOString();
+}
+const fmtHora = (iso: string) => new Intl.DateTimeFormat("es-CO", { dateStyle: "full", timeStyle: "short", timeZone: "America/Bogota" }).format(new Date(iso));
+
+// -------------------------------------------------------------------------------------------------------------
+
+type Ctx = { chatId: number; userId: string; nombre: string; role: Parameters<typeof canPublish>[0]; e: EstadoChat };
+
+async function guardar(c: Ctx, extra: Partial<EstadoChat> = {}) {
+  Object.assign(c.e, extra);
+  const r = await guardarBorradorCore(c.userId, {
+    id: c.e.articleId, title: c.e.title ?? "", excerpt: c.e.excerpt ?? "", body: c.e.body ?? "", tags: c.e.tags ?? [],
+    categoryId: c.e.categoryId, coverImageUrl: c.e.coverUrl, coverImageAlt: c.e.coverAlt, metaTitle: c.e.metaTitle, metaDescription: c.e.metaDescription,
+  });
+  if (r.ok) c.e.articleId = r.id;
+  await setEstado(c.chatId, c.e);
+  return r;
+}
+const fin = (c: Ctx) => setEstado(c.chatId, c.e);
+const enlacePanel = (c: Ctx) => (c.e.articleId ? siteUrl(`/panel/articulos/${c.e.articleId}?modo=ia`) : siteUrl("/panel/articulos"));
+const barra = (c: Ctx, f: Fase) => `Paso ${PASOS.indexOf(f) + 1} de ${PASOS.length}`;
+
+async function proponer(c: Ctx) {
+  await escribiendo(c.chatId);
+  await enviar(c.chatId, "🔎 Analizando el contexto y preparando títulos y enfoques…");
+  const r = await suggestTitlesAndContextsCore(c.userId, { topic: c.e.topic ?? "", material: c.e.material });
+  if (!r.ok) return enviar(c.chatId, `⚠️ ${esc(r.error)}`);
+  c.e.options = { titles: r.titles, contexts: r.contexts };
+  c.e.fase = "titulos";
+  await fin(c);
+  const lista = r.titles.map((t, i) => `<b>${i + 1}.</b> ${esc(t)}`).join("\n");
+  const filas: Boton[][] = [r.titles.map((_, i) => ({ texto: String(i + 1), dato: `t:${i}` })), [{ texto: "✏️ Escribir el mío", dato: "t:x" }]];
+  await enviar(c.chatId, `📰 <b>Elige el título</b>\n\n${lista}`, filas);
+}
+
+async function mostrarEnfoques(c: Ctx) {
+  const ctxs = c.e.options?.contexts ?? [];
+  c.e.fase = "enfoque";
+  await fin(c);
+  const lista = ctxs.map((x, i) => `<b>${i + 1}. ${esc(x.label)}</b>\n${esc(x.text)}`).join("\n\n");
+  await enviar(c.chatId, `🎯 <b>Elige el enfoque</b>\n\n${lista}`, [
+    ctxs.map((_, i) => ({ texto: String(i + 1), dato: `c:${i}` })),
+    [{ texto: "Sin enfoque especial", dato: "c:x" }],
+  ]);
+}
+
+async function redactar(c: Ctx) {
+  await escribiendo(c.chatId);
+  await enviar(c.chatId, "✍️ Redactando el borrador… puede tardar hasta un minuto.");
+  const prompt = [c.e.topic, c.e.context].filter(Boolean).join("\n\n");
+  const r = await generateArticleDraftCore(c.userId, { title: c.e.title ?? "", prompt: prompt || "Redacta la nota a partir del material.", material: c.e.material, references: (c.e.material ?? []).filter((m) => m.kind === "enlace" && m.url).map((m) => ({ title: m.title, outlet: "", url: m.url! })) });
+  if (!r.ok) return enviar(c.chatId, `⚠️ ${esc(r.error)}`);
+  if (r.mode === "esquema") await enviar(c.chatId, `ℹ️ ${esc(r.note ?? "Sin clave del modelo: solo se generó un esquema.")}`);
+  const d = r.draft;
+  await guardar(c, { title: d.title || c.e.title, excerpt: d.excerpt, body: d.body, tags: d.tags.map((t) => t.toLowerCase()).slice(0, 12), metaTitle: d.metaTitle, metaDescription: d.metaDescription });
+  await paso(c, "titulo");
+}
+
+// --- Un mensaje por paso, igual que el asistente web ----------------------------------------------------------
+
+const OK_ED = (f: string, regen = true): Boton[][] => [[{ texto: "✅ Siguiente", dato: "n:" }, ...(regen ? [{ texto: "🔄 Otra", dato: `r:${f}` }] : []), { texto: "✏️ Editar", dato: `e:${f}` }]];
+
+async function paso(c: Ctx, f: Fase) {
+  c.e.fase = f;
+  await fin(c);
+  const cab = `<i>${barra(c, f)}</i>\n`;
+  switch (f) {
+    case "titulo":
+      return enviar(c.chatId, `${cab}📌 <b>Título</b>\n${esc(c.e.title ?? "")}\n<i>${(c.e.title ?? "").length} caracteres (ideal 15–65)</i>\n\n📝 Borrador guardado en el panel.`, OK_ED("titulo", false));
+    case "resumen":
+      return enviar(c.chatId, `${cab}🧾 <b>Resumen / entradilla</b>\n${esc(c.e.excerpt ?? "")}`, OK_ED("resumen"));
+    case "claves":
+      return enviar(c.chatId, `${cab}🏷️ <b>Palabras clave</b>\n${esc((c.e.tags ?? []).join(", ") || "—")}\n\n<b>Título SEO:</b> ${esc(c.e.metaTitle ?? "—")}\n<b>Descripción:</b> ${esc(c.e.metaDescription ?? "—")}`, OK_ED("claves"));
+    case "seccion":
+      return mostrarSecciones(c);
+    case "cuerpo":
+      return enviar(c.chatId, `${cab}📄 <b>Cuerpo de la nota</b>\n\n${cuerpoParaTelegram(c.e.body ?? "")}`, OK_ED("cuerpo"));
+    case "grafica":
+      return enviar(c.chatId, `${cab}📊 <b>Gráfica con datos</b> (opcional)\n¿Quieres que la IA busque cifras y arme una gráfica? Elige el tipo:`, [
+        TIPOS_GRAFICA.slice(0, 4).map((t) => ({ texto: t.label, dato: `g:${t.id}` })),
+        TIPOS_GRAFICA.slice(4).map((t) => ({ texto: t.label, dato: `g:${t.id}` })),
+        [{ texto: "⏭️ Omitir", dato: "n:" }],
+      ]);
+    case "portada":
+      return enviar(c.chatId, `${cab}🖼️ <b>Foto de portada</b> (opcional)\nPuedo generarla con IA (realista, estilo cine) o puedes <b>enviarme una foto</b> ahora.`, [[{ texto: "🎨 Generar con IA", dato: "ph:g" }, { texto: "⏭️ Omitir", dato: "n:" }]]);
+    case "seo": {
+      const a = auditArticle({ title: c.e.title ?? "", excerpt: c.e.excerpt ?? "", body: c.e.body ?? "", metaTitle: c.e.metaTitle, metaDescription: c.e.metaDescription, tags: c.e.tags, focus: c.e.tags?.[0] || c.e.title, coverImageUrl: c.e.coverUrl ?? "", coverImageAlt: c.e.coverAlt, authorName: c.nombre });
+      const faltan = a.items.filter((i) => !i.ok).slice(0, 5).map((i) => `• ${esc(i.text)}`).join("\n");
+      return enviar(c.chatId, `${cab}🔎 <b>SEO: ${a.score}/100 · ${scoreLabel(a.score)}</b>\n${a.groups.filter((g) => g.score !== null).map((g) => `${esc(g.label)}: ${g.score} %`).join("\n")}${faltan ? `\n\n<b>Por mejorar:</b>\n${faltan}` : "\n\n✅ Todo en orden."}${a.capped ? "\n\n⚠️ Falta un criterio crítico (firma, fuentes, titular o datos por confirmar): no pasa de «Bueno»." : ""}`, [[{ texto: "✅ Continuar", dato: "n:" }]]);
+    }
+    case "final": {
+      const pub = canPublish(c.role) && (await tienePermiso(c.userId, c.role, "publicar"));
+      return enviar(c.chatId, `${cab}🚀 <b>Todo listo</b>\n<b>${esc(c.e.title ?? "")}</b>\nLa nota está guardada como borrador. ¿Qué hacemos?`, [
+        [{ texto: "💾 Dejar en borrador", dato: "f:b" }, { texto: "🔍 A revisión", dato: "f:r" }],
+        ...(pub ? [[{ texto: "📅 Programar", dato: "f:p" }, { texto: "🚀 Publicar ahora", dato: "f:pub" }]] : []),
+        [{ texto: "🔗 Abrir en el panel", url: enlacePanel(c) }],
+      ]);
+    }
+    default:
+      return;
+  }
+}
+
+async function siguiente(c: Ctx) {
+  const i = PASOS.indexOf(c.e.fase);
+  if (i < 0 || i >= PASOS.length - 1) return;
+  return paso(c, PASOS[i + 1]);
+}
+
+// --- Sección (árbol) ------------------------------------------------------------------------------------------
+
+async function cats() {
+  return db.select({ id: categories.id, name: categories.name, parentId: categories.parentId }).from(categories).orderBy(asc(categories.sortOrder), asc(categories.name));
+}
+async function mostrarSecciones(c: Ctx) {
+  const todas = await cats();
+  const raices = todas.filter((x) => !x.parentId);
+  const rama = c.e.ramaSeccion ? raices.find((r) => r.id === c.e.ramaSeccion) : undefined;
+  const sel = todas.find((x) => x.id === c.e.categoryId);
+  const cab = `<i>${barra(c, "seccion")}</i>\n📂 <b>Sección</b>${sel ? ` · elegida: <b>${esc(sel.name)}</b>` : ""}\nAutor: <b>${esc(c.nombre)}</b> (tu usuario)\n`;
+  if (rama) {
+    const hijos = todas.filter((x) => x.parentId === rama.id);
+    const filas: Boton[][] = [[{ texto: `✔ ${rama.name} (sección)`, dato: `s:${rama.id}` }]];
+    for (let i = 0; i < hijos.length; i += 2) filas.push(hijos.slice(i, i + 2).map((h) => ({ texto: h.name, dato: `s:${h.id}` })));
+    filas.push([{ texto: "⬅️ Volver", dato: "sr:0" }]);
+    return enviar(c.chatId, `${cab}\nSubsecciones de <b>${esc(rama.name)}</b>:`, filas);
+  }
+  const t = `${c.e.title} ${c.e.excerpt} ${(c.e.tags ?? []).join(" ")}`.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
+  const sug = raices.filter((r) => r.name.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase().split(/\s+/).some((w) => w.length >= 5 && t.includes(w.slice(0, Math.max(5, w.length - 2)))));
+  const orden = [...sug, ...raices.filter((r) => !sug.includes(r))];
+  const filas: Boton[][] = [];
+  for (let i = 0; i < orden.length; i += 2) filas.push(orden.slice(i, i + 2).map((r) => ({ texto: `${sug.includes(r) ? "⭐ " : ""}${r.name}${todas.some((x) => x.parentId === r.id) ? " ›" : ""}`, dato: todas.some((x) => x.parentId === r.id) ? `sr:${r.id}` : `s:${r.id}` })));
+  filas.push([{ texto: "Sin sección", dato: "s:0" }, { texto: "✅ Siguiente", dato: "n:" }]);
+  return enviar(c.chatId, `${cab}\nElige la sección (⭐ = sugerida; «›» tiene subsecciones):`, filas);
+}
+
+// --- Gráfica / portada ---------------------------------------------------------------------------------------
+
+async function hacerGrafica(c: Ctx, tipo: TipoGrafica) {
+  await escribiendo(c.chatId, "upload_photo");
+  await enviar(c.chatId, "📊 Buscando cifras en la web y dibujando la gráfica…");
+  const r = await generateChartCore(c.userId, { topic: c.e.title ?? "", tipo });
+  if (!r.ok) return enviar(c.chatId, `⚠️ ${esc(r.error)}`, [[{ texto: "⏭️ Omitir", dato: "n:" }]]);
+  c.e.chart = { spec: r.chart, sourceNote: r.sourceNote, sources: r.sources };
+  await fin(c);
+  const png = await graficaPng(r.chart);
+  const datos = r.chart.labels.map((l, i) => `• ${esc(l)}: ${r.chart.series[0].values[i]}`).join("\n");
+  await enviarFoto(c.chatId, png, `<b>${esc(r.chart.title)}</b>\n${esc(r.chart.unit)}\n\n${datos.slice(0, 600)}\n\n<i>Fuente: ${esc(r.sourceNote)}. Verifica antes de publicar.</i>`);
+  await enviar(c.chatId, `${r.sources.slice(0, 4).map((s) => `🔗 ${esc(s.title)}`).join("\n")}\n\nLa versión interactiva se ve en la nota. ¿La inserto?`, [
+    [{ texto: "✅ Insertar en la nota", dato: "gi" }, { texto: "🔁 Otro tipo", dato: "gt" }],
+    [{ texto: "⏭️ Omitir", dato: "n:" }],
+  ]);
+}
+function insertarGrafica(c: Ctx) {
+  const ch = c.e.chart; if (!ch) return false;
+  const spec = ch.spec as ChartSpec;
+  const fuente = `Fuente: ${ch.sourceNote}. Consultado en: ${ch.sources.slice(0, 3).map((x) => x.title).join(", ")}.`.replace(/[|\]]/g, " ");
+  const tk = `[[GRAFICA ${encodeSpec(spec)} | ${spec.title.replace(/[|\]]/g, " ")} | ${fuente}]]`;
+  const html = `<figure class="lx-chart" data-chart="${encodeSpec(spec)}"><figcaption>${esc(fuente)}</figcaption></figure>`;
+  c.e.chartToken = tk;
+  c.e.body = `${c.e.body ?? ""}${html}`;
+  return true;
+}
+
+async function portadaIA(c: Ctx) {
+  await escribiendo(c.chatId, "upload_photo");
+  await enviar(c.chatId, "🎨 Generando la imagen… unos 20–40 segundos.");
+  const r = await generateCoverImageCore(c.userId, { title: c.e.title ?? "", excerpt: c.e.excerpt });
+  if (!r.ok) return enviar(c.chatId, `⚠️ ${esc(r.error)}`, [[{ texto: "⏭️ Omitir", dato: "n:" }]]);
+  c.e.coverUrl = r.url; c.e.coverAlt = r.alt;
+  await guardar(c);
+  await tg("sendPhoto", { chat_id: c.chatId, photo: r.url, caption: `🖼️ ${r.alt}`.slice(0, 900) });
+  await enviar(c.chatId, "¿Te gusta esta portada? Queda marcada «imagen generada con IA».", [[{ texto: "✅ Usar", dato: "n:" }, { texto: "🔄 Otra", dato: "ph:g" }]]);
+}
+
+// --- Entrada de texto, voz y archivos -----------------------------------------------------------------------
+
+async function contexto(c: Ctx, texto: string) {
+  const urls = urlsEn(texto);
+  if (urls.length) {
+    await enviar(c.chatId, `🔗 Leyendo ${urls.length} enlace${urls.length > 1 ? "s" : ""}…`);
+    const r = await leerEnlacesCore(c.userId, { urls: urls.join("\n") });
+    if (r.ok) {
+      c.e.material = [...(c.e.material ?? []), ...r.materiales];
+      await enviar(c.chatId, `✅ Leí: ${r.materiales.map((m) => esc(m.title)).join(" · ")}${r.fallidos.length ? `\n⚠️ No pude leer: ${esc(r.fallidos.join(", "))}` : ""}`);
+    } else await enviar(c.chatId, `⚠️ ${esc(r.error)}`);
+  }
+  const sinUrls = texto.replace(/https?:\/\/\S+/g, "").trim();
+  if (sinUrls.length > 0) c.e.topic = [c.e.topic, sinUrls].filter(Boolean).join("\n\n");
+  if (!c.e.topic && !(c.e.material?.length)) return enviar(c.chatId, "No encontré contexto en tu mensaje. Cuéntame de qué trata la noticia o envíame un enlace o una nota de voz.");
+  c.e.fase = "idle";
+  await fin(c);
+  return proponer(c);
+}
+
+async function entrevista(c: Ctx, fileId: string, mime: string, nombre: string) {
+  await escribiendo(c.chatId);
+  await enviar(c.chatId, "🎙️ Transcribiendo el audio… puede tardar un par de minutos.");
+  const f = await descargarArchivo(fileId);
+  if (!f) return enviar(c.chatId, "⚠️ No pude descargar el audio.");
+  if (f.bytes.length > 20 * 1024 * 1024) return enviar(c.chatId, "⚠️ El audio supera 20 MB: recórtalo o envíalo por partes.");
+  const r = await transcribirAudioBytesCore(c.userId, f.bytes, mime, nombre);
+  if (!r.ok) return enviar(c.chatId, `⚠️ ${esc(r.error)}`);
+  c.e.material = [...(c.e.material ?? []), r.material];
+  await fin(c);
+  await enviar(c.chatId, `✅ Transcribí la entrevista (${r.material.text.length.toLocaleString("es-CO")} caracteres).\n\n<i>${esc(r.material.text.slice(0, 500))}…</i>\n\nSi quieres añadir más contexto, escríbelo; si no, sigo con los títulos.`, [[{ texto: "▶️ Proponer títulos", dato: "go" }]]);
+}
+
+async function fotoRecibida(c: Ctx, fileId: string) {
+  const f = await descargarArchivo(fileId);
+  if (!f) return enviar(c.chatId, "⚠️ No pude descargar la foto.");
+  const up = await subirImagenBytes(f.bytes, "image/jpeg");
+  if (!up.ok) return enviar(c.chatId, `⚠️ ${esc(up.error)}`);
+  c.e.coverUrl = up.url; c.e.coverAlt = c.e.title ?? "";
+  await guardar(c);
+  await enviar(c.chatId, "📷 Foto guardada como portada.", [[{ texto: "✅ Siguiente", dato: "n:" }]]);
+}
+
+// --- Punto de entrada -------------------------------------------------------------------------------------------
+
+export async function procesar(u: Update): Promise<unknown> {
+  const msg = u.message ?? u.callback_query?.message;
+  if (!msg) return;
+  const chatId = msg.chat.id;
+  const cb = u.callback_query;
+  const texto = (u.message?.text ?? "").trim();
+
+  const vinculo = await vinculoDe(chatId);
+  if (!vinculo) {
+    const cod = texto.replace(/^\/vincular\s*/i, "").trim().toUpperCase();
+    if (/^[A-Z2-9]{6}$/.test(cod)) {
+      const uid = await vincularConCodigo(cod, chatId, u.message?.from?.first_name ?? msg.chat.first_name ?? "");
+      if (uid) {
+        const [usr] = await db.select({ name: users.name }).from(users).where(eq(users.id, uid)).limit(1);
+        return void (await enviar(chatId, `✅ ¡Vinculado! Hola, <b>${esc(usr?.name ?? "")}</b>. Escribe /nueva o envíame directamente el contexto de una noticia.`));
+      }
+      return void (await enviar(chatId, "❌ Ese código no existe o ya venció (duran 10 minutos). Genera uno nuevo en el panel: Configuración → Telegram."));
+    }
+    if (cb) await responderCallback(cb.id);
+    return void (await enviar(chatId, "👋 Este bot es del equipo de CONtexto Ganadero.\n\nPara usarlo, entra al panel → <b>Configuración → Telegram</b>, genera un código y envíamelo aquí (por ejemplo <code>/vincular ABC123</code>)."));
+  }
+
+  const [usr] = await db.select({ id: users.id, name: users.name, role: users.role, active: users.active }).from(users).where(eq(users.id, vinculo.userId)).limit(1);
+  if (!usr || !usr.active) return void (await enviar(chatId, "Tu cuenta del panel está desactivada."));
+  if (!(await tienePermiso(usr.id, usr.role, "articulos"))) return void (await enviar(chatId, "Tu cuenta no tiene permiso para redactar artículos."));
+
+  const e = await getEstado(chatId);
+  if (typeof e.ultimoUpdate === "number" && u.update_id <= e.ultimoUpdate) return; // reintento de Telegram
+  e.ultimoUpdate = u.update_id;
+  const c: Ctx = { chatId, userId: usr.id, nombre: usr.name, role: usr.role, e };
+  await setEstado(chatId, e);
+
+  if (cb) {
+    await responderCallback(cb.id);
+    return acciones(c, cb.data ?? "");
+  }
+  const m = u.message!;
+
+  // Comandos
+  if (/^\/(start|ayuda|help)\b/i.test(texto)) return void (await enviar(chatId, AYUDA));
+  if (/^\/(nueva|nuevo)\b/i.test(texto)) { await setEstado(chatId, { fase: "idle", ultimoUpdate: u.update_id }); return void (await enviar(chatId, "📝 Cuéntame el contexto de la nueva noticia: escribe el texto, pega enlaces o envía una nota de voz.")); }
+  if (/^\/cancelar\b/i.test(texto)) { await setEstado(chatId, { fase: "idle", ultimoUpdate: u.update_id }); return void (await enviar(chatId, "Listo, descartado. Envía /nueva cuando quieras. (Lo que ya estaba guardado queda como borrador en el panel.)")); }
+  if (/^\/desvincular\b/i.test(texto)) { await desvincular(chatId); return void (await enviar(chatId, "Telegram desvinculado de tu cuenta.")); }
+
+  // Archivos
+  if (m.voice) return entrevista(c, m.voice.file_id, m.voice.mime_type ?? "audio/ogg", "nota-de-voz.ogg");
+  if (m.audio) return entrevista(c, m.audio.file_id, m.audio.mime_type ?? "audio/mpeg", m.audio.file_name ?? "audio.mp3");
+  if (m.document?.mime_type?.startsWith("audio/")) return entrevista(c, m.document.file_id, m.document.mime_type, m.document.file_name ?? "audio");
+  if (m.photo?.length) {
+    if (c.e.fase === "portada" || c.e.fase === "esperando_foto" || c.e.articleId) return fotoRecibida(c, m.photo[m.photo.length - 1].file_id);
+    return void (await enviar(chatId, "Para usar una foto como portada, primero crea la nota con /nueva."));
+  }
+  if (!texto) return;
+
+  // Texto según la fase
+  switch (c.e.fase) {
+    case "esperando_titulo": {
+      c.e.title = texto.slice(0, 160);
+      return mostrarEnfoques(c);
+    }
+    case "esperando_edicion": {
+      const campo = c.e.edit;
+      if (campo === "titulo") await guardar(c, { title: texto.slice(0, 160) });
+      else if (campo === "resumen") await guardar(c, { excerpt: texto });
+      else if (campo === "claves") await guardar(c, { tags: texto.split(/[,\n]/).map((t) => t.trim().toLowerCase()).filter(Boolean).slice(0, 12) });
+      else if (campo === "cuerpo") await guardar(c, { body: htmlDeTexto(texto) });
+      return paso(c, campo === "titulo" ? "titulo" : campo === "resumen" ? "resumen" : campo === "claves" ? "claves" : "cuerpo");
+    }
+    case "esperando_fecha": {
+      const iso = parseFecha(texto);
+      if (!iso) return void (await enviar(chatId, "No entendí la fecha. Ejemplos: <code>05/10 20:00</code>, <code>mañana 8pm</code>."));
+      return programar(c, iso);
+    }
+    default:
+      return contexto(c, texto);
+  }
+}
+
+async function programar(c: Ctx, iso: string) {
+  try {
+    await guardar(c);
+    await programarCore(c.e.articleId!, iso);
+    c.e.fase = "idle";
+    await fin(c);
+    await enviar(c.chatId, `📅 <b>Programada</b> para ${esc(fmtHora(iso))} (hora de Colombia).\nSe publica sola a esa hora.\n\n🔗 ${enlacePanel(c)}`);
+  } catch (err) {
+    await enviar(c.chatId, `⚠️ ${esc(err instanceof Error ? err.message : "No se pudo programar.")}`);
+  }
+}
+
+async function acciones(c: Ctx, d: string) {
+  const [k, v = ""] = d.split(":");
+  switch (k) {
+    case "go": return proponer(c);
+    case "t": {
+      if (v === "x") { c.e.fase = "esperando_titulo"; await fin(c); return void (await enviar(c.chatId, "✏️ Escribe el título que quieres usar.")); }
+      c.e.title = c.e.options?.titles[Number(v)] ?? c.e.title;
+      return mostrarEnfoques(c);
+    }
+    case "c": {
+      c.e.context = v === "x" ? "" : c.e.options?.contexts[Number(v)]?.text ?? "";
+      return redactar(c);
+    }
+    case "n": return siguiente(c);
+    case "e": {
+      c.e.fase = "esperando_edicion"; c.e.edit = v as EstadoChat["edit"]; await fin(c);
+      const actual = v === "titulo" ? c.e.title : v === "resumen" ? c.e.excerpt : v === "claves" ? (c.e.tags ?? []).join(", ") : textoDeHtml(c.e.body ?? "").replace(/##/g, "## ");
+      return void (await enviar(c.chatId, `✏️ Envíame el nuevo ${v === "claves" ? "conjunto de palabras clave (separadas por comas)" : v === "cuerpo" ? "texto del cuerpo (usa «## » para intertítulos y una línea en blanco entre párrafos)" : v}.\n\nActual:\n<code>${esc((actual ?? "").slice(0, 1500))}</code>`));
+    }
+    case "r": {
+      const parte = v === "claves" ? "tags" : v === "cuerpo" ? "body" : "excerpt";
+      await escribiendo(c.chatId);
+      await enviar(c.chatId, "🔄 Preparando otra versión…");
+      const actual = parte === "tags" ? (c.e.tags ?? []).join(", ") : parte === "body" ? c.e.body ?? "" : c.e.excerpt ?? "";
+      const r = await regenerateDraftPartCore(c.userId, { title: c.e.title ?? "", prompt: [c.e.topic, c.e.context].filter(Boolean).join("\n\n") || materialParaPrompt(c.e.material, 8000), part: parte, current: actual });
+      if (!r.ok) return void (await enviar(c.chatId, `⚠️ ${esc(r.error)}`));
+      const val = r.value;
+      if (val.tags) await guardar(c, { tags: val.tags.map((t) => t.toLowerCase()) });
+      if (val.body) await guardar(c, { body: val.body });
+      if (val.excerpt) await guardar(c, { excerpt: val.excerpt });
+      return paso(c, v === "claves" ? "claves" : v === "cuerpo" ? "cuerpo" : "resumen");
+    }
+    case "sr": { c.e.ramaSeccion = v === "0" ? undefined : v; await fin(c); return mostrarSecciones(c); }
+    case "s": {
+      await guardar(c, { categoryId: v === "0" ? undefined : v, ramaSeccion: undefined });
+      const nombre = v === "0" ? "Sin sección" : (await cats()).find((x) => x.id === v)?.name ?? "";
+      await enviar(c.chatId, `📂 Sección: <b>${esc(nombre)}</b>`);
+      return siguiente(c);
+    }
+    case "g": return hacerGrafica(c, v as TipoGrafica);
+    case "gt": return paso(c, "grafica");
+    case "gi": {
+      if (!insertarGrafica(c)) return void (await enviar(c.chatId, "Primero genera la gráfica."));
+      await guardar(c);
+      await enviar(c.chatId, "✅ Gráfica insertada en la nota.");
+      return siguiente(c);
+    }
+    case "ph": {
+      if (v === "g") return portadaIA(c);
+      return siguiente(c);
+    }
+    case "f": return finales(c, v);
+    case "p": {
+      if (v === "otra") { c.e.fase = "esperando_fecha"; await fin(c); return void (await enviar(c.chatId, "📅 Escribe la fecha y hora (hora de Colombia). Ej.: <code>05/10 20:00</code> o <code>mañana 8pm</code>.")); }
+      const iso = v === "lunes" ? proximoLunes8pm() : parseFecha(v === "man_am" ? "mañana 7:00" : "mañana 20:00");
+      return iso ? programar(c, iso) : undefined;
+    }
+    default: return;
+  }
+}
+
+async function finales(c: Ctx, v: string) {
+  await guardar(c);
+  if (v === "b") { c.e.fase = "idle"; await fin(c); return void (await enviar(c.chatId, `💾 Queda como borrador.\n🔗 ${enlacePanel(c)}`)); }
+  if (v === "r") { await enviarARevisionCore(c.e.articleId!); c.e.fase = "idle"; await fin(c); return void (await enviar(c.chatId, `🔍 Enviada a revisión.\n🔗 ${enlacePanel(c)}`)); }
+  const pub = canPublish(c.role) && (await tienePermiso(c.userId, c.role, "publicar"));
+  if (!pub) return void (await enviar(c.chatId, "Tu cuenta no tiene permiso para publicar ni programar. Puedes enviarla a revisión."));
+  if (v === "p") return void (await enviar(c.chatId, "📅 ¿Cuándo se publica?", [[{ texto: "Próximo lunes · 8:00 p. m.", dato: "p:lunes" }], [{ texto: "Mañana · 7:00 a. m.", dato: "p:man_am" }, { texto: "Mañana · 8:00 p. m.", dato: "p:man_pm" }], [{ texto: "Otra fecha…", dato: "p:otra" }]]));
+  if (v === "pub") return void (await enviar(c.chatId, `⚠️ ¿Publicar <b>ahora</b> «${esc(c.e.title ?? "")}»? Saldrá en el sitio de inmediato.`, [[{ texto: "✅ Sí, publicar", dato: "f:ok" }, { texto: "Cancelar", dato: "f:b" }]]));
+  if (v === "ok") {
+    await publicarCore(c.e.articleId!);
+    c.e.fase = "idle"; await fin(c);
+    return void (await enviar(c.chatId, `🚀 <b>Publicada.</b>\n${siteUrl("/")}`));
+  }
+}
