@@ -32,7 +32,7 @@ import {
 } from "@/app/panel/(app)/articulos/ai-actions";
 import { SiteArticlePreview, type SitePreviewChrome } from "@/components/panel/site-article-preview";
 import { decodeSpec, encodeSpec, renderChartSvg, svgDataUri } from "@/lib/chart-svg";
-import { auditArticle, scoreLabel, type AuditItem } from "@/lib/seo-audit";
+import { auditArticle, scoreLabel, type AuditItem, type AuditResult } from "@/lib/seo-audit";
 
 type Option = { id: string; name: string };
 
@@ -972,7 +972,7 @@ export function ArticleWizard({
         {error && current.key !== "tema" && <p className="mt-4 text-sm text-[var(--danger,#b4442e)]">{error}</p>}
       </div>
 
-      {current.key !== "vista" && <SeoPanel score={audit.score} items={audit.items} focus={tags[0]} />}
+      {current.key !== "vista" && <SeoPanel score={audit.score} items={audit.items} groups={audit.groups} capped={audit.capped} focus={tags[0]} />}
       </div>
 
       {/* --- Navegación --- */}
@@ -1058,6 +1058,12 @@ const STEP_OF: Record<string, string> = {
   enlaces: "Cuerpo",
   pendientes: "Cuerpo",
   etiquetas: "Palabras clave",
+  fuentes: "Cuerpo",
+  firma: "Sección y autor",
+  portada: "Portada",
+  "portada-alt": "Portada",
+  "titulo-limpio": "Título",
+  "desc-distinta": "Resumen o Buscadores",
 };
 
 /**
@@ -1136,7 +1142,7 @@ function SeoBar({ score, items, focus }: { score: number; items: AuditItem[]; fo
 }
 
 /** Panel SEO lateral (escritorio): nota, barra y la lista completa de criterios. */
-function SeoPanel({ score, items, focus }: { score: number; items: AuditItem[]; focus?: string }) {
+function SeoPanel({ score, items, groups, capped, focus }: { score: number; items: AuditItem[]; groups: AuditResult["groups"]; capped: boolean; focus?: string }) {
   const pending = items
     .filter((i) => !i.ok)
     .sort((a, b) => (a.severity === b.severity ? b.weight - a.weight : a.severity === "error" ? -1 : 1));
@@ -1167,6 +1173,21 @@ function SeoPanel({ score, items, focus }: { score: number; items: AuditItem[]; 
         >
           <div className="h-full rounded-full transition-all duration-500" style={{ width: `${score}%`, background: color }} />
         </div>
+        {capped && (
+          <p className="mt-2 text-xs font-medium text-[#b45309]">
+            Falta un criterio crítico de Google (firma, fuentes, sustancia o titular): la nota no puede pasar de «Bueno».
+          </p>
+        )}
+        <ul className="mt-3 flex flex-col gap-1.5">
+          {groups.filter((g) => g.score !== null).map((g) => (
+            <li key={g.id} className="text-xs">
+              <div className="flex justify-between gap-2"><span>{g.label}</span><span className="tabular-nums text-[var(--fg-muted)]">{g.score} %</span></div>
+              <div className="mt-0.5 h-1 overflow-hidden rounded-full bg-[var(--border)]">
+                <div className="h-full rounded-full" style={{ width: `${g.score}%`, background: (g.score ?? 0) >= 75 ? "#16a34a" : (g.score ?? 0) >= 55 ? "#d97706" : "#dc2626" }} />
+              </div>
+            </li>
+          ))}
+        </ul>
         <p className="mt-2 text-xs text-[var(--fg-muted)]">
           {focus ? `Palabra clave: «${focus}»` : "Añade palabras clave para medir la principal."}
         </p>

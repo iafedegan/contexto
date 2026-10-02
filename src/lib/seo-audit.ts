@@ -20,10 +20,48 @@ export type AuditItem = {
   help?: string;
   /** Peso en la nota final. */
   weight: number;
+  group: AuditGroupId;
+  critical: boolean;
+};
+
+/** Bloques de la nota: reflejan cómo Google evalúa un artículo (ver criterios en `GROUP_OF`). */
+export type AuditGroupId = "contenido" | "ficha" | "discover" | "lectura";
+export const AUDIT_GROUPS: Record<AuditGroupId, string> = {
+  contenido: "Contenido útil y confiable",
+  ficha: "Ficha en buscadores",
+  discover: "Imagen y Discover",
+  lectura: "Lectura y estructura",
+};
+
+/**
+ * Criterios de Google («contenido útil, fiable y pensado para las personas»,
+ * políticas de Discover y spam): autoría visible, fuentes y evidencia, informe
+ * original con sustancia, titulares sin sensacionalismo, imagen grande ≥ 1200 px.
+ * `CRITICAL`: si falla uno, la nota no puede pasar de «Bueno» aunque lo demás esté perfecto,
+ * porque son lo que más pesa en la evaluación de calidad (E-E-A-T) y no se compensa con meta etiquetas.
+ */
+const GROUP_OF: Record<string, AuditGroupId> = {
+  firma: "contenido", fuentes: "contenido", cuerpo: "contenido", pendientes: "contenido",
+  "titulo-limpio": "contenido", "tema-titulo": "contenido", "tema-entrada": "contenido", enlaces: "contenido",
+  "title-len": "ficha", "desc-len": "ficha", "desc-prosa": "ficha", "desc-distinta": "ficha", excerpt: "ficha",
+  portada: "discover", "portada-alt": "discover", alt: "discover",
+  intertitulos: "lectura", parrafos: "lectura", frases: "lectura", etiquetas: "lectura",
+};
+const CRITICAL = new Set(["firma", "fuentes", "cuerpo", "pendientes", "titulo-limpio"]);
+/** Peso por criterio: el contenido y la confianza pesan más que las meta etiquetas. */
+const WEIGHT: Record<string, number> = {
+  firma: 4, fuentes: 4, cuerpo: 4, pendientes: 4, "titulo-limpio": 3, "tema-titulo": 2, "tema-entrada": 2, enlaces: 1,
+  "title-len": 1, "desc-len": 1, "desc-prosa": 1, "desc-distinta": 1, excerpt: 1,
+  portada: 3, "portada-alt": 1, alt: 1,
+  intertitulos: 1, parrafos: 1, frases: 1, etiquetas: 1,
 };
 
 export type AuditResult = {
   score: number;
+  /** Nota (0–100) por bloque; null si el bloque no tiene criterios evaluables. */
+  groups: { id: AuditGroupId; label: string; score: number | null }[];
+  /** Criterios críticos que fallan y limitan la nota máxima. */
+  capped: boolean;
   items: AuditItem[];
   stats: { words: number; minutes: number; paragraphs: number; headings: number };
 };
@@ -81,7 +119,17 @@ export function auditArticle(input: AuditInput): AuditResult {
     weight: number,
     help?: string,
     soft = false,
-  ) => items.push({ id, ok, severity: ok ? "ok" : soft ? "aviso" : "error", text, help, weight });
+  ) =>
+    items.push({
+      id,
+      ok,
+      severity: ok ? "ok" : soft && !CRITICAL.has(id) ? "aviso" : "error",
+      text,
+      help,
+      weight: WEIGHT[id] ?? weight,
+      group: GROUP_OF[id] ?? "lectura",
+      critical: CRITICAL.has(id),
+    });
 
   // --- Ficha para buscadores -----------------------------------------------
   add(
@@ -110,10 +158,10 @@ export function auditArticle(input: AuditInput): AuditResult {
   // --- Estructura del texto -------------------------------------------------
   add(
     "cuerpo",
-    words >= 250,
-    `Cuerpo ${words} palabras (mínimo recomendado 250)`,
+    words >= 300,
+    `Cuerpo ${words} palabras (mínimo recomendado 300)`,
     2,
-    "Una nota muy corta rara vez responde la intención de búsqueda.",
+    "Google busca informe original con sustancia: una nota muy corta rara vez responde la necesidad del lector.",
   );
   add(
     "intertitulos",
@@ -182,8 +230,7 @@ export function auditArticle(input: AuditInput): AuditResult {
     !(/[!?]{2,}/.test(title) || (title.length > 12 && title === title.toUpperCase())),
     "Título sin MAYÚSCULAS sostenidas ni signos repetidos",
     1,
-    "Los titulares sensacionalistas se tratan como señuelo y pierden visibilidad.",
-    true,
+    "Google desaconseja el señuelo (clickbait) en titulares: pierden visibilidad, sobre todo en Discover.",
   );
   add(
     "desc-distinta",
@@ -198,8 +245,7 @@ export function auditArticle(input: AuditInput): AuditResult {
     /<a\s[^>]*href=["']https?:\/\//i.test(input.body) || words < 300,
     "Cita o enlaza una fuente externa",
     1,
-    "Google premia el contenido que muestra de dónde salen los datos (cifras, comunicados, entidades).",
-    true,
+    "Google valora la evidencia: cita de dónde salen las cifras (entidad, comunicado, estudio) con un enlace.",
   );
   if (input.coverImageUrl !== undefined) {
     add(
@@ -207,8 +253,7 @@ export function auditArticle(input: AuditInput): AuditResult {
       Boolean(input.coverImageUrl),
       "Imagen de portada presente",
       1,
-      "Discover y los resultados enriquecidos exigen una imagen grande (≥ 1200 px de ancho).",
-      true,
+      "Discover pide una imagen propia y relevante de ≥ 1200 px de ancho (ideal 16:9), no un logo.",
     );
     if (input.coverImageUrl) {
       add("portada-alt", Boolean(input.coverImageAlt?.trim()), "La portada tiene texto alternativo", 1, "Describe la imagen en una frase: accesibilidad y buscador de imágenes.", true);
@@ -220,16 +265,28 @@ export function auditArticle(input: AuditInput): AuditResult {
       Boolean(input.authorName?.trim()),
       "La nota tiene firma (autor)",
       1,
-      "La autoría visible y enlazada a una página de autor es una señal de confianza para Google.",
-      true,
+      "Google pide autoría clara (firma con su página de autor): es la señal de confianza (E-E-A-T) más visible.",
     );
   }
 
   const total = items.reduce((n, i) => n + i.weight, 0);
   const got = items.reduce((n, i) => n + (i.ok ? i.weight : 0), 0);
+  let score = total ? Math.round((got / total) * 100) : 0;
+  // Los criterios críticos no se compensan con meta etiquetas: 1 fallo → máx. 79 («Bueno»); 2 o más → máx. 64.
+  const fallosCriticos = items.filter((i) => i.critical && !i.ok).length;
+  const capped = fallosCriticos > 0;
+  if (fallosCriticos >= 2) score = Math.min(score, 64);
+  else if (fallosCriticos === 1) score = Math.min(score, 79);
+  const groups = (Object.keys(AUDIT_GROUPS) as AuditGroupId[]).map((id) => {
+    const its = items.filter((i) => i.group === id);
+    const t = its.reduce((n, i) => n + i.weight, 0);
+    return { id, label: AUDIT_GROUPS[id], score: t ? Math.round((its.reduce((n, i) => n + (i.ok ? i.weight : 0), 0) / t) * 100) : null };
+  });
 
   return {
-    score: total ? Math.round((got / total) * 100) : 0,
+    score,
+    groups,
+    capped,
     items,
     stats: {
       words,
