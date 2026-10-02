@@ -84,8 +84,8 @@ export default async function PanelLayout({ children }: { children: React.ReactN
           <span className="shrink-0"><LogoMark size={36} /></span>
           <span className="lx-display whitespace-nowrap text-base font-semibold leading-tight opacity-0 transition-opacity duration-150 group-hover/sb:opacity-100 group-focus-within/sb:opacity-100">Panel editorial</span>
         </Link>
-        <div className="flex items-center gap-3 overflow-hidden rounded-2xl bg-white/8 p-1.5 group-hover/sb:p-3 group-focus-within/sb:p-3">
-          <span className="grid size-11 shrink-0 place-items-center rounded-full bg-[var(--accent)] text-lg font-bold text-[var(--accent-fg)]">{inicial}</span>
+        <div className="flex items-center gap-3 overflow-hidden rounded-2xl p-0 transition-[padding,background-color] group-hover/sb:bg-white/8 group-hover/sb:p-3 group-focus-within/sb:bg-white/8 group-focus-within/sb:p-3">
+          <span className="grid size-10 shrink-0 place-items-center rounded-full bg-[var(--accent)] text-lg font-bold text-[var(--accent-fg)]">{inicial}</span>
           <div className="min-w-0 opacity-0 transition-opacity duration-150 group-hover/sb:opacity-100 group-focus-within/sb:opacity-100">
             <p className="truncate text-sm font-semibold">{session.user.name}</p>
             <p className="truncate text-xs capitalize text-[var(--fg-muted)]">{session.user.role}</p>
