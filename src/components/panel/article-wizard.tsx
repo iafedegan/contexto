@@ -11,6 +11,7 @@ import {
   Eye,
   ImagePlus,
   Loader2,
+  Lightbulb,
   Link2,
   Mic,
   RotateCcw,
@@ -185,6 +186,7 @@ export function ArticleWizard({
   const [refs, setRefs] = useState<NewsItem[]>([]);
   const [newsFiltro, setNewsFiltro] = useState<"todo" | NewsItem["type"]>("todo");
   const [searchingNews, startNews] = useTransition();
+  const [fuente, setFuente] = useState<"ideas" | "noticias" | "entrevista" | "enlaces">("ideas");
   const [progAbierto, setProgAbierto] = useState(false);
   const [progFecha, setProgFecha] = useState("");
   const [material, setMaterial] = useState<Material[]>([]);
@@ -722,13 +724,48 @@ export function ArticleWizard({
         {current.key === "tema" && (
           <Step
             title="Tema, título y contexto"
-            hint="Cuéntale a la IA el tema. Te propone varios títulos y varios enfoques; eliges los que te sirvan (puedes editarlos) y con eso redacta un borrador que revisarás paso a paso."
+            hint="Describe el tema, o parte de una noticia, una entrevista o unos enlaces. La IA propone títulos y enfoques; tú eliges y revisas cada paso."
           >
-            <div className="rounded-[var(--radius)] border border-dashed border-[var(--border-strong)] bg-[var(--surface-2)]/50 p-4">
-              <p className="text-sm font-semibold">¿No sabes de qué escribir?</p>
-              <p className="mt-1 text-xs text-[var(--fg-muted)]">
-                La IA busca en internet qué es tendencia en el sector ganadero, en Colombia y en el mundo, y te propone temas con sus fuentes.
-              </p>
+                        <textarea
+              autoFocus
+              value={topic}
+              onChange={(e) => setTopic(e.target.value)}
+              rows={3}
+              placeholder="Cuéntale a la IA de qué trata la nota. Ej.: el precio del novillo gordo subió 4 % en Medellín en septiembre según la Central Ganadera; menor entrada de ganado del Magdalena Medio…"
+              className={`${input} resize-y text-base leading-relaxed`}
+            />
+            <div className="flex flex-wrap items-center gap-3">
+              <button type="button" onClick={suggest} disabled={generating} className="lx-btn">
+                {generating && !options ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
+                {options ? "Proponer otras opciones" : "Proponer títulos y contextos"}
+              </button>
+              <span className="text-xs text-[var(--fg-muted)]">Nada se publica sin tu revisión.</span>
+            </div>
+
+            <div className="mt-2">
+              <p className="lx-kicker text-[var(--fg-muted)]">¿Prefieres partir de otra cosa?</p>
+              <div role="tablist" aria-label="Fuente para empezar" className="mt-2 flex gap-2 overflow-x-auto pb-1">
+                <button type="button" role="tab" id="tab-ideas" aria-selected={fuente === "ideas"} aria-controls="panel-fuente" onClick={() => setFuente("ideas")} className={`inline-flex items-center gap-2 whitespace-nowrap rounded-full border px-4 py-2 text-sm font-medium transition ${fuente === "ideas" ? "border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-fg)] shadow-sm" : "border-[var(--border)] bg-[var(--bg-2)] hover:border-[var(--accent)]"}`}>
+                  <Lightbulb size={15} aria-hidden /> Ideas de la IA
+                </button>
+                <button type="button" role="tab" id="tab-noticias" aria-selected={fuente === "noticias"} aria-controls="panel-fuente" onClick={() => setFuente("noticias")} className={`inline-flex items-center gap-2 whitespace-nowrap rounded-full border px-4 py-2 text-sm font-medium transition ${fuente === "noticias" ? "border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-fg)] shadow-sm" : "border-[var(--border)] bg-[var(--bg-2)] hover:border-[var(--accent)]"}`}>
+                  <Search size={15} aria-hidden /> Buscar noticias
+                </button>
+                <button type="button" role="tab" id="tab-entrevista" aria-selected={fuente === "entrevista"} aria-controls="panel-fuente" onClick={() => setFuente("entrevista")} className={`inline-flex items-center gap-2 whitespace-nowrap rounded-full border px-4 py-2 text-sm font-medium transition ${fuente === "entrevista" ? "border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-fg)] shadow-sm" : "border-[var(--border)] bg-[var(--bg-2)] hover:border-[var(--accent)]"}`}>
+                  <Mic size={15} aria-hidden /> Entrevista de voz
+                </button>
+                <button type="button" role="tab" id="tab-enlaces" aria-selected={fuente === "enlaces"} aria-controls="panel-fuente" onClick={() => setFuente("enlaces")} className={`inline-flex items-center gap-2 whitespace-nowrap rounded-full border px-4 py-2 text-sm font-medium transition ${fuente === "enlaces" ? "border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-fg)] shadow-sm" : "border-[var(--border)] bg-[var(--bg-2)] hover:border-[var(--accent)]"}`}>
+                  <Link2 size={15} aria-hidden /> Enlaces
+                </button>
+              </div>
+              <div id="panel-fuente" role="tabpanel" aria-labelledby={`tab-${fuente}`} className="mt-3 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] p-4">
+                {fuente === "ideas" && <p className="mb-3 text-sm text-[var(--fg-muted)]">La IA busca en internet qué es tendencia en el sector, en Colombia y en el mundo, y te propone temas con sus fuentes.</p>}
+                {fuente === "noticias" && <p className="mb-3 text-sm text-[var(--fg-muted)]">Escribe una persona, empresa o tema (p. ej. «Joaquín Manjarrés»): investiga en medios, YouTube y fuentes oficiales. Eliges cuáles <strong>referenciar</strong> o usar <strong>como tema</strong>.</p>}
+                {fuente === "entrevista" && <p className="mb-3 text-sm text-[var(--fg-muted)]">Sube el audio y la IA lo transcribe. Puedes corregir el texto antes de redactar. MP3, M4A, WAV, OGG… hasta 20 MB.</p>}
+                {fuente === "enlaces" && <p className="mb-3 text-sm text-[var(--fg-muted)]">Pega hasta 5 enlaces (uno por línea): la IA lee cada página y redacta con palabras propias, atribuyendo.</p>}
+                {fuente === "ideas" && (
+                  <div>
+              
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <input
                   value={ideasFocus}
@@ -780,11 +817,11 @@ export function ArticleWizard({
                   </ul>
                 </div>
               )}
-              <div className="mt-4 border-t border-[var(--border)] pt-4">
-                <p className="text-sm font-semibold">¿Quieres partir de una noticia concreta?</p>
-                <p className="mt-1 text-xs text-[var(--fg-muted)]">
-                  Escribe una persona, empresa o tema (p. ej. «Joaquín Manjarrés»): la IA hace una búsqueda profunda de noticias relacionadas. Eliges cuáles <strong>referenciar</strong> (se citan con enlace en tu nota) o cuál usar <strong>como tema</strong> para escribir sobre ella.
-                </p>
+              </div>
+                )}
+                {fuente === "noticias" && (
+                  <div>
+                
                 <div className="mt-3 flex flex-wrap items-center gap-2">
                   <input
                     value={newsQuery}
@@ -863,16 +900,11 @@ export function ArticleWizard({
                   </div>
                 )}
               </div>
-            </div>
-            <div className="rounded-[var(--radius)] border border-dashed border-[var(--border-strong)] bg-[var(--surface-2)]/50 p-4">
-              <p className="text-sm font-semibold">¿Ya tienes el material? Cárgalo y la nota sale de ahí</p>
-              <p className="mt-1 text-xs text-[var(--fg-muted)]">
-                Sube una <strong>entrevista de voz</strong> (la IA la transcribe) o pega uno o varios <strong>enlaces</strong> (la IA los lee). Luego sigues con «Proponer títulos y contextos» y los demás pasos como siempre.
-              </p>
-              <div className="mt-3 grid grid-cols-1 gap-4 md:grid-cols-2">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-[var(--fg-muted)]">Entrevista de voz</p>
-                  <label className={`lx-btn mt-2 cursor-pointer ${audioBusy ? "pointer-events-none opacity-60" : ""}`}>
+                )}
+                {fuente === "entrevista" && (
+                  <div>
+                  
+                  <label className={`lx-btn cursor-pointer ${audioBusy ? "pointer-events-none opacity-60" : ""}`}>
                     {audioBusy ? <Loader2 size={15} className="animate-spin" /> : <Mic size={15} />}
                     {audioBusy ? "Transcribiendo…" : "Subir audio"}
                     <input
@@ -889,14 +921,16 @@ export function ArticleWizard({
                   <p className="mt-1.5 text-xs text-[var(--fg-muted)]">MP3, M4A, WAV, OGG… hasta 20 MB. Puede tardar un par de minutos.</p>
                   {audioError && <p role="alert" className="mt-2 text-sm text-[var(--danger,#b4442e)]">{audioError}</p>}
                 </div>
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-[var(--fg-muted)]">Enlaces (uno por línea, hasta 5)</p>
+                )}
+                {fuente === "enlaces" && (
+                  <div>
+                  
                   <textarea
                     value={urlsTxt}
                     onChange={(e) => setUrlsTxt(e.target.value)}
                     rows={2}
                     placeholder="https://…"
-                    className={`${input} mt-2 resize-y !py-2 text-sm`}
+                    className={`${input} resize-y !py-2 text-sm`}
                   />
                   <button type="button" onClick={cargarEnlaces} disabled={urlsBusy || urlsTxt.trim().length < 8} className="lx-btn mt-2">
                     {urlsBusy ? <Loader2 size={15} className="animate-spin" /> : <Link2 size={15} />}
@@ -904,6 +938,7 @@ export function ArticleWizard({
                   </button>
                   {urlsError && <p role="alert" className="mt-2 text-sm text-[var(--danger,#b4442e)]">{urlsError}</p>}
                 </div>
+                )}
               </div>
               {material.length > 0 && (
                 <ul className="mt-4 flex flex-col gap-2">
@@ -931,21 +966,6 @@ export function ArticleWizard({
                   ))}
                 </ul>
               )}
-            </div>
-            <textarea
-              autoFocus
-              value={topic}
-              onChange={(e) => setTopic(e.target.value)}
-              rows={3}
-              placeholder="Ej.: el precio del novillo gordo subió 4 % en Medellín en septiembre según la Central Ganadera; menor entrada de ganado del Magdalena Medio…"
-              className={`${input} resize-y text-base leading-relaxed`}
-            />
-            <div className="flex flex-wrap items-center gap-3">
-              <button type="button" onClick={suggest} disabled={generating} className="lx-btn">
-                {generating && !options ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
-                {options ? "Proponer otras opciones" : "Proponer títulos y contextos"}
-              </button>
-              <span className="text-xs text-[var(--fg-muted)]">Nada se publica sin tu revisión.</span>
             </div>
 
             {options && (
