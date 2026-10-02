@@ -1,3 +1,4 @@
+import { promoverProgramados } from "@/lib/scheduled";
 import { ensureUserAuthors } from "@/lib/user-authors";
 import Link from "next/link";
 import { and, asc, desc, eq, ilike, inArray, or, sql, type SQL } from "drizzle-orm";
@@ -42,6 +43,7 @@ function param(sp: Record<string, string | string[] | undefined>, key: string): 
 
 export default async function ArticlesList({ searchParams }: { searchParams: SearchParams }) {
   await requirePermiso("articulos");
+  await promoverProgramados();
   const session = await auth();
   const canDelete = session?.user.role === "editor" || session?.user.role === "administrador";
   const sp = await searchParams;

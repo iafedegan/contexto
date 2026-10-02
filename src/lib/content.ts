@@ -1,3 +1,4 @@
+import { promoverProgramados } from "@/lib/scheduled";
 import "server-only";
 import { cache } from "react";
 import { and, desc, eq, gte, inArray, isNull, lte, sql } from "drizzle-orm";
@@ -89,6 +90,7 @@ export async function getRecentArticles(limit = 12): Promise<ArticleListItem[]> 
  * portada; RSS, llms.txt y el cintillo siguen el orden cronológico real.
  */
 export async function getHomepageArticles(limit = 13): Promise<ArticleListItem[]> {
+  await promoverProgramados();
   // Vista previa del editor: el orden y estilo de tarjetas sin publicar.
   const draft = getPreviewDraft();
   if (draft) {
@@ -219,6 +221,7 @@ export type FullArticle = {
 };
 
 export async function getPublishedArticleBySlug(slug: string): Promise<FullArticle | null> {
+  await promoverProgramados();
   const [row] = await db
     .select({
       id: articles.id,

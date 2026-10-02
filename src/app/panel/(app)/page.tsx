@@ -1,3 +1,4 @@
+import { promoverProgramados } from "@/lib/scheduled";
 import Link from "next/link";
 import { sql } from "drizzle-orm";
 import {
@@ -25,6 +26,7 @@ import { subscriberPoints as loadSubscriberPoints } from "@/lib/subscriber-map";
 export const dynamic = "force-dynamic";
 
 export default async function PanelHome() {
+  await promoverProgramados();
   const [byStatus, pendingDrafts, queries7d, week, trend, subscriberPoints, top] = await Promise.all([
     db.select({ status: articles.status, n: sql<number>`count(*)::int` }).from(articles).groupBy(articles.status),
     db.select({ n: sql<number>`count(*)::int` }).from(agentDrafts).where(sql`${agentDrafts.status} = 'pendiente'`),
