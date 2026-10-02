@@ -71,7 +71,7 @@ export default async function ArticleEditorPage({
 
   await ensureUserAuthors().catch(() => {});
   const [cats, auths] = await Promise.all([
-    db.select({ id: categories.id, name: categories.name }).from(categories).orderBy(asc(categories.name)),
+    db.select({ id: categories.id, name: categories.name, parentId: categories.parentId }).from(categories).orderBy(asc(categories.sortOrder), asc(categories.name)),
     db.select({ id: authors.id, name: authors.name }).from(authors).orderBy(asc(authors.name)),
   ]);
 

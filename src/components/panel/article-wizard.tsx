@@ -42,7 +42,7 @@ import {
   type DraftPart,
   type TitleContextOptions,
 } from "@/app/panel/(app)/articulos/ai-actions";
-import { ChipPicker } from "@/components/panel/chip-picker";
+import { ChipPicker, SectionTree } from "@/components/panel/chip-picker";
 import type { Material } from "@/lib/material-types";
 import { SiteArticlePreview, type SitePreviewChrome } from "@/components/panel/site-article-preview";
 import { decodeSpec, encodeSpec, renderChartSvg, svgDataUri } from "@/lib/chart-svg";
@@ -154,7 +154,7 @@ export function ArticleWizard({
   canPublish = false,
   savedAs,
 }: {
-  categories: Option[];
+  categories: (Option & { parentId?: string | null })[];
   authors: Option[];
   mode?: "manual" | "ia";
   /** Artículo ya guardado que se reabre en el asistente. */
@@ -1142,7 +1142,7 @@ export function ArticleWizard({
         {current.key === "seccion" && (
           <Step title="Sección y autor" hint="Dónde se publica y quién firma. Puedes dejarlo para después.">
             <div className="flex flex-col gap-7">
-              <ChipPicker label="Sección" options={categories} value={categoryId} onChange={setCategoryId} vacio="Sin sección" sugeridas={seccionesSugeridas} />
+              <SectionTree options={categories} value={categoryId} onChange={setCategoryId} sugeridas={seccionesSugeridas} />
               <ChipPicker label="Autor" options={authors} value={authorId} onChange={setAuthorId} vacio="Sin autor" avatar buscar={false} />
             </div>
           </Step>
