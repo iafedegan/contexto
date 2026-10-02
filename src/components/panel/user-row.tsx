@@ -1,5 +1,6 @@
 "use client";
 
+import { CuotaBarra } from "@/components/panel/cuota-ia-form";
 import { Fragment, useState, useTransition } from "react";
 import { ChevronDown } from "lucide-react";
 import type { UserRole } from "@/db/schema";
@@ -80,6 +81,7 @@ export function UserRow({
           {isSelf && <span className="ml-2 text-xs text-[var(--fg-muted)]">(tú)</span>}
         </span>
         <span className="block text-xs text-[var(--fg-muted)]">{user.email}</span>
+        {cuotaIA && <CuotaBarra gasto={cuotaIA.gasto} tope={cuotaIA.efectiva} compacta />}
       </td>
 
       <td className="border-b border-[var(--border)] px-4 py-3">
@@ -161,11 +163,8 @@ export function UserRow({
               {cuotaIA && (
                 <div className="mt-4 border-t border-[var(--border)] pt-4">
                   <p className="text-sm font-semibold">Cuota mensual de IA</p>
-                  <p className="mt-1 text-xs text-[var(--fg-muted)]">
-                    Este mes: US$ {cuotaIA.gasto.toFixed(2)}
-                    {cuotaIA.efectiva === null ? " · sin tope" : ` de US$ ${cuotaIA.efectiva.toFixed(2)}`}
-                    {cuotaIA.propia === null && cuotaIA.efectiva !== null ? " (la predeterminada)" : ""}
-                  </p>
+                  <CuotaBarra gasto={cuotaIA.gasto} tope={cuotaIA.efectiva} />
+                  {cuotaIA.propia === null && cuotaIA.efectiva !== null && <p className="mt-1 text-xs text-[var(--fg-muted)]">Usa la cuota predeterminada.</p>}
                   <div className="mt-2 flex flex-wrap items-center gap-2">
                     <span className="text-sm">US$</span>
                     <input type="text" inputMode="decimal" value={cuotaTxt} onChange={(e) => setCuotaTxt(e.target.value)} placeholder="predeterminada" className="lx-input py-1.5 text-sm" style={{ width: "9rem" }} />
@@ -207,11 +206,8 @@ export function UserRow({
               {cuotaIA && (
                 <div className="mt-4 border-t border-[var(--border)] pt-4">
                   <p className="text-sm font-semibold">Cuota mensual de IA</p>
-                  <p className="mt-1 text-xs text-[var(--fg-muted)]">
-                    Este mes: US$ {cuotaIA.gasto.toFixed(2)}
-                    {cuotaIA.efectiva === null ? " · sin tope" : ` de US$ ${cuotaIA.efectiva.toFixed(2)}`}
-                    {cuotaIA.propia === null && cuotaIA.efectiva !== null ? " (la predeterminada)" : ""}
-                  </p>
+                  <CuotaBarra gasto={cuotaIA.gasto} tope={cuotaIA.efectiva} />
+                  {cuotaIA.propia === null && cuotaIA.efectiva !== null && <p className="mt-1 text-xs text-[var(--fg-muted)]">Usa la cuota predeterminada.</p>}
                   <div className="mt-2 flex flex-wrap items-center gap-2">
                     <span className="text-sm">US$</span>
                     <input
