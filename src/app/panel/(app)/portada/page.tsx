@@ -99,7 +99,7 @@ export default async function PortadaPage({
     // left-1/2 + margen negativo + w-screen (el padre recorta en horizontal, ver .lx-shell).
     // Nada de `translate`: crearía un bloque contenedor y los elementos `fixed` del editor
     // (aviso, árbol de secciones, panel flotante) se anclarían a este div en vez de a la ventana.
-    <div className="relative left-1/2 -ml-[50vw] w-screen px-5">
+    <div className="relative left-1/2 -ml-[50vw] w-screen px-5 lg:-ml-[calc(50vw-2rem)] lg:w-[calc(100vw-4rem)]">
       <div className="flex min-h-[calc(100dvh-9rem)] flex-col gap-5">
       {/* `key` fuerza a remontar el builder cuando cambia el diseño real en la
           BD (tras guardar o restablecer), para que su estado interno no quede

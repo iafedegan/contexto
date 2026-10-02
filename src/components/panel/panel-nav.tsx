@@ -109,7 +109,7 @@ export function PanelSidebarNav({ role, permisos }: { role: string; permisos: st
     <nav aria-label="Secciones del panel" className="flex flex-col gap-6">
       {groups.map((g) => (
         <div key={g.id}>
-          <p className="px-3 text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-[var(--ink-faint)]">{g.label}</p>
+          <p className="whitespace-nowrap px-3 text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-[var(--ink-faint)] opacity-0 transition-opacity duration-150 group-hover/sb:opacity-100 group-focus-within/sb:opacity-100">{g.label}</p>
           <ul className="mt-2 flex flex-col gap-1">
             {g.items.map((i) => {
               const base = i.href.split(/[#?]/)[0];
@@ -125,9 +125,9 @@ export function PanelSidebarNav({ role, permisos }: { role: string; permisos: st
                       current ? "bg-white/12 text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]" : "text-[var(--fg-muted)] hover:bg-white/8 hover:text-white"
                     }`}
                   >
-                    {current && <span aria-hidden className="absolute -left-3 top-2 bottom-2 w-1 rounded-full bg-[var(--accent)]" />}
-                    <Icon size={18} className={current ? "text-[var(--accent)]" : "opacity-80 group-hover:text-[var(--accent)]"} aria-hidden />
-                    {i.label}
+                    {current && <span aria-hidden className="absolute -left-1.5 top-2 bottom-2 w-1 rounded-full bg-[var(--accent)]" />}
+                    <Icon size={20} className={`shrink-0 ${current ? "text-[var(--accent)]" : "opacity-80 group-hover:text-[var(--accent)]"}`} aria-hidden />
+                    <span className="whitespace-nowrap opacity-0 transition-opacity duration-150 group-hover/sb:opacity-100 group-focus-within/sb:opacity-100">{i.label}</span>
                   </Link>
                 </li>
               );

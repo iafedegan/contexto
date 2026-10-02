@@ -79,27 +79,27 @@ export default async function PanelLayout({ children }: { children: React.ReactN
   return (
     <div data-theme="panel" className="lx-shell">
       {/* Barra lateral (escritorio): azul marino con la navegación agrupada y la cuenta al pie. */}
-      <aside data-theme="panel-header" className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col gap-6 overflow-y-auto bg-[linear-gradient(180deg,#16315c,#0f2347)] px-5 py-6 text-[var(--fg)] shadow-[8px_0_30px_-18px_rgba(10,25,60,0.6)] lg:flex">
+      <aside data-theme="panel-header" className="group/sb fixed inset-y-0 left-0 z-50 hidden w-16 flex-col gap-6 overflow-y-auto overflow-x-hidden bg-[linear-gradient(180deg,#16315c,#0f2347)] px-3 py-6 text-[var(--fg)] shadow-[8px_0_30px_-18px_rgba(10,25,60,0.6)] transition-[width] duration-200 ease-out hover:w-64 focus-within:w-64 lg:flex">
         <Link href="/panel" className="flex items-center gap-3 rounded-xl px-1">
-          <LogoMark size={36} />
-          <span className="lx-display text-base font-semibold leading-tight">Panel editorial</span>
+          <span className="shrink-0"><LogoMark size={36} /></span>
+          <span className="lx-display whitespace-nowrap text-base font-semibold leading-tight opacity-0 transition-opacity duration-150 group-hover/sb:opacity-100 group-focus-within/sb:opacity-100">Panel editorial</span>
         </Link>
-        <div className="flex items-center gap-3 rounded-2xl bg-white/8 p-3">
+        <div className="flex items-center gap-3 overflow-hidden rounded-2xl bg-white/8 p-1.5 group-hover/sb:p-3 group-focus-within/sb:p-3">
           <span className="grid size-11 shrink-0 place-items-center rounded-full bg-[var(--accent)] text-lg font-bold text-[var(--accent-fg)]">{inicial}</span>
-          <div className="min-w-0">
+          <div className="min-w-0 opacity-0 transition-opacity duration-150 group-hover/sb:opacity-100 group-focus-within/sb:opacity-100">
             <p className="truncate text-sm font-semibold">{session.user.name}</p>
             <p className="truncate text-xs capitalize text-[var(--fg-muted)]">{session.user.role}</p>
           </div>
         </div>
         {!debeActivar2fa && <PanelSidebarNav role={session.user.role} permisos={permisos} />}
-        <div className="mt-auto flex items-center justify-between gap-2 border-t border-white/10 pt-4 text-sm">
+        <div className="mt-auto flex items-center justify-between gap-2 whitespace-nowrap border-t border-white/10 pt-4 text-sm opacity-0 transition-opacity duration-150 group-hover/sb:opacity-100 group-focus-within/sb:opacity-100">
           <Link href="/" className="font-medium text-[var(--fg-muted)] transition hover:text-white">Ver sitio</Link>
           <form action={async () => { "use server"; await signOut({ redirectTo: "/panel/login" }); }}>
             <button className="rounded-lg border border-white/25 px-3 py-1.5 font-medium transition hover:border-[var(--accent)] hover:text-[var(--accent)]">Salir</button>
           </form>
         </div>
       </aside>
-      <div className="flex min-h-dvh flex-col lg:pl-64">
+      <div className="flex min-h-dvh flex-col lg:pl-16">
       {/* La barra del panel va en claro (tema `panel-ui`), igual que la barra
           del editor de portada: es cromo de herramienta, no parte del sitio.
           El contenido de cada pantalla conserva su propio tema debajo. */}
