@@ -362,18 +362,19 @@ export async function generateChart(input: { topic: string; section?: string }):
  * Temas sugeridos por la IA a partir de la tendencia en internet
  * -------------------------------------------------------------------------- */
 
+// Sin topes de longitud en el esquema: Gemini a veces se pasa de caracteres y todo el resultado
+// se descartaba con «response did not match schema». Se recorta después.
 const topicIdeasSchema = z.object({
   ideas: z
     .array(
       z.object({
-        title: z.string().min(8).max(140),
-        scope: z.enum(["local", "internacional"]),
-        angle: z.string().min(20).max(300),
-        why: z.string().min(15).max(240),
+        title: z.string(),
+        scope: z.enum(["local", "internacional"]).catch("local"),
+        angle: z.string(),
+        why: z.string(),
       }),
     )
-    .min(3)
-    .max(8),
+    .min(1),
 });
 
 export type TopicIdea = z.infer<typeof topicIdeasSchema>["ideas"][number];
@@ -413,13 +414,24 @@ export async function suggestTopicIdeas(input: { section?: string; focus?: strin
       .slice(0, 10);
     if (!sources.length) return { ok: false, error: "La búsqueda no devolvió fuentes citables, así que no se proponen temas." };
 
-    const { object, usage } = await generateObject({
+    const intento = () => generateObject({
       model: ai.model,
       schema: topicIdeasSchema,
-      prompt: `Con SOLO lo que dice el texto, propone de 5 a 8 temas de nota para un medio ganadero colombiano: mezcla temas LOCALES (Colombia) e INTERNACIONALES. Para cada uno: title = titular tentativo claro (máx. 110 caracteres), scope, angle = el enfoque periodístico concreto (qué contar y a quién le importa), why = por qué es tendencia ahora (hecho + fecha). No inventes cifras ni hechos que no estén en el texto.\n\nTEXTO:\n${found.text.slice(0, 7000)}`,
+      prompt: `Con SOLO lo que dice el texto, propone de 5 a 8 temas de nota para un medio ganadero colombiano: mezcla temas LOCALES (Colombia) e INTERNACIONALES. Para cada uno (textos breves): title = titular tentativo claro (máx. 110 caracteres), scope, angle = el enfoque periodístico concreto (qué contar y a quién le importa), why = por qué es tendencia ahora (hecho + fecha). No inventes cifras ni hechos que no estén en el texto.\n\nTEXTO:\n${found.text.slice(0, 7000)}`,
     });
-    await registrarUsoIA(user.id, usage);
-    return { ok: true, ideas: object.ideas, sources };
+    let res;
+    try {
+      res = await intento();
+    } catch {
+      res = await intento(); // un reintento: la salida estructurada falla de forma intermitente
+    }
+    await registrarUsoIA(user.id, res.usage);
+    const ideas = res.object.ideas
+      .filter((i) => i.title.trim() && i.angle.trim())
+      .slice(0, 8)
+      .map((i) => ({ ...i, title: i.title.trim().slice(0, 160), angle: i.angle.trim().slice(0, 400), why: i.why.trim().slice(0, 300) }));
+    if (!ideas.length) return { ok: false, error: "La IA no devolvió temas utilizables; inténtalo de nuevo." };
+    return { ok: true, ideas, sources };
   } catch (err) {
     console.error("suggestTopicIdeas:", err);
     const detalle = err && typeof err === "object" && "message" in err ? String((err as Error).message) : "";
