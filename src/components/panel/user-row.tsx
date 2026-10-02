@@ -30,6 +30,7 @@ export function UserRow({
   permisos = [],
   exige2fa = true,
   cuotaIA,
+  ultimoAcceso,
 }: {
   user: {
     id: string;
@@ -46,6 +47,8 @@ export function UserRow({
   /** ¿Se le exige 2FA? (casilla «Exigir 2FA»). */
   exige2fa?: boolean;
   /** Cuota de IA: la propia (null = usa la predeterminada), la que rige y lo gastado este mes. */
+  /** Último inicio de sesión ya formateado (hora de Colombia). */
+  ultimoAcceso?: string;
   cuotaIA?: { propia: number | null; efectiva: number | null; gasto: number };
 }) {
   const [pending, start] = useTransition();
@@ -81,6 +84,7 @@ export function UserRow({
           {isSelf && <span className="ml-2 text-xs text-[var(--fg-muted)]">(tú)</span>}
         </span>
         <span className="block text-xs text-[var(--fg-muted)]">{user.email}</span>
+        <span className="block text-xs text-[var(--fg-muted)]">{ultimoAcceso ? `Último acceso: ${ultimoAcceso}` : "Sin accesos registrados"}</span>
         {cuotaIA && <CuotaBarra gasto={cuotaIA.gasto} tope={cuotaIA.efectiva} compacta />}
       </td>
 

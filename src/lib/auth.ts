@@ -9,6 +9,7 @@ import { db } from "@/db";
 import { users, type UserRole } from "@/db/schema";
 import { clearHits, clientIp, hit } from "@/lib/rate-limit";
 import { verifyHuman } from "@/lib/turnstile";
+import { dispositivoDe, registrarAcceso } from "@/lib/login-log";
 import { verificarTokenPasskey } from "@/lib/passkey";
 import { tienePermiso } from "@/lib/permisos-server";
 import type { PermisoId } from "@/lib/permisos";
@@ -100,6 +101,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           const [u] = await db.select().from(users).where(eq(users.id, uid)).limit(1);
           if (!u) return rechazar("passkey de una cuenta que ya no existe");
           if (!u.active) return rechazar("la cuenta está desactivada");
+          await registrarAcceso({ userId: u.id, name: u.name, email: u.email, role: u.role, metodo: "passkey", ip: request?.headers ? clientIp(request.headers) : "", dispositivo: dispositivoDe(request?.headers?.get("user-agent")) });
           return { id: u.id, name: u.name, email: u.email, role: u.role };
         }
 
@@ -138,6 +140,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         }
 
         await clearHits(`login:email:${email}`);
+        await registrarAcceso({ userId: u.id, name: u.name, email: u.email, role: u.role, metodo: "contraseña", ip, dispositivo: dispositivoDe(request?.headers?.get("user-agent")) });
         return { id: u.id, name: u.name, email: u.email, role: u.role };
       },
     }),

@@ -5,6 +5,7 @@ import { users } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { PERMISOS, efectivo, exige2fa, porDefecto } from "@/lib/permisos";
 import { getAjustes } from "@/lib/permisos-server";
+import { getAccesos } from "@/lib/login-log";
 import { cuotaDe, getCuotas, getGastos } from "@/lib/ai-cuota";
 import { getLimites } from "@/lib/budget";
 import { LimitesAsistenteForm } from "@/components/panel/limites-asistente-form";
@@ -56,6 +57,11 @@ export default async function ConfiguracionPage() {
     listarPasskeys(),
   ]);
 
+  const accesos = isAdmin ? await getAccesos(100) : [];
+  const fmtHora = (iso: string) =>
+    new Intl.DateTimeFormat("es-CO", { day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit", hour12: true, timeZone: "America/Bogota" }).format(new Date(iso));
+  const ultimo = new Map<string, string>();
+  for (const a of accesos) if (!ultimo.has(a.userId)) ultimo.set(a.userId, fmtHora(a.at));
   const ajustes = isAdmin ? await getAjustes() : {};
   const [cuotas, gastos] = isAdmin ? await Promise.all([getCuotas(), getGastos()]) : [null, null];
   const yoMismo = people.find((p) => p.id === session?.user.id || p.email === session?.user.email);
@@ -182,6 +188,7 @@ export default async function ConfiguracionPage() {
                   user={p}
                   canManage={isAdmin && p.id !== session?.user.id}
                   isSelf={p.id === session?.user.id}
+                  ultimoAcceso={ultimo.get(p.id)}
                   exige2fa={exige2fa(p.role, ajustes[p.id])}
                   cuotaIA={cuotas && gastos ? { propia: cuotas.personas[p.id] ?? null, efectiva: cuotaDe(cuotas, p.id), gasto: gastos[p.id] ?? 0 } : undefined}
                   permisos={PERMISOS.map((x) => ({
@@ -196,6 +203,41 @@ export default async function ConfiguracionPage() {
             </tbody>
           </table>
         </div>
+        )}
+
+        {isAdmin && (
+          <div className="mt-6 rounded-[var(--radius)] border border-[var(--border)]">
+            <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-[var(--border)] bg-[var(--surface-2)] px-4 py-3">
+              <p className="text-sm font-semibold">Accesos al panel</p>
+              <p className="text-xs text-[var(--fg-muted)]">Últimos {accesos.length} · hora de Colombia</p>
+            </div>
+            {accesos.length === 0 ? (
+              <p className="px-4 py-5 text-sm text-[var(--fg-muted)]">Aún no hay accesos registrados: aparecerán a partir del próximo inicio de sesión de cada persona.</p>
+            ) : (
+              <div className="max-h-96 overflow-auto">
+                <table className="w-full min-w-[40rem] text-sm">
+                  <thead>
+                    <tr className="text-left text-xs text-[var(--fg-muted)]">
+                      {["Fecha y hora", "Persona", "Cómo entró", "Dispositivo", "IP"].map((h) => (
+                        <th key={h} className="sticky top-0 bg-[var(--bg-2)] px-4 py-2 font-medium">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {accesos.map((a, i) => (
+                      <tr key={a.at + a.userId + i} className="border-t border-[var(--border)]">
+                        <td className="whitespace-nowrap px-4 py-2 tabular-nums">{fmtHora(a.at)}</td>
+                        <td className="px-4 py-2"><span className="font-medium">{a.name}</span> <span className="text-xs text-[var(--fg-muted)]">{a.email}</span></td>
+                        <td className="px-4 py-2">{a.metodo === "passkey" ? "Passkey" : "Contraseña + 2FA"}</td>
+                        <td className="whitespace-nowrap px-4 py-2">{a.dispositivo}</td>
+                        <td className="whitespace-nowrap px-4 py-2 tabular-nums text-[var(--fg-muted)]">{a.ip || "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         )}
 
         {isAdmin && (
