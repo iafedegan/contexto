@@ -186,6 +186,7 @@ export function ArticleWizard({
   const [refs, setRefs] = useState<NewsItem[]>([]);
   const [newsFiltro, setNewsFiltro] = useState<"todo" | NewsItem["type"]>("todo");
   const [searchingNews, startNews] = useTransition();
+  const [enOpciones, setEnOpciones] = useState(false);
   const [fuente, setFuente] = useState<"ideas" | "noticias" | "entrevista" | "enlaces">("ideas");
   const [progAbierto, setProgAbierto] = useState(false);
   const [progFecha, setProgFecha] = useState("");
@@ -339,6 +340,7 @@ export function ArticleWizard({
     if (current.key === "tema" && !generated) {
       if (generating) return;
       if (!options) return suggest();
+      if (!enOpciones) return setEnOpciones(true);
       // El contexto es opcional: con solo el título elegido se redacta a partir del tema.
       return generate();
     }
@@ -349,6 +351,8 @@ export function ArticleWizard({
   }
   function back() {
     setError("");
+    // En la pantalla de títulos y enfoque, «Atrás» vuelve a elegir la fuente, no al paso anterior.
+    if (current.key === "tema" && enOpciones) return setEnOpciones(false);
     setStep((s) => Math.max(s - 1, 0));
   }
   function goTo(i: number) {
@@ -535,6 +539,7 @@ export function ArticleWizard({
       if (!res.ok) return setError(res.error);
       setOptions({ titles: res.titles, contexts: res.contexts });
       setPickedContext(null);
+      setEnOpciones(true);
     });
   }
 
@@ -723,10 +728,12 @@ export function ArticleWizard({
         )}
         {current.key === "tema" && (
           <Step
-            title="Tema, título y contexto"
-            hint="Describe el tema, o parte de una noticia, una entrevista o unos enlaces. La IA propone títulos y enfoques; tú eliges y revisas cada paso."
+            title={enOpciones && options ? "Elige el título y el enfoque" : "Tema, título y contexto"}
+            hint={enOpciones && options ? "La IA propone varios títulos y enfoques a partir de tu material. Elige uno de cada uno (puedes editarlos) y genera el borrador." : "Describe el tema, o parte de una noticia, una entrevista o unos enlaces. La IA propone títulos y enfoques; tú eliges y revisas cada paso."}
           >
-                        <textarea
+                        {!(enOpciones && options) && (
+              <>
+            <textarea
               autoFocus
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
@@ -967,9 +974,20 @@ export function ArticleWizard({
                 </ul>
               )}
             </div>
+              </>
+            )}
 
-            {options && (
+            {options && enOpciones && (
               <>
+                <div className="flex flex-wrap items-start gap-3 rounded-[var(--radius)] bg-[var(--surface-2)] p-3 text-sm">
+                  <p className="min-w-0 flex-1 text-[var(--fg-muted)]">
+                    <strong className="text-[var(--fg)]">Tema:</strong> {(topic.trim() || material[0]?.title || "—").slice(0, 160)}
+                    {material.length > 0 && ` · ${material.length} material${material.length > 1 ? "es" : ""} cargado${material.length > 1 ? "s" : ""}`}
+                  </p>
+                  <button type="button" onClick={() => setEnOpciones(false)} className="lx-link inline-flex items-center gap-1 text-xs font-semibold">
+                    <ArrowLeft size={12} /> Cambiar tema o fuente
+                  </button>
+                </div>
                 <p className="lx-kicker mt-2 text-[var(--accent)]">1 · Elige un título</p>
                 <div className="flex flex-col gap-2">
                   {options.titles.map((t) => (
