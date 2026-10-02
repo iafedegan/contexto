@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { LogoMark } from "@/components/logo-mark";
 
 type Source = { n: number; title: string; url: string; kind: "articulo" | "archivo"; summary: string };
@@ -17,12 +17,17 @@ const EJEMPLOS = [
   "¿Qué cambia en el ciclo de vacunación?",
 ];
 
-export function AssistantChat() {
+/** `compact`: versión para el cuadro flotante (altura propia con desplazamiento y el campo fijo abajo). */
+export function AssistantChat({ compact = false }: { compact?: boolean }) {
   const [sessionId] = useState(() => crypto.randomUUID());
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Msg[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(false);
+  const finRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (compact) finRef.current?.scrollIntoView({ block: "end", behavior: "smooth" });
+  }, [compact, messages, busy]);
 
   async function send(question: string) {
     setBusy(true);
@@ -48,9 +53,10 @@ export function AssistantChat() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className={compact ? "flex h-full min-h-0 flex-col gap-3" : "flex flex-col gap-6"}>
+      <div className={compact ? "flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto overscroll-contain pr-1" : "contents"}>
       {messages.length === 0 && (
-        <div className="lx-card lx-glass p-7 text-center">
+        <div className={compact ? "lx-card lx-glass p-4 text-center" : "lx-card lx-glass p-7 text-center"}>
           <p className="text-sm leading-relaxed text-[var(--fg-muted)]">
             Pregunta sobre precios, regiones, normativa o cualquier tema cubierto por CONtexto
             Ganadero. Cada respuesta cita sus fuentes; si no hay fuentes, el asistente no responde.
@@ -131,6 +137,8 @@ export function AssistantChat() {
         {error && (
           <p className="text-sm text-[var(--danger)]">Ocurrió un error. Intenta de nuevo.</p>
         )}
+        <div ref={finRef} />
+      </div>
       </div>
 
       <form
@@ -141,7 +149,7 @@ export function AssistantChat() {
           setInput("");
           void send(q);
         }}
-        className="lx-card lx-glass sticky bottom-[max(1rem,env(safe-area-inset-bottom))] flex items-center gap-2 p-2"
+        className={compact ? "lx-card lx-glass flex shrink-0 items-center gap-2 p-2" : "lx-card lx-glass sticky bottom-[max(1rem,env(safe-area-inset-bottom))] flex items-center gap-2 p-2"}
       >
         <input
           value={input}

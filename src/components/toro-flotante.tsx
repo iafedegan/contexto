@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
-import Link from "next/link";
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { X } from "lucide-react";
 import { ToroBot } from "@/components/toro-bot";
+import { AssistantChat } from "@/components/assistant-chat";
+import { LogoMark } from "@/components/logo-mark";
 
 /**
  * Avatar flotante del asistente: el toro de caricatura, fijo en la esquina inferior derecha de todo el
@@ -14,11 +15,43 @@ import { ToroBot } from "@/components/toro-bot";
 export function ToroFlotante() {
   const pathname = usePathname() ?? "";
   const [oculto, setOculto] = useState(false);
+  const [abierto, setAbierto] = useState(false);
+  const [montado, setMontado] = useState(false);
+  useEffect(() => {
+    if (!abierto) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setAbierto(false);
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [abierto]);
   const en = pathname === "/en" || pathname.startsWith("/en/");
   if (oculto || /\/asistente(\/|$)/.test(pathname)) return null;
   const etiqueta = en ? "Ask the archive assistant" : "Pregúntale al asistente";
 
   return (
+    <>
+      {montado && (
+        <div
+          id="toro-dialogo"
+          role="dialog"
+          aria-label={en ? "Archive assistant" : "Asistente del archivo"}
+          hidden={!abierto}
+          className="toro-dialogo fixed bottom-[max(9rem,calc(env(safe-area-inset-bottom)+8.5rem))] right-[max(0.75rem,env(safe-area-inset-right))] z-30 flex h-[min(34rem,calc(100dvh-11.5rem))] w-[min(26rem,calc(100vw-1.5rem))] flex-col overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border-strong)] bg-[var(--bg)] text-[var(--fg)] shadow-[0_24px_60px_-20px_rgba(0,0,0,0.55)] print:hidden"
+        >
+          <div className="flex shrink-0 items-center gap-3 border-b border-[var(--border)] bg-[var(--bg-2)] px-4 py-3">
+            <LogoMark size={26} />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold leading-tight">{en ? "Archive assistant" : "Asistente del archivo"}</p>
+              <p className="truncate text-[0.72rem] text-[var(--fg-muted)]">{en ? "Answers with cited sources" : "Respuestas con fuente citada"}</p>
+            </div>
+            <button type="button" onClick={() => setAbierto(false)} aria-label={en ? "Close" : "Cerrar"} className="grid size-9 place-items-center rounded-full border border-[var(--border)] transition hover:bg-[var(--surface-2)]">
+              <X size={16} />
+            </button>
+          </div>
+          <div className="min-h-0 flex-1 p-3">
+            <AssistantChat compact />
+          </div>
+        </div>
+      )}
     <div className="toro-wrap pointer-events-none fixed bottom-[max(1rem,env(safe-area-inset-bottom))] right-[max(0.75rem,env(safe-area-inset-right))] z-30 print:hidden">
       <div className="group pointer-events-auto relative">
         <button
@@ -29,17 +62,24 @@ export function ToroFlotante() {
         >
           <X size={12} />
         </button>
-        <Link
-          href={en ? "/en/asistente" : "/asistente"}
+        <button
+          type="button"
+          onClick={() => {
+            setMontado(true);
+            setAbierto((v) => !v);
+          }}
           aria-label={etiqueta}
+          aria-expanded={abierto}
+          aria-controls="toro-dialogo"
           className="toro-float block w-[5.25rem] transition-transform hover:scale-110 sm:w-28"
         >
           <ToroBot bubble={false} label={etiqueta} />
-        </Link>
+        </button>
         <span className="pointer-events-none absolute bottom-full right-0 mb-1 hidden whitespace-nowrap rounded-full border border-[var(--border-strong)] bg-[var(--bg-2)] px-3 py-1 text-xs font-medium text-[var(--fg)] opacity-0 shadow transition group-hover:opacity-100 pointer-fine:block">
           {etiqueta}
         </span>
       </div>
     </div>
+    </>
   );
 }
