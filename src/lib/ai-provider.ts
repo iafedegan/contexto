@@ -104,10 +104,10 @@ export async function getGroundedAi() {
  * Modelo de imagen (Gemini «nano banana»). Solo con el proveedor Google: Anthropic no genera imágenes.
  * `null` = no hay clave; `"otro-proveedor"` = hay clave pero de otro proveedor.
  */
-export async function getImageAi() {
+export async function getImageAi(modelo = "gemini-3.1-flash-image-preview") {
   const settings = await readSettings();
   const { key } = await resolveKey(settings);
   if (!key) return null;
   if (settings.provider !== "google") return "otro-proveedor" as const;
-  return createGoogleGenerativeAI({ apiKey: key }).image("gemini-2.5-flash-image");
+  return createGoogleGenerativeAI({ apiKey: key }).image(modelo);
 }

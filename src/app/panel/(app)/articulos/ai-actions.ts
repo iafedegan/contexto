@@ -617,7 +617,7 @@ export async function searchNewsAbout(input: { query: string; section?: string }
  * -------------------------------------------------------------------------- */
 
 /** Costo estimado por imagen generada (USD); se descuenta de la cuota mensual de la persona. */
-const COSTO_IMAGEN_USD = 0.04;
+const COSTO_IMAGEN_USD = 0.12;
 
 export type CoverImageResult =
   | { ok: true; url: string; alt: string; scene: string }
@@ -665,11 +665,26 @@ export async function generateCoverImage(input: {
 
     const prompt =
       `Fotografía fotorrealista con estética de fotograma de cine: ${scene}. ` +
-      "Iluminación natural cinematográfica (luz dorada o contraluz suave), lente anamórfica de 35 mm, poca profundidad de campo, " +
+      "Máxima nitidez y detalle, resolución muy alta, sin compresión ni pixelado. Iluminación natural cinematográfica (luz dorada o contraluz suave), lente anamórfica de 35 mm, poca profundidad de campo, " +
       "grano de película sutil, colores naturales y ricos, composición editorial amplia en formato horizontal 16:9. " +
       "Sin texto, sin letras, sin logotipos, sin marcas de agua. Sin personas reales identificables.";
 
-    const { image } = await generateImage({ model: imageModel, prompt, aspectRatio: "16:9" });
+    // Alta resolución (2K ≈ 2752×1536): a pantalla completa una imagen de 1K se pixela. Si el modelo
+    // de 2K no está disponible, se cae al anterior (1K) en vez de fallar.
+    let image;
+    try {
+      ({ image } = await generateImage({
+        model: imageModel,
+        prompt,
+        aspectRatio: "16:9",
+        providerOptions: { google: { imageConfig: { imageSize: "2K" } } },
+      }));
+    } catch (e) {
+      console.warn("generateCoverImage: falló el modelo de 2K, uso el de 1K:", e);
+      const respaldo = await getImageAi("gemini-2.5-flash-image");
+      if (!respaldo || respaldo === "otro-proveedor") throw e;
+      ({ image } = await generateImage({ model: respaldo, prompt, aspectRatio: "16:9" }));
+    }
     await registrarCostoIA(user.id, COSTO_IMAGEN_USD);
     const mime = image.mediaType === "image/jpeg" ? "image/jpeg" : image.mediaType === "image/webp" ? "image/webp" : "image/png";
     const up = await subirImagenGenerada(image.uint8Array, mime);

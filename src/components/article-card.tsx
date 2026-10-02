@@ -145,7 +145,7 @@ function LeadCard({ a, priority, locale }: { a: ArticleListItem; priority?: bool
           label={a.categoryName ?? a.title}
           ratio="aspect-[16/11] md:h-full"
           priority={priority}
-          sizes="(min-width: 768px) 60vw, 100vw"
+          sizes="(min-width: 1280px) 900px, (min-width: 768px) 60vw, 100vw"
         />
       </Link>
       <div className="pointer-events-none absolute inset-x-0 bottom-0 hidden h-3/4 bg-gradient-to-t from-[var(--bg)] via-[var(--bg)]/80 to-transparent md:block" />
