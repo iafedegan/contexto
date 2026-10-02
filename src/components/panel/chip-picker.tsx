@@ -120,7 +120,11 @@ type Nodo = Opcion & { parentId?: string | null };
  */
 export function SectionTree({ options, value, onChange, sugeridas = [] }: { options: Nodo[]; value: string; onChange: (id: string) => void; sugeridas?: string[] }) {
   const [q, setQ] = useState("");
-  const [cerradas, setCerradas] = useState<Set<string>>(new Set());
+  // Todo empieza CERRADO; solo se abre de entrada la rama de la sección ya elegida.
+  const [abiertas, setAbiertas] = useState<Set<string>>(() => {
+    const sel = options.find((o) => o.id === value);
+    return new Set(sel?.parentId ? [sel.parentId] : []);
+  });
   const id = useId();
   const ids = useMemo(() => new Set(options.map((o) => o.id)), [options]);
   const hijos = useMemo(() => {
@@ -182,14 +186,14 @@ export function SectionTree({ options, value, onChange, sugeridas = [] }: { opti
       <ul className="flex max-h-[26rem] flex-col gap-1 overflow-y-auto rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] p-2">
         {raices.filter(ramaVisible).map((r) => {
           const subs = (hijos.get(r.id) ?? []).filter((h) => !t || coincide(h) || coincide(r));
-          const plegada = !t && cerradas.has(r.id);
+          const plegada = !t && !abiertas.has(r.id);
           return (
             <li key={r.id} className="rounded-lg px-1 py-1.5">
               <div className="flex flex-wrap items-center gap-2">
                 {(hijos.get(r.id)?.length ?? 0) > 0 ? (
                   <button
                     type="button"
-                    onClick={() => setCerradas((c) => { const n = new Set(c); if (n.has(r.id)) n.delete(r.id); else n.add(r.id); return n; })}
+                    onClick={() => setAbiertas((c) => { const n = new Set(c); if (n.has(r.id)) n.delete(r.id); else n.add(r.id); return n; })}
                     aria-expanded={!plegada}
                     aria-label={`${plegada ? "Abrir" : "Plegar"} ${r.name}`}
                     className="grid size-6 place-items-center rounded-md text-[var(--fg-muted)] transition hover:bg-[var(--surface-2)]"
