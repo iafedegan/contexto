@@ -99,9 +99,12 @@ async function guardar(c: Ctx, extra: Partial<EstadoChat> = {}) {
   });
   if (r.ok) c.e.articleId = r.id;
   await setEstado(c.chatId, c.e);
+  if (!r.ok && !r.skipped) await enviar(c.chatId, `⚠️ No se pudo guardar la nota en el panel.\n<code>${esc(r.detalle ?? r.error ?? "error desconocido")}</code>`);
   return r;
 }
 const fin = (c: Ctx) => setEstado(c.chatId, c.e);
+/** Los botones finales llevan el inicio del id de SU nota: un botón viejo no debe publicar otra nota. */
+const tk = (c: Ctx) => (c.e.articleId ?? "").slice(0, 8);
 const enlacePanel = (c: Ctx) => (c.e.articleId ? siteUrl(`/panel/articulos/${c.e.articleId}?modo=ia`) : siteUrl("/panel/articulos"));
 const barra = (c: Ctx, f: Fase) => `Paso ${PASOS.indexOf(f) + 1} de ${PASOS.length}`;
 
@@ -151,7 +154,7 @@ async function paso(c: Ctx, f: Fase) {
   const cab = `<i>${barra(c, f)}</i>\n`;
   switch (f) {
     case "titulo":
-      return enviar(c.chatId, `${cab}📌 <b>Título</b>\n${esc(c.e.title ?? "")}\n✍️ Firma: <b>${esc(c.nombre)}</b>\n<i>${(c.e.title ?? "").length} caracteres (ideal 15–65)</i>\n\n📝 Borrador guardado en el panel.`, OK_ED("titulo", false));
+      return enviar(c.chatId, `${cab}📌 <b>Título</b>\n${esc(c.e.title ?? "")}\n✍️ Firma: <b>${esc(c.nombre)}</b>\n<i>${(c.e.title ?? "").length} caracteres (ideal 15–65)</i>\n\n${c.e.articleId ? "📝 Borrador guardado en el panel." : "⚠️ Aún no está guardada en el panel."}`, OK_ED("titulo", false));
     case "resumen":
       return enviar(c.chatId, `${cab}🧾 <b>Resumen / entradilla</b>\n${esc(c.e.excerpt ?? "")}`, OK_ED("resumen"));
     case "claves":
@@ -177,8 +180,8 @@ async function paso(c: Ctx, f: Fase) {
       const pub = canPublish(c.role) && (await tienePermiso(c.userId, c.role, "publicar"));
       const aviso = pub ? "" : `\n\nℹ️ Tu rol (<b>${esc(String(c.role))}</b>) no puede publicar ni programar: envíala a revisión y un editor la publica.`;
       return enviar(c.chatId, `${cab}🚀 <b>Todo listo</b>\n<b>${esc(c.e.title ?? "")}</b>\n✍️ <b>Firma:</b> ${esc(c.nombre)}\n📌 Estado: <b>borrador</b> (aún NO está publicada)${aviso}\n\n¿Qué hacemos?`, [
-        [{ texto: "💾 Dejar en borrador", dato: "f:b" }, { texto: "🔍 A revisión", dato: "f:r" }],
-        ...(pub ? [[{ texto: "📅 Programar", dato: "f:p" }, { texto: "🚀 Publicar ahora", dato: "f:pub" }]] : []),
+        [{ texto: "💾 Dejar en borrador", dato: `f:b:${tk(c)}` }, { texto: "🔍 A revisión", dato: `f:r:${tk(c)}` }],
+        ...(pub ? [[{ texto: "📅 Programar", dato: `f:p:${tk(c)}` }, { texto: "🚀 Publicar ahora", dato: `f:pub:${tk(c)}` }]] : []),
         [{ texto: "🔗 Abrir en el panel", url: enlacePanel(c) }],
       ]);
     }
@@ -399,7 +402,7 @@ async function estadoNota(c: Ctx) {
   const pub = canPublish(c.role) && (await tienePermiso(c.userId, c.role, "publicar"));
   await enviar(c.chatId, `<b>${esc(a.title)}</b>\nEstado: ${estado}\n✍️ Firma: <b>${esc(a.firma ?? "— sin firma —")}</b>${a.status === "publicado" ? `\n🔗 ${siteUrl(`/articulo/${a.slug}`)}` : ""}`, [
     [{ texto: "🔗 Abrir en el panel", url: enlacePanel(c) }],
-    ...(a.status !== "publicado" && pub ? [[{ texto: "🚀 Publicar ahora", dato: "f:pub" }, { texto: "📅 Programar", dato: "f:p" }]] : []),
+    ...(a.status !== "publicado" && pub ? [[{ texto: "🚀 Publicar ahora", dato: `f:pub:${tk(c)}` }, { texto: "📅 Programar", dato: `f:p:${tk(c)}` }]] : []),
   ]);
 }
 
@@ -416,7 +419,10 @@ async function programar(c: Ctx, iso: string) {
 }
 
 async function acciones(c: Ctx, d: string) {
-  const [k, v = ""] = d.split(":");
+  const [k, v = "", t = ""] = d.split(":");
+  if ((k === "f" || k === "p") && t && !(c.e.articleId ?? "").startsWith(t)) {
+    return void (await enviar(c.chatId, "Ese botón es de otra nota. Escribe /estado para ver la nota en curso."));
+  }
   switch (k) {
     case "go": return proponer(c);
     case "t": {
@@ -477,16 +483,20 @@ async function acciones(c: Ctx, d: string) {
 }
 
 async function finales(c: Ctx, v: string) {
+  if (!c.e.articleId && !c.e.title) return void (await enviar(c.chatId, "No tengo una nota en curso. Envía /nueva para empezar."));
   await guardar(c);
+  if (!c.e.articleId) return void (await enviar(c.chatId, "⚠️ No pude guardar la nota. Inténtalo de nuevo o ábrela en el panel."));
   if (v === "b") { c.e.fase = "idle"; await fin(c); return void (await enviar(c.chatId, `💾 Queda como <b>borrador</b> (no está publicada).\n✍️ Firma: <b>${esc(c.nombre)}</b>\n🔗 ${enlacePanel(c)}`)); }
   if (v === "r") { await enviarARevisionCore(c.e.articleId!); c.e.fase = "idle"; await fin(c); return void (await enviar(c.chatId, `🔍 Enviada a <b>revisión</b>: un editor puede publicarla.\n✍️ Firma: <b>${esc(c.nombre)}</b>\n🔗 ${enlacePanel(c)}`)); }
   const pub = canPublish(c.role) && (await tienePermiso(c.userId, c.role, "publicar"));
   if (!pub) return void (await enviar(c.chatId, "Tu cuenta no tiene permiso para publicar ni programar. Puedes enviarla a revisión."));
-  if (v === "p") return void (await enviar(c.chatId, "📅 ¿Cuándo se publica?", [[{ texto: "Próximo lunes · 8:00 p. m.", dato: "p:lunes" }], [{ texto: "Mañana · 7:00 a. m.", dato: "p:man_am" }, { texto: "Mañana · 8:00 p. m.", dato: "p:man_pm" }], [{ texto: "Otra fecha…", dato: "p:otra" }]]));
-  if (v === "pub") return void (await enviar(c.chatId, `⚠️ ¿Publicar <b>ahora</b> «${esc(c.e.title ?? "")}»? Saldrá en el sitio de inmediato.`, [[{ texto: "✅ Sí, publicar", dato: "f:ok" }, { texto: "Cancelar", dato: "f:b" }]]));
+  if (v === "p") return void (await enviar(c.chatId, "📅 ¿Cuándo se publica?", [[{ texto: "Próximo lunes · 8:00 p. m.", dato: `p:lunes:${tk(c)}` }], [{ texto: "Mañana · 7:00 a. m.", dato: `p:man_am:${tk(c)}` }, { texto: "Mañana · 8:00 p. m.", dato: `p:man_pm:${tk(c)}` }], [{ texto: "Otra fecha…", dato: `p:otra:${tk(c)}` }]]));
+  if (v === "pub") return void (await enviar(c.chatId, `⚠️ ¿Publicar <b>ahora</b> «${esc(c.e.title ?? "")}»? Saldrá en el sitio de inmediato.`, [[{ texto: "✅ Sí, publicar", dato: `f:ok:${tk(c)}` }, { texto: "Cancelar", dato: `f:b:${tk(c)}` }]]));
   if (v === "ok") {
-    await publicarCore(c.e.articleId!);
+    await publicarCore(c.e.articleId);
+    const [a] = await db.select({ slug: articles.slug, status: articles.status, firma: authors.name }).from(articles).leftJoin(authors, eq(articles.authorId, authors.id)).where(eq(articles.id, c.e.articleId)).limit(1);
+    if (!a || a.status !== "publicado") return void (await enviar(c.chatId, "⚠️ No pude confirmar la publicación. Revisa la nota con /estado o en el panel."));
     c.e.fase = "idle"; await fin(c);
-    return void (await enviar(c.chatId, `🚀 <b>Publicada.</b>\n✍️ Firma: <b>${esc(c.nombre)}</b>\n🔗 ${siteUrl(`/articulo/${await slugDe(c.e.articleId!)}`)}`));
+    return void (await enviar(c.chatId, `🚀 <b>Publicada.</b>\n✍️ Firma: <b>${esc(a.firma ?? c.nombre)}</b>\n🔗 ${siteUrl(`/articulo/${a.slug}`)}`));
   }
 }

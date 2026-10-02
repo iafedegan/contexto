@@ -28,7 +28,7 @@ export type BorradorInput = {
   metaDescription?: string | null;
 };
 
-export type GuardadoResult = { ok: true; id: string; savedAt: string } | { ok: false; skipped?: boolean; error?: string };
+export type GuardadoResult = { ok: true; id: string; savedAt: string } | { ok: false; skipped?: boolean; error?: string; detalle?: string };
 
 /** Crea o actualiza el BORRADOR. Solo toca notas en borrador o en revisión (una publicada solo cambia con sus botones). */
 export async function guardarBorradorCore(userId: string, input: BorradorInput): Promise<GuardadoResult> {
@@ -64,7 +64,7 @@ export async function guardarBorradorCore(userId: string, input: BorradorInput):
     return { ok: true, id: row.id, savedAt: new Date().toISOString() };
   } catch (err) {
     console.error("guardarBorradorCore:", err);
-    return { ok: false, error: "No se pudo guardar." };
+    return { ok: false, error: "No se pudo guardar.", detalle: String((err as Error)?.message ?? err).slice(0, 240) };
   }
 }
 
