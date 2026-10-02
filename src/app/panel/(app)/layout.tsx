@@ -7,7 +7,7 @@ import { db } from "@/db";
 import { LogoMark } from "@/components/logo-mark";
 import { users } from "@/db/schema";
 import { auth, signOut } from "@/lib/auth";
-import { PanelNav } from "@/components/panel/panel-nav";
+import { PanelNav, PanelSidebarNav } from "@/components/panel/panel-nav";
 import { HeaderHeightVar } from "@/components/panel/header-height";
 import { IrASeguridad } from "@/components/panel/ir-a-seguridad";
 import { efectivos, exige2fa } from "@/lib/permisos";
@@ -75,8 +75,31 @@ export default async function PanelLayout({ children }: { children: React.ReactN
     </>
   );
 
+  const inicial = (session.user.name ?? "?").trim().charAt(0).toUpperCase();
   return (
-    <div data-theme="panel" className="lx-shell lx-grain">
+    <div data-theme="panel" className="lx-shell">
+      {/* Barra lateral (escritorio): azul marino con la navegación agrupada y la cuenta al pie. */}
+      <aside data-theme="panel-header" className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col gap-6 overflow-y-auto bg-[linear-gradient(180deg,#16315c,#0f2347)] px-5 py-6 text-[var(--fg)] shadow-[8px_0_30px_-18px_rgba(10,25,60,0.6)] lg:flex">
+        <Link href="/panel" className="flex items-center gap-3 rounded-xl px-1">
+          <LogoMark size={36} />
+          <span className="lx-display text-base font-semibold leading-tight">Panel editorial</span>
+        </Link>
+        <div className="flex items-center gap-3 rounded-2xl bg-white/8 p-3">
+          <span className="grid size-11 shrink-0 place-items-center rounded-full bg-[var(--accent)] text-lg font-bold text-[var(--accent-fg)]">{inicial}</span>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold">{session.user.name}</p>
+            <p className="truncate text-xs capitalize text-[var(--fg-muted)]">{session.user.role}</p>
+          </div>
+        </div>
+        {!debeActivar2fa && <PanelSidebarNav role={session.user.role} permisos={permisos} />}
+        <div className="mt-auto flex items-center justify-between gap-2 border-t border-white/10 pt-4 text-sm">
+          <Link href="/" className="font-medium text-[var(--fg-muted)] transition hover:text-white">Ver sitio</Link>
+          <form action={async () => { "use server"; await signOut({ redirectTo: "/panel/login" }); }}>
+            <button className="rounded-lg border border-white/25 px-3 py-1.5 font-medium transition hover:border-[var(--accent)] hover:text-[var(--accent)]">Salir</button>
+          </form>
+        </div>
+      </aside>
+      <div className="flex min-h-dvh flex-col lg:pl-64">
       {/* La barra del panel va en claro (tema `panel-ui`), igual que la barra
           del editor de portada: es cromo de herramienta, no parte del sitio.
           El contenido de cada pantalla conserva su propio tema debajo. */}
@@ -84,7 +107,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
       <header
         data-panel-header
         data-theme="panel-header"
-        className="sticky top-0 z-40 border-b border-[var(--border)] bg-[var(--bg)] text-[var(--fg)] shadow-[var(--shadow)]"
+        className="sticky top-0 z-40 border-b border-[var(--border)] bg-[var(--bg)] text-[var(--fg)] shadow-[var(--shadow)] lg:hidden"
       >
         <div
           aria-hidden
@@ -105,7 +128,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
           )}
 
           {/* Sin 2FA no hay menú: la cuenta (con «Salir») se queda siempre a la vista. */}
-          <div className={`ml-auto items-center gap-3 text-xs ${debeActivar2fa ? "flex flex-wrap justify-end" : "hidden lg:flex"}`}>{cuenta}</div>
+          <div className={`ml-auto items-center gap-3 text-xs ${debeActivar2fa ? "flex flex-wrap justify-end" : "hidden"}`}>{cuenta}</div>
         </div>
       </header>
 
@@ -113,7 +136,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
           Diseño…): la barra queda como cromo claro y el contenido comparte un
           mismo fondo, en vez de mezclar pantallas claras y oscuras. */}
       <main data-theme="panel-amber" className="lx-pearl-canvas flex-1 text-[var(--fg)]">
-        <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-10">
+        <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:px-10">
           {debeActivar2fa && (
             <p className="mb-6 flex items-start gap-2 rounded-[var(--radius)] border border-[var(--accent)]/40 bg-[var(--surface-2)] p-4 text-sm leading-relaxed">
               <ShieldAlert size={16} className="mt-0.5 shrink-0 text-[var(--accent)]" />
@@ -125,12 +148,13 @@ export default async function PanelLayout({ children }: { children: React.ReactN
         </div>
       </main>
 
-      <footer className="border-t border-[var(--border)] px-4 py-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:px-6">
+      <footer data-theme="panel-amber" className="border-t border-[var(--border)] bg-[var(--bg)] text-[var(--fg)] px-4 py-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:px-6">
         <p className="mx-auto max-w-6xl text-[0.72rem] uppercase tracking-[0.18em] text-[var(--fg-muted)]">
           CONtexto Ganadero · plantilla «Grafito & Jade» · ningún contenido de IA se publica sin
           aprobación humana
         </p>
       </footer>
+      </div>
     </div>
   );
 }

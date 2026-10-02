@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronDown } from "lucide-react";
+import { Inbox, KeyRound, LayoutDashboard, LayoutTemplate, Mail, Newspaper, Settings, Users, Circle } from "lucide-react";
 import type { PermisoId } from "@/lib/permisos";
 import { PanelMobileMenu } from "@/components/panel/panel-mobile-menu";
 
@@ -80,106 +79,73 @@ const GROUPS: Group[] = [
   },
 ];
 
-export function PanelNav({ role, permisos, children }: { role: string; permisos: string[]; children?: React.ReactNode }) {
+function gruposVisibles(role: string, permisos: string[]) {
   const esAdmin = role === "administrador";
   // Lo que el rol no puede usar ni se muestra (el servidor además lo exige).
-  const groups = GROUPS.map((g) => ({
+  return GROUPS.map((g) => ({
     ...g,
     items: g.items
       .filter((i) => !i.permiso || permisos.includes(i.permiso))
       .map((i) => (esAdmin || !i.paraOtros ? i : { ...i, ...i.paraOtros })),
   })).filter((g) => g.items.length > 0);
-  const pathname = usePathname();
-  const [open, setOpen] = useState<string | null>(null);
-  const navRef = useRef<HTMLElement>(null);
+}
 
-  // Cerrar al hacer clic fuera o con Escape: un menú que se queda abierto
-  // tapando el contenido es peor que no tenerlo.
-  useEffect(() => {
-    function onPointerDown(e: PointerEvent) {
-      if (navRef.current && !navRef.current.contains(e.target as Node)) setOpen(null);
-    }
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setOpen(null);
-    }
-    document.addEventListener("pointerdown", onPointerDown);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("pointerdown", onPointerDown);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, []);
+const ICONOS: Record<string, typeof Circle> = {
+  "/panel": LayoutDashboard,
+  "/panel/portada": LayoutTemplate,
+  "/panel/articulos": Newspaper,
+  "/panel/newsletter": Mail,
+  "/panel/configuracion": Settings,
+  "/panel/newsletter?tab=suscriptores": Users,
+  "/panel/mensajes": Inbox,
+  "/panel/api": KeyRound,
+};
+
+/** Barra lateral de escritorio (≥ lg): navegación vertical agrupada, con la sección activa resaltada. */
+export function PanelSidebarNav({ role, permisos }: { role: string; permisos: string[] }) {
+  const groups = gruposVisibles(role, permisos);
+  const pathname = usePathname();
+  return (
+    <nav aria-label="Secciones del panel" className="flex flex-col gap-6">
+      {groups.map((g) => (
+        <div key={g.id}>
+          <p className="px-3 text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-[var(--ink-faint)]">{g.label}</p>
+          <ul className="mt-2 flex flex-col gap-1">
+            {g.items.map((i) => {
+              const base = i.href.split(/[#?]/)[0];
+              const current = i.href.includes("?") ? false : pathname === base || (base !== "/panel" && pathname.startsWith(`${base}/`));
+              const Icon = ICONOS[i.href] ?? Circle;
+              return (
+                <li key={i.href}>
+                  <Link
+                    href={i.href}
+                    title={i.hint}
+                    aria-current={current ? "page" : undefined}
+                    className={`group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
+                      current ? "bg-white/12 text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]" : "text-[var(--fg-muted)] hover:bg-white/8 hover:text-white"
+                    }`}
+                  >
+                    {current && <span aria-hidden className="absolute -left-3 top-2 bottom-2 w-1 rounded-full bg-[var(--accent)]" />}
+                    <Icon size={18} className={current ? "text-[var(--accent)]" : "opacity-80 group-hover:text-[var(--accent)]"} aria-hidden />
+                    {i.label}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      ))}
+    </nav>
+  );
+}
+
+export function PanelNav({ role, permisos, children }: { role: string; permisos: string[]; children?: React.ReactNode }) {
+  const groups = gruposVisibles(role, permisos);
 
   return (
     <>
     {/* Debajo de `lg` los tres desplegables no caben: menú móvil con todas las secciones y la cuenta. */}
     <PanelMobileMenu groups={groups}>{children}</PanelMobileMenu>
-    <nav ref={navRef} aria-label="Secciones del panel" className="relative hidden flex-wrap gap-1.5 lg:flex">
-      {groups.map((group) => {
-        const isOpen = open === group.id;
-        // "/panel" es prefijo de todo, así que el grupo activo se decide por
-        // coincidencia exacta o por ruta hija, nunca por startsWith a secas.
-        const active = group.items.some((i) => {
-          const base = i.href.split("#")[0];
-          return pathname === base || (base !== "/panel" && pathname.startsWith(`${base}/`));
-        });
-
-        return (
-          <div key={group.id} className="relative">
-            <button
-              type="button"
-              onClick={() => setOpen(isOpen ? null : group.id)}
-              aria-expanded={isOpen}
-              aria-haspopup="menu"
-              className={`inline-flex items-center gap-1.5 rounded-[var(--radius)] px-3 py-1.5 text-xs font-medium transition ${
-                active || isOpen
-                  ? "bg-[var(--surface-2)] text-[var(--fg)]"
-                  : "text-[var(--fg-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)]"
-              }`}
-            >
-              {group.label}
-              <ChevronDown
-                size={13}
-                className={`transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`}
-                aria-hidden
-              />
-            </button>
-
-            {isOpen && (
-              <div
-                role="menu"
-                className="absolute left-0 top-[calc(100%+0.5rem)] z-50 w-72 overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--nav-bg)] p-1.5 shadow-[var(--shadow-hover)]"
-              >
-                {group.items.map((item) => {
-                  const base = item.href.split("#")[0];
-                  const current =
-                    pathname === base || (base !== "/panel" && pathname.startsWith(`${base}/`));
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      role="menuitem"
-                      onClick={() => setOpen(null)}
-                      aria-current={current ? "page" : undefined}
-                      className={`block rounded-[var(--radius)] px-3 py-2.5 transition ${
-                        current
-                          ? "bg-[var(--surface-2)] text-[var(--accent)]"
-                          : "hover:bg-[var(--surface-2)]"
-                      }`}
-                    >
-                      <span className="block text-sm font-medium">{item.label}</span>
-                      <span className="mt-0.5 block text-xs text-[var(--fg-muted)]">
-                        {item.hint}
-                      </span>
-                    </Link>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        );
-      })}
-    </nav>
     </>
   );
 }
