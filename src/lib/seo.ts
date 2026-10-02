@@ -58,7 +58,7 @@ export function articleMetadata(a: ArticleLike): Metadata {
       siteName: SITE_NAME,
       publishedTime: toIso(a.publishedAt),
       modifiedTime: toIso(a.updatedAt),
-      images: a.coverImageUrl ? [{ url: a.coverImageUrl, alt: a.coverImageAlt ?? a.title }] : undefined,
+      images: a.coverImageUrl ? [{ url: abs(a.coverImageUrl), alt: a.coverImageAlt ?? a.title }] : undefined,
       authors: a.authorName ? [a.authorName] : undefined,
       section: a.categoryName ?? undefined,
       tags: a.tags,
@@ -67,7 +67,7 @@ export function articleMetadata(a: ArticleLike): Metadata {
       card: "summary_large_image",
       title,
       description,
-      images: a.coverImageUrl ? [a.coverImageUrl] : undefined,
+      images: a.coverImageUrl ? [abs(a.coverImageUrl)] : undefined,
     },
   };
 }
@@ -82,7 +82,7 @@ export function newsArticleJsonLd(a: ArticleLike) {
     headline: (a.metaTitle?.trim() || a.title).slice(0, 110),
     description: clampDescription(a.metaDescription?.trim() || a.excerpt),
     image: a.coverImageUrl
-      ? [{ "@type": "ImageObject", url: a.coverImageUrl, caption: a.coverImageAlt ?? a.title }]
+      ? [{ "@type": "ImageObject", url: abs(a.coverImageUrl), caption: a.coverImageAlt ?? a.title }]
       : undefined,
     inLanguage: "es-CO",
     isAccessibleForFree: true,
@@ -127,6 +127,11 @@ export function breadcrumbJsonLd(items: Array<{ name: string; path: string }>) {
       item: siteUrl(it.path),
     })),
   };
+}
+
+/** Google exige URLs absolutas en imágenes y enlaces del JSON-LD. */
+function abs(u: string): string {
+  return u.startsWith("/") ? siteUrl(u) : u;
 }
 
 function toIso(d?: Date | string | null): string | undefined {
