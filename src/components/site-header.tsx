@@ -140,6 +140,7 @@ function MastheadHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extr
     day: "numeric",
     month: "long",
     year: "numeric",
+    timeZone: "America/Bogota",
   }).format(new Date());
 
   return (

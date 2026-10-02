@@ -51,10 +51,13 @@ export function slugify(input: string): string {
  */
 export function formatDate(date: Date | string, locale: string = "es-CO"): string {
   const d = typeof date === "string" ? new Date(date) : date;
+  // Zona fija: el servidor (UTC) y el navegador (Colombia) daban días distintos
+  // entre las 19:00 y las 24:00 y React fallaba al hidratar (error #418).
   return new Intl.DateTimeFormat(locale, {
     year: "numeric",
     month: "long",
     day: "numeric",
+    timeZone: "America/Bogota",
   }).format(d);
 }
 
