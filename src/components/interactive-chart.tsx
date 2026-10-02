@@ -124,7 +124,10 @@ export function InteractiveChart({ spec, caption }: { spec: ChartSpec; caption?:
           ))}
         </tbody>
       </table>
-      {spec.series.length > 1 && <p className="mt-2 text-xs opacity-70">Toca una serie de la leyenda para ocultarla o mostrarla.</p>}
+      <p className="mt-2 text-xs opacity-70">
+        {spec.type === "pie" ? "Pasa el cursor o toca una porción para ver su valor." : "Pasa el cursor o toca una marca para ver su valor."}
+        {spec.series.length > 1 && " Toca una serie de la leyenda para ocultarla o mostrarla."}
+      </p>
       {caption && <figcaption className="mt-2 text-sm opacity-80" dangerouslySetInnerHTML={{ __html: caption }} />}
     </figure>
   );

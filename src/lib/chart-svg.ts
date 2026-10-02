@@ -103,6 +103,10 @@ export type RenderOpts = {
 };
 
 const STYLE = `<style>
+.lxc .bgc{fill:currentColor;fill-opacity:.05;stroke:currentColor;stroke-opacity:.16}
+.lxc text[fill="#141210"]{fill:currentColor}.lxc text[fill="#6b645b"]{fill:currentColor;fill-opacity:.66}.lxc text[fill="#8a8378"]{fill:currentColor;fill-opacity:.55}
+.lxc line[stroke="#ece7df"]{stroke:currentColor;stroke-opacity:.14}.lxc line[stroke="#cfc8bc"]{stroke:currentColor;stroke-opacity:.32}
+.lxc circle[fill="#fff"]{fill:var(--bg,#fff)}.lxc path[stroke="#fff"]{stroke:var(--bg,#fff)}
 .lxc .mk{cursor:pointer;transition:opacity .15s ease,filter .15s ease}
 .lxc.hov .mk{opacity:.4}.lxc.hov .mk.on{opacity:1;filter:brightness(1.06)}
 .lxc .lg{cursor:pointer}.lxc .lg.off{opacity:.35}
@@ -145,7 +149,7 @@ export function renderChartSvg(c: ChartSpec, opts: RenderOpts = {}): string {
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="${esc(c.title)}" font-family="${FONT}"${o.interactive ? ' class="lxc"' : ""}>` +
     (o.interactive ? STYLE : "") +
     `<defs><linearGradient id="${o.gid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${PALETTE[0]}" stop-opacity="0.28"/><stop offset="1" stop-color="${PALETTE[0]}" stop-opacity="0"/></linearGradient></defs>` +
-    `<rect x="0.5" y="0.5" width="${W - 1}" height="${H - 1}" rx="16" fill="#ffffff" stroke="${GRID}"/>` +
+    `<rect class="bgc" x="0.5" y="0.5" width="${W - 1}" height="${H - 1}" rx="16" fill="#ffffff" stroke="${GRID}"/>` +
     lines(32, 42, titleLines, 21, INK, "start", 700, 1.2) +
     (c.unit ? `<text x="32" y="${42 + titleLines.length * 25 + 2}" font-size="13" fill="${MUTED}">${esc(c.unit)}</text>` : "") +
     legend +
