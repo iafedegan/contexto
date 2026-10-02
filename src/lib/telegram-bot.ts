@@ -93,10 +93,13 @@ type Ctx = { chatId: number; userId: string; nombre: string; role: Parameters<ty
 
 async function guardar(c: Ctx, extra: Partial<EstadoChat> = {}) {
   Object.assign(c.e, extra);
-  const r = await guardarBorradorCore(c.userId, {
+  const intentar = () => guardarBorradorCore(c.userId, {
     id: c.e.articleId, title: c.e.title ?? "", excerpt: c.e.excerpt ?? "", body: c.e.body ?? "", tags: c.e.tags ?? [],
     categoryId: c.e.categoryId, coverImageUrl: c.e.coverUrl, coverImageAlt: c.e.coverAlt, metaTitle: c.e.metaTitle, metaDescription: c.e.metaDescription,
   });
+  let r = await intentar();
+  // La nota enlazada al chat se borró desde el panel: se vuelve a crear con el contenido actual.
+  if (!r.ok && c.e.articleId && r.error === "La nota ya no existe.") { c.e.articleId = undefined; r = await intentar(); }
   if (r.ok) c.e.articleId = r.id;
   await setEstado(c.chatId, c.e);
   if (!r.ok && !r.skipped) await enviar(c.chatId, `⚠️ No se pudo guardar la nota en el panel.\n<code>${esc(r.detalle ?? r.error ?? "error desconocido")}</code>`);
