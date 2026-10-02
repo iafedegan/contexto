@@ -18,10 +18,14 @@ export type ChartSpec = {
 };
 
 const W = 800;
-const PALETTE = ["#2f6b3f", "#c2652a", "#3b6fd4", "#8a5cf6"];
-const INK = "#141210";
-const MUTED = "#6b645b";
-const GRID = "#ece7df";
+/** Estilo «infografía moderna»: panel de vidrio oscuro con degradados neón (turquesa, violeta, rosa, ámbar). */
+const PALETTE = ["#2dd4bf", "#a78bfa", "#f472b6", "#fbbf24"];
+const GRAD: [string, string][] = [["#34d399", "#22d3ee"], ["#a78bfa", "#6366f1"], ["#f472b6", "#fb7185"], ["#fbbf24", "#f97316"]];
+const INK = "#ffffff";
+const MUTED = "rgba(255,255,255,0.64)";
+const GRID = "rgba(255,255,255,0.11)";
+const AXIS = "rgba(255,255,255,0.32)";
+const CARD_EDGE = "#171a52";
 const FONT = "Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif";
 
 const esc = (s: string) =>
@@ -54,9 +58,10 @@ export function chartProblem(c: ChartSpec): string | null {
 }
 
 /** Marcas «redondas» para el eje: 0, 50, 100… en vez de 813.179. */
-function niceScale(min: number, max: number, ticks = 4) {
-  const lo = Math.min(0, min);
-  const hi = Math.max(0, max) || 1;
+function niceScale(min: number, max: number, ticks = 4, fromZero = true) {
+  // Las líneas muestran la TENDENCIA: no hace falta partir de cero (las barras sí, siempre).
+  const lo = fromZero ? Math.min(0, min) : min;
+  const hi = fromZero ? Math.max(0, max) || 1 : max === min ? max + 1 : max;
   const raw = (hi - lo) / ticks;
   const mag = Math.pow(10, Math.floor(Math.log10(raw)));
   const norm = raw / mag;
@@ -103,10 +108,6 @@ export type RenderOpts = {
 };
 
 const STYLE = `<style>
-.lxc .bgc{fill:currentColor;fill-opacity:.05;stroke:currentColor;stroke-opacity:.16}
-.lxc text[fill="#141210"]{fill:currentColor}.lxc text[fill="#6b645b"]{fill:currentColor;fill-opacity:.66}.lxc text[fill="#8a8378"]{fill:currentColor;fill-opacity:.55}
-.lxc line[stroke="#ece7df"]{stroke:currentColor;stroke-opacity:.14}.lxc line[stroke="#cfc8bc"]{stroke:currentColor;stroke-opacity:.32}
-.lxc circle[fill="#fff"]{fill:var(--bg,#fff)}.lxc path[stroke="#fff"]{stroke:var(--bg,#fff)}
 .lxc .mk{cursor:pointer;transition:opacity .15s ease,filter .15s ease}
 .lxc.hov .mk{opacity:.4}.lxc.hov .mk.on{opacity:1;filter:brightness(1.06)}
 .lxc .lg{cursor:pointer}.lxc .lg.off{opacity:.35}
@@ -121,7 +122,7 @@ const STYLE = `<style>
 </style>`;
 
 export function renderChartSvg(c: ChartSpec, opts: RenderOpts = {}): string {
-  const titleLines = wrap(c.title, 62, 2);
+  const titleLines = wrap(c.title, 46, 2);
   const headH = 30 + titleLines.length * 26 + (c.unit ? 22 : 0) + (c.series.length > 1 ? 26 : 0);
   const source = c.source ? wrap(`Fuente: ${c.source}`, 118, 2) : [];
   const footH = source.length ? 24 + source.length * 15 : 18;
@@ -132,6 +133,24 @@ export function renderChartSvg(c: ChartSpec, opts: RenderOpts = {}): string {
   const H = headH + bodyH + footH;
 
   const hidden = new Set(opts.hidden ?? []);
+  // Cifra destacada (como los «KPI» de un tablero): el mayor valor, el cambio de una serie en el tiempo o la porción principal.
+  const v0 = c.series[0].values;
+  let kpi = "", kpiSub = "";
+  if (c.type === "pie") {
+    const tot = v0.reduce((a, b) => a + b, 0) || 1;
+    const m = v0.indexOf(Math.max(...v0));
+    kpi = `${Math.round((v0[m] / tot) * 100)} %`;
+    kpiSub = c.labels[m].slice(0, 30);
+  } else if (c.type === "line" && v0[0]) {
+    const ch = ((v0[v0.length - 1] - v0[0]) / Math.abs(v0[0])) * 100;
+    kpi = `${ch >= 0 ? "▲" : "▼"} ${nf.format(Math.round(Math.abs(ch) * 10) / 10)} %`;
+    kpiSub = `desde ${c.labels[0]}`.slice(0, 34);
+  } else {
+    const m = v0.indexOf(Math.max(...v0));
+    kpi = fmt(v0[m]);
+    kpiSub = `${c.labels[m]} · mayor valor`.slice(0, 34);
+  }
+
   const o = { interactive: !!opts.interactive, hidden, gid: `g${opts.id ?? "a"}` };
   let body = "";
   if (c.type === "pie") body = donut(c, headH, bodyH, o);
@@ -148,13 +167,20 @@ export function renderChartSvg(c: ChartSpec, opts: RenderOpts = {}): string {
   return (
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="${esc(c.title)}" font-family="${FONT}"${o.interactive ? ' class="lxc"' : ""}>` +
     (o.interactive ? STYLE : "") +
-    `<defs><linearGradient id="${o.gid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${PALETTE[0]}" stop-opacity="0.28"/><stop offset="1" stop-color="${PALETTE[0]}" stop-opacity="0"/></linearGradient></defs>` +
-    `<rect class="bgc" x="0.5" y="0.5" width="${W - 1}" height="${H - 1}" rx="16" fill="#ffffff" stroke="${GRID}"/>` +
+    `<defs>
+<linearGradient id="${o.gid}bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0d0f33" stop-opacity="0.94"/><stop offset="1" stop-color="#232a78" stop-opacity="0.90"/></linearGradient>
+<radialGradient id="${o.gid}gl1"><stop offset="0" stop-color="#22d3ee" stop-opacity="0.20"/><stop offset="1" stop-color="#22d3ee" stop-opacity="0"/></radialGradient>
+<radialGradient id="${o.gid}gl2"><stop offset="0" stop-color="#a78bfa" stop-opacity="0.22"/><stop offset="1" stop-color="#a78bfa" stop-opacity="0"/></radialGradient>
+<linearGradient id="${o.gid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${PALETTE[0]}" stop-opacity="0.38"/><stop offset="1" stop-color="${PALETTE[0]}" stop-opacity="0"/></linearGradient>` +
+    GRAD.map((g, i) => `<linearGradient id="${o.gid}c${i}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${g[1]}"/><stop offset="1" stop-color="${g[0]}" stop-opacity="0.85"/></linearGradient><linearGradient id="${o.gid}h${i}" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="${g[0]}" stop-opacity="0.85"/><stop offset="1" stop-color="${g[1]}"/></linearGradient>`).join("") +
+    `<filter id="${o.gid}f" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>` +
+    `<rect x="0.5" y="0.5" width="${W - 1}" height="${H - 1}" rx="22" fill="url(#${o.gid}bg)" stroke="rgba(255,255,255,0.16)"/><circle cx="${W - 70}" cy="30" r="170" fill="url(#${o.gid}gl1)"/><circle cx="60" cy="${H - 20}" r="190" fill="url(#${o.gid}gl2)"/>` +
     lines(32, 42, titleLines, 21, INK, "start", 700, 1.2) +
+    `<text x="${W - 32}" y="48" font-size="32" font-weight="800" text-anchor="end" fill="${PALETTE[0]}">${esc(kpi)}</text><text x="${W - 32}" y="68" font-size="11.5" text-anchor="end" fill="${MUTED}">${esc(kpiSub)}</text>` +
     (c.unit ? `<text x="32" y="${42 + titleLines.length * 25 + 2}" font-size="13" fill="${MUTED}">${esc(c.unit)}</text>` : "") +
     legend +
     body +
-    (source.length ? lines(32, H - footH + 22, source, 11, "#8a8378") : "") +
+    (source.length ? lines(32, H - footH + 22, source, 11, MUTED) : "") +
     `</svg>`
   );
 }
@@ -166,7 +192,7 @@ function cartesian(c: ChartSpec, top: number, h: number, o: Ctx) {
   const pw = W - left - right, ph = h - padT - padB;
   const shown = c.series.map((s, si) => ({ s, si })).filter((x) => !o.hidden.has(x.si));
   const all = shown.flatMap((x) => x.s.values);
-  const sc = niceScale(Math.min(...all), Math.max(...all));
+  const sc = niceScale(Math.min(...all), Math.max(...all), 4, c.type !== "line");
   const y = (v: number) => top + padT + ph - ((v - sc.min) / (sc.max - sc.min || 1)) * ph;
   const n = c.labels.length;
   const step = pw / n;
@@ -174,7 +200,7 @@ function cartesian(c: ChartSpec, top: number, h: number, o: Ctx) {
 
   let out = "";
   for (const v of sc.ticks) {
-    out += `<line x1="${left}" y1="${y(v)}" x2="${W - right}" y2="${y(v)}" stroke="${v === 0 ? "#cfc8bc" : GRID}" ${v === 0 ? "" : 'stroke-dasharray="3 4"'}/>`;
+    out += `<line x1="${left}" y1="${y(v)}" x2="${W - right}" y2="${y(v)}" stroke="${v === 0 ? AXIS : GRID}" ${v === 0 ? "" : 'stroke-dasharray="3 4"'}/>`;
     out += `<text x="${left - 10}" y="${y(v) + 4}" font-size="11.5" text-anchor="end" fill="${MUTED}">${esc(fmtTick(v))}</text>`;
   }
   c.labels.forEach((l, i) => {
@@ -193,8 +219,8 @@ function cartesian(c: ChartSpec, top: number, h: number, o: Ctx) {
         const color = PALETTE[si % PALETTE.length];
         const d = `M${x},${y0 + hh} V${y0 + r} Q${x},${y0} ${x + r},${y0} H${x + bw - r} Q${x + bw},${y0} ${x + bw},${y0 + r} V${y0 + hh} Z`;
         out += o.interactive
-          ? `<path d="${d}" fill="${color}" class="mk bar" data-i="${i}" data-s="${si}" tabindex="0" style="animation-delay:${i * 50}ms"/>`
-          : `<path d="${d}" fill="${color}"/>`;
+          ? `<path d="${d}" fill="url(#${o.gid}c${si % 4})" filter="url(#${o.gid}f)" class="mk bar" data-i="${i}" data-s="${si}" tabindex="0" style="animation-delay:${i * 50}ms"/>`
+          : `<path d="${d}" fill="url(#${o.gid}c${si % 4})" filter="url(#${o.gid}f)"/>`;
         if (shown.length === 1 || n <= 5) out += `<text x="${x + bw / 2}" y="${y0 - 7}" font-size="12" font-weight="600" text-anchor="middle" fill="${INK}" pointer-events="none">${esc(fmt(v))}</text>`;
       }),
     );
@@ -203,12 +229,13 @@ function cartesian(c: ChartSpec, top: number, h: number, o: Ctx) {
       const color = PALETTE[si % PALETTE.length];
       const pts = s.values.map((v, i) => [cx(i), y(v)] as const);
       if (shown.length === 1) {
-        out += `<path d="M${pts[0][0]},${y(0)} ${pts.map((p) => `L${p[0]},${p[1]}`).join(" ")} L${pts[pts.length - 1][0]},${y(0)} Z" fill="url(#${o.gid})"/>`;
+        const base = top + padT + ph; // el relleno llega hasta el pie del área de trazado, aunque el eje no parta de cero
+        out += `<path d="M${pts[0][0]},${base} ${pts.map((p) => `L${p[0]},${p[1]}`).join(" ")} L${pts[pts.length - 1][0]},${base} Z" fill="url(#${o.gid})"/>`;
       }
-      out += `<polyline${o.interactive ? ' class="ln" pathLength="1"' : ""} points="${pts.map((p) => p.join(",")).join(" ")}" fill="none" stroke="${color}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>`;
+      out += `<polyline${o.interactive ? ' class="ln" pathLength="1"' : ""} points="${pts.map((p) => p.join(",")).join(" ")}" fill="none" stroke="${color}" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" filter="url(#${o.gid}f)"/>`;
       if (!o.interactive) {
         pts.forEach((p, i) => {
-          out += `<circle cx="${p[0]}" cy="${p[1]}" r="4.5" fill="#fff" stroke="${color}" stroke-width="2.5"/>`;
+          out += `<circle cx="${p[0]}" cy="${p[1]}" r="4.5" fill="#14163f" stroke="${color}" stroke-width="2.5"/>`;
           if (shown.length === 1 && (n <= 8 || i === n - 1 || i === 0)) {
             out += `<text x="${p[0]}" y="${p[1] - 12}" font-size="12" font-weight="600" text-anchor="middle" fill="${INK}">${esc(fmt(s.values[i]))}</text>`;
           }
@@ -220,7 +247,7 @@ function cartesian(c: ChartSpec, top: number, h: number, o: Ctx) {
       c.labels.forEach((_, i) => {
         out += `<g class="col" data-i="${i}"><rect data-i="${i}" x="${cx(i) - step / 2}" y="${top + padT}" width="${step}" height="${ph}" fill="transparent"/><line class="gd" x1="${cx(i)}" y1="${top + padT}" x2="${cx(i)}" y2="${top + padT + ph}" stroke="${MUTED}" stroke-width="1" stroke-dasharray="3 3"/>`;
         shown.forEach(({ s, si }) => {
-          out += `<circle class="dot" cx="${cx(i)}" cy="${y(s.values[i])}" r="4.5" fill="#fff" stroke="${PALETTE[si % PALETTE.length]}" stroke-width="2.5" pointer-events="none"/>`;
+          out += `<circle class="dot" cx="${cx(i)}" cy="${y(s.values[i])}" r="4.5" fill="#14163f" stroke="${PALETTE[si % PALETTE.length]}" stroke-width="2.5" pointer-events="none"/>`;
         });
         out += `</g>`;
       });
@@ -241,7 +268,7 @@ function hbars(c: ChartSpec, top: number, h: number, o: Ctx) {
 
   let out = "";
   for (const v of sc.ticks) {
-    out += `<line x1="${x(v)}" y1="${top + 6}" x2="${x(v)}" y2="${top + h - 22}" stroke="${v === 0 ? "#cfc8bc" : GRID}" ${v === 0 ? "" : 'stroke-dasharray="3 4"'}/>`;
+    out += `<line x1="${x(v)}" y1="${top + 6}" x2="${x(v)}" y2="${top + h - 22}" stroke="${v === 0 ? AXIS : GRID}" ${v === 0 ? "" : 'stroke-dasharray="3 4"'}/>`;
     out += `<text x="${x(v)}" y="${top + h - 6}" font-size="11.5" text-anchor="middle" fill="${MUTED}">${esc(fmtTick(v))}</text>`;
   }
   c.labels.forEach((l, i) => {
@@ -256,8 +283,8 @@ function hbars(c: ChartSpec, top: number, h: number, o: Ctx) {
       const d = `M${x0},${by} H${x0 + w - r} Q${x0 + w},${by} ${x0 + w},${by + r} V${by + bh - r} Q${x0 + w},${by + bh} ${x0 + w - r},${by + bh} H${x0} Z`;
       const color = PALETTE[si % PALETTE.length];
       out += o.interactive
-        ? `<path d="${d}" fill="${color}" class="mk hb" data-i="${i}" data-s="${si}" tabindex="0" style="animation-delay:${i * 45}ms"/>`
-        : `<path d="${d}" fill="${color}"/>`;
+        ? `<path d="${d}" fill="url(#${o.gid}h${si % 4})" filter="url(#${o.gid}f)" class="mk hb" data-i="${i}" data-s="${si}" tabindex="0" style="animation-delay:${i * 45}ms"/>`
+        : `<path d="${d}" fill="url(#${o.gid}h${si % 4})" filter="url(#${o.gid}f)"/>`;
       out += `<text x="${x0 + w + 8}" y="${by + bh / 2 + 4}" font-size="12" font-weight="600" fill="${INK}" pointer-events="none">${esc(fmt(v))}</text>`;
     });
   });
@@ -276,7 +303,7 @@ function donut(c: ChartSpec, top: number, h: number, o: Ctx) {
     const large = a1 - a0 > Math.PI ? 1 : 0;
     const p = (a: number, rad: number) => `${cx + rad * Math.cos(a)},${cy + rad * Math.sin(a)}`;
     const d = `M${p(a0, r)} A${r},${r} 0 ${large} 1 ${p(a1, r)} L${p(a1, ri)} A${ri},${ri} 0 ${large} 0 ${p(a0, ri)} Z`;
-    out += `<path d="${d}" fill="${PALETTE[i % PALETTE.length]}" stroke="#fff" stroke-width="3"${o.interactive ? ` class="mk sl" data-i="${i}" data-s="0" tabindex="0"` : ""}/>`;
+    out += `<path d="${d}" fill="url(#${o.gid}c${i % 4})" stroke="${CARD_EDGE}" stroke-width="3"${o.interactive ? ` class="mk sl" data-i="${i}" data-s="0" tabindex="0"` : ""}/>`;
     a0 = a1;
   });
   out += `<text x="${cx}" y="${cy - 2}" font-size="22" font-weight="700" text-anchor="middle" fill="${INK}" pointer-events="none">${esc(fmt(total))}</text><text x="${cx}" y="${cy + 18}" font-size="12" text-anchor="middle" fill="${MUTED}" pointer-events="none">total</text>`;
