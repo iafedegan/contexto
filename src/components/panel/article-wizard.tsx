@@ -1175,7 +1175,7 @@ function SeoPanel({ score, items, groups, capped, focus }: { score: number; item
         </div>
         {capped && (
           <p className="mt-2 text-xs font-medium text-[#b45309]">
-            Falta un criterio crítico de Google (firma, fuentes, sustancia o titular): la nota no puede pasar de «Bueno».
+            Falta un criterio crítico de Google (firma, fuentes, titular o datos por confirmar): la nota no puede pasar de «Bueno».
           </p>
         )}
         <ul className="mt-3 flex flex-col gap-1.5">
