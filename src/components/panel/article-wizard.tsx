@@ -10,6 +10,8 @@ import {
   Eye,
   ImagePlus,
   Loader2,
+  Link2,
+  Mic,
   RotateCcw,
   Save,
   Search,
@@ -27,6 +29,10 @@ import {
   suggestTopicIdeas,
   searchNewsAbout,
   generateCoverImage,
+  transcribirEntrevista,
+  crearSubidaAudio,
+  transcribirEntrevistaSubida,
+  leerEnlaces,
   type TopicIdea,
   type NewsItem,
   generateChart,
@@ -34,6 +40,7 @@ import {
   type DraftPart,
   type TitleContextOptions,
 } from "@/app/panel/(app)/articulos/ai-actions";
+import type { Material } from "@/lib/material-types";
 import { SiteArticlePreview, type SitePreviewChrome } from "@/components/panel/site-article-preview";
 import { decodeSpec, encodeSpec, renderChartSvg, svgDataUri } from "@/lib/chart-svg";
 import { auditArticle, scoreLabel, type AuditItem, type AuditResult } from "@/lib/seo-audit";
@@ -177,6 +184,12 @@ export function ArticleWizard({
   const [refs, setRefs] = useState<NewsItem[]>([]);
   const [newsFiltro, setNewsFiltro] = useState<"todo" | NewsItem["type"]>("todo");
   const [searchingNews, startNews] = useTransition();
+  const [material, setMaterial] = useState<Material[]>([]);
+  const [audioError, setAudioError] = useState("");
+  const [audioBusy, startAudio] = useTransition();
+  const [urlsTxt, setUrlsTxt] = useState("");
+  const [urlsError, setUrlsError] = useState("");
+  const [urlsBusy, startUrls] = useTransition();
   const [sceneTxt, setSceneTxt] = useState("");
   const [imgError, setImgError] = useState("");
   const [genImg, startImg] = useTransition();
@@ -359,7 +372,7 @@ export function ArticleWizard({
 
   function generate() {
     if (title.trim().length < 5) return setError("Escribe un título de al menos 5 caracteres.");
-    if (prompt.length < 20) return setError("Añade un poco más de contexto (mínimo 20 caracteres).");
+    if (prompt.length < 20 && material.length === 0) return setError("Añade un poco más de contexto (mínimo 20 caracteres) o carga una entrevista o enlaces.");
     setError("");
     startGenerating(async () => {
       const res = await generateArticleDraft({
@@ -367,6 +380,7 @@ export function ArticleWizard({
         prompt,
         section: categories.find((c) => c.id === categoryId)?.name,
         references: refs.map((r) => ({ title: r.title, outlet: r.outlet, url: r.url, videoId: r.videoId })),
+        material,
       });
       if (!res.ok) return setError(res.error);
       const d = res.draft;
@@ -405,6 +419,42 @@ export function ArticleWizard({
     setChart(null);
     setChartTopic("");
     setChartError("");
+  }
+
+  function subirEntrevista(f: File) {
+    setAudioError("");
+    startAudio(async () => {
+      try {
+        let res;
+        if (f.size <= 3.5 * 1024 * 1024) {
+          const fd = new FormData();
+          fd.append("audio", f);
+          res = await transcribirEntrevista(fd);
+        } else {
+          const c = await crearSubidaAudio({ name: f.name, type: f.type, size: f.size });
+          if (!c.ok) return setAudioError(c.error);
+          const put = await fetch(c.uploadUrl, { method: "PUT", headers: { "content-type": f.type || "audio/mpeg" }, body: f });
+          if (!put.ok) return setAudioError(`No se pudo subir el audio (${put.status}).`);
+          res = await transcribirEntrevistaSubida({ path: c.path, name: f.name });
+        }
+        if (!res.ok) return setAudioError(res.error);
+        setMaterial((m) => [...m, res.material]);
+        setOptions(null);
+      } catch {
+        setAudioError("No se pudo procesar el audio. Inténtalo de nuevo.");
+      }
+    });
+  }
+  function cargarEnlaces() {
+    setUrlsError("");
+    startUrls(async () => {
+      const res = await leerEnlaces({ urls: urlsTxt });
+      if (!res.ok) return setUrlsError(res.error);
+      setMaterial((m) => [...m, ...res.materiales.filter((n) => !m.some((x) => x.url === n.url))]);
+      setOptions(null);
+      setUrlsTxt("");
+      if (res.fallidos.length) setUrlsError(`No se pudieron leer: ${res.fallidos.join(", ")}`);
+    });
   }
 
   function makeCover() {
@@ -461,6 +511,7 @@ export function ArticleWizard({
       const res = await suggestTitlesAndContexts({
         topic: topic.trim(),
         section: categories.find((c) => c.id === categoryId)?.name,
+        material,
       });
       if (!res.ok) return setError(res.error);
       setOptions({ titles: res.titles, contexts: res.contexts });
@@ -795,6 +846,74 @@ export function ArticleWizard({
                   </div>
                 )}
               </div>
+            </div>
+            <div className="rounded-[var(--radius)] border border-dashed border-[var(--border-strong)] bg-[var(--surface-2)]/50 p-4">
+              <p className="text-sm font-semibold">¿Ya tienes el material? Cárgalo y la nota sale de ahí</p>
+              <p className="mt-1 text-xs text-[var(--fg-muted)]">
+                Sube una <strong>entrevista de voz</strong> (la IA la transcribe) o pega uno o varios <strong>enlaces</strong> (la IA los lee). Luego sigues con «Proponer títulos y contextos» y los demás pasos como siempre.
+              </p>
+              <div className="mt-3 grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-[var(--fg-muted)]">Entrevista de voz</p>
+                  <label className={`lx-btn mt-2 cursor-pointer ${audioBusy ? "pointer-events-none opacity-60" : ""}`}>
+                    {audioBusy ? <Loader2 size={15} className="animate-spin" /> : <Mic size={15} />}
+                    {audioBusy ? "Transcribiendo…" : "Subir audio"}
+                    <input
+                      type="file"
+                      accept="audio/*,.mp3,.m4a,.wav,.ogg,.opus,.webm,.aac,.flac"
+                      className="hidden"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        e.target.value = "";
+                        if (f) subirEntrevista(f);
+                      }}
+                    />
+                  </label>
+                  <p className="mt-1.5 text-xs text-[var(--fg-muted)]">MP3, M4A, WAV, OGG… hasta 20 MB. Puede tardar un par de minutos.</p>
+                  {audioError && <p role="alert" className="mt-2 text-sm text-[var(--danger,#b4442e)]">{audioError}</p>}
+                </div>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-[var(--fg-muted)]">Enlaces (uno por línea, hasta 5)</p>
+                  <textarea
+                    value={urlsTxt}
+                    onChange={(e) => setUrlsTxt(e.target.value)}
+                    rows={2}
+                    placeholder="https://…"
+                    className={`${input} mt-2 resize-y !py-2 text-sm`}
+                  />
+                  <button type="button" onClick={cargarEnlaces} disabled={urlsBusy || urlsTxt.trim().length < 8} className="lx-btn mt-2">
+                    {urlsBusy ? <Loader2 size={15} className="animate-spin" /> : <Link2 size={15} />}
+                    {urlsBusy ? "Leyendo…" : "Leer enlaces"}
+                  </button>
+                  {urlsError && <p role="alert" className="mt-2 text-sm text-[var(--danger,#b4442e)]">{urlsError}</p>}
+                </div>
+              </div>
+              {material.length > 0 && (
+                <ul className="mt-4 flex flex-col gap-2">
+                  {material.map((m, i) => (
+                    <li key={`${m.kind}-${i}-${m.title}`} className="rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] p-3">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="rounded-full bg-[var(--accent)]/12 px-2 py-0.5 text-[0.6875rem] font-semibold uppercase tracking-wide text-[var(--accent)]">
+                          {m.kind === "entrevista" ? "Entrevista" : "Enlace"}
+                        </span>
+                        <span className="min-w-0 flex-1 truncate text-sm font-semibold">{m.title}</span>
+                        <span className="text-xs text-[var(--fg-muted)]">{m.text.length.toLocaleString("es-CO")} car.</span>
+                        <button type="button" onClick={() => { setMaterial((x) => x.filter((_, k) => k !== i)); setOptions(null); }} className="lx-link text-xs">Quitar</button>
+                      </div>
+                      <details className="mt-2">
+                        <summary className="cursor-pointer text-xs text-[var(--accent)]">Ver y corregir el texto</summary>
+                        <textarea
+                          value={m.text}
+                          onChange={(e) => setMaterial((x) => x.map((y, k) => (k === i ? { ...y, text: e.target.value } : y)))}
+                          rows={8}
+                          className={`${input} mt-2 resize-y text-sm leading-relaxed`}
+                        />
+                        {m.url && <a href={m.url} target="_blank" rel="noopener noreferrer" className="lx-link mt-1 inline-block text-xs">Abrir enlace ↗</a>}
+                      </details>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
             <textarea
               autoFocus

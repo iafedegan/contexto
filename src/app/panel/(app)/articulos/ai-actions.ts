@@ -8,6 +8,7 @@ import { focusTerms } from "@/lib/seo-audit";
 import { getAiModel, getGroundedAi, getImageAi } from "@/lib/ai-provider";
 import { subirImagenGenerada } from "@/app/panel/(app)/articulos/media-actions";
 import { PREFIJO_IMAGEN_IA } from "@/lib/ai-image";
+import { materialParaPrompt, type Material } from "@/lib/material-types";
 import { registrarCostoIA, registrarUsoIA, verificarCuotaIA } from "@/lib/ai-cuota";
 import { chartProblem, renderChartSvg, type ChartSpec } from "@/lib/chart-svg";
 
@@ -55,12 +56,15 @@ export async function generateArticleDraft(input: {
   section?: string;
   /** Noticias que el periodista eligió referenciar: se citan con enlace en el cuerpo. */
   references?: { title: string; outlet: string; url: string; videoId?: string }[];
+  /** Entrevista transcrita o texto de enlaces: material primario del que sale la nota. */
+  material?: Material[];
 }): Promise<GenerateResult> {
   const user = await requirePermiso("articulos");
 
   const tema = input.title.trim();
   const encargo = input.prompt.trim();
-  if (encargo.length < 20) {
+  const mat = materialParaPrompt(input.material);
+  if (encargo.length < 20 && !mat) {
     return { ok: false, error: "Describe el tema con un poco más de detalle (mínimo 20 caracteres)." };
   }
 
@@ -82,7 +86,8 @@ export async function generateArticleDraft(input: {
     const prompt = [
       tema ? `TÍTULO PROPUESTO POR EL PERIODISTA: ${tema}` : "El periodista no fijó título.",
       input.section ? `SECCIÓN: ${input.section}` : "",
-      `ENCARGO Y NOTAS:\n${encargo}`,
+      encargo ? `ENCARGO Y NOTAS:\n${encargo}` : "ENCARGO: redacta la nota a partir del material de partida.",
+      mat ? `MATERIAL DE PARTIDA:\n${mat}\n\nUsa SOLO hechos y declaraciones que consten en este material; no añadas cifras ni citas que no estén.` : "",
       refs.length
         ? `NOTICIAS DE REFERENCIA (las eligió el periodista): ${refs.map((r, i) => `[${i + 1}] ${r.outlet}: «${r.title}»`).join("; ")}. Atribúyelas en el texto («según …») sin copiar frases textuales: redacta con palabras propias.`
         : "",
@@ -273,10 +278,12 @@ export type SuggestResult = ({ ok: true } & TitleContextOptions) | { ok: false; 
 export async function suggestTitlesAndContexts(input: {
   topic: string;
   section?: string;
+  material?: Material[];
 }): Promise<SuggestResult> {
   const user = await requirePermiso("articulos");
   const topic = input.topic.trim();
-  if (topic.length < 10) return { ok: false, error: "Cuéntame el tema con un poco más de detalle (mínimo 10 caracteres)." };
+  const mat = materialParaPrompt(input.material, 30_000);
+  if (topic.length < 10 && !mat) return { ok: false, error: "Cuéntame el tema con un poco más de detalle (mínimo 10 caracteres)." };
 
   const model = await getAiModel();
   if (!model) {
@@ -291,7 +298,8 @@ export async function suggestTitlesAndContexts(input: {
       system: EDITOR_ASSIST_SYSTEM,
       prompt: [
         input.section ? `SECCIÓN: ${input.section}` : "",
-        `TEMA DEL PERIODISTA:\n${topic}`,
+        topic ? `TEMA DEL PERIODISTA:\n${topic}` : "",
+        mat ? `MATERIAL DE PARTIDA (entrevista o fuentes que cargó el periodista):\n${mat}` : "",
         "TAREA: propón entre 4 y 5 TÍTULOS distintos entre sí (de 15 a 65 caracteres; uno informativo con el hecho, uno con el dato, uno centrado en la consecuencia para el productor, uno en forma de pregunta o explicación). " +
           "Propón además entre 3 y 4 CONTEXTOS: cada uno es un enfoque de redacción distinto (p. ej. noticia de última hora, análisis para el productor, explicativo con antecedentes). " +
           "Cada contexto tiene una etiqueta corta y un texto de 2 a 4 frases que dice qué ángulo tomar, qué datos y fuentes hay que confirmar y a quién le importa. " +
@@ -672,4 +680,186 @@ export async function generateCoverImage(input: {
     const detalle = err && typeof err === "object" && "message" in err ? String((err as Error).message) : "";
     return { ok: false, error: detalle ? `No se pudo generar la imagen: ${detalle.slice(0, 220)}` : "El modelo de imagen no respondió." };
   }
+}
+
+/* --------------------------------------------------------------------------
+ * Material de partida: entrevista de voz transcrita y enlaces leídos
+ * -------------------------------------------------------------------------- */
+
+export type MaterialResult = { ok: true; material: Material } | { ok: false; error: string };
+export type EnlacesResult = { ok: true; materiales: Material[]; fallidos: string[] } | { ok: false; error: string };
+
+const AUDIO_MIME: Record<string, string> = {
+  mp3: "audio/mpeg", mpeg: "audio/mpeg", m4a: "audio/mp4", mp4: "audio/mp4", aac: "audio/aac",
+  wav: "audio/wav", ogg: "audio/ogg", oga: "audio/ogg", opus: "audio/ogg", webm: "audio/webm", flac: "audio/flac",
+};
+/** Tope del audio que se envía al modelo en una sola petición (límite práctico de Gemini en línea). */
+const MAX_AUDIO = 20 * 1024 * 1024;
+
+function mimeAudio(name: string, declared: string): string | null {
+  const ext = name.split(".").pop()?.toLowerCase() ?? "";
+  if (AUDIO_MIME[ext]) return AUDIO_MIME[ext];
+  if (declared.startsWith("audio/")) return declared === "audio/x-m4a" || declared === "audio/m4a" ? "audio/mp4" : declared;
+  return null;
+}
+
+async function transcribir(userId: string, bytes: Uint8Array, mime: string, nombre: string): Promise<MaterialResult> {
+  const model = await getAiModel();
+  if (!model) return { ok: false, error: "Falta la clave del modelo (Configuración → Asistente)." };
+  const settingsOk = await getImageAi(); // solo para distinguir proveedor: «otro-proveedor» = no es Google
+  if (settingsOk === "otro-proveedor") {
+    return { ok: false, error: "Transcribir audio usa Gemini: elige Google (Gemini) en Configuración → Asistente." };
+  }
+  const cuota = await verificarCuotaIA(userId);
+  if (!cuota.ok) return { ok: false, error: cuota.message };
+  const r = await generateText({
+    model,
+    system:
+      "Eres transcriptor profesional de un medio periodístico colombiano. Transcribes entrevistas con fidelidad: texto literal en el idioma hablado, con puntuación correcta, párrafos por intervención y, cuando se distingan voces, marcas «Entrevistador:» / «Entrevistado:» (o el nombre si se menciona). No resumas, no corrijas lo dicho, no inventes lo inaudible: márcalo como [inaudible].",
+    messages: [
+      {
+        role: "user",
+        content: [
+          { type: "text", text: "Transcribe completa esta entrevista de audio." },
+          { type: "file", data: bytes, mediaType: mime },
+        ],
+      },
+    ],
+  });
+  await registrarUsoIA(userId, r.usage);
+  const text = r.text.trim();
+  if (text.length < 20) return { ok: false, error: "No se pudo transcribir el audio (¿está vacío o ilegible?)." };
+  return { ok: true, material: { kind: "entrevista", title: `Entrevista: ${nombre.replace(/\.[a-z0-9]+$/i, "").slice(0, 80)}`, text } };
+}
+
+/** Audio pequeño: llega directo en el formulario (el límite de Vercel para cuerpos de petición es ~4,5 MB). */
+export async function transcribirEntrevista(formData: FormData): Promise<MaterialResult> {
+  const user = await requirePermiso("articulos");
+  const f = formData.get("audio");
+  if (!(f instanceof File) || f.size === 0) return { ok: false, error: "No llegó ningún audio." };
+  const mime = mimeAudio(f.name, f.type);
+  if (!mime) return { ok: false, error: "Formato de audio no admitido. Usa MP3, M4A, WAV, OGG, WEBM, AAC o FLAC." };
+  if (f.size > MAX_AUDIO) return { ok: false, error: `El audio pesa ${(f.size / 1048576).toFixed(1)} MB; el máximo son 20 MB. Recórtalo o comprímelo.` };
+  try {
+    return await transcribir(user.id, new Uint8Array(await f.arrayBuffer()), mime, f.name);
+  } catch (err) {
+    console.error("transcribirEntrevista:", err);
+    const d = err && typeof err === "object" && "message" in err ? String((err as Error).message) : "";
+    return { ok: false, error: d ? `No se pudo transcribir: ${d.slice(0, 220)}` : "El modelo no respondió." };
+  }
+}
+
+/** Audio grande: se sube directo al almacenamiento con una URL firmada y aquí solo se pide su transcripción. */
+export async function crearSubidaAudio(input: { name: string; type: string; size: number }): Promise<
+  { ok: true; uploadUrl: string; path: string } | { ok: false; error: string }
+> {
+  await requirePermiso("articulos");
+  const mime = mimeAudio(input.name, input.type);
+  if (!mime) return { ok: false, error: "Formato de audio no admitido. Usa MP3, M4A, WAV, OGG, WEBM, AAC o FLAC." };
+  if (input.size > MAX_AUDIO) return { ok: false, error: `El audio pesa ${(input.size / 1048576).toFixed(1)} MB; el máximo son 20 MB.` };
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) return { ok: false, error: "Para audios grandes falta configurar SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY." };
+  const ext = input.name.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "") || "mp3";
+  const path = `entrevistas/${crypto.randomUUID()}.${ext}`;
+  const res = await fetch(`${url}/storage/v1/object/upload/sign/media/${path}`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${key}`, apikey: key, "Content-Type": "application/json" },
+    body: "{}",
+  });
+  if (!res.ok) return { ok: false, error: `No se pudo preparar la subida (${res.status}).` };
+  const data = (await res.json()) as { url?: string };
+  if (!data.url) return { ok: false, error: "Supabase no devolvió la dirección de subida." };
+  return { ok: true, uploadUrl: data.url.startsWith("http") ? data.url : `${url}/storage/v1${data.url}`, path };
+}
+
+export async function transcribirEntrevistaSubida(input: { path: string; name: string }): Promise<MaterialResult> {
+  const user = await requirePermiso("articulos");
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key || !/^entrevistas\/[\w-]+\.[a-z0-9]+$/.test(input.path)) return { ok: false, error: "Subida no válida." };
+  const mime = mimeAudio(input.path, "");
+  if (!mime) return { ok: false, error: "Formato de audio no admitido." };
+  try {
+    const r = await fetch(`${url}/storage/v1/object/media/${input.path}`, { headers: { Authorization: `Bearer ${key}`, apikey: key } });
+    if (!r.ok) return { ok: false, error: `No se pudo leer el audio subido (${r.status}).` };
+    const bytes = new Uint8Array(await r.arrayBuffer());
+    if (bytes.length > MAX_AUDIO) return { ok: false, error: "El audio supera 20 MB." };
+    return await transcribir(user.id, bytes, mime, input.name);
+  } catch (err) {
+    console.error("transcribirEntrevistaSubida:", err);
+    const d = err && typeof err === "object" && "message" in err ? String((err as Error).message) : "";
+    return { ok: false, error: d ? `No se pudo transcribir: ${d.slice(0, 220)}` : "El modelo no respondió." };
+  } finally {
+    // La entrevista es privada y el bucket es público: se borra apenas se transcribe.
+    void fetch(`${url}/storage/v1/object/media/${input.path}`, { method: "DELETE", headers: { Authorization: `Bearer ${key}`, apikey: key } }).catch(() => {});
+  }
+}
+
+/* --- Lectura de enlaces --------------------------------------------------- */
+
+function ipPrivada(ip: string): boolean {
+  if (ip === "::1" || ip.startsWith("fc") || ip.startsWith("fd") || ip.startsWith("fe80") || ip === "::") return true;
+  const m = ip.match(/^(?:::ffff:)?(\d+)\.(\d+)\.(\d+)\.(\d+)$/);
+  if (!m) return false;
+  const [a, b] = [Number(m[1]), Number(m[2])];
+  return a === 10 || a === 127 || a === 0 || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 100 && b >= 64 && b <= 127);
+}
+
+const decodeHtml = (s: string) =>
+  s.replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;|&apos;/g, "'")
+    .replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(Number(n)));
+
+function htmlATexto(html: string): { title: string; text: string } {
+  const og = html.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["']/i)?.[1];
+  const tt = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1];
+  const title = decodeHtml((og || tt || "").replace(/\s+/g, " ").trim()).slice(0, 200);
+  let cuerpo = html.match(/<article[\s\S]*?<\/article>/i)?.[0] ?? html.match(/<main[\s\S]*?<\/main>/i)?.[0] ?? html;
+  cuerpo = cuerpo
+    .replace(/<(script|style|noscript|svg|nav|footer|header|aside|form|iframe)[\s\S]*?<\/\1>/gi, " ")
+    .replace(/<!--[\s\S]*?-->/g, " ")
+    .replace(/<\/(p|div|h[1-6]|li|br|tr|section|blockquote)>|<br\s*\/?>/gi, "\n")
+    .replace(/<[^>]+>/g, " ");
+  const text = decodeHtml(cuerpo).replace(/[ \t\f\v]+/g, " ").replace(/\n\s*\n\s*\n+/g, "\n\n").replace(/ *\n */g, "\n").trim();
+  return { title, text };
+}
+
+async function leerUnEnlace(raw: string): Promise<Material | null> {
+  let u: URL;
+  try {
+    u = new URL(raw.trim());
+  } catch {
+    return null;
+  }
+  if (!/^https?:$/.test(u.protocol)) return null;
+  // Protección SSRF: nada de direcciones internas.
+  const { lookup } = await import("node:dns/promises");
+  const dirs = await lookup(u.hostname, { all: true }).catch(() => []);
+  if (!dirs.length || dirs.some((d) => ipPrivada(d.address))) return null;
+  const r = await fetch(u, {
+    redirect: "follow",
+    signal: AbortSignal.timeout(10_000),
+    headers: { "user-agent": "Mozilla/5.0 (compatible; CONtextoGanadero-Redaccion/1.0)", accept: "text/html,application/xhtml+xml" },
+  });
+  if (!r.ok) return null;
+  const tipo = r.headers.get("content-type") ?? "";
+  if (!/text\/html|application\/xhtml|text\/plain/.test(tipo)) return null;
+  const html = (await r.text()).slice(0, 2_000_000);
+  const { title, text } = tipo.includes("text/plain") ? { title: u.hostname, text: html } : htmlATexto(html);
+  if (text.length < 200) return null;
+  return { kind: "enlace", title: title || u.hostname, text: text.slice(0, 30_000), url: u.toString() };
+}
+
+/** Lee hasta 5 enlaces (una por línea): extrae titular y texto principal para redactar a partir de ellos. */
+export async function leerEnlaces(input: { urls: string }): Promise<EnlacesResult> {
+  await requirePermiso("articulos");
+  const urls = [...new Set(input.urls.split(/[\s,]+/).map((x) => x.trim()).filter((x) => /^https?:\/\//i.test(x)))].slice(0, 5);
+  if (!urls.length) return { ok: false, error: "Pega al menos un enlace que empiece por http:// o https://." };
+  const res = await Promise.all(urls.map((u) => leerUnEnlace(u).catch(() => null)));
+  const materiales = res.filter((m): m is Material => m !== null);
+  const fallidos = urls.filter((_, i) => !res[i]);
+  if (!materiales.length) {
+    return { ok: false, error: "No se pudo leer ningún enlace (puede estar protegido, ser un video o exigir suscripción). Pega el texto en el cuadro de tema." };
+  }
+  return { ok: true, materiales, fallidos };
 }

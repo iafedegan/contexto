@@ -19,6 +19,8 @@ import {
 } from "@/app/panel/(app)/articulos/actions";
 
 export const dynamic = "force-dynamic";
+// Transcribir una entrevista o buscar noticias llama al modelo varios minutos: sin esto Vercel corta a los pocos segundos.
+export const maxDuration = 300;
 
 type Initial = {
   id: string;
