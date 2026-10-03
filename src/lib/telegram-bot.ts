@@ -9,7 +9,7 @@ import {
   generateArticleDraftCore, generateChartCore, generateCoverImageCore, leerEnlacesCore, regenerateDraftPartCore,
   searchNewsAboutCore, suggestTitlesAndContextsCore, suggestTopicIdeasCore, transcribirAudioBytesCore,
 } from "@/lib/ai-core";
-import { enviarARevisionCore, guardarBorradorCore, programarCore, publicarCore } from "@/lib/article-ops";
+import { distintivosCore, enviarARevisionCore, fijarPortadaCore, guardarBorradorCore, programarCore, publicarCore } from "@/lib/article-ops";
 import { graficaPng } from "@/lib/chart-png";
 import { materialParaPrompt } from "@/lib/material-types";
 import { tienePermiso } from "@/lib/permisos-server";
@@ -213,6 +213,7 @@ async function paso(c: Ctx, f: Fase) {
       return enviar(c.chatId, `${cab}🚀 <b>Todo listo</b>\n<b>${esc(c.e.title ?? "")}</b>\n✍️ <b>Firma:</b> ${esc(c.nombre)}\n📌 Estado: <b>borrador</b> (aún NO está publicada)${aviso}\n\n¿Qué hacemos?`, [
         [{ texto: "💾 Dejar en borrador", dato: `f:b:${tk(c)}` }, { texto: "🔍 A revisión", dato: `f:r:${tk(c)}` }],
         ...(pub ? [[{ texto: "📅 Programar", dato: `f:p:${tk(c)}` }, { texto: "🚀 Publicar ahora", dato: `f:pub:${tk(c)}` }]] : []),
+        [{ texto: "📌 Portada y distintivos", dato: `d:m:${tk(c)}` }],
         [{ texto: "🔗 Abrir en el panel", url: enlacePanel(c) }],
       ]);
     }
@@ -334,7 +335,18 @@ async function buscarNoticias(c: Ctx, consulta: string) {
 
 // --- Entrada de texto, voz y archivos -----------------------------------------------------------------------
 
+/** Una nota ya guardada o publicada no debe contaminar la siguiente: el contexto nuevo empieza desde cero. */
+function reiniciarSiTerminada(c: Ctx) {
+  if (c.e.fase !== "idle" || !c.e.articleId) return;
+  const ultimo = c.e.ultimoUpdate;
+  const o = c.e as Record<string, unknown>;
+  for (const k of Object.keys(o)) delete o[k];
+  c.e.fase = "idle";
+  c.e.ultimoUpdate = ultimo;
+}
+
 async function contexto(c: Ctx, texto: string) {
+  reiniciarSiTerminada(c);
   const urls = urlsEn(texto);
   if (urls.length) {
     await enviar(c.chatId, `🔗 Leyendo ${urls.length} enlace${urls.length > 1 ? "s" : ""}…`);
@@ -353,6 +365,7 @@ async function contexto(c: Ctx, texto: string) {
 }
 
 async function entrevista(c: Ctx, fileId: string, mime: string, nombre: string) {
+  reiniciarSiTerminada(c);
   await escribiendo(c.chatId);
   await enviar(c.chatId, "🎙️ Transcribiendo el audio… puede tardar un par de minutos.");
   const f = await descargarArchivo(fileId);
@@ -468,6 +481,7 @@ async function estadoNota(c: Ctx) {
   const estado = a.status === "publicado" ? "✅ publicada" : a.status === "programado" ? `📅 programada para ${a.scheduledFor ? fmtHora(a.scheduledFor.toISOString()) : "?"}` : a.status === "en_revision" ? "🔍 en revisión" : "📝 borrador (no publicada)";
   const pub = canPublish(c.role) && (await tienePermiso(c.userId, c.role, "publicar"));
   await enviar(c.chatId, `<b>${esc(a.title)}</b>\nEstado: ${estado}\n✍️ Firma: <b>${esc(a.firma ?? "— sin firma —")}</b>${a.status === "publicado" ? `\n🔗 ${siteUrl(`/articulo/${a.slug}`)}` : ""}`, [
+    [{ texto: "📌 Portada y distintivos", dato: `d:m:${tk(c)}` }],
     [{ texto: "🔗 Abrir en el panel", url: enlacePanel(c) }],
     ...(a.status !== "publicado" && pub ? [[{ texto: "🚀 Publicar ahora", dato: `f:pub:${tk(c)}` }, { texto: "📅 Programar", dato: `f:p:${tk(c)}` }]] : []),
   ]);
@@ -488,14 +502,55 @@ async function programar(c: Ctx, iso: string) {
   }
 }
 
+/** Portada y distintivos (última hora / en desarrollo): se aplican de inmediato sobre la nota guardada. */
+async function menuDistintivos(c: Ctx) {
+  if (!c.e.articleId) return void (await enviar(c.chatId, "No tengo una nota en curso. Envía /nueva para empezar."));
+  const [a] = await db.select({ title: articles.title, status: articles.status, b: articles.isBreaking, l: articles.isLive, pos: articles.homePosition }).from(articles).where(eq(articles.id, c.e.articleId)).limit(1);
+  if (!a) return void (await enviar(c.chatId, "No encontré esa nota."));
+  const pubOk = canPublish(c.role) && (await tienePermiso(c.userId, c.role, "publicar"));
+  const portOk = await tienePermiso(c.userId, c.role, "portada");
+  if (!pubOk && !portOk) return void (await enviar(c.chatId, "Tu rol no puede destacar en la portada ni marcar distintivos. Un editor lo hace desde el panel."));
+  const k = tk(c);
+  const filas: Boton[][] = [];
+  if (portOk) {
+    filas.push([{ texto: `${a.pos === 0 ? "✅" : "📌"} Portada principal`, dato: `d:p0:${k}` }, { texto: `${a.pos === 1 ? "✅" : "📌"} Segunda destacada`, dato: `d:p1:${k}` }]);
+    if (a.pos !== null) filas.push([{ texto: "✖ Quitar de la portada", dato: `d:px:${k}` }]);
+  }
+  if (pubOk) {
+    filas.push([{ texto: `${a.b ? "✅" : "⚡"} Última hora`, dato: `d:b:${k}` }]);
+    filas.push([{ texto: `${a.l ? "✅" : "🔴"} En desarrollo (En vivo)`, dato: `d:l:${k}` }]);
+  }
+  filas.push([{ texto: "⬅️ Listo", dato: `d:ok:${k}` }]);
+  const estadoPos = a.pos === null ? "sin fijar (orden por fecha)" : a.pos === 0 ? "portada principal" : a.pos === 1 ? "segunda destacada" : `posición ${a.pos + 1}`;
+  await enviar(c.chatId, `📌 <b>Portada y distintivos</b>\n<b>${esc(a.title)}</b>\nPortada: <b>${estadoPos}</b>\n⚡ Última hora: <b>${a.b ? "sí" : "no"}</b> · 🔴 En desarrollo: <b>${a.l ? "sí" : "no"}</b>${a.status !== "publicado" ? "\n\n<i>Se verá en el sitio cuando la nota esté publicada.</i>" : ""}\n\n<i>Última hora: solo se muestra la nota marcada más reciente. En desarrollo pone la etiqueta «En vivo» en la nota.</i>`, filas);
+}
+
 async function acciones(c: Ctx, d: string) {
   const [k, v = "", t = ""] = d.split(":");
-  if ((k === "f" || k === "p") && t && !(c.e.articleId ?? "").startsWith(t)) {
+  if ((k === "f" || k === "p" || k === "d") && t && !(c.e.articleId ?? "").startsWith(t)) {
     return void (await enviar(c.chatId, "Ese botón es de otra nota. Escribe /estado para ver la nota en curso."));
   }
   switch (k) {
     case "go": return proponer(c);
+    case "d": {
+      if (!c.e.articleId) return void (await enviar(c.chatId, "No tengo una nota en curso. Envía /nueva para empezar."));
+      if (v === "m") { await guardar(c); return menuDistintivos(c); }
+      if (v === "ok") return void (await enviar(c.chatId, "Listo. Escribe /estado para ver cómo quedó la nota."));
+      const pubOk = canPublish(c.role) && (await tienePermiso(c.userId, c.role, "publicar"));
+      const portOk = await tienePermiso(c.userId, c.role, "portada");
+      const [a] = await db.select({ b: articles.isBreaking, l: articles.isLive }).from(articles).where(eq(articles.id, c.e.articleId)).limit(1);
+      if (!a) return void (await enviar(c.chatId, "No encontré esa nota."));
+      if ((v === "b" || v === "l") && !pubOk) return void (await enviar(c.chatId, "Tu rol no puede marcar distintivos."));
+      if (v.startsWith("p") && !portOk) return void (await enviar(c.chatId, "Tu cuenta no tiene permiso para la portada."));
+      if (v === "b") await distintivosCore(c.e.articleId, { isBreaking: !a.b });
+      else if (v === "l") await distintivosCore(c.e.articleId, { isLive: !a.l });
+      else if (v === "p0") await fijarPortadaCore(c.e.articleId, 0);
+      else if (v === "p1") await fijarPortadaCore(c.e.articleId, 1);
+      else if (v === "px") await fijarPortadaCore(c.e.articleId, null);
+      return menuDistintivos(c);
+    }
     case "i": {
+      reiniciarSiTerminada(c);
       if (v === "ideas") return verIdeas(c);
       if (v === "news") { c.e.fase = "esperando_busqueda"; await fin(c); return void (await enviar(c.chatId, "🔎 ¿A quién o qué busco? Escríbelo. Ej.: <i>precio del novillo gordo en Montería</i>, <i>fiebre aftosa Colombia</i>.")); }
       if (v === "voz") { c.e.fase = "idle"; await fin(c); return void (await enviar(c.chatId, "🎙️ Envíame la <b>nota de voz</b> o el audio de la entrevista (hasta 20 MB). La transcribo y sigo con los títulos.")); }
@@ -590,6 +645,6 @@ async function finales(c: Ctx, v: string) {
     const [a] = await db.select({ slug: articles.slug, status: articles.status, firma: authors.name }).from(articles).leftJoin(authors, eq(articles.authorId, authors.id)).where(eq(articles.id, c.e.articleId)).limit(1);
     if (!a || a.status !== "publicado") return void (await enviar(c.chatId, "⚠️ No pude confirmar la publicación. Revisa la nota con /estado o en el panel."));
     c.e.fase = "idle"; await fin(c);
-    return void (await enviar(c.chatId, `🚀 <b>Publicada.</b>\n✍️ Firma: <b>${esc(a.firma ?? c.nombre)}</b>\n🔗 ${siteUrl(`/articulo/${a.slug}`)}`));
+    return void (await enviar(c.chatId, `🚀 <b>Publicada.</b>\n✍️ Firma: <b>${esc(a.firma ?? c.nombre)}</b>\n🔗 ${siteUrl(`/articulo/${a.slug}`)}\n\n¿La destacamos en la portada o la marcamos como última hora?`, [[{ texto: "📌 Portada y distintivos", dato: `d:m:${tk(c)}` }]]));
   }
 }

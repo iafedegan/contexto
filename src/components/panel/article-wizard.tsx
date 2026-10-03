@@ -71,6 +71,8 @@ export type WizardInitial = {
   coverImageAlt: string | null;
   metaTitle: string | null;
   metaDescription: string | null;
+  isBreaking?: boolean;
+  isLive?: boolean;
 };
 
 const STEPS_MANUAL = [
@@ -227,6 +229,8 @@ export function ArticleWizard({
   const [categoryId, setCategoryId] = useState(initial?.categoryId ?? "");
   const [authorId] = useState(initial?.authorId ?? miAutorId ?? "");
   const [body, setBody] = useState(() => (initial?.body ? toText(initial.body) : ""));
+  const [breaking, setBreaking] = useState(initial?.isBreaking ?? false);
+  const [live, setLive] = useState(initial?.isLive ?? false);
   const [cover, setCover] = useState(initial?.coverImageUrl ?? "");
   const [coverAlt, setCoverAlt] = useState(initial?.coverImageAlt ?? "");
   const [metaTitle, setMetaTitle] = useState(initial?.metaTitle ?? "");
@@ -659,8 +663,8 @@ export function ArticleWizard({
       <input type="hidden" name="coverImageAlt" value={coverAlt} />
       <input type="hidden" name="metaTitle" value={metaTitle} />
       <input type="hidden" name="metaDescription" value={metaDescription} />
-      <input type="hidden" name="isBreaking" value="0" />
-      <input type="hidden" name="isLive" value="0" />
+      <input type="hidden" name="isBreaking" value={breaking ? "1" : "0"} />
+      <input type="hidden" name="isLive" value={live ? "1" : "0"} />
 
       {/* --- Progreso --- */}
       <div className="lx-card shrink-0 px-4 py-3">
@@ -1385,6 +1389,12 @@ export function ArticleWizard({
               <button type="button" onClick={back} className="lx-link inline-flex items-center gap-1 text-sm">
                 <ArrowLeft size={14} /> Volver a editar
               </button>
+              <label className="flex items-center gap-1.5 text-sm">
+                <input type="checkbox" checked={breaking} onChange={(e) => setBreaking(e.target.checked)} /> ⚡ Última hora
+              </label>
+              <label className="flex items-center gap-1.5 text-sm">
+                <input type="checkbox" checked={live} onChange={(e) => setLive(e.target.checked)} /> 🔴 En desarrollo (En vivo)
+              </label>
               <p className="lx-kicker ml-auto flex items-center gap-2 text-[var(--accent)]">
                 <Eye size={14} /> Así se verá en el sitio
               </p>

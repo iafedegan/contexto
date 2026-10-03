@@ -1,6 +1,6 @@
 import "server-only";
 import { revalidatePath } from "next/cache";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, gte, isNotNull, ne, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { articles, authors, categories } from "@/db/schema";
 import { embed } from "@/lib/embeddings";
@@ -111,4 +111,31 @@ export async function programarCore(articleId: string, isoDateTime: string) {
   const when = new Date(isoDateTime);
   if (Number.isNaN(when.getTime()) || when.getTime() < Date.now()) throw new Error("La fecha de programación debe ser futura.");
   await db.update(articles).set({ status: "programado", scheduledFor: when, updatedAt: sql`now()` }).where(eq(articles.id, articleId));
+}
+
+/** Distintivos de la nota: «Última hora» (barra roja, solo la más reciente) y «En vivo / en desarrollo» (etiqueta). */
+export async function distintivosCore(articleId: string, d: { isBreaking?: boolean; isLive?: boolean }) {
+  const set: { isBreaking?: boolean; isLive?: boolean } = {};
+  if (typeof d.isBreaking === "boolean") set.isBreaking = d.isBreaking;
+  if (typeof d.isLive === "boolean") set.isLive = d.isLive;
+  if (!Object.keys(set).length) return;
+  await db.update(articles).set({ ...set, updatedAt: sql`now()` }).where(eq(articles.id, articleId));
+  await revalidarNota(articleId);
+}
+
+/**
+ * Fija la nota en la portada (0 = principal, 1 = secundaria) o la suelta (null). Las ya fijadas desde esa
+ * posición se corren un lugar, igual que al arrastrar en /panel/portada.
+ */
+export async function fijarPortadaCore(articleId: string, posicion: number | null) {
+  if (posicion === null) {
+    await db.update(articles).set({ homePosition: null, homeStyle: null }).where(eq(articles.id, articleId));
+  } else {
+    await db.update(articles).set({ homePosition: sql`${articles.homePosition} + 1` })
+      .where(and(isNotNull(articles.homePosition), gte(articles.homePosition, posicion), ne(articles.id, articleId)));
+    await db.update(articles).set({ homePosition: posicion }).where(eq(articles.id, articleId));
+  }
+  revalidatePath("/");
+  revalidatePath("/panel/portada");
+  await revalidarNota(articleId);
 }

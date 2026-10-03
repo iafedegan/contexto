@@ -147,6 +147,8 @@ export default async function ArticleEditorPage({
             coverImageAlt: row.coverImageAlt,
             metaTitle: row.metaTitle,
             metaDescription: row.metaDescription,
+            isBreaking: row.isBreaking,
+            isLive: row.isLive,
           }}
         />
       );
