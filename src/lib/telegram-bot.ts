@@ -136,7 +136,7 @@ async function guardar(c: Ctx, extra: Partial<EstadoChat> = {}) {
 const fin = (c: Ctx) => setEstado(c.chatId, c.e);
 /** Los botones finales llevan el inicio del id de SU nota: un botón viejo no debe publicar otra nota. */
 const tk = (c: Ctx) => (c.e.articleId ?? "").slice(0, 8);
-const enlacePanel = (c: Ctx) => (c.e.articleId ? siteUrl(`/panel/articulos/${c.e.articleId}?modo=ia`) : siteUrl("/panel/articulos"));
+const enlacePanel = (c: Ctx) => (c.e.articleId ? siteUrl(`/panel/articulos/${c.e.articleId}?modo=ia&paso=vista`) : siteUrl("/panel/articulos"));
 const barra = (c: Ctx, f: Fase) => `Paso ${PASOS.indexOf(f) + 1} de ${PASOS.length}`;
 
 async function proponer(c: Ctx) {
