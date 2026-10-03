@@ -55,19 +55,21 @@ async function investigarTema(userId: string, tema: string, encargo: string, sec
   if (!ai || ai === "otro-proveedor") return null;
   try {
     const hoy = new Intl.DateTimeFormat("es-CO", { dateStyle: "long", timeZone: "America/Bogota" }).format(new Date());
-    const r = await generateText({
-      model: ai.model,
-      tools: ai.tools as unknown as ToolSet,
-      system:
-        "Eres verificador de datos de un medio ganadero colombiano. Busca en la web fuentes fidedignas (DANE, FEDEGAN, ICA, Ministerio de Agricultura, IDEAM, FAO, USDA, medios reconocidos). Reporta SOLO hechos que aparezcan literalmente en las páginas consultadas: cifras con su unidad y fecha, nombres, cargos, declaraciones y lugares, cada uno con su fuente. Si algo no lo encuentras, di que no lo encontraste. Nunca completes con suposiciones.",
-      prompt: `Hoy es ${hoy}.${section ? ` Sección: ${section}.` : ""}\nTEMA DE LA NOTA: ${tema || encargo.slice(0, 200)}\nCONTEXTO DEL PERIODISTA: ${encargo.slice(0, 1500)}\n\nListas los hechos verificables y recientes sobre este tema (qué pasó, cuándo, dónde, quién, cuántos) con la fuente de cada uno.`,
-    });
-    await registrarUsoIA(userId, r.usage);
-    const sources = r.sources
+    const sistema =
+      "Eres verificador de datos de un medio ganadero colombiano. Busca en la web fuentes fidedignas (DANE, FEDEGAN, ICA, Ministerio de Agricultura, Agronet/SIPSA, IDEAM, Banco de la República, FAO, USDA, medios reconocidos). Reporta SOLO hechos que aparezcan literalmente en las páginas consultadas: cifras con su unidad, periodo y fecha de corte, nombres, cargos, declaraciones y lugares, cada uno con su fuente (entidad y página). Si algo no lo encuentras, di que no lo encontraste. Nunca completes con suposiciones.";
+    const base = `Hoy es ${hoy}.${section ? ` Sección: ${section}.` : ""}\nTEMA DE LA NOTA: ${tema || encargo.slice(0, 200)}\nCONTEXTO DEL PERIODISTA: ${encargo.slice(0, 1500)}\n\n`;
+    const [hechos, cifras] = await Promise.all([
+      generateText({ model: ai.model, tools: ai.tools as unknown as ToolSet, system: sistema, prompt: `${base}Lista los hechos verificables y recientes sobre este tema (qué pasó, cuándo, dónde, quién) con la fuente de cada uno.` }),
+      generateText({ model: ai.model, tools: ai.tools as unknown as ToolSet, system: sistema, prompt: `${base}Busca las CIFRAS OFICIALES Y AUDITABLES relacionadas con este tema (inventarios, precios, producción, exportaciones, área o animales afectados, variaciones porcentuales). Para cada cifra: valor exacto, unidad, periodo o fecha de corte y entidad que la publica con su enlace.` }),
+    ]);
+    await registrarUsoIA(userId, hechos.usage);
+    await registrarUsoIA(userId, cifras.usage);
+    const sources = [...hechos.sources, ...cifras.sources]
       .filter((x) => x.sourceType === "url")
       .map((x) => ({ title: (x.title || new URL(x.url).hostname).slice(0, 120), outlet: new URL(x.url).hostname.replace(/^www\./, ""), url: x.url }))
       .filter((x, i, a) => a.findIndex((y) => y.url === x.url) === i)
-      .slice(0, 8);
+      .slice(0, 10);
+    const r = { text: `HECHOS:\n${hechos.text}\n\nCIFRAS OFICIALES:\n${cifras.text}` };
     return { text: r.text, sources };
   } catch (e) {
     console.warn("investigarTema:", e);
@@ -142,7 +144,7 @@ export async function generateArticleDraftCore(userId: string, input: {
       refs.length
         ? `NOTICIAS DE REFERENCIA (las eligió el periodista): ${refs.map((r, i) => `[${i + 1}] ${r.outlet}: «${r.title}»`).join("; ")}. Atribúyelas en el texto («según …») sin copiar frases textuales: redacta con palabras propias.`
         : "",
-      "REGLA DE ORO: la nota debe ser 100 % real y verificable. Usa SOLO hechos, cifras, fechas, nombres, cargos y declaraciones que consten en el encargo, el material o el dossier. Si algo no consta, NO lo escribas (no lo deduzcas, no lo redondees, no lo completes con conocimiento propio). Atribuye cada dato a su fuente en el texto («según el DANE…»). Sin citas textuales que no estén en el material. Es preferible una nota más corta y exacta que una larga con datos dudosos.",
+      "REGLA DE ORO: la nota debe ser 100 % real y verificable. Usa SOLO hechos, cifras, fechas, nombres, cargos y declaraciones que consten en el encargo, el material o el dossier. Si algo no consta, NO lo escribas (no lo deduzcas, no lo redondees, no lo completes con conocimiento propio). Atribuye cada dato a su fuente en el texto («según el DANE, con corte a junio de 2026…»). La nota debe apoyarse en CIFRAS AUDITABLES: incluye las cifras clave que traiga el dossier o el material (mínimo tres cuando existan), cada una con su unidad, su periodo y la entidad que la publica, y nunca mezcles periodos o unidades sin decirlo. Sin citas textuales que no estén en el material. Es preferible una nota más corta y exacta que una larga con datos dudosos.",
     ]
       .filter(Boolean)
       .join("\n\n");
@@ -400,7 +402,7 @@ export type ChartResult =
  * citables (regla de la casa: nada sin fuente) y la gráfica sale con sus
  * fuentes a la vista para que el periodista las verifique antes de insertarla.
  */
-export async function generateChartCore(userId: string, input: { topic: string; section?: string; tipo?: TipoGrafica }): Promise<ChartResult> {
+export async function generateChartCore(userId: string, input: { topic: string; section?: string; tipo?: TipoGrafica; /** Texto de la nota ya redactada: la gráfica debe ilustrar sus cifras y su hecho central. */ articulo?: string }): Promise<ChartResult> {
   const topic = input.topic.trim();
   if (topic.length < 10) return { ok: false, error: "Describe qué quieres graficar (mínimo 10 caracteres)." };
 
@@ -427,21 +429,22 @@ export async function generateChartCore(userId: string, input: { topic: string; 
       return { text: r.text, src };
     };
     const sistema = `Eres un analista de datos de un medio ganadero colombiano. ${FUENTES} ${REGLAS}`;
-    const sec = input.section ? `SECCIÓN: ${input.section}\n` : "";
+    const nota = (input.articulo ?? "").replace(/\s+/g, " ").trim().slice(0, 3000);
+    const sec = `${input.section ? `SECCIÓN: ${input.section}\n` : ""}${nota ? `NOTA YA REDACTADA (la gráfica debe ilustrar su hecho central y sus cifras): ${nota}\n` : ""}`;
 
     // Dos búsquedas en paralelo con ángulos distintos: la cifra exacta del tema y la serie oficial más cercana.
     const [exacta, serie] = await Promise.all([
       buscar(sistema, `Hoy es ${hoy}.\n${sec}TEMA A GRAFICAR: ${topic}\n\nBusca las cifras EXACTAS de ese tema (valores, periodo, fuente). Lista de 3 a 12 puntos comparables en el tiempo o entre categorías.`),
       buscar(sistema, `Hoy es ${hoy}.\n${sec}TEMA: ${topic}\n\nBusca la SERIE OFICIAL HISTÓRICA más cercana a ese tema (por ejemplo inventario bovino, sacrificio, precios por kilo o litro, producción, exportaciones, área, ocupación o afectaciones) con valores de varios años o meses consecutivos, en una misma unidad. Cita cada valor con su fuente.`),
     ]);
-    let texto = `${exacta.text}\n\n${serie.text}`;
+    let texto = `${exacta.text}\n\n${serie.text}${nota ? `\n\nCIFRAS DE LA NOTA REDACTADA:\n${nota}` : ""}`;
     let allSrc = [...exacta.src, ...serie.src];
 
     const armar = async (material: string, estricto: boolean) => {
       const { object, usage } = await generateObject({
         model: ai.model,
         schema: chartSchema,
-        prompt: `Con SOLO las cifras del siguiente texto (no agregues ninguna y no cambies ninguna: cada valor debe aparecer en el texto tal cual), arma la gráfica más adecuada (barras para comparar categorías, línea para evolución en el tiempo, torta SOLO para partes de un total). REGLAS DE LA GRÁFICA: (1) todos los valores deben ser de la MISMA magnitud y unidad y comparables entre sí: NUNCA mezcles hectáreas con cabezas de ganado o con pesos en el mismo gráfico; si el texto trae varias magnitudes, elige UNA y grafica solo esa; (2) prefiere una serie en el tiempo o categorías comparables, de 3 a 8 puntos; (3) etiquetas cortas (máx. 22 caracteres) sin repetir la unidad; (4) ordena las categorías de mayor a menor (si no son cronológicas); (5) title = una frase que diga qué muestra (no «Gráfica de…»), unit = la unidad con su periodo (p. ej. «Miles de cabezas, 2025»); (6) sourceNote = la(s) fuente(s) concretas de los datos. ${estricto ? "Si el tema exacto no tiene serie, usa la serie oficial relacionada más cercana y deja claro en el title qué mide realmente (no digas que mide otra cosa). " : ""}Si no hay cifras suficientes y comparables marca enough=false.${input.tipo && input.tipo !== "auto" ? ` El periodista pidió una gráfica de tipo «${input.tipo}»: organiza los datos para que ese tipo tenga sentido.` : ""}\n\nTEMA: ${topic}\n\nTEXTO:\n${material.slice(0, 9000)}`,
+        prompt: `Con SOLO las cifras del siguiente texto (no agregues ninguna y no cambies ninguna: cada valor debe aparecer en el texto tal cual), arma la gráfica más adecuada (barras para comparar categorías, línea para evolución en el tiempo, torta SOLO para partes de un total). REGLAS DE LA GRÁFICA: (1) todos los valores deben ser de la MISMA magnitud y unidad y comparables entre sí: NUNCA mezcles hectáreas con cabezas de ganado o con pesos en el mismo gráfico; si el texto trae varias magnitudes, elige UNA y grafica solo esa; (2) prefiere una serie en el tiempo o categorías comparables, de 3 a 8 puntos; (3) etiquetas cortas (máx. 22 caracteres) sin repetir la unidad; (4) ordena las categorías de mayor a menor (si no son cronológicas); (5) title = una frase que diga qué muestra (no «Gráfica de…»), unit = la unidad con su periodo (p. ej. «Miles de cabezas, 2025»); (6) sourceNote = la(s) fuente(s) concretas de los datos; (7) la gráfica debe ser CONSECUENTE con la nota: ilustra su hecho central usando, de preferencia, las cifras que la propia nota ya presenta (constan en sus fuentes) y complementa solo con series oficiales del MISMO tema; nunca grafiques datos de otro asunto. ${estricto ? "Si el tema exacto no tiene serie, usa la serie oficial relacionada más cercana y deja claro en el title qué mide realmente (no digas que mide otra cosa). " : ""}Si no hay cifras suficientes y comparables marca enough=false.${input.tipo && input.tipo !== "auto" ? ` El periodista pidió una gráfica de tipo «${input.tipo}»: organiza los datos para que ese tipo tenga sentido.` : ""}\n\nTEMA: ${topic}\n\nTEXTO:\n${material.slice(0, 9000)}`,
       });
       await registrarUsoIA(userId, usage);
       return object;
@@ -773,7 +776,7 @@ export async function generateCoverImageCore(userId: string, input: {
     if (!scene) scene = `Paisaje ganadero colombiano relacionado con: ${title}`;
 
     const prompt =
-      `Fotografía fotorrealista con estética de fotograma de cine que ilustra la noticia «${title}»: ${scene}. ` +
+      `Fotografía fotorrealista con estética de fotograma de cine que ilustra la noticia «${title}»${input.excerpt ? ` (${input.excerpt.slice(0, 220)})` : ""}. La imagen debe mostrar de forma inequívoca el tema de la nota, no una escena genérica: ${scene}. ` +
       "Máxima nitidez y detalle, resolución muy alta, sin compresión ni pixelado. Iluminación natural cinematográfica (luz dorada o contraluz suave), lente anamórfica de 35 mm, poca profundidad de campo, " +
       "grano de película sutil, colores naturales y ricos, composición editorial amplia en formato horizontal 16:9. " +
       "Ambientación 100 % colombiana: paisaje de Colombia (Llanos Orientales, sabana caribeña, montaña andina, valles, páramo) y, si hay personas, campesinos y ganaderos colombianos anónimos, de espaldas o a distancia, con sombrero, ruana o poncho y botas de caucho; nada de paisajes ni personas de otros países. " +

@@ -414,7 +414,7 @@ export function ArticleWizard({
       });
       if (!res.ok) return setError(res.error);
       const d = res.draft;
-      setTitle(d.title || title);
+      setTitle(title.trim() || d.title);
       setExcerpt(d.excerpt);
       setBody(toText(d.body));
       setMetaTitle(d.metaTitle);
@@ -437,6 +437,7 @@ export function ArticleWizard({
         topic: chartTopic.trim() || title.trim(),
         section: categories.find((c) => c.id === categoryId)?.name,
         tipo: tipoGrafica,
+        articulo: bodyHtml.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").slice(0, 3000),
       });
       if (!res.ok) return setChartError(res.error);
       setChart(res);

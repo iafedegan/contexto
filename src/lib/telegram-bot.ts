@@ -38,7 +38,7 @@ type Msg = {
 };
 export type Update = { update_id: number; message?: Msg; callback_query?: { id: string; data?: string; message?: Msg } };
 
-const PASOS: Fase[] = ["titulo", "resumen", "claves", "seccion", "cuerpo", "grafica", "portada", "seo", "final"];
+const PASOS: Fase[] = ["titulo", "resumen", "claves", "portada", "seccion", "cuerpo", "grafica", "seo", "final"];
 const AYUDA =
   "✍️ <b>Redactor de CONtexto Ganadero</b>\n\nEnvíame el <b>contexto de la noticia</b>: texto, una <b>nota de voz</b> (entrevista) o uno o más <b>enlaces</b>. Yo propongo títulos y enfoques, redacto el borrador y te voy mostrando cada paso para que lo apruebes o lo corrijas.\n\n/nueva — empezar otra nota (ideas de la IA, buscar noticias, entrevista de voz o enlaces)\n/estado — ver si la última nota está publicada y quién firma\n/cancelar — descartar el flujo actual\n/ayuda — esta ayuda\n/desvincular — separar este Telegram de tu cuenta";
 
@@ -171,7 +171,7 @@ async function redactar(c: Ctx) {
   if (!r.ok) return enviar(c.chatId, `⚠️ ${esc(r.error)}`);
   if (r.mode === "esquema") await enviar(c.chatId, `ℹ️ ${esc(r.note ?? "Sin clave del modelo: solo se generó un esquema.")}`);
   const d = r.draft;
-  await guardar(c, { title: d.title || c.e.title, excerpt: d.excerpt, body: d.body, tags: d.tags.map((t) => t.toLowerCase()).slice(0, 12), metaTitle: d.metaTitle, metaDescription: d.metaDescription });
+  await guardar(c, { title: c.e.title || d.title, excerpt: d.excerpt, body: d.body, tags: d.tags.map((t) => t.toLowerCase()).slice(0, 12), metaTitle: d.metaTitle, metaDescription: d.metaDescription });
   await paso(c, "titulo");
 }
 
@@ -201,7 +201,7 @@ async function paso(c: Ctx, f: Fase) {
         [{ texto: "⏭️ Omitir", dato: "n:" }],
       ]);
     case "portada":
-      return enviar(c.chatId, `${cab}🖼️ <b>Foto de portada</b> (opcional)\nPuedo generarla con IA (realista, estilo cine) o puedes <b>enviarme una foto</b> ahora.`, [[{ texto: "🎨 Generar con IA", dato: "ph:g" }, { texto: "⏭️ Omitir", dato: "n:" }]]);
+      return enviar(c.chatId, `${cab}🖼️ <b>Foto de portada</b> (opcional)\nLa genero con IA a partir de lo que cuenta la nota (realista, estilo cine, ambientada en Colombia) o puedes <b>enviarme una foto</b> ahora.`, [[{ texto: "🎨 Generar con IA", dato: "ph:g" }, { texto: "⏭️ Omitir", dato: "n:" }]]);
     case "seo": {
       const a = auditArticle({ title: c.e.title ?? "", excerpt: c.e.excerpt ?? "", body: c.e.body ?? "", metaTitle: c.e.metaTitle, metaDescription: c.e.metaDescription, tags: c.e.tags, focus: c.e.tags?.[0] || c.e.title, coverImageUrl: c.e.coverUrl ?? "", coverImageAlt: c.e.coverAlt, authorName: c.nombre });
       const faltan = a.items.filter((i) => !i.ok).slice(0, 5).map((i) => `• ${esc(i.text)}`).join("\n");
@@ -260,7 +260,7 @@ async function mostrarSecciones(c: Ctx) {
 async function hacerGrafica(c: Ctx, tipo: TipoGrafica) {
   await escribiendo(c.chatId, "upload_photo");
   await enviar(c.chatId, "📊 Buscando cifras en la web y dibujando la gráfica…");
-  const r = await generateChartCore(c.userId, { topic: c.e.title ?? "", tipo });
+  const r = await generateChartCore(c.userId, { topic: c.e.title ?? "", tipo, articulo: textoDeHtml(c.e.body ?? "") });
   if (!r.ok) return enviar(c.chatId, `⚠️ ${esc(r.error)}`, [[{ texto: "⏭️ Omitir", dato: "n:" }]]);
   const png = await graficaPng(r.chart);
   // La imagen que ves aquí es EXACTAMENTE la que se inserta en la nota: se sube ahora y se guarda su URL.
