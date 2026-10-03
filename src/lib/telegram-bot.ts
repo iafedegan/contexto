@@ -4,7 +4,7 @@ import { db } from "@/db";
 import { articles, authors, categories, users } from "@/db/schema";
 import { canPublish } from "@/lib/auth";
 import { auditArticle, scoreLabel } from "@/lib/seo-audit";
-import { encodeSpec, TIPOS_GRAFICA, type ChartSpec, type TipoGrafica } from "@/lib/chart-svg";
+import { TIPOS_GRAFICA, type ChartSpec, type TipoGrafica } from "@/lib/chart-svg";
 import {
   generateArticleDraftCore, generateChartCore, generateCoverImageCore, leerEnlacesCore, regenerateDraftPartCore,
   searchNewsAboutCore, suggestTitlesAndContextsCore, suggestTopicIdeasCore, transcribirAudioBytesCore,
@@ -262,31 +262,34 @@ async function hacerGrafica(c: Ctx, tipo: TipoGrafica) {
   await enviar(c.chatId, "📊 Buscando cifras en la web y dibujando la gráfica…");
   const r = await generateChartCore(c.userId, { topic: c.e.title ?? "", tipo });
   if (!r.ok) return enviar(c.chatId, `⚠️ ${esc(r.error)}`, [[{ texto: "⏭️ Omitir", dato: "n:" }]]);
-  c.e.chart = { spec: r.chart, sourceNote: r.sourceNote, sources: r.sources };
-  await fin(c);
   const png = await graficaPng(r.chart);
+  // La imagen que ves aquí es EXACTAMENTE la que se inserta en la nota: se sube ahora y se guarda su URL.
+  const sub = await subirImagenBytes(png, "image/png");
+  if (!sub.ok) return enviar(c.chatId, `⚠️ No pude guardar la imagen de la gráfica: ${esc(sub.error)}`, [[{ texto: "⏭️ Omitir", dato: "n:" }]]);
+  c.e.chart = { spec: r.chart, sourceNote: r.sourceNote, sources: r.sources, pngUrl: sub.url };
+  await fin(c);
   const datos = r.chart.labels.map((l, i) => `• ${esc(l)}: ${r.chart.series[0].values[i]}`).join("\n");
   await enviarFoto(c.chatId, png, `<b>${esc(r.chart.title)}</b>\n${esc(r.chart.unit)}\n\n${datos.slice(0, 600)}\n\n<i>Fuente: ${esc(r.sourceNote)}. Verifica antes de publicar.</i>`);
-  await enviar(c.chatId, `${r.sources.slice(0, 4).map((s) => `🔗 ${esc(s.title)}`).join("\n")}\n\nLa versión interactiva se ve en la nota. ¿La inserto?`, [
+  await enviar(c.chatId, `${r.sources.slice(0, 4).map((s) => `🔗 ${esc(s.title)}`).join("\n")}\n\nEsta misma imagen es la que se inserta en la nota, con su fuente. ¿La inserto?`, [
     [{ texto: "✅ Insertar en la nota", dato: "gi" }, { texto: "🔁 Otro tipo", dato: "gt" }],
     [{ texto: "⏭️ Omitir", dato: "n:" }],
   ]);
 }
 function insertarGrafica(c: Ctx) {
-  const ch = c.e.chart; if (!ch) return false;
+  const ch = c.e.chart; if (!ch?.pngUrl) return false;
   const spec = ch.spec as ChartSpec;
-  const fuente = `Fuente: ${ch.sourceNote}. Consultado en: ${ch.sources.slice(0, 3).map((x) => x.title).join(", ")}.`.replace(/[|\]]/g, " ");
-  const tk = `[[GRAFICA ${encodeSpec(spec)} | ${spec.title.replace(/[|\]]/g, " ")} | ${fuente}]]`;
-  const html = `<figure class="lx-chart" data-chart="${encodeSpec(spec)}"><figcaption>${esc(fuente)}</figcaption></figure>`;
-  c.e.chartToken = tk;
-  c.e.body = `${c.e.body ?? ""}${html}`;
+  const fuente = `Fuente: ${ch.sourceNote}. Consultado en: ${ch.sources.slice(0, 3).map((x) => x.title).join(", ")}.`;
+  const alt = `Gráfica: ${spec.title} (${spec.unit})`.replace(/"/g, "'");
+  // Reemplaza la gráfica anterior de Telegram (si la hubo) para no duplicarla.
+  const sinPrevia = (c.e.body ?? "").replace(/<figure><img [^>]*alt="Gráfica:[^>]*>(?:<figcaption>[\s\S]*?<\/figcaption>)?<\/figure>/g, "");
+  c.e.body = `${sinPrevia}<figure><img src="${ch.pngUrl}" alt="${esc(alt)}"><figcaption>${esc(fuente)}</figcaption></figure>`;
   return true;
 }
 
 async function portadaIA(c: Ctx) {
   await escribiendo(c.chatId, "upload_photo");
   await enviar(c.chatId, "🎨 Generando la imagen… unos 20–40 segundos.");
-  const r = await generateCoverImageCore(c.userId, { title: c.e.title ?? "", excerpt: c.e.excerpt });
+  const r = await generateCoverImageCore(c.userId, { title: c.e.title ?? "", excerpt: c.e.excerpt, body: c.e.body, section: undefined });
   if (!r.ok) return enviar(c.chatId, `⚠️ ${esc(r.error)}`, [[{ texto: "⏭️ Omitir", dato: "n:" }]]);
   c.e.coverUrl = r.url; c.e.coverAlt = r.alt;
   await guardar(c);

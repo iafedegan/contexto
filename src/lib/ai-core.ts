@@ -49,6 +49,47 @@ export type GenerateResult =
  * se devuelve un ESQUEMA de trabajo con la estructura, los intertítulos y la
  * ficha de posicionamiento, para que el periodista escriba encima.
  */
+/** Hechos verificables del tema (búsqueda web con fuentes). Sin esto el modelo escribiría de memoria, es decir, inventando. */
+async function investigarTema(userId: string, tema: string, encargo: string, section?: string) {
+  const ai = await getGroundedAi();
+  if (!ai || ai === "otro-proveedor") return null;
+  try {
+    const hoy = new Intl.DateTimeFormat("es-CO", { dateStyle: "long", timeZone: "America/Bogota" }).format(new Date());
+    const r = await generateText({
+      model: ai.model,
+      tools: ai.tools as unknown as ToolSet,
+      system:
+        "Eres verificador de datos de un medio ganadero colombiano. Busca en la web fuentes fidedignas (DANE, FEDEGAN, ICA, Ministerio de Agricultura, IDEAM, FAO, USDA, medios reconocidos). Reporta SOLO hechos que aparezcan literalmente en las páginas consultadas: cifras con su unidad y fecha, nombres, cargos, declaraciones y lugares, cada uno con su fuente. Si algo no lo encuentras, di que no lo encontraste. Nunca completes con suposiciones.",
+      prompt: `Hoy es ${hoy}.${section ? ` Sección: ${section}.` : ""}\nTEMA DE LA NOTA: ${tema || encargo.slice(0, 200)}\nCONTEXTO DEL PERIODISTA: ${encargo.slice(0, 1500)}\n\nListas los hechos verificables y recientes sobre este tema (qué pasó, cuándo, dónde, quién, cuántos) con la fuente de cada uno.`,
+    });
+    await registrarUsoIA(userId, r.usage);
+    const sources = r.sources
+      .filter((x) => x.sourceType === "url")
+      .map((x) => ({ title: (x.title || new URL(x.url).hostname).slice(0, 120), outlet: new URL(x.url).hostname.replace(/^www\./, ""), url: x.url }))
+      .filter((x, i, a) => a.findIndex((y) => y.url === x.url) === i)
+      .slice(0, 8);
+    return { text: r.text, sources };
+  } catch (e) {
+    console.warn("investigarTema:", e);
+    return null;
+  }
+}
+
+/** Cifras (con al menos 2 dígitos) del cuerpo que no constan en el material de respaldo. */
+function cifrasSinRespaldo(html: string, respaldo: string): string[] {
+  const dig = (x: string) => x.replace(/[.,\s]/g, "");
+  const base = new Set((respaldo.match(/\d[\d.,]*\d|\d/g) ?? []).map(dig));
+  const texto = html.replace(/<[^>]+>/g, " ");
+  const malas = new Set<string>();
+  for (const m of texto.match(/\d[\d.,]*\d/g) ?? []) if (!base.has(dig(m))) malas.add(m);
+  return [...malas];
+}
+/** Quita los párrafos/viñetas con cifras que no constan en las fuentes: mejor omitir que inventar. */
+function sinCifrasInventadas(html: string, malas: string[]): string {
+  if (!malas.length) return html;
+  return html.replace(/<(p|li)\b[^>]*>[\s\S]*?<\/\1>/gi, (blk) => (malas.some((m) => blk.includes(m)) ? "" : blk));
+}
+
 export async function generateArticleDraftCore(userId: string, input: {
   title: string;
   prompt: string;
@@ -81,19 +122,30 @@ export async function generateArticleDraftCore(userId: string, input: {
   }
 
   try {
+    // 1) Respaldo: material del periodista y, si es escaso, una investigación web con fuentes. Sin respaldo no se escribe.
+    const cuotaIA = await verificarCuotaIA(userId);
+    if (!cuotaIA.ok) return { ok: false, error: cuotaIA.message };
+    const suficiente = mat.length >= 2500 || encargo.length >= 600;
+    const inv = suficiente && refs.length ? null : await investigarTema(userId, tema, encargo, input.section);
+    if (!suficiente && !refs.length && !mat && !(inv && inv.sources.length)) {
+      return { ok: false, error: "No encontré fuentes verificables para ese tema y no hay material tuyo (entrevista, enlaces o texto). Para no inventar información, no redacto la nota. Pega enlaces o el texto base, o precisa el tema." };
+    }
+    const fuentes = [...refs, ...(inv?.sources ?? [])].filter((r, i, a) => a.findIndex((y) => y.url === r.url) === i).slice(0, 10);
+    const respaldo = [tema, encargo, mat, inv?.text ?? "", refs.map((r) => `${r.title} ${r.outlet}`).join(" ")].join("\n");
+
     const prompt = [
       tema ? `TÍTULO PROPUESTO POR EL PERIODISTA: ${tema}` : "El periodista no fijó título.",
       input.section ? `SECCIÓN: ${input.section}` : "",
       encargo ? `ENCARGO Y NOTAS:\n${encargo}` : "ENCARGO: redacta la nota a partir del material de partida.",
-      mat ? `MATERIAL DE PARTIDA:\n${mat}\n\nUsa SOLO hechos y declaraciones que consten en este material; no añadas cifras ni citas que no estén.` : "",
+      mat ? `MATERIAL DE PARTIDA:\n${mat}` : "",
+      inv?.text ? `DOSSIER VERIFICADO (búsqueda web con fuentes: ${inv.sources.map((x) => x.outlet).join(", ")}):\n${inv.text.slice(0, 7000)}` : "",
       refs.length
         ? `NOTICIAS DE REFERENCIA (las eligió el periodista): ${refs.map((r, i) => `[${i + 1}] ${r.outlet}: «${r.title}»`).join("; ")}. Atribúyelas en el texto («según …») sin copiar frases textuales: redacta con palabras propias.`
         : "",
+      "REGLA DE ORO: la nota debe ser 100 % real y verificable. Usa SOLO hechos, cifras, fechas, nombres, cargos y declaraciones que consten en el encargo, el material o el dossier. Si algo no consta, NO lo escribas (no lo deduzcas, no lo redondees, no lo completes con conocimiento propio). Atribuye cada dato a su fuente en el texto («según el DANE…»). Sin citas textuales que no estén en el material. Es preferible una nota más corta y exacta que una larga con datos dudosos.",
     ]
       .filter(Boolean)
       .join("\n\n");
-    const cuotaIA = await verificarCuotaIA(userId);
-    if (!cuotaIA.ok) return { ok: false, error: cuotaIA.message };
     let { object, usage } = await generateObject({ model, schema: draftSchema, system: EDITOR_ASSIST_SYSTEM, prompt });
     await registrarUsoIA(userId, usage);
     // Debe salir listo para publicar: si aun así trae marcadores {{…}}, un
@@ -107,8 +159,21 @@ export async function generateArticleDraftCore(userId: string, input: {
       }));
       await registrarUsoIA(userId, usage);
     }
+    // 2) Verificación: toda cifra del cuerpo debe constar en el respaldo. Una segunda redacción corrige; lo que aún no conste se omite.
+    let malas = cifrasSinRespaldo(object.body, respaldo);
+    if (malas.length) {
+      ({ object, usage } = await generateObject({
+        model,
+        schema: draftSchema,
+        system: EDITOR_ASSIST_SYSTEM,
+        prompt: `${prompt}\n\nCORRECCIÓN OBLIGATORIA: en tu borrador anterior estas cifras NO constan en el material ni en el dossier: ${malas.join(", ")}. Reescribe la nota sin ellas (o con las cifras que sí constan).`,
+      }));
+      await registrarUsoIA(userId, usage);
+      malas = cifrasSinRespaldo(object.body, respaldo);
+      object.body = sinCifrasInventadas(object.body, malas);
+    }
     const draft = stripMarkers(object);
-    if (refs.length) draft.body = `${draft.body}${fuentesHtml(refs)}`;
+    if (fuentes.length) draft.body = `${draft.body}${fuentesHtml(fuentes)}`;
     return { ok: true, mode: "ia", draft };
   } catch (err) {
     console.error("generateArticleDraft:", err);
@@ -675,6 +740,8 @@ export async function generateCoverImageCore(userId: string, input: {
   title: string;
   excerpt?: string;
   section?: string;
+  /** Cuerpo de la nota (HTML o texto): la escena sale de lo que la nota realmente cuenta. */
+  body?: string;
   /** Escena escrita por el periodista (opcional): manda sobre la que propondría el modelo. */
   scene?: string;
 }): Promise<CoverImageResult> {
@@ -697,8 +764,8 @@ export async function generateCoverImageCore(userId: string, input: {
       const r = await generateText({
         model: text,
         system:
-          "Eres director de fotografía de un medio ganadero colombiano. Escribes UNA escena fotográfica concreta, en español, de 1-2 frases, que ilustre la noticia: ganadería, paisaje, animales, trabajadores vistos de espaldas o lejos, instalaciones, mercados, clima. Sin texto en la imagen. NUNCA retrates a una persona real identificable (políticos, empresarios, figuras públicas): usa personas anónimas de espaldas, siluetas o planos generales. Sin logotipos ni marcas. OBLIGATORIO: todo es COLOMBIANO. Si aparecen personas, son campesinos y ganaderos colombianos (rasgos mestizos latinoamericanos, sombrero aguadeño o de paja, ruana, poncho, carriel, botas de caucho, ropa de trabajo de campo), anónimos y vistos de espaldas o a distancia. El paisaje es reconocible de Colombia (potreros y sabanas de los Llanos Orientales, sabana de Córdoba y Sucre, montaña andina con cafetales, valles del Cauca, páramo, Caribe colombiano, cordilleras al fondo) y nunca de otros países (ni praderas de Estados Unidos, ni campo europeo, ni africano). Razas y entorno propios del trópico colombiano (cebú, brahman, criollo, Holstein de altiplano).",
-        prompt: `TÍTULO: ${title}\n${input.excerpt ? `RESUMEN: ${input.excerpt.slice(0, 400)}\n` : ""}${input.section ? `SECCIÓN: ${input.section}\n` : ""}\nDescribe la escena.`,
+          "Eres director de fotografía de un medio ganadero colombiano. Escribes UNA escena fotográfica concreta, en español, de 1-2 frases, que ilustre EXACTAMENTE lo que cuenta la noticia (su hecho central, el lugar, los animales, la actividad o la situación que menciona el texto; si habla de sequía, muestra potreros resecos; si habla de exportación, corrales o embarque; si habla de precios, subasta o feria ganadera; nunca una escena genérica que podría ir en cualquier nota). Ilustra: ganadería, paisaje, animales, trabajadores vistos de espaldas o lejos, instalaciones, mercados, clima. Sin texto en la imagen. NUNCA retrates a una persona real identificable (políticos, empresarios, figuras públicas): usa personas anónimas de espaldas, siluetas o planos generales. Sin logotipos ni marcas. OBLIGATORIO: todo es COLOMBIANO. Si aparecen personas, son campesinos y ganaderos colombianos (rasgos mestizos latinoamericanos, sombrero aguadeño o de paja, ruana, poncho, carriel, botas de caucho, ropa de trabajo de campo), anónimos y vistos de espaldas o a distancia. El paisaje es reconocible de Colombia (potreros y sabanas de los Llanos Orientales, sabana de Córdoba y Sucre, montaña andina con cafetales, valles del Cauca, páramo, Caribe colombiano, cordilleras al fondo) y nunca de otros países (ni praderas de Estados Unidos, ni campo europeo, ni africano). Razas y entorno propios del trópico colombiano (cebú, brahman, criollo, Holstein de altiplano).",
+        prompt: `TÍTULO: ${title}\n${input.excerpt ? `RESUMEN: ${input.excerpt.slice(0, 400)}\n` : ""}${input.section ? `SECCIÓN: ${input.section}\n` : ""}${input.body ? `CONTENIDO DE LA NOTA:\n${input.body.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").slice(0, 1800)}\n` : ""}\nDescribe la escena que mejor ilustra el hecho central de esta nota.`,
       });
       await registrarUsoIA(userId, r.usage);
       scene = r.text.trim().replace(/^["«]|["»]$/g, "");
@@ -706,7 +773,7 @@ export async function generateCoverImageCore(userId: string, input: {
     if (!scene) scene = `Paisaje ganadero colombiano relacionado con: ${title}`;
 
     const prompt =
-      `Fotografía fotorrealista con estética de fotograma de cine: ${scene}. ` +
+      `Fotografía fotorrealista con estética de fotograma de cine que ilustra la noticia «${title}»: ${scene}. ` +
       "Máxima nitidez y detalle, resolución muy alta, sin compresión ni pixelado. Iluminación natural cinematográfica (luz dorada o contraluz suave), lente anamórfica de 35 mm, poca profundidad de campo, " +
       "grano de película sutil, colores naturales y ricos, composición editorial amplia en formato horizontal 16:9. " +
       "Ambientación 100 % colombiana: paisaje de Colombia (Llanos Orientales, sabana caribeña, montaña andina, valles, páramo) y, si hay personas, campesinos y ganaderos colombianos anónimos, de espaldas o a distancia, con sombrero, ruana o poncho y botas de caucho; nada de paisajes ni personas de otros países. " +

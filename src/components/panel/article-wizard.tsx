@@ -532,6 +532,7 @@ export function ArticleWizard({
       const res = await generateCoverImage({
         title,
         excerpt,
+        body: bodyHtml,
         section: categories.find((c) => c.id === categoryId)?.name,
         scene: sceneTxt,
       });

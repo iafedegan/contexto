@@ -90,7 +90,7 @@ export type EstadoChat = {
   coverUrl?: string;
   coverAlt?: string;
   edit?: "titulo" | "resumen" | "claves" | "cuerpo";
-  chart?: { spec: unknown; sourceNote: string; sources: { title: string; url: string }[] };
+  chart?: { spec: unknown; sourceNote: string; sources: { title: string; url: string }[]; pngUrl?: string };
   chartToken?: string;
   /** Rama de secciones que se está mostrando (id de la sección principal). */
   ramaSeccion?: string;
