@@ -318,11 +318,11 @@ export async function suggestTitlesAndContextsCore(userId: string, input: {
 const chartSchema = z.object({
   enough: z.boolean().describe("false si el texto no trae cifras suficientes para una gráfica"),
   type: z.enum(["bar", "line", "pie"]),
-  title: z.string().max(110),
-  unit: z.string().max(70),
-  labels: z.array(z.string()).max(12),
-  series: z.array(z.object({ name: z.string(), values: z.array(z.number()) })).max(4),
-  sourceNote: z.string().max(160).describe("Fuente y periodo de las cifras, tal como constan en el texto"),
+  title: z.string(),
+  unit: z.string(),
+  labels: z.array(z.string()),
+  series: z.array(z.object({ name: z.string(), values: z.array(z.number()) })),
+  sourceNote: z.string().describe("Fuente y periodo de las cifras, tal como constan en el texto"),
 });
 
 export type ChartResult =
@@ -348,40 +348,86 @@ export async function generateChartCore(userId: string, input: { topic: string; 
   try {
     const cuotaIA = await verificarCuotaIA(userId);
     if (!cuotaIA.ok) return { ok: false, error: cuotaIA.message };
-    const found = await generateText({
-      model: ai.model,
-      tools: ai.tools as unknown as ToolSet,
-      system:
-        "Eres un asistente de datos para un medio ganadero colombiano. Busca en la web fuentes oficiales o reconocidas (DANE, FEDEGAN, Ministerio de Agricultura, ICA, FAO, bolsas y centrales ganaderas). Devuelve SOLO cifras que hayas encontrado, con unidad, periodo y fuente. Nunca estimes ni inventes números.",
-      prompt: `${input.section ? `SECCIÓN: ${input.section}\n` : ""}TEMA A GRAFICAR: ${topic}\n\nBusca las cifras más recientes y listalas (de 3 a 12 puntos comparables en el tiempo o entre categorías), con unidad, periodo y fuente de cada una.`,
-    });
-    await registrarUsoIA(userId, found.usage);
+    const hoy = new Intl.DateTimeFormat("es-CO", { dateStyle: "long", timeZone: "America/Bogota" }).format(new Date());
+    const FUENTES =
+      "Fuentes preferidas (en este orden): DANE, FEDEGAN (cifras de referencia del sector, Fondo Nacional del Ganado), ICA (censo pecuario), Ministerio de Agricultura (Agronet, SIPSA, UPRA, EVA), Banco de la República, Bolsa Mercantil, Fedegán/Fenavi/Asoleche, FAO (FAOSTAT), USDA, OCDE, Banco Mundial.";
+    const REGLAS =
+      "Devuelve SOLO cifras que aparezcan literalmente en las páginas que consultes, cada una con su unidad, periodo y fuente (nombre y página). Nunca estimes, interpoles, redondees ni inventes números; si una cifra no está, no la incluyas. Prefiere tablas y series históricas oficiales.";
+    const buscar = async (system: string, prompt: string) => {
+      const r = await generateText({ model: ai.model, tools: ai.tools as unknown as ToolSet, system, prompt });
+      await registrarUsoIA(userId, r.usage);
+      const src = r.sources
+        .filter((x) => x.sourceType === "url")
+        .map((x) => ({ title: (x.title || new URL(x.url).hostname).slice(0, 120), url: x.url }));
+      return { text: r.text, src };
+    };
+    const sistema = `Eres un analista de datos de un medio ganadero colombiano. ${FUENTES} ${REGLAS}`;
+    const sec = input.section ? `SECCIÓN: ${input.section}\n` : "";
 
-    const sources = found.sources
-      .filter((s) => s.sourceType === "url")
-      .map((s) => ({ title: (s.title || new URL(s.url).hostname).slice(0, 120), url: s.url }))
-      .filter((s, i, a) => a.findIndex((x) => x.url === s.url) === i)
-      .slice(0, 8);
-    if (!sources.length) {
-      return { ok: false, error: "La búsqueda no devolvió fuentes citables para ese tema, así que no se genera la gráfica." };
+    // Dos búsquedas en paralelo con ángulos distintos: la cifra exacta del tema y la serie oficial más cercana.
+    const [exacta, serie] = await Promise.all([
+      buscar(sistema, `Hoy es ${hoy}.\n${sec}TEMA A GRAFICAR: ${topic}\n\nBusca las cifras EXACTAS de ese tema (valores, periodo, fuente). Lista de 3 a 12 puntos comparables en el tiempo o entre categorías.`),
+      buscar(sistema, `Hoy es ${hoy}.\n${sec}TEMA: ${topic}\n\nBusca la SERIE OFICIAL HISTÓRICA más cercana a ese tema (por ejemplo inventario bovino, sacrificio, precios por kilo o litro, producción, exportaciones, área, ocupación o afectaciones) con valores de varios años o meses consecutivos, en una misma unidad. Cita cada valor con su fuente.`),
+    ]);
+    let texto = `${exacta.text}\n\n${serie.text}`;
+    let allSrc = [...exacta.src, ...serie.src];
+
+    const armar = async (material: string, estricto: boolean) => {
+      const { object, usage } = await generateObject({
+        model: ai.model,
+        schema: chartSchema,
+        prompt: `Con SOLO las cifras del siguiente texto (no agregues ninguna y no cambies ninguna: cada valor debe aparecer en el texto tal cual), arma la gráfica más adecuada (barras para comparar categorías, línea para evolución en el tiempo, torta SOLO para partes de un total). REGLAS DE LA GRÁFICA: (1) todos los valores deben ser de la MISMA magnitud y unidad y comparables entre sí: NUNCA mezcles hectáreas con cabezas de ganado o con pesos en el mismo gráfico; si el texto trae varias magnitudes, elige UNA y grafica solo esa; (2) prefiere una serie en el tiempo o categorías comparables, de 3 a 8 puntos; (3) etiquetas cortas (máx. 22 caracteres) sin repetir la unidad; (4) ordena las categorías de mayor a menor (si no son cronológicas); (5) title = una frase que diga qué muestra (no «Gráfica de…»), unit = la unidad con su periodo (p. ej. «Miles de cabezas, 2025»); (6) sourceNote = la(s) fuente(s) concretas de los datos. ${estricto ? "Si el tema exacto no tiene serie, usa la serie oficial relacionada más cercana y deja claro en el title qué mide realmente (no digas que mide otra cosa). " : ""}Si no hay cifras suficientes y comparables marca enough=false.${input.tipo && input.tipo !== "auto" ? ` El periodista pidió una gráfica de tipo «${input.tipo}»: organiza los datos para que ese tipo tenga sentido.` : ""}\n\nTEMA: ${topic}\n\nTEXTO:\n${material.slice(0, 9000)}`,
+      });
+      await registrarUsoIA(userId, usage);
+      return object;
+    };
+    /** Una cifra está respaldada si aparece en el texto de las fuentes (con formato latino o inglés, o escalada a miles/millones). */
+    const respaldada = (v: number, t: string) => {
+      const abs = Math.abs(v);
+      const f = new Set<string>();
+      for (const base of [abs, abs / 1000, abs / 1_000_000]) {
+        if (!Number.isFinite(base) || base === 0) continue;
+        for (const dec of [0, 1, 2]) {
+          const n = Number(base.toFixed(dec));
+          if (Math.abs(n - base) > base * 0.0005 + 1e-9) continue;
+          for (const loc of ["es-CO", "en-US"]) f.add(n.toLocaleString(loc, { minimumFractionDigits: dec, maximumFractionDigits: dec }));
+          f.add(n.toFixed(dec)); f.add(n.toFixed(dec).replace(".", ","));
+        }
+      }
+      return [...f].some((x) => x.length > 0 && new RegExp(`(?<![\\d.,])${x.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?!\\d|[.,]\\d)`).test(t));
+    };
+    const verificada = (o: Awaited<ReturnType<typeof armar>>, t: string) => {
+      const vals = o.series.flatMap((x) => x.values);
+      if (!vals.length) return false;
+      return vals.filter((v) => respaldada(v, t)).length / vals.length >= 0.8;
+    };
+
+    let object = await armar(texto, false);
+    if (!object.enough || !verificada(object, texto)) {
+      // Segundo intento: búsqueda más amplia (datos macro del sector) y reglas más flexibles con el tema, nunca con los números.
+      const amplia = await buscar(
+        sistema,
+        `Hoy es ${hoy}.\n${sec}TEMA DE LA NOTA: ${topic}\n\nNo encontré cifras exactas. Busca en las fuentes oficiales (DANE, FEDEGAN, ICA, Agronet/SIPSA, FAO) los datos del sector ganadero colombiano (o mundial si aplica) MÁS RELACIONADOS con ese tema que tengan una serie anual o mensual de 4 o más valores (inventario, precios, producción, exportaciones, sacrificio, leche acopiada, clima/área afectada). Copia los valores tal cual con su fuente y año.`,
+      );
+      texto = `${texto}\n\n${amplia.text}`;
+      allSrc = [...allSrc, ...amplia.src];
+      object = await armar(texto, true);
     }
+    const sources = allSrc.filter((x, k, arr) => arr.findIndex((y) => y.url === x.url) === k).slice(0, 8);
+    if (!sources.length) {
+      return { ok: false, error: "La búsqueda no devolvió fuentes citables para ese tema, así que no se genera la gráfica. Prueba describiendo el dato concreto (p. ej. «inventario bovino de Colombia 2019–2024»)." };
+    }
+    if (!object.enough) return { ok: false, error: "Busqué en fuentes oficiales (DANE, FEDEGAN, ICA, FAO…) y no hallé una serie de cifras comparables para ese tema. Prueba con el dato concreto que quieres mostrar, por ejemplo «precio del kilo de novillo gordo en 2025» o «exportaciones de carne bovina de Colombia 2020–2024»." };
+    if (!verificada(object, texto)) return { ok: false, error: "Encontré cifras, pero no pude confirmar que cada valor aparezca en las fuentes citadas, así que no genero la gráfica (regla de la casa: solo datos verificables). Prueba con un dato más concreto o inserta la gráfica manual con tus cifras." };
 
-    const { object, usage: uso4 } = await generateObject({
-      model: ai.model,
-      schema: chartSchema,
-      prompt: `Con SOLO las cifras del siguiente texto (no agregues ninguna), arma la gráfica más adecuada (barras para comparar categorías, línea para evolución en el tiempo, torta SOLO para partes de un total). REGLAS DE LA GRÁFICA: (1) todos los valores deben ser de la MISMA magnitud y unidad y comparables entre sí: NUNCA mezcles hectáreas con cabezas de ganado o con pesos en el mismo gráfico; si el texto trae varias magnitudes, elige UNA y grafica solo esa; (2) prefiere una serie en el tiempo o categorías comparables, de 3 a 8 puntos; (3) etiquetas cortas (máx. 22 caracteres) sin repetir la unidad; (4) ordena las categorías de mayor a menor (si no son cronológicas); (5) title = una frase que diga qué muestra (no «Gráfica de…»), unit = la unidad con su periodo (p. ej. «Miles de cabezas, 2025»). Si no hay cifras suficientes y comparables marca enough=false.${input.tipo && input.tipo !== "auto" ? ` El periodista pidió una gráfica de tipo «${input.tipo}»: organiza los datos para que ese tipo tenga sentido.` : ""}\n\nTEMA: ${topic}\n\nTEXTO:\n${found.text.slice(0, 6000)}`,
-    });
-    await registrarUsoIA(userId, uso4);
-    if (!object.enough) return { ok: false, error: "Las fuentes encontradas no traen cifras suficientes para una gráfica de ese tema." };
-
-    const base: ChartSpec = { type: object.type, title: object.title, unit: object.unit, labels: object.labels, series: object.series, source: object.sourceNote };
+    const base: ChartSpec = { type: object.type, title: object.title.slice(0, 110), unit: object.unit.slice(0, 70), labels: object.labels.slice(0, 12).map((l) => l.slice(0, 30)), series: object.series.slice(0, 4), source: object.sourceNote.slice(0, 160) };
     // Si quien redacta eligió una forma concreta (torta, histograma…), se aplica sobre los datos encontrados.
     const forma = aplicarTipo(base, input.tipo ?? "auto");
     if (!forma.ok) return { ok: false, error: forma.error };
     const chart = forma.chart;
     const problem = chartProblem(chart);
     if (problem) return { ok: false, error: `Los datos no sirven para graficar: ${problem}` };
-    return { ok: true, chart, sourceNote: object.sourceNote, sources, svg: renderChartSvg(chart) };
+    return { ok: true, chart, sourceNote: object.sourceNote.slice(0, 160), sources, svg: renderChartSvg(chart) };
   } catch (err) {
     console.error("generateChart:", err);
     const detalle = err && typeof err === "object" && "message" in err ? String((err as Error).message) : "";
