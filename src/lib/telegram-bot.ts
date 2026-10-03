@@ -70,7 +70,7 @@ export function parseFecha(txt: string, ahora = new Date()): string | null {
   const co = new Date(ahora.getTime() - 5 * 3600_000);
   let y = co.getUTCFullYear(), m = co.getUTCMonth(), d = co.getUTCDate();
   let explicita = false, conAnio = false, fecha = false;
-  let r = t.match(/(\d{1,2})\s*[\/\-.]\s*(\d{1,2})(?:\s*[\/\-.]\s*(\d{2,4}))?/);
+  const r = t.match(/(\d{1,2})\s*[\/\-.]\s*(\d{1,2})(?:\s*[\/\-.]\s*(\d{2,4}))?/);
   const r2 = t.match(new RegExp(`(\\d{1,2})\\s*(?:de\\s+)?(${MESES.join("|")})(?:\\s*(?:de|del)?\\s*(\\d{4}))?`));
   if (r && !/\d{1,2}:\d{2}/.test(r[0])) {
     d = Number(r[1]); m = Number(r[2]) - 1; fecha = explicita = true;
@@ -456,11 +456,6 @@ export async function procesar(u: Update): Promise<unknown> {
     default:
       return contexto(c, texto);
   }
-}
-
-async function slugDe(id: string): Promise<string> {
-  const [a] = await db.select({ slug: articles.slug }).from(articles).where(eq(articles.id, id)).limit(1);
-  return a?.slug ?? "";
 }
 
 /** Estado real de la última nota: título, estado, firma y enlaces. */
