@@ -39,7 +39,12 @@ type Msg = {
 };
 export type Update = { update_id: number; message?: Msg; callback_query?: { id: string; data?: string; message?: Msg } };
 
-const PASOS: Fase[] = ["titulo", "resumen", "claves", "portada", "seccion", "cuerpo", "grafica", "seo", "final"];
+// Mismo orden y nombres que el asistente web: Título, Resumen, Palabras clave, Sección y autor, Cuerpo, Gráfica, Portada, Buscadores, Vista previa.
+const PASOS: Fase[] = ["titulo", "resumen", "claves", "seccion", "cuerpo", "grafica", "portada", "seo", "final"];
+const NOMBRE_PASO: Partial<Record<Fase, string>> = {
+  titulo: "Título y contexto", resumen: "Resumen", claves: "Palabras clave", seccion: "Sección y autor", cuerpo: "Cuerpo",
+  grafica: "Gráfica", portada: "Portada", seo: "Buscadores", final: "Vista previa",
+};
 const AYUDA =
   "✍️ <b>Redactor de CONtexto Ganadero</b>\n\nEnvíame el <b>contexto de la noticia</b>: texto, una <b>nota de voz</b> (entrevista) o uno o más <b>enlaces</b>. Yo propongo títulos y enfoques, redacto el borrador y te voy mostrando cada paso para que lo apruebes o lo corrijas.\n\n/nueva — empezar otra nota (ideas de la IA, buscar noticias, entrevista de voz o enlaces)\n/estado — ver si la última nota está publicada y quién firma\n/cancelar — descartar el flujo actual\n/ayuda — esta ayuda\n/desvincular — separar este Telegram de tu cuenta";
 
@@ -142,7 +147,7 @@ const enlacePanel = (c: Ctx) => (c.e.articleId ? siteUrl(`/panel/articulos/${c.e
 const vistaUrl = (c: Ctx) => (c.e.articleId ? siteUrl(`/vista-previa/${c.e.articleId}?t=${signPreviewToken(c.e.articleId)}`) : null);
 const botonVista = (c: Ctx): Boton[][] => { const u = vistaUrl(c); return u ? [[{ texto: "👁️ Ver vista previa", url: u }]] : []; };
 const linkVista = (c: Ctx) => { const u = vistaUrl(c); return u ? `\n👁️ <a href="${u}">Vista previa del artículo</a> (se abre sin contraseña)` : ""; };
-const barra = (c: Ctx, f: Fase) => `Paso ${PASOS.indexOf(f) + 1} de ${PASOS.length}`;
+const barra = (c: Ctx, f: Fase) => `Paso ${PASOS.indexOf(f) + 1} de ${PASOS.length} · ${NOMBRE_PASO[f] ?? ""}`;
 
 async function proponer(c: Ctx) {
   await escribiendo(c.chatId);
@@ -213,9 +218,18 @@ async function paso(c: Ctx, f: Fase) {
       return enviar(c.chatId, `${cab}🔎 <b>SEO: ${a.score}/100 · ${scoreLabel(a.score)}</b>\n${a.groups.filter((g) => g.score !== null).map((g) => `${esc(g.label)}: ${g.score} %`).join("\n")}${faltan ? `\n\n<b>Por mejorar:</b>\n${faltan}` : "\n\n✅ Todo en orden."}${a.capped ? "\n\n⚠️ Falta un criterio crítico (firma, fuentes, titular o datos por confirmar): no pasa de «Bueno»." : ""}`, [[{ texto: "✅ Continuar", dato: "n:" }], ...botonVista(c)]);
     }
     case "final": {
+      // Vista previa: la nota completa, como se verá en el sitio (portada, titular, entradilla, cuerpo y gráficas).
+      const [info] = c.e.articleId
+        ? await db.select({ cat: categories.name }).from(articles).leftJoin(categories, eq(articles.categoryId, categories.id)).where(eq(articles.id, c.e.articleId)).limit(1)
+        : [];
+      if (c.e.coverUrl) await tg("sendPhoto", { chat_id: c.chatId, photo: c.e.coverUrl, caption: `🖼️ ${c.e.coverAlt ?? ""}`.slice(0, 900) });
+      await enviar(c.chatId, `${cab}\n━━━━━━━━━━\n${info?.cat ? `<i>${esc(info.cat.toUpperCase())}</i>\n` : ""}<b>${esc(c.e.title ?? "")}</b>\n\n<i>${esc(c.e.excerpt ?? "")}</i>\n\nPor <b>${esc(c.nombre)}</b>\n━━━━━━━━━━\n\n${cuerpoParaTelegram(c.e.body ?? "")}`);
+      for (const m of (c.e.body ?? "").matchAll(/<img [^>]*src="([^"]+)"[^>]*alt="([^"]*)"/g)) {
+        await tg("sendPhoto", { chat_id: c.chatId, photo: m[1], caption: `📊 ${textoDeHtml(m[2])}`.slice(0, 900) });
+      }
       const pub = canPublish(c.role) && (await tienePermiso(c.userId, c.role, "publicar"));
       const aviso = pub ? "" : `\n\nℹ️ Tu rol (<b>${esc(String(c.role))}</b>) no puede publicar ni programar: envíala a revisión y un editor la publica.`;
-      return enviar(c.chatId, `${cab}🚀 <b>Todo listo</b>\n<b>${esc(c.e.title ?? "")}</b>\n✍️ <b>Firma:</b> ${esc(c.nombre)}\n📌 Estado: <b>borrador</b> (aún NO está publicada)${aviso}\n\n¿Qué hacemos?`, [
+      return enviar(c.chatId, `🚀 <b>Todo listo</b>\n<b>${esc(c.e.title ?? "")}</b>\n✍️ <b>Firma:</b> ${esc(c.nombre)}\n📌 Estado: <b>borrador</b> (aún NO está publicada)${aviso}\n\n¿Qué hacemos?`, [
         [{ texto: "💾 Dejar en borrador", dato: `f:b:${tk(c)}` }, { texto: "🔍 A revisión", dato: `f:r:${tk(c)}` }],
         ...(pub ? [[{ texto: "📅 Programar", dato: `f:p:${tk(c)}` }, { texto: "🚀 Publicar ahora", dato: `f:pub:${tk(c)}` }]] : []),
         ...botonVista(c),
