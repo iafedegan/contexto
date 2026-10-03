@@ -19,7 +19,7 @@ const OPTIONS: sanitizeHtml.IOptions = {
     "a", "ul", "ol", "li", "blockquote", "q", "cite", "code", "pre",
     "figure", "figcaption", "img", "video", "source", "iframe",
     "table", "thead", "tbody", "tfoot", "tr", "th", "td", "caption",
-    "span", "div",
+    "span", "div", "details", "summary",
   ],
   allowedAttributes: {
     a: ["href", "title", "target", "rel"],

@@ -290,7 +290,7 @@ async function hacerGrafica(c: Ctx, tipo: TipoGrafica) {
   await fin(c);
   const datos = r.chart.labels.map((l, i) => `• ${esc(l)}: ${r.chart.series[0].values[i]}`).join("\n");
   await enviarFoto(c.chatId, png, `<b>${esc(r.chart.title)}</b>\n${esc(r.chart.unit)}\n\n${datos.slice(0, 600)}\n\n<i>Fuente: ${esc(r.sourceNote)}. Verifica antes de publicar.</i>`);
-  await enviar(c.chatId, `<b>Fuentes consultadas:</b>\n${r.sources.slice(0, 6).map((s) => `🔗 ${esc(s.title)}`).join("\n")}\n\nEsta misma imagen es la que se inserta en la nota, con su fuente. ¿La inserto?`, [
+  await enviar(c.chatId, `<blockquote expandable><b>Fuentes consultadas (${Math.min(r.sources.length, 6)})</b>\n${r.sources.slice(0, 6).map((s) => `🔗 <a href="${esc(s.url)}">${esc(s.title)}</a>`).join("\n")}</blockquote>\n\nEsta misma imagen es la que se inserta en la nota, con su fuente. ¿La inserto?`, [
     [{ texto: "✅ Insertar en la nota", dato: "gi" }, { texto: "🔁 Otro tipo", dato: "gt" }],
     [{ texto: "⏭️ Omitir", dato: "n:" }],
   ]);

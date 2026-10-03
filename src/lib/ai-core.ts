@@ -70,7 +70,7 @@ async function investigarTema(userId: string, tema: string, encargo: string, sec
       .filter((x, i, a) => a.findIndex((y) => y.url === x.url) === i)
       .slice(0, 10);
     const r = { text: `HECHOS:\n${hechos.text}\n\nCIFRAS OFICIALES:\n${cifras.text}` };
-    return { text: r.text, sources };
+    return { text: r.text, sources: await resolverEnlaces(sources) };
   } catch (e) {
     console.warn("investigarTema:", e);
     return null;
@@ -202,9 +202,13 @@ function fuentesHtml(refs: { title: string; outlet: string; url: string; videoId
         .map((v) => `<p><iframe src="https://www.youtube-nocookie.com/embed/${v.videoId}" title="${esc(v.title)}" loading="lazy" allowfullscreen></iframe></p>`)
         .join("")}`
     : "";
-  return `${incrustados}<h2>Fuentes consultadas</h2><ul>${refs
-    .map((r) => `<li><a href="${esc(r.url)}" rel="noopener noreferrer" target="_blank">${esc(r.outlet ? `${r.outlet}: ` : "")}${esc(r.title)}</a></li>`)
-    .join("")}</ul>`;
+  // Las fuentes van en un desplegable que SIEMPRE llega cerrado (sin el atributo `open`; el saneado no lo permite).
+  const item = (r: { title: string; outlet: string; url: string }) => {
+    const titulo = r.title.replace(new RegExp(`^${r.outlet.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}:\\s*`, "i"), "");
+    const etiqueta = !r.outlet || titulo.toLowerCase() === r.outlet.toLowerCase() ? titulo || r.url : `${titulo} — ${r.outlet}`;
+    return `<li><a href="${esc(r.url)}" rel="noopener noreferrer" target="_blank">${esc(etiqueta)}</a></li>`;
+  };
+  return `${incrustados}<details><summary>Fuentes consultadas (${refs.length})</summary><ul>${refs.map(item).join("")}</ul></details>`;
 }
 
 const MARKER = /\s*\{\{[^}]*\}\}/g;
@@ -396,6 +400,22 @@ export type ChartResult =
   | { ok: true; chart: ChartSpec; sourceNote: string; sources: { title: string; url: string }[]; svg: string }
   | { ok: false; error: string };
 
+/** Las fuentes de la búsqueda de Gemini llegan como enlaces de redirección: se siguen para guardar la página real. */
+async function resolverEnlaces<T extends { url: string }>(lista: T[]): Promise<T[]> {
+  return Promise.all(
+    lista.map(async (x) => {
+      try {
+        if (new URL(x.url).hostname !== "vertexaisearch.cloud.google.com") return x;
+        const r = await fetch(x.url, { redirect: "manual", signal: AbortSignal.timeout(4000) });
+        const loc = r.headers.get("location");
+        return loc && /^https?:\/\//i.test(loc) ? { ...x, url: loc } : x;
+      } catch {
+        return x;
+      }
+    }),
+  );
+}
+
 /**
  * Dominio de una fuente. La búsqueda de Gemini devuelve enlaces de redirección (vertexaisearch…) y deja el dominio
  * real en el título; por eso se usa el título cuando tiene forma de dominio.
@@ -545,7 +565,7 @@ export async function generateChartCore(userId: string, input: { topic: string; 
     const chart = forma.chart;
     const problem = chartProblem(chart);
     if (problem) return { ok: false, error: `Los datos no sirven para graficar: ${problem}` };
-    return { ok: true, chart, sourceNote: object.sourceNote.slice(0, 160), sources, svg: renderChartSvg(chart) };
+    return { ok: true, chart, sourceNote: object.sourceNote.slice(0, 160), sources: await resolverEnlaces(sources), svg: renderChartSvg(chart) };
   } catch (err) {
     console.error("generateChart:", err);
     const detalle = err && typeof err === "object" && "message" in err ? String((err as Error).message) : "";

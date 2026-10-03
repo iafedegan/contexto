@@ -22,8 +22,19 @@ function envolverTablas(html: string): string {
  * respaldo; aquí se sustituyen por la gráfica interactiva. Si los datos no
  * son válidos se deja la imagen estática tal cual.
  */
+/**
+ * Notas anteriores traían «Fuentes consultadas» como encabezado + lista abierta. Se muestran igual que las nuevas:
+ * en un desplegable que siempre llega cerrado.
+ */
+function fuentesDesplegables(html: string): string {
+  return html.replace(/<h2[^>]*>\s*Fuentes consultadas\s*<\/h2>\s*(<ul>[\s\S]*?<\/ul>)/i, (_m, ul: string) => {
+    const n = (ul.match(/<li/gi) ?? []).length;
+    return `<details><summary>Fuentes consultadas (${n})</summary>${ul}</details>`;
+  });
+}
+
 export function ArticleBody({ html: crudo, className }: { html: string; className?: string }) {
-  const html = envolverTablas(crudo);
+  const html = envolverTablas(fuentesDesplegables(crudo));
   const parts: React.ReactNode[] = [];
   let last = 0;
   let k = 0;

@@ -1592,3 +1592,28 @@ html[data-cg-overlay] .cg-consent { display: none; }
 @media (prefers-reduced-motion: reduce) { .toro-float { animation: none; } }
 /* El aviso de ubicación ocupa el borde inferior en el teléfono: el toro se sube mientras esté visible. */
 @media (max-width: 639px) { body:has(.cg-consent) .toro-wrap { bottom: 13rem; } }
+
+
+/* Fuentes del artículo: desplegable que siempre llega cerrado. */
+.prose details {
+  margin-top: 2rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 0;
+}
+.prose details > summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 0.85rem 1.1rem;
+  font-family: var(--font-ui, inherit);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.prose details > summary::-webkit-details-marker { display: none; }
+.prose details > summary::after { content: "＋"; float: right; }
+.prose details[open] > summary::after { content: "－"; }
+.prose details > ul { margin: 0; padding: 0 1.1rem 1rem 2.2rem; font-size: 0.92rem; line-height: 1.6; }
