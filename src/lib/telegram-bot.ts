@@ -15,6 +15,7 @@ import { materialParaPrompt } from "@/lib/material-types";
 import { tienePermiso } from "@/lib/permisos-server";
 import { descargarArchivo, enviar, enviarFoto, esc, escribiendo, responderCallback, tg, type Boton } from "@/lib/telegram";
 import { getEstado, setEstado, vincularConCodigo, vinculoDe, desvincular, type EstadoChat, type Fase } from "@/lib/telegram-store";
+import { signPreviewToken } from "@/lib/preview-token";
 import { siteUrl } from "@/lib/utils";
 import { subirImagenBytes } from "@/lib/media-upload";
 
@@ -137,6 +138,10 @@ const fin = (c: Ctx) => setEstado(c.chatId, c.e);
 /** Los botones finales llevan el inicio del id de SU nota: un botón viejo no debe publicar otra nota. */
 const tk = (c: Ctx) => (c.e.articleId ?? "").slice(0, 8);
 const enlacePanel = (c: Ctx) => (c.e.articleId ? siteUrl(`/panel/articulos/${c.e.articleId}?modo=ia&paso=vista`) : siteUrl("/panel/articulos"));
+/** Vista previa de la nota tal como se verá en el sitio: enlace firmado y caducable, se abre sin iniciar sesión (noindex). */
+const vistaUrl = (c: Ctx) => (c.e.articleId ? siteUrl(`/vista-previa/${c.e.articleId}?t=${signPreviewToken(c.e.articleId)}`) : null);
+const botonVista = (c: Ctx): Boton[][] => { const u = vistaUrl(c); return u ? [[{ texto: "👁️ Ver vista previa", url: u }]] : []; };
+const linkVista = (c: Ctx) => { const u = vistaUrl(c); return u ? `\n👁️ <a href="${u}">Vista previa del artículo</a> (se abre sin contraseña)` : ""; };
 const barra = (c: Ctx, f: Fase) => `Paso ${PASOS.indexOf(f) + 1} de ${PASOS.length}`;
 
 async function proponer(c: Ctx) {
@@ -193,7 +198,7 @@ async function paso(c: Ctx, f: Fase) {
     case "seccion":
       return mostrarSecciones(c);
     case "cuerpo":
-      return enviar(c.chatId, `${cab}📄 <b>Cuerpo de la nota</b>\n\n${cuerpoParaTelegram(c.e.body ?? "")}`, OK_ED("cuerpo"));
+      return enviar(c.chatId, `${cab}📄 <b>Cuerpo de la nota</b>\n\n${cuerpoParaTelegram(c.e.body ?? "")}`, [...OK_ED("cuerpo"), ...botonVista(c)]);
     case "grafica":
       return enviar(c.chatId, `${cab}📊 <b>Gráfica con datos</b> (opcional)\n¿Quieres que la IA busque cifras y arme una gráfica? Elige el tipo:`, [
         TIPOS_GRAFICA.slice(0, 4).map((t) => ({ texto: t.label, dato: `g:${t.id}` })),
@@ -205,7 +210,7 @@ async function paso(c: Ctx, f: Fase) {
     case "seo": {
       const a = auditArticle({ title: c.e.title ?? "", excerpt: c.e.excerpt ?? "", body: c.e.body ?? "", metaTitle: c.e.metaTitle, metaDescription: c.e.metaDescription, tags: c.e.tags, focus: c.e.tags?.[0] || c.e.title, coverImageUrl: c.e.coverUrl ?? "", coverImageAlt: c.e.coverAlt, authorName: c.nombre });
       const faltan = a.items.filter((i) => !i.ok).slice(0, 5).map((i) => `• ${esc(i.text)}`).join("\n");
-      return enviar(c.chatId, `${cab}🔎 <b>SEO: ${a.score}/100 · ${scoreLabel(a.score)}</b>\n${a.groups.filter((g) => g.score !== null).map((g) => `${esc(g.label)}: ${g.score} %`).join("\n")}${faltan ? `\n\n<b>Por mejorar:</b>\n${faltan}` : "\n\n✅ Todo en orden."}${a.capped ? "\n\n⚠️ Falta un criterio crítico (firma, fuentes, titular o datos por confirmar): no pasa de «Bueno»." : ""}`, [[{ texto: "✅ Continuar", dato: "n:" }]]);
+      return enviar(c.chatId, `${cab}🔎 <b>SEO: ${a.score}/100 · ${scoreLabel(a.score)}</b>\n${a.groups.filter((g) => g.score !== null).map((g) => `${esc(g.label)}: ${g.score} %`).join("\n")}${faltan ? `\n\n<b>Por mejorar:</b>\n${faltan}` : "\n\n✅ Todo en orden."}${a.capped ? "\n\n⚠️ Falta un criterio crítico (firma, fuentes, titular o datos por confirmar): no pasa de «Bueno»." : ""}`, [[{ texto: "✅ Continuar", dato: "n:" }], ...botonVista(c)]);
     }
     case "final": {
       const pub = canPublish(c.role) && (await tienePermiso(c.userId, c.role, "publicar"));
@@ -213,8 +218,9 @@ async function paso(c: Ctx, f: Fase) {
       return enviar(c.chatId, `${cab}🚀 <b>Todo listo</b>\n<b>${esc(c.e.title ?? "")}</b>\n✍️ <b>Firma:</b> ${esc(c.nombre)}\n📌 Estado: <b>borrador</b> (aún NO está publicada)${aviso}\n\n¿Qué hacemos?`, [
         [{ texto: "💾 Dejar en borrador", dato: `f:b:${tk(c)}` }, { texto: "🔍 A revisión", dato: `f:r:${tk(c)}` }],
         ...(pub ? [[{ texto: "📅 Programar", dato: `f:p:${tk(c)}` }, { texto: "🚀 Publicar ahora", dato: `f:pub:${tk(c)}` }]] : []),
+        ...botonVista(c),
         [{ texto: "📌 Portada y distintivos", dato: `d:m:${tk(c)}` }],
-        [{ texto: "🔗 Abrir en el panel", url: enlacePanel(c) }],
+        [{ texto: "🔗 Abrir en el panel (pide contraseña)", url: enlacePanel(c) }],
       ]);
     }
     default:
@@ -294,7 +300,7 @@ async function portadaIA(c: Ctx) {
   c.e.coverUrl = r.url; c.e.coverAlt = r.alt;
   await guardar(c);
   await tg("sendPhoto", { chat_id: c.chatId, photo: r.url, caption: `🖼️ ${r.alt}`.slice(0, 900) });
-  await enviar(c.chatId, "¿Te gusta esta portada? Queda marcada «imagen generada con IA».", [[{ texto: "✅ Usar", dato: "n:" }, { texto: "🔄 Otra", dato: "ph:g" }]]);
+  await enviar(c.chatId, "¿Te gusta esta portada? Queda marcada «imagen generada con IA».", [[{ texto: "✅ Usar", dato: "n:" }, { texto: "🔄 Otra", dato: "ph:g" }], ...botonVista(c)]);
 }
 
 // --- Menú de inicio: las mismas formas de partir que el asistente web ------------------------------------------
@@ -484,8 +490,9 @@ async function estadoNota(c: Ctx) {
   const estado = a.status === "publicado" ? "✅ publicada" : a.status === "programado" ? `📅 programada para ${a.scheduledFor ? fmtHora(a.scheduledFor.toISOString()) : "?"}` : a.status === "en_revision" ? "🔍 en revisión" : "📝 borrador (no publicada)";
   const pub = canPublish(c.role) && (await tienePermiso(c.userId, c.role, "publicar"));
   await enviar(c.chatId, `<b>${esc(a.title)}</b>\nEstado: ${estado}\n✍️ Firma: <b>${esc(a.firma ?? "— sin firma —")}</b>${a.status === "publicado" ? `\n🔗 ${siteUrl(`/articulo/${a.slug}`)}` : ""}`, [
+ ...botonVista(c),
     [{ texto: "📌 Portada y distintivos", dato: `d:m:${tk(c)}` }],
-    [{ texto: "🔗 Abrir en el panel", url: enlacePanel(c) }],
+    [{ texto: "🔗 Abrir en el panel (pide contraseña)", url: enlacePanel(c) }],
     ...(a.status !== "publicado" && pub ? [[{ texto: "🚀 Publicar ahora", dato: `f:pub:${tk(c)}` }, { texto: "📅 Programar", dato: `f:p:${tk(c)}` }]] : []),
   ]);
 }
@@ -499,7 +506,7 @@ async function programar(c: Ctx, iso: string) {
     if (chk?.status !== "programado") return void (await enviar(c.chatId, "⚠️ No pude confirmar la programación. Revisa la nota con /estado o en el panel."));
     c.e.fase = "idle";
     await fin(c);
-    await enviar(c.chatId, `📅 <b>Programada</b> para ${esc(fmtHora(iso))} (hora de Colombia).\n✍️ Firma: <b>${esc(c.nombre)}</b>\nSe publica sola a esa hora (si el reloj de Supabase está activo; si no, al abrirse el sitio o el panel).\n\n🔗 ${enlacePanel(c)}`);
+    await enviar(c.chatId, `📅 <b>Programada</b> para ${esc(fmtHora(iso))} (hora de Colombia).\n✍️ Firma: <b>${esc(c.nombre)}</b>\nSe publica sola a esa hora (si el reloj de Supabase está activo; si no, al abrirse el sitio o el panel).${linkVista(c)}\n\n🔗 ${enlacePanel(c)}`);
   } catch (err) {
     await enviar(c.chatId, `⚠️ ${esc(err instanceof Error ? err.message : "No se pudo programar.")}`);
   }
@@ -616,7 +623,7 @@ async function acciones(c: Ctx, d: string) {
     case "gi": {
       if (!insertarGrafica(c)) return void (await enviar(c.chatId, "Primero genera la gráfica."));
       await guardar(c);
-      await enviar(c.chatId, "✅ Gráfica insertada en la nota.");
+      await enviar(c.chatId, "✅ Gráfica insertada en la nota.", botonVista(c));
       return siguiente(c);
     }
     case "ph": {
@@ -637,8 +644,8 @@ async function finales(c: Ctx, v: string) {
   if (!c.e.articleId && !c.e.title) return void (await enviar(c.chatId, "No tengo una nota en curso. Envía /nueva para empezar."));
   await guardar(c);
   if (!c.e.articleId) return void (await enviar(c.chatId, "⚠️ No pude guardar la nota. Inténtalo de nuevo o ábrela en el panel."));
-  if (v === "b") { c.e.fase = "idle"; await fin(c); return void (await enviar(c.chatId, `💾 Queda como <b>borrador</b> (no está publicada).\n✍️ Firma: <b>${esc(c.nombre)}</b>\n🔗 ${enlacePanel(c)}`)); }
-  if (v === "r") { await enviarARevisionCore(c.e.articleId!); c.e.fase = "idle"; await fin(c); return void (await enviar(c.chatId, `🔍 Enviada a <b>revisión</b>: un editor puede publicarla.\n✍️ Firma: <b>${esc(c.nombre)}</b>\n🔗 ${enlacePanel(c)}`)); }
+  if (v === "b") { c.e.fase = "idle"; await fin(c); return void (await enviar(c.chatId, `💾 Queda como <b>borrador</b> (no está publicada).\n✍️ Firma: <b>${esc(c.nombre)}</b>\n${linkVista(c)}\n🔗 ${enlacePanel(c)}`)); }
+  if (v === "r") { await enviarARevisionCore(c.e.articleId!); c.e.fase = "idle"; await fin(c); return void (await enviar(c.chatId, `🔍 Enviada a <b>revisión</b>: un editor puede publicarla.\n✍️ Firma: <b>${esc(c.nombre)}</b>${linkVista(c)}\n🔗 ${enlacePanel(c)}`)); }
   const pub = canPublish(c.role) && (await tienePermiso(c.userId, c.role, "publicar"));
   if (!pub) return void (await enviar(c.chatId, "Tu cuenta no tiene permiso para publicar ni programar. Puedes enviarla a revisión."));
   if (v === "p") return void (await enviar(c.chatId, "📅 ¿Cuándo se publica?", [[{ texto: "Próximo lunes · 8:00 p. m.", dato: `p:lunes:${tk(c)}` }], [{ texto: "Mañana · 7:00 a. m.", dato: `p:man_am:${tk(c)}` }, { texto: "Mañana · 8:00 p. m.", dato: `p:man_pm:${tk(c)}` }], [{ texto: "Otra fecha…", dato: `p:otra:${tk(c)}` }]]));
