@@ -66,6 +66,7 @@ export async function desvincular(chatId: number | string) {
 
 export type Fase =
   | "idle" | "esperando_titulo" | "esperando_edicion" | "esperando_fecha" | "esperando_foto"
+  | "esperando_enfoque_ideas" | "esperando_busqueda"
   | "titulos" | "enfoque" | "titulo" | "resumen" | "claves" | "seccion" | "cuerpo" | "grafica" | "portada" | "seo" | "final";
 
 export type EstadoChat = {
@@ -73,6 +74,8 @@ export type EstadoChat = {
   /** Último update procesado: Telegram reintenta si tardamos y no hay que repetir nada. */
   ultimoUpdate?: number;
   topic?: string;
+  ideas?: { title: string; angle: string; why: string; scope: string }[];
+  noticias?: { title: string; outlet: string; date: string; summary: string; url: string }[];
   material?: Material[];
   options?: { titles: string[]; contexts: { label: string; text: string }[] };
   title?: string;

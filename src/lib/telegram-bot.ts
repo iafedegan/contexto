@@ -7,7 +7,7 @@ import { auditArticle, scoreLabel } from "@/lib/seo-audit";
 import { encodeSpec, TIPOS_GRAFICA, type ChartSpec, type TipoGrafica } from "@/lib/chart-svg";
 import {
   generateArticleDraftCore, generateChartCore, generateCoverImageCore, leerEnlacesCore, regenerateDraftPartCore,
-  suggestTitlesAndContextsCore, transcribirAudioBytesCore,
+  searchNewsAboutCore, suggestTitlesAndContextsCore, suggestTopicIdeasCore, transcribirAudioBytesCore,
 } from "@/lib/ai-core";
 import { enviarARevisionCore, guardarBorradorCore, programarCore, publicarCore } from "@/lib/article-ops";
 import { graficaPng } from "@/lib/chart-png";
@@ -40,7 +40,7 @@ export type Update = { update_id: number; message?: Msg; callback_query?: { id: 
 
 const PASOS: Fase[] = ["titulo", "resumen", "claves", "seccion", "cuerpo", "grafica", "portada", "seo", "final"];
 const AYUDA =
-  "✍️ <b>Redactor de CONtexto Ganadero</b>\n\nEnvíame el <b>contexto de la noticia</b>: texto, una <b>nota de voz</b> (entrevista) o uno o más <b>enlaces</b>. Yo propongo títulos y enfoques, redacto el borrador y te voy mostrando cada paso para que lo apruebes o lo corrijas.\n\n/nueva — empezar otra nota\n/estado — ver si la última nota está publicada y quién firma\n/cancelar — descartar el flujo actual\n/ayuda — esta ayuda\n/desvincular — separar este Telegram de tu cuenta";
+  "✍️ <b>Redactor de CONtexto Ganadero</b>\n\nEnvíame el <b>contexto de la noticia</b>: texto, una <b>nota de voz</b> (entrevista) o uno o más <b>enlaces</b>. Yo propongo títulos y enfoques, redacto el borrador y te voy mostrando cada paso para que lo apruebes o lo corrijas.\n\n/nueva — empezar otra nota (ideas de la IA, buscar noticias, entrevista de voz o enlaces)\n/estado — ver si la última nota está publicada y quién firma\n/cancelar — descartar el flujo actual\n/ayuda — esta ayuda\n/desvincular — separar este Telegram de tu cuenta";
 
 const urlsEn = (t: string) => [...new Set(t.match(/https?:\/\/[^\s<>"')]+/gi) ?? [])];
 
@@ -61,22 +61,50 @@ function htmlDeTexto(t: string): string {
   }).join("");
 }
 
-/** «05/10 20:00», «mañana 8pm», «hoy 18:30» → ISO (hora de Colombia, UTC-5). */
+/** «05/10 20:00», «5 de octubre 8pm», «mañana 8pm», «lunes 7 am», «hoy 18:30» → ISO (hora de Colombia, UTC-5). */
 export function parseFecha(txt: string, ahora = new Date()): string | null {
-  const t = txt.toLowerCase().trim();
+  const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+  const DIAS = ["domingo", "lunes", "martes", "miercoles", "jueves", "viernes", "sabado"];
+  let t = txt.toLowerCase().normalize("NFD").replace(/\p{Diacritic}/gu, "").replace(/\s+/g, " ").trim();
+  t = t.replace(/de la manana/g, " am ").replace(/de la (tarde|noche)/g, " pm ").replace(/del dia/g, " am ");
   const co = new Date(ahora.getTime() - 5 * 3600_000);
   let y = co.getUTCFullYear(), m = co.getUTCMonth(), d = co.getUTCDate();
-  const hm = t.match(/(\d{1,2})(?::(\d{2}))?\s*(a\.?\s?m\.?|p\.?\s?m\.?)?\s*$/);
-  if (!hm) return null;
-  let h = Number(hm[1]);
-  const min = Number(hm[2] ?? 0);
-  if (hm[3]) { const pm = hm[3].startsWith("p"); if (pm && h < 12) h += 12; if (!pm && h === 12) h = 0; }
-  if (h > 23 || min > 59) return null;
-  const f = t.match(/(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?/);
-  if (f) { d = Number(f[1]); m = Number(f[2]) - 1; if (f[3]) y = Number(f[3]) < 100 ? 2000 + Number(f[3]) : Number(f[3]); }
-  else if (/ma[ñn]ana/.test(t)) d += 1;
-  else if (!/hoy/.test(t)) return null;
-  const when = new Date(Date.UTC(y, m, d, h + 5, min));
+  let explicita = false, conAnio = false, fecha = false;
+  let r = t.match(/(\d{1,2})\s*[\/\-.]\s*(\d{1,2})(?:\s*[\/\-.]\s*(\d{2,4}))?/);
+  const r2 = t.match(new RegExp(`(\\d{1,2})\\s*(?:de\\s+)?(${MESES.join("|")})(?:\\s*(?:de|del)?\\s*(\\d{4}))?`));
+  if (r && !/\d{1,2}:\d{2}/.test(r[0])) {
+    d = Number(r[1]); m = Number(r[2]) - 1; fecha = explicita = true;
+    if (r[3]) { y = Number(r[3]) < 100 ? 2000 + Number(r[3]) : Number(r[3]); conAnio = true; }
+    t = t.replace(r[0], " ");
+  } else if (r2) {
+    d = Number(r2[1]); m = MESES.indexOf(r2[2]); fecha = explicita = true;
+    if (r2[3]) { y = Number(r2[3]); conAnio = true; }
+    t = t.replace(r2[0], " ");
+  } else if (/pasado manana/.test(t)) { d += 2; fecha = true; t = t.replace("pasado manana", " "); }
+  else if (/manana/.test(t)) { d += 1; fecha = true; t = t.replace("manana", " "); }
+  else if (/\bhoy\b/.test(t)) { fecha = true; t = t.replace("hoy", " "); }
+  else {
+    const dia = DIAS.findIndex((x) => new RegExp(`\\b${x}\\b`).test(t));
+    if (dia >= 0) { let n = (dia - co.getUTCDay() + 7) % 7; if (n === 0) n = 7; d += n; fecha = true; t = t.replace(DIAS[dia], " "); }
+  }
+  let h = 8, min = 0, conHora = false;
+  const hm = t.match(/(\d{1,2})(?:\s*[:.h]\s*(\d{2}))?\s*(a\.?\s?m\.?|p\.?\s?m\.?)?(?!\d)/);
+  if (hm) {
+    conHora = true;
+    h = Number(hm[1]); min = Number(hm[2] ?? 0);
+    if (hm[3]) { const pm = hm[3].startsWith("p"); if (pm && h < 12) h += 12; if (!pm && h === 12) h = 0; }
+    if (h > 23 || min > 59) return null;
+  }
+  if (!fecha && !conHora) return null;
+  const hoyIso = () => new Date(Date.UTC(y, m, d, h + 5, min));
+  if (!fecha) { // solo hora: hoy si aún no pasó, si no mañana
+    let w = hoyIso(); if (w.getTime() <= ahora.getTime()) { d += 1; w = hoyIso(); }
+    return w.toISOString();
+  }
+  let when = hoyIso();
+  // Día y mes sin año que ya pasaron → el año siguiente.
+  if (explicita && !conAnio && when.getTime() < ahora.getTime() - 3600_000) { y += 1; when = hoyIso(); }
+  if (explicita && (when.getUTCMonth() !== m || Number.isNaN(when.getTime()))) return null; // 31/02, etc.
   return Number.isNaN(when.getTime()) ? null : when.toISOString();
 }
 function proximoLunes8pm(ahora = new Date()): string {
@@ -265,6 +293,45 @@ async function portadaIA(c: Ctx) {
   await enviar(c.chatId, "¿Te gusta esta portada? Queda marcada «imagen generada con IA».", [[{ texto: "✅ Usar", dato: "n:" }, { texto: "🔄 Otra", dato: "ph:g" }]]);
 }
 
+// --- Menú de inicio: las mismas formas de partir que el asistente web ------------------------------------------
+
+async function menuInicio(c: Ctx) {
+  await enviar(c.chatId, "📝 <b>Nueva nota</b>\n¿Cómo quieres partir?\n\nO escríbeme directamente el tema, pega enlaces o envía una nota de voz.", [
+    [{ texto: "💡 Ideas de la IA", dato: "i:ideas" }, { texto: "🔎 Buscar noticias", dato: "i:news" }],
+    [{ texto: "🎙️ Entrevista de voz", dato: "i:voz" }, { texto: "🔗 Enlaces", dato: "i:links" }],
+    [{ texto: "✏️ Escribir el tema", dato: "i:tema" }],
+  ]);
+}
+
+async function verIdeas(c: Ctx, focus?: string) {
+  await escribiendo(c.chatId);
+  await enviar(c.chatId, "💡 Buscando en internet qué se está moviendo en el sector (Colombia y el mundo)…");
+  const r = await suggestTopicIdeasCore(c.userId, { focus: focus?.slice(0, 200) });
+  if (!r.ok) return enviar(c.chatId, `⚠️ ${esc(r.error)}`);
+  c.e.ideas = r.ideas.slice(0, 6).map((i) => ({ title: i.title, angle: i.angle, why: i.why, scope: i.scope }));
+  c.e.fase = "esperando_enfoque_ideas";
+  await fin(c);
+  const lista = c.e.ideas.map((i, k) => `<b>${k + 1}.</b> ${i.scope === "local" ? "🇨🇴" : "🌎"} ${esc(i.title)}\n<i>${esc(i.why)}</i>`).join("\n\n");
+  const fuentes = r.sources.slice(0, 4).map((x) => `🔗 ${esc(x.title)}`).join("\n");
+  await enviar(c.chatId, `💡 <b>Temas con fuentes</b>\n\n${lista}${fuentes ? `\n\n${fuentes}` : ""}\n\nElige uno, o escribe un enfoque (leche, exportaciones, sanidad…) para afinar la búsqueda.`, [
+    c.e.ideas.map((_, k) => ({ texto: String(k + 1), dato: `i:u:${k}` })),
+    [{ texto: "🔄 Otras ideas", dato: "i:ideas" }],
+  ]);
+}
+
+async function buscarNoticias(c: Ctx, consulta: string) {
+  await escribiendo(c.chatId);
+  await enviar(c.chatId, `🔎 Buscando noticias sobre «${esc(consulta.slice(0, 120))}»…`);
+  const r = await searchNewsAboutCore(c.userId, { query: consulta });
+  if (!r.ok) return enviar(c.chatId, `⚠️ ${esc(r.error)}`);
+  c.e.noticias = r.items.slice(0, 6).map((n) => ({ title: n.title, outlet: n.outlet, date: n.date, summary: n.summary, url: n.url }));
+  await fin(c);
+  const lista = c.e.noticias.map((n, k) => `<b>${k + 1}.</b> ${esc(n.title)}\n<i>${esc(n.outlet)}${n.date ? ` · ${esc(n.date)}` : ""}</i>`).join("\n\n");
+  await enviar(c.chatId, `🔎 <b>Resultados</b>\n\n${lista}\n\nElige la que usarás como punto de partida (queda citada como fuente), o escribe otra búsqueda.`, [
+    c.e.noticias.map((_, k) => ({ texto: String(k + 1), dato: `i:n:${k}` })),
+  ]);
+}
+
 // --- Entrada de texto, voz y archivos -----------------------------------------------------------------------
 
 async function contexto(c: Ctx, texto: string) {
@@ -350,7 +417,7 @@ export async function procesar(u: Update): Promise<unknown> {
 
   // Comandos
   if (/^\/(start|ayuda|help)\b/i.test(texto)) return void (await enviar(chatId, AYUDA));
-  if (/^\/(nueva|nuevo)\b/i.test(texto)) { await setEstado(chatId, { fase: "idle", ultimoUpdate: u.update_id }); return void (await enviar(chatId, "📝 Cuéntame el contexto de la nueva noticia: escribe el texto, pega enlaces o envía una nota de voz.")); }
+  if (/^\/(nueva|nuevo)\b/i.test(texto)) { await setEstado(chatId, { fase: "idle", ultimoUpdate: u.update_id }); return menuInicio(c); }
   if (/^\/estado\b/i.test(texto)) return estadoNota(c);
   if (/^\/cancelar\b/i.test(texto)) { await setEstado(chatId, { fase: "idle", ultimoUpdate: u.update_id }); return void (await enviar(chatId, "Listo, descartado. Envía /nueva cuando quieras. (Lo que ya estaba guardado queda como borrador en el panel.)")); }
   if (/^\/desvincular\b/i.test(texto)) { await desvincular(chatId); return void (await enviar(chatId, "Telegram desvinculado de tu cuenta.")); }
@@ -379,9 +446,11 @@ export async function procesar(u: Update): Promise<unknown> {
       else if (campo === "cuerpo") await guardar(c, { body: htmlDeTexto(texto) });
       return paso(c, campo === "titulo" ? "titulo" : campo === "resumen" ? "resumen" : campo === "claves" ? "claves" : "cuerpo");
     }
+    case "esperando_enfoque_ideas": return verIdeas(c, texto);
+    case "esperando_busqueda": return buscarNoticias(c, texto);
     case "esperando_fecha": {
       const iso = parseFecha(texto);
-      if (!iso) return void (await enviar(chatId, "No entendí la fecha. Ejemplos: <code>05/10 20:00</code>, <code>mañana 8pm</code>."));
+      if (!iso) return void (await enviar(chatId, "No entendí la fecha. Ejemplos: <code>5 de octubre 8pm</code>, <code>05/10 20:00</code>, <code>mañana 7am</code>, <code>lunes 8pm</code>."));
       return programar(c, iso);
     }
     default:
@@ -412,7 +481,10 @@ async function estadoNota(c: Ctx) {
 async function programar(c: Ctx, iso: string) {
   try {
     await guardar(c);
-    await programarCore(c.e.articleId!, iso);
+    if (!c.e.articleId) return void (await enviar(c.chatId, "⚠️ No pude guardar la nota para programarla. Inténtalo de nuevo."));
+    await programarCore(c.e.articleId, iso);
+    const [chk] = await db.select({ status: articles.status }).from(articles).where(eq(articles.id, c.e.articleId)).limit(1);
+    if (chk?.status !== "programado") return void (await enviar(c.chatId, "⚠️ No pude confirmar la programación. Revisa la nota con /estado o en el panel."));
     c.e.fase = "idle";
     await fin(c);
     await enviar(c.chatId, `📅 <b>Programada</b> para ${esc(fmtHora(iso))} (hora de Colombia).\n✍️ Firma: <b>${esc(c.nombre)}</b>\nSe publica sola a esa hora (si el reloj de Supabase está activo; si no, al abrirse el sitio o el panel).\n\n🔗 ${enlacePanel(c)}`);
@@ -428,6 +500,29 @@ async function acciones(c: Ctx, d: string) {
   }
   switch (k) {
     case "go": return proponer(c);
+    case "i": {
+      if (v === "ideas") return verIdeas(c);
+      if (v === "news") { c.e.fase = "esperando_busqueda"; await fin(c); return void (await enviar(c.chatId, "🔎 ¿A quién o qué busco? Escríbelo. Ej.: <i>precio del novillo gordo en Montería</i>, <i>fiebre aftosa Colombia</i>.")); }
+      if (v === "voz") { c.e.fase = "idle"; await fin(c); return void (await enviar(c.chatId, "🎙️ Envíame la <b>nota de voz</b> o el audio de la entrevista (hasta 20 MB). La transcribo y sigo con los títulos.")); }
+      if (v === "links") { c.e.fase = "idle"; await fin(c); return void (await enviar(c.chatId, "🔗 Pega uno o más <b>enlaces</b> (hasta 5) de noticias o artículos. Los leo y los uso como fuentes.")); }
+      if (v === "tema") { c.e.fase = "idle"; await fin(c); return void (await enviar(c.chatId, "✏️ Escribe el tema o pega el texto de la noticia.")); }
+      if (v === "u") {
+        const idea = c.e.ideas?.[Number(t)];
+        if (!idea) return void (await enviar(c.chatId, "Esa idea ya no está. Pide otras con /nueva."));
+        c.e.topic = `${idea.title}. ${idea.angle} ${idea.why}`.trim();
+        c.e.fase = "idle"; await fin(c);
+        return proponer(c);
+      }
+      if (v === "n") {
+        const n = c.e.noticias?.[Number(t)];
+        if (!n) return void (await enviar(c.chatId, "Esa noticia ya no está. Busca de nuevo con /nueva."));
+        c.e.topic = `${n.title}. ${n.summary} (Fuente: ${n.outlet}${n.date ? `, ${n.date}` : ""}).`;
+        c.e.material = [...(c.e.material ?? []), { kind: "enlace", title: n.title, text: n.summary, url: n.url }];
+        c.e.fase = "idle"; await fin(c);
+        return proponer(c);
+      }
+      return;
+    }
     case "t": {
       if (v === "x") { c.e.fase = "esperando_titulo"; await fin(c); return void (await enviar(c.chatId, "✏️ Escribe el título que quieres usar.")); }
       c.e.title = c.e.options?.titles[Number(v)] ?? c.e.title;
@@ -477,7 +572,7 @@ async function acciones(c: Ctx, d: string) {
     }
     case "f": return finales(c, v);
     case "p": {
-      if (v === "otra") { c.e.fase = "esperando_fecha"; await fin(c); return void (await enviar(c.chatId, "📅 Escribe la fecha y hora (hora de Colombia). Ej.: <code>05/10 20:00</code> o <code>mañana 8pm</code>.")); }
+      if (v === "otra") { c.e.fase = "esperando_fecha"; await fin(c); return void (await enviar(c.chatId, "📅 Escribe la fecha y hora (hora de Colombia). Ej.: <code>5 de octubre 8pm</code>, <code>05/10 20:00</code>, <code>mañana 7am</code> o <code>lunes 8pm</code>.")); }
       const iso = v === "lunes" ? proximoLunes8pm() : parseFecha(v === "man_am" ? "mañana 7:00" : "mañana 20:00");
       return iso ? programar(c, iso) : undefined;
     }

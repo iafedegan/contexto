@@ -651,7 +651,7 @@ export async function generateCoverImageCore(userId: string, input: {
       const r = await generateText({
         model: text,
         system:
-          "Eres director de fotografía de un medio ganadero colombiano. Escribes UNA escena fotográfica concreta, en español, de 1-2 frases, que ilustre la noticia: ganadería, paisaje, animales, trabajadores vistos de espaldas o lejos, instalaciones, mercados, clima. Sin texto en la imagen. NUNCA retrates a una persona real identificable (políticos, empresarios, figuras públicas): usa personas anónimas de espaldas, siluetas o planos generales. Sin logotipos ni marcas.",
+          "Eres director de fotografía de un medio ganadero colombiano. Escribes UNA escena fotográfica concreta, en español, de 1-2 frases, que ilustre la noticia: ganadería, paisaje, animales, trabajadores vistos de espaldas o lejos, instalaciones, mercados, clima. Sin texto en la imagen. NUNCA retrates a una persona real identificable (políticos, empresarios, figuras públicas): usa personas anónimas de espaldas, siluetas o planos generales. Sin logotipos ni marcas. OBLIGATORIO: todo es COLOMBIANO. Si aparecen personas, son campesinos y ganaderos colombianos (rasgos mestizos latinoamericanos, sombrero aguadeño o de paja, ruana, poncho, carriel, botas de caucho, ropa de trabajo de campo), anónimos y vistos de espaldas o a distancia. El paisaje es reconocible de Colombia (potreros y sabanas de los Llanos Orientales, sabana de Córdoba y Sucre, montaña andina con cafetales, valles del Cauca, páramo, Caribe colombiano, cordilleras al fondo) y nunca de otros países (ni praderas de Estados Unidos, ni campo europeo, ni africano). Razas y entorno propios del trópico colombiano (cebú, brahman, criollo, Holstein de altiplano).",
         prompt: `TÍTULO: ${title}\n${input.excerpt ? `RESUMEN: ${input.excerpt.slice(0, 400)}\n` : ""}${input.section ? `SECCIÓN: ${input.section}\n` : ""}\nDescribe la escena.`,
       });
       await registrarUsoIA(userId, r.usage);
@@ -663,6 +663,7 @@ export async function generateCoverImageCore(userId: string, input: {
       `Fotografía fotorrealista con estética de fotograma de cine: ${scene}. ` +
       "Máxima nitidez y detalle, resolución muy alta, sin compresión ni pixelado. Iluminación natural cinematográfica (luz dorada o contraluz suave), lente anamórfica de 35 mm, poca profundidad de campo, " +
       "grano de película sutil, colores naturales y ricos, composición editorial amplia en formato horizontal 16:9. " +
+      "Ambientación 100 % colombiana: paisaje de Colombia (Llanos Orientales, sabana caribeña, montaña andina, valles, páramo) y, si hay personas, campesinos y ganaderos colombianos anónimos, de espaldas o a distancia, con sombrero, ruana o poncho y botas de caucho; nada de paisajes ni personas de otros países. " +
       "Sin texto, sin letras, sin logotipos, sin marcas de agua. Sin personas reales identificables.";
 
     // Alta resolución (2K ≈ 2752×1536): a pantalla completa una imagen de 1K se pixela. Si el modelo
