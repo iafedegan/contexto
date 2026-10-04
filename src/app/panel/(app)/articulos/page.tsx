@@ -303,10 +303,10 @@ export default async function ArticlesList({ searchParams }: { searchParams: Sea
             <tr>
               <Th>Título</Th>
               <Th>Estado</Th>
-              <Th className="hidden xl:table-cell">Autor</Th>
+              <Th className="hidden 2xl:table-cell">Autor</Th>
               <Th className="text-right">Lecturas</Th>
-              <Th className="hidden lg:table-cell">Últimos {SPARK_DAYS} días</Th>
-              <Th className="hidden xl:table-cell">Actualizado</Th>
+              <Th className="hidden xl:table-cell">Últimos {SPARK_DAYS} días</Th>
+              <Th className="hidden 2xl:table-cell">Actualizado</Th>
               {canDelete && <Th className="text-right">Eliminar</Th>}
             </tr>
           </thead>
@@ -341,7 +341,7 @@ export default async function ArticlesList({ searchParams }: { searchParams: Sea
                       )}
                     </div>
                     {/* Con la columna «Autor» oculta (pantallas medianas), la firma va en su propia línea. */}
-                    <div className="mt-0.5 text-xs text-[var(--fg-muted)] xl:hidden">Por {r.author ?? "autor sin asignar"}</div>
+                    <div className="mt-0.5 text-xs text-[var(--fg-muted)] 2xl:hidden">Por {r.author ?? "autor sin asignar"}</div>
                   </Td>
                   <Td>
                     <Badge
@@ -355,11 +355,11 @@ export default async function ArticlesList({ searchParams }: { searchParams: Sea
                       <span className="ml-2 text-xs text-[var(--fg-muted)]">{formatDate(r.scheduledFor)}</span>
                     )}
                   </Td>
-                  <Td className="hidden xl:table-cell">{r.author ?? "—"}</Td>
+                  <Td className="hidden 2xl:table-cell">{r.author ?? "—"}</Td>
                   <Td className="text-right">
                     <span className="text-base font-semibold tabular-nums">{nf.format(Number(r.views))}</span>
                   </Td>
-                  <Td className="hidden lg:table-cell">
+                  <Td className="hidden xl:table-cell">
                     {r.status === "publicado" || Number(r.views) > 0 ? (
                       <div className="flex min-w-[9.5rem] items-center gap-3">
                         <SparklineZoom values={serie} title={r.title} articleId={r.id} />
@@ -381,7 +381,7 @@ export default async function ArticlesList({ searchParams }: { searchParams: Sea
                       <span className="text-xs text-[var(--fg-muted)]">Sin publicar</span>
                     )}
                   </Td>
-                  <Td className="hidden whitespace-nowrap text-[var(--fg-muted)] xl:table-cell">{formatDate(r.updatedAt)}</Td>
+                  <Td className="hidden whitespace-nowrap text-[var(--fg-muted)] 2xl:table-cell">{formatDate(r.updatedAt)}</Td>
                   {canDelete && (
                     <Td className="text-right">
                       <DeleteArticleButton id={r.id} title={r.title} published={r.status === "publicado"} />
