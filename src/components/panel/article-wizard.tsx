@@ -124,8 +124,18 @@ const linkify = (s: string) =>
  * párrafo; una línea que empieza por "## " es un intertítulo. Si el redactor
  * ya escribió HTML, se respeta tal cual.
  */
+/** Marcador de gráfica → <figure>. Se aplica tanto al texto simple como al cuerpo que ya trae HTML (p. ej. con el bloque de fuentes). */
+const MARCADOR_GRAFICA = /(?:<p[^>]*>\s*)?\[\[GRAFICA ([\w-]+) \| ([^|\]]*) \| ([^\]]*)\]\](?:\s*<\/p>)?/g;
+function expandirGraficas(html: string): string {
+  return html.replace(MARCADOR_GRAFICA, (marca, datos: string, alt: string, fuente: string) => {
+    const spec = decodeSpec(datos);
+    if (!spec) return marca;
+    return `<figure class="lx-chart" data-chart="${datos}"><img src="${svgDataUri(renderChartSvg(spec))}" alt="${escapeHtml(alt)}" loading="lazy"><figcaption>${escapeHtml(fuente)}</figcaption></figure>`;
+  });
+}
+
 function toHtml(text: string): string {
-  if (/<\/?(p|h2|h3|ul|ol|figure|blockquote)\b/i.test(text)) return text;
+  if (/<\/?(p|h2|h3|ul|ol|figure|blockquote|details)\b/i.test(text)) return expandirGraficas(text);
   return text
     .split(/\n\s*\n/)
     .map((b) => b.trim())

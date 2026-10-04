@@ -33,8 +33,19 @@ function fuentesDesplegables(html: string): string {
   });
 }
 
+/**
+ * Red de seguridad: si una nota se guardó con el marcador interno `[[GRAFICA <datos> | alt | fuente]]` sin convertirlo
+ * (error ya corregido en el editor), aquí se convierte en la figura de la gráfica para que se dibuje igual.
+ */
+const MARCADOR_GRAFICA = /(?:<p[^>]*>\s*)?\[\[GRAFICA ([\w-]+) \| ([^|\]]*) \| ([^\]]*)\]\](?:\s*<\/p>)?/g;
+function marcadoresAGraficas(html: string): string {
+  return html.replace(MARCADOR_GRAFICA, (marca, datos: string, _alt: string, fuente: string) =>
+    decodeSpec(datos) ? `<figure class="lx-chart" data-chart="${datos}"><figcaption>${fuente}</figcaption></figure>` : marca,
+  );
+}
+
 export function ArticleBody({ html: crudo, className }: { html: string; className?: string }) {
-  const html = envolverTablas(fuentesDesplegables(crudo));
+  const html = envolverTablas(fuentesDesplegables(marcadoresAGraficas(crudo)));
   const parts: React.ReactNode[] = [];
   let last = 0;
   let k = 0;
