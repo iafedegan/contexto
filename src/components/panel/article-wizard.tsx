@@ -791,8 +791,19 @@ export function ArticleWizard({
         )}
         {current.key === "tema" && (
           <Step
+            ancho={enOpciones && options ? "xl" : "md"}
             title={enOpciones && options ? "Elige el título y el enfoque" : "Tema, título y contexto"}
-            hint={enOpciones && options ? "La IA propone varios títulos y enfoques a partir de tu material. Elige uno de cada uno (puedes editarlos) y genera el borrador." : "Describe el tema, o parte de una noticia, una entrevista o unos enlaces. La IA propone títulos y enfoques; tú eliges y revisas cada paso."}
+            hint={enOpciones && options ? (
+              <p className="flex items-baseline gap-3">
+                <span className="line-clamp-1 min-w-0 flex-1">
+                  <strong className="text-[var(--fg)]">Tema:</strong> {(topic.trim() || material[0]?.title || "—").slice(0, 200)}
+                  {material.length > 0 && ` · ${material.length} material${material.length > 1 ? "es" : ""} cargado${material.length > 1 ? "s" : ""}`}
+                </span>
+                <button type="button" onClick={() => setEnOpciones(false)} className="lx-link inline-flex shrink-0 items-center gap-1 text-xs font-semibold">
+                  <ArrowLeft size={12} /> Cambiar tema o fuente
+                </button>
+              </p>
+            ) : "Describe el tema, o parte de una noticia, una entrevista o unos enlaces. La IA propone títulos y enfoques; tú eliges y revisas cada paso."}
           >
                         {!(enOpciones && options) && (
               <>
@@ -976,72 +987,106 @@ export function ArticleWizard({
 
             {options && enOpciones && (
               <>
-                <div className="flex flex-wrap items-start gap-3 rounded-[var(--radius)] bg-[var(--surface-2)] p-3 text-sm">
-                  <p className="min-w-0 flex-1 text-[var(--fg-muted)]">
-                    <strong className="text-[var(--fg)]">Tema:</strong> {(topic.trim() || material[0]?.title || "—").slice(0, 160)}
-                    {material.length > 0 && ` · ${material.length} material${material.length > 1 ? "es" : ""} cargado${material.length > 1 ? "s" : ""}`}
-                  </p>
-                  <button type="button" onClick={() => setEnOpciones(false)} className="lx-link inline-flex items-center gap-1 text-xs font-semibold">
-                    <ArrowLeft size={12} /> Cambiar tema o fuente
-                  </button>
-                </div>
-                <p className="lx-kicker mt-2 text-[var(--accent)]">1 · Elige un título</p>
-                <div className="flex flex-col gap-2">
-                  {options.titles.map((t) => (
-                    <button
-                      key={t}
-                      type="button"
-                      onClick={() => setTitle(t)}
-                      aria-pressed={title === t}
-                      className={`rounded-[var(--radius)] border px-4 py-3 text-left text-[0.95rem] font-semibold leading-snug transition ${
-                        title === t
-                          ? "border-[var(--accent)] bg-[var(--surface-2)]"
-                          : "border-[var(--border)] hover:border-[var(--accent)]"
-                      }`}
-                    >
-                      {t} <span className="ml-1 text-xs font-normal text-[var(--fg-muted)]">{t.length} car.</span>
-                    </button>
-                  ))}
-                </div>
-                <input
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="O escribe el tuyo"
-                  className={`${input} lx-display text-lg font-semibold`}
-                />
-                <Counter value={title.length} min={15} max={65} />
+                {/* Las dos elecciones en una sola hoja: título a la izquierda y enfoque a la derecha. */}
+                <div className="grid items-start gap-3 md:grid-cols-2">
+                  <section aria-labelledby="op-titulo" className="flex flex-col gap-2 rounded-[var(--radius-lg)] border border-[var(--border)] p-3.5">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <h3 id="op-titulo" className="lx-kicker text-[var(--accent)]">1 · Título</h3>
+                      <span className="text-xs text-[var(--fg-muted)]">{title.trim().length >= 5 ? <span className="font-medium text-[#16a34a]">✓ Elegido</span> : "Elige uno o escribe el tuyo"}</span>
+                    </div>
+                    <div role="radiogroup" aria-labelledby="op-titulo" className="flex flex-col gap-1.5">
+                      {options.titles.map((t) => (
+                        <button
+                          key={t}
+                          type="button"
+                          role="radio"
+                          aria-checked={title === t}
+                          onClick={() => setTitle(t)}
+                          className={`flex items-start gap-2.5 rounded-[var(--radius)] border px-3 py-2 text-left transition focus-visible:outline-2 focus-visible:outline-offset-2 ${
+                            title === t ? "border-[var(--accent)] bg-[var(--accent)]/8" : "border-[var(--border)] hover:border-[var(--accent)]"
+                          }`}
+                        >
+                          <Punto on={title === t} />
+                          <span className="min-w-0 flex-1 text-[0.88rem] font-semibold leading-snug">{t}</span>
+                          <span className="mt-0.5 shrink-0 text-[0.7rem] tabular-nums text-[var(--fg-muted)]">{t.length}</span>
+                        </button>
+                      ))}
+                    </div>
+                    <input
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      placeholder="O escribe el tuyo"
+                      aria-label="Título propio"
+                      className={`${input} !py-2 text-base font-semibold`}
+                    />
+                    <Counter value={title.length} min={15} max={65} />
+                  </section>
 
-                <p className="lx-kicker mt-2 text-[var(--accent)]">2 · Elige un contexto (enfoque de la nota)</p>
-                <div className="grid gap-2 md:grid-cols-2">
-                  {options.contexts.map((c, i) => (
-                    <button
-                      key={c.label}
-                      type="button"
-                      onClick={() => {
-                        setPickedContext(i);
-                        setContext(c.text);
+                  <section aria-labelledby="op-enfoque" className="flex flex-col gap-2 rounded-[var(--radius-lg)] border border-[var(--border)] p-3.5">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <h3 id="op-enfoque" className="lx-kicker text-[var(--accent)]">2 · Enfoque</h3>
+                      <span className="text-xs text-[var(--fg-muted)]">Cómo contar la nota · opcional</span>
+                    </div>
+                    <div role="radiogroup" aria-labelledby="op-enfoque" className="flex flex-col gap-1.5">
+                      {options.contexts.map((c, i) => (
+                        <button
+                          key={c.label}
+                          type="button"
+                          role="radio"
+                          aria-checked={pickedContext === i}
+                          onClick={() => {
+                            setPickedContext(i);
+                            setContext(c.text);
+                          }}
+                          className={`flex items-start gap-2.5 rounded-[var(--radius)] border px-3 py-2.5 text-left transition focus-visible:outline-2 focus-visible:outline-offset-2 ${
+                            pickedContext === i ? "border-[var(--accent)] bg-[var(--accent)]/8" : "border-[var(--border)] hover:border-[var(--accent)]"
+                          }`}
+                        >
+                          <Punto on={pickedContext === i} />
+                          <span className="min-w-0 flex-1">
+                            <span className="block text-sm font-semibold leading-snug">{c.label}</span>
+                            <span className="mt-0.5 line-clamp-2 block text-[0.78rem] leading-snug text-[var(--fg-muted)]" title={c.text}>{c.text}</span>
+                          </span>
+                        </button>
+                      ))}
+                      <button
+                        type="button"
+                        role="radio"
+                        aria-checked={pickedContext === -1}
+                        onClick={() => {
+                          setPickedContext(-1);
+                          setContext("");
+                        }}
+                        className={`flex items-center gap-2.5 rounded-[var(--radius)] border px-3 py-2 text-left text-sm transition focus-visible:outline-2 focus-visible:outline-offset-2 ${
+                          pickedContext === -1 ? "border-[var(--accent)] bg-[var(--accent)]/8 font-semibold" : "border-dashed border-[var(--border)] text-[var(--fg-muted)] hover:border-[var(--accent)]"
+                        }`}
+                      >
+                        <Punto on={pickedContext === -1} />
+                        Sin enfoque especial
+                      </button>
+                    </div>
+                    <textarea
+                      value={context}
+                      onChange={(e) => {
+                        setContext(e.target.value);
+                        setPickedContext(null);
                       }}
-                      aria-pressed={pickedContext === i}
-                      className={`rounded-[var(--radius)] border px-4 py-3 text-left transition ${
-                        pickedContext === i
-                          ? "border-[var(--accent)] bg-[var(--surface-2)]"
-                          : "border-[var(--border)] hover:border-[var(--accent)]"
-                      }`}
-                    >
-                      <span className="block text-sm font-semibold">{c.label}</span>
-                      <span className="mt-1 block text-sm text-[var(--fg-muted)]">{c.text}</span>
-                    </button>
-                  ))}
+                      rows={2}
+                      placeholder="O escribe el tuyo"
+                      aria-label="Enfoque propio"
+                      className={`${input} resize-y !py-2 text-sm leading-relaxed`}
+                    />
+                  </section>
                 </div>
-                <textarea
-                  value={context}
-                  onChange={(e) => setContext(e.target.value)}
-                  rows={3}
-                  placeholder="El contexto elegido aparece aquí y lo puedes ajustar"
-                  className={`${input} resize-y text-base leading-relaxed`}
-                />
 
-                {generated && <p className="text-xs text-[var(--fg-muted)]">Ya hay un borrador: «Siguiente» para revisarlo, o «Volver a generar» abajo.</p>}
+                {generated && (
+                  <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--fg-muted)]">
+                    Ya hay un borrador: «Siguiente» para revisarlo.
+                    <button type="button" onClick={generate} disabled={generating} className="lx-link inline-flex items-center gap-1 font-semibold disabled:opacity-60">
+                      {generating ? <Loader2 size={12} className="animate-spin" /> : <RotateCcw size={12} />} Volver a generar con esta elección
+                    </button>
+                  </p>
+                )}
               </>
             )}
           </Step>
@@ -1117,20 +1162,8 @@ export function ArticleWizard({
         )}
 
         {current.key === "seccion" && (
-          <Step title="Sección y autor" hint="Dónde se publica y quién firma. Puedes dejarlo para después.">
-            <div className="flex flex-col gap-7">
-              <SectionTree options={categories} value={categoryId} onChange={setCategoryId} sugeridas={seccionesSugeridas} />
-              <div className="flex flex-col gap-3">
-                <span className="lx-kicker text-[var(--fg-muted)]">Autor</span>
-                <div className="flex items-center gap-3 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] p-3">
-                  <span className="grid size-10 place-items-center rounded-full bg-[var(--accent)] text-base font-bold text-[var(--accent-fg)]">{(authorName ?? "?").charAt(0).toUpperCase()}</span>
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold">{authorName ?? "Tu firma se asigna al guardar"}</p>
-                    <p className="text-xs text-[var(--fg-muted)]">La nota la firma quien la escribe: tu usuario. No se puede cambiar.</p>
-                  </div>
-                </div>
-              </div>
-            </div>
+          <Step ancho="lg" title="Sección y autor" hint="Dónde se publica y quién firma. Puedes dejarlo para después.">
+            <SectionTree options={categories} value={categoryId} onChange={setCategoryId} sugeridas={seccionesSugeridas} firma={authorName ?? "tu usuario, al guardar"} />
           </Step>
         )}
 
@@ -1555,15 +1588,24 @@ export function ArticleWizard({
 }
 
 /** Estructura común de cada paso: título, una línea de ayuda y el contenido, con una entrada suave. */
-function Step({ title, hint, children, ancho = "md" }: { title: string; hint: string; children: React.ReactNode; ancho?: "md" | "lg" }) {
+function Step({ title, hint, children, ancho = "md" }: { title: string; hint: React.ReactNode; children: React.ReactNode; ancho?: "md" | "lg" | "xl" }) {
   return (
-    <div className={`lx-step mx-auto flex w-full flex-col gap-5 ${ancho === "lg" ? "max-w-3xl" : "max-w-2xl"}`}>
+    <div className={`lx-step mx-auto flex w-full flex-col gap-5 ${ancho === "xl" ? "max-w-5xl" : ancho === "lg" ? "max-w-3xl" : "max-w-2xl"}`}>
       <header className="flex flex-col gap-1">
         <h2 className="lx-display text-2xl font-semibold tracking-tight">{title}</h2>
-        <p className="text-sm leading-snug text-[var(--fg-muted)]">{hint}</p>
+        <div className="text-sm leading-snug text-[var(--fg-muted)]">{hint}</div>
       </header>
       <div className="flex flex-col gap-3.5">{children}</div>
     </div>
+  );
+}
+
+/** Punto de selección de las tarjetas de opciones (título y enfoque). */
+function Punto({ on }: { on: boolean }) {
+  return (
+    <span aria-hidden className={`mt-0.5 grid size-[1.1rem] shrink-0 place-items-center rounded-full border transition ${on ? "border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-fg)]" : "border-[var(--border-strong,var(--border))]"}`}>
+      {on && <Check size={11} strokeWidth={3} />}
+    </span>
   );
 }
 
