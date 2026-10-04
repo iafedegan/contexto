@@ -365,8 +365,8 @@ async function noticiaComoTema(c: Ctx, k: number) {
   if (!esRef(c, n.url)) c.e.refs = [...(c.e.refs ?? []), { title: n.title, outlet: n.outlet, url: n.url, videoId: n.videoId }];
   await limpiarTarjetas(c);
   c.nuevo = true;
-  c.aviso = "✅ Tema elegido: revísalo y pulsa «Proponer títulos y contextos».";
-  return pasoTema(c);
+  await fin(c);
+  return proponer(c); // sigue solo: propone títulos y enfoques con esa noticia
 }
 
 async function proponer(c: Ctx) {
@@ -1034,9 +1034,8 @@ async function acciones(c: Ctx, d: string) {
           if (!idea) return fallo(c, "Esa idea ya no está: pide otras.");
           c.e.topic = `${idea.title}. ${idea.angle}`;
           c.e.options = undefined; c.e.enOpciones = false;
-          c.aviso = "✅ Tema elegido: revísalo y pulsa «Proponer títulos y contextos».";
           await fin(c);
-          return pasoTema(c);
+          return proponer(c); // sigue solo: propone títulos y enfoques con ese tema
         }
         case "nf": c.e.noticiasFiltro = (t || "todo") as NonNullable<EstadoChat["noticiasFiltro"]>; await fin(c); return mostrarNoticias(c);
         case "ns": return noticiaComoTema(c, Number(t));
