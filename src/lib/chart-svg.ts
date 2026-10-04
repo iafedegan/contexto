@@ -23,11 +23,17 @@ const W = 800;
 /** Estilo «infografía moderna»: panel de vidrio oscuro con degradados neón (turquesa, violeta, rosa, ámbar). */
 const PALETTE = ["#2dd4bf", "#a78bfa", "#f472b6", "#fbbf24"];
 const GRAD: [string, string][] = [["#34d399", "#22d3ee"], ["#a78bfa", "#6366f1"], ["#f472b6", "#fb7185"], ["#fbbf24", "#f97316"]];
-const INK = "#ffffff";
-const MUTED = "rgba(255,255,255,0.64)";
-const GRID = "rgba(255,255,255,0.11)";
-const AXIS = "rgba(255,255,255,0.32)";
-const CARD_EDGE = "#171a52";
+/** Tonos del panel oscuro (imagen estática) y del modo transparente (hereda el color de texto y el fondo del sitio). */
+const DARK_TONE = { ink: "#ffffff", muted: "rgba(255,255,255,0.64)", grid: "rgba(255,255,255,0.11)", axis: "rgba(255,255,255,0.32)", edge: "#171a52", dot: "#14163f" };
+const OPEN_TONE = {
+  ink: "currentColor",
+  muted: "color-mix(in srgb, currentColor 62%, transparent)",
+  grid: "color-mix(in srgb, currentColor 16%, transparent)",
+  axis: "color-mix(in srgb, currentColor 38%, transparent)",
+  edge: "var(--bg, #fff)",
+  dot: "var(--bg, #fff)",
+};
+let TONE = DARK_TONE;
 const FONT = "Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif";
 
 const esc = (s: string) =>
@@ -131,6 +137,8 @@ export type RenderOpts = {
   hidden?: number[];
   /** Identificador único del degradado cuando hay varias gráficas en la página. */
   id?: string;
+  /** Sin panel ni brillos de fondo; textos y rejilla heredan el color del sitio (fondo transparente). */
+  transparent?: boolean;
 };
 
 const STYLE = `<style>
@@ -142,12 +150,14 @@ const STYLE = `<style>
 .lxc .ln{stroke-dasharray:1;stroke-dashoffset:1;animation:lxd 1.1s ease-out .1s forwards}
 .lxc .dot{transform-box:fill-box;transform-origin:center;transition:transform .15s ease}
 .lxc .col .gd{opacity:0;transition:opacity .15s}.lxc .col:hover .gd{opacity:1}.lxc .col:hover .dot{transform:scale(1.55)}
-.lxc .sl{transform-box:fill-box;transform-origin:center;transition:transform .18s ease}.lxc .sl.on{transform:scale(1.045)}
+.lxc .sl{transform-box:fill-box;transform-origin:center;transition:transform .18s ease}.lxc .sl.on,.lxc .sl.sel{transform:scale(1.045)}
+.lxc.hasel .mk:not(.sel){opacity:.32}.lxc .mk.sel{opacity:1;filter:brightness(1.08)}.lxc .col.sel .gd{opacity:1}.lxc .col.sel .dot{transform:scale(1.7)}
 @keyframes lxg{from{transform:scaleY(0)}}@keyframes lxh{from{transform:scaleX(0)}}@keyframes lxd{to{stroke-dashoffset:0}}
 @media (prefers-reduced-motion:reduce){.lxc *{animation:none!important}.lxc .ln{stroke-dashoffset:0}}
 </style>`;
 
 export function renderChartSvg(c: ChartSpec, opts: RenderOpts = {}): string {
+  TONE = opts.transparent ? OPEN_TONE : DARK_TONE;
   const titleLines = wrap(c.title, 46, 2);
   const headH = 30 + titleLines.length * 26 + (c.unit ? 22 : 0) + (c.series.length > 1 ? 26 : 0);
   const source = c.source ? wrap(`Fuente: ${c.source}`, 118, 2) : [];
@@ -186,7 +196,7 @@ export function renderChartSvg(c: ChartSpec, opts: RenderOpts = {}): string {
   const legend =
     c.series.length > 1 && c.type !== "pie"
       ? c.series
-          .map((s, i) => `<g class="lg${hidden.has(i) ? " off" : ""}"${o.interactive ? ` data-lg="${i}"` : ""}><rect x="${24 + i * 170}" y="${headH - 28}" width="160" height="24" fill="transparent"/><circle cx="${34 + i * 170}" cy="${headH - 14}" r="5" fill="${PALETTE[i % PALETTE.length]}"/><text x="${46 + i * 170}" y="${headH - 10}" font-size="12.5" fill="${INK}">${esc(s.name.slice(0, 22))}</text></g>`)
+          .map((s, i) => `<g class="lg${hidden.has(i) ? " off" : ""}"${o.interactive ? ` data-lg="${i}"` : ""}><rect x="${24 + i * 170}" y="${headH - 28}" width="160" height="24" fill="transparent"/><circle cx="${34 + i * 170}" cy="${headH - 14}" r="5" fill="${PALETTE[i % PALETTE.length]}"/><text x="${46 + i * 170}" y="${headH - 10}" font-size="12.5" fill="${TONE.ink}">${esc(s.name.slice(0, 22))}</text></g>`)
           .join("")
       : "";
 
@@ -200,13 +210,13 @@ export function renderChartSvg(c: ChartSpec, opts: RenderOpts = {}): string {
 <linearGradient id="${o.gid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${PALETTE[0]}" stop-opacity="0.38"/><stop offset="1" stop-color="${PALETTE[0]}" stop-opacity="0"/></linearGradient>` +
     GRAD.map((g, i) => `<linearGradient id="${o.gid}c${i}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${g[1]}"/><stop offset="1" stop-color="${g[0]}" stop-opacity="0.85"/></linearGradient><linearGradient id="${o.gid}h${i}" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="${g[0]}" stop-opacity="0.85"/><stop offset="1" stop-color="${g[1]}"/></linearGradient>`).join("") +
     `<filter id="${o.gid}f" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>` +
-    `<rect x="0.5" y="0.5" width="${W - 1}" height="${H - 1}" rx="22" fill="url(#${o.gid}bg)" stroke="rgba(255,255,255,0.16)"/><circle cx="${W - 70}" cy="30" r="170" fill="url(#${o.gid}gl1)"/><circle cx="60" cy="${H - 20}" r="190" fill="url(#${o.gid}gl2)"/>` +
-    lines(32, 42, titleLines, 21, INK, "start", 700, 1.2) +
-    `<text x="${W - 32}" y="48" font-size="32" font-weight="800" text-anchor="end" fill="${PALETTE[0]}">${esc(kpi)}</text><text x="${W - 32}" y="68" font-size="11.5" text-anchor="end" fill="${MUTED}">${esc(kpiSub)}</text>` +
-    (c.unit ? `<text x="32" y="${42 + titleLines.length * 25 + 2}" font-size="13" fill="${MUTED}">${esc(c.unit)}</text>` : "") +
+    (opts.transparent ? "" : `<rect x="0.5" y="0.5" width="${W - 1}" height="${H - 1}" rx="22" fill="url(#${o.gid}bg)" stroke="rgba(255,255,255,0.16)"/><circle cx="${W - 70}" cy="30" r="170" fill="url(#${o.gid}gl1)"/><circle cx="60" cy="${H - 20}" r="190" fill="url(#${o.gid}gl2)"/>`) +
+    lines(32, 42, titleLines, 21, TONE.ink, "start", 700, 1.2) +
+    `<text x="${W - 32}" y="48" font-size="32" font-weight="800" text-anchor="end" fill="${PALETTE[0]}">${esc(kpi)}</text><text x="${W - 32}" y="68" font-size="11.5" text-anchor="end" fill="${TONE.muted}">${esc(kpiSub)}</text>` +
+    (c.unit ? `<text x="32" y="${42 + titleLines.length * 25 + 2}" font-size="13" fill="${TONE.muted}">${esc(c.unit)}</text>` : "") +
     legend +
     body +
-    (source.length ? lines(32, H - footH + 22, source, 11, MUTED) : "") +
+    (source.length ? lines(32, H - footH + 22, source, 11, TONE.muted) : "") +
     `</svg>`
   );
 }
@@ -226,11 +236,11 @@ function cartesian(c: ChartSpec, top: number, h: number, o: Ctx) {
 
   let out = "";
   for (const v of sc.ticks) {
-    out += `<line x1="${left}" y1="${y(v)}" x2="${W - right}" y2="${y(v)}" stroke="${v === 0 ? AXIS : GRID}" ${v === 0 ? "" : 'stroke-dasharray="3 4"'}/>`;
-    out += `<text x="${left - 10}" y="${y(v) + 4}" font-size="11.5" text-anchor="end" fill="${MUTED}">${esc(fmtTick(v))}</text>`;
+    out += `<line x1="${left}" y1="${y(v)}" x2="${W - right}" y2="${y(v)}" stroke="${v === 0 ? TONE.axis : TONE.grid}" ${v === 0 ? "" : 'stroke-dasharray="3 4"'}/>`;
+    out += `<text x="${left - 10}" y="${y(v) + 4}" font-size="11.5" text-anchor="end" fill="${TONE.muted}">${esc(fmtTick(v))}</text>`;
   }
   c.labels.forEach((l, i) => {
-    out += lines(cx(i), top + padT + ph + 20, wrap(l, Math.max(8, Math.floor(step / 7)), 2), 12, INK, "middle");
+    out += lines(cx(i), top + padT + ph + 20, wrap(l, Math.max(8, Math.floor(step / 7)), 2), 12, TONE.ink, "middle");
   });
 
   if (c.type === "bar") {
@@ -247,7 +257,7 @@ function cartesian(c: ChartSpec, top: number, h: number, o: Ctx) {
         out += o.interactive
           ? `<path d="${d}" fill="url(#${o.gid}c${si % 4})" filter="url(#${o.gid}f)" class="mk bar" data-i="${i}" data-s="${si}" tabindex="0" style="animation-delay:${i * 50}ms"/>`
           : `<path d="${d}" fill="url(#${o.gid}c${si % 4})" filter="url(#${o.gid}f)"/>`;
-        if (shown.length === 1 || n <= 5) out += `<text x="${x + bw / 2}" y="${y0 - 7}" font-size="12" font-weight="600" text-anchor="middle" fill="${INK}" pointer-events="none">${esc(fmt(v))}</text>`;
+        if (shown.length === 1 || n <= 5) out += `<text x="${x + bw / 2}" y="${y0 - 7}" font-size="12" font-weight="600" text-anchor="middle" fill="${TONE.ink}" pointer-events="none">${esc(fmt(v))}</text>`;
       }),
     );
   } else {
@@ -262,9 +272,9 @@ function cartesian(c: ChartSpec, top: number, h: number, o: Ctx) {
       out += `<polyline${o.interactive ? ' class="ln" pathLength="1"' : ""} points="${pts.map((p) => p.join(",")).join(" ")}" fill="none" stroke="${color}" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" filter="url(#${o.gid}f)"/>`;
       if (!o.interactive) {
         pts.forEach((p, i) => {
-          out += `<circle cx="${p[0]}" cy="${p[1]}" r="4.5" fill="#14163f" stroke="${color}" stroke-width="2.5"/>`;
+          out += `<circle cx="${p[0]}" cy="${p[1]}" r="4.5" fill="${TONE.dot}" stroke="${color}" stroke-width="2.5"/>`;
           if (shown.length === 1 && (n <= 8 || i === n - 1 || i === 0)) {
-            out += `<text x="${p[0]}" y="${p[1] - 12}" font-size="12" font-weight="600" text-anchor="middle" fill="${INK}">${esc(fmt(s.values[i]))}</text>`;
+            out += `<text x="${p[0]}" y="${p[1] - 12}" font-size="12" font-weight="600" text-anchor="middle" fill="${TONE.ink}">${esc(fmt(s.values[i]))}</text>`;
           }
         });
       }
@@ -272,9 +282,9 @@ function cartesian(c: ChartSpec, top: number, h: number, o: Ctx) {
     if (o.interactive) {
       // Una columna sensible por punto: guía vertical, puntos que crecen y tooltip.
       c.labels.forEach((_, i) => {
-        out += `<g class="col" data-i="${i}"><rect data-i="${i}" x="${cx(i) - step / 2}" y="${top + padT}" width="${step}" height="${ph}" fill="transparent"/><line class="gd" x1="${cx(i)}" y1="${top + padT}" x2="${cx(i)}" y2="${top + padT + ph}" stroke="${MUTED}" stroke-width="1" stroke-dasharray="3 3"/>`;
+        out += `<g class="col" data-i="${i}"><rect data-i="${i}" x="${cx(i) - step / 2}" y="${top + padT}" width="${step}" height="${ph}" fill="transparent"/><line class="gd" x1="${cx(i)}" y1="${top + padT}" x2="${cx(i)}" y2="${top + padT + ph}" stroke="${TONE.muted}" stroke-width="1" stroke-dasharray="3 3"/>`;
         shown.forEach(({ s, si }) => {
-          out += `<circle class="dot" cx="${cx(i)}" cy="${y(s.values[i])}" r="4.5" fill="#14163f" stroke="${PALETTE[si % PALETTE.length]}" stroke-width="2.5" pointer-events="none"/>`;
+          out += `<circle class="dot" cx="${cx(i)}" cy="${y(s.values[i])}" r="4.5" fill="${TONE.dot}" stroke="${PALETTE[si % PALETTE.length]}" stroke-width="2.5" pointer-events="none"/>`;
         });
         out += `</g>`;
       });
@@ -295,12 +305,12 @@ function hbars(c: ChartSpec, top: number, h: number, o: Ctx) {
 
   let out = "";
   for (const v of sc.ticks) {
-    out += `<line x1="${x(v)}" y1="${top + 6}" x2="${x(v)}" y2="${top + h - 22}" stroke="${v === 0 ? AXIS : GRID}" ${v === 0 ? "" : 'stroke-dasharray="3 4"'}/>`;
-    out += `<text x="${x(v)}" y="${top + h - 6}" font-size="11.5" text-anchor="middle" fill="${MUTED}">${esc(fmtTick(v))}</text>`;
+    out += `<line x1="${x(v)}" y1="${top + 6}" x2="${x(v)}" y2="${top + h - 22}" stroke="${v === 0 ? TONE.axis : TONE.grid}" ${v === 0 ? "" : 'stroke-dasharray="3 4"'}/>`;
+    out += `<text x="${x(v)}" y="${top + h - 6}" font-size="11.5" text-anchor="middle" fill="${TONE.muted}">${esc(fmtTick(v))}</text>`;
   }
   c.labels.forEach((l, i) => {
     const yc = top + 6 + rowH * i + rowH / 2;
-    out += lines(left - 12, yc - (wrap(l, 26, 2).length - 1) * 7 + 4, wrap(l, 26, 2), 12.5, INK, "end");
+    out += lines(left - 12, yc - (wrap(l, 26, 2).length - 1) * 7 + 4, wrap(l, 26, 2), 12.5, TONE.ink, "end");
     shown.forEach(({ s, si }, vi) => {
       const v = s.values[i];
       const by = yc - (bh * shown.length) / 2 + bh * vi;
@@ -311,7 +321,7 @@ function hbars(c: ChartSpec, top: number, h: number, o: Ctx) {
       out += o.interactive
         ? `<path d="${d}" fill="url(#${o.gid}h${si % 4})" filter="url(#${o.gid}f)" class="mk hb" data-i="${i}" data-s="${si}" tabindex="0" style="animation-delay:${i * 45}ms"/>`
         : `<path d="${d}" fill="url(#${o.gid}h${si % 4})" filter="url(#${o.gid}f)"/>`;
-      out += `<text x="${x0 + w + 8}" y="${by + bh / 2 + 4}" font-size="12" font-weight="600" fill="${INK}" pointer-events="none">${esc(fmt(v))}</text>`;
+      out += `<text x="${x0 + w + 8}" y="${by + bh / 2 + 4}" font-size="12" font-weight="600" fill="${TONE.ink}" pointer-events="none">${esc(fmt(v))}</text>`;
     });
   });
   return out;
@@ -329,13 +339,13 @@ function donut(c: ChartSpec, top: number, h: number, o: Ctx) {
     const large = a1 - a0 > Math.PI ? 1 : 0;
     const p = (a: number, rad: number) => `${cx + rad * Math.cos(a)},${cy + rad * Math.sin(a)}`;
     const d = `M${p(a0, r)} A${r},${r} 0 ${large} 1 ${p(a1, r)} L${p(a1, ri)} A${ri},${ri} 0 ${large} 0 ${p(a0, ri)} Z`;
-    out += `<path d="${d}" fill="url(#${o.gid}c${i % 4})" stroke="${CARD_EDGE}" stroke-width="3"${o.interactive ? ` class="mk sl" data-i="${i}" data-s="0" tabindex="0"` : ""}/>`;
+    out += `<path d="${d}" fill="url(#${o.gid}c${i % 4})" stroke="${TONE.edge}" stroke-width="3"${o.interactive ? ` class="mk sl" data-i="${i}" data-s="0" tabindex="0"` : ""}/>`;
     a0 = a1;
   });
-  if (ri > 0) out += `<text x="${cx}" y="${cy - 2}" font-size="22" font-weight="700" text-anchor="middle" fill="${INK}" pointer-events="none">${esc(fmt(total))}</text><text x="${cx}" y="${cy + 18}" font-size="12" text-anchor="middle" fill="${MUTED}" pointer-events="none">total</text>`;
+  if (ri > 0) out += `<text x="${cx}" y="${cy - 2}" font-size="22" font-weight="700" text-anchor="middle" fill="${TONE.ink}" pointer-events="none">${esc(fmt(total))}</text><text x="${cx}" y="${cy + 18}" font-size="12" text-anchor="middle" fill="${TONE.muted}" pointer-events="none">total</text>`;
   c.labels.forEach((l, i) => {
     const yy = top + h / 2 - ((c.labels.length - 1) * 28) / 2 + i * 28;
-    out += `<g${o.interactive ? ` class="mk" data-i="${i}" data-s="0"` : ""}><rect x="440" y="${yy - 18}" width="${W - 440 - 24}" height="26" fill="transparent"/><circle cx="450" cy="${yy - 4}" r="6" fill="${PALETTE[i % PALETTE.length]}"/><text x="466" y="${yy}" font-size="13.5" fill="${INK}">${esc(l.slice(0, 28))}</text><text x="${W - 32}" y="${yy}" font-size="13.5" font-weight="600" text-anchor="end" fill="${INK}">${esc(fmt(vals[i]))} · ${Math.round((vals[i] / total) * 100)} %</text></g>`;
+    out += `<g${o.interactive ? ` class="mk" data-i="${i}" data-s="0"` : ""}><rect x="440" y="${yy - 18}" width="${W - 440 - 24}" height="26" fill="transparent"/><circle cx="450" cy="${yy - 4}" r="6" fill="${PALETTE[i % PALETTE.length]}"/><text x="466" y="${yy}" font-size="13.5" fill="${TONE.ink}">${esc(l.slice(0, 28))}</text><text x="${W - 32}" y="${yy}" font-size="13.5" font-weight="600" text-anchor="end" fill="${TONE.ink}">${esc(fmt(vals[i]))} · ${Math.round((vals[i] / total) * 100)} %</text></g>`;
   });
   return out;
 }

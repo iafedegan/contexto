@@ -4,7 +4,7 @@ import { db } from "@/db";
 import { articles, authors, categories, users } from "@/db/schema";
 import { canPublish } from "@/lib/auth";
 import { auditArticle, scoreLabel } from "@/lib/seo-audit";
-import { TIPOS_GRAFICA, type ChartSpec, type TipoGrafica } from "@/lib/chart-svg";
+import { encodeSpec, TIPOS_GRAFICA, type ChartSpec, type TipoGrafica } from "@/lib/chart-svg";
 import {
   generateArticleDraftCore, generateChartCore, generateCoverImageCore, leerEnlacesCore, regenerateDraftPartCore,
   searchNewsAboutCore, suggestTitlesAndContextsCore, suggestTopicIdeasCore, transcribirAudioBytesCore,
@@ -290,7 +290,7 @@ async function hacerGrafica(c: Ctx, tipo: TipoGrafica) {
   await fin(c);
   const datos = r.chart.labels.map((l, i) => `• ${esc(l)}: ${r.chart.series[0].values[i]}`).join("\n");
   await enviarFoto(c.chatId, png, `<b>${esc(r.chart.title)}</b>\n${esc(r.chart.unit)}\n\n${datos.slice(0, 600)}\n\n<i>Fuente: ${esc(r.sourceNote)}. Verifica antes de publicar.</i>`);
-  await enviar(c.chatId, `<blockquote expandable><b>Fuentes consultadas (${Math.min(r.sources.length, 6)})</b>\n${r.sources.slice(0, 6).map((s) => `🔗 <a href="${esc(s.url)}">${esc(s.title)}</a>`).join("\n")}</blockquote>\n\nEsta misma imagen es la que se inserta en la nota, con su fuente. ¿La inserto?`, [
+  await enviar(c.chatId, `<blockquote expandable><b>Fuentes consultadas (${Math.min(r.sources.length, 6)})</b>\n${r.sources.slice(0, 6).map((s) => `🔗 <a href="${esc(s.url)}">${esc(s.title)}</a>`).join("\n")}</blockquote>\n\nEn la nota se publica la gráfica <b>interactiva</b> (con filtros y fondo transparente) con estos mismos datos; esta imagen queda como respaldo. ¿La inserto?`, [
     [{ texto: "✅ Insertar en la nota", dato: "gi" }, { texto: "🔁 Otro tipo", dato: "gt" }],
     [{ texto: "⏭️ Omitir", dato: "n:" }],
   ]);
@@ -300,9 +300,12 @@ function insertarGrafica(c: Ctx) {
   const spec = ch.spec as ChartSpec;
   const fuente = `Fuente: ${ch.sourceNote}. Consultado en: ${ch.sources.slice(0, 3).map((x) => x.title).join(", ")}.`;
   const alt = `Gráfica: ${spec.title} (${spec.unit})`.replace(/"/g, "'");
-  // Reemplaza la gráfica anterior de Telegram (si la hubo) para no duplicarla.
-  const sinPrevia = (c.e.body ?? "").replace(/<figure><img [^>]*alt="Gráfica:[^>]*>(?:<figcaption>[\s\S]*?<\/figcaption>)?<\/figure>/g, "");
-  c.e.body = `${sinPrevia}<figure><img src="${ch.pngUrl}" alt="${esc(alt)}"><figcaption>${esc(fuente)}</figcaption></figure>`;
+  // En el sitio se muestra la gráfica INTERACTIVA (con filtros y fondo transparente); la imagen que viste en el chat
+  // queda dentro como respaldo (RSS, correo, lectores sin JavaScript). Reemplaza la gráfica anterior para no duplicarla.
+  const sinPrevia = (c.e.body ?? "")
+    .replace(/<figure class="lx-chart" data-chart="[\w-]+">[\s\S]*?<\/figure>/g, "")
+    .replace(/<figure><img [^>]*alt="Gráfica:[^>]*>(?:<figcaption>[\s\S]*?<\/figcaption>)?<\/figure>/g, "");
+  c.e.body = `${sinPrevia}<figure class="lx-chart" data-chart="${encodeSpec(spec)}"><img src="${ch.pngUrl}" alt="${esc(alt)}"><figcaption>${esc(fuente)}</figcaption></figure>`;
   return true;
 }
 
