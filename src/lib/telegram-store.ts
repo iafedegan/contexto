@@ -3,6 +3,7 @@ import { randomInt } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { siteSettings } from "@/db/schema";
+import type { NewsItem } from "@/lib/ai-core";
 import type { Material } from "@/lib/material-types";
 
 /**
@@ -64,20 +65,37 @@ export async function desvincular(chatId: number | string) {
   await escribir(estadoKey(chatId), {});
 }
 
-export type Fase =
-  | "idle" | "esperando_titulo" | "esperando_edicion" | "esperando_fecha" | "esperando_foto"
-  | "esperando_enfoque_ideas" | "esperando_busqueda"
-  | "titulos" | "enfoque" | "titulo" | "resumen" | "claves" | "seccion" | "cuerpo" | "grafica" | "portada" | "seo" | "final";
+/** Paso del recorrido (mismos nombres que el asistente web). «tema» es el primer paso del modo IA; «titulo», el del modo manual. */
+export type Fase = "idle" | "tema" | "titulo" | "resumen" | "claves" | "portada" | "seccion" | "cuerpo" | "grafica" | "seo" | "final";
+
+/** Dato que se espera como PRÓXIMO mensaje de texto (lo pide un botón); si no hay, el texto se interpreta según el paso. */
+export type Espera =
+  | "titulo" | "contexto" | "resumen" | "claves" | "cuerpo" | "metaTitle" | "metaDescription" | "alt" | "escena"
+  | "graficaTema" | "correccion" | "fecha";
 
 export type EstadoChat = {
   fase: Fase;
   /** Último update procesado: Telegram reintenta si tardamos y no hay que repetir nada. */
   ultimoUpdate?: number;
+  /** «ia» (por defecto) o «manual», como en «Cambiar modo» del asistente web. */
+  modo?: "ia" | "manual";
+  espera?: Espera;
+  /** Pestaña abierta en «¿Prefieres partir de otra cosa?». */
+  fuente?: "ideas" | "noticias" | "entrevista" | "enlaces";
   topic?: string;
+  ideasFocus?: string;
   ideas?: { title: string; angle: string; why: string; scope: string }[];
-  noticias?: { title: string; outlet: string; date: string; summary: string; url: string }[];
+  ideasFuentes?: { title: string; url: string }[];
+  noticias?: NewsItem[];
+  noticiasFiltro?: "todo" | "noticia" | "video" | "oficial";
+  /** Noticias elegidas para referenciar: van enlazadas al final de la nota (los videos, incrustados). */
+  refs?: { title: string; outlet: string; url: string; videoId?: string }[];
   material?: Material[];
+  /** Índice del material cuyo texto se está corrigiendo. */
+  editIdx?: number;
   options?: { titles: string[]; contexts: { label: string; text: string }[] };
+  enOpciones?: boolean;
+  generated?: boolean;
   title?: string;
   context?: string;
   articleId?: string;
@@ -89,9 +107,11 @@ export type EstadoChat = {
   categoryId?: string;
   coverUrl?: string;
   coverAlt?: string;
-  edit?: "titulo" | "resumen" | "claves" | "cuerpo";
+  sceneTxt?: string;
+  chartTopic?: string;
+  tipoGrafica?: string;
+  chartInsertada?: boolean;
   chart?: { spec: unknown; sourceNote: string; sources: { title: string; url: string }[]; pngUrl?: string };
-  chartToken?: string;
   /** Rama de secciones que se está mostrando (id de la sección principal). */
   ramaSeccion?: string;
 };

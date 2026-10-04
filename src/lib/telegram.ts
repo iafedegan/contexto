@@ -106,6 +106,11 @@ export async function enviar(chatId: number | string, html: string, botones?: Bo
   return ultimo;
 }
 
+/** Cambia solo los botones de un mensaje ya enviado (p. ej. «Referenciar» → «✓ Referenciada»). */
+export async function editarTeclado(chatId: number | string, mensajeId: number, botones?: Boton[][]) {
+  return tg("editMessageReplyMarkup", { chat_id: chatId, message_id: mensajeId, reply_markup: teclado(botones) ?? { inline_keyboard: [] } });
+}
+
 export async function editar(chatId: number | string, mensajeId: number, html: string, botones?: Boton[][]) {
   return tg("editMessageText", { chat_id: chatId, message_id: mensajeId, text: html.slice(0, 4000), parse_mode: "HTML", disable_web_page_preview: true, reply_markup: teclado(botones) ?? { inline_keyboard: [] } });
 }
