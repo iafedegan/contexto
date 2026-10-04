@@ -48,7 +48,7 @@ const NOMBRE_PASO: Partial<Record<Fase, string>> = {
   seccion: "Sección y autor", cuerpo: "Cuerpo", grafica: "Gráfica", seo: "Buscadores", final: "Vista previa",
 };
 const AYUDA =
-  "✍️ <b>Redactor de CONtexto Ganadero</b>\n\nEs el mismo asistente del panel, en nueve pasos: Título y contexto · Resumen · Palabras clave · Portada · Sección y autor · Cuerpo · Gráfica · Buscadores · Vista previa.\n\nTodo ocurre en un solo mensaje que se va actualizando: usa los botones <b>⬅️ Atrás</b> y <b>Siguiente ➡️</b>. Lo que escribas en el chat se suma al tema (o responde al botón que pulsaste).\n\n/nueva — empezar otra nota\n/estado — estado de la última nota\n/cancelar — descartar el flujo actual\n/ayuda — esta ayuda\n/desvincular — separar este Telegram de tu cuenta";
+  "✍️ <b>Redactor de CONtexto Ganadero</b>\n\nEs el mismo asistente del panel, en nueve pasos: Título y contexto · Resumen · Palabras clave · Portada · Sección y autor · Cuerpo · Gráfica · Buscadores · Vista previa.\n\nTodo ocurre en un solo mensaje que se va actualizando: usa los botones <b>⬅️ Atrás</b> y <b>Siguiente ➡️</b>. Lo que escribas en el chat se suma al tema (o responde al botón que pulsaste).\n\n/nueva — empezar un artículo con IA\n/estado — estado de la última nota\n/cancelar — descartar el flujo actual\n/ayuda — esta ayuda\n/desvincular — separar este Telegram de tu cuenta";
 
 const urlsEn = (t: string) => [...new Set(t.match(/https?:\/\/[^\s<>"')]+/gi) ?? [])];
 
@@ -717,13 +717,11 @@ async function panelFinal(c: Ctx) {
 
 // --- Menú de inicio y entrada ------------------------------------------------------------------------------------
 
-/** Primer paso: la misma pantalla «¿Cómo quieres crearlo?» del panel, con sus dos opciones y sus textos. */
+/** Telegram es solo para artículos con IA: /nueva abre directamente el primer paso del asistente. */
 async function menuInicio(c: Ctx) {
   c.nuevo = true;
-  await mostrar(c, "<i>NUEVO ARTÍCULO</i>\n<b>¿Cómo quieres crearlo?</b>\n\n✏️ <b>Escribirlo yo</b>\nUn paso a paso guiado: título, resumen, palabras clave, sección, cuerpo, portada y buscadores. Al final ves la vista previa antes de guardar.\n\n✨ <b>Con asistente de IA</b>\nSolo el título y un poco de contexto: la IA redacta el borrador y lo revisas con el mismo paso a paso, barra SEO y vista previa. Nada se publica sin tu aprobación.", [
-    [{ texto: "✏️ Escribirlo yo · Empezar paso a paso →", dato: "m:man" }],
-    [{ texto: "✨ Con asistente de IA · Usar el asistente →", dato: "m:ia" }],
-  ]);
+  c.e.modo = "ia";
+  return paso(c, "tema");
 }
 
 /** Una nota ya guardada o publicada no debe contaminar la siguiente: el contexto nuevo empieza desde cero. */
@@ -959,8 +957,8 @@ async function acciones(c: Ctx, d: string) {
     case "m": { // elegir modo: con IA o paso a paso (el panel de inicio se reescribe)
       const panel = c.e.panel;
       c.e = { fase: "idle", ultimoUpdate: c.e.ultimoUpdate, panel };
-      c.e.modo = v === "man" ? "manual" : "ia";
-      return paso(c, v === "man" ? "titulo" : "tema");
+      c.e.modo = "ia";
+      return paso(c, "tema");
     }
     case "x": { // cancelar una entrada pendiente
       c.e.espera = undefined;
