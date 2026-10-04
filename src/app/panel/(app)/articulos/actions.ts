@@ -11,7 +11,8 @@ import { embed } from "@/lib/embeddings";
 import { avisarSiUltimaHora } from "@/lib/push";
 import { slugify } from "@/lib/utils";
 import { autorDeUsuario } from "@/lib/user-authors";
-import { guardarBorradorCore, type BorradorInput } from "@/lib/article-ops";
+import { fijarPortadaCore, guardarBorradorCore, type BorradorInput } from "@/lib/article-ops";
+import { tienePermiso } from "@/lib/permisos-server";
 
 /** Recalcula y persiste el embedding del artículo (= reindexación para el asistente). */
 async function reindex(articleId: string) {
@@ -101,6 +102,13 @@ export async function saveArticle(formData: FormData) {
   }
 
   await reindex(articleId);
+  // Lugar en la portada del sitio (solo con permiso «portada»; «keep» o ausente = no tocar).
+  const portadaPos = String(formData.get("portadaPos") ?? "keep");
+  if ((portadaPos === "0" || portadaPos === "1" || portadaPos === "none") && (await tienePermiso(user.id, user.role, "portada"))) {
+    const [act] = await db.select({ pos: articles.homePosition }).from(articles).where(eq(articles.id, articleId)).limit(1);
+    const quiere = portadaPos === "none" ? null : Number(portadaPos);
+    if ((act?.pos ?? null) !== quiere) await fijarPortadaCore(articleId, quiere);
+  }
   // Los distintivos (última hora, directo) salen en la cabecera y en las
   // tarjetas de todo el portal, así que se refresca el layout completo.
   revalidatePath("/", "layout");

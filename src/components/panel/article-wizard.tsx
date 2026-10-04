@@ -73,6 +73,8 @@ export type WizardInitial = {
   metaDescription: string | null;
   isBreaking?: boolean;
   isLive?: boolean;
+  /** Lugar fijado en la portada del sitio (0 = principal, 1 = segunda), si lo hay. */
+  homePosition?: number | null;
 };
 
 const STEPS_MANUAL = [
@@ -167,6 +169,7 @@ export function ArticleWizard({
   site,
   status,
   canPublish = false,
+  canPortada = false,
   savedAs,
 }: {
   categories: (Option & { parentId?: string | null })[];
@@ -184,6 +187,8 @@ export function ArticleWizard({
   status?: string;
   /** Editor o administrador: puede publicar directamente. */
   canPublish?: boolean;
+  /** Puede ubicar notas en la portada del sitio (permiso «portada»). */
+  canPortada?: boolean;
   /** Resultado del último guardado (?guardado=…), para confirmarlo. */
   savedAs?: string;
 }) {
@@ -241,6 +246,11 @@ export function ArticleWizard({
   const [body, setBody] = useState(() => (initial?.body ? toText(initial.body) : ""));
   const [breaking, setBreaking] = useState(initial?.isBreaking ?? false);
   const [live, setLive] = useState(initial?.isLive ?? false);
+  // Portada del sitio: «none» = sin destacar, «0» = principal, «1» = segunda; «keep» = ocupa otro lugar fijado desde el editor de portada.
+  const [portadaPos, setPortadaPos] = useState<"none" | "0" | "1" | "keep">(() => {
+    const p = initial?.homePosition;
+    return p == null ? "none" : p === 0 ? "0" : p === 1 ? "1" : "keep";
+  });
   const [cover, setCover] = useState(initial?.coverImageUrl ?? "");
   const [coverAlt, setCoverAlt] = useState(initial?.coverImageAlt ?? "");
   const [metaTitle, setMetaTitle] = useState(initial?.metaTitle ?? "");
@@ -677,6 +687,7 @@ export function ArticleWizard({
       <input type="hidden" name="metaDescription" value={metaDescription} />
       <input type="hidden" name="isBreaking" value={breaking ? "1" : "0"} />
       <input type="hidden" name="isLive" value={live ? "1" : "0"} />
+      <input type="hidden" name="portadaPos" value={canPortada ? portadaPos : "keep"} />
 
       {/* --- Progreso --- */}
       <div className="lx-card shrink-0 px-4 py-3">
@@ -1300,7 +1311,46 @@ export function ArticleWizard({
         )}
 
         {current.key === "portada" && (
-          <Step title="Foto de portada" hint="Opcional. Si no subes ninguna, se usa una ilustración con el nombre de la sección.">
+          <Step title="Portada" hint="Dónde aparece la nota en el sitio y con qué imagen. Todo es opcional.">
+            <div className="rounded-[var(--radius)] border border-[var(--border)] p-4">
+              <p className="text-sm font-semibold">¿Publicar en la portada del sitio?</p>
+              <p className="mt-1 text-xs text-[var(--fg-muted)]">
+                Por defecto la nota entra a la portada por fecha. Aquí puedes fijarla arriba cuando se publique. El orden fino se ajusta en «Portada» del menú.
+              </p>
+              {canPortada ? (
+                <div role="radiogroup" aria-label="Lugar en la portada" className="mt-3 grid gap-2 sm:grid-cols-3">
+                  {([
+                    ["none", "Sin destacar", "Entra por fecha, como cualquier nota."],
+                    ["0", "Portada principal", "La nota grande de arriba."],
+                    ["1", "Segunda destacada", "Junto a la principal."],
+                  ] as const).map(([v, t, d]) => (
+                    <button key={v} type="button" role="radio" aria-checked={portadaPos === v} onClick={() => setPortadaPos(v)}
+                      className={`rounded-[var(--radius)] border p-3 text-left transition ${portadaPos === v ? "border-[var(--accent)] bg-[var(--accent)]/10" : "border-[var(--border)] hover:border-[var(--accent)]"}`}>
+                      <span className="block text-sm font-semibold">{t}</span>
+                      <span className="block text-xs text-[var(--fg-muted)]">{d}</span>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-3 text-xs text-[var(--fg-muted)]">Tu cuenta no ubica notas en la portada: un editor lo hace al publicar.</p>
+              )}
+              {portadaPos === "keep" && <p className="mt-2 text-xs text-[var(--fg-muted)]">Esta nota ya ocupa otro lugar fijado en la portada; se conserva.</p>}
+              {canPublish && (
+                <div className="mt-4 flex flex-col gap-2 border-t border-[var(--border)] pt-3">
+                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--fg-muted)]">Distintivos</p>
+                  <label className="flex items-start gap-2 text-sm">
+                    <input type="checkbox" className="mt-1" checked={breaking} onChange={(e) => setBreaking(e.target.checked)} />
+                    <span>⚡ <strong>Última hora</strong> — barra roja en la portada; al publicarla avisa por notificación a quienes tienen la app (una vez).</span>
+                  </label>
+                  <label className="flex items-start gap-2 text-sm">
+                    <input type="checkbox" className="mt-1" checked={live} onChange={(e) => setLive(e.target.checked)} />
+                    <span>🔴 <strong>En desarrollo</strong> — etiqueta «En vivo» en las tarjetas y en la nota.</span>
+                  </label>
+                </div>
+              )}
+            </div>
+            <p className="mt-2 text-sm font-semibold">Imagen de portada</p>
+            <p className="-mt-1 text-xs text-[var(--fg-muted)]">Si no subes ninguna, se usa una ilustración con el nombre de la sección.</p>
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-[16rem_minmax(0,1fr)]">
               <div className="relative aspect-[16/10] overflow-hidden rounded-[var(--radius)] border border-dashed border-[var(--border)] bg-[var(--surface-2)]">
                 {cover ? (
@@ -1401,12 +1451,6 @@ export function ArticleWizard({
               <button type="button" onClick={back} className="lx-link inline-flex items-center gap-1 text-sm">
                 <ArrowLeft size={14} /> Volver a editar
               </button>
-              <label className="flex items-center gap-1.5 text-sm">
-                <input type="checkbox" checked={breaking} onChange={(e) => setBreaking(e.target.checked)} /> ⚡ Última hora (avisa por notificación al publicar)
-              </label>
-              <label className="flex items-center gap-1.5 text-sm">
-                <input type="checkbox" checked={live} onChange={(e) => setLive(e.target.checked)} /> 🔴 En desarrollo (En vivo)
-              </label>
               <p className="lx-kicker ml-auto flex items-center gap-2 text-[var(--accent)]">
                 <Eye size={14} /> Así se verá en el sitio
               </p>

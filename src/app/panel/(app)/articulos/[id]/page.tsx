@@ -4,6 +4,7 @@ import { asc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { articles, authors, categories } from "@/db/schema";
 import { auth, canPublish, requirePermiso } from "@/lib/auth";
+import { tienePermiso } from "@/lib/permisos-server";
 import Link from "next/link";
 import { ArrowLeft, PenLine, Sparkles } from "lucide-react";
 import { ArticleEditor } from "@/components/article-editor";
@@ -87,6 +88,7 @@ export default async function ArticleEditorPage({
           mode={modo}
           site={await siteChrome()}
           canPublish={canPublish(session!.user.role)}
+          canPortada={await tienePermiso(session!.user.id, session!.user.role, "portada")}
         />
       );
     }
@@ -134,6 +136,7 @@ export default async function ArticleEditorPage({
           site={await siteChrome()}
           status={row.status}
           canPublish={canPublish(session!.user.role)}
+          canPortada={await tienePermiso(session!.user.id, session!.user.role, "portada")}
           savedAs={guardado}
           initial={{
             id: row.id,
@@ -149,6 +152,7 @@ export default async function ArticleEditorPage({
             metaDescription: row.metaDescription,
             isBreaking: row.isBreaking,
             isLive: row.isLive,
+            homePosition: row.homePosition,
           }}
         />
       );

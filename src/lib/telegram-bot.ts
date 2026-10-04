@@ -211,8 +211,14 @@ async function paso(c: Ctx, f: Fase) {
         TIPOS_GRAFICA.slice(4).map((t) => ({ texto: t.label, dato: `g:${t.id}` })),
         [{ texto: "⏭️ Omitir", dato: "n:" }],
       ]);
-    case "portada":
-      return enviar(c.chatId, `${cab}🖼️ <b>Foto de portada</b> (opcional)\nLa genero con IA a partir de lo que cuenta la nota (realista, estilo cine, ambientada en Colombia) o puedes <b>enviarme una foto</b> ahora.`, [[{ texto: "🎨 Generar con IA", dato: "ph:g" }, { texto: "⏭️ Omitir", dato: "n:" }]]);
+    case "portada": {
+      const portOk = await tienePermiso(c.userId, c.role, "portada");
+      return enviar(c.chatId, `${cab}📰 <b>Portada</b> (opcional)\n🖼️ <b>Imagen:</b> la genero con IA a partir de lo que cuenta la nota (realista, estilo cine) o <b>envíame una foto</b> ahora.\n📌 <b>Ubicación:</b> ${portOk ? "puedes publicarla en la portada del sitio y marcarla como Última hora o En desarrollo." : "un editor la ubica en la portada al publicar."}`, [
+        [{ texto: "🎨 Generar imagen con IA", dato: "ph:g" }],
+        ...(portOk || canPublish(c.role) ? [[{ texto: "📌 Publicar en la portada / distintivos", dato: `d:m:${tk(c)}` }]] : []),
+        [{ texto: "⏭️ Siguiente", dato: "n:" }],
+      ]);
+    }
     case "seo": {
       const a = auditArticle({ title: c.e.title ?? "", excerpt: c.e.excerpt ?? "", body: c.e.body ?? "", metaTitle: c.e.metaTitle, metaDescription: c.e.metaDescription, tags: c.e.tags, focus: c.e.tags?.[0] || c.e.title, coverImageUrl: c.e.coverUrl ?? "", coverImageAlt: c.e.coverAlt, authorName: c.nombre });
       const faltan = a.items.filter((i) => !i.ok).slice(0, 5).map((i) => `• ${esc(i.text)}`).join("\n");
@@ -579,7 +585,11 @@ async function acciones(c: Ctx, d: string) {
         const r = await avisarNota(c.e.articleId, { repetir: true, urgente: false });
         return void (await enviar(c.chatId, r.ok ? `📣 Notificación enviada a <b>${r.enviados}</b> dispositivo${r.enviados === 1 ? "" : "s"}${r.caducados ? ` (${r.caducados} suscripción${r.caducados === 1 ? "" : "es"} caducada${r.caducados === 1 ? "" : "s"} eliminada${r.caducados === 1 ? "" : "s"})` : ""}${r.fallidos ? `, ${r.fallidos} con error` : ""}.` : `⚠️ ${esc(r.motivo)}`));
       }
-      if (v === "ok") return void (await enviar(c.chatId, "Listo. Escribe /estado para ver cómo quedó la nota."));
+      if (v === "ok") {
+        // A mitad del recorrido se vuelve al paso en curso; al terminar, se indica /estado.
+        if (c.e.fase !== "idle" && c.e.fase !== "final" && PASOS.includes(c.e.fase)) return paso(c, c.e.fase);
+        return void (await enviar(c.chatId, "Listo. Escribe /estado para ver cómo quedó la nota."));
+      }
       const pubOk = canPublish(c.role) && (await tienePermiso(c.userId, c.role, "publicar"));
       const portOk = await tienePermiso(c.userId, c.role, "portada");
       const [a] = await db.select({ b: articles.isBreaking, l: articles.isLive }).from(articles).where(eq(articles.id, c.e.articleId)).limit(1);
