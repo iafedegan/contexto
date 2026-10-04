@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { aplicarTipo, chartProblem, fmt, renderChartSvg, type ChartSpec, type TipoGrafica } from "@/lib/chart-svg";
 
 type Tip = { x: number; y: number; title: string; rows: { color: string; name: string; value: string }[] };
@@ -55,6 +55,18 @@ export function InteractiveChart({ spec, caption }: { spec: ChartSpec; caption?:
   const [tabla, setTabla] = useState(false);
   const [sel, setSel] = useState<number | null>(null);
   const [tip, setTip] = useState<Tip | null>(null);
+  // Ancho real del contenedor: el dibujo se compone para ese ancho (no se encoge uno de 800 px, que dejaba los textos ilegibles en el celular).
+  const [ancho, setAncho] = useState(800);
+  useEffect(() => {
+    const el = box.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(([e]) => {
+      const w = Math.round(e.contentRect.width / 20) * 20; // de 20 en 20 px: no se redibuja a cada píxel
+      if (w > 0) setAncho(Math.min(900, Math.max(300, w)));
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   const temporal = useMemo(() => esTemporal(spec.labels), [spec.labels]);
   const primera = useMemo(() => spec.series.findIndex((_, i) => !hidden.includes(i)), [spec.series, hidden]);
@@ -75,7 +87,7 @@ export function InteractiveChart({ spec, caption }: { spec: ChartSpec; caption?:
 
   const esTorta = view.type === "pie";
   const hiddenView = useMemo(() => (esTorta ? [] : hidden), [esTorta, hidden]);
-  const svg = useMemo(() => renderChartSvg(view, { interactive: true, transparent: true, hidden: hiddenView, id: uid }), [view, hiddenView, uid]);
+  const svg = useMemo(() => renderChartSvg(view, { interactive: true, transparent: true, hidden: hiddenView, id: uid, width: ancho }), [view, hiddenView, uid, ancho]);
   const vals = view.series[esTorta ? 0 : Math.min(refIdx, view.series.length - 1)].values;
   const total = vals.reduce((a, b) => a + b, 0) || 1;
 
@@ -185,13 +197,13 @@ export function InteractiveChart({ spec, caption }: { spec: ChartSpec; caption?:
         </div>
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs">
           {n0 > 3 && (
-            <div className="flex items-center gap-1.5">
+            <div className="flex flex-wrap items-center gap-1.5">
               <label htmlFor={`${uid}d`} className="opacity-70">Desde</label>
-              <select id={`${uid}d`} value={desde} onChange={(e) => { const v = Number(e.target.value); setDesde(v); if (hasta <= v) setHasta(Math.min(n0 - 1, v + 1)); setSel(null); }} className="max-w-[9rem] rounded-md border border-[color-mix(in_srgb,currentColor_22%,transparent)] bg-transparent px-2 py-1">
+              <select id={`${uid}d`} value={desde} onChange={(e) => { const v = Number(e.target.value); setDesde(v); if (hasta <= v) setHasta(Math.min(n0 - 1, v + 1)); setSel(null); }} className="max-w-[8.5rem] rounded-md border border-[color-mix(in_srgb,currentColor_22%,transparent)] bg-transparent px-2 py-1">
                 {spec.labels.slice(0, n0 - 1).map((l, i) => <option key={i} value={i} className="text-black">{l}</option>)}
               </select>
               <label htmlFor={`${uid}h`} className="opacity-70">hasta</label>
-              <select id={`${uid}h`} value={hasta} onChange={(e) => { const v = Number(e.target.value); setHasta(v); if (desde >= v) setDesde(Math.max(0, v - 1)); setSel(null); }} className="max-w-[9rem] rounded-md border border-[color-mix(in_srgb,currentColor_22%,transparent)] bg-transparent px-2 py-1">
+              <select id={`${uid}h`} value={hasta} onChange={(e) => { const v = Number(e.target.value); setHasta(v); if (desde >= v) setDesde(Math.max(0, v - 1)); setSel(null); }} className="max-w-[8.5rem] rounded-md border border-[color-mix(in_srgb,currentColor_22%,transparent)] bg-transparent px-2 py-1">
                 {spec.labels.map((l, i) => (i > 0 ? <option key={i} value={i} className="text-black">{l}</option> : null))}
               </select>
             </div>

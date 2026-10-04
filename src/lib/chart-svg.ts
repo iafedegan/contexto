@@ -19,7 +19,10 @@ export type ChartSpec = {
   source?: string;
 };
 
-const W = 800;
+/** Ancho del lienzo. Por defecto 800; la versión interactiva lo pide igual al ancho de su contenedor para que los textos no se encojan. */
+let W = 800;
+const ANCHO_MIN = 300;
+const ANCHO_MAX = 900;
 /** Estilo «infografía moderna»: panel de vidrio oscuro con degradados neón (turquesa, violeta, rosa, ámbar). */
 const PALETTE = ["#2dd4bf", "#a78bfa", "#f472b6", "#fbbf24"];
 const GRAD: [string, string][] = [["#34d399", "#22d3ee"], ["#a78bfa", "#6366f1"], ["#f472b6", "#fb7185"], ["#fbbf24", "#f97316"]];
@@ -35,6 +38,9 @@ const OPEN_TONE = {
 };
 let TONE = DARK_TONE;
 const FONT = "Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif";
+
+/** Recorta con puntos suspensivos (no en seco). */
+const cortar = (t: string, n: number) => (t.length > n ? `${t.slice(0, Math.max(1, n - 1)).trimEnd()}…` : t);
 
 const esc = (s: string) =>
   s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
@@ -139,6 +145,8 @@ export type RenderOpts = {
   id?: string;
   /** Sin panel ni brillos de fondo; textos y rejilla heredan el color del sitio (fondo transparente). */
   transparent?: boolean;
+  /** Ancho del lienzo en px (300–900, 800 por defecto). Con anchos chicos la composición se reacomoda: KPI bajo el título, etiquetas inclinadas, leyenda en filas, dona sobre su leyenda. */
+  width?: number;
 };
 
 const STYLE = `<style>
@@ -158,14 +166,29 @@ const STYLE = `<style>
 
 export function renderChartSvg(c: ChartSpec, opts: RenderOpts = {}): string {
   TONE = opts.transparent ? OPEN_TONE : DARK_TONE;
-  const titleLines = wrap(c.title, 46, 2);
-  const headH = 30 + titleLines.length * 26 + (c.unit ? 22 : 0) + (c.series.length > 1 ? 26 : 0);
-  const source = c.source ? wrap(`Fuente: ${c.source}`, 118, 2) : [];
+  W = Math.round(Math.min(ANCHO_MAX, Math.max(ANCHO_MIN, opts.width ?? 800)));
+  const compact = W < 560;
+  const tSize = compact ? 18 : 21;
+  const titleLines = wrap(c.title, compact ? Math.floor((W - 48) / (tSize * 0.56)) : Math.min(46, Math.floor((W - 214) / 11.6)), compact ? 3 : 2);
+  // Leyenda de series en filas que caben en el ancho (4 series a 170 px en el lienzo ancho; varias filas en el angosto).
+  const legItem = compact ? 150 : 170;
+  const legPerRow = Math.max(1, Math.floor((W - 48) / legItem));
+  const legRows = c.series.length > 1 && c.type !== "pie" ? Math.ceil(c.series.length / legPerRow) : 0;
+  const legH = legRows ? (legRows === 1 ? 26 : legRows * 24 + 2) : 0;
+  const unitY = compact ? 34 + titleLines.length * 22 + 2 : 42 + titleLines.length * 25 + 2;
+  const headH = compact
+    ? 34 + titleLines.length * 22 + (c.unit ? 22 : 6) + 50 + legH
+    : 30 + titleLines.length * 26 + (c.unit ? 22 : 0) + legH;
+  const source = c.source ? wrap(`Fuente: ${c.source}`, Math.max(30, Math.floor((W - 64) / 6.3)), compact ? 3 : 2) : [];
   const footH = source.length ? 24 + source.length * 15 : 18;
 
-  const horizontal = c.type === "bar" && (c.variant === "horizontal" || (c.variant !== "vertical" && c.variant !== "histograma" && (c.labels.some((l) => l.length > 14) || c.labels.length > 7)));
+  const largos = compact ? 9 : 14;
+  const horizontal = c.type === "bar" && (c.variant === "horizontal" || (c.variant !== "vertical" && c.variant !== "histograma" && (c.labels.some((l) => l.length > largos) || c.labels.length > (compact ? 5 : 7))));
+  const pieR = compact ? Math.min(110, Math.floor((W - 64) / 2)) : 120;
   const bodyH =
-    c.type === "pie" ? Math.max(300, 80 + c.labels.length * 28) : horizontal ? 28 + c.labels.length * 44 : 320;
+    c.type === "pie"
+      ? compact ? pieR * 2 + 52 + c.labels.length * 26 : Math.max(300, 80 + c.labels.length * 28)
+      : horizontal ? 28 + c.labels.length * (compact ? 46 : 44) : 320;
   const H = headH + bodyH + footH;
 
   const hidden = new Set(opts.hidden ?? []);
@@ -193,12 +216,22 @@ export function renderChartSvg(c: ChartSpec, opts: RenderOpts = {}): string {
   else if (horizontal) body = hbars(c, headH, bodyH, o);
   else body = cartesian(c, headH, bodyH, o);
 
-  const legend =
-    c.series.length > 1 && c.type !== "pie"
-      ? c.series
-          .map((s, i) => `<g class="lg${hidden.has(i) ? " off" : ""}"${o.interactive ? ` data-lg="${i}"` : ""}><rect x="${24 + i * 170}" y="${headH - 28}" width="160" height="24" fill="transparent"/><circle cx="${34 + i * 170}" cy="${headH - 14}" r="5" fill="${PALETTE[i % PALETTE.length]}"/><text x="${46 + i * 170}" y="${headH - 10}" font-size="12.5" fill="${TONE.ink}">${esc(s.name.slice(0, 22))}</text></g>`)
-          .join("")
-      : "";
+  const legend = legRows
+    ? c.series
+        .map((s, i) => {
+          const row = Math.floor(i / legPerRow), col = i % legPerRow;
+          const lx = 24 + col * legItem;
+          const cy = headH - legH + 12 + row * 24;
+          const name = esc(cortar(s.name, compact ? 18 : 22));
+          return `<g class="lg${hidden.has(i) ? " off" : ""}"${o.interactive ? ` data-lg="${i}"` : ""}><rect x="${lx}" y="${cy - 14}" width="${legItem - 10}" height="24" fill="transparent"/><circle cx="${lx + 10}" cy="${cy}" r="5" fill="${PALETTE[i % PALETTE.length]}"/><text x="${lx + 22}" y="${cy + 4}" font-size="12.5" fill="${TONE.ink}">${name}</text></g>`;
+        })
+        .join("")
+    : "";
+
+  // KPI: a la derecha del título en el lienzo ancho; debajo del título, a la izquierda, en el angosto.
+  const kpiSvg = compact
+    ? `<text x="24" y="${unitY + (c.unit ? 6 : -10) + 26}" font-size="26" font-weight="800" fill="${PALETTE[0]}">${esc(kpi)}</text><text x="24" y="${unitY + (c.unit ? 6 : -10) + 44}" font-size="11.5" fill="${TONE.muted}">${esc(kpiSub)}</text>`
+    : `<text x="${W - 32}" y="48" font-size="32" font-weight="800" text-anchor="end" fill="${PALETTE[0]}">${esc(kpi)}</text><text x="${W - 32}" y="68" font-size="11.5" text-anchor="end" fill="${TONE.muted}">${esc(kpiSub)}</text>`;
 
   return (
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="${esc(c.title)}" font-family="${FONT}"${o.interactive ? ' class="lxc"' : ""}>` +
@@ -211,12 +244,12 @@ export function renderChartSvg(c: ChartSpec, opts: RenderOpts = {}): string {
     GRAD.map((g, i) => `<linearGradient id="${o.gid}c${i}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${g[1]}"/><stop offset="1" stop-color="${g[0]}" stop-opacity="0.85"/></linearGradient><linearGradient id="${o.gid}h${i}" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="${g[0]}" stop-opacity="0.85"/><stop offset="1" stop-color="${g[1]}"/></linearGradient>`).join("") +
     `<filter id="${o.gid}f" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>` +
     (opts.transparent ? "" : `<rect x="0.5" y="0.5" width="${W - 1}" height="${H - 1}" rx="22" fill="url(#${o.gid}bg)" stroke="rgba(255,255,255,0.16)"/><circle cx="${W - 70}" cy="30" r="170" fill="url(#${o.gid}gl1)"/><circle cx="60" cy="${H - 20}" r="190" fill="url(#${o.gid}gl2)"/>`) +
-    lines(32, 42, titleLines, 21, TONE.ink, "start", 700, 1.2) +
-    `<text x="${W - 32}" y="48" font-size="32" font-weight="800" text-anchor="end" fill="${PALETTE[0]}">${esc(kpi)}</text><text x="${W - 32}" y="68" font-size="11.5" text-anchor="end" fill="${TONE.muted}">${esc(kpiSub)}</text>` +
-    (c.unit ? `<text x="32" y="${42 + titleLines.length * 25 + 2}" font-size="13" fill="${TONE.muted}">${esc(c.unit)}</text>` : "") +
+    lines(compact ? 24 : 32, compact ? 34 : 42, titleLines, tSize, TONE.ink, "start", 700, 1.2) +
+    kpiSvg +
+    (c.unit ? `<text x="${compact ? 24 : 32}" y="${unitY}" font-size="13" fill="${TONE.muted}">${esc(c.unit)}</text>` : "") +
     legend +
     body +
-    (source.length ? lines(32, H - footH + 22, source, 11, TONE.muted) : "") +
+    (source.length ? lines(compact ? 24 : 32, H - footH + 22, source, 11, TONE.muted) : "") +
     `</svg>`
   );
 }
@@ -224,14 +257,21 @@ export function renderChartSvg(c: ChartSpec, opts: RenderOpts = {}): string {
 type Ctx = { interactive: boolean; hidden: Set<number>; gid: string };
 
 function cartesian(c: ChartSpec, top: number, h: number, o: Ctx) {
-  const left = 58, right = 28, padT = 16, padB = 52;
-  const pw = W - left - right, ph = h - padT - padB;
+  const compact = W < 560;
+  const left = compact ? 44 : 58, right = compact ? 14 : 28, padT = 16;
+  const n = c.labels.length;
+  const pw = W - left - right;
+  const step = pw / n;
+  // Etiquetas del eje X: en dos líneas si caben; si cada columna es muy angosta (muchas barras en pantalla chica) se inclinan.
+  const maxLen = Math.max(...c.labels.map((l) => l.length));
+  const inclinar = step < 58 && maxLen * 6.2 > step - 4;
+  const lblMax = inclinar ? Math.min(maxLen, 14) : 0;
+  const padB = inclinar ? 24 + Math.round(lblMax * 4.8) : 52;
+  const ph = h - padT - padB;
   const shown = c.series.map((s, si) => ({ s, si })).filter((x) => !o.hidden.has(x.si));
   const all = shown.flatMap((x) => x.s.values);
   const sc = niceScale(Math.min(...all), Math.max(...all), 4, c.type !== "line");
   const y = (v: number) => top + padT + ph - ((v - sc.min) / (sc.max - sc.min || 1)) * ph;
-  const n = c.labels.length;
-  const step = pw / n;
   const cx = (i: number) => left + step * i + step / 2;
 
   let out = "";
@@ -240,7 +280,13 @@ function cartesian(c: ChartSpec, top: number, h: number, o: Ctx) {
     out += `<text x="${left - 10}" y="${y(v) + 4}" font-size="11.5" text-anchor="end" fill="${TONE.muted}">${esc(fmtTick(v))}</text>`;
   }
   c.labels.forEach((l, i) => {
-    out += lines(cx(i), top + padT + ph + 20, wrap(l, Math.max(8, Math.floor(step / 7)), 2), 12, TONE.ink, "middle");
+    if (inclinar) {
+      const t = l.length > lblMax ? `${l.slice(0, lblMax - 1)}…` : l;
+      const px = cx(i) + 4, py = top + padT + ph + 14;
+      out += `<text x="${px}" y="${py}" font-size="11.5" fill="${TONE.ink}" text-anchor="end" transform="rotate(-42 ${px} ${py})">${esc(t)}</text>`;
+    } else {
+      out += lines(cx(i), top + padT + ph + 20, wrap(l, Math.max(6, Math.floor(step / 6.8)), 2), 12, TONE.ink, "middle");
+    }
   });
 
   if (c.type === "bar") {
@@ -257,7 +303,7 @@ function cartesian(c: ChartSpec, top: number, h: number, o: Ctx) {
         out += o.interactive
           ? `<path d="${d}" fill="url(#${o.gid}c${si % 4})" filter="url(#${o.gid}f)" class="mk bar" data-i="${i}" data-s="${si}" tabindex="0" style="animation-delay:${i * 50}ms"/>`
           : `<path d="${d}" fill="url(#${o.gid}c${si % 4})" filter="url(#${o.gid}f)"/>`;
-        if (shown.length === 1 || n <= 5) out += `<text x="${x + bw / 2}" y="${y0 - 7}" font-size="12" font-weight="600" text-anchor="middle" fill="${TONE.ink}" pointer-events="none">${esc(fmt(v))}</text>`;
+        if ((shown.length === 1 || n <= 5) && step / shown.length >= 34) out += `<text x="${x + bw / 2}" y="${y0 - 7}" font-size="12" font-weight="600" text-anchor="middle" fill="${TONE.ink}" pointer-events="none">${esc(fmt(v))}</text>`;
       }),
     );
   } else {
@@ -273,7 +319,7 @@ function cartesian(c: ChartSpec, top: number, h: number, o: Ctx) {
       if (!o.interactive) {
         pts.forEach((p, i) => {
           out += `<circle cx="${p[0]}" cy="${p[1]}" r="4.5" fill="${TONE.dot}" stroke="${color}" stroke-width="2.5"/>`;
-          if (shown.length === 1 && (n <= 8 || i === n - 1 || i === 0)) {
+          if (shown.length === 1 && ((n <= 8 && step >= 40) || i === n - 1 || i === 0)) {
             out += `<text x="${p[0]}" y="${p[1] - 12}" font-size="12" font-weight="600" text-anchor="middle" fill="${TONE.ink}">${esc(fmt(s.values[i]))}</text>`;
           }
         });
@@ -294,13 +340,17 @@ function cartesian(c: ChartSpec, top: number, h: number, o: Ctx) {
 }
 
 function hbars(c: ChartSpec, top: number, h: number, o: Ctx) {
-  const left = 190, right = 80;
+  const compact = W < 560;
+  // Área de nombres proporcional al ancho: 190 px en el lienzo ancho, ~36 % del ancho en pantallas chicas.
+  const left = compact ? Math.max(96, Math.round(W * 0.36)) : Math.min(190, Math.round(W * 0.24)), right = compact ? 58 : 80;
+  const lblChars = Math.max(9, Math.floor((left - 14) / 6.9));
   const pw = W - left - right;
   const shown = c.series.map((s, si) => ({ s, si })).filter((x) => !o.hidden.has(x.si));
   const all = shown.flatMap((x) => x.s.values);
-  const sc = niceScale(Math.min(...all), Math.max(...all), 4);
+  const sc = niceScale(Math.min(...all), Math.max(...all), Math.max(2, Math.min(4, Math.floor(pw / 85))));
   const x = (v: number) => left + ((v - sc.min) / (sc.max - sc.min || 1)) * pw;
   const rowH = (h - 28) / c.labels.length;
+  const nameLines = compact ? 3 : 2;
   const bh = Math.min(26, (rowH - 12) / shown.length);
 
   let out = "";
@@ -310,7 +360,8 @@ function hbars(c: ChartSpec, top: number, h: number, o: Ctx) {
   }
   c.labels.forEach((l, i) => {
     const yc = top + 6 + rowH * i + rowH / 2;
-    out += lines(left - 12, yc - (wrap(l, 26, 2).length - 1) * 7 + 4, wrap(l, 26, 2), 12.5, TONE.ink, "end");
+    const nm = wrap(l, compact ? lblChars : Math.min(26, lblChars), nameLines);
+    out += lines(left - 12, yc - (nm.length - 1) * 7 + 4, nm, compact ? 12 : 12.5, TONE.ink, "end");
     shown.forEach(({ s, si }, vi) => {
       const v = s.values[i];
       const by = yc - (bh * shown.length) / 2 + bh * vi;
@@ -330,7 +381,12 @@ function hbars(c: ChartSpec, top: number, h: number, o: Ctx) {
 function donut(c: ChartSpec, top: number, h: number, o: Ctx) {
   const vals = c.series[0].values;
   const total = vals.reduce((a, b) => a + b, 0) || 1;
-  const cx = 230, cy = top + h / 2, r = 120, ri = c.variant === "torta" ? 0 : 74;
+  const compact = W < 560;
+  // Ancho: dona a la izquierda y leyenda a la derecha. Angosto: la dona arriba, centrada, y la leyenda en filas debajo.
+  const r = compact ? Math.min(110, Math.floor((W - 64) / 2)) : 120;
+  const cx = compact ? W / 2 : Math.round(W * 0.29);
+  const cy = compact ? top + r + 18 : top + h / 2;
+  const ri = c.variant === "torta" ? 0 : Math.round(r * 0.62);
   let a0 = -Math.PI / 2;
   let out = "";
   vals.forEach((v, i) => {
@@ -342,10 +398,14 @@ function donut(c: ChartSpec, top: number, h: number, o: Ctx) {
     out += `<path d="${d}" fill="url(#${o.gid}c${i % 4})" stroke="${TONE.edge}" stroke-width="3"${o.interactive ? ` class="mk sl" data-i="${i}" data-s="0" tabindex="0"` : ""}/>`;
     a0 = a1;
   });
-  if (ri > 0) out += `<text x="${cx}" y="${cy - 2}" font-size="22" font-weight="700" text-anchor="middle" fill="${TONE.ink}" pointer-events="none">${esc(fmt(total))}</text><text x="${cx}" y="${cy + 18}" font-size="12" text-anchor="middle" fill="${TONE.muted}" pointer-events="none">total</text>`;
+  if (ri > 0) out += `<text x="${cx}" y="${cy - 2}" font-size="${compact ? 19 : 22}" font-weight="700" text-anchor="middle" fill="${TONE.ink}" pointer-events="none">${esc(fmt(total))}</text><text x="${cx}" y="${cy + 18}" font-size="12" text-anchor="middle" fill="${TONE.muted}" pointer-events="none">total</text>`;
+  const lx = compact ? 24 : Math.round(W * 0.55) + 10;
+  const lw = W - lx - 24;
+  const rowGap = compact ? 26 : 28;
+  const chars = Math.max(8, Math.floor((lw - 130) / 7.2));
   c.labels.forEach((l, i) => {
-    const yy = top + h / 2 - ((c.labels.length - 1) * 28) / 2 + i * 28;
-    out += `<g${o.interactive ? ` class="mk" data-i="${i}" data-s="0"` : ""}><rect x="440" y="${yy - 18}" width="${W - 440 - 24}" height="26" fill="transparent"/><circle cx="450" cy="${yy - 4}" r="6" fill="${PALETTE[i % PALETTE.length]}"/><text x="466" y="${yy}" font-size="13.5" fill="${TONE.ink}">${esc(l.slice(0, 28))}</text><text x="${W - 32}" y="${yy}" font-size="13.5" font-weight="600" text-anchor="end" fill="${TONE.ink}">${esc(fmt(vals[i]))} · ${Math.round((vals[i] / total) * 100)} %</text></g>`;
+    const yy = compact ? cy + r + 34 + i * rowGap : top + h / 2 - ((c.labels.length - 1) * rowGap) / 2 + i * rowGap;
+    out += `<g${o.interactive ? ` class="mk" data-i="${i}" data-s="0"` : ""}><rect x="${lx - 10}" y="${yy - 18}" width="${lw + 10}" height="26" fill="transparent"/><circle cx="${lx}" cy="${yy - 4}" r="6" fill="${PALETTE[i % PALETTE.length]}"/><text x="${lx + 16}" y="${yy}" font-size="13.5" fill="${TONE.ink}">${esc(cortar(l, chars))}</text><text x="${W - (compact ? 24 : 32)}" y="${yy}" font-size="13.5" font-weight="600" text-anchor="end" fill="${TONE.ink}">${esc(fmt(vals[i]))} · ${Math.round((vals[i] / total) * 100)} %</text></g>`;
   });
   return out;
 }
