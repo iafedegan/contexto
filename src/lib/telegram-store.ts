@@ -84,6 +84,8 @@ export type EstadoChat = {
   panel?: number;
   /** Contexto elegido en las opciones del primer paso (índice; -1 = sin enfoque especial). */
   ctxSel?: number;
+  /** Pregunta en curso dentro del primer paso: primero el título, luego el enfoque. */
+  etapa?: "titulo" | "enfoque";
   topic?: string;
   ideasFocus?: string;
   ideas?: { title: string; angle: string; why: string; scope: string }[];

@@ -210,12 +210,10 @@ async function pedir(c: Ctx, espera: Espera, instruccion: string, actual?: strin
 const fallo = (c: Ctx, msg: string) => { c.aviso = `⚠️ ${msg}`; return vista(c); };
 
 const auditoria = (c: Ctx) => auditArticle({ title: c.e.title ?? "", excerpt: c.e.excerpt ?? "", body: c.e.body ?? "", metaTitle: c.e.metaTitle, metaDescription: c.e.metaDescription, tags: c.e.tags, focus: c.e.tags?.[0] || c.e.title, coverImageUrl: c.e.coverUrl ?? "", coverImageAlt: c.e.coverAlt, authorName: c.nombre });
-/** Encabezado de cada paso: «Paso 4 de 9 · Portada», barra de avance y la puntuación SEO en vivo. */
+/** Encabezado mínimo: nombre del paso y «2/9». */
 function cab(c: Ctx, f: Fase, titulo?: string): string {
   const l = pasos(c);
-  const n = l.indexOf(f) + 1;
-  const seo = (c.e.title ?? "").trim().length >= 5 ? `  ·  🔎 SEO ${auditoria(c).score}` : "";
-  return `<b>Paso ${n} de ${l.length} · ${titulo ?? NOMBRE_PASO[f] ?? ""}</b>\n${"▰".repeat(n)}${"▱".repeat(l.length - n)}${seo}\n\n`;
+  return `<b>${titulo ?? NOMBRE_PASO[f] ?? ""}</b> · ${l.indexOf(f) + 1}/${l.length}\n\n`;
 }
 /** Navegación fija: «Atrás» (salvo en el primer paso) y «Siguiente». */
 const nav = (c: Ctx, sig: Boton = { texto: "Siguiente ➡️", dato: "n:" }): Boton[] =>
@@ -226,46 +224,27 @@ const nombreSeccion = async (c: Ctx) => (c.e.categoryId ? (await cats()).find((x
 
 async function pasoTema(c: Ctx) {
   c.e.fase = "tema";
+  c.e.espera = undefined;
   const topic = (c.e.topic ?? "").trim();
-  const mat = c.e.material ?? [];
-  const refs = c.e.refs ?? [];
-  const L = [
-    `${cab(c, "tema", "Tema, título y contexto")}Describe el tema, o parte de una noticia, una entrevista o unos enlaces. La IA propone títulos y enfoques; tú eliges y revisas cada paso.`,
-    "",
-    `📝 <b>Tema:</b> ${topic ? esc(recorta(topic, 500)) : "<i>escríbelo en un mensaje aquí abajo</i>"}`,
-  ];
-  if (mat.length || refs.length) L.push(`📎 ${mat.length} material${mat.length === 1 ? "" : "es"} · 📚 ${refs.length} referencia${refs.length === 1 ? "" : "s"}`);
-  L.push("", "<b>¿Prefieres partir de otra cosa?</b>");
-  const filas: Boton[][] = [
-    [{ texto: c.e.options ? "✨ Proponer otras opciones" : "✨ Proponer títulos y contextos", dato: "i:prop" }],
+  await mostrar(c, `${cab(c, "tema", "Tema")}<b>¿De qué trata la nota?</b>\nEscríbelo en un mensaje, o elige una fuente.${topic ? `\n\n📝 ${esc(recorta(topic, 300))}` : ""}`, [
     [{ texto: "💡 Ideas de la IA", dato: "i:ideas" }, { texto: "🔎 Buscar noticias", dato: "i:noticias" }],
     [{ texto: "🎙️ Entrevista de voz", dato: "i:entrevista" }, { texto: "🔗 Enlaces", dato: "i:enlaces" }],
-  ];
-  mat.slice(0, 4).forEach((m, i) => filas.push([{ texto: `👁️ ${i + 1}. ${recorta(m.title, 26)}`, dato: `i:mv:${i}` }, { texto: "🗑️", dato: `i:mq:${i}` }]));
-  if (topic || mat.length || refs.length) filas.push([{ texto: "🗑️ Empezar de nuevo", dato: "i:bt" }]);
-  if (c.e.generated) filas.push([{ texto: "Siguiente ➡️ (ya hay un borrador)", dato: "n:" }]);
-  c.e.espera = undefined;
-  await mostrar(c, L.join("\n"), filas);
+    ...(topic || (c.e.material ?? []).length ? [[{ texto: "✨ Proponer títulos", dato: "i:prop" }]] : []),
+    ...(c.e.generated ? [[{ texto: "Siguiente ➡️ (ya hay borrador)", dato: "n:" }]] : []),
+  ]);
 }
 
-/** Pantallas de cada fuente: una instrucción corta y «Volver». */
-async function subPanel(c: Ctx, titulo: string, texto: string, extra: Boton[][] = []) {
-  await mostrar(c, `<b>${titulo}</b>\n\n${texto}`, [...extra, [{ texto: "⬅️ Volver", dato: "i:ini" }]]);
+/** Pantallas de cada fuente: una instrucción de una línea y «Volver». */
+async function subPanel(c: Ctx, texto: string) {
+  await mostrar(c, texto, [[{ texto: "⬅️ Volver", dato: "i:ini" }]]);
 }
-const subIdeas = (c: Ctx) => {
-  c.e.espera = undefined;
-  return subPanel(c, "💡 Ideas de la IA", `La IA busca en internet qué es tendencia en el sector, en Colombia y en el mundo, y te propone temas con sus fuentes.${c.e.ideasFocus ? `\n\nEnfoque: <b>${esc(c.e.ideasFocus)}</b>` : ""}`, [
-    [{ texto: c.e.ideas ? "✨ Buscar otros temas" : "✨ Aconséjame temas", dato: "i:find" }],
-    [{ texto: c.e.ideasFocus ? "✏️ Cambiar el enfoque" : "✏️ Con un enfoque (leche, exportaciones…)", dato: "i:enf" }],
-  ]);
-};
 async function subNoticias(c: Ctx) {
   c.e.espera = "busqueda";
   await fin(c);
-  return subPanel(c, "🔎 Buscar noticias", "Escribe una persona, empresa o tema (p. ej. «Joaquín Manjarrés»): investiga en medios, YouTube y fuentes oficiales. Eliges cuáles <b>referenciar</b> o usar <b>como tema</b>.\n\n✏️ <i>Escribe aquí abajo lo que quieres investigar.</i>", c.e.noticias?.length ? [[{ texto: "📰 Ver los resultados anteriores", dato: "i:nf:todo" }]] : []);
+  return subPanel(c, "🔎 <b>¿Qué quieres investigar?</b>\nEscribe una persona, empresa o tema.");
 }
-const subEntrevista = (c: Ctx) => subPanel(c, "🎙️ Entrevista de voz", "Sube el audio y la IA lo transcribe. Puedes corregir el texto antes de redactar. MP3, M4A, WAV, OGG… hasta 20 MB.\n\n🎙️ <i>Envíame ahora la nota de voz o el archivo de audio.</i>");
-const subEnlaces = (c: Ctx) => subPanel(c, "🔗 Enlaces", "Pega hasta 5 enlaces (uno por línea): la IA lee cada página y redacta con palabras propias, atribuyendo.\n\n🔗 <i>Pega los enlaces aquí abajo.</i>");
+const subEntrevista = (c: Ctx) => subPanel(c, "🎙️ Envíame la <b>nota de voz</b> o el audio (hasta 20 MB).");
+const subEnlaces = (c: Ctx) => subPanel(c, "🔗 <b>Pega los enlaces</b> (hasta 5, uno por línea).");
 
 /** Suma el texto al tema (como escribir en el cuadro de tema) y lee los enlaces que traiga. */
 async function agregarTema(c: Ctx, texto: string) {
@@ -275,7 +254,8 @@ async function agregarTema(c: Ctx, texto: string) {
   c.e.options = undefined;
   c.e.enOpciones = false;
   if (urls.length) await leerEnlaces(c, urls);
-  return pasoTema(c);
+  if (!(c.e.topic ?? "").trim() && !(c.e.material ?? []).length) return pasoTema(c);
+  return proponer(c); // sigue solo: propone títulos con lo que escribiste
 }
 
 async function leerEnlaces(c: Ctx, urls: string[]) {
@@ -292,15 +272,15 @@ async function buscarIdeas(c: Ctx) {
   await escribiendo(c.chatId);
   await ocupado(c, "Buscando tendencias en internet… puede tardar hasta un minuto.");
   const r = await suggestTopicIdeasCore(c.userId, { section: await nombreSeccion(c), focus: c.e.ideasFocus?.slice(0, 200) });
-  if (!r.ok) { c.aviso = `⚠️ ${esc(r.error)}`; return subIdeas(c); }
+  if (!r.ok) { c.aviso = `⚠️ ${esc(r.error)}`; return pasoTema(c); }
   c.e.ideas = r.ideas.slice(0, 6).map((i) => ({ title: recorta(i.title, 110), angle: recorta(i.angle, 170), why: recorta(i.why, 110), scope: i.scope }));
   c.e.ideasFuentes = r.sources;
   await fin(c);
   const lista = c.e.ideas.map((i, k) => `<b>${k + 1}.</b> ${i.scope === "local" ? "🇨🇴" : "🌎"} <b>${esc(i.title)}</b>\n${esc(i.angle)}\n<i>${esc(i.why)}</i>`).join("\n\n");
   const hosts = r.sources.slice(0, 8).map((x) => { let h = x.title; try { if (/vertexaisearch/.test(x.url)) h = x.title; else h = new URL(x.url).hostname.replace(/^www\./, ""); } catch { /* texto del título */ } return `<a href="${esc(x.url)}">${esc(recorta(h, 40))}</a>`; });
-  await mostrar(c, `<b>💡 Temas sugeridos</b>\nPulsa un número para usar ese tema.\n\n${lista}${hosts.length ? `\n\n<blockquote expandable><b>Fuentes</b>\n${hosts.join(" · ")}</blockquote>` : ""}`, [
+  await mostrar(c, `<b>💡 Elige un tema</b>\n\n${lista}${hosts.length ? `\n\n<blockquote expandable><b>Fuentes</b>\n${hosts.join(" · ")}</blockquote>` : ""}`, [
     c.e.ideas.map((_, k) => ({ texto: String(k + 1), dato: `i:u:${k}` })),
-    [{ texto: "✨ Buscar otros temas", dato: "i:find" }, { texto: "⬅️ Volver", dato: "i:ini" }],
+    [{ texto: "✨ Otros temas", dato: "i:find" }, { texto: "⬅️ Volver", dato: "i:ini" }],
   ]);
 }
 
@@ -378,41 +358,48 @@ async function proponer(c: Ctx) {
   if (!r.ok) { c.aviso = `⚠️ ${esc(r.error)}`; return pasoTema(c); }
   c.e.options = { titles: r.titles, contexts: r.contexts };
   c.e.enOpciones = true;
+  c.e.etapa = "titulo";
   c.e.context = undefined;
   c.e.ctxSel = undefined;
   await fin(c);
   return pasoOpciones(c);
 }
 
-/** «Elige el título y el enfoque»: todo en un panel, con ✓ en lo elegido y «Generar borrador». */
-async function pasoOpciones(c: Ctx) {
+/** Primera pregunta: el título. */
+async function pasoTitulos(c: Ctx) {
   const o = c.e.options;
   if (!o) return pasoTema(c);
-  c.e.fase = "tema";
-  c.e.espera = undefined;
-  const t = (c.e.title ?? "").trim();
-  const sel = o.titles.findIndex((x) => x === t);
-  const titulos = o.titles.map((x, i) => `<b>${i + 1}.</b> ${esc(x)} <i>(${x.length})</i>`).join("\n");
-  const ctxs = o.contexts.map((x, i) => `<b>${String.fromCharCode(65 + i)}.</b> <b>${esc(x.label)}</b> — ${esc(recorta(x.text, 130))}`).join("\n");
-  const ctx = (c.e.context ?? "").trim();
-  const filas: Boton[][] = [
-    o.titles.map((_, i) => ({ texto: `${sel === i ? "✓ " : ""}${i + 1}`, dato: `t:${i}` })),
-    [{ texto: t && sel < 0 ? "✓ Mi título" : "✏️ Escribir el mío", dato: "t:x" }],
-    o.contexts.map((_, i) => ({ texto: `${c.e.ctxSel === i ? "✓ " : ""}${String.fromCharCode(65 + i)}`, dato: `c:${i}` })),
-    [{ texto: `${c.e.ctxSel === -1 ? "✓ " : ""}Sin enfoque`, dato: "c:x" }, { texto: "✏️ Ajustar enfoque", dato: "c:e" }],
-    [{ texto: c.e.generated ? "✨ Volver a generar el borrador" : "✨ Generar borrador", dato: "gen" }],
-    c.e.generated ? [{ texto: "⬅️ Cambiar tema o fuente", dato: "i:chg" }, { texto: "Siguiente ➡️", dato: "n:" }] : [{ texto: "⬅️ Cambiar tema o fuente", dato: "i:chg" }],
-  ];
-  await mostrar(c, `${cab(c, "tema", "Elige el título y el enfoque")}<b>1 · Título</b> <i>(ideal 15–65 car.)</i>\n${titulos}\n\n<b>2 · Enfoque</b>\n${ctxs}\n\n<b>Elegido:</b> ${t ? `${esc(recorta(t, 90))} <i>(${t.length})</i>` : "<i>— título pendiente —</i>"}${ctx ? `\n<b>Enfoque:</b> ${esc(recorta(ctx, 160))}` : ""}`, filas);
+  c.e.fase = "tema"; c.e.etapa = "titulo"; c.e.espera = undefined;
+  await fin(c);
+  await mostrar(c, `${cab(c, "tema", "Título")}<b>Elige un título</b>\n\n${o.titles.map((x, i) => `<b>${i + 1}.</b> ${esc(x)}`).join("\n")}`, [
+    o.titles.map((_, i) => ({ texto: String(i + 1), dato: `t:${i}` })),
+    [{ texto: "✏️ Escribir el mío", dato: "t:x" }],
+    [{ texto: "⬅️ Cambiar tema", dato: "i:chg" }],
+  ]);
 }
+
+/** Segunda pregunta: el enfoque. Al elegirlo, la IA redacta sola. */
+async function pasoEnfoques(c: Ctx) {
+  const o = c.e.options;
+  if (!o) return pasoTema(c);
+  c.e.fase = "tema"; c.e.etapa = "enfoque"; c.e.espera = undefined;
+  await fin(c);
+  await mostrar(c, `${cab(c, "tema", "Enfoque")}<b>¿Qué enfoque le damos?</b>\n<i>${esc(recorta(c.e.title ?? "", 90))}</i>\n\n${o.contexts.map((x, i) => `<b>${String.fromCharCode(65 + i)}.</b> <b>${esc(x.label)}</b> — ${esc(recorta(x.text, 120))}`).join("\n")}`, [
+    o.contexts.map((_, i) => ({ texto: String.fromCharCode(65 + i), dato: `c:${i}` })),
+    [{ texto: "Sin enfoque especial", dato: "c:x" }, { texto: "✏️ Escribir uno", dato: "c:e" }],
+    [{ texto: "⬅️ Atrás", dato: "b:" }],
+  ]);
+}
+
+const pasoOpciones = (c: Ctx) => (c.e.etapa === "enfoque" ? pasoEnfoques(c) : pasoTitulos(c));
 
 async function redactar(c: Ctx) {
   const titulo = (c.e.title ?? "").trim();
   const prompt = [c.e.topic, c.e.context].filter(Boolean).join("\n\n");
-  if (titulo.length < 5) { c.aviso = "⚠️ Elige o escribe un título de al menos 5 caracteres."; return pasoOpciones(c); }
+  if (titulo.length < 5) { c.aviso = "⚠️ Elige o escribe un título de al menos 5 caracteres."; return pasoTitulos(c); }
   if (prompt.length < 20 && !(c.e.material?.length)) { c.aviso = "⚠️ Añade un poco más de contexto (mínimo 20 caracteres) o carga una entrevista o enlaces."; return pasoOpciones(c); }
   await escribiendo(c.chatId);
-  await ocupado(c, "La IA está redactando el borrador… puede tardar hasta un minuto. Al terminar pasas al resumen.");
+  await ocupado(c, "Redactando el borrador… hasta 1 minuto.");
   const enlaces = (c.e.material ?? []).filter((m) => m.kind === "enlace" && m.url).map((m) => ({ title: m.title, outlet: "", url: m.url! }));
   const refs = (c.e.refs ?? []).map((r) => ({ title: r.title, outlet: r.outlet, url: r.url, videoId: r.videoId }));
   const r = await generateArticleDraftCore(c.userId, {
@@ -480,7 +467,7 @@ async function pasoTitulo(c: Ctx) {
 
 async function pasoResumen(c: Ctx) {
   const x = c.e.excerpt ?? "";
-  await mostrar(c, `${cab(c, "resumen")}<b>Resume la noticia</b>\n<i>Dos o tres líneas que expliquen por qué importa. Es la entradilla y, por defecto, la descripción en buscadores.</i>\n\n${x ? `${esIA(c) && c.e.generated ? "✨ " : ""}${esc(x)}\n<i>${contador(x.length, 70, 155)}</i>` : "✏️ Escríbelo en un mensaje."}`, [
+  await mostrar(c, `${cab(c, "resumen")}${x ? esc(x) : "✏️ Escribe el resumen en un mensaje."}`, [
     ...(x ? [[...(esIA(c) && c.e.generated ? [regenerar(c, "resumen")] : []), { texto: "✏️ Editar", dato: "e:resumen" }]] : []),
     nav(c),
   ]);
@@ -490,7 +477,7 @@ async function pasoClaves(c: Ctx) {
   const t = c.e.tags ?? [];
   const filas: Boton[][] = [];
   for (let i = 0; i < t.length; i += 3) filas.push(t.slice(i, i + 3).map((x, k) => ({ texto: `✖ ${recorta(x, 18)}`, dato: `k:${i + k}` })));
-  await mostrar(c, `${cab(c, "claves")}<b>Palabras clave</b>\n<i>Temas de la nota: ayudan a relacionar artículos y al buscador interno. Escribe una (o varias separadas por comas) para añadirlas; toca una para quitarla.</i>\n\n${t.length ? `🏷️ ${t.map((x) => esc(x)).join(" · ")}` : "<i>aún sin palabras clave</i>"}\n<i>${t.length} de 12 · recomendado entre 3 y 6</i>`, [
+  await mostrar(c, `${cab(c, "claves")}${t.length ? `🏷️ ${t.map((x) => esc(x)).join(" · ")}` : "<i>sin palabras clave</i>"}\n<i>Escribe para añadir · toca para quitar</i>`, [
     ...filas,
     [...(esIA(c) && c.e.generated ? [regenerar(c, "claves")] : []), { texto: "✏️ Reemplazar todas", dato: "e:claves" }],
     nav(c),
@@ -501,7 +488,7 @@ async function pasoCuerpo(c: Ctx) {
   const b = c.e.body ?? "";
   const w = palabras(b);
   const largo = textoDeHtml(b).length > 650;
-  await mostrar(c, `${cab(c, "cuerpo")}<b>Escribe el cuerpo</b>\n<i>Separa los párrafos con una línea en blanco; una línea que empiece por «## » es un intertítulo.</i>\n\n${b ? cuerpoCorto(b) : "✏️ Escríbelo en un mensaje."}\n\n<i>${w} palabras · ${Math.max(1, Math.round(w / 200))} min de lectura${w > 0 && w < 250 ? " · se recomiendan al menos 250" : ""}</i>`, [
+  await mostrar(c, `${cab(c, "cuerpo")}${b ? cuerpoCorto(b) : "✏️ Escribe el cuerpo en un mensaje."}\n\n<i>${w} palabras${w > 0 && w < 250 ? " · conviene al menos 250" : ""}</i>`, [
     ...(largo ? [[{ texto: "📖 Ver completo", dato: "v:cuerpo" }]] : []),
     ...(b ? [[...(esIA(c) && c.e.generated ? [regenerar(c, "cuerpo")] : []), { texto: "✏️ Editar", dato: "e:cuerpo" }]] : []),
     ...botonVista(c),
@@ -523,7 +510,7 @@ async function pasoPortada(c: Ctx) {
   filas.push([{ texto: c.e.coverUrl ? "🎨 Otra imagen con IA" : "🎨 Generar imagen con IA", dato: "ph:g" }, ...(portOk || pubOk ? [{ texto: "📌 Portada del sitio", dato: `d:m:${tk(c)}` }] : [])]);
   filas.push([{ texto: "✏️ Describir la escena", dato: "e:escena" }, ...(c.e.coverUrl ? [{ texto: "✏️ Texto alt", dato: "e:alt" }, { texto: "🗑️ Quitar", dato: "ph:q" }] : [])]);
   filas.push(nav(c));
-  await mostrar(c, `${cab(c, "portada")}<b>Portada</b>\n<i>Dónde aparece la nota en el sitio y con qué imagen. Todo es opcional.</i>\n\n🖼️ <b>Imagen:</b> ${c.e.coverUrl ? `✅ lista${c.e.coverAlt ? ` — <i>${esc(recorta(c.e.coverAlt, 90))}</i>` : ""}` : "sin foto (se usa una ilustración con la sección)"}\n📌 <b>En el sitio:</b> ${ubic || (portOk || pubOk ? "sin destacar" : "un editor la ubica al publicar")}\n\n📷 <i>Envíame una foto, pega la URL de una imagen o genérala con IA (no retrata personas reales; se publica rotulada «imagen generada con IA»).</i>`, filas);
+  await mostrar(c, `${cab(c, "portada")}🖼️ ${c.e.coverUrl ? "Imagen lista" : "Sin imagen"} · 📌 ${ubic || (portOk || pubOk ? "sin destacar" : "la ubica un editor")}\n<i>Envía una foto o genera una con IA.</i>`, filas);
 }
 
 async function portadaIA(c: Ctx) {
@@ -561,7 +548,7 @@ async function mostrarSecciones(c: Ctx) {
   const raices = todas.filter((x) => !x.parentId);
   const rama = c.e.ramaSeccion ? raices.find((r) => r.id === c.e.ramaSeccion) : undefined;
   const sel = todas.find((x) => x.id === c.e.categoryId);
-  const cabeza = `${cab(c, "seccion")}<b>Sección y autor</b>\n<i>Dónde se publica y quién firma. Puedes dejarlo para después.</i>\n\n📂 <b>Sección:</b> ${sel ? esc(sel.name) : "sin elegir"}\n✍️ <b>Autor:</b> ${esc(c.nombre)} <i>(la firma quien escribe)</i>\n`;
+  const cabeza = `${cab(c, "seccion")}📂 <b>Sección:</b> ${sel ? esc(sel.name) : "sin elegir"} · ✍️ ${esc(c.nombre)}\n`;
   if (rama) {
     const hijos = todas.filter((x) => x.parentId === rama.id);
     const filas: Boton[][] = [[{ texto: `✔ ${rama.name} (la sección)`, dato: `s:${rama.id}` }]];
@@ -575,7 +562,7 @@ async function mostrarSecciones(c: Ctx) {
   const filas: Boton[][] = [];
   for (let i = 0; i < orden.length; i += 2) filas.push(orden.slice(i, i + 2).map((r) => ({ texto: `${sug.includes(r) ? "⭐ " : ""}${r.name}${todas.some((x) => x.parentId === r.id) ? " ›" : ""}`, dato: todas.some((x) => x.parentId === r.id) ? `sr:${r.id}` : `s:${r.id}` })));
   filas.push([{ texto: "Sin sección", dato: "s:0" }], nav(c));
-  return void (await mostrar(c, `${cabeza}\nElige la sección (⭐ sugerida, › tiene subsecciones) o <b>escribe su nombre</b> para buscarla.`, filas));
+  return void (await mostrar(c, `${cabeza}Elige la sección o escribe su nombre.`, filas));
 }
 
 /** «Buscar sección o subsección…» del asistente web: escribir un nombre lista las coincidencias. */
@@ -603,9 +590,8 @@ const filasTipos = (c: Ctx): Boton[][] => {
 
 async function pasoGrafica(c: Ctx) {
   const t = tipoActual(c);
-  const hint = TIPOS_GRAFICA.find((x) => x.id === t)?.hint ?? "";
   const tema = c.e.chartTopic?.trim() || c.e.title || "";
-  await mostrar(c, `${cab(c, "grafica")}<b>Gráfica con datos</b>\n<i>Opcional. La IA busca cifras en la web, las dibuja y tú eliges el tipo.</i>\n\n<b>¿Qué graficar?</b> ${tema ? esc(recorta(tema, 140)) : "<i>escríbelo en un mensaje</i>"}\n<b>Tipo:</b> ${esc(TIPOS_GRAFICA.find((x) => x.id === t)?.label ?? "")} — <i>${esc(hint)}</i>${c.e.chartInsertada ? "\n✓ <b>Ya está en la nota.</b>" : ""}`, [
+  await mostrar(c, `${cab(c, "grafica")}<b>¿Qué graficar?</b> ${tema ? esc(recorta(tema, 140)) : "<i>escríbelo en un mensaje</i>"}\n<i>Opcional · tipo: ${esc(TIPOS_GRAFICA.find((x) => x.id === t)?.label ?? "")}</i>${c.e.chartInsertada ? "\n✓ Ya está en la nota." : ""}`, [
     ...filasTipos(c),
     [{ texto: c.e.chart ? "✨ Buscar otros datos" : "✨ Generar gráfica", dato: "gg" }, { texto: "✏️ Cambiar tema", dato: "e:graficaTema" }],
     ...(c.e.chart?.pngUrl ? [[{ texto: c.e.chartInsertada ? "✅ Actualizar en la nota" : "✅ Insertar en la nota", dato: "gi" }, ...(c.e.chartInsertada ? [{ texto: "🗑️ Quitar", dato: "gq" }] : [])]] : []),
@@ -675,9 +661,9 @@ async function pasoSeo(c: Ctx) {
   const a = auditoria(c);
   const mt = c.e.metaTitle || c.e.title || "";
   const md = c.e.metaDescription || c.e.excerpt || "";
-  const faltan = a.items.filter((i) => !i.ok).slice(0, 3).map((i) => `• ${esc(i.text)}`).join("\n");
+  const faltan = a.items.filter((i) => !i.ok).slice(0, 2).map((i) => `• ${esc(i.text)}`).join("\n");
   const dominio = new URL(siteUrl("/")).host;
-  await mostrar(c, `${cab(c, "seo", "Buscadores")}<b>Cómo se verá en Google</b>\n<i>Opcional. Si lo dejas vacío se usan el título y el resumen.</i>\n\n<i>${esc(dominio)} › articulo</i>\n<b><u>${esc(recorta(mt, 90))}</u></b>\n${esc(recorta(md, 200))}\n\n<i>Título ${contador(mt.length, 15, 65)}\nDescripción ${contador(md.length, 70, 155)}</i>\n\n🔎 <b>SEO ${a.score}/100 · ${scoreLabel(a.score)}</b>${faltan ? `\n${faltan}` : "\n✅ Todo en orden."}${a.capped ? "\n⚠️ Falta un criterio crítico (firma, fuentes, titular o datos por confirmar)." : ""}`, [
+  await mostrar(c, `${cab(c, "seo", "Buscadores")}<i>${esc(dominio)} › articulo</i>\n<b><u>${esc(recorta(mt, 90))}</u></b>\n${esc(recorta(md, 200))}\n\n🔎 <b>SEO ${a.score}/100 · ${scoreLabel(a.score)}</b>${faltan ? `\n${faltan}` : "\n✅ Todo en orden."}`, [
     [{ texto: "✏️ Título SEO", dato: "e:metaTitle" }, { texto: "✏️ Descripción", dato: "e:metaDescription" }],
     ...(esIA(c) && c.e.generated ? [[regenerar(c, "seo")]] : []),
     ...botonVista(c),
@@ -705,7 +691,7 @@ async function panelFinal(c: Ctx) {
   const [info] = c.e.articleId ? await db.select({ estado: articles.status }).from(articles).where(eq(articles.id, c.e.articleId)).limit(1) : [];
   const pub = canPublish(c.role) && (await tienePermiso(c.userId, c.role, "publicar"));
   const ya = info?.estado === "publicado";
-  await mostrar(c, `${cab(c, "final")}<b>Así quedó</b>\n<b>${esc(recorta(c.e.title ?? "", 100))}</b>\n✍️ ${esc(c.nombre)} · 📌 ${ya ? "publicada" : "borrador (aún NO está publicada)"}${pub ? "" : `\n\nℹ️ Tu rol (<b>${esc(String(c.role))}</b>) no publica ni programa: envíala a revisión y un editor la publica.`}\n\n¿Qué hacemos?`, [
+  await mostrar(c, `${cab(c, "final")}<b>${esc(recorta(c.e.title ?? "", 100))}</b>\n📌 ${ya ? "Publicada" : "Borrador (aún NO publicada)"}${pub ? "" : "\nTu rol no publica: envíala a revisión."}`, [
     ...(pub
       ? [[{ texto: ya ? "🚀 Guardar y actualizar" : "🚀 Publicar", dato: `f:pub:${tk(c)}` }], [{ texto: "📅 Programar", dato: `f:p:${tk(c)}` }, { texto: "💾 Guardar borrador", dato: `f:b:${tk(c)}` }]]
       : [[{ texto: "🔍 Enviar a revisión", dato: `f:r:${tk(c)}` }, { texto: "💾 Guardar borrador", dato: `f:b:${tk(c)}` }]]),
@@ -747,9 +733,8 @@ async function entrevista(c: Ctx, fileId: string, mime: string, nombre: string) 
   c.e.material = [...(c.e.material ?? []), r.material];
   c.e.options = undefined;
   c.e.enOpciones = false;
-  c.aviso = `✅ Transcribí la entrevista (${r.material.text.length.toLocaleString("es-CO")} caracteres). Puedes revisarla con 👁️.`;
   await fin(c);
-  return pasoTema(c);
+  return proponer(c); // sigue solo: propone títulos con la entrevista
 }
 
 // --- Punto de entrada -------------------------------------------------------------------------------------------
@@ -867,8 +852,8 @@ async function textoEsperado(c: Ctx, texto: string) {
   const w = c.e.espera;
   c.e.espera = undefined;
   switch (w) {
-    case "titulo": { await guardar(c, { title: texto.slice(0, 160) }); return c.e.fase === "tema" ? pasoOpciones(c) : vista(c); }
-    case "contexto": c.e.context = texto; c.e.ctxSel = undefined; await fin(c); return pasoOpciones(c);
+    case "titulo": { await guardar(c, { title: texto.slice(0, 160) }); return c.e.fase === "tema" ? pasoEnfoques(c) : vista(c); }
+    case "contexto": c.e.context = texto; c.e.ctxSel = undefined; await fin(c); return redactar(c);
     case "resumen": await guardar(c, { excerpt: texto }); return pasoResumen(c);
     case "claves": await guardar(c, { tags: texto.split(/[,\n]/).map((t) => t.trim().toLowerCase()).filter(Boolean).slice(0, 12) }); return pasoClaves(c);
     case "cuerpo": await guardar(c, { body: htmlDeTexto(texto) }); return pasoCuerpo(c);
@@ -877,7 +862,7 @@ async function textoEsperado(c: Ctx, texto: string) {
     case "alt": await guardar(c, { coverAlt: texto.slice(0, 300) }); return pasoPortada(c);
     case "escena": c.e.sceneTxt = texto.slice(0, 400); await fin(c); return portadaIA(c);
     case "graficaTema": c.e.chartTopic = texto.slice(0, 300); await fin(c); return pasoGrafica(c);
-    case "enfoque": c.e.ideasFocus = texto.slice(0, 200); await fin(c); return subIdeas(c);
+    case "enfoque": return pasoTema(c);
     case "busqueda": return buscarNoticias(c, texto);
     case "correccion": {
       const i = c.e.editIdx;
@@ -966,7 +951,7 @@ async function acciones(c: Ctx, d: string) {
       return c.e.fase === "final" ? panelFinal(c) : vista(c);
     }
     case "b": { // Atrás: al paso anterior (en las opciones del primer paso, vuelve al tema)
-      if (c.e.fase === "tema" && c.e.enOpciones) { c.e.enOpciones = false; return pasoTema(c); }
+      if (c.e.fase === "tema" && c.e.enOpciones) { if (c.e.etapa === "enfoque") return pasoTitulos(c); c.e.enOpciones = false; return pasoTema(c); }
       const l = pasos(c);
       const i = l.indexOf(c.e.fase);
       return i > 0 ? paso(c, l[i - 1]) : undefined;
@@ -1018,11 +1003,11 @@ async function acciones(c: Ctx, d: string) {
       if (c.e.fase === "idle") { c.e.modo = "ia"; c.e.fase = "tema"; }
       switch (v) {
         case "ini": await limpiarTarjetas(c); c.e.espera = undefined; return pasoTema(c);
-        case "ideas": return subIdeas(c);
+        case "ideas": return buscarIdeas(c);
         case "noticias": await limpiarTarjetas(c); return subNoticias(c);
         case "entrevista": return subEntrevista(c);
         case "enlaces": return subEnlaces(c);
-        case "enf": return pedir(c, "enfoque", "Escribe el enfoque (p. ej. leche, exportaciones, sanidad).", c.e.ideasFocus);
+        case "enf": return pasoTema(c);
         case "bt": await limpiarTarjetas(c); c.e.topic = undefined; c.e.material = []; c.e.refs = []; c.e.options = undefined; c.e.enOpciones = false; c.e.ideas = undefined; c.e.noticias = undefined; c.e.ideasFocus = undefined; await fin(c); return pasoTema(c);
         case "prop": return proponer(c);
         case "chg": c.e.enOpciones = false; await fin(c); return pasoTema(c);
@@ -1060,14 +1045,14 @@ async function acciones(c: Ctx, d: string) {
       if (v === "x") return pedir(c, "titulo", "Escribe el título que quieres usar (ideal entre 15 y 65 caracteres).", c.e.title);
       c.e.title = c.e.options?.titles[Number(v)] ?? c.e.title;
       await fin(c);
-      return pasoOpciones(c);
+      return pasoEnfoques(c);
     }
     case "c": {
       if (v === "e") return pedir(c, "contexto", "Escribe el contexto o enfoque que quieres (reemplaza al elegido).", c.e.context);
       c.e.ctxSel = v === "x" ? -1 : Number(v);
       c.e.context = v === "x" ? "" : c.e.options?.contexts[Number(v)]?.text ?? "";
       await fin(c);
-      return pasoOpciones(c);
+      return redactar(c);
     }
     case "n": {
       // En el primer paso, «Siguiente» hace lo que toca: proponer opciones y, con título elegido, generar el borrador.
