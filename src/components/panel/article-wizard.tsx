@@ -79,10 +79,10 @@ const STEPS_MANUAL = [
   { key: "titulo", label: "Título" },
   { key: "resumen", label: "Resumen" },
   { key: "claves", label: "Palabras clave" },
+  { key: "portada", label: "Portada" },
   { key: "seccion", label: "Sección y autor" },
   { key: "cuerpo", label: "Cuerpo" },
   { key: "grafica", label: "Gráfica" },
-  { key: "portada", label: "Portada" },
   { key: "seo", label: "Buscadores" },
   { key: "vista", label: "Vista previa" },
 ] as const;

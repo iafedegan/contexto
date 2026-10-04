@@ -40,8 +40,8 @@ type Msg = {
 };
 export type Update = { update_id: number; message?: Msg; callback_query?: { id: string; data?: string; message?: Msg } };
 
-// Mismo orden y nombres que el asistente web: Título, Resumen, Palabras clave, Sección y autor, Cuerpo, Gráfica, Portada, Buscadores, Vista previa.
-const PASOS: Fase[] = ["titulo", "resumen", "claves", "seccion", "cuerpo", "grafica", "portada", "seo", "final"];
+// Mismo orden y nombres que el asistente web: Título, Resumen, Palabras clave, Portada, Sección y autor, Cuerpo, Gráfica, Buscadores, Vista previa.
+const PASOS: Fase[] = ["titulo", "resumen", "claves", "portada", "seccion", "cuerpo", "grafica", "seo", "final"];
 const NOMBRE_PASO: Partial<Record<Fase, string>> = {
   titulo: "Título y contexto", resumen: "Resumen", claves: "Palabras clave", seccion: "Sección y autor", cuerpo: "Cuerpo",
   grafica: "Gráfica", portada: "Portada", seo: "Buscadores", final: "Vista previa",
