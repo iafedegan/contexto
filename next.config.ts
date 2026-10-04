@@ -33,8 +33,8 @@ const CSP = [
 const nextConfig: NextConfig = {
   poweredByHeader: false,
 
-  // Las acciones del servidor admiten 1 MB por defecto; el audio de una entrevista se manda en trozos de ~3 MB (Vercel tope: 4,5 MB).
-  experimental: { serverActions: { bodySizeLimit: "4mb" } },
+  // Las acciones del servidor admiten 1 MB por defecto; el audio de una entrevista se manda en trozos de ~3 MB (OJO: en Vercel el tope real por petición es 4,5 MB, suba lo que suba este valor).
+  experimental: { serverActions: { bodySizeLimit: "50mb" } },
 
   // Identifica cada despliegue: el Service Worker se registra con esta
   // versión y así los teléfonos toman el diseño nuevo sin intervención manual.
