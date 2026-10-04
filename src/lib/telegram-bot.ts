@@ -636,9 +636,11 @@ async function pasoFinal(c: Ctx) {
 
 // --- Menú de inicio y entrada ------------------------------------------------------------------------------------
 
+/** Primer paso: la misma pantalla «¿Cómo quieres crearlo?» del panel, con sus dos opciones y sus textos. */
 async function menuInicio(c: Ctx) {
-  await enviar(c.chatId, "📝 <b>Nuevo artículo</b>\n¿Cómo quieres crearlo?\n\n✨ <b>Con IA:</b> describes el tema (o partes de ideas, noticias, una entrevista o enlaces) y la IA propone títulos y redacta; tú revisas cada paso.\n✍️ <b>Paso a paso:</b> lo escribes tú, un paso por mensaje.\n\nTambién puedes escribirme directamente el tema, pegar enlaces o enviar una nota de voz.", [
-    [{ texto: "✨ Con IA", dato: "m:ia" }, { texto: "✍️ Paso a paso", dato: "m:man" }],
+  await enviar(c.chatId, "<i>NUEVO ARTÍCULO</i>\n<b>¿Cómo quieres crearlo?</b>\n\n✏️ <b>Escribirlo yo</b>\nUn paso a paso guiado: título, resumen, palabras clave, sección, cuerpo, portada y buscadores. Al final ves la vista previa antes de guardar.\n\n✨ <b>Con asistente de IA</b>\nSolo el título y un poco de contexto: la IA redacta el borrador y lo revisas con el mismo paso a paso, barra SEO y vista previa. Nada se publica sin tu aprobación.", [
+    [{ texto: "✏️ Escribirlo yo · Empezar paso a paso →", dato: "m:man" }],
+    [{ texto: "✨ Con asistente de IA · Usar el asistente →", dato: "m:ia" }],
   ]);
 }
 
