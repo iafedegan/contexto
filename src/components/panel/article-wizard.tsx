@@ -54,7 +54,7 @@ import type { Material } from "@/lib/material-types";
 import { SiteArticlePreview, type SitePreviewChrome } from "@/components/panel/site-article-preview";
 import { IdeaCards, NewsCards } from "@/components/panel/wizard-fuentes";
 import { WizardStepper } from "@/components/panel/wizard-stepper";
-import { esVideo, ExtraerAudioError, extraerAudioDeVideo } from "@/lib/audio-extract";
+import { esVideo, ExtraerAudioError, extraerAudioDeVideo, partirWav } from "@/lib/audio-extract";
 import { aplicarTipo, decodeSpec, encodeSpec, renderChartSvg, svgDataUri, TIPOS_GRAFICA, type ChartSpec, type TipoGrafica } from "@/lib/chart-svg";
 import { InteractiveChart } from "@/components/interactive-chart";
 import { auditArticle, scoreLabel, type AuditItem, type AuditResult } from "@/lib/seo-audit";
@@ -556,7 +556,23 @@ export function ArticleWizard({
         }
         setAudioFase(esVideo(f) ? "Transcribiendo el video…" : "Transcribiendo…");
         let res;
-        if (f.size <= 3.5 * 1024 * 1024) {
+        if (f !== original && f.type === "audio/wav") {
+          // Audio sacado de un video: se manda en trozos de ~3 MB directo al servidor (sin pasar por el almacenamiento).
+          const partes = await partirWav(f, 3 * 1024 * 1024);
+          const textos: string[] = [];
+          let primero: Material | null = null;
+          for (let i = 0; i < partes.length; i++) {
+            setAudioFase(partes.length > 1 ? `Transcribiendo… parte ${i + 1} de ${partes.length}` : "Transcribiendo…");
+            const fd = new FormData();
+            fd.append("audio", partes[i]);
+            const r = await transcribirEntrevista(fd);
+            if (!r.ok) return setAudioError(`${r.error}${partes.length > 1 ? ` (parte ${i + 1} de ${partes.length})` : ""}`);
+            primero ??= r.material;
+            textos.push(r.material.text);
+          }
+          if (!primero) return setAudioError("No se pudo transcribir.");
+          res = { ok: true as const, material: { ...primero, title: `Entrevista: ${original.name.replace(/\.[a-z0-9]+$/i, "").slice(0, 80)}`, text: textos.join("\n\n") } };
+        } else if (f.size <= 3.5 * 1024 * 1024) {
           const fd = new FormData();
           fd.append("audio", f);
           res = await transcribirEntrevista(fd);

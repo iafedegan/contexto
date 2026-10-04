@@ -86,3 +86,26 @@ export async function extraerAudioDeVideo(video: File, maxBytes: number): Promis
   const nombre = video.name.replace(/\.[a-z0-9]+$/i, "") || "entrevista";
   return new File([aWav(aMono(pcm, rate), rate)], `${nombre}.wav`, { type: "audio/wav" });
 }
+
+/** Parte un WAV mono de 16 bits en trozos de a lo sumo `maxBytes` (cada uno con su cabecera), para mandarlos directo al servidor. */
+export async function partirWav(wav: File, maxBytes: number): Promise<File[]> {
+  if (wav.size <= maxBytes) return [wav];
+  const buf = await wav.arrayBuffer();
+  const rate = new DataView(buf).getUint32(24, true);
+  const datos = buf.slice(44);
+  const por = Math.floor((maxBytes - 44) / 2) * 2;
+  const base = wav.name.replace(/\.wav$/i, "");
+  const out: File[] = [];
+  for (let i = 0, k = 1; i < datos.byteLength; i += por, k++) {
+    const parte = datos.slice(i, i + por);
+    const h = new ArrayBuffer(44);
+    const v = new DataView(h);
+    const t = (o: number, s: string) => { for (let j = 0; j < s.length; j++) v.setUint8(o + j, s.charCodeAt(j)); };
+    t(0, "RIFF"); v.setUint32(4, 36 + parte.byteLength, true); t(8, "WAVE"); t(12, "fmt ");
+    v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+    v.setUint32(24, rate, true); v.setUint32(28, rate * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true);
+    t(36, "data"); v.setUint32(40, parte.byteLength, true);
+    out.push(new File([h, parte], `${base}-${k}.wav`, { type: "audio/wav" }));
+  }
+  return out;
+}
