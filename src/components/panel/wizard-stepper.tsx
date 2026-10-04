@@ -31,7 +31,7 @@ export function WizardStepper({ pasos, actual, onGo }: { pasos: readonly { key: 
               >
                 {hecho ? <Check size={12} strokeWidth={3} /> : i + 1}
               </span>
-              <span className={`${es ? "inline" : "hidden lg:inline"} whitespace-nowrap`}>{p.label}</span>
+              <span className={`${es ? "inline" : "hidden 2xl:inline"} whitespace-nowrap`}>{p.label}</span>
             </button>
           </li>
         );

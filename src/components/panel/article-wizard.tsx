@@ -213,7 +213,7 @@ export function ArticleWizard({
   const [newsFiltro, setNewsFiltro] = useState<"todo" | NewsItem["type"]>("todo");
   const [searchingNews, startNews] = useTransition();
   const [enOpciones, setEnOpciones] = useState(false);
-  const [fuente, setFuente] = useState<"ideas" | "noticias" | "entrevista" | "enlaces">("ideas");
+  const [fuente, setFuente] = useState<"ideas" | "noticias" | "entrevista" | "enlaces" | null>(null);
   const [progAbierto, setProgAbierto] = useState(false);
   const [progFecha, setProgFecha] = useState("");
   const [material, setMaterial] = useState<Material[]>([]);
@@ -295,7 +295,10 @@ export function ArticleWizard({
   };
   const firma = JSON.stringify(snapshot);
   const snapRef = useRef(snapshot);
-  snapRef.current = snapshot;
+  // Siempre el último estado, actualizado al confirmar cada render (no durante el render).
+  useEffect(() => {
+    snapRef.current = snapshot;
+  });
   useEffect(() => {
     if (title.trim().length < 5 || firma === ultimaFirma.current) return;
     const t = setTimeout(async function guardar() {
@@ -741,20 +744,12 @@ export function ArticleWizard({
       <div className="flex min-h-0 flex-1 gap-3">
       <div className="lx-card min-h-0 flex-1 p-5 sm:p-6" style={{ overflowY: "auto", transform: "none" }}>
         {mode === "ia" && generated && PART_OF[current.key] && (
-          <div className="mx-auto mb-4 flex max-w-2xl flex-wrap items-center gap-2 rounded-[var(--radius)] border border-[var(--border-strong)] bg-[var(--surface-2)] px-3 py-2">
-            <Sparkles size={14} className="text-[var(--accent)]" />
-            <span className="mr-auto text-sm">Propuesta de la IA. ¿Te gusta?</span>
-            <button
-              type="button"
-              onClick={() => regenerate(PART_OF[current.key]!)}
-              disabled={generating}
-              className="lx-btn lx-btn-ghost !py-1.5 text-xs"
-            >
-              {generating ? <Loader2 size={13} className="animate-spin" /> : <RotateCcw size={13} />}
+          <div className="mx-auto mb-3 flex max-w-2xl items-center gap-2 text-xs text-[var(--fg-muted)]">
+            <Sparkles size={13} className="text-[var(--accent)]" />
+            <span>Propuesta de la IA</span>
+            <button type="button" onClick={() => regenerate(PART_OF[current.key]!)} disabled={generating} className="lx-link inline-flex items-center gap-1 font-semibold">
+              {generating ? <Loader2 size={12} className="animate-spin" /> : <RotateCcw size={12} />}
               {generating ? "Regenerando…" : "Regenerar"}
-            </button>
-            <button type="button" onClick={next} disabled={generating} className="lx-btn !py-1.5 text-xs">
-              <Check size={13} /> Me gusta
             </button>
           </div>
         )}
@@ -797,19 +792,20 @@ export function ArticleWizard({
             <div className="mt-2">
               <p className="lx-kicker text-[var(--fg-muted)]">¿Prefieres partir de otra cosa?</p>
               <div role="tablist" aria-label="Fuente para empezar" className="mt-2 flex gap-2 overflow-x-auto pb-1">
-                <button type="button" role="tab" id="tab-ideas" aria-selected={fuente === "ideas"} aria-controls="panel-fuente" onClick={() => setFuente("ideas")} className={`inline-flex items-center gap-2 whitespace-nowrap rounded-full border px-4 py-2 text-sm font-medium transition ${fuente === "ideas" ? "border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-fg)] shadow-sm" : "border-[var(--border)] bg-[var(--bg-2)] hover:border-[var(--accent)]"}`}>
+                <button type="button" role="tab" id="tab-ideas" aria-selected={fuente === "ideas"} aria-controls="panel-fuente" onClick={() => setFuente((x) => (x === "ideas" ? null : "ideas"))} className={`inline-flex items-center gap-2 whitespace-nowrap rounded-full border px-4 py-2 text-sm font-medium transition ${fuente === "ideas" ? "border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-fg)] shadow-sm" : "border-[var(--border)] bg-[var(--bg-2)] hover:border-[var(--accent)]"}`}>
                   <Lightbulb size={15} aria-hidden /> Ideas de la IA
                 </button>
-                <button type="button" role="tab" id="tab-noticias" aria-selected={fuente === "noticias"} aria-controls="panel-fuente" onClick={() => setFuente("noticias")} className={`inline-flex items-center gap-2 whitespace-nowrap rounded-full border px-4 py-2 text-sm font-medium transition ${fuente === "noticias" ? "border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-fg)] shadow-sm" : "border-[var(--border)] bg-[var(--bg-2)] hover:border-[var(--accent)]"}`}>
+                <button type="button" role="tab" id="tab-noticias" aria-selected={fuente === "noticias"} aria-controls="panel-fuente" onClick={() => setFuente((x) => (x === "noticias" ? null : "noticias"))} className={`inline-flex items-center gap-2 whitespace-nowrap rounded-full border px-4 py-2 text-sm font-medium transition ${fuente === "noticias" ? "border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-fg)] shadow-sm" : "border-[var(--border)] bg-[var(--bg-2)] hover:border-[var(--accent)]"}`}>
                   <Search size={15} aria-hidden /> Buscar noticias
                 </button>
-                <button type="button" role="tab" id="tab-entrevista" aria-selected={fuente === "entrevista"} aria-controls="panel-fuente" onClick={() => setFuente("entrevista")} className={`inline-flex items-center gap-2 whitespace-nowrap rounded-full border px-4 py-2 text-sm font-medium transition ${fuente === "entrevista" ? "border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-fg)] shadow-sm" : "border-[var(--border)] bg-[var(--bg-2)] hover:border-[var(--accent)]"}`}>
+                <button type="button" role="tab" id="tab-entrevista" aria-selected={fuente === "entrevista"} aria-controls="panel-fuente" onClick={() => setFuente((x) => (x === "entrevista" ? null : "entrevista"))} className={`inline-flex items-center gap-2 whitespace-nowrap rounded-full border px-4 py-2 text-sm font-medium transition ${fuente === "entrevista" ? "border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-fg)] shadow-sm" : "border-[var(--border)] bg-[var(--bg-2)] hover:border-[var(--accent)]"}`}>
                   <Mic size={15} aria-hidden /> Entrevista de voz
                 </button>
-                <button type="button" role="tab" id="tab-enlaces" aria-selected={fuente === "enlaces"} aria-controls="panel-fuente" onClick={() => setFuente("enlaces")} className={`inline-flex items-center gap-2 whitespace-nowrap rounded-full border px-4 py-2 text-sm font-medium transition ${fuente === "enlaces" ? "border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-fg)] shadow-sm" : "border-[var(--border)] bg-[var(--bg-2)] hover:border-[var(--accent)]"}`}>
+                <button type="button" role="tab" id="tab-enlaces" aria-selected={fuente === "enlaces"} aria-controls="panel-fuente" onClick={() => setFuente((x) => (x === "enlaces" ? null : "enlaces"))} className={`inline-flex items-center gap-2 whitespace-nowrap rounded-full border px-4 py-2 text-sm font-medium transition ${fuente === "enlaces" ? "border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-fg)] shadow-sm" : "border-[var(--border)] bg-[var(--bg-2)] hover:border-[var(--accent)]"}`}>
                   <Link2 size={15} aria-hidden /> Enlaces
                 </button>
               </div>
+              {fuente && (
               <div id="panel-fuente" role="tabpanel" aria-labelledby={`tab-${fuente}`} className="mt-3 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] p-4">
                 {fuente === "ideas" && <p className="mb-3 text-sm text-[var(--fg-muted)]">La IA busca en internet qué es tendencia en el sector, en Colombia y en el mundo, y te propone temas con sus fuentes.</p>}
                 {fuente === "noticias" && <p className="mb-3 text-sm text-[var(--fg-muted)]">Escribe una persona, empresa o tema (p. ej. «Joaquín Manjarrés»): investiga en medios, YouTube y fuentes oficiales. Eliges cuáles <strong>referenciar</strong> o usar <strong>como tema</strong>.</p>}
@@ -932,6 +928,7 @@ export function ArticleWizard({
                 </div>
                 )}
               </div>
+              )}
               {material.length > 0 && (
                 <ul className="mt-4 flex flex-col gap-2">
                   {material.map((m, i) => (
@@ -959,18 +956,6 @@ export function ArticleWizard({
                 </ul>
               )}
             </div>
-              {/* Acción principal siempre a la vista: al explorar ideas o noticias no hay que volver arriba. */}
-              <div className="sticky bottom-0 z-10 -mx-5 mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-[var(--border)] bg-[var(--bg-2)] px-5 py-3 shadow-[0_-10px_14px_-12px_rgba(0,0,0,0.3)] sm:-mx-6 sm:px-6">
-                <button type="button" onClick={suggest} disabled={generating || (topic.trim().length < 10 && material.length === 0)} className="lx-btn max-sm:w-full max-sm:justify-center disabled:opacity-60">
-                  {generating && !options ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
-                  {options ? "Proponer otras opciones" : "Proponer títulos y contextos"}
-                </button>
-                <span className="hidden min-w-0 flex-1 truncate text-xs text-[var(--fg-muted)] sm:block">
-                  {topic.trim() || material.length
-                    ? `Tema: ${(topic.trim() || material[0]?.title || "").slice(0, 90)}${material.length ? ` · ${material.length} material${material.length > 1 ? "es" : ""}` : ""}${refs.length ? ` · ${refs.length} referencia${refs.length > 1 ? "s" : ""}` : ""}`
-                    : "Escribe el tema (o elige una idea, una noticia, una entrevista o enlaces) para continuar."}
-                </span>
-              </div>
               </>
             )}
 
@@ -1041,15 +1026,7 @@ export function ArticleWizard({
                   className={`${input} resize-y text-base leading-relaxed`}
                 />
 
-                <div className="flex flex-wrap items-center gap-3">
-                  <button type="button" onClick={generate} disabled={generating} className="lx-btn">
-                    {generating ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
-                    {generating ? "Redactando…" : generated ? "Volver a generar" : "Generar borrador con esta selección"}
-                  </button>
-                  {generated && (
-                    <span className="text-xs text-[var(--fg-muted)]">Ya hay un borrador: pulsa Siguiente para revisarlo.</span>
-                  )}
-                </div>
+                {generated && <p className="text-xs text-[var(--fg-muted)]">Ya hay un borrador: «Siguiente» para revisarlo, o «Volver a generar» abajo.</p>}
               </>
             )}
           </Step>
@@ -1311,18 +1288,23 @@ export function ArticleWizard({
                     </button>
                   )}
                 </div>
-                <input
-                  value={cover}
-                  onChange={(e) => setCover(e.target.value)}
-                  placeholder="…o pega la URL de la imagen"
-                  className={`${input} text-sm`}
-                />
-                <input
-                  value={coverAlt}
-                  onChange={(e) => setCoverAlt(e.target.value)}
-                  placeholder="Qué se ve en la foto (texto alternativo)"
-                  className={`${input} text-sm`}
-                />
+                <details className="text-sm">
+                  <summary className="lx-link cursor-pointer text-xs font-medium">Pegar la URL de una imagen</summary>
+                  <input
+                    value={cover}
+                    onChange={(e) => setCover(e.target.value)}
+                    placeholder="https://…"
+                    className={`${input} mt-2 text-sm`}
+                  />
+                </details>
+                {cover && (
+                  <input
+                    value={coverAlt}
+                    onChange={(e) => setCoverAlt(e.target.value)}
+                    placeholder="Qué se ve en la foto (texto alternativo)"
+                    className={`${input} text-sm`}
+                  />
+                )}
               </div>
             </div>
             <div className="mt-5 rounded-[var(--radius)] border border-dashed border-[var(--border-strong)] bg-[var(--surface-2)]/50 p-4">
@@ -1330,17 +1312,20 @@ export function ArticleWizard({
               <p className="mt-1 text-xs text-[var(--fg-muted)]">
                 Crea una imagen realista, con estética de fotograma de cine (16:9), a partir del título y el resumen. No retrata personas reales. Se publica rotulada «imagen generada con IA»; si la nota trata de un hecho real, es mejor usar una foto propia o de agencia.
               </p>
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-                <input
-                  value={sceneTxt}
-                  onChange={(e) => setSceneTxt(e.target.value)}
-                  placeholder="Opcional: describe la escena (si lo dejas vacío, la IA la propone)"
-                  className={`${input} min-w-0 flex-1 !py-2 text-sm`}
-                />
-                <button type="button" onClick={makeCover} disabled={genImg || uploading} className="lx-btn">
+              <div className="mt-3 flex flex-col gap-2">
+                <button type="button" onClick={makeCover} disabled={genImg || uploading} className="lx-btn w-fit">
                   {genImg ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
                   {cover ? "Generar otra" : "Generar foto con IA"}
                 </button>
+                <details className="text-sm">
+                  <summary className="lx-link cursor-pointer text-xs font-medium">Describir la escena (opcional)</summary>
+                  <input
+                    value={sceneTxt}
+                    onChange={(e) => setSceneTxt(e.target.value)}
+                    placeholder="Si lo dejas vacío, la IA propone la escena"
+                    className={`${input} mt-2 !py-2 text-sm`}
+                  />
+                </details>
               </div>
               {genImg && <p role="status" className="mt-3 text-xs text-[var(--fg-muted)]">Generando la imagen… puede tardar unos 20 segundos.</p>}
               {imgError && <p role="alert" className="mt-3 text-sm text-[var(--danger,#b4442e)]">{imgError}</p>}
@@ -1417,14 +1402,13 @@ export function ArticleWizard({
 
       {/* --- Navegación --- */}
       <div className="flex shrink-0 items-center justify-between gap-3">
-        <button
-          type="button"
-          onClick={back}
-          disabled={step === 0}
-          className="lx-btn lx-btn-ghost disabled:opacity-40"
-        >
-          <ArrowLeft size={15} /> Atrás
-        </button>
+        {step > 0 || (current.key === "tema" && enOpciones) ? (
+          <button type="button" onClick={back} className="lx-btn lx-btn-ghost">
+            <ArrowLeft size={15} /> Atrás
+          </button>
+        ) : (
+          <span />
+        )}
         {isLast ? (
           <div className="flex flex-wrap items-center justify-end gap-2">
             {savedAs && (
@@ -1478,6 +1462,19 @@ export function ArticleWizard({
               </button>
             )}
           </div>
+        ) : current.key === "tema" && !generated ? (
+          <button
+            type="button"
+            onClick={next}
+            disabled={generating || (!options ? topic.trim().length < 10 && material.length === 0 : enOpciones && title.trim().length < 5)}
+            className="lx-btn disabled:opacity-60"
+          >
+            {generating ? (
+              <><Loader2 size={15} className="animate-spin" /> {options ? "Redactando…" : "Buscando…"}</>
+            ) : (
+              <><Sparkles size={15} /> {!options ? "Proponer títulos y contextos" : !enOpciones ? "Ver títulos y contextos" : "Generar borrador"}</>
+            )}
+          </button>
         ) : (
           <button type="button" onClick={next} disabled={generating && current.key === "tema"} className="lx-btn disabled:opacity-70">
             {generating && current.key === "tema" ? (
