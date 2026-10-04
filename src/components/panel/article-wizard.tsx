@@ -580,7 +580,7 @@ export function ArticleWizard({
           const c = await crearSubidaAudio({ name: f.name, type: f.type, size: f.size });
           if (!c.ok) return setAudioError(c.error);
           const put = await fetch(c.uploadUrl, { method: "PUT", headers: { "content-type": f.type || "audio/mpeg" }, body: f });
-          if (!put.ok) return setAudioError(`No se pudo subir el archivo (${put.status}).`);
+          if (!put.ok) return setAudioError(`No se pudo subir el archivo (${put.status}): ${(await put.text().catch(() => "")).replace(/[{}"]/g, " ").slice(0, 160)}`);
           res = await transcribirEntrevistaSubida({ path: c.path, name: original.name });
         }
         if (!res.ok) return setAudioError(res.error);
