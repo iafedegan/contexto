@@ -91,7 +91,7 @@ const STEPS_MANUAL = [
   { key: "titulo", label: "Título" },
   { key: "resumen", label: "Resumen" },
   { key: "claves", label: "Palabras clave" },
-  { key: "portada", label: "Portada" },
+  { key: "portada", label: "Imagen" },
   { key: "seccion", label: "Sección y autor" },
   { key: "cuerpo", label: "Cuerpo" },
   { key: "grafica", label: "Gráfica" },
@@ -1184,7 +1184,34 @@ export function ArticleWizard({
 
         {current.key === "seccion" && (
           <Step ancho="lg" title="Sección y autor" hint="Dónde se publica y quién firma. Puedes dejarlo para después.">
-            <SectionTree options={categories} value={categoryId} onChange={setCategoryId} sugeridas={seccionesSugeridas} firma={authorName ?? "tu usuario, al guardar"} />
+            <SectionTree options={categories} value={categoryId} onChange={setCategoryId} sugeridas={seccionesSugeridas} firma={authorName ?? "tu usuario, al guardar"}>
+              {canPortada ? (
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] px-3.5 py-2.5">
+                  <div className="min-w-0 flex-1 basis-48">
+                    <p id="pt-sitio" className="lx-kicker text-[var(--fg-muted)]" title="Sin destacar: entra a la portada por fecha, como cualquier nota.">En la portada del sitio</p>
+                    <p className="text-xs leading-snug text-[var(--fg-muted)]">
+                      {portadaPos === "0" && "Se fija como la nota grande de arriba cuando se publique."}
+                      {portadaPos === "1" && "Se fija junto a la principal cuando se publique."}
+                      {portadaPos === "keep" && "Ya ocupa otro lugar fijado en la portada; se conserva (se ajusta en «Portada» del menú)."}
+                    </p>
+                  </div>
+                  <div role="radiogroup" aria-labelledby="pt-sitio" className="grid w-full grid-cols-3 gap-1 rounded-full border border-[var(--border)] bg-[var(--surface)] p-1 sm:w-auto">
+                    {([
+                      ["none", "Normal", "Sin destacar", "Entra por fecha, como cualquier nota."],
+                      ["0", "Principal", "Portada principal", "La nota grande de arriba."],
+                      ["1", "Segunda", "Segunda destacada", "Junto a la principal."],
+                    ] as const).map(([v, corto, t, d]) => (
+                      <button key={v} type="button" role="radio" aria-checked={portadaPos === v} title={d} onClick={() => setPortadaPos(v)}
+                        className={`rounded-full px-3 py-1.5 text-center text-sm font-medium transition sm:px-3.5 ${portadaPos === v ? "bg-[var(--accent)] text-[var(--accent-fg,#fff)] shadow-sm" : "text-[var(--fg-muted)] hover:text-[var(--fg)]"}`}>
+                        <span className="sm:hidden">{corto}</span><span className="hidden sm:inline">{t}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <p className="px-1 text-xs text-[var(--fg-muted)]">Tu cuenta no ubica notas en la portada del sitio: un editor lo hace al publicar.</p>
+              )}
+            </SectionTree>
           </Step>
         )}
 
@@ -1308,63 +1335,11 @@ export function ArticleWizard({
         )}
 
         {current.key === "portada" && (
-          <Step ancho="lg" title="Portada" hint="Dónde aparece la nota en el sitio y con qué imagen. Todo es opcional.">
-            {/* --- En el sitio --- */}
-            <section aria-labelledby="pt-sitio" className="rounded-[var(--radius-lg)] border border-[var(--border)] p-4 sm:p-5">
-              <h3 id="pt-sitio" className="text-sm font-semibold">En el sitio</h3>
-              {canPortada ? (
-                <>
-                  <div role="radiogroup" aria-label="Lugar en la portada" className="mt-3 grid w-full grid-cols-3 gap-1 rounded-full border border-[var(--border)] bg-[var(--bg-2)] p-1 sm:inline-grid sm:w-auto">
-                    {([
-                      ["none", "Normal", "Sin destacar", "Entra por fecha, como cualquier nota."],
-                      ["0", "Principal", "Portada principal", "La nota grande de arriba."],
-                      ["1", "Segunda", "Segunda destacada", "Junto a la principal."],
-                    ] as const).map(([v, corto, t, d]) => (
-                      <button key={v} type="button" role="radio" aria-checked={portadaPos === v} title={d} onClick={() => setPortadaPos(v)}
-                        className={`rounded-full px-3 py-1.5 text-center text-sm font-medium transition sm:px-3.5 ${portadaPos === v ? "bg-[var(--accent)] text-[var(--accent-fg,#fff)] shadow-sm" : "text-[var(--fg-muted)] hover:text-[var(--fg)]"}`}>
-                        <span className="sm:hidden">{corto}</span><span className="hidden sm:inline">{t}</span>
-                      </button>
-                    ))}
-                  </div>
-                  <p className="mt-2 text-xs text-[var(--fg-muted)]">
-                    {portadaPos === "none" && "Entra a la portada por fecha, como cualquier nota."}
-                    {portadaPos === "0" && "Se fija como la nota grande de arriba cuando se publique."}
-                    {portadaPos === "1" && "Se fija junto a la principal cuando se publique."}
-                    {portadaPos === "keep" && "Ya ocupa otro lugar fijado en la portada; se conserva (se ajusta en «Portada» del menú)."}
-                  </p>
-                </>
-              ) : (
-                <p className="mt-2 text-xs text-[var(--fg-muted)]">Tu cuenta no ubica notas en la portada: un editor lo hace al publicar.</p>
-              )}
-              {canPublish && (
-                <div className="mt-4 border-t border-[var(--border)] pt-4">
-                  <div className="flex flex-wrap gap-2">
-                    {([
-                      [breaking, setBreaking, "⚡ Última hora"],
-                      [live, setLive, "🔴 En desarrollo"],
-                    ] as const).map(([activo, cambiar, texto]) => (
-                      <button key={texto} type="button" aria-pressed={activo} onClick={() => cambiar(!activo)}
-                        className={`inline-flex items-center rounded-full border px-3.5 py-1.5 text-sm font-medium transition ${activo ? "border-[var(--accent)] bg-[var(--accent)]/12 text-[var(--accent)]" : "border-[var(--border)] hover:border-[var(--accent)]"}`}>
-                        {texto}
-                      </button>
-                    ))}
-                  </div>
-                  {(breaking || live) && (
-                    <p className="mt-2 text-xs text-[var(--fg-muted)]">
-                      {breaking && "Última hora: barra roja en la portada y aviso por notificación a quienes tienen la app, una sola vez al publicar. "}
-                      {live && "En desarrollo: etiqueta «En vivo» en las tarjetas y en la nota."}
-                    </p>
-                  )}
-                </div>
-              )}
-            </section>
-
+          <Step ancho="lg" title="Imagen de portada" hint="La foto que ilustra la nota en el sitio y al compartirla. Es opcional: sin ella se usa una ilustración con la sección.">
             {/* --- Imagen --- */}
             <section aria-labelledby="pt-imagen" className="rounded-[var(--radius-lg)] border border-[var(--border)] p-4 sm:p-5">
-              <div className="flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:justify-between sm:gap-3">
-                <h3 id="pt-imagen" className="text-sm font-semibold">Imagen de portada</h3>
-                <span className="text-xs text-[var(--fg-muted)]">{cover ? "Se publica con esta imagen" : "Sin imagen: se usa una ilustración con la sección"}</span>
-              </div>
+              <h3 id="pt-imagen" className="sr-only">Imagen de portada</h3>
+              <p className="text-xs text-[var(--fg-muted)]">{cover ? "Se publica con esta imagen." : "Sin imagen todavía."}</p>
               <div
                 onDragOver={(e) => { e.preventDefault(); setArrastre(true); }}
                 onDragLeave={() => setArrastre(false)}
@@ -1475,10 +1450,29 @@ export function ArticleWizard({
               <button type="button" onClick={back} className="lx-link inline-flex items-center gap-1 text-sm">
                 <ArrowLeft size={14} /> Volver a editar
               </button>
+              {canPublish && (
+                <div role="group" aria-label="Distintivos de la nota" className="flex flex-wrap items-center gap-2">
+                  {([
+                    [breaking, setBreaking, "⚡ Última hora", "Barra roja en la portada y aviso por notificación a quienes tienen la app, una sola vez al publicar."],
+                    [live, setLive, "🔴 En desarrollo", "Etiqueta «En vivo» en las tarjetas y en la nota."],
+                  ] as const).map(([activo, cambiar, texto, ayuda]) => (
+                    <button key={texto} type="button" aria-pressed={activo} title={ayuda} onClick={() => cambiar(!activo)}
+                      className={`inline-flex items-center rounded-full border px-3 py-1 text-sm font-medium transition ${activo ? "border-[var(--accent)] bg-[var(--accent)]/12 text-[var(--accent)]" : "border-[var(--border)] hover:border-[var(--accent)]"}`}>
+                      {texto}
+                    </button>
+                  ))}
+                </div>
+              )}
               <p className="lx-kicker ml-auto flex items-center gap-2 text-[var(--accent)]">
                 <Eye size={14} /> Así se verá en el sitio
               </p>
             </div>
+            {canPublish && (breaking || live) && (
+              <p className="-mt-1 text-xs text-[var(--fg-muted)]">
+                {breaking && "Última hora: barra roja en la portada y aviso por notificación a quienes tienen la app, una sola vez al publicar. "}
+                {live && "En desarrollo: etiqueta «En vivo» en las tarjetas y en la nota."}
+              </p>
+            )}
             {site ? (
               <div className="min-h-0 flex-1">
                 <SiteArticlePreview
@@ -1668,8 +1662,8 @@ const STEP_OF: Record<string, string> = {
   etiquetas: "Palabras clave",
   fuentes: "Cuerpo",
   firma: "Sección y autor",
-  portada: "Portada",
-  "portada-alt": "Portada",
+  portada: "Imagen",
+  "portada-alt": "Imagen",
   "titulo-limpio": "Título",
   "desc-distinta": "Resumen o Buscadores",
 };

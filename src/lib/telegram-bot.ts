@@ -47,7 +47,7 @@ export type Update = { update_id: number; message?: Msg; callback_query?: { id: 
 const PASOS_IA: Fase[] = ["tema", "resumen", "claves", "portada", "seccion", "cuerpo", "grafica", "seo", "final"];
 const PASOS_MANUAL: Fase[] = ["titulo", "resumen", "claves", "portada", "seccion", "cuerpo", "grafica", "seo", "final"];
 const NOMBRE_PASO: Partial<Record<Fase, string>> = {
-  tema: "Título y contexto", titulo: "Título", resumen: "Resumen", claves: "Palabras clave", portada: "Portada",
+  tema: "Título y contexto", titulo: "Título", resumen: "Resumen", claves: "Palabras clave", portada: "Imagen",
   seccion: "Sección y autor", cuerpo: "Cuerpo", grafica: "Gráfica", seo: "Buscadores", final: "Vista previa",
 };
 const AYUDA =
@@ -499,21 +499,14 @@ async function pasoCuerpo(c: Ctx) {
   ]);
 }
 
-// --- Portada: ubicación en el sitio + imagen ---------------------------------------------------------------------
+// --- Imagen de portada ---------------------------------------------------------------------------------------
 
 async function pasoPortada(c: Ctx) {
-  const portOk = await tienePermiso(c.userId, c.role, "portada");
-  const pubOk = canPublish(c.role);
-  let ubic = "";
-  if (c.e.articleId) {
-    const [a] = await db.select({ pos: articles.homePosition, b: articles.isBreaking, l: articles.isLive }).from(articles).where(eq(articles.id, c.e.articleId)).limit(1);
-    if (a) ubic = `${a.pos === null ? "sin destacar" : a.pos === 0 ? "portada principal" : a.pos === 1 ? "segunda destacada" : `lugar ${a.pos + 1}`}${a.b ? " · ⚡ Última hora" : ""}${a.l ? " · 🔴 En desarrollo" : ""}`;
-  }
   const filas: Boton[][] = [];
-  filas.push([{ texto: c.e.coverUrl ? "🎨 Otra imagen con IA" : "🎨 Generar imagen con IA", dato: "ph:g" }, ...(portOk || pubOk ? [{ texto: "📌 Portada del sitio", dato: `d:m:${tk(c)}` }] : [])]);
+  filas.push([{ texto: c.e.coverUrl ? "🎨 Otra imagen con IA" : "🎨 Generar imagen con IA", dato: "ph:g" }]);
   filas.push([{ texto: "✏️ Describir la escena", dato: "e:escena" }, ...(c.e.coverUrl ? [{ texto: "✏️ Texto alt", dato: "e:alt" }, { texto: "🗑️ Quitar", dato: "ph:q" }] : [])]);
   filas.push(nav(c));
-  await mostrar(c, `${cab(c, "portada")}🖼️ ${c.e.coverUrl ? "Imagen lista" : "Sin imagen"} · 📌 ${ubic || (portOk || pubOk ? "sin destacar" : "la ubica un editor")}\n<i>Envía una foto o genera una con IA.</i>`, filas);
+  await mostrar(c, `${cab(c, "portada")}🖼️ ${c.e.coverUrl ? "Imagen lista" : "Sin imagen"}\n<i>Envía una foto o genera una con IA.</i>`, filas);
 }
 
 async function portadaIA(c: Ctx) {
@@ -546,6 +539,13 @@ async function fotoRecibida(c: Ctx, fileId: string) {
 async function cats() {
   return db.select({ id: categories.id, name: categories.name, parentId: categories.parentId }).from(categories).orderBy(asc(categories.sortOrder), asc(categories.name));
 }
+const textoLugar = (pos: number | null | undefined) => (pos == null ? "sin destacar" : pos === 0 ? "portada principal" : pos === 1 ? "segunda destacada" : `lugar ${pos + 1}`);
+/** «📌 Portada del sitio: …»: dónde queda la nota en la portada (solo con permiso y con la nota ya guardada). */
+async function filaPortada(c: Ctx): Promise<Boton[][]> {
+  if (!c.e.articleId || !(await tienePermiso(c.userId, c.role, "portada"))) return [];
+  const [a] = await db.select({ pos: articles.homePosition }).from(articles).where(eq(articles.id, c.e.articleId)).limit(1);
+  return [[{ texto: `📌 Portada del sitio: ${textoLugar(a?.pos)}`, dato: `d:pm:${tk(c)}` }]];
+}
 async function mostrarSecciones(c: Ctx) {
   const todas = await cats();
   const raices = todas.filter((x) => !x.parentId);
@@ -564,7 +564,7 @@ async function mostrarSecciones(c: Ctx) {
   const orden = [...sug, ...raices.filter((r) => !sug.includes(r))];
   const filas: Boton[][] = [];
   for (let i = 0; i < orden.length; i += 2) filas.push(orden.slice(i, i + 2).map((r) => ({ texto: `${sug.includes(r) ? "⭐ " : ""}${r.name}${todas.some((x) => x.parentId === r.id) ? " ›" : ""}`, dato: todas.some((x) => x.parentId === r.id) ? `sr:${r.id}` : `s:${r.id}` })));
-  filas.push([{ texto: "Sin sección", dato: "s:0" }], nav(c));
+  filas.push([{ texto: "Sin sección", dato: "s:0" }], ...(await filaPortada(c)), nav(c));
   return void (await mostrar(c, `${cabeza}Elige la sección o escribe su nombre.`, filas));
 }
 
@@ -699,7 +699,7 @@ async function panelFinal(c: Ctx) {
       ? [[{ texto: ya ? "🚀 Guardar y actualizar" : "🚀 Publicar", dato: `f:pub:${tk(c)}` }], [{ texto: "📅 Programar", dato: `f:p:${tk(c)}` }, { texto: "💾 Guardar borrador", dato: `f:b:${tk(c)}` }]]
       : [[{ texto: "🔍 Enviar a revisión", dato: `f:r:${tk(c)}` }, { texto: "💾 Guardar borrador", dato: `f:b:${tk(c)}` }]]),
     ...botonVista(c),
-    [{ texto: "📌 Portada y distintivos", dato: `d:m:${tk(c)}` }],
+    [{ texto: "⚡ Distintivos y aviso", dato: `d:m:${tk(c)}` }],
     [{ texto: "⬅️ Atrás", dato: "b:" }, { texto: "🔗 Abrir en el panel", url: enlacePanel(c) }],
   ]);
 }
@@ -925,25 +925,33 @@ async function programar(c: Ctx, iso: string) {
 }
 
 /** Portada y distintivos (última hora / en desarrollo): se aplican de inmediato sobre la nota guardada. */
+/** Lugar de la nota en la portada del sitio (se abre desde «Sección y autor»). */
+async function menuPortada(c: Ctx) {
+  if (!c.e.articleId) return void (await mostrar(c, "No tengo una nota en curso. Envía /nueva para empezar."));
+  const [a] = await db.select({ title: articles.title, status: articles.status, pos: articles.homePosition }).from(articles).where(eq(articles.id, c.e.articleId)).limit(1);
+  if (!a) return void (await mostrar(c, "No encontré esa nota."));
+  if (!(await tienePermiso(c.userId, c.role, "portada"))) { c.aviso = "ℹ️ Tu cuenta no ubica notas en la portada del sitio: un editor lo hace desde el panel."; return vista(c); }
+  const k = tk(c);
+  const filas: Boton[][] = [[{ texto: `${a.pos === 0 ? "✅" : "📌"} Portada principal`, dato: `d:p0:${k}` }, { texto: `${a.pos === 1 ? "✅" : "📌"} Segunda destacada`, dato: `d:p1:${k}` }]];
+  if (a.pos !== null) filas.push([{ texto: "✖ Quitar de la portada", dato: `d:px:${k}` }]);
+  filas.push([{ texto: "⬅️ Listo", dato: `d:ok:${k}` }]);
+  await mostrar(c, `📌 <b>Portada del sitio</b>\n<b>${esc(recorta(a.title, 100))}</b>\n\nLugar: <b>${textoLugar(a.pos)}</b>${a.status !== "publicado" ? "\n<i>Se verá en el sitio cuando la nota esté publicada.</i>" : ""}`, filas);
+}
+
+/** Distintivos (última hora, en desarrollo) y aviso a los lectores: van al final, junto a Publicar. */
 async function menuDistintivos(c: Ctx) {
   if (!c.e.articleId) return void (await mostrar(c, "No tengo una nota en curso. Envía /nueva para empezar."));
-  const [a] = await db.select({ title: articles.title, status: articles.status, b: articles.isBreaking, l: articles.isLive, pos: articles.homePosition }).from(articles).where(eq(articles.id, c.e.articleId)).limit(1);
+  const [a] = await db.select({ title: articles.title, status: articles.status, b: articles.isBreaking, l: articles.isLive }).from(articles).where(eq(articles.id, c.e.articleId)).limit(1);
   if (!a) return void (await mostrar(c, "No encontré esa nota."));
   const pubOk = canPublish(c.role) && (await tienePermiso(c.userId, c.role, "publicar"));
-  const portOk = await tienePermiso(c.userId, c.role, "portada");
-  if (!pubOk && !portOk) { c.aviso = "ℹ️ Tu rol no puede destacar en la portada ni marcar distintivos: un editor lo hace desde el panel."; return vista(c); }
+  const avisosOk = await tienePermiso(c.userId, c.role, "avisos");
+  if (!pubOk && !avisosOk) { c.aviso = "ℹ️ Tu rol no puede marcar distintivos ni avisar a los lectores: un editor lo hace desde el panel."; return vista(c); }
   const k = tk(c);
   const filas: Boton[][] = [];
-  if (portOk) {
-    filas.push([{ texto: `${a.pos === 0 ? "✅" : "📌"} Portada principal`, dato: `d:p0:${k}` }, { texto: `${a.pos === 1 ? "✅" : "📌"} Segunda destacada`, dato: `d:p1:${k}` }]);
-    if (a.pos !== null) filas.push([{ texto: "✖ Quitar de la portada", dato: `d:px:${k}` }]);
-  }
   if (pubOk) filas.push([{ texto: `${a.b ? "✅" : "⚡"} Última hora`, dato: `d:b:${k}` }, { texto: `${a.l ? "✅" : "🔴"} En desarrollo`, dato: `d:l:${k}` }]);
-  const avisosOk = await tienePermiso(c.userId, c.role, "avisos");
   if (avisosOk && a.status === "publicado") filas.push([{ texto: "📣 Avisar a los lectores (notificación)", dato: `d:n:${k}` }]);
   filas.push([{ texto: "⬅️ Listo", dato: `d:ok:${k}` }]);
-  const estadoPos = a.pos === null ? "sin destacar (orden por fecha)" : a.pos === 0 ? "portada principal" : a.pos === 1 ? "segunda destacada" : `lugar ${a.pos + 1}`;
-  await mostrar(c, `📌 <b>Portada y distintivos</b>\n<b>${esc(recorta(a.title, 100))}</b>\n\nEn el sitio: <b>${estadoPos}</b>\n⚡ Última hora: <b>${a.b ? "sí" : "no"}</b> · 🔴 En desarrollo: <b>${a.l ? "sí" : "no"}</b>${a.status !== "publicado" ? "\n<i>Se verá en el sitio cuando la nota esté publicada.</i>" : ""}\n\n<i>Última hora: solo se muestra la más reciente y, al publicarla, avisa por notificación a quienes tienen la app (una vez). En desarrollo pone la etiqueta «En vivo».</i>`, filas);
+  await mostrar(c, `⚡ <b>Distintivos y aviso</b>\n<b>${esc(recorta(a.title, 100))}</b>\n\n⚡ Última hora: <b>${a.b ? "sí" : "no"}</b> · 🔴 En desarrollo: <b>${a.l ? "sí" : "no"}</b>${a.status !== "publicado" ? "\n<i>Se verán en el sitio cuando la nota esté publicada.</i>" : ""}\n\n<i>Última hora: solo se muestra la más reciente y, al publicarla, avisa por notificación a quienes tienen la app (una vez). En desarrollo pone la etiqueta «En vivo».</i>`, filas);
 }
 
 async function acciones(c: Ctx, d: string) {
@@ -978,6 +986,7 @@ async function acciones(c: Ctx, d: string) {
     case "d": {
       if (!c.e.articleId) return fallo(c, "No tengo una nota en curso. Envía /nueva para empezar.");
       if (v === "m") { await guardar(c); return menuDistintivos(c); }
+      if (v === "pm") { await guardar(c); return menuPortada(c); }
       if (v === "n" || v === "nok") {
         if (!(await tienePermiso(c.userId, c.role, "avisos"))) { c.aviso = "⚠️ Tu cuenta no tiene permiso para enviar avisos a los lectores."; return menuDistintivos(c); }
         if (!pushConfigurado()) { c.aviso = "⚠️ Las notificaciones aún no están configuradas en el sitio (faltan las claves VAPID). Avisa al administrador."; return menuDistintivos(c); }
@@ -1003,13 +1012,13 @@ async function acciones(c: Ctx, d: string) {
       const [a] = await db.select({ b: articles.isBreaking, l: articles.isLive }).from(articles).where(eq(articles.id, c.e.articleId)).limit(1);
       if (!a) return fallo(c, "No encontré esa nota.");
       if ((v === "b" || v === "l") && !pubOk) { c.aviso = "⚠️ Tu rol no puede marcar distintivos."; return menuDistintivos(c); }
-      if (v.startsWith("p") && !portOk) { c.aviso = "⚠️ Tu cuenta no tiene permiso para la portada."; return menuDistintivos(c); }
+      if (v.startsWith("p") && !portOk) { c.aviso = "⚠️ Tu cuenta no tiene permiso para la portada."; return menuPortada(c); }
       if (v === "b") await distintivosCore(c.e.articleId, { isBreaking: !a.b });
       else if (v === "l") await distintivosCore(c.e.articleId, { isLive: !a.l });
       else if (v === "p0") await fijarPortadaCore(c.e.articleId, 0);
       else if (v === "p1") await fijarPortadaCore(c.e.articleId, 1);
       else if (v === "px") await fijarPortadaCore(c.e.articleId, null);
-      return menuDistintivos(c);
+      return v.startsWith("p") ? menuPortada(c) : menuDistintivos(c);
     }
     case "i": { // primer paso: fuentes, ideas, noticias, material
       reiniciarSiTerminada(c);

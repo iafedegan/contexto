@@ -141,6 +141,7 @@ export function SectionTree({
   onChange,
   sugeridas = [],
   firma,
+  children,
 }: {
   options: Nodo[];
   value: string;
@@ -148,6 +149,8 @@ export function SectionTree({
   sugeridas?: string[];
   /** Quién firma la nota: se muestra junto a «Se publicará en». */
   firma?: string;
+  /** Contenido propio del asistente que va justo debajo de «Se publicará en» (p. ej. el lugar en la portada). */
+  children?: React.ReactNode;
 }) {
   const [q, setQ] = useState("");
   const id = useId();
@@ -267,6 +270,8 @@ export function SectionTree({
           </div>
         )}
       </div>
+
+      {children}
 
       {sugs.length > 0 && !t && (
         <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Secciones sugeridas">
