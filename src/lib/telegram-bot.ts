@@ -33,10 +33,13 @@ type Msg = {
   from?: { first_name?: string };
   text?: string;
   caption?: string;
-  voice?: { file_id: string; mime_type?: string };
-  audio?: { file_id: string; mime_type?: string; file_name?: string };
+  voice?: { file_id: string; mime_type?: string; file_size?: number };
+  audio?: { file_id: string; mime_type?: string; file_name?: string; file_size?: number };
+  video?: { file_id: string; mime_type?: string; file_name?: string; file_size?: number };
+  /** Video redondo («mensaje de video»): siempre MP4. */
+  video_note?: { file_id: string; file_size?: number };
   photo?: { file_id: string; width: number }[];
-  document?: { file_id: string; mime_type?: string; file_name?: string };
+  document?: { file_id: string; mime_type?: string; file_name?: string; file_size?: number };
 };
 export type Update = { update_id: number; message?: Msg; callback_query?: { id: string; data?: string; message?: Msg } };
 
@@ -48,7 +51,7 @@ const NOMBRE_PASO: Partial<Record<Fase, string>> = {
   seccion: "Sección y autor", cuerpo: "Cuerpo", grafica: "Gráfica", seo: "Buscadores", final: "Vista previa",
 };
 const AYUDA =
-  "✍️ <b>Redactor de CONtexto Ganadero</b>\n\nEs el mismo asistente del panel, en nueve pasos: Título y contexto · Resumen · Palabras clave · Portada · Sección y autor · Cuerpo · Gráfica · Buscadores · Vista previa.\n\nTodo ocurre en un solo mensaje que se va actualizando: usa los botones <b>⬅️ Atrás</b> y <b>Siguiente ➡️</b>. Lo que escribas en el chat se suma al tema (o responde al botón que pulsaste).\n\n/nueva — empezar un artículo con IA\n/estado — estado de la última nota\n/cancelar — descartar el flujo actual\n/ayuda — esta ayuda\n/desvincular — separar este Telegram de tu cuenta";
+  "✍️ <b>Redactor de CONtexto Ganadero</b>\n\nEs el mismo asistente del panel, en nueve pasos: Título y contexto · Resumen · Palabras clave · Portada · Sección y autor · Cuerpo · Gráfica · Buscadores · Vista previa.\n\nTodo ocurre en un solo mensaje que se va actualizando: usa los botones <b>⬅️ Atrás</b> y <b>Siguiente ➡️</b>. Lo que escribas en el chat se suma al tema (o responde al botón que pulsaste). También puedes enviar una <b>nota de voz, un audio o un video</b> (hasta 20 MB): lo transcribo y propongo títulos.\n\n/nueva — empezar un artículo con IA\n/estado — estado de la última nota\n/cancelar — descartar el flujo actual\n/ayuda — esta ayuda\n/desvincular — separar este Telegram de tu cuenta";
 
 const urlsEn = (t: string) => [...new Set(t.match(/https?:\/\/[^\s<>"')]+/gi) ?? [])];
 
@@ -228,7 +231,7 @@ async function pasoTema(c: Ctx) {
   const topic = (c.e.topic ?? "").trim();
   await mostrar(c, `${cab(c, "tema", "Tema")}<b>¿De qué trata la nota?</b>\nEscríbelo en un mensaje, o elige una fuente.${topic ? `\n\n📝 ${esc(recorta(topic, 300))}` : ""}`, [
     [{ texto: "💡 Ideas de la IA", dato: "i:ideas" }, { texto: "🔎 Buscar noticias", dato: "i:noticias" }],
-    [{ texto: "🎙️ Entrevista de voz", dato: "i:entrevista" }, { texto: "🔗 Enlaces", dato: "i:enlaces" }],
+    [{ texto: "🎙️ Voz o video", dato: "i:entrevista" }, { texto: "🔗 Enlaces", dato: "i:enlaces" }],
     ...(topic || (c.e.material ?? []).length ? [[{ texto: "✨ Proponer títulos", dato: "i:prop" }]] : []),
     ...(c.e.generated ? [[{ texto: "Siguiente ➡️ (ya hay borrador)", dato: "n:" }]] : []),
   ]);
@@ -243,7 +246,7 @@ async function subNoticias(c: Ctx) {
   await fin(c);
   return subPanel(c, "🔎 <b>¿Qué quieres investigar?</b>\nEscribe una persona, empresa o tema.");
 }
-const subEntrevista = (c: Ctx) => subPanel(c, "🎙️ Envíame la <b>nota de voz</b> o el audio (hasta 20 MB).");
+const subEntrevista = (c: Ctx) => subPanel(c, "🎙️ Envíame una <b>nota de voz</b>, un <b>audio</b> o un <b>video</b> (hasta 20 MB). Transcribo lo que se oye.");
 const subEnlaces = (c: Ctx) => subPanel(c, "🔗 <b>Pega los enlaces</b> (hasta 5, uno por línea).");
 
 /** Suma el texto al tema (como escribir en el cuadro de tema) y lee los enlaces que traiga. */
@@ -720,14 +723,21 @@ function reiniciarSiTerminada(c: Ctx) {
   c.e.ultimoUpdate = ultimo;
 }
 
-async function entrevista(c: Ctx, fileId: string, mime: string, nombre: string) {
+const MAX_TELEGRAM = 20 * 1024 * 1024;
+
+/** Telegram solo deja a un bot descargar archivos de hasta 20 MB: más allá, mejor decir cómo seguir que fallar en silencio. */
+const AVISO_PESADO = "⚠️ Telegram solo permite que un bot descargue archivos de hasta <b>20 MB</b>. Mándalo más corto o solo en audio, o súbelo desde el panel (allí el video no pesa: se saca el audio en tu navegador).";
+
+async function entrevista(c: Ctx, fileId: string, mime: string, nombre: string, tam?: number) {
   reiniciarSiTerminada(c);
   if (c.e.fase === "idle") { c.e.modo = "ia"; c.e.fase = "tema"; }
+  if (tam && tam > MAX_TELEGRAM) { c.aviso = AVISO_PESADO; return pasoTema(c); }
+  const video = mime.startsWith("video/");
   await escribiendo(c.chatId);
-  await ocupado(c, "Transcribiendo el audio… puede tardar un par de minutos.");
+  await ocupado(c, `Transcribiendo ${video ? "el video" : "el audio"}… puede tardar un par de minutos.`);
   const f = await descargarArchivo(fileId);
-  if (!f) { c.aviso = "⚠️ No pude descargar el audio."; return pasoTema(c); }
-  if (f.bytes.length > 20 * 1024 * 1024) { c.aviso = "⚠️ El audio supera 20 MB: recórtalo o envíalo por partes."; return pasoTema(c); }
+  if (!f) { c.aviso = `⚠️ No pude descargar ${video ? "el video" : "el audio"}. Si pesa más de 20 MB, Telegram no deja que el bot lo reciba: envíalo más corto o súbelo desde el panel.`; return pasoTema(c); }
+  if (f.bytes.length > MAX_TELEGRAM) { c.aviso = AVISO_PESADO; return pasoTema(c); }
   const r = await transcribirAudioBytesCore(c.userId, f.bytes, mime, nombre);
   if (!r.ok) { c.aviso = `⚠️ ${esc(r.error)}`; return pasoTema(c); }
   c.e.material = [...(c.e.material ?? []), r.material];
@@ -796,9 +806,12 @@ export async function procesar(u: Update): Promise<unknown> {
   if (/^\/desvincular\b/i.test(texto)) { await desvincular(chatId); return void (await enviar(chatId, "Telegram desvinculado de tu cuenta.")); }
 
   // Archivos
-  if (m.voice) return entrevista(c, m.voice.file_id, m.voice.mime_type ?? "audio/ogg", "nota-de-voz.ogg");
-  if (m.audio) return entrevista(c, m.audio.file_id, m.audio.mime_type ?? "audio/mpeg", m.audio.file_name ?? "audio.mp3");
-  if (m.document?.mime_type?.startsWith("audio/")) return entrevista(c, m.document.file_id, m.document.mime_type, m.document.file_name ?? "audio");
+  if (m.voice) return entrevista(c, m.voice.file_id, m.voice.mime_type ?? "audio/ogg", "nota-de-voz.ogg", m.voice.file_size);
+  if (m.audio) return entrevista(c, m.audio.file_id, m.audio.mime_type ?? "audio/mpeg", m.audio.file_name ?? "audio.mp3", m.audio.file_size);
+  if (m.video) return entrevista(c, m.video.file_id, m.video.mime_type ?? "video/mp4", m.video.file_name ?? "video.mp4", m.video.file_size);
+  if (m.video_note) return entrevista(c, m.video_note.file_id, "video/mp4", "video-circular.mp4", m.video_note.file_size);
+  if (m.document?.mime_type?.startsWith("audio/")) return entrevista(c, m.document.file_id, m.document.mime_type, m.document.file_name ?? "audio", m.document.file_size);
+  if (m.document?.mime_type?.startsWith("video/")) return entrevista(c, m.document.file_id, m.document.mime_type, m.document.file_name ?? "video.mp4", m.document.file_size);
   if (m.photo?.length) {
     if (c.e.fase === "portada" || c.e.articleId) return fotoRecibida(c, m.photo[m.photo.length - 1].file_id);
     return void (await enviar(chatId, "Para usar una foto como portada, primero crea la nota con /nueva."));

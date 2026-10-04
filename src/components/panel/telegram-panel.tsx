@@ -24,7 +24,7 @@ export function TelegramPanel({ esAdmin }: { esAdmin: boolean }) {
   return (
     <div className="flex flex-col gap-5">
       <p className="text-sm leading-relaxed text-[var(--fg-muted)]">
-        Redacta desde Telegram: le mandas el contexto de la noticia (texto, nota de voz o enlaces) y el bot recorre el mismo paso a paso del asistente —títulos, borrador, resumen, palabras clave, sección, cuerpo, gráfica, portada y SEO— y deja todo guardado como borrador aquí. Nada se publica sin que confirmes con un botón.
+        Redacta desde Telegram: le mandas el contexto de la noticia (texto, nota de voz, video o enlaces) y el bot recorre el mismo paso a paso del asistente —títulos, borrador, resumen, palabras clave, sección, cuerpo, gráfica, portada y SEO— y deja todo guardado como borrador aquí. Nada se publica sin que confirmes con un botón.
       </p>
 
       {esAdmin && (

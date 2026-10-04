@@ -54,6 +54,7 @@ import type { Material } from "@/lib/material-types";
 import { SiteArticlePreview, type SitePreviewChrome } from "@/components/panel/site-article-preview";
 import { IdeaCards, NewsCards } from "@/components/panel/wizard-fuentes";
 import { WizardStepper } from "@/components/panel/wizard-stepper";
+import { esVideo, ExtraerAudioError, extraerAudioDeVideo } from "@/lib/audio-extract";
 import { aplicarTipo, decodeSpec, encodeSpec, renderChartSvg, svgDataUri, TIPOS_GRAFICA, type ChartSpec, type TipoGrafica } from "@/lib/chart-svg";
 import { InteractiveChart } from "@/components/interactive-chart";
 import { auditArticle, scoreLabel, type AuditItem, type AuditResult } from "@/lib/seo-audit";
@@ -226,6 +227,7 @@ export function ArticleWizard({
   const [material, setMaterial] = useState<Material[]>([]);
   const [audioError, setAudioError] = useState("");
   const [audioBusy, startAudio] = useTransition();
+  const [audioFase, setAudioFase] = useState("");
   const [urlsTxt, setUrlsTxt] = useState("");
   const [urlsError, setUrlsError] = useState("");
   const [urlsBusy, startUrls] = useTransition();
@@ -532,10 +534,27 @@ export function ArticleWizard({
     setProgFecha(`${base.toISOString().slice(0, 10)}T${String(hora).padStart(2, "0")}:00`);
   }
 
-  function subirEntrevista(f: File) {
+  /** Tope por archivo que acepta el modelo (audio ya extraído o video chico). */
+  const MAX_ENTREVISTA = 20 * 1024 * 1024;
+  function subirEntrevista(original: File) {
     setAudioError("");
     startAudio(async () => {
       try {
+        let f = original;
+        // Un video se reduce primero a su audio EN EL NAVEGADOR: así no se sube el video (pesa cientos de MB).
+        if (esVideo(original)) {
+          setAudioFase("Extrayendo el audio del video…");
+          try {
+            f = await extraerAudioDeVideo(original, MAX_ENTREVISTA);
+          } catch (e) {
+            if (e instanceof ExtraerAudioError && e.fatal) return setAudioError(e.message);
+            if (original.size > MAX_ENTREVISTA) {
+              return setAudioError(`${e instanceof Error ? e.message : "No se pudo leer el video."} Como pesa más de 20 MB, conviértelo a MP4 (H.264/AAC) o súbelo solo en audio.`);
+            }
+            f = original; // video chico que el navegador no supo abrir: el modelo transcribe su audio
+          }
+        }
+        setAudioFase(esVideo(f) ? "Transcribiendo el video…" : "Transcribiendo…");
         let res;
         if (f.size <= 3.5 * 1024 * 1024) {
           const fd = new FormData();
@@ -545,14 +564,16 @@ export function ArticleWizard({
           const c = await crearSubidaAudio({ name: f.name, type: f.type, size: f.size });
           if (!c.ok) return setAudioError(c.error);
           const put = await fetch(c.uploadUrl, { method: "PUT", headers: { "content-type": f.type || "audio/mpeg" }, body: f });
-          if (!put.ok) return setAudioError(`No se pudo subir el audio (${put.status}).`);
-          res = await transcribirEntrevistaSubida({ path: c.path, name: f.name });
+          if (!put.ok) return setAudioError(`No se pudo subir el archivo (${put.status}).`);
+          res = await transcribirEntrevistaSubida({ path: c.path, name: original.name });
         }
         if (!res.ok) return setAudioError(res.error);
         setMaterial((m) => [...m, res.material]);
         setOptions(null);
       } catch {
-        setAudioError("No se pudo procesar el audio. Inténtalo de nuevo.");
+        setAudioError("No se pudo procesar el archivo. Inténtalo de nuevo.");
+      } finally {
+        setAudioFase("");
       }
     });
   }
@@ -825,7 +846,7 @@ export function ArticleWizard({
                   <Search size={15} aria-hidden /> Buscar noticias
                 </button>
                 <button type="button" role="tab" id="tab-entrevista" aria-selected={fuente === "entrevista"} aria-controls="panel-fuente" onClick={() => setFuente((x) => (x === "entrevista" ? null : "entrevista"))} className={`inline-flex items-center gap-2 whitespace-nowrap rounded-full border px-4 py-2 text-sm font-medium transition ${fuente === "entrevista" ? "border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-fg)] shadow-sm" : "border-[var(--border)] bg-[var(--bg-2)] hover:border-[var(--accent)]"}`}>
-                  <Mic size={15} aria-hidden /> Entrevista de voz
+                  <Mic size={15} aria-hidden /> Voz o video
                 </button>
                 <button type="button" role="tab" id="tab-enlaces" aria-selected={fuente === "enlaces"} aria-controls="panel-fuente" onClick={() => setFuente((x) => (x === "enlaces" ? null : "enlaces"))} className={`inline-flex items-center gap-2 whitespace-nowrap rounded-full border px-4 py-2 text-sm font-medium transition ${fuente === "enlaces" ? "border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-fg)] shadow-sm" : "border-[var(--border)] bg-[var(--bg-2)] hover:border-[var(--accent)]"}`}>
                   <Link2 size={15} aria-hidden /> Enlaces
@@ -835,7 +856,7 @@ export function ArticleWizard({
               <div id="panel-fuente" role="tabpanel" aria-labelledby={`tab-${fuente}`} className="mt-3 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] p-4">
                 {fuente === "ideas" && <p className="mb-3 text-sm text-[var(--fg-muted)]">La IA busca en internet qué es tendencia en el sector, en Colombia y en el mundo, y te propone temas con sus fuentes.</p>}
                 {fuente === "noticias" && <p className="mb-3 text-sm text-[var(--fg-muted)]">Escribe una persona, empresa o tema (p. ej. «Joaquín Manjarrés»): investiga en medios, YouTube y fuentes oficiales. Eliges cuáles <strong>referenciar</strong> o usar <strong>como tema</strong>.</p>}
-                {fuente === "entrevista" && <p className="mb-3 text-sm text-[var(--fg-muted)]">Sube el audio y la IA lo transcribe. Puedes corregir el texto antes de redactar. MP3, M4A, WAV, OGG… hasta 20 MB.</p>}
+                {fuente === "entrevista" && <p className="mb-3 text-sm text-[var(--fg-muted)]">Sube una nota de voz, un audio o un <strong>video</strong> y la IA transcribe lo que se oye. En un video, el navegador saca solo el audio: el video no se sube. Puedes corregir el texto antes de redactar.</p>}
                 {fuente === "enlaces" && <p className="mb-3 text-sm text-[var(--fg-muted)]">Pega hasta 5 enlaces (uno por línea): la IA lee cada página y redacta con palabras propias, atribuyendo.</p>}
                 {fuente === "ideas" && (
                   <div>
@@ -920,10 +941,10 @@ export function ArticleWizard({
                   
                   <label className={`lx-btn cursor-pointer ${audioBusy ? "pointer-events-none opacity-60" : ""}`}>
                     {audioBusy ? <Loader2 size={15} className="animate-spin" /> : <Mic size={15} />}
-                    {audioBusy ? "Transcribiendo…" : "Subir audio"}
+                    {audioBusy ? audioFase || "Procesando…" : "Subir audio o video"}
                     <input
                       type="file"
-                      accept="audio/*,.mp3,.m4a,.wav,.ogg,.opus,.webm,.aac,.flac"
+                      accept="audio/*,video/*,.mp3,.m4a,.wav,.ogg,.opus,.webm,.aac,.flac,.mp4,.m4v,.mov,.mpeg,.mpg,.avi,.wmv,.3gp"
                       className="hidden"
                       onChange={(e) => {
                         const f = e.target.files?.[0];
@@ -932,7 +953,7 @@ export function ArticleWizard({
                       }}
                     />
                   </label>
-                  <p className="mt-1.5 text-xs text-[var(--fg-muted)]">MP3, M4A, WAV, OGG… hasta 20 MB. Puede tardar un par de minutos.</p>
+                  <p className="mt-1.5 text-xs text-[var(--fg-muted)]">Audio (MP3, M4A, WAV, OGG…) hasta 20 MB · video (MP4, MOV, WEBM…) de hasta unos 800 MB y 20 min de grabación. Puede tardar un par de minutos.</p>
                   {audioError && <p role="alert" className="mt-2 text-sm text-[var(--danger,#b4442e)]">{audioError}</p>}
                 </div>
                 )}

@@ -7,6 +7,7 @@ import { focusTerms } from "@/lib/seo-audit";
 import { getAiModel, getGroundedAi, getImageAi } from "@/lib/ai-provider";
 import { subirImagenBytes } from "@/lib/media-upload";
 import { PREFIJO_IMAGEN_IA } from "@/lib/ai-image";
+import { esMimeVideo, FORMATOS_MEDIA, mimeMedia } from "@/lib/media-mime";
 import { materialParaPrompt, type Material } from "@/lib/material-types";
 import { registrarCostoIA, registrarUsoIA, verificarCuotaIA } from "@/lib/ai-cuota";
 import { aplicarTipo, chartProblem, renderChartSvg, TIPOS_GRAFICA, type ChartSpec, type TipoGrafica } from "@/lib/chart-svg";
@@ -887,38 +888,29 @@ export async function generateCoverImageCore(userId: string, input: {
 export type MaterialResult = { ok: true; material: Material } | { ok: false; error: string };
 export type EnlacesResult = { ok: true; materiales: Material[]; fallidos: string[] } | { ok: false; error: string };
 
-const AUDIO_MIME: Record<string, string> = {
-  mp3: "audio/mpeg", mpeg: "audio/mpeg", m4a: "audio/mp4", mp4: "audio/mp4", aac: "audio/aac",
-  wav: "audio/wav", ogg: "audio/ogg", oga: "audio/ogg", opus: "audio/ogg", webm: "audio/webm", flac: "audio/flac",
-};
 /** Tope del audio que se envía al modelo en una sola petición (límite práctico de Gemini en línea). */
 const MAX_AUDIO = 20 * 1024 * 1024;
-
-function mimeAudio(name: string, declared: string): string | null {
-  const ext = name.split(".").pop()?.toLowerCase() ?? "";
-  if (AUDIO_MIME[ext]) return AUDIO_MIME[ext];
-  if (declared.startsWith("audio/")) return declared === "audio/x-m4a" || declared === "audio/m4a" ? "audio/mp4" : declared;
-  return null;
-}
 
 async function transcribir(userId: string, bytes: Uint8Array, mime: string, nombre: string): Promise<MaterialResult> {
   const model = await getAiModel();
   if (!model) return { ok: false, error: "Falta la clave del modelo (Configuración → Asistente)." };
   const settingsOk = await getImageAi(); // solo para distinguir proveedor: «otro-proveedor» = no es Google
   if (settingsOk === "otro-proveedor") {
-    return { ok: false, error: "Transcribir audio usa Gemini: elige Google (Gemini) en Configuración → Asistente." };
+    return { ok: false, error: "Transcribir audio o video usa Gemini: elige Google (Gemini) en Configuración → Asistente." };
   }
   const cuota = await verificarCuotaIA(userId);
   if (!cuota.ok) return { ok: false, error: cuota.message };
+  const video = esMimeVideo(mime);
   const r = await generateText({
     model,
     system:
-      "Eres transcriptor profesional de un medio periodístico colombiano. Transcribes entrevistas con fidelidad: texto literal en el idioma hablado, con puntuación correcta, párrafos por intervención y, cuando se distingan voces, marcas «Entrevistador:» / «Entrevistado:» (o el nombre si se menciona). No resumas, no corrijas lo dicho, no inventes lo inaudible: márcalo como [inaudible].",
+      "Eres transcriptor profesional de un medio periodístico colombiano. Transcribes entrevistas con fidelidad: texto literal en el idioma hablado, con puntuación correcta, párrafos por intervención y, cuando se distingan voces, marcas «Entrevistador:» / «Entrevistado:» (o el nombre si se menciona). No resumas, no corrijas lo dicho, no inventes lo inaudible: márcalo como [inaudible]." +
+      (video ? " Si el archivo es un video, transcribe SOLO lo que se oye: no describas imágenes ni añadas lo que se ve." : ""),
     messages: [
       {
         role: "user",
         content: [
-          { type: "text", text: "Transcribe completa esta entrevista de audio." },
+          { type: "text", text: video ? "Transcribe completo lo que se dice en esta entrevista grabada en video." : "Transcribe completa esta entrevista de audio." },
           { type: "file", data: bytes, mediaType: mime },
         ],
       },
@@ -926,17 +918,17 @@ async function transcribir(userId: string, bytes: Uint8Array, mime: string, nomb
   });
   await registrarUsoIA(userId, r.usage);
   const text = r.text.trim();
-  if (text.length < 20) return { ok: false, error: "No se pudo transcribir el audio (¿está vacío o ilegible?)." };
+  if (text.length < 20) return { ok: false, error: "No se pudo transcribir (¿está vacío o ilegible?)." };
   return { ok: true, material: { kind: "entrevista", title: `Entrevista: ${nombre.replace(/\.[a-z0-9]+$/i, "").slice(0, 80)}`, text } };
 }
 
 /** Audio pequeño: llega directo en el formulario (el límite de Vercel para cuerpos de petición es ~4,5 MB). */
 export async function transcribirEntrevistaCore(userId: string, formData: FormData): Promise<MaterialResult> {
   const f = formData.get("audio");
-  if (!(f instanceof File) || f.size === 0) return { ok: false, error: "No llegó ningún audio." };
-  const mime = mimeAudio(f.name, f.type);
-  if (!mime) return { ok: false, error: "Formato de audio no admitido. Usa MP3, M4A, WAV, OGG, WEBM, AAC o FLAC." };
-  if (f.size > MAX_AUDIO) return { ok: false, error: `El audio pesa ${(f.size / 1048576).toFixed(1)} MB; el máximo son 20 MB. Recórtalo o comprímelo.` };
+  if (!(f instanceof File) || f.size === 0) return { ok: false, error: "No llegó ningún audio ni video." };
+  const mime = mimeMedia(f.name, f.type);
+  if (!mime) return { ok: false, error: `Formato no admitido. Usa ${FORMATOS_MEDIA}.` };
+  if (f.size > MAX_AUDIO) return { ok: false, error: `El archivo pesa ${(f.size / 1048576).toFixed(1)} MB; el máximo son 20 MB. Recórtalo o comprímelo.` };
   try {
     return await transcribir(userId, new Uint8Array(await f.arrayBuffer()), mime, f.name);
   } catch (err) {
@@ -950,14 +942,16 @@ export async function transcribirEntrevistaCore(userId: string, formData: FormDa
 export async function crearSubidaAudioCore(userId: string, input: { name: string; type: string; size: number }): Promise<
   { ok: true; uploadUrl: string; path: string } | { ok: false; error: string }
 > {
-  const mime = mimeAudio(input.name, input.type);
-  if (!mime) return { ok: false, error: "Formato de audio no admitido. Usa MP3, M4A, WAV, OGG, WEBM, AAC o FLAC." };
-  if (input.size > MAX_AUDIO) return { ok: false, error: `El audio pesa ${(input.size / 1048576).toFixed(1)} MB; el máximo son 20 MB.` };
+  const mime = mimeMedia(input.name, input.type);
+  if (!mime) return { ok: false, error: `Formato no admitido. Usa ${FORMATOS_MEDIA}.` };
+  if (input.size > MAX_AUDIO) return { ok: false, error: `El archivo pesa ${(input.size / 1048576).toFixed(1)} MB; el máximo son 20 MB.` };
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) return { ok: false, error: "Para audios grandes falta configurar SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY." };
-  const ext = input.name.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "") || "mp3";
-  const path = `entrevistas/${crypto.randomUUID()}.${ext}`;
+  const video = esMimeVideo(mime);
+  const ext = input.name.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "") || (video ? "mp4" : "mp3");
+  // El «-v» del nombre recuerda que es un video: al transcribir solo se conoce la ruta, no el tipo que declaró el navegador.
+  const path = `entrevistas/${crypto.randomUUID()}${video ? "-v" : ""}.${ext}`;
   const res = await fetch(`${url}/storage/v1/object/upload/sign/media/${path}`, {
     method: "POST",
     headers: { Authorization: `Bearer ${key}`, apikey: key, "Content-Type": "application/json" },
@@ -973,13 +967,13 @@ export async function transcribirEntrevistaSubidaCore(userId: string, input: { p
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key || !/^entrevistas\/[\w-]+\.[a-z0-9]+$/.test(input.path)) return { ok: false, error: "Subida no válida." };
-  const mime = mimeAudio(input.path, "");
-  if (!mime) return { ok: false, error: "Formato de audio no admitido." };
+  const mime = mimeMedia(input.path, /-v\.[a-z0-9]+$/.test(input.path) ? "video/*" : "");
+  if (!mime) return { ok: false, error: "Formato no admitido." };
   try {
     const r = await fetch(`${url}/storage/v1/object/media/${input.path}`, { headers: { Authorization: `Bearer ${key}`, apikey: key } });
-    if (!r.ok) return { ok: false, error: `No se pudo leer el audio subido (${r.status}).` };
+    if (!r.ok) return { ok: false, error: `No se pudo leer el archivo subido (${r.status}).` };
     const bytes = new Uint8Array(await r.arrayBuffer());
-    if (bytes.length > MAX_AUDIO) return { ok: false, error: "El audio supera 20 MB." };
+    if (bytes.length > MAX_AUDIO) return { ok: false, error: "El archivo supera 20 MB." };
     return await transcribir(userId, bytes, mime, input.name);
   } catch (err) {
     console.error("transcribirEntrevistaSubida:", err);
@@ -1058,10 +1052,10 @@ export async function leerEnlacesCore(userId: string, input: { urls: string }): 
   return { ok: true, materiales, fallidos };
 }
 
-/** Transcribe un audio ya descargado (bytes): lo usa el bot de Telegram. */
+/** Transcribe un audio o video ya descargado (bytes): lo usa el bot de Telegram. */
 export async function transcribirAudioBytesCore(userId: string, bytes: Uint8Array, mime: string, nombre: string): Promise<MaterialResult> {
-  const m = mimeAudio(nombre, mime) ?? (mime.startsWith("audio/") ? mime : null);
-  if (!m) return { ok: false, error: "Formato de audio no admitido." };
+  const m = mimeMedia(nombre, mime);
+  if (!m) return { ok: false, error: `Formato no admitido. Usa ${FORMATOS_MEDIA}.` };
   try {
     return await transcribir(userId, bytes, m, nombre);
   } catch (err) {

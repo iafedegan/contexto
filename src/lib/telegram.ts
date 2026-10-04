@@ -160,7 +160,7 @@ export async function enviarFoto(chatId: number | string, bytes: Uint8Array, pie
   }
 }
 
-/** Descarga un archivo enviado al bot (nota de voz, audio, foto). */
+/** Descarga un archivo enviado al bot (nota de voz, audio, video, foto). */
 export async function descargarArchivo(fileId: string): Promise<{ bytes: Uint8Array; ruta: string } | null> {
   const t = await tokenTelegram();
   if (!t) return null;
