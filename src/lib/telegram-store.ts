@@ -71,7 +71,7 @@ export type Fase = "idle" | "tema" | "titulo" | "resumen" | "claves" | "portada"
 /** Dato que se espera como PRÓXIMO mensaje de texto (lo pide un botón); si no hay, el texto se interpreta según el paso. */
 export type Espera =
   | "titulo" | "contexto" | "resumen" | "claves" | "cuerpo" | "metaTitle" | "metaDescription" | "alt" | "escena"
-  | "graficaTema" | "correccion" | "fecha";
+  | "graficaTema" | "correccion" | "fecha" | "enfoque" | "busqueda";
 
 export type EstadoChat = {
   fase: Fase;
@@ -80,13 +80,17 @@ export type EstadoChat = {
   /** «ia» (por defecto) o «manual», como en «Cambiar modo» del asistente web. */
   modo?: "ia" | "manual";
   espera?: Espera;
-  /** Pestaña abierta en «¿Prefieres partir de otra cosa?». */
-  fuente?: "ideas" | "noticias" | "entrevista" | "enlaces";
+  /** Mensaje «panel» del chat: se reescribe en vez de enviar uno nuevo en cada paso, para que la conversación no se llene. */
+  panel?: number;
+  /** Contexto elegido en las opciones del primer paso (índice; -1 = sin enfoque especial). */
+  ctxSel?: number;
   topic?: string;
   ideasFocus?: string;
   ideas?: { title: string; angle: string; why: string; scope: string }[];
   ideasFuentes?: { title: string; url: string }[];
   noticias?: NewsItem[];
+  /** Mensajes de tarjetas de resultados (se borran al salir de los resultados). */
+  tarjetas?: number[];
   noticiasFiltro?: "todo" | "noticia" | "video" | "oficial";
   /** Noticias elegidas para referenciar: van enlazadas al final de la nota (los videos, incrustados). */
   refs?: { title: string; outlet: string; url: string; videoId?: string }[];

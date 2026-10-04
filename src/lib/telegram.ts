@@ -90,18 +90,26 @@ export function partir(texto: string, max = 3800): string[] {
   return out;
 }
 
-/** Envía HTML (usa `esc` para el texto del usuario). Los botones van en el último mensaje. */
+/** HTML de Telegram → texto plano (respaldo cuando Telegram rechaza el formato). */
+const textoPlano = (html: string) =>
+  html.replace(/<[^>]+>/g, "").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&amp;/g, "&");
+
+/**
+ * Envía HTML (usa `esc` para el texto del usuario). Los botones van en el último mensaje. Si Telegram rechaza el
+ * formato (p. ej. una etiqueta que quedó cortada al partir un texto largo), se reenvía como texto plano: así un
+ * mensaje nunca se pierde en silencio.
+ */
 export async function enviar(chatId: number | string, html: string, botones?: Boton[][]) {
   const partes = partir(html);
   let ultimo: Resp<{ message_id: number }> = { ok: false };
   for (let i = 0; i < partes.length; i++) {
-    ultimo = await tg<{ message_id: number }>("sendMessage", {
-      chat_id: chatId,
-      text: partes[i],
-      parse_mode: "HTML",
-      disable_web_page_preview: true,
-      ...(i === partes.length - 1 && botones ? { reply_markup: teclado(botones) } : {}),
-    });
+    const ultima = i === partes.length - 1;
+    const markup = ultima && botones ? { reply_markup: teclado(botones) } : {};
+    ultimo = await tg<{ message_id: number }>("sendMessage", { chat_id: chatId, text: partes[i], parse_mode: "HTML", disable_web_page_preview: true, ...markup });
+    if (!ultimo.ok) {
+      console.error("telegram sendMessage:", ultimo.description);
+      ultimo = await tg<{ message_id: number }>("sendMessage", { chat_id: chatId, text: textoPlano(partes[i]).slice(0, 4000), disable_web_page_preview: true, ...markup });
+    }
   }
   return ultimo;
 }
@@ -111,8 +119,18 @@ export async function editarTeclado(chatId: number | string, mensajeId: number, 
   return tg("editMessageReplyMarkup", { chat_id: chatId, message_id: mensajeId, reply_markup: teclado(botones) ?? { inline_keyboard: [] } });
 }
 
+/** Reescribe un mensaje ya enviado (texto y botones). «No se modificó» cuenta como éxito; un formato inválido cae a texto plano. */
 export async function editar(chatId: number | string, mensajeId: number, html: string, botones?: Boton[][]) {
-  return tg("editMessageText", { chat_id: chatId, message_id: mensajeId, text: html.slice(0, 4000), parse_mode: "HTML", disable_web_page_preview: true, reply_markup: teclado(botones) ?? { inline_keyboard: [] } });
+  const base = { chat_id: chatId, message_id: mensajeId, disable_web_page_preview: true, reply_markup: teclado(botones) ?? { inline_keyboard: [] } };
+  let r = await tg("editMessageText", { ...base, text: html.slice(0, 4000), parse_mode: "HTML" });
+  if (!r.ok && /parse entities|can't find end/i.test(r.description ?? "")) r = await tg("editMessageText", { ...base, text: textoPlano(html).slice(0, 4000) });
+  if (!r.ok && /not modified/i.test(r.description ?? "")) return { ok: true as const, result: true };
+  return r;
+}
+
+/** Borra un mensaje (en chats privados el bot puede borrar también los del usuario). Sin error si ya no existe. */
+export async function borrar(chatId: number | string, mensajeId: number) {
+  return tg("deleteMessage", { chat_id: chatId, message_id: mensajeId });
 }
 
 export async function responderCallback(id: string, texto?: string) {
