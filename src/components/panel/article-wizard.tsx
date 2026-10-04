@@ -45,6 +45,8 @@ import {
 import { SectionTree } from "@/components/panel/chip-picker";
 import type { Material } from "@/lib/material-types";
 import { SiteArticlePreview, type SitePreviewChrome } from "@/components/panel/site-article-preview";
+import { IdeaCards, NewsCards } from "@/components/panel/wizard-fuentes";
+import { WizardStepper } from "@/components/panel/wizard-stepper";
 import { aplicarTipo, decodeSpec, encodeSpec, renderChartSvg, svgDataUri, TIPOS_GRAFICA, type ChartSpec, type TipoGrafica } from "@/lib/chart-svg";
 import { InteractiveChart } from "@/components/interactive-chart";
 import { auditArticle, scoreLabel, type AuditItem, type AuditResult } from "@/lib/seo-audit";
@@ -202,6 +204,7 @@ export function ArticleWizard({
   const [ideas, setIdeas] = useState<{ ideas: TopicIdea[]; sources: { title: string; url: string }[] } | null>(null);
   const [ideasError, setIdeasError] = useState("");
   const [ideasOpen, setIdeasOpen] = useState(true);
+  const [ideaElegida, setIdeaElegida] = useState<string | null>(null);
   const [newsQuery, setNewsQuery] = useState("");
   const [news, setNews] = useState<NewsItem[] | null>(null);
   const [newsOpen, setNewsOpen] = useState(true);
@@ -689,43 +692,25 @@ export function ArticleWizard({
       <input type="hidden" name="isLive" value={live ? "1" : "0"} />
       <input type="hidden" name="portadaPos" value={canPortada ? portadaPos : "keep"} />
 
-      {/* --- Progreso --- */}
+      {/* --- Pasos --- */}
       <div className="lx-card shrink-0 px-4 py-3">
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-          <span className="text-sm font-semibold">
-            {initial ? "Editar artículo" : heading} · Paso {step + 1} de {STEPS.length}: {current.label}
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+          <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-semibold">
+            <span>{initial ? "Editar artículo" : heading}</span>
+            <span className="font-normal text-[var(--fg-muted)]">· Paso {step + 1} de {STEPS.length}</span>
             {status && (
-              <span className="ml-2 rounded-full bg-[var(--surface-2)] px-2 py-0.5 text-xs font-medium text-[var(--fg-muted)]">
+              <span className="rounded-full bg-[var(--surface-2)] px-2 py-0.5 text-xs font-medium text-[var(--fg-muted)]">
                 {STATUS_LABEL[status] ?? status}
               </span>
             )}
-          </span>
-          <ol className="hidden flex-1 flex-wrap gap-1 lg:flex">
-            {STEPS.map((s, i) => (
-              <li key={s.key}>
-                <button
-                  type="button"
-                  onClick={() => goTo(i)}
-                  className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[0.72rem] transition ${
-                    i === step
-                      ? "border-[var(--accent)] bg-[var(--accent)] text-white"
-                      : i < step
-                        ? "border-[var(--border-strong)] text-[var(--accent)]"
-                        : "border-[var(--border)] text-[var(--fg-muted)]"
-                  }`}
-                >
-                  {i < step && <Check size={10} />} {s.label}
-                </button>
-              </li>
-            ))}
-          </ol>
-          <span className="ml-auto flex items-center gap-3 text-xs">
+          </p>
+          <span className="ml-auto flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
             <span role="status" aria-live="polite" className="text-[var(--fg-muted)]">
               {autoEstado === "guardando" && "Guardando…"}
-              {autoEstado === "guardado" && `✓ Borrador guardado · ${autoHora}`}
+              {autoEstado === "guardado" && `✓ Guardado · ${autoHora}`}
               {autoEstado === "error" && <span className="text-[var(--danger,#b4442e)]">No se pudo autoguardar</span>}
               {autoEstado === "omitido" && "Nota publicada: guarda con los botones"}
-              {autoEstado === "idle" && title.trim().length < 5 && "Se guarda solo desde que escribas el título"}
+              {autoEstado === "idle" && title.trim().length < 5 && "Se guarda al escribir el título"}
             </span>
             {initial ? (
               <Link href={`/panel/articulos/${initial.id}`} className="lx-link">
@@ -737,21 +722,20 @@ export function ArticleWizard({
               </Link>
             )}
             <Link href="/panel/articulos" className="lx-link inline-flex items-center gap-1">
-              <ArrowLeft size={12} /> Volver a artículos
+              <ArrowLeft size={12} /> Artículos
             </Link>
           </span>
         </div>
-        <div className="mt-2 h-1 overflow-hidden rounded-full bg-[var(--border)]">
-          <div
-            className="h-full rounded-full bg-[var(--accent)] transition-all"
-            style={{ width: `${((step + 1) / STEPS.length) * 100}%` }}
-          />
+        <div className="mt-2.5">
+          <WizardStepper pasos={STEPS} actual={step} onGo={goTo} />
         </div>
       </div>
 
-      <div className="lg:hidden">
-        <SeoBar score={audit.score} items={audit.items} focus={tags[0]} />
-      </div>
+      {current.key !== "tema" && (
+        <div className="lg:hidden">
+          <SeoBar score={audit.score} items={audit.items} focus={tags[0]} />
+        </div>
+      )}
 
       {/* --- Pantalla del paso + panel SEO lateral (escritorio) --- */}
       <div className="flex min-h-0 flex-1 gap-3">
@@ -810,14 +794,6 @@ export function ArticleWizard({
               placeholder="Cuéntale a la IA de qué trata la nota. Ej.: el precio del novillo gordo subió 4 % en Medellín en septiembre según la Central Ganadera; menor entrada de ganado del Magdalena Medio…"
               className={`${input} resize-y text-base leading-relaxed`}
             />
-            <div className="flex flex-wrap items-center gap-3">
-              <button type="button" onClick={suggest} disabled={generating} className="lx-btn">
-                {generating && !options ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
-                {options ? "Proponer otras opciones" : "Proponer títulos y contextos"}
-              </button>
-              <span className="text-xs text-[var(--fg-muted)]">Nada se publica sin tu revisión.</span>
-            </div>
-
             <div className="mt-2">
               <p className="lx-kicker text-[var(--fg-muted)]">¿Prefieres partir de otra cosa?</p>
               <div role="tablist" aria-label="Fuente para empezar" className="mt-2 flex gap-2 overflow-x-auto pb-1">
@@ -863,35 +839,17 @@ export function ArticleWizard({
                 </p>
               )}
               {ideas && ideasOpen && (
-                <div className="mt-4 flex flex-col gap-2">
-                  {ideas.ideas.map((i) => (
-                    <button
-                      key={i.title}
-                      type="button"
-                      onClick={() => {
-                        setTopic(`${i.title}. ${i.angle}`);
-                        setOptions(null);
-                        setIdeasOpen(false);
-                      }}
-                      className="rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] p-3 text-left transition hover:border-[var(--accent)]"
-                    >
-                      <span className="flex flex-wrap items-center gap-2">
-                        <span className={`rounded-full px-2 py-0.5 text-[0.6875rem] font-semibold uppercase tracking-wide ${i.scope === "local" ? "bg-[var(--accent)]/12 text-[var(--accent)]" : "bg-[var(--accent-2)]/15 text-[var(--accent-2)]"}`}>
-                          {i.scope === "local" ? "Colombia" : "Internacional"}
-                        </span>
-                        <span className="font-semibold">{i.title}</span>
-                      </span>
-                      <span className="mt-1 block text-sm">{i.angle}</span>
-                      <span className="mt-1 block text-xs text-[var(--fg-muted)]">Tendencia: {i.why}</span>
-                    </button>
-                  ))}
-                  <p className="text-xs text-[var(--fg-muted)]">Pulsa un tema para usarlo; luego «Proponer títulos y contextos». Fuentes consultadas:</p>
-                  <ul className="flex flex-wrap gap-x-3 gap-y-1 text-xs">
-                    {ideas.sources.map((x) => (
-                      <li key={x.url}><a href={x.url} target="_blank" rel="noopener noreferrer" className="lx-link">{x.title}</a></li>
-                    ))}
-                  </ul>
-                </div>
+                <IdeaCards
+                  ideas={ideas.ideas}
+                  sources={ideas.sources}
+                  picked={ideaElegida}
+                  onPick={(i) => {
+                    setTopic(`${i.title}. ${i.angle}`);
+                    setIdeaElegida(i.title);
+                    setOptions(null);
+                    setIdeasOpen(false);
+                  }}
+                />
               )}
               </div>
                 )}
@@ -931,49 +889,7 @@ export function ArticleWizard({
                   </p>
                 )}
                 {news && newsOpen && (
-                  <div className="mt-3 flex flex-col gap-2">
-                    <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filtrar resultados">
-                      {(["todo", "noticia", "video", "oficial"] as const).map((f) => {
-                        const cuantos = f === "todo" ? news.length : news.filter((n) => n.type === f).length;
-                        if (f !== "todo" && cuantos === 0) return null;
-                        return (
-                          <button
-                            key={f}
-                            type="button"
-                            onClick={() => setNewsFiltro(f)}
-                            aria-pressed={newsFiltro === f}
-                            className={`rounded-full border px-3 py-1 text-xs font-medium transition ${newsFiltro === f ? "border-[var(--accent)] bg-[var(--surface-2)]" : "border-[var(--border)] hover:border-[var(--accent)]"}`}
-                          >
-                            {f === "todo" ? "Todo" : f === "noticia" ? "Noticias" : f === "video" ? "Videos de YouTube" : "Oficiales y redes"} ({cuantos})
-                          </button>
-                        );
-                      })}
-                    </div>
-                    {news.filter((n) => newsFiltro === "todo" || n.type === newsFiltro).map((n) => (
-                      <div key={n.url} className={`flex gap-3 rounded-[var(--radius)] border bg-[var(--bg-2)] p-3 ${isRef(n) ? "border-[var(--accent)]" : "border-[var(--border)]"}`}>
-                        {n.videoId && (
-                          // eslint-disable-next-line @next/next/no-img-element -- miniatura externa de YouTube
-                          <img src={`https://img.youtube.com/vi/${n.videoId}/mqdefault.jpg`} alt="" loading="lazy" className="hidden h-20 w-36 shrink-0 rounded-md object-cover sm:block" />
-                        )}
-                        <div className="min-w-0 flex-1">
-                        <p className="text-xs text-[var(--fg-muted)]">
-                          {n.type === "video" && <span className="mr-1.5 rounded-full bg-[#dc2626]/12 px-2 py-0.5 font-semibold text-[#b91c1c]">▶ Video</span>}
-                          {n.type === "oficial" && <span className="mr-1.5 rounded-full bg-[var(--accent)]/12 px-2 py-0.5 font-semibold text-[var(--accent)]">Oficial</span>}
-                          {n.outlet}{n.date ? ` · ${n.date}` : ""}
-                        </p>
-                        <p className="mt-0.5 font-semibold leading-snug">{n.title}</p>
-                        <p className="mt-1 text-sm">{n.summary}</p>
-                        <div className="mt-2 flex flex-wrap items-center gap-2">
-                          <button type="button" onClick={() => elegirNoticiaComoTema(n)} className="lx-btn !py-1.5 text-xs">Escribir sobre esto</button>
-                          <button type="button" onClick={() => toggleRef(n)} aria-pressed={isRef(n)} className="lx-btn lx-btn-ghost !py-1.5 text-xs">
-                            {isRef(n) ? "✓ Referenciada" : n.type === "video" ? "Referenciar e incrustar" : "Referenciar"}
-                          </button>
-                          <a href={n.url} target="_blank" rel="noopener noreferrer" className="lx-link text-xs">{n.type === "video" ? "Ver en YouTube ↗" : "Abrir fuente ↗"}</a>
-                        </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                  <NewsCards news={news} filtro={newsFiltro} onFiltro={setNewsFiltro} isRef={isRef} onTema={elegirNoticiaComoTema} onRef={toggleRef} />
                 )}
               </div>
                 )}
@@ -1043,6 +959,18 @@ export function ArticleWizard({
                 </ul>
               )}
             </div>
+              {/* Acción principal siempre a la vista: al explorar ideas o noticias no hay que volver arriba. */}
+              <div className="sticky bottom-0 z-10 -mx-5 mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-[var(--border)] bg-[var(--bg-2)] px-5 py-3 shadow-[0_-10px_14px_-12px_rgba(0,0,0,0.3)] sm:-mx-6 sm:px-6">
+                <button type="button" onClick={suggest} disabled={generating || (topic.trim().length < 10 && material.length === 0)} className="lx-btn max-sm:w-full max-sm:justify-center disabled:opacity-60">
+                  {generating && !options ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
+                  {options ? "Proponer otras opciones" : "Proponer títulos y contextos"}
+                </button>
+                <span className="hidden min-w-0 flex-1 truncate text-xs text-[var(--fg-muted)] sm:block">
+                  {topic.trim() || material.length
+                    ? `Tema: ${(topic.trim() || material[0]?.title || "").slice(0, 90)}${material.length ? ` · ${material.length} material${material.length > 1 ? "es" : ""}` : ""}${refs.length ? ` · ${refs.length} referencia${refs.length > 1 ? "s" : ""}` : ""}`
+                    : "Escribe el tema (o elige una idea, una noticia, una entrevista o enlaces) para continuar."}
+                </span>
+              </div>
               </>
             )}
 
@@ -1065,7 +993,7 @@ export function ArticleWizard({
                       type="button"
                       onClick={() => setTitle(t)}
                       aria-pressed={title === t}
-                      className={`rounded-[var(--radius)] border px-4 py-3 text-left text-base font-semibold transition ${
+                      className={`rounded-[var(--radius)] border px-4 py-3 text-left text-[0.95rem] font-semibold leading-snug transition ${
                         title === t
                           ? "border-[var(--accent)] bg-[var(--surface-2)]"
                           : "border-[var(--border)] hover:border-[var(--accent)]"
@@ -1084,7 +1012,7 @@ export function ArticleWizard({
                 <Counter value={title.length} min={15} max={65} />
 
                 <p className="lx-kicker mt-2 text-[var(--accent)]">2 · Elige un contexto (enfoque de la nota)</p>
-                <div className="flex flex-col gap-2">
+                <div className="grid gap-2 md:grid-cols-2">
                   {options.contexts.map((c, i) => (
                     <button
                       key={c.label}
@@ -1484,7 +1412,7 @@ export function ArticleWizard({
         {error && current.key !== "tema" && <p className="mt-4 text-sm text-[var(--danger,#b4442e)]">{error}</p>}
       </div>
 
-      {current.key !== "vista" && <SeoPanel score={audit.score} items={audit.items} groups={audit.groups} capped={audit.capped} focus={tags[0]} />}
+      {current.key !== "vista" && current.key !== "tema" && <SeoPanel score={audit.score} items={audit.items} groups={audit.groups} capped={audit.capped} focus={tags[0]} />}
       </div>
 
       {/* --- Navegación --- */}
@@ -1558,7 +1486,7 @@ export function ArticleWizard({
               </>
             ) : (
               <>
-                {STEPS[step + 1].key === "vista" ? "Ver vista previa" : "Siguiente"} <ArrowRight size={15} />
+                {STEPS[step + 1].key === "vista" ? "Ver vista previa" : <>Siguiente<span className="hidden sm:inline">: {STEPS[step + 1].label}</span></>} <ArrowRight size={15} />
               </>
             )}
           </button>
@@ -1688,6 +1616,7 @@ function SeoBar({ score, items, focus }: { score: number; items: AuditItem[]; fo
 
 /** Panel SEO lateral (escritorio): nota, barra y la lista completa de criterios. */
 function SeoPanel({ score, items, groups, capped, focus }: { score: number; items: AuditItem[]; groups: AuditResult["groups"]; capped: boolean; focus?: string }) {
+  const [verTodo, setVerTodo] = useState(false);
   const pending = items
     .filter((i) => !i.ok)
     .sort((a, b) => (a.severity === b.severity ? b.weight - a.weight : a.severity === "error" ? -1 : 1));
@@ -1695,7 +1624,7 @@ function SeoPanel({ score, items, groups, capped, focus }: { score: number; item
   const color = score >= 75 ? "#16a34a" : score >= 55 ? "#d97706" : "#dc2626";
 
   return (
-    <aside className="lx-card hidden w-80 shrink-0 flex-col overflow-hidden p-0 lg:flex" aria-label="Puntuación SEO">
+    <aside className="lx-card hidden w-72 shrink-0 flex-col overflow-hidden p-0 lg:flex xl:w-80" aria-label="Puntuación SEO">
       <div className="border-b border-[var(--border)] p-4">
         <p className="lx-kicker text-[var(--fg-muted)]">SEO en vivo</p>
         <div className="mt-1 flex items-baseline gap-2">
@@ -1742,7 +1671,7 @@ function SeoPanel({ score, items, groups, capped, focus }: { score: number; item
           <>
             <p className="lx-kicker mb-2 text-[var(--fg-muted)]">Qué falta ({pending.length})</p>
             <ul className="flex flex-col gap-2.5">
-              {pending.map((i) => (
+              {(verTodo ? pending : pending.slice(0, 4)).map((i) => (
                 <li key={i.id} className="flex items-start gap-2 text-sm leading-snug">
                   <span
                     className="mt-1.5 size-2 shrink-0 rounded-full"
@@ -1756,19 +1685,24 @@ function SeoPanel({ score, items, groups, capped, focus }: { score: number; item
                 </li>
               ))}
             </ul>
+            {pending.length > 4 && (
+              <button type="button" onClick={() => setVerTodo((v) => !v)} className="lx-link mt-2 text-xs font-semibold">
+                {verTodo ? "Ver menos" : `Ver las ${pending.length - 4} restantes`}
+              </button>
+            )}
           </>
         )}
         {passed.length > 0 && (
-          <>
-            <p className="lx-kicker mb-2 mt-4 text-[var(--fg-muted)]">Cumplido ({passed.length})</p>
-            <ul className="flex flex-col gap-1.5">
+          <details className="mt-4 group">
+            <summary className="lx-kicker cursor-pointer text-[var(--fg-muted)]">Cumplido ({passed.length})</summary>
+            <ul className="mt-2 flex flex-col gap-1.5">
               {passed.map((i) => (
                 <li key={i.id} className="flex items-start gap-2 text-xs text-[var(--fg-muted)]">
                   <Check size={12} className="mt-0.5 shrink-0 text-[#16a34a]" /> {i.text}
                 </li>
               ))}
             </ul>
-          </>
+          </details>
         )}
       </div>
     </aside>
