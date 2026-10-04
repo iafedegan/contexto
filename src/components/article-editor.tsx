@@ -761,7 +761,7 @@ export function ArticleEditor({
                 activo={breaking}
                 onToggle={() => setBreaking((v) => !v)}
                 titulo="Última hora"
-                detalle="Barra roja en la portada. Solo se muestra la nota marcada más reciente."
+                detalle="Barra roja en la portada. Solo se muestra la nota marcada más reciente. Al publicarla avisa por notificación a quienes tienen la app (una vez)."
               />
               <Interruptor
                 activo={live}

@@ -223,20 +223,50 @@ self.addEventListener("push", (event) => {
   } catch {
     datos = { title: "CONtexto Ganadero", body: event.data.text() };
   }
+  const opciones = {
+    body: datos.body || "",
+    icon: datos.icon || "/api/pwa-icon?size=192",
+    badge: datos.badge || "/api/pwa-icon?size=96",
+    tag: datos.tag || "cg-noticia",
+    renotify: true,
+    timestamp: Date.now(),
+    vibrate: [120, 60, 120],
+    lang: "es-CO",
+    data: { url: datos.url || "/" },
+  };
+  // Foto de la nota: Android y escritorio la muestran grande; donde no se admite, se ignora.
+  if (datos.image) opciones.image = datos.image;
   event.waitUntil(
-    self.registration.showNotification(datos.title || "CONtexto Ganadero", {
-      body: datos.body || "",
-      icon: datos.icon || "/icon?size=192",
-      badge: datos.badge || "/icon?size=96",
-      tag: datos.tag || "cg-noticia",
-      renotify: true,
-      data: { url: datos.url || "/" },
-    }),
+    Promise.all([
+      self.registration.showNotification(datos.title || "CONtexto Ganadero", opciones),
+      // Marca en el ícono de la app instalada (donde el sistema lo permite); la página la limpia al abrirse.
+      self.navigator && self.navigator.setAppBadge ? self.navigator.setAppBadge().catch(() => {}) : undefined,
+    ]),
+  );
+});
+
+// El navegador a veces renueva o invalida la suscripción por su cuenta: se vuelve a registrar sin que el lector haga nada.
+self.addEventListener("pushsubscriptionchange", (event) => {
+  event.waitUntil(
+    (async () => {
+      try {
+        const opciones = (event.oldSubscription && event.oldSubscription.options) || { userVisibleOnly: true };
+        const nueva = event.newSubscription || (await self.registration.pushManager.subscribe(opciones));
+        await fetch("/api/push", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(nueva.toJSON()),
+        });
+      } catch {
+        /* se reintenta la próxima vez que el lector abra la app */
+      }
+    })(),
   );
 });
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
+  if (self.navigator && self.navigator.clearAppBadge) self.navigator.clearAppBadge().catch(() => {});
   const destino = (event.notification.data && event.notification.data.url) || "/";
   event.waitUntil(
     self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((ventanas) => {

@@ -8,6 +8,7 @@ import { db } from "@/db";
 import { articles, authors, categories } from "@/db/schema";
 import { canPublish, requirePermiso } from "@/lib/auth";
 import { embed } from "@/lib/embeddings";
+import { avisarSiUltimaHora } from "@/lib/push";
 import { slugify } from "@/lib/utils";
 import { autorDeUsuario } from "@/lib/user-authors";
 import { guardarBorradorCore, type BorradorInput } from "@/lib/article-ops";
@@ -150,6 +151,7 @@ export async function publishArticle(articleId: string) {
   await reindex(articleId);
   await revalidateArticle(articleId);
   revalidatePath(`/panel/articulos/${articleId}`);
+  avisarSiUltimaHora(articleId);
 }
 
 export async function scheduleArticle(articleId: string, isoDateTime: string) {

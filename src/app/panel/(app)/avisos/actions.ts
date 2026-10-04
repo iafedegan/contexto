@@ -34,7 +34,7 @@ export async function enviarAvisoUltimaHora(
   if (!articleId) return { ok: false, message: "Elige la nota que quieres anunciar." };
 
   const [nota] = await db
-    .select({ slug: articles.slug, title: articles.title, excerpt: articles.excerpt })
+    .select({ id: articles.id, slug: articles.slug, title: articles.title, excerpt: articles.excerpt, cover: articles.coverImageUrl })
     .from(articles)
     .where(and(eq(articles.id, articleId), eq(articles.status, "publicado")))
     .limit(1);
@@ -43,7 +43,10 @@ export async function enviarAvisoUltimaHora(
   const res = await enviarAviso({
     titulo: titulo || nota.title,
     cuerpo: cuerpo || nota.excerpt,
-    url: siteUrl(`/articulo/${nota.slug}`),
+    url: `${siteUrl(`/articulo/${nota.slug}`)}?utm_source=push&utm_medium=notificacion&utm_campaign=ultima-hora`,
+    imagen: nota.cover && /^https?:\/\//i.test(nota.cover) ? nota.cover : null,
+    tag: `nota-${nota.id.slice(0, 8)}`,
+    urgente: true,
   });
 
   return {

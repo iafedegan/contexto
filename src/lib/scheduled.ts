@@ -2,6 +2,7 @@ import "server-only";
 import { and, eq, lte, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { articles } from "@/db/schema";
+import { avisarSiUltimaHora } from "@/lib/push";
 
 /**
  * Pasa a «publicado» las notas programadas cuya hora ya llegó. Es la red de seguridad del publicador: el cron
@@ -16,6 +17,7 @@ export async function promoverProgramados(): Promise<number> {
       .set({ status: "publicado", publishedAt: sql`${articles.scheduledFor}`, updatedAt: sql`now()` })
       .where(and(eq(articles.status, "programado"), lte(articles.scheduledFor, sql`now()`)))
       .returning({ id: articles.id });
+    if (r.length) avisarSiUltimaHora(r.map((x) => x.id));
     return r.length;
   } catch {
     return 0;

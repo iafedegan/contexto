@@ -1,10 +1,12 @@
 import "server-only";
 import webpush from "web-push";
-import { eq, inArray } from "drizzle-orm";
+import { after } from "next/server";
+import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
-import { pushSubscriptions } from "@/db/schema";
+import { articles, pushSubscriptions, siteSettings } from "@/db/schema";
 import { getSiteIdentity } from "@/lib/site-identity";
 import { env } from "@/lib/env";
+import { siteUrl } from "@/lib/utils";
 
 /**
  * Notificaciones push (FM-01) mediante Web Push con claves VAPID.
@@ -45,6 +47,12 @@ export async function enviarAviso(input: {
   titulo: string;
   cuerpo: string;
   url: string;
+  /** Foto grande de la notificación (portada de la nota). */
+  imagen?: string | null;
+  /** Una misma etiqueta reemplaza el aviso anterior de esa nota en vez de apilarlo. */
+  tag?: string;
+  /** Última hora: entrega con máxima prioridad aunque el teléfono esté en reposo. */
+  urgente?: boolean;
 }): Promise<EnvioPush> {
   if (!pushConfigurado()) return { enviados: 0, caducados: 0, fallidos: 0 };
   const nombre = await configurar();
@@ -54,9 +62,10 @@ export async function enviarAviso(input: {
     title: input.titulo.slice(0, 120),
     body: input.cuerpo.slice(0, 220),
     url: input.url,
-    tag: "cg-noticia",
-    badge: "/icon?size=96",
-    icon: "/icon?size=192",
+    tag: input.tag ?? "cg-noticia",
+    badge: "/api/pwa-icon?size=96",
+    icon: "/api/pwa-icon?size=192",
+    ...(input.imagen ? { image: input.imagen } : {}),
     origen: nombre,
   });
 
@@ -70,7 +79,7 @@ export async function enviarAviso(input: {
         await webpush.sendNotification(
           { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
           payload,
-          { TTL: 60 * 60 * 6 },
+          { TTL: 60 * 60 * 6, urgency: input.urgente ? "high" : "normal" },
         );
         enviados += 1;
       } catch (err) {
@@ -111,4 +120,74 @@ export async function guardarSuscripcion(sub: {
 /** Baja de una suscripción (el lector desactiva los avisos). */
 export async function borrarSuscripcion(endpoint: string) {
   await db.delete(pushSubscriptions).where(eq(pushSubscriptions.endpoint, endpoint));
+}
+
+
+/* ------------------------------------------------------------------------------------------------------------
+ * Aviso de una nota publicada
+ * ------------------------------------------------------------------------------------------------------------ */
+
+const ENVIADOS_KEY = "push_enviados";
+type Enviado = { id: string; at: string };
+
+export async function notaYaAvisada(id: string): Promise<boolean> {
+  const [row] = await db.select({ v: siteSettings.value }).from(siteSettings).where(eq(siteSettings.key, ENVIADOS_KEY)).limit(1);
+  return ((row?.v as Enviado[] | undefined) ?? []).some((x) => x.id === id);
+}
+async function marcarEnviado(id: string) {
+  const [row] = await db.select({ v: siteSettings.value }).from(siteSettings).where(eq(siteSettings.key, ENVIADOS_KEY)).limit(1);
+  const lista = [{ id, at: new Date().toISOString() }, ...(((row?.v as Enviado[] | undefined) ?? []).filter((x) => x.id !== id))].slice(0, 200);
+  await db.insert(siteSettings).values({ key: ENVIADOS_KEY, value: lista as never }).onConflictDoUpdate({ target: siteSettings.key, set: { value: lista as never, updatedAt: new Date() } });
+}
+
+export type AvisoNota = { ok: true; enviados: number; caducados: number; fallidos: number } | { ok: false; motivo: string };
+
+/**
+ * Notifica a los suscriptores una nota ya publicada: titular, entradilla, portada y enlace a la nota.
+ * Cada nota se avisa UNA sola vez (se registra), salvo que quien la manda a mano confirme repetirla (`repetir`).
+ */
+export async function avisarNota(articleId: string, opts: { repetir?: boolean; urgente?: boolean } = {}): Promise<AvisoNota> {
+  if (!pushConfigurado()) return { ok: false, motivo: "Las notificaciones no están configuradas (faltan las claves VAPID)." };
+  const [nota] = await db
+    .select({ id: articles.id, slug: articles.slug, title: articles.title, excerpt: articles.excerpt, cover: articles.coverImageUrl, breaking: articles.isBreaking })
+    .from(articles)
+    .where(and(eq(articles.id, articleId), eq(articles.status, "publicado")))
+    .limit(1);
+  if (!nota) return { ok: false, motivo: "La nota no está publicada todavía." };
+  if (!opts.repetir && (await notaYaAvisada(articleId))) return { ok: false, motivo: "Esta nota ya se avisó a los lectores." };
+
+  const res = await enviarAviso({
+    titulo: nota.title,
+    cuerpo: nota.excerpt,
+    url: `${siteUrl(`/articulo/${nota.slug}`)}?utm_source=push&utm_medium=notificacion&utm_campaign=${nota.breaking || opts.urgente ? "ultima-hora" : "noticia"}`,
+    imagen: nota.cover && /^https?:\/\//i.test(nota.cover) ? nota.cover : null,
+    tag: `nota-${nota.id.slice(0, 8)}`,
+    urgente: nota.breaking || opts.urgente,
+  });
+  await marcarEnviado(articleId).catch(() => {});
+  return { ok: true, ...res };
+}
+
+/**
+ * Se llama al publicar: si la nota lleva el distintivo «Última hora», avisa a los lectores de inmediato (una vez).
+ * Corre después de responder (`after`), así que nunca retrasa la publicación; un fallo se registra y no la afecta.
+ */
+export function avisarSiUltimaHora(articleId: string | string[]) {
+  const ids = Array.isArray(articleId) ? articleId : [articleId];
+  if (!ids.length || !pushConfigurado()) return;
+  const tarea = async () => {
+    for (const id of ids) {
+      try {
+        const [n] = await db.select({ b: articles.isBreaking }).from(articles).where(eq(articles.id, id)).limit(1);
+        if (n?.b) await avisarNota(id, { urgente: true });
+      } catch (err) {
+        console.error("avisarSiUltimaHora:", err);
+      }
+    }
+  };
+  try {
+    after(tarea);
+  } catch {
+    void tarea(); // fuera de una petición (scripts, pruebas)
+  }
 }

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Bell, BellOff, Loader2 } from "lucide-react";
 import { t, type Locale } from "@/lib/i18n";
+import { suscribirPush } from "@/lib/push-client";
 
 /**
  * Suscripción a avisos de última hora (FM-01).
@@ -49,21 +50,9 @@ export function PushToggle({ locale, publicKey }: { locale: Locale; publicKey: s
         return;
       }
 
-      const permiso = await Notification.requestPermission();
-      if (permiso !== "granted") {
-        setEstado(permiso === "denied" ? "bloqueado" : "no");
-        return;
-      }
-
-      const sub = await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: base64UrlABytes(publicKey),
-      });
-      await fetch("/api/push", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(sub.toJSON()),
-      });
+      const r = await suscribirPush(publicKey);
+      if (r === "bloqueada") return void setEstado("bloqueado");
+      if (r !== "activada") return void setEstado("no");
       setEstado("si");
     } catch {
       setEstado("no");
@@ -99,17 +88,4 @@ export function PushToggle({ locale, publicKey }: { locale: Locale; publicKey: s
       {estado === "si" ? t(locale, "push.off") : t(locale, "push.on")}
     </button>
   );
-}
-
-/**
- * La clave VAPID viaja en base64url y `subscribe` espera bytes sobre un
- * ArrayBuffer propio (no compartido), de ahí la reserva explícita.
- */
-function base64UrlABytes(base64: string): Uint8Array<ArrayBuffer> {
-  const relleno = "=".repeat((4 - (base64.length % 4)) % 4);
-  const normal = (base64 + relleno).replace(/-/g, "+").replace(/_/g, "/");
-  const crudo = atob(normal);
-  const bytes = new Uint8Array(new ArrayBuffer(crudo.length));
-  for (let i = 0; i < crudo.length; i += 1) bytes[i] = crudo.charCodeAt(i);
-  return bytes;
 }

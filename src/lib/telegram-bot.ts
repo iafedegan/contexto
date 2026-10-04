@@ -16,6 +16,7 @@ import { tienePermiso } from "@/lib/permisos-server";
 import { descargarArchivo, enviar, enviarFoto, esc, escribiendo, responderCallback, tg, type Boton } from "@/lib/telegram";
 import { getEstado, setEstado, vincularConCodigo, vinculoDe, desvincular, type EstadoChat, type Fase } from "@/lib/telegram-store";
 import { signPreviewToken } from "@/lib/preview-token";
+import { avisarNota, contarSuscriptores, notaYaAvisada, pushConfigurado } from "@/lib/push";
 import { siteUrl } from "@/lib/utils";
 import { subirImagenBytes } from "@/lib/media-upload";
 
@@ -543,13 +544,15 @@ async function menuDistintivos(c: Ctx) {
     filas.push([{ texto: `${a.pos === 0 ? "✅" : "📌"} Portada principal`, dato: `d:p0:${k}` }, { texto: `${a.pos === 1 ? "✅" : "📌"} Segunda destacada`, dato: `d:p1:${k}` }]);
     if (a.pos !== null) filas.push([{ texto: "✖ Quitar de la portada", dato: `d:px:${k}` }]);
   }
+  const avisosOk = await tienePermiso(c.userId, c.role, "avisos");
+  if (avisosOk && a.status === "publicado") filas.push([{ texto: "📣 Avisar a los lectores (notificación)", dato: `d:n:${k}` }]);
   if (pubOk) {
     filas.push([{ texto: `${a.b ? "✅" : "⚡"} Última hora`, dato: `d:b:${k}` }]);
     filas.push([{ texto: `${a.l ? "✅" : "🔴"} En desarrollo (En vivo)`, dato: `d:l:${k}` }]);
   }
   filas.push([{ texto: "⬅️ Listo", dato: `d:ok:${k}` }]);
   const estadoPos = a.pos === null ? "sin fijar (orden por fecha)" : a.pos === 0 ? "portada principal" : a.pos === 1 ? "segunda destacada" : `posición ${a.pos + 1}`;
-  await enviar(c.chatId, `📌 <b>Portada y distintivos</b>\n<b>${esc(a.title)}</b>\nPortada: <b>${estadoPos}</b>\n⚡ Última hora: <b>${a.b ? "sí" : "no"}</b> · 🔴 En desarrollo: <b>${a.l ? "sí" : "no"}</b>${a.status !== "publicado" ? "\n\n<i>Se verá en el sitio cuando la nota esté publicada.</i>" : ""}\n\n<i>Última hora: solo se muestra la nota marcada más reciente. En desarrollo pone la etiqueta «En vivo» en la nota.</i>`, filas);
+  await enviar(c.chatId, `📌 <b>Portada y distintivos</b>\n<b>${esc(a.title)}</b>\nPortada: <b>${estadoPos}</b>\n⚡ Última hora: <b>${a.b ? "sí" : "no"}</b> · 🔴 En desarrollo: <b>${a.l ? "sí" : "no"}</b>${a.status !== "publicado" ? "\n\n<i>Se verá en el sitio cuando la nota esté publicada.</i>" : ""}\n\n<i>Última hora: solo se muestra la nota marcada más reciente y, al publicarla, avisa por notificación a quienes tienen la app (una sola vez). En desarrollo pone la etiqueta «En vivo» en la nota.</i>`, filas);
 }
 
 async function acciones(c: Ctx, d: string) {
@@ -562,6 +565,20 @@ async function acciones(c: Ctx, d: string) {
     case "d": {
       if (!c.e.articleId) return void (await enviar(c.chatId, "No tengo una nota en curso. Envía /nueva para empezar."));
       if (v === "m") { await guardar(c); return menuDistintivos(c); }
+      if (v === "n" || v === "nok") {
+        if (!(await tienePermiso(c.userId, c.role, "avisos"))) return void (await enviar(c.chatId, "Tu cuenta no tiene permiso para enviar avisos a los lectores."));
+        if (!pushConfigurado()) return void (await enviar(c.chatId, "Las notificaciones aún no están configuradas en el sitio (faltan las claves VAPID). Avisa al administrador."));
+        const [nota] = await db.select({ title: articles.title, status: articles.status }).from(articles).where(eq(articles.id, c.e.articleId)).limit(1);
+        if (!nota || nota.status !== "publicado") return void (await enviar(c.chatId, "La nota todavía no está publicada: publícala y luego avisa a los lectores."));
+        if (v === "n") {
+          const n = await contarSuscriptores().catch(() => 0);
+          if (!n) return void (await enviar(c.chatId, "Todavía no hay lectores con notificaciones activadas."));
+          const repetida = await notaYaAvisada(c.e.articleId);
+          return void (await enviar(c.chatId, `📣 <b>¿Enviar la notificación?</b>\n«${esc(nota.title)}»\nLlegará a <b>${n}</b> dispositivo${n === 1 ? "" : "s"} y <b>no se puede retirar</b>.${repetida ? "\n\n⚠️ Esta nota <b>ya se avisó</b> antes; se enviaría de nuevo." : ""}`, [[{ texto: "✅ Sí, enviar", dato: `d:nok:${tk(c)}` }, { texto: "Cancelar", dato: `d:ok:${tk(c)}` }]]));
+        }
+        const r = await avisarNota(c.e.articleId, { repetir: true, urgente: false });
+        return void (await enviar(c.chatId, r.ok ? `📣 Notificación enviada a <b>${r.enviados}</b> dispositivo${r.enviados === 1 ? "" : "s"}${r.caducados ? ` (${r.caducados} suscripción${r.caducados === 1 ? "" : "es"} caducada${r.caducados === 1 ? "" : "s"} eliminada${r.caducados === 1 ? "" : "s"})` : ""}${r.fallidos ? `, ${r.fallidos} con error` : ""}.` : `⚠️ ${esc(r.motivo)}`));
+      }
       if (v === "ok") return void (await enviar(c.chatId, "Listo. Escribe /estado para ver cómo quedó la nota."));
       const pubOk = canPublish(c.role) && (await tienePermiso(c.userId, c.role, "publicar"));
       const portOk = await tienePermiso(c.userId, c.role, "portada");

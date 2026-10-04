@@ -1392,7 +1392,7 @@ export function ArticleWizard({
                 <ArrowLeft size={14} /> Volver a editar
               </button>
               <label className="flex items-center gap-1.5 text-sm">
-                <input type="checkbox" checked={breaking} onChange={(e) => setBreaking(e.target.checked)} /> ⚡ Última hora
+                <input type="checkbox" checked={breaking} onChange={(e) => setBreaking(e.target.checked)} /> ⚡ Última hora (avisa por notificación al publicar)
               </label>
               <label className="flex items-center gap-1.5 text-sm">
                 <input type="checkbox" checked={live} onChange={(e) => setLive(e.target.checked)} /> 🔴 En desarrollo (En vivo)
