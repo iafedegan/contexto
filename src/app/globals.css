@@ -1617,3 +1617,9 @@ html[data-cg-overlay] .cg-consent { display: none; }
 .prose details > summary::after { content: "＋"; float: right; }
 .prose details[open] > summary::after { content: "－"; }
 .prose details > ul { margin: 0; padding: 0 1.1rem 1rem 2.2rem; font-size: 0.92rem; line-height: 1.6; }
+
+
+/* Entrada suave de cada paso del asistente (respeta «reducir movimiento»). */
+@keyframes lxstep { from { opacity: 0; transform: translateY(8px); } }
+.lx-step { animation: lxstep 0.28s ease-out both; }
+@media (prefers-reduced-motion: reduce) { .lx-step { animation: none; } }

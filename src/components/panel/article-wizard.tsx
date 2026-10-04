@@ -5,7 +5,14 @@ import Link from "next/link";
 import {
   ArrowLeft,
   ArrowRight,
+  AreaChart,
   BarChart3,
+  BarChartHorizontal,
+  BarChart4,
+  Donut,
+  LineChart,
+  PieChart,
+  Wand2,
   CalendarClock,
   Check,
   Eye,
@@ -239,6 +246,10 @@ export function ArticleWizard({
   // Un artículo reabierto ya tiene borrador: se puede revisar y regenerar.
   const [generated, setGenerated] = useState(!!initial);
   const [aiNote, setAiNote] = useState("");
+  const [aiNotaCerrada, setAiNotaCerrada] = useState(false);
+  const [arrastre, setArrastre] = useState(false);
+  const scroller = useRef<HTMLDivElement>(null);
+  const cuerpoRef = useRef<HTMLTextAreaElement>(null);
   const [generating, startGenerating] = useTransition();
   const [title, setTitle] = useState(initial?.title ?? "");
   const [excerpt, setExcerpt] = useState(initial?.excerpt ?? "");
@@ -381,6 +392,10 @@ export function ArticleWizard({
     resumen: excerpt.trim().length < 20 ? "El resumen debe tener al menos 20 caracteres." : null,
   };
   const current = STEPS[step];
+  // Cada paso empieza arriba: el título del paso nunca queda oculto por el scroll del anterior.
+  useEffect(() => {
+    scroller.current?.scrollTo({ top: 0 });
+  }, [step, enOpciones]);
   const isLast = step === STEPS.length - 1;
 
   function next() {
@@ -742,7 +757,7 @@ export function ArticleWizard({
 
       {/* --- Pantalla del paso + panel SEO lateral (escritorio) --- */}
       <div className="flex min-h-0 flex-1 gap-3">
-      <div className="lx-card min-h-0 flex-1 p-5 sm:p-6" style={{ overflowY: "auto", transform: "none" }}>
+      <div ref={scroller} className="lx-card min-h-0 flex-1 p-5 sm:p-6" style={{ overflowY: "auto", transform: "none" }}>
         {mode === "ia" && generated && PART_OF[current.key] && (
           <div className="mx-auto mb-3 flex max-w-2xl items-center gap-2 text-xs text-[var(--fg-muted)]">
             <Sparkles size={13} className="text-[var(--accent)]" />
@@ -1097,7 +1112,7 @@ export function ArticleWizard({
                 className="min-w-[10rem] flex-1 border-0 bg-transparent py-1 outline-none"
               />
             </div>
-            <p className="text-xs text-[var(--fg-muted)]">{tags.length} de 12 · recomendado entre 3 y 6.</p>
+            <p className="text-xs" style={{ color: tags.length >= 3 && tags.length <= 6 ? "#16a34a" : undefined }}><span className={tags.length >= 3 && tags.length <= 6 ? "" : "text-[var(--fg-muted)]"}>{tags.length} de 12 · ideal entre 3 y 6{tags.length >= 3 && tags.length <= 6 ? " ✓" : ""}</span></p>
           </Step>
         )}
 
@@ -1120,30 +1135,52 @@ export function ArticleWizard({
         )}
 
         {current.key === "cuerpo" && (
-          <Step
-            title="Escribe el cuerpo"
-            hint="Separa los párrafos con una línea en blanco. Empieza una línea con «## » para un intertítulo. Las direcciones https://… se convierten en enlaces."
-          >
-            <textarea
-              autoFocus
-              value={body}
-              onChange={(e) => setBody(e.target.value)}
-              rows={11}
-              placeholder={"Primer párrafo con lo más importante…\n\n## Qué explica el alza\n\nSegundo párrafo…"}
-              className={`${input} resize-y text-base leading-relaxed`}
-            />
-            <p className="flex items-center gap-2 rounded-[var(--radius)] bg-[var(--surface-2)] p-3 text-xs text-[var(--fg-muted)]">
-              <BarChart3 size={14} className="shrink-0 text-[var(--accent)]" /> ¿La nota tiene cifras? En el siguiente paso, «Gráfica», la IA te arma una (barras, histograma, líneas, área, torta o dona) y la ves antes de insertarla.
-            </p>
-            <p className="text-xs text-[var(--fg-muted)]">
-              {words} palabras · {Math.max(1, Math.round(words / 200))} min de lectura
-              {words > 0 && words < 250 && " · se recomiendan al menos 250"}
+          <Step title="Escribe el cuerpo" hint="Párrafos separados por una línea en blanco. Las direcciones https://… se convierten en enlaces.">
+            <div className="overflow-hidden rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] focus-within:border-[var(--accent)]">
+              <div className="flex flex-wrap items-center gap-1 border-b border-[var(--border)] px-2 py-1.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const el = cuerpoRef.current;
+                    const ini = el?.selectionStart ?? body.length;
+                    const linea = body.lastIndexOf("\n", ini - 1) + 1;
+                    if (body.slice(linea, linea + 3) === "## ") return el?.focus();
+                    setBody(body.slice(0, linea) + "## " + body.slice(linea));
+                    requestAnimationFrame(() => { el?.focus(); el?.setSelectionRange(ini + 3, ini + 3); });
+                  }}
+                  className="rounded-md px-2.5 py-1 text-xs font-semibold text-[var(--fg-muted)] transition hover:bg-[var(--surface-2)] hover:text-[var(--fg)]"
+                  title="Convierte la línea actual en un intertítulo"
+                >
+                  H2 · Intertítulo
+                </button>
+                <span className="ml-auto pr-1 text-xs tabular-nums text-[var(--fg-muted)]">
+                  {words} palabras · {Math.max(1, Math.round(words / 200))} min
+                </span>
+              </div>
+              <textarea
+                ref={cuerpoRef}
+                autoFocus
+                value={body}
+                onChange={(e) => setBody(e.target.value)}
+                rows={12}
+                placeholder={"Primer párrafo con lo más importante…\n\n## Qué explica el alza\n\nSegundo párrafo…"}
+                className="block min-h-[18rem] w-full resize-y border-0 bg-transparent px-4 py-3 text-base leading-relaxed outline-none"
+              />
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-[var(--border)]" role="meter" aria-valuenow={words} aria-valuemin={0} aria-valuemax={400} aria-label="Palabras">
+                <span className="absolute inset-y-0 left-0 rounded-full transition-all duration-300" style={{ width: `${Math.min(100, (words / 400) * 100)}%`, background: words >= 250 ? "#16a34a" : "#d97706" }} />
+              </div>
+              <span className="text-xs text-[var(--fg-muted)]">{words >= 250 ? "Buena longitud ✓" : "Se recomiendan al menos 250"}</span>
+            </div>
+            <p className="flex items-center gap-2 text-xs text-[var(--fg-muted)]">
+              <BarChart3 size={13} className="shrink-0 text-[var(--accent)]" /> ¿Tiene cifras? En «Gráfica» la IA arma una y la ves antes de insertarla.
             </p>
           </Step>
         )}
 
         {current.key === "grafica" && (
-          <Step title="Gráfica con datos" hint="Opcional. La IA busca cifras en la web, las dibuja y tú eliges el tipo. La ves aquí antes de insertarla en la nota.">
+          <Step ancho="lg" title="Gráfica con datos" hint="Opcional. La IA busca cifras en la web, las dibuja y tú eliges el tipo. La ves aquí antes de insertarla en la nota.">
             <div className="flex flex-col gap-5">
               <div className="flex flex-col gap-3">
                 <label className="flex flex-col gap-1.5">
@@ -1167,8 +1204,9 @@ export function ArticleWizard({
                         aria-checked={tipoGrafica === t.id}
                         title={t.hint}
                         onClick={() => cambiarTipo(t.id)}
-                        className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${tipoGrafica === t.id ? "border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-fg)]" : "border-[var(--border)] bg-[var(--bg-2)] hover:border-[var(--accent)]"}`}
+                        className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition ${tipoGrafica === t.id ? "border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-fg)]" : "border-[var(--border)] bg-[var(--bg-2)] hover:border-[var(--accent)]"}`}
                       >
+                        {(() => { const I = ({ auto: Wand2, vertical: BarChart3, horizontal: BarChartHorizontal, histograma: BarChart4, line: LineChart, area: AreaChart, torta: PieChart, dona: Donut } as const)[t.id]; return <I size={13} aria-hidden />; })()}
                         {t.label}
                       </button>
                     ))}
@@ -1216,120 +1254,132 @@ export function ArticleWizard({
         )}
 
         {current.key === "portada" && (
-          <Step title="Portada" hint="Dónde aparece la nota en el sitio y con qué imagen. Todo es opcional.">
-            <div className="rounded-[var(--radius)] border border-[var(--border)] p-4">
-              <p className="text-sm font-semibold">¿Publicar en la portada del sitio?</p>
-              <p className="mt-1 text-xs text-[var(--fg-muted)]">
-                Por defecto la nota entra a la portada por fecha. Aquí puedes fijarla arriba cuando se publique. El orden fino se ajusta en «Portada» del menú.
-              </p>
+          <Step ancho="lg" title="Portada" hint="Dónde aparece la nota en el sitio y con qué imagen. Todo es opcional.">
+            {/* --- En el sitio --- */}
+            <section aria-labelledby="pt-sitio" className="rounded-[var(--radius-lg)] border border-[var(--border)] p-4 sm:p-5">
+              <h3 id="pt-sitio" className="text-sm font-semibold">En el sitio</h3>
               {canPortada ? (
-                <div role="radiogroup" aria-label="Lugar en la portada" className="mt-3 grid gap-2 sm:grid-cols-3">
-                  {([
-                    ["none", "Sin destacar", "Entra por fecha, como cualquier nota."],
-                    ["0", "Portada principal", "La nota grande de arriba."],
-                    ["1", "Segunda destacada", "Junto a la principal."],
-                  ] as const).map(([v, t, d]) => (
-                    <button key={v} type="button" role="radio" aria-checked={portadaPos === v} onClick={() => setPortadaPos(v)}
-                      className={`rounded-[var(--radius)] border p-3 text-left transition ${portadaPos === v ? "border-[var(--accent)] bg-[var(--accent)]/10" : "border-[var(--border)] hover:border-[var(--accent)]"}`}>
-                      <span className="block text-sm font-semibold">{t}</span>
-                      <span className="block text-xs text-[var(--fg-muted)]">{d}</span>
-                    </button>
-                  ))}
-                </div>
+                <>
+                  <div role="radiogroup" aria-label="Lugar en la portada" className="mt-3 grid w-full grid-cols-3 gap-1 rounded-full border border-[var(--border)] bg-[var(--bg-2)] p-1 sm:inline-grid sm:w-auto">
+                    {([
+                      ["none", "Normal", "Sin destacar", "Entra por fecha, como cualquier nota."],
+                      ["0", "Principal", "Portada principal", "La nota grande de arriba."],
+                      ["1", "Segunda", "Segunda destacada", "Junto a la principal."],
+                    ] as const).map(([v, corto, t, d]) => (
+                      <button key={v} type="button" role="radio" aria-checked={portadaPos === v} title={d} onClick={() => setPortadaPos(v)}
+                        className={`rounded-full px-3 py-1.5 text-center text-sm font-medium transition sm:px-3.5 ${portadaPos === v ? "bg-[var(--accent)] text-[var(--accent-fg,#fff)] shadow-sm" : "text-[var(--fg-muted)] hover:text-[var(--fg)]"}`}>
+                        <span className="sm:hidden">{corto}</span><span className="hidden sm:inline">{t}</span>
+                      </button>
+                    ))}
+                  </div>
+                  <p className="mt-2 text-xs text-[var(--fg-muted)]">
+                    {portadaPos === "none" && "Entra a la portada por fecha, como cualquier nota."}
+                    {portadaPos === "0" && "Se fija como la nota grande de arriba cuando se publique."}
+                    {portadaPos === "1" && "Se fija junto a la principal cuando se publique."}
+                    {portadaPos === "keep" && "Ya ocupa otro lugar fijado en la portada; se conserva (se ajusta en «Portada» del menú)."}
+                  </p>
+                </>
               ) : (
-                <p className="mt-3 text-xs text-[var(--fg-muted)]">Tu cuenta no ubica notas en la portada: un editor lo hace al publicar.</p>
+                <p className="mt-2 text-xs text-[var(--fg-muted)]">Tu cuenta no ubica notas en la portada: un editor lo hace al publicar.</p>
               )}
-              {portadaPos === "keep" && <p className="mt-2 text-xs text-[var(--fg-muted)]">Esta nota ya ocupa otro lugar fijado en la portada; se conserva.</p>}
               {canPublish && (
-                <div className="mt-4 flex flex-col gap-2 border-t border-[var(--border)] pt-3">
-                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--fg-muted)]">Distintivos</p>
-                  <label className="flex items-start gap-2 text-sm">
-                    <input type="checkbox" className="mt-1" checked={breaking} onChange={(e) => setBreaking(e.target.checked)} />
-                    <span>⚡ <strong>Última hora</strong> — barra roja en la portada; al publicarla avisa por notificación a quienes tienen la app (una vez).</span>
-                  </label>
-                  <label className="flex items-start gap-2 text-sm">
-                    <input type="checkbox" className="mt-1" checked={live} onChange={(e) => setLive(e.target.checked)} />
-                    <span>🔴 <strong>En desarrollo</strong> — etiqueta «En vivo» en las tarjetas y en la nota.</span>
-                  </label>
-                </div>
-              )}
-            </div>
-            <p className="mt-2 text-sm font-semibold">Imagen de portada</p>
-            <p className="-mt-1 text-xs text-[var(--fg-muted)]">Si no subes ninguna, se usa una ilustración con el nombre de la sección.</p>
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-[16rem_minmax(0,1fr)]">
-              <div className="relative aspect-[16/10] overflow-hidden rounded-[var(--radius)] border border-dashed border-[var(--border)] bg-[var(--surface-2)]">
-                {cover ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={cover} alt="" className="size-full object-cover" />
-                ) : (
-                  <span className="grid size-full place-items-center text-sm text-[var(--fg-muted)]">
-                    {uploading ? <Loader2 className="animate-spin" /> : "Sin foto"}
-                  </span>
-                )}
-              </div>
-              <div className="flex flex-col gap-3">
-                <div className="flex flex-wrap gap-2">
-                  <label className="lx-btn cursor-pointer">
-                    <ImagePlus size={15} /> {cover ? "Cambiar foto" : "Subir foto"}
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e) => {
-                        const f = e.target.files?.[0];
-                        e.target.value = "";
-                        if (f) void onCover(f);
-                      }}
-                    />
-                  </label>
-                  {cover && (
-                    <button type="button" onClick={() => setCover("")} className="lx-btn lx-btn-ghost">
-                      <Trash2 size={15} /> Quitar
-                    </button>
+                <div className="mt-4 border-t border-[var(--border)] pt-4">
+                  <div className="flex flex-wrap gap-2">
+                    {([
+                      [breaking, setBreaking, "⚡ Última hora"],
+                      [live, setLive, "🔴 En desarrollo"],
+                    ] as const).map(([activo, cambiar, texto]) => (
+                      <button key={texto} type="button" aria-pressed={activo} onClick={() => cambiar(!activo)}
+                        className={`inline-flex items-center rounded-full border px-3.5 py-1.5 text-sm font-medium transition ${activo ? "border-[var(--accent)] bg-[var(--accent)]/12 text-[var(--accent)]" : "border-[var(--border)] hover:border-[var(--accent)]"}`}>
+                        {texto}
+                      </button>
+                    ))}
+                  </div>
+                  {(breaking || live) && (
+                    <p className="mt-2 text-xs text-[var(--fg-muted)]">
+                      {breaking && "Última hora: barra roja en la portada y aviso por notificación a quienes tienen la app, una sola vez al publicar. "}
+                      {live && "En desarrollo: etiqueta «En vivo» en las tarjetas y en la nota."}
+                    </p>
                   )}
                 </div>
-                <details className="text-sm">
-                  <summary className="lx-link cursor-pointer text-xs font-medium">Pegar la URL de una imagen</summary>
-                  <input
-                    value={cover}
-                    onChange={(e) => setCover(e.target.value)}
-                    placeholder="https://…"
-                    className={`${input} mt-2 text-sm`}
-                  />
-                </details>
-                {cover && (
-                  <input
-                    value={coverAlt}
-                    onChange={(e) => setCoverAlt(e.target.value)}
-                    placeholder="Qué se ve en la foto (texto alternativo)"
-                    className={`${input} text-sm`}
-                  />
+              )}
+            </section>
+
+            {/* --- Imagen --- */}
+            <section aria-labelledby="pt-imagen" className="rounded-[var(--radius-lg)] border border-[var(--border)] p-4 sm:p-5">
+              <div className="flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:justify-between sm:gap-3">
+                <h3 id="pt-imagen" className="text-sm font-semibold">Imagen de portada</h3>
+                <span className="text-xs text-[var(--fg-muted)]">{cover ? "Se publica con esta imagen" : "Sin imagen: se usa una ilustración con la sección"}</span>
+              </div>
+              <div
+                onDragOver={(e) => { e.preventDefault(); setArrastre(true); }}
+                onDragLeave={() => setArrastre(false)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setArrastre(false);
+                  const f = e.dataTransfer.files?.[0];
+                  if (f && f.type.startsWith("image/")) void onCover(f);
+                }}
+                className={`relative mt-3 aspect-[16/9] w-full overflow-hidden rounded-[var(--radius)] border transition ${cover ? "border-[var(--border)]" : "border-dashed"} ${arrastre ? "border-[var(--accent)] bg-[var(--accent)]/10" : "bg-[var(--surface-2)]/60"}`}
+              >
+                {cover ? (
+                  <>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={cover} alt="" className="size-full object-cover" />
+                    <div className="absolute inset-x-0 bottom-0 flex flex-wrap items-center gap-2 bg-gradient-to-t from-black/70 to-transparent p-3 pt-8">
+                      <label className="lx-btn cursor-pointer !px-3 !py-1.5 text-xs">
+                        <ImagePlus size={13} /> Cambiar
+                        <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void onCover(f); }} />
+                      </label>
+                      <button type="button" onClick={makeCover} disabled={genImg || uploading} className="lx-btn lx-btn-ghost !border-white/40 !bg-white/10 !px-3 !py-1.5 text-xs !text-white">
+                        <Sparkles size={13} /> Generar otra
+                      </button>
+                      <button type="button" onClick={() => { setCover(""); setCoverAlt(""); }} className="ml-auto inline-flex items-center gap-1 text-xs font-medium text-white/90 hover:text-white">
+                        <Trash2 size={13} /> Quitar
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="grid size-full place-items-center p-4 text-center">
+                    <div className="flex flex-col items-center gap-3">
+                      <ImagePlus size={28} className="text-[var(--fg-muted)]" aria-hidden />
+                      <p className="text-sm font-medium">Arrastra una foto aquí</p>
+                      <div className="flex flex-wrap justify-center gap-2">
+                        <label className="lx-btn cursor-pointer">
+                          <ImagePlus size={15} /> Subir foto
+                          <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void onCover(f); }} />
+                        </label>
+                        <button type="button" onClick={makeCover} disabled={genImg || uploading} className="lx-btn lx-btn-ghost">
+                          <Sparkles size={15} /> Generar con IA
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                {(uploading || genImg) && (
+                  <div role="status" className="absolute inset-0 grid place-items-center bg-black/55 text-sm font-medium text-white">
+                    <span className="inline-flex items-center gap-2"><Loader2 size={16} className="animate-spin" /> {genImg ? "Generando la imagen… unos 20 segundos" : "Subiendo…"}</span>
+                  </div>
                 )}
               </div>
-            </div>
-            <div className="mt-5 rounded-[var(--radius)] border border-dashed border-[var(--border-strong)] bg-[var(--surface-2)]/50 p-4">
-              <p className="text-sm font-semibold">¿Sin foto? Genérala con IA</p>
-              <p className="mt-1 text-xs text-[var(--fg-muted)]">
-                Crea una imagen realista, con estética de fotograma de cine (16:9), a partir del título y el resumen. No retrata personas reales. Se publica rotulada «imagen generada con IA»; si la nota trata de un hecho real, es mejor usar una foto propia o de agencia.
-              </p>
-              <div className="mt-3 flex flex-col gap-2">
-                <button type="button" onClick={makeCover} disabled={genImg || uploading} className="lx-btn w-fit">
-                  {genImg ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
-                  {cover ? "Generar otra" : "Generar foto con IA"}
-                </button>
-                <details className="text-sm">
-                  <summary className="lx-link cursor-pointer text-xs font-medium">Describir la escena (opcional)</summary>
-                  <input
-                    value={sceneTxt}
-                    onChange={(e) => setSceneTxt(e.target.value)}
-                    placeholder="Si lo dejas vacío, la IA propone la escena"
-                    className={`${input} mt-2 !py-2 text-sm`}
-                  />
-                </details>
-              </div>
-              {genImg && <p role="status" className="mt-3 text-xs text-[var(--fg-muted)]">Generando la imagen… puede tardar unos 20 segundos.</p>}
               {imgError && <p role="alert" className="mt-3 text-sm text-[var(--danger,#b4442e)]">{imgError}</p>}
-            </div>
+              <div className="mt-3 flex flex-col gap-2 text-sm">
+                {cover && (
+                  <input value={coverAlt} onChange={(e) => setCoverAlt(e.target.value)} placeholder="Qué se ve en la foto (texto alternativo)" className={`${input} text-sm`} />
+                )}
+                <div className="flex flex-wrap gap-x-5 gap-y-1">
+                  <details className="min-w-0">
+                    <summary className="lx-link cursor-pointer text-xs font-medium">Pegar la URL de una imagen</summary>
+                    <input value={cover} onChange={(e) => setCover(e.target.value)} placeholder="https://…" className={`${input} mt-2 text-sm`} />
+                  </details>
+                  <details className="min-w-0">
+                    <summary className="lx-link cursor-pointer text-xs font-medium">Describir la escena para la IA</summary>
+                    <input value={sceneTxt} onChange={(e) => setSceneTxt(e.target.value)} placeholder="Si lo dejas vacío, la IA propone la escena" className={`${input} mt-2 text-sm`} />
+                    <p className="mt-1.5 text-xs text-[var(--fg-muted)]">Imagen realista, estilo cine (16:9); no retrata personas reales y se publica rotulada «imagen generada con IA».</p>
+                  </details>
+                </div>
+              </div>
+            </section>
           </Step>
         )}
 
@@ -1350,10 +1400,17 @@ export function ArticleWizard({
               className={`${input} resize-y`}
             />
             <Counter value={(metaDescription || excerpt).length} min={70} max={155} />
-            <div className="rounded-[var(--radius)] border border-[var(--border)] bg-white p-4 text-left">
-              <p className="text-xs text-[#4d5156]">contextoganadero.com › articulo</p>
-              <p className="mt-1 truncate text-lg text-[#1a0dab]">{metaTitle || title}</p>
-              <p className="line-clamp-2 text-sm text-[#4d5156]">{metaDescription || excerpt}</p>
+            <div className="mt-1 rounded-[var(--radius-lg)] border border-[var(--border)] bg-white p-4 text-left shadow-sm">
+              <p className="mb-2 text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-[#70757a]">Así aparece en Google</p>
+              <div className="flex items-center gap-2.5">
+                <span className="grid size-7 shrink-0 place-items-center rounded-full bg-[#f1f3f4] text-xs font-bold text-[#202124]">C</span>
+                <div className="min-w-0 leading-tight">
+                  <p className="truncate text-sm text-[#202124]">CONtexto Ganadero</p>
+                  <p className="truncate text-xs text-[#4d5156]">contextoganadero.com › articulo</p>
+                </div>
+              </div>
+              <p className="mt-2 line-clamp-2 text-[1.15rem] leading-snug text-[#1a0dab]">{metaTitle || title || "Título de la nota"}</p>
+              <p className="mt-1 line-clamp-2 text-sm leading-snug text-[#4d5156]">{metaDescription || excerpt || "La descripción de la nota aparecerá aquí."}</p>
             </div>
           </Step>
         )}
@@ -1389,9 +1446,13 @@ export function ArticleWizard({
           </div>
         )}
 
-        {aiNote && current.key !== "tema" && current.key !== "vista" && (
+        {aiNote && current.key === STEPS[1].key && !aiNotaCerrada && (
           <p className="mx-auto mt-5 flex max-w-2xl items-start gap-2 rounded-[var(--radius)] bg-[var(--surface-2)] p-3 text-xs text-[var(--fg-muted)]">
-            <Sparkles size={13} className="mt-0.5 shrink-0 text-[var(--accent)]" /> {aiNote}
+            <Sparkles size={13} className="mt-0.5 shrink-0 text-[var(--accent)]" />
+            <span className="flex-1">{aiNote}</span>
+            <button type="button" onClick={() => setAiNotaCerrada(true)} aria-label="Cerrar aviso" className="shrink-0 text-[var(--fg-muted)] hover:text-[var(--fg)]">
+              <X size={14} />
+            </button>
           </p>
         )}
         {error && current.key !== "tema" && <p className="mt-4 text-sm text-[var(--danger,#b4442e)]">{error}</p>}
@@ -1483,7 +1544,7 @@ export function ArticleWizard({
               </>
             ) : (
               <>
-                {STEPS[step + 1].key === "vista" ? "Ver vista previa" : <>Siguiente<span className="hidden sm:inline">: {STEPS[step + 1].label}</span></>} <ArrowRight size={15} />
+                {STEPS[step + 1].key === "vista" ? "Ver vista previa" : <>Siguiente<span className="hidden opacity-75 sm:inline"> · {STEPS[step + 1].label}</span></>} <ArrowRight size={15} />
               </>
             )}
           </button>
@@ -1493,22 +1554,36 @@ export function ArticleWizard({
   );
 }
 
-function Step({ title, hint, children }: { title: string; hint: string; children: React.ReactNode }) {
+/** Estructura común de cada paso: título, una línea de ayuda y el contenido, con una entrada suave. */
+function Step({ title, hint, children, ancho = "md" }: { title: string; hint: string; children: React.ReactNode; ancho?: "md" | "lg" }) {
   return (
-    <div className="mx-auto flex max-w-2xl flex-col gap-2">
-      <h2 className="lx-display text-xl font-semibold sm:text-2xl">{title}</h2>
-      <p className="text-sm text-[var(--fg-muted)]">{hint}</p>
-      <div className="mt-2 flex flex-col gap-2.5">{children}</div>
+    <div className={`lx-step mx-auto flex w-full flex-col gap-5 ${ancho === "lg" ? "max-w-3xl" : "max-w-2xl"}`}>
+      <header className="flex flex-col gap-1">
+        <h2 className="lx-display text-2xl font-semibold tracking-tight">{title}</h2>
+        <p className="text-sm leading-snug text-[var(--fg-muted)]">{hint}</p>
+      </header>
+      <div className="flex flex-col gap-3.5">{children}</div>
     </div>
   );
 }
 
+/** Contador con medidor: zona ideal sombreada, verde dentro del rango, ámbar si falta y rojo si se pasa. */
 function Counter({ value, min, max }: { value: number; min: number; max: number }) {
   const ok = value >= min && value <= max;
+  const limite = Math.round(max * 1.2);
+  const color = ok ? "#16a34a" : value > max ? "#dc2626" : "#d97706";
   return (
-    <p className={`text-right text-xs ${ok ? "text-[var(--accent)]" : "text-[var(--fg-muted)]"}`}>
-      {value} / {max} caracteres {ok ? "✓" : `(ideal ${min}–${max})`}
-    </p>
+    <div className="flex items-center gap-3" aria-live="polite">
+      <div className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-[var(--border)]" role="meter" aria-valuenow={value} aria-valuemin={0} aria-valuemax={limite} aria-label="Longitud">
+        <span className="absolute inset-y-0 bg-[#16a34a]/25" style={{ left: `${(min / limite) * 100}%`, width: `${((max - min) / limite) * 100}%` }} />
+        <span className="absolute inset-y-0 left-0 rounded-full transition-all duration-300" style={{ width: `${Math.min(100, (value / limite) * 100)}%`, background: color }} />
+      </div>
+      <span className="shrink-0 text-xs font-medium tabular-nums" style={{ color }}>
+        {value}
+        <span className="font-normal text-[var(--fg-muted)]"> / {min}–{max}</span>
+        {ok ? " ✓" : ""}
+      </span>
+    </div>
   );
 }
 
