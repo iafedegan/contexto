@@ -253,7 +253,6 @@ export function ArticleWizard({
   const [aiNote, setAiNote] = useState("");
   const [aiNotaCerrada, setAiNotaCerrada] = useState(false);
   const [arrastre, setArrastre] = useState(false);
-  const scroller = useRef<HTMLDivElement>(null);
   const cuerpoRef = useRef<HTMLTextAreaElement>(null);
   const [generating, startGenerating] = useTransition();
   const [title, setTitle] = useState(initial?.title ?? "");
@@ -397,9 +396,9 @@ export function ArticleWizard({
     resumen: excerpt.trim().length < 20 ? "El resumen debe tener al menos 20 caracteres." : null,
   };
   const current = STEPS[step];
-  // Cada paso empieza arriba: el título del paso nunca queda oculto por el scroll del anterior.
+  // Cada paso empieza arriba: el título del paso nunca queda oculto por el desplazamiento del anterior.
   useEffect(() => {
-    scroller.current?.scrollTo({ top: 0 });
+    window.scrollTo({ top: 0 });
   }, [step, enOpciones]);
   const isLast = step === STEPS.length - 1;
 
@@ -766,9 +765,9 @@ export function ArticleWizard({
   return (
     <form
       action={saveArticle}
-      // Todo el asistente cabe en la ventana: solo la tarjeta del paso tiene
-      // scroll interno si su contenido (cuerpo largo, vista previa) lo exige.
-      className="-my-6 flex h-[calc(100dvh-var(--panel-header-h,61px)-5.75rem)] min-h-[30rem] flex-col gap-3"
+      // La tarjeta del paso crece con su contenido (sin scroll interno): la página se desplaza y la barra de
+      // navegación queda fija abajo. Como mínimo ocupa la ventana, para que un paso corto no deje huecos.
+      className="-my-6 flex min-h-[max(30rem,calc(100dvh-var(--panel-header-h,61px)-5.75rem))] flex-col gap-3"
     >
       {/* Todo viaja oculto: el formulario solo se envía desde la vista previa. */}
       <input type="hidden" name="id" value={savedId} />
@@ -833,8 +832,8 @@ export function ArticleWizard({
       )}
 
       {/* --- Pantalla del paso + panel SEO lateral (escritorio) --- */}
-      <div className="flex min-h-0 flex-1 gap-3">
-      <div ref={scroller} className="lx-card min-h-0 flex-1 p-5 sm:p-6" style={{ overflowY: "auto", transform: "none" }}>
+      <div className="flex flex-1 gap-3">
+      <div className="lx-card min-w-0 flex-1 p-5 sm:p-6" style={{ transform: "none" }}>
         {mode === "ia" && generated && PART_OF[current.key] && (
           <div className="mx-auto mb-3 flex max-w-2xl items-center gap-2 text-xs text-[var(--fg-muted)]">
             <Sparkles size={13} className="text-[var(--accent)]" />
@@ -892,6 +891,12 @@ export function ArticleWizard({
               placeholder="Cuéntale a la IA de qué trata la nota. Ej.: el precio del novillo gordo subió 4 % en Medellín en septiembre según la Central Ganadera; menor entrada de ganado del Magdalena Medio…"
               className={`${input} resize-y text-base leading-relaxed`}
             />
+            <p className="-mt-1.5 flex flex-wrap items-center justify-between gap-x-4 gap-y-0.5 text-xs text-[var(--fg-muted)]">
+              <span>Cuanto más concreto (qué pasó, dónde, cuándo y según quién), mejores serán los títulos que proponga la IA.</span>
+              <span className={`tabular-nums font-medium ${topic.trim().length >= 10 || material.length > 0 ? "text-[#16a34a]" : ""}`} aria-live="polite">
+                {material.length > 0 ? "✓ Hay material cargado" : topic.trim().length >= 10 ? `✓ ${topic.trim().length} caracteres` : `${topic.trim().length} / 10 mínimo`}
+              </span>
+            </p>
             <div className="mt-2">
               <p className="lx-kicker text-[var(--fg-muted)]">¿Prefieres partir de otra cosa?</p>
               <div role="tablist" aria-label="Fuente para empezar" className="mt-2 flex gap-2 overflow-x-auto pb-1">
@@ -1521,7 +1526,7 @@ export function ArticleWizard({
         )}
 
         {current.key === "vista" && (
-          <div className="flex h-full min-h-[24rem] flex-col gap-3">
+          <div className="flex h-[calc(100dvh-var(--panel-header-h,61px)-17rem)] min-h-[24rem] flex-col gap-3">
             <div className="flex flex-wrap items-center gap-3">
               <button type="button" onClick={back} className="lx-link inline-flex items-center gap-1 text-sm">
                 <ArrowLeft size={14} /> Volver a editar
@@ -1579,14 +1584,18 @@ export function ArticleWizard({
             </button>
           </p>
         )}
-        {error && current.key !== "tema" && <p className="mt-4 text-sm text-[var(--danger,#b4442e)]">{error}</p>}
+        {error && current.key !== "tema" && (
+          <p role="alert" className="mx-auto mt-4 w-full max-w-2xl rounded-[var(--radius)] border border-[var(--danger,#b4442e)]/40 bg-[var(--danger,#b4442e)]/8 px-3 py-2 text-sm text-[var(--danger,#b4442e)]">
+            {error}
+          </p>
+        )}
       </div>
 
       {current.key !== "vista" && current.key !== "tema" && <SeoPanel score={audit.score} items={audit.items} groups={audit.groups} capped={audit.capped} focus={tags[0]} />}
       </div>
 
       {/* --- Navegación --- */}
-      <div className="flex shrink-0 items-center justify-between gap-3">
+      <div className="sticky bottom-0 z-20 flex shrink-0 items-center justify-between gap-3 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 shadow-md">
         {step > 0 || (current.key === "tema" && enOpciones) ? (
           <button type="button" onClick={back} className="lx-btn lx-btn-ghost">
             <ArrowLeft size={15} /> Atrás
@@ -1594,6 +1603,18 @@ export function ArticleWizard({
         ) : (
           <span />
         )}
+        {/* Qué falta para seguir (o cómo va): evita que un botón apagado parezca roto. */}
+        <p className="hidden min-w-0 flex-1 truncate text-center text-xs text-[var(--fg-muted)] sm:block" aria-live="polite">
+          {current.key === "tema"
+            ? !options
+              ? topic.trim().length < 10 && material.length === 0
+                ? "Escribe el tema (mínimo 10 caracteres) o carga una fuente para continuar."
+                : "Listo: la IA propondrá títulos y enfoques."
+              : enOpciones && title.trim().length < 5
+                ? "Elige un título (o escribe el tuyo) para generar el borrador."
+                : ""
+            : `Paso ${step + 1} de ${STEPS.length} · ${current.label}`}
+        </p>
         {isLast ? (
           <div className="flex flex-wrap items-center justify-end gap-2">
             {savedAs && (
@@ -1652,7 +1673,7 @@ export function ArticleWizard({
             type="button"
             onClick={next}
             disabled={generating || (!options ? topic.trim().length < 10 && material.length === 0 : enOpciones && title.trim().length < 5)}
-            className="lx-btn disabled:opacity-60"
+            className="lx-btn disabled:cursor-not-allowed disabled:opacity-60 disabled:saturate-50"
           >
             {generating ? (
               <><Loader2 size={15} className="animate-spin" /> {options ? "Redactando…" : "Buscando…"}</>
@@ -1830,7 +1851,7 @@ function SeoPanel({ score, items, groups, capped, focus }: { score: number; item
   const color = score >= 75 ? "#16a34a" : score >= 55 ? "#d97706" : "#dc2626";
 
   return (
-    <aside className="lx-card hidden w-72 shrink-0 flex-col overflow-hidden p-0 lg:flex xl:w-80" aria-label="Puntuación SEO">
+    <aside className="lx-card sticky top-4 hidden max-h-[calc(100dvh-2rem)] w-72 shrink-0 flex-col self-start overflow-hidden p-0 lg:flex xl:w-80" aria-label="Puntuación SEO">
       <div className="border-b border-[var(--border)] p-4">
         <p className="lx-kicker text-[var(--fg-muted)]">SEO en vivo</p>
         <div className="mt-1 flex items-baseline gap-2">
