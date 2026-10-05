@@ -21,6 +21,7 @@ export async function POST(req: Request) {
   try {
     const body = (await req.json()) as { slug?: unknown; us?: unknown; um?: unknown; uc?: unknown; ref?: unknown };
     slug = typeof body.slug === "string" ? body.slug.slice(0, 200) : "";
+    // Texto recortado al máximo; vacío si el valor no es texto.
     const t = (v: unknown, n: number) => (typeof v === "string" ? v.slice(0, n) : "");
     origen = { utmSource: t(body.us, 60), utmMedium: t(body.um, 60), utmCampaign: t(body.uc, 80), referrer: t(body.ref, 300) };
   } catch {

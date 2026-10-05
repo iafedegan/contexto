@@ -39,6 +39,7 @@ if (spec.template && !spec.resume) {
 // Recorre la página hacia abajo para activar lo que carga al desplazarse.
 async function autoScroll() {
   await page.evaluate(async () => {
+    // Desplaza la página de a 700 píxeles hasta llegar al final.
     await new Promise((res) => { let y = 0; const step = () => { window.scrollBy(0, 700); y += 700; if (y < document.documentElement.scrollHeight && y < 30000) setTimeout(step, 60); else res(); }; step(); });
   });
   await sleep(500);
@@ -75,6 +76,7 @@ async function one(route, vpKey, ri, vi) {
   writeLine(out, { theme: spec.theme || null, route: route.id, url: route.url, vp: vpKey, status: v.status, errs: v.errs, err, a, scrolled, shot });
 }
 
+// Recorre todas las rutas y tamaños de pantalla, guardando cada resultado.
 // Recorre todas las rutas y tamaños de pantalla, guardando cada resultado.
 let ri = 0, n = 0; const total = spec.routes.length * spec.vps.length; const t0 = Date.now();
 for (const route of spec.routes) {

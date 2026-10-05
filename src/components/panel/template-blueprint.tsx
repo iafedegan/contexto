@@ -5,9 +5,12 @@ import type { HomeLayoutConfig } from "@/db/schema";
 import { AD_ZONE_SPECS, type AdPosition } from "@/lib/ads-positions";
 import { resolveParts } from "@/lib/template-parts";
 
+// Estado de un anuncio en el plano: activo, borrador o vacío.
 export type AdState = "activo" | "borrador" | "vacio";
+// Vista del plano: portada, sección o nota.
 export type View = "portada" | "seccion" | "nota";
 
+// Colores del plano.
 const C = {
   img: "#dfe6c4",
   icon: "#b4c186",
@@ -20,6 +23,7 @@ const C = {
   accent: "#556b2f",
 };
 
+// Aspecto de los anuncios según su estado.
 const AD_LOOK: Record<AdState, { fill: string; stroke: string; text: string; dash?: string }> = {
   activo: { fill: "#cfe9b0", stroke: "#4f8a1f", text: "#2c5a10" },
   borrador: { fill: "#ffe7a8", stroke: "#c9a227", text: "#7a5d00" },
@@ -54,18 +58,22 @@ export function TemplateBlueprint({
 }) {
   const [innerView, setInnerView] = useState<View>(viewProp);
   const view = onView ? viewProp : innerView;
+  // Cambia la vista del plano.
   const setView = (v: View) => (onView ? onView(v) : setInnerView(v));
   const parts = resolveParts(layout.templateId ?? "clasico", layout.parts);
 
   const els: React.ReactNode[] = [];
   let k = 0;
+  // Genera una clave única para cada forma.
   const key = () => k++;
   const W = 360;
   const L = 20;
   const CW = 320;
 
+  // Dibuja un rectángulo.
   const rect = (x: number, y: number, w: number, h: number, fill: string, rx = 3, stroke?: string, op?: number) =>
     els.push(<rect key={key()} x={x} y={y} width={w} height={h} rx={rx} fill={fill} stroke={stroke} opacity={op} />);
+  // Dibuja un marcador de imagen.
   const img = (x: number, y: number, w: number, h: number, dark = false) => {
     rect(x, y, w, h, dark ? "#46583a" : C.img, 4);
     if (h >= 14 && w >= 14) {
@@ -77,12 +85,16 @@ export function TemplateBlueprint({
       );
     }
   };
+  // Dibuja líneas que simulan texto.
   const ln = (x: number, y: number, w: number, n = 1, fill = C.line, h = 3, gap = 6) => {
     for (let i = 0; i < n; i++) rect(x, y + i * gap, i === n - 1 && n > 1 ? w * 0.62 : w, h, fill, 1.5);
   };
+  // Dibuja líneas que simulan un titular.
   const head = (x: number, y: number, w: number, n = 1) => ln(x, y, w, n, C.head, 5, 8);
+  // Dibuja un círculo que simula una foto de perfil.
   const avatar = (cx: number, cy: number, r: number) => els.push(<circle key={key()} cx={cx} cy={cy} r={r} fill={C.icon} />);
 
+  // Dibuja un espacio publicitario con el aspecto de su estado.
   const ad = (pos: AdPosition, x: number, y: number, w: number, h: number) => {
     const st = adStates[pos] ?? "vacio";
     const look = AD_LOOK[st];
@@ -123,11 +135,13 @@ export function TemplateBlueprint({
     for (let i = 0; i < 5; i++) rect(L + 100 + i * 38, y + 12, 28, 4, C.head, 2);
     return 34;
   };
+  // Dibuja la franja de indicadores.
   const ticker = (y: number): number => {
     rect(L, y, CW, 9, C.dark, 2);
     for (let i = 0; i < 4; i++) rect(L + 8 + i * 78, y + 3, 60, 3, "#9fb04a", 1.5);
     return 15;
   };
+  // Dibuja el pie según la pieza elegida.
   const footer = (y: number): number => {
     rect(L, y, CW, 66, C.dark, 6);
     if (parts.footer === "atelier" || parts.footer === "seal" || parts.footer === "aurora") {
@@ -167,6 +181,7 @@ export function TemplateBlueprint({
     for (let r = 0; r < 2; r++) for (let c = 0; c < 3; c++) card(x + c * (cw + 8), y2 + 12 + r * 64, cw, 34);
     return 128 + 12 + 2 * 64;
   };
+  // Dibuja el cuerpo de la plantilla clásica.
   const bodyClasico = (x: number, y: number, w: number): number => {
     let h: number;
     if (layout.breveDirection === "horizontal") {
@@ -201,6 +216,7 @@ export function TemplateBlueprint({
     for (let c = 0; c < 3; c++) card(x + c * (cw + 8), y2 + 12, cw, 30);
     return h + 8 + 12 + 66;
   };
+  // Dibuja el cuerpo de la plantilla revista.
   const bodyRevista = (x: number, y: number, w: number): number => {
     img(x, y, w, 104, true);
     rect(x, y + 66, w, 38, C.dark, 4, undefined, 0.88);
@@ -220,6 +236,7 @@ export function TemplateBlueprint({
     for (let r = 0; r < 2; r++) for (let c = 0; c < 3; c++) card(x + c * (rw3 + 8), y3 + 22 + r * 66, rw3, 38);
     return 116 + 80 + 22 + 2 * 66;
   };
+  // Dibuja el cuerpo de la plantilla compacta.
   const bodyCompacto = (x: number, y: number, w: number): number => {
     ln(x, y + 2, w * 0.45, 1, C.head, 3.5);
     for (let i = 0; i < 3; i++) rect(x + w - 24 - i * 26, y, 22, 8, C.band, 4, C.rule);
@@ -236,6 +253,7 @@ export function TemplateBlueprint({
       }
     return 22 + rows * 34;
   };
+  // Dibuja el cuerpo de la plantilla vanguardia.
   const bodyVanguardia = (x: number, y: number, w: number): number => {
     const u = (w - 5 * 4) / 6, rh = 36;
     const tiles: [number, number, number, number][] = [[0, 0, 4, 2], [4, 0, 2, 1], [4, 1, 2, 1], [0, 2, 2, 1], [2, 2, 2, 1], [4, 2, 2, 1], [0, 3, 3, 1], [3, 3, 3, 1], [0, 4, 2, 1], [2, 4, 2, 1], [4, 4, 2, 1]];
@@ -248,6 +266,7 @@ export function TemplateBlueprint({
     }
     return 5 * (rh + 4);
   };
+  // Dibuja el cuerpo de la plantilla gremial.
   const bodyGremial = (x: number, y: number, w: number): number => {
     const lw = w * 0.63;
     img(x, y, lw, 92, true);
@@ -345,6 +364,7 @@ export function TemplateBlueprint({
     y += header(y);
     y += 10;
 
+    // Dibuja el bloque de filtros de sección.
     const filterBlock = (x: number, yy: number, w: number): number => {
       for (let i = 0; i < 4; i++) rect(x + i * ((w - 6) / 4 + 2), yy, (w - 6) / 4, 9, i === 0 ? "#cfa84a" : "#fff", 5, C.rule);
       rect(x, yy + 14, w * 0.34, 10, "#fff", 3, C.rule);
@@ -353,10 +373,12 @@ export function TemplateBlueprint({
       rect(x + w * 0.88, yy + 14, w * 0.12, 10, "#cfa84a", 5);
       return 28;
     };
+    // Dibuja las etiquetas de subsecciones.
     const chips = (x: number, yy: number) => {
       rect(x, yy, 56, 10, "#fff", 5, C.rule);
       rect(x + 62, yy, 74, 10, "#fff", 5, C.rule);
     };
+    // Dibuja las migas de pan.
     const crumbs = (x: number, yy: number) => {
       rect(x, yy, 22, 3, C.line, 1.5);
       rect(x + 28, yy, 4, 3, C.line, 1.5);
@@ -501,6 +523,7 @@ export function TemplateBlueprint({
     } else if (theme === "compacto") {
       // Fichas densas: la primera ocupa 2×2 y el resto 1×1 (cuadrícula de 4 columnas).
       const cw4 = (CW - 3 * 6) / 4, rh = 70;
+      // Dibuja una celda del mosaico.
       const tile = (c: number, r: number, cs: number, rs: number, big = false) => {
         const tx = L + c * (cw4 + 6), ty = y + r * (rh + 6), tw = cs * cw4 + (cs - 1) * 6, th = rs * rh + (rs - 1) * 6;
         rect(tx, ty, tw, th, "#fff", 4, C.rule);
@@ -517,6 +540,7 @@ export function TemplateBlueprint({
       const u = (CW - 16 - 5 * 4) / 6, rh = 52;
       const occ = new Set<string>();
       let cr = 0, cc = 0;
+      // Coloca una celda en la primera posición libre de la cuadrícula.
       const place = (cs: number, rs: number) => {
         for (;;) {
           if (cc + cs > 6) { cc = 0; cr++; continue; }

@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils";
 
+// Formato de números de Colombia.
 const nf = new Intl.NumberFormat("es-CO");
 
 /** Mini-gráfica de barras (SVG, sin JS) para la tabla de artículos. */
@@ -40,6 +41,7 @@ export function ViewsSparkline({ values, className }: { values: number[]; classN
 /** Gráfica diaria con ejes mínimos para la ficha de un artículo. */
 export function ViewsBarChart({ days, values }: { days: string[]; values: number[] }) {
   const max = Math.max(1, ...values);
+  // Formatea un día en español, en UTC.
   const fmt = (iso: string) =>
     new Intl.DateTimeFormat("es-CO", { day: "numeric", month: "short", timeZone: "UTC" }).format(
       new Date(`${iso}T00:00:00Z`),

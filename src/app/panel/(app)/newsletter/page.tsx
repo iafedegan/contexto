@@ -15,6 +15,7 @@ export const maxDuration = 300;
 // Formatea una fecha y hora en español de Colombia.
 const fmt = (d: Date | null) => (d ? new Intl.DateTimeFormat("es-CO", { dateStyle: "medium", timeStyle: "short", timeZone: "America/Bogota" }).format(d) : "—");
 
+// Pantalla del boletín en pestañas: ediciones, suscriptores y ajustes (exige el permiso «newsletter»).
 export default async function NewsletterPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
   const user = await requirePermiso("newsletter");
   const { tab = "ediciones" } = await searchParams;
@@ -69,6 +70,7 @@ export default async function NewsletterPage({ searchParams }: { searchParams: P
   );
 }
 
+// Lista de las últimas 50 ediciones.
 async function Ediciones() {
   const rows = await db.select().from(newsletterEditions).orderBy(desc(newsletterEditions.createdAt)).limit(50);
   if (rows.length === 0) return <p className="text-sm text-[var(--fg-muted)]">Aún no hay ediciones. Crea la primera con «Nueva edición».</p>;
@@ -88,6 +90,7 @@ async function Ediciones() {
   );
 }
 
+// Lista de los últimos 200 suscriptores, con su estado y acciones.
 async function Suscriptores({ admin }: { admin: boolean }) {
   const rows = await db.select().from(newsletterSubscribers).orderBy(desc(newsletterSubscribers.createdAt)).limit(200);
 

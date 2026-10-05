@@ -5,6 +5,7 @@ import { RotateCcw } from "lucide-react";
 import type { ZoneStyle } from "@/db/schema";
 import type { ZoneMapData, ZoneMapItem } from "@/lib/block-tools";
 
+// Distribuciones de columnas predefinidas según el número de columnas.
 const PRESETS: Record<number, Array<[string, string]>> = {
   2: [
     ["1fr 1fr", "Iguales"],
@@ -68,11 +69,13 @@ export function ZonePanel({
   const colT = track(map.colTracks, map.colGap);
   const rowT = track(map.rowTracks, map.rowGap);
   const canDrag = map.display.includes("grid") && colT.length > 0 && !!onMoveBlock;
+  // Índice de la celda que contiene una posición.
   const cellAt = (arr: { start: number; size: number }[], v: number, gap: number) => {
     if (!arr.length) return 0;
     for (let i = 0; i < arr.length; i++) if (v < arr[i].start + arr[i].size + gap / 2) return i;
     return arr.length; // por debajo de la última: una fila nueva
   };
+  // Convierte la posición del puntero a coordenadas del dibujo.
   const toSvg = (e: React.PointerEvent) => {
     const svg = svgRef.current;
     const ctm = svg?.getScreenCTM();
@@ -83,12 +86,14 @@ export function ZonePanel({
     const p = pt.matrixTransform(ctm.inverse());
     return { x: p.x, y: p.y };
   };
+  // Empieza a arrastrar un bloque de la zona.
   function startDrag(e: React.PointerEvent, it: ZoneMapItem) {
     if (!canDrag) return;
     e.preventDefault();
     (e.currentTarget as Element).setPointerCapture(e.pointerId);
     const start = toSvg(e);
     let moved = false;
+    // Mueve el bloque durante el arrastre.
     const move = (ev: PointerEvent) => {
       const p = toSvg(ev as unknown as React.PointerEvent);
       const dx = p.x - start.x, dy = p.y - start.y;
@@ -96,6 +101,7 @@ export function ZonePanel({
       const cx = it.x + it.w / 2 + dx, cy = it.y + it.h / 2 + dy;
       setDrag({ id: it.id, dx, dy, col: cellAt(colT, cx - it.w / 2, map!.colGap), row: cellAt(rowT, cy - it.h / 2, map!.rowGap) });
     };
+    // Suelta el bloque y guarda su nueva posición.
     const up = (ev: PointerEvent) => {
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", up);
@@ -112,6 +118,7 @@ export function ZonePanel({
   }
   const cols = z.cols ?? (z.tpl ? z.tpl.split(" ").length : undefined);
   const fs = Math.max(10, map.w / 34);
+  // Cambia el estilo de la zona, quitando los valores vacíos.
   const patch = (p: Partial<ZoneStyle>) => {
     const merged = { ...z, ...p } as Record<string, unknown>;
     for (const k of Object.keys(merged)) if (merged[k] === undefined) delete merged[k];

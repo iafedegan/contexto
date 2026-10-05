@@ -14,6 +14,7 @@ import {
   toggleUserActive,
 } from "@/app/panel/(app)/configuracion/actions";
 
+// Roles que se pueden asignar.
 const ROLES: UserRole[] = ["redactor", "editor", "administrador"];
 
 /**
@@ -23,6 +24,7 @@ const ROLES: UserRole[] = ["redactor", "editor", "administrador"];
  */
 export type PermisoVista = { id: string; label: string; hint: string; activo: boolean; porDefecto: boolean };
 
+// Fila de una persona del equipo: rol, estado, permisos, segundo factor y cuota de IA.
 export function UserRow({
   user,
   canManage,
@@ -63,6 +65,7 @@ export function UserRow({
   const esAdmin = user.role === "administrador";
   const personalizado = permisos.some((p) => marcas[p.id] !== p.porDefecto);
 
+  // Marca o desmarca un permiso.
   function marcar(id: string, valor: boolean) {
     setError(null);
     setMarcas((m) => ({ ...m, [id]: valor }));

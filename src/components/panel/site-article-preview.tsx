@@ -5,6 +5,7 @@ import { Maximize2 } from "lucide-react";
 import { CoverArt } from "@/components/cover-art";
 import { ArticleBody } from "@/components/article-body";
 
+// Datos del marco del sitio para la vista previa: plantilla, estilos e identidad.
 export type SitePreviewChrome = {
   /** Plantilla activa (`data-theme`). */
   theme: string;
@@ -24,6 +25,7 @@ export type SitePreviewChrome = {
  */
 export const PREVIEW_STORAGE_KEY = "cg:vista-articulo";
 
+// Propiedades de la vista previa de la nota.
 export type Props = {
   chrome: SitePreviewChrome;
   title: string;
@@ -69,6 +71,7 @@ export function SiteArticlePreview(props: Props) {
   );
 }
 
+// Marco que escala la vista previa al ancho disponible.
 export function Frame({
   chrome,
   title,
@@ -88,6 +91,7 @@ export function Frame({
   useEffect(() => {
     const el = frame.current;
     if (!el) return;
+    // Calcula la escala para que quepa el ancho del sitio.
     const set = () => setScale(Math.min(1, el.clientWidth / WIDTH));
     set();
     const ro = new ResizeObserver(set);

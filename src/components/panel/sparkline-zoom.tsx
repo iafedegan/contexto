@@ -8,6 +8,7 @@ import { fuentesDeNota } from "@/app/panel/(app)/articulos/fuentes-actions";
 import type { FuenteLectura } from "@/lib/view-sources";
 import { AreaChart } from "@/components/panel/dash-charts";
 
+// Formato de números de Colombia.
 const nf = new Intl.NumberFormat("es-CO");
 
 /** Etiqueta «d mmm» del día `atras` días antes de hoy (hora de Colombia). */
@@ -24,6 +25,7 @@ export function SparklineZoom({ values, title, articleId }: { values: number[]; 
   const id = useId();
   useEffect(() => {
     if (!open) return;
+    // Cierra la ampliación con la tecla Escape.
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);

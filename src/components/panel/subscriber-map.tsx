@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 
+// Punto del mapa: ubicación de un suscriptor.
 export type SubscriberPoint = {
   lat: number;
   lon: number;
@@ -18,9 +19,12 @@ export type SubscriberPoint = {
   date: string | null;
 };
 
+// Escapa los caracteres especiales para usarlos en HTML.
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
+// Hoja de estilos de Leaflet, cargada desde un CDN.
 const LEAFLET_CSS = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+// Código de Leaflet, cargado desde un CDN.
 const LEAFLET_JS = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
 
 // Leaflet no está instalado como dependencia (se carga por CDN, ver arriba),
@@ -53,6 +57,7 @@ export function SubscriberMap({ points }: { points: SubscriberPoint[] }) {
   useEffect(() => {
     let cancelled = false;
 
+    // Carga Leaflet y dibuja el mapa con los puntos.
     async function boot() {
       if (!document.querySelector(`link[href="${LEAFLET_CSS}"]`)) {
         const link = document.createElement("link");

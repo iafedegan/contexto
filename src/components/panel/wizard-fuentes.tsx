@@ -62,6 +62,7 @@ export function IdeaCards({ ideas, sources, picked, onPick }: { ideas: TopicIdea
   );
 }
 
+// Filtro de resultados: todo o un tipo de noticia.
 type Filtro = "todo" | NewsItem["type"];
 
 /** Resultados de noticias: filtro segmentado y filas compactas con «Escribir sobre esto», «Referenciar» y la fuente. */

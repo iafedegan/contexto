@@ -12,6 +12,7 @@ export function TelegramPanel({ esAdmin }: { esAdmin: boolean }) {
   const [codigo, setCodigo] = useState("");
   const [pend, start] = useTransition();
 
+  // Consulta el estado de la conexión con Telegram.
   const cargar = () => estadoTelegram().then(setEst).catch(() => setEst(null));
   useEffect(() => {
     let vivo = true;

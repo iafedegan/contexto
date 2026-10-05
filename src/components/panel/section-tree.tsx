@@ -86,6 +86,7 @@ export function SectionTree({ sections, onSaved }: { sections: SectionNode[]; on
     },
   });
 
+  // Abre o cierra una sección del árbol.
   const toggle = (id: string) =>
     setOpen((o) => {
       const n = new Set(o);
@@ -97,6 +98,7 @@ export function SectionTree({ sections, onSaved }: { sections: SectionNode[]; on
   const bar = tree.slice(0, NAV_VISIBLE);
   const more = tree.slice(NAV_VISIBLE);
 
+  // Dibuja una sección principal con sus subsecciones.
   const renderBranch = ({ node, kids }: Branch, pos: number | null) => {
     const isOpen = open.has(node.id);
     return (
@@ -225,6 +227,7 @@ export function SectionTree({ sections, onSaved }: { sections: SectionNode[]; on
   );
 }
 
+// Mensaje de resultado de una operación sobre las secciones.
 function Msg({ r }: { r: EstructuraResult }) {
   return (
     <p role="status" className={`rounded-[var(--radius)] px-3 py-2 text-xs font-medium ${r.ok ? "bg-[#dbe5b7] text-[#2c3a10]" : "bg-[#f6d9d4] text-[#7a2518]"}`}>
@@ -233,6 +236,7 @@ function Msg({ r }: { r: EstructuraResult }) {
   );
 }
 
+// Formulario para crear una sección nueva.
 function NewSection({ padreId, label, run, busy }: { padreId: string | null; label: string; run: (p: () => Promise<EstructuraResult>) => void; busy: boolean }) {
   const [name, setName] = useState("");
   return (
@@ -360,6 +364,7 @@ function Detail({
   );
 }
 
+// Campos de una sección que se usan en el diagrama.
 const pick = (s: SectionNode) => ({
   id: s.id,
   slug: s.slug,
@@ -369,6 +374,7 @@ const pick = (s: SectionNode) => ({
   articleCount: s.articleCount,
 });
 
+// Etiqueta de una sección en el diagrama.
 function NodePill({ s, level, active, onClick, extra }: { s: SectionNode; level: 1 | 2; active: boolean; onClick: () => void; extra?: string }) {
   const base =
     level === 1
@@ -418,6 +424,7 @@ function WideTree({
 
   // Calco de la barra: 8 secciones, «Buscar» (fijo) y «Más» con el resto.
   type TNode = { key: string; label: string; kind: "root" | "item" | "extra" | "fixed" | "more" | "sub"; section?: SectionNode; kids: TNode[] };
+  // Convierte una sección en un nodo del diagrama.
   const asNode = (br: Branch, kind: "item" | "extra", pos: number | null): TNode => ({
     key: br.node.id,
     label: pos ? `${pos} · ${br.node.name}` : br.node.name,
@@ -444,6 +451,7 @@ function WideTree({
   const links: { ax: number; ay: number; bx: number; by: number }[] = [];
   let row = 0;
   let maxDepth = 0;
+  // Calcula la posición de cada nodo del diagrama según su profundidad.
   const place = (t: TNode, depth: number): number => {
     maxDepth = Math.max(maxDepth, depth);
     const x = PAD + depth * (CW + GAP);
@@ -462,9 +470,12 @@ function WideTree({
   const height = PAD * 2 + Math.max(row, 1) * ROW;
   const sel = sections.find((s) => s.id === selected) ?? null;
 
+  // Trazo curvo que une dos nodos.
   const linkPath = (l: { ax: number; ay: number; bx: number; by: number }) =>
     `<path d="M${l.ax},${l.ay} C${l.ax + GAP / 2},${l.ay} ${l.bx - GAP / 2},${l.by} ${l.bx},${l.by}" fill="none" stroke="#bccb8f" stroke-width="2"/>`;
+  // Recorta un texto con puntos suspensivos.
   const trunc = (t: string, n: number) => (t.length > n ? t.slice(0, n - 1) + "…" : t);
+  // Aspecto de un nodo según su tipo.
   const look = (t: TNode) => {
     const notes = t.section?.articleCount ?? 0;
     switch (t.kind) {

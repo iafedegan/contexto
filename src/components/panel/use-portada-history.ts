@@ -15,6 +15,7 @@ export type EditorSnap = {
   auto: boolean;
 };
 
+// Huella estable del estado del editor, para saber si cambió.
 const key = (s: EditorSnap) =>
   stable({ i: s.items.map((i) => [i.slug, i.homeStyle ?? null]), l: s.layout, p: s.popup, a: s.adDrafts, u: s.auto });
 
