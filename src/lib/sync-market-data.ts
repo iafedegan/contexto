@@ -21,6 +21,7 @@ import { MARKET_SERIES_KEYS } from "@/lib/market-data";
  */
 const TODAY = () => new Date().toISOString().slice(0, 10);
 
+// Consulta la tasa representativa del mercado (dólar) en el portal de datos abiertos; null si falla.
 async function fetchTrm(): Promise<number | null> {
   try {
     // Banco de la República, vía el portal de datos abiertos del Estado.
@@ -39,6 +40,7 @@ async function fetchTrm(): Promise<number | null> {
   }
 }
 
+// Consulta el precio del petróleo Brent (con clave si existe, o la demo); null si falla.
 async function fetchBrent(): Promise<number | null> {
   const apiKey = process.env.OILPRICEAPI_KEY;
   try {
@@ -65,6 +67,7 @@ async function fetchBrent(): Promise<number | null> {
   }
 }
 
+// Crea la serie si no existe y guarda (o actualiza) su valor del día.
 async function upsertPoint(key: string, name: string, unit: string, source: string, value: number) {
   const [series] = await db
     .insert(dataSeries)
@@ -81,6 +84,7 @@ async function upsertPoint(key: string, name: string, unit: string, source: stri
     });
 }
 
+// Actualiza las series de dólar y petróleo y devuelve cuáles cambiaron.
 export async function syncMarketData(): Promise<{ updated: string[]; trm: number | null; brent: number | null }> {
   const [trm, brent] = await Promise.all([fetchTrm(), fetchBrent()]);
   const updated: string[] = [];

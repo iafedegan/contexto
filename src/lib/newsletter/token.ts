@@ -12,10 +12,12 @@ function secret(): string {
   return s;
 }
 
+// Token de baja de un suscriptor: HMAC de su id, truncado a 32 caracteres.
 export function unsubscribeToken(subscriberId: string): string {
   return createHmac("sha256", secret()).update(`baja:${subscriberId}`).digest("base64url").slice(0, 32);
 }
 
+// Verifica un token de baja comparando en tiempo constante; ante cualquier error responde que no es válido.
 export function verifyUnsubscribeToken(subscriberId: string, token: string): boolean {
   try {
     const a = Buffer.from(unsubscribeToken(subscriberId));

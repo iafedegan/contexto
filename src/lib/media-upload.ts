@@ -1,6 +1,7 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
 
+// Extensión de archivo que corresponde a cada tipo de imagen admitido.
 const EXT: Record<string, string> = { "image/png": "png", "image/jpeg": "jpg", "image/webp": "webp" };
 
 /** Sube bytes de una imagen al bucket público «media» de Supabase. Sin permisos propios: quien llama ya los comprobó. */

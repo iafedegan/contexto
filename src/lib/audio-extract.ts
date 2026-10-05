@@ -26,6 +26,7 @@ export function esVideo(f: File): boolean {
 
 /** Pasa el audio decodificado a mono y a `rate` Hz promediando muestras (basta para voz). */
 function aMono(pcm: AudioBuffer, rate: number): Float32Array {
+  // Se toman los datos de cada canal y se calcula cuántas muestras originales equivalen a una muestra nueva.
   const canales = Array.from({ length: pcm.numberOfChannels }, (_, c) => pcm.getChannelData(c));
   const razon = pcm.sampleRate / rate;
   const n = Math.floor(pcm.length / razon);
@@ -44,6 +45,7 @@ function aMono(pcm: AudioBuffer, rate: number): Float32Array {
 function aWav(muestras: Float32Array, rate: number): ArrayBuffer {
   const buf = new ArrayBuffer(44 + muestras.length * 2);
   const v = new DataView(buf);
+  // Escribe una cadena de texto (marca de formato) byte a byte en la cabecera WAV.
   const txt = (o: number, s: string) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
   txt(0, "RIFF"); v.setUint32(4, 36 + muestras.length * 2, true); txt(8, "WAVE");
   txt(12, "fmt "); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
@@ -79,6 +81,7 @@ export async function extraerAudioDeVideo(video: File, maxBytes: number): Promis
   }
   if (pcm.duration < 0.5) throw new ExtraerAudioError("El video no tiene audio.");
 
+  // Se elige la frecuencia de muestreo más alta con la que el archivo WAV resultante no pase del tamaño máximo.
   const rate = FRECUENCIAS.find((r) => 44 + Math.ceil(pcm.duration * r) * 2 <= maxBytes);
   if (!rate) {
     throw new ExtraerAudioError(`La grabación dura ${Math.ceil(pcm.duration / 60)} min: el máximo son unos 20 min por archivo. Recórtala o divídela.`, true);
@@ -100,6 +103,7 @@ export async function partirWav(wav: File, maxBytes: number): Promise<File[]> {
     const parte = datos.slice(i, i + por);
     const h = new ArrayBuffer(44);
     const v = new DataView(h);
+    // Escribe una marca de texto en la cabecera WAV de cada trozo.
     const t = (o: number, s: string) => { for (let j = 0; j < s.length; j++) v.setUint8(o + j, s.charCodeAt(j)); };
     t(0, "RIFF"); v.setUint32(4, 36 + parte.byteLength, true); t(8, "WAVE"); t(12, "fmt ");
     v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);

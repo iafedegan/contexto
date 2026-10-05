@@ -30,6 +30,7 @@ export type BorradorInput = {
   metaDescription?: string | null;
 };
 
+// Resultado de guardar un borrador: el id y la hora, o el motivo por el que no se guardó.
 export type GuardadoResult = { ok: true; id: string; savedAt: string } | { ok: false; skipped?: boolean; error?: string; detalle?: string };
 
 /** Crea o actualiza el BORRADOR. Solo toca notas en borrador o en revisión (una publicada solo cambia con sus botones). */
@@ -78,6 +79,7 @@ export async function reindexarNota(articleId: string) {
   if (vec) await db.update(articles).set({ embedding: vec }).where(eq(articles.id, articleId));
 }
 
+// Descarta la caché de datos y las páginas afectadas por una nota: portada, sitemap, feed, la nota, su categoría y su autor.
 export async function revalidarNota(articleId: string) {
   const [a] = await db
     .select({ slug: articles.slug, categorySlug: categories.slug, authorSlug: authors.slug })
@@ -106,6 +108,7 @@ export async function enviarARevisionCore(articleId: string) {
   if (!fila) throw new Error("Solo una nota en borrador puede enviarse a revisión.");
 }
 
+// Publica una nota ya autorizada: cambia el estado, recalcula su embedding, revalida el sitio y avisa si es de última hora.
 export async function publicarCore(articleId: string) {
   await db
     .update(articles)

@@ -6,6 +6,7 @@
 
 export const ANALYTICS_KEY = "analytics";
 
+// Ajustes de analítica editables desde el panel.
 export type AnalyticsSettings = {
   /** Identificador de medición GA4, del tipo `G-XXXXXXXXXX`. Es público. */
   ga4Id: string;
@@ -22,6 +23,7 @@ export type AnalyticsSettings = {
   searchConsoleToken: string;
 };
 
+// Valores iniciales: todo vacío hasta que alguien lo configure.
 export const DEFAULT_ANALYTICS: AnalyticsSettings = {
   ga4Id: "",
   psiKey: null,
@@ -41,5 +43,7 @@ export type AnalyticsStatus = {
   psiMasked: string | null;
 };
 
+// Formato válido de un identificador de Google Analytics 4 (G-XXXXXXXX).
 export const GA4_ID_RE = /^G-[A-Z0-9]{6,}$/i;
+// Formato válido de un contenedor de Google Tag Manager (GTM-XXXXX).
 export const GTM_ID_RE = /^GTM-[A-Z0-9]{5,}$/i;

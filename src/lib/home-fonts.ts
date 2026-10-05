@@ -34,6 +34,7 @@ export type HomeTitleFont =
   | "courier"
   | "systemui";
 
+// Opción tipográfica que se ofrece al editor para los titulares.
 export type HomeFontOption = {
   id: HomeTitleFont;
   /** Nombre que ve el editor. */
@@ -44,6 +45,7 @@ export type HomeFontOption = {
   group: "tema" | "serif" | "sans" | "sistema";
 };
 
+// Catálogo de tipografías disponibles, agrupadas por estilo.
 export const HOME_FONTS: HomeFontOption[] = [
   // Heredadas del tema de la plantilla.
   { id: "display", label: "Titular del tema", cssVar: "var(--font-display)", group: "tema" },
@@ -77,6 +79,7 @@ export const HOME_FONTS: HomeFontOption[] = [
   { id: "systemui", label: "Sistema (system-ui)", cssVar: "system-ui, -apple-system, 'Segoe UI', sans-serif", group: "sistema" },
 ];
 
+// Índice del catálogo por id, para buscar rápido.
 const BY_ID = new Map(HOME_FONTS.map((f) => [f.id, f]));
 
 /** Familia CSS de una elección; `undefined` = la del tema (sin tocar nada). */
@@ -85,6 +88,7 @@ export function homeFontFamily(font: HomeTitleFont | undefined): string | undefi
   return BY_ID.get(font)?.cssVar;
 }
 
+// Grupos con los que el selector organiza las tipografías.
 export const HOME_FONT_GROUPS: Array<{ id: HomeFontOption["group"]; label: string }> = [
   { id: "tema", label: "Del tema" },
   { id: "serif", label: "Serif" },

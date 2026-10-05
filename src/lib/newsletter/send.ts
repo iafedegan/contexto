@@ -1,6 +1,7 @@
 import "server-only";
 import { resolveResendKey } from "@/lib/newsletter/settings";
 
+// Un correo por enviar: destinatario, asunto y contenidos.
 export type Outgoing = {
   to: string;
   subject: string;
@@ -9,8 +10,10 @@ export type Outgoing = {
   headers?: Record<string, string>;
 };
 
+// Resultado de un envío: entregados, fallidos y un error opcional.
 export type SendResult = { delivered: number; failed: number; error?: string };
 
+// Pausa asíncrona en milisegundos, para espaciar los envíos.
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /**

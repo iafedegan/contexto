@@ -12,16 +12,22 @@
  */
 
 export const LOCALES = ["es", "en"] as const;
+// Idioma de la interfaz: uno de los definidos en LOCALES.
 export type Locale = (typeof LOCALES)[number];
+// Idioma por defecto: español.
 export const DEFAULT_LOCALE: Locale = "es";
 
+// Nombre completo de cada idioma.
 export const LOCALE_LABEL: Record<Locale, string> = { es: "Español", en: "English" };
+// Abreviatura de cada idioma, para el selector.
 export const LOCALE_SHORT: Record<Locale, string> = { es: "ES", en: "EN" };
 /** Idioma real del documento (el contenido sigue siendo español). */
 export const HTML_LANG: Record<Locale, string> = { es: "es-CO", en: "es-CO" };
 
+// Diccionario de textos: clave → texto.
 type Dict = Record<string, string>;
 
+// Textos de la interfaz en español.
 const es: Dict = {
   // --- Cromo ---
   "nav.sections": "Secciones",
@@ -192,6 +198,7 @@ const es: Dict = {
     "La interfaz está en inglés; los artículos permanecen en su idioma original, español.",
 };
 
+// Textos de la interfaz en inglés.
 const en: Dict = {
   "nav.sections": "Sections",
   "nav.search": "Search",
@@ -352,6 +359,7 @@ const en: Dict = {
     "The interface is in English; articles remain in their original language, Spanish.",
 };
 
+// Diccionarios agrupados por idioma.
 const DICTS: Record<Locale, Dict> = { es, en };
 
 /** Traduce una clave. Si falta en inglés, cae al español (nunca a la clave). */
@@ -384,6 +392,7 @@ const CATEGORY_EN: Record<string, string> = {
   opinion: "Opinion",
 };
 
+// Nombre de una categoría en el idioma pedido: en inglés usa la traducción si existe y si no, el nombre original.
 export function categoryLabel(locale: Locale, slug: string | null, fallback: string): string {
   if (locale === DEFAULT_LOCALE || !slug) return fallback;
   return CATEGORY_EN[slug] ?? fallback;

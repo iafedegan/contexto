@@ -135,6 +135,7 @@ export async function buildOpenApiSpec(origin: string) {
   };
 }
 
+// Respuesta de error estándar de la especificación OpenAPI (esquema Error).
 function errorResponse(desc: string) {
   return { description: desc, content: { "application/json": { schema: { $ref: "#/components/schemas/Error" } } } };
 }

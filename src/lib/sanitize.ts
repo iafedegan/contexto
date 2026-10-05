@@ -12,6 +12,7 @@ import sanitizeHtml from "sanitize-html";
 /** Únicos orígenes de vídeo incrustable (ver src/lib/embeds.ts). */
 const IFRAME_HOSTS = ["www.youtube-nocookie.com", "player.vimeo.com"];
 
+// Lista blanca de etiquetas, atributos y esquemas permitidos en el cuerpo de una nota; todo lo demás se elimina.
 const OPTIONS: sanitizeHtml.IOptions = {
   allowedTags: [
     "p", "br", "hr", "h2", "h3", "h4",
@@ -53,6 +54,7 @@ const OPTIONS: sanitizeHtml.IOptions = {
   },
 };
 
+// Limpia el HTML de una nota con la lista blanca (se usa al guardar y al pintar).
 export function sanitizeArticleHtml(html: string): string {
   return sanitizeHtml(html ?? "", OPTIONS);
 }

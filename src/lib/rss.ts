@@ -18,14 +18,17 @@ import { siteUrl } from "@/lib/utils";
 
 const ITEMS = 40;
 
+// Escapa los caracteres especiales de XML.
 const esc = (s: string) =>
   s.replace(/[<>&'"]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", "'": "&apos;", '"': "&quot;" })[c]!);
 
 /** CDATA seguro: `]]>` dentro del HTML cerraría la sección antes de tiempo. */
 const cdata = (s: string) => `<![CDATA[${s.replace(/]]>/g, "]]]]><![CDATA[>")}]]>`;
 
+// Convierte una dirección relativa en absoluta del sitio.
 const absUrl = (u: string) => (/^https?:\/\//.test(u) ? u : siteUrl(u.startsWith("/") ? u : `/${u}`));
 
+// Tipo MIME de una imagen según su extensión, para la etiqueta enclosure del feed.
 function imageType(url: string): string {
   const ext = url.split("?")[0].split(".").pop()?.toLowerCase();
   return (
@@ -33,6 +36,7 @@ function imageType(url: string): string {
   )[ext ?? ""] ?? "image/jpeg";
 }
 
+// Categoría que describe el feed: dirección, nombre y descripción.
 type FeedCategory = { slug: string; name: string; description: string | null };
 
 /** XML del feed. Sin `categorySlug`, el general; con él, el de esa sección y sus subsecciones. */
@@ -125,6 +129,7 @@ ${items.join("\n")}
   return { xml };
 }
 
+// Cabeceras de la respuesta RSS: tipo XML y caché en CDN para los lectores que consultan cada pocos minutos.
 export const RSS_HEADERS = {
   "Content-Type": "application/rss+xml; charset=utf-8",
   // Los lectores consultan cada pocos minutos: se sirve desde la CDN y se

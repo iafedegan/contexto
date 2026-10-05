@@ -20,6 +20,7 @@ function fluidRem(px: number): string {
   return `clamp(${min / 16}rem, calc(${min / 16}rem + (100vw - 22.5rem) * ${k}), ${px / 16}rem)`;
 }
 
+// Estilos CSS del titular de una tarjeta según su configuración manual (tamaño, tipografía, negrilla, cursiva y color).
 export function homeStyleTitleCss(
   style: HomeStyle | null | undefined,
   basePx: number,
@@ -48,12 +49,16 @@ export function homeStyleTitleCss(
   };
 }
 
+// Escala de la imagen de una tarjeta en porcentaje; 100 si no se fijó.
 export function homeStyleImageScale(style: HomeStyle | null | undefined): number {
   return style?.imageScale ?? 100;
 }
 
+// Color hexadecimal válido de 3 o 6 dígitos.
 const HEX = /^#(?:[\da-f]{3}|[\da-f]{6})$/i;
+// Devuelve el color si es válido; si no, undefined.
 const hex = (v: unknown) => (typeof v === "string" && HEX.test(v) ? v : undefined);
+// Valida un número y lo acota al rango dado, redondeado al entero.
 const num = (v: unknown, min: number, max: number) =>
   typeof v === "number" && Number.isFinite(v) ? Math.min(max, Math.max(min, Math.round(v))) : undefined;
 

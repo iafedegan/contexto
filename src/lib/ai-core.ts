@@ -14,6 +14,7 @@ import { registrarCostoIA, registrarUsoIA, verificarCuotaIA } from "@/lib/ai-cuo
 import { aplicarTipo, chartProblem, renderChartSvg, TIPOS_GRAFICA, type ChartSpec, type TipoGrafica } from "@/lib/chart-svg";
 
 
+// Forma que debe tener el borrador que devuelve el modelo: título, resumen, cuerpo, ficha SEO, etiquetas, palabras clave y variantes de ficha.
 const draftSchema = z.object({
   title: z.string().min(8),
   excerpt: z.string().min(20),
@@ -34,8 +35,10 @@ const draftSchema = z.object({
     .max(3),
 });
 
+// Borrador generado, tipado a partir del esquema.
 export type GeneratedDraft = z.infer<typeof draftSchema>;
 
+// Resultado de generar un borrador: el borrador y su modo (IA o esquema de respaldo), o un error.
 export type GenerateResult =
   | { ok: true; mode: "ia" | "esquema"; draft: GeneratedDraft; note?: string }
   | { ok: false; error: string };
@@ -81,6 +84,7 @@ async function investigarTema(userId: string, tema: string, encargo: string, sec
 
 /** Cifras (con al menos 2 dígitos) del cuerpo que no constan en el material de respaldo. */
 function cifrasSinRespaldo(html: string, respaldo: string): string[] {
+  // Deja solo los dígitos de una cifra para compararla sin separadores de miles ni decimales.
   const dig = (x: string) => x.replace(/[.,\s]/g, "");
   const base = new Set((respaldo.match(/\d[\d.,]*\d|\d/g) ?? []).map(dig));
   const texto = html.replace(/<[^>]+>/g, " ");
@@ -94,6 +98,7 @@ function sinCifrasInventadas(html: string, malas: string[]): string {
   return html.replace(/<(p|li)\b[^>]*>[\s\S]*?<\/\1>/gi, (blk) => (malas.some((m) => blk.includes(m)) ? "" : blk));
 }
 
+// Genera el borrador de una nota con el modelo a partir del tema, el contexto y el material; si no hay modelo o falla, devuelve un esquema determinista. Verifica que las cifras del texto existan en las fuentes.
 export async function generateArticleDraftCore(userId: string, input: {
   title: string;
   prompt: string;
@@ -197,6 +202,7 @@ export async function generateArticleDraftCore(userId: string, input: {
 
 /** Cierra el cuerpo con las noticias de referencia enlazadas (señal de fuentes y evidencia). */
 function fuentesHtml(refs: { title: string; outlet: string; url: string; videoId?: string }[]): string {
+  // Escapa los caracteres especiales de HTML.
   const esc = (t: string) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   const videos = refs.filter((r) => r.videoId && /^[\w-]{6,20}$/.test(r.videoId));
   const incrustados = videos.length
@@ -213,8 +219,11 @@ function fuentesHtml(refs: { title: string; outlet: string; url: string; videoId
   return `${incrustados}<details><summary>Fuentes consultadas (${refs.length})</summary><ul>${refs.map(item).join("")}</ul></details>`;
 }
 
+// Marcadores de relleno entre llaves dobles que el modelo a veces deja en el texto.
 const MARKER = /\s*\{\{[^}]*\}\}/g;
+// Indica si un objeto todavía contiene algún marcador de relleno.
 const hasMarkers = (o: unknown) => JSON.stringify(o).includes("{{");
+// Quita los marcadores de relleno de todos los textos de un objeto.
 function stripMarkers<T>(o: T): T {
   return JSON.parse(JSON.stringify(o).replace(MARKER, "")) as T;
 }
@@ -265,6 +274,7 @@ function scaffold(tema: string, encargo: string, section?: string): GeneratedDra
 
 export type DraftPart = "excerpt" | "tags" | "body" | "seo";
 
+// Esquema de cada parte del borrador que se puede regenerar por separado.
 const PART_SCHEMAS = {
   excerpt: z.object({ excerpt: z.string().min(20).max(300) }),
   tags: z.object({ tags: z.array(z.string()).min(3).max(8) }),
@@ -272,6 +282,7 @@ const PART_SCHEMAS = {
   seo: z.object({ metaTitle: z.string().min(8).max(70), metaDescription: z.string().min(50).max(170) }),
 } as const;
 
+// Instrucción que se le da al modelo para regenerar cada parte.
 const PART_TASK: Record<DraftPart, string> = {
   excerpt: "Escribe SOLO una nueva entradilla (2-3 líneas, 70-155 caracteres ideal) que explique por qué importa la noticia.",
   tags: "Propón SOLO un nuevo conjunto de 3 a 6 palabras clave o etiquetas, en minúsculas, específicas del tema. La primera debe ser la palabra clave principal.",
@@ -279,6 +290,7 @@ const PART_TASK: Record<DraftPart, string> = {
   seo: "Propón SOLO un nuevo título SEO (15-65 caracteres) y una meta descripción en prosa (70-155 caracteres).",
 };
 
+// Resultado de regenerar una parte: su valor nuevo o un error.
 export type RegenerateResult =
   | { ok: true; part: DraftPart; value: Partial<Pick<GeneratedDraft, "excerpt" | "tags" | "body" | "metaTitle" | "metaDescription">> }
   | { ok: false; error: string };
@@ -335,8 +347,10 @@ const optionsSchema = z.object({
     .max(4),
 });
 
+// Opciones de títulos y contextos que propone el modelo, tipadas a partir del esquema.
 export type TitleContextOptions = z.infer<typeof optionsSchema>;
 
+// Resultado de proponer títulos y enfoques: las opciones o un error.
 export type SuggestResult = ({ ok: true } & TitleContextOptions) | { ok: false; error: string };
 
 /**
@@ -398,6 +412,7 @@ const chartSchema = z.object({
   sourceNote: z.string().describe("Fuente y periodo de las cifras, tal como constan en el texto"),
 });
 
+// Resultado de generar una gráfica: su especificación, fuentes y SVG, o un error.
 export type ChartResult =
   | { ok: true; chart: ChartSpec; sourceNote: string; sources: { title: string; url: string }[]; svg: string }
   | { ok: false; error: string };
@@ -433,6 +448,7 @@ const FUENTE_CONFIABLE = [
   /(^|\.)fao\.org$/, /(^|\.)oecd\.org$/, /(^|\.)worldbank\.org$/, /(^|\.)cepal\.org$/, /(^|\.)iica\.int$/, /(^|\.)un\.org$/,
   /(^|\.)woah\.org$/, /(^|\.)edu(\.[a-z]{2})?$/, /(^|\.)agronet\.gov\.co$/, /(^|\.)banrep\.gov\.co$/,
 ];
+// Indica si el dominio de una fuente está en la lista de fuentes confiables.
 const esConfiable = (host: string) => FUENTE_CONFIABLE.some((r) => r.test(host));
 
 /**
@@ -459,6 +475,7 @@ export async function generateChartCore(userId: string, input: { topic: string; 
       "Fuentes preferidas (en este orden): DANE, FEDEGAN (cifras de referencia del sector, Fondo Nacional del Ganado), ICA (censo pecuario), Ministerio de Agricultura (Agronet, SIPSA, UPRA, EVA), Banco de la República, Bolsa Mercantil, Fedegán/Fenavi/Asoleche, FAO (FAOSTAT), USDA, OCDE, Banco Mundial.";
     const REGLAS =
       "Devuelve SOLO cifras que aparezcan literalmente en las páginas que consultes, cada una con su unidad, periodo y fuente (nombre y página). Nunca estimes, interpoles, redondees ni inventes números; si una cifra no está, no la incluyas. Prefiere tablas y series históricas oficiales.";
+    // Consulta al modelo con búsqueda en Google, registra el gasto y devuelve el texto y las fuentes web que usó.
     const buscar = async (system: string, prompt: string) => {
       const r = await generateText({ model: ai.model, tools: ai.tools as unknown as ToolSet, system, prompt });
       await registrarUsoIA(userId, r.usage);
@@ -495,6 +512,7 @@ export async function generateChartCore(userId: string, input: { topic: string; 
     let texto = `${busquedas.map((b) => `=== ${b.nombre} ===\n${b.text}`).join("\n\n")}${nota ? `\n\nCIFRAS DE LA NOTA REDACTADA:\n${nota}` : ""}`;
     let allSrc = busquedas.flatMap((b) => b.src);
 
+    // Convierte el texto con cifras en la especificación de la gráfica, exigiendo que no se inventen ni cambien valores.
     const armar = async (material: string, estricto: boolean) => {
       const { object, usage } = await generateObject({
         model: ai.model,
@@ -519,12 +537,14 @@ export async function generateChartCore(userId: string, input: { topic: string; 
       }
       return [...f].some((x) => x.length > 0 && new RegExp(`(?<![\\d.,])${x.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?!\\d|[.,]\\d)`).test(t));
     };
+    // Comprueba que al menos el 80 % de los valores de la gráfica aparezcan en el texto de respaldo.
     const verificada = (o: Awaited<ReturnType<typeof armar>>, t: string) => {
       const vals = o.series.flatMap((x) => x.values);
       if (!vals.length) return false;
       return vals.filter((v) => respaldada(v, t)).length / vals.length >= 0.8;
     };
 
+    // Comprueba que la gráfica tenga suficientes datos para el tipo pedido (torta, líneas, histograma o barras).
     const adecuada = (o: Awaited<ReturnType<typeof armar>>) => {
       const n = o.labels.length;
       if (tipo === "torta" || tipo === "dona") return n >= 3 && n <= 8 && !o.labels.every((l) => /^(19|20)\d{2}/.test(l.trim())) && (o.series[0]?.values ?? []).every((v) => v > 0);
@@ -594,8 +614,10 @@ const topicIdeasSchema = z.object({
     .min(1),
 });
 
+// Una idea de tema con su ángulo y su justificación.
 export type TopicIdea = z.infer<typeof topicIdeasSchema>["ideas"][number];
 
+// Resultado de aconsejar temas: las ideas con sus fuentes, o un error.
 export type TopicIdeasResult =
   | { ok: true; ideas: TopicIdea[]; sources: { title: string; url: string }[] }
   | { ok: false; error: string };
@@ -630,6 +652,7 @@ export async function suggestTopicIdeasCore(userId: string, input: { section?: s
       .slice(0, 10);
     if (!sources.length) return { ok: false, error: "La búsqueda no devolvió fuentes citables, así que no se proponen temas." };
 
+    // Una llamada al modelo para proponer los temas a partir del texto de la búsqueda.
     const intento = () => generateObject({
       model: ai.model,
       schema: topicIdeasSchema,
@@ -675,6 +698,7 @@ const newsSchema = z.object({
     .min(1),
 });
 
+// Una noticia encontrada: titular, medio, fecha, resumen y enlace.
 export type NewsItem = {
   title: string;
   outlet: string;
@@ -686,6 +710,7 @@ export type NewsItem = {
   videoId?: string;
 };
 
+// Resultado de buscar noticias: la lista o un error.
 export type NewsSearchResult = { ok: true; items: NewsItem[] } | { ok: false; error: string };
 
 /** Id de un video de YouTube a partir de su enlace (watch, youtu.be, shorts, embed). */
@@ -802,6 +827,7 @@ export async function searchNewsAboutCore(userId: string, input: { query: string
 /** Costo estimado por imagen generada (USD); se descuenta de la cuota mensual de la persona. */
 const COSTO_IMAGEN_USD = 0.12;
 
+// Resultado de generar la portada: dirección de la imagen, texto alternativo y escena usada, o un error.
 export type CoverImageResult =
   | { ok: true; url: string; alt: string; scene: string }
   | { ok: false; error: string };
@@ -887,11 +913,13 @@ export async function generateCoverImageCore(userId: string, input: {
  * -------------------------------------------------------------------------- */
 
 export type MaterialResult = { ok: true; material: Material } | { ok: false; error: string };
+// Resultado de leer enlaces: los materiales y los que no se pudieron leer, o un error.
 export type EnlacesResult = { ok: true; materiales: Material[]; fallidos: string[] } | { ok: false; error: string };
 
 /** Tope del audio que se envía al modelo en una sola petición (límite práctico de Gemini en línea). */
 const MAX_AUDIO = 20 * 1024 * 1024;
 
+// Transcribe audio o video con Gemini (solo cuenta lo que se oye), comprueba la cuota y registra el gasto.
 async function transcribir(userId: string, bytes: Uint8Array, mime: string, nombre: string): Promise<MaterialResult> {
   const model = await getAiModel();
   if (!model) return { ok: false, error: "Falta la clave del modelo (Configuración → Asistente)." };
@@ -964,6 +992,7 @@ export async function crearSubidaAudioCore(userId: string, input: { name: string
   return { ok: true, uploadUrl: data.url.startsWith("http") ? data.url : `${url}/storage/v1${data.url}`, path };
 }
 
+// Transcribe una entrevista subida directamente a Supabase Storage, validando antes la ruta del archivo.
 export async function transcribirEntrevistaSubidaCore(userId: string, input: { path: string; name: string }): Promise<MaterialResult> {
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -992,6 +1021,7 @@ const decodeHtml = (s: string) =>
   s.replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;|&apos;/g, "'")
     .replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(Number(n)));
 
+// Extrae el titular y el texto principal de una página HTML, descartando scripts, menús y pies.
 function htmlATexto(html: string): { title: string; text: string } {
   const og = html.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["']/i)?.[1];
   const tt = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1];
@@ -1006,6 +1036,7 @@ function htmlATexto(html: string): { title: string; text: string } {
   return { title, text };
 }
 
+// Descarga y lee un enlace de forma segura (ver safe-fetch) y devuelve su texto como material.
 async function leerUnEnlace(raw: string): Promise<Material | null> {
   let u: URL;
   try {

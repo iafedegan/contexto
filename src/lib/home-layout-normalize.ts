@@ -17,6 +17,7 @@ export function normalizeLayout(input: HomeLayoutConfig): HomeLayoutConfig {
     footer: FOOTERS.find((f) => f.id === input.parts?.footer)?.id,
   };
   const templateId = HOME_TEMPLATES.find((t) => t.id === input.templateId)?.id;
+  // Posición de los filtros de sección: solo vale una de las seis permitidas.
   const sectionFilters = (["cabecera", "izquierda", "centro", "derecha", "barra", "oculto"] as const).find((p) => p === input.sectionFilters);
   return { ...input, ...(templateId ? { templateId } : {}), regions: sanitizeRegions(input.regions), parts, sectionFilters: sectionFilters ?? "cabecera", sectionEls: sanitizeSectionEls(input.sectionEls), zones: sanitizeZones(input.zones) };
 }

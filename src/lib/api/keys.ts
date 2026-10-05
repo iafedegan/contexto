@@ -13,13 +13,16 @@ import { apiClients } from "@/db/schema";
  */
 const PREFIX = "cg_live_";
 
+// Hash SHA-256 en hexadecimal: de la clave solo se guarda esto.
 const hash = (key: string) => createHash("sha256").update(key).digest("hex");
 
+// Genera una clave nueva (prefijo + 40 caracteres hex), su hash para guardar y el prefijo visible para reconocerla.
 export function generateApiKey(): { key: string; hash: string; prefix: string } {
   const key = PREFIX + randomBytes(20).toString("hex");
   return { key, hash: hash(key), prefix: key.slice(0, 14) };
 }
 
+// Datos mínimos del cliente de la API una vez verificada su clave.
 export type VerifiedClient = { id: string; name: string; requestsPerHour: number };
 
 /** `null` si la clave no existe, está revocada, o no llega ninguna. */

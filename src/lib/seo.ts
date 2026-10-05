@@ -7,12 +7,14 @@
 import type { Metadata } from "next";
 import { siteUrl } from "./utils";
 
+// Nombre del sitio para los metadatos y los datos estructurados.
 const SITE_NAME = process.env.NEXT_PUBLIC_SITE_NAME ?? "CONtexto Ganadero";
 // El logo del NewsArticle/Organization apuntaba a /logo-512.png, un archivo
 // que nunca existió en public/ (404): Google Rich Results marcaba el schema
 // como inválido en cada nota. Es el logo real que ya usa el resto del sitio.
 const ORG_LOGO = siteUrl("/logo/contexto-ganadero-logo.jpg");
 
+// Campos de una nota que necesitan los metadatos.
 type ArticleLike = {
   slug: string;
   title: string;
@@ -38,6 +40,7 @@ function clampDescription(text: string, max = 155): string {
   return clean.slice(0, clean.lastIndexOf(" ", max)).trimEnd() + "…";
 }
 
+// Metadatos de una nota: título, descripción, canónica, Open Graph y Twitter, derivados del titular y el resumen.
 export function articleMetadata(a: ArticleLike): Metadata {
   const url = siteUrl(`/articulo/${a.slug}`);
   const title = a.metaTitle?.trim() || a.title;
@@ -104,6 +107,7 @@ export function newsArticleJsonLd(a: ArticleLike) {
   };
 }
 
+// Datos estructurados (JSON-LD) de la organización editora.
 export function organizationJsonLd() {
   return {
     "@context": "https://schema.org",
@@ -116,6 +120,7 @@ export function organizationJsonLd() {
   };
 }
 
+// Datos estructurados (JSON-LD) de la ruta de migas de pan.
 export function breadcrumbJsonLd(items: Array<{ name: string; path: string }>) {
   return {
     "@context": "https://schema.org",
@@ -134,6 +139,7 @@ function abs(u: string): string {
   return u.startsWith("/") ? siteUrl(u) : u;
 }
 
+// Convierte una fecha (objeto o texto) a formato ISO; undefined si no hay.
 function toIso(d?: Date | string | null): string | undefined {
   if (!d) return undefined;
   return (typeof d === "string" ? new Date(d) : d).toISOString();

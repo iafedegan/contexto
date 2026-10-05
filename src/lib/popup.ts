@@ -7,9 +7,10 @@ import { DEFAULT_POPUP, sanitizePopup, type PopupConfig } from "@/lib/popup-type
 import { getPreviewDraft } from "@/lib/preview-draft";
 import { cachear, TAG_AJUSTES } from "@/lib/data-cache";
 
+// Clave de la fila de site_settings donde se guarda la ventana emergente.
 export const POPUP_KEY = "site_popup";
 
-/** Popup configurado en /panel/portada (fila `site_popup` de site_settings). */
+// Fila de la ventana emergente leída de la base y cacheada 5 minutos entre peticiones.
 const leerPopup = cachear(
   "popup",
   async () => {
@@ -19,6 +20,8 @@ const leerPopup = cachear(
   { tags: [TAG_AJUSTES], segundos: 300 },
 );
 
+// Lee la ventana emergente: en vista previa usa el borrador del editor; si no, la guardada (con caché entre peticiones).
+/** Popup configurado en /panel/portada (fila `site_popup` de site_settings). */
 export const getSitePopup = cache(async (): Promise<PopupConfig> => {
   // Vista previa del editor: el popup sin publicar, mostrado siempre y casi sin espera.
   const draft = getPreviewDraft();

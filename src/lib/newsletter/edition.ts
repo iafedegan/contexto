@@ -9,8 +9,10 @@ import { unsubscribeToken } from "@/lib/newsletter/token";
 import type { Outgoing } from "@/lib/newsletter/send";
 import { siteUrl } from "@/lib/utils";
 
+// Contenido editable de una edición: asunto, texto previo, introducción y notas elegidas.
 export type EditionContent = { subject: string; preheader: string; intro: string; articleSlugs: string[] };
 
+// Condición SQL: nota publicada y ya vigente.
 const published = and(eq(articles.status, "publicado"), lte(articles.publishedAt, sql`now()`));
 
 /** Notas publicadas para el selector del editor: las 40 más recientes. */
@@ -58,6 +60,7 @@ export async function nextIssueNumber(): Promise<number> {
   return (row?.max ?? 0) + 1;
 }
 
+// Asunto completo: el prefijo configurado seguido del asunto de la edición.
 export function fullSubject(prefix: string, subject: string): string {
   const p = prefix.trim();
   return p ? `${p} ${subject}` : subject;
@@ -73,6 +76,7 @@ export async function prepareRender(content: EditionContent, issue: number | nul
   return { settings, identity, list, issue, content };
 }
 
+// Edición ya preparada para dibujar y enviar.
 export type Prepared = Awaited<ReturnType<typeof prepareRender>>;
 
 /** El correo de UN lector (enlace de baja propio) o una prueba/vista previa (`subscriberId` null). */

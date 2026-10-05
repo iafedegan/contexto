@@ -12,11 +12,14 @@
 
 export type Embed = { tipo: "youtube" | "vimeo"; id: string; src: string };
 
+// Patrones de enlaces de YouTube (watch, live, youtu.be, embed y shorts) que capturan el id del video.
 const YT = [
   /(?:youtube\.com\/watch\?v=|youtube\.com\/live\/|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([A-Za-z0-9_-]{6,20})/,
 ];
+// Patrón de enlaces de Vimeo que captura el id numérico.
 const VIMEO = [/vimeo\.com\/(?:video\/)?(\d{6,12})/];
 
+// Reconoce un enlace de video y devuelve cómo incrustarlo; null si no es de un servicio admitido.
 export function parseEmbed(url: string): Embed | null {
   const limpia = url.trim();
   for (const re of YT) {

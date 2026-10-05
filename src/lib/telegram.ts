@@ -11,10 +11,13 @@ import { decryptSecret, encryptSecret } from "@/lib/secrets";
  * `TELEGRAM_API_BASE` permite apuntar a un servidor de prueba local.
  */
 export const TELEGRAM_KEY = "telegram";
+// Ajustes guardados del bot: token cifrado, nombre de usuario y dirección del webhook.
 type Guardado = { token?: string; username?: string; webhookUrl?: string };
 
+// Dirección base de la API de Telegram (configurable para servidores de prueba).
 const base = () => (process.env.TELEGRAM_API_BASE ?? "https://api.telegram.org").replace(/\/$/, "");
 
+// Lee los ajustes del bot de la base; vacío si no hay o si falla.
 export async function leerAjustesTelegram(): Promise<Guardado> {
   try {
     const [row] = await db.select({ value: siteSettings.value }).from(siteSettings).where(eq(siteSettings.key, TELEGRAM_KEY)).limit(1);
@@ -24,6 +27,7 @@ export async function leerAjustesTelegram(): Promise<Guardado> {
   }
 }
 
+// Guarda los ajustes del bot, cifrando el token si llega en claro.
 export async function guardarAjustesTelegram(parcial: Partial<Guardado> & { tokenPlano?: string }) {
   const actual = await leerAjustesTelegram();
   const nuevo: Guardado = { ...actual, ...parcial };
@@ -35,6 +39,7 @@ export async function guardarAjustesTelegram(parcial: Partial<Guardado> & { toke
     .onConflictDoUpdate({ target: siteSettings.key, set: { value: nuevo, updatedAt: new Date() } });
 }
 
+// Token del bot: el de la variable de entorno o, si no hay, el guardado cifrado.
 export async function tokenTelegram(): Promise<string | null> {
   if (process.env.TELEGRAM_BOT_TOKEN) return process.env.TELEGRAM_BOT_TOKEN;
   const g = await leerAjustesTelegram();
@@ -47,8 +52,10 @@ export function secretoWebhook(): string {
   return createHmac("sha256", s).update("telegram-webhook").digest("hex").slice(0, 48);
 }
 
+// Respuesta de la API de Telegram: resultado o descripción del error.
 type Resp<T> = { ok: true; result: T } | { ok: false; description?: string };
 
+// Llama a un método de la API de Telegram y devuelve su respuesta; ante un fallo de red devuelve un error.
 export async function tg<T = unknown>(metodo: string, cuerpo: Record<string, unknown> = {}, token?: string | null): Promise<Resp<T>> {
   const t = token ?? (await tokenTelegram());
   if (!t) return { ok: false, description: "Falta el token del bot de Telegram." };
@@ -65,10 +72,13 @@ export async function tg<T = unknown>(metodo: string, cuerpo: Record<string, unk
   }
 }
 
+// Escapa los caracteres especiales para el formato HTML de Telegram.
 export const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
+// Un botón: texto y un dato de retorno o una dirección.
 export type Boton = { texto: string; dato?: string; url?: string };
 
+// Convierte filas de botones en el teclado en línea de Telegram.
 const teclado = (filas?: Boton[][]) =>
   filas?.length
     ? { inline_keyboard: filas.map((f) => f.map((b) => (b.url ? { text: b.texto, url: b.url } : { text: b.texto, callback_data: (b.dato ?? "").slice(0, 60) }))) }
@@ -133,10 +143,12 @@ export async function borrar(chatId: number | string, mensajeId: number) {
   return tg("deleteMessage", { chat_id: chatId, message_id: mensajeId });
 }
 
+// Confirma la pulsación de un botón (quita el reloj de carga y puede mostrar un aviso).
 export async function responderCallback(id: string, texto?: string) {
   return tg("answerCallbackQuery", { callback_query_id: id, ...(texto ? { text: texto.slice(0, 190) } : {}) });
 }
 
+// Muestra «escribiendo…» o «enviando foto…» en el chat.
 export async function escribiendo(chatId: number | string, accion: "typing" | "upload_photo" = "typing") {
   void tg("sendChatAction", { chat_id: chatId, action: accion });
 }

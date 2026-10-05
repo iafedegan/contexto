@@ -9,8 +9,10 @@ import { siteSettings } from "@/db/schema";
  * necesitar migración en Supabase. El registro nunca bloquea ni rompe el inicio de sesión.
  */
 export const LOGIN_LOG_KEY = "login_log";
+// Máximo de accesos que se conservan en el registro.
 const MAX = 300;
 
+// Un inicio de sesión registrado: quién, cuándo, con qué método, desde qué IP y dispositivo.
 export type AccesoRegistro = {
   at: string;
   userId: string;
@@ -30,6 +32,7 @@ export function dispositivoDe(ua: string | null | undefined): string {
   return so ? `${nav} · ${so}` : nav;
 }
 
+// Añade un acceso al registro, que se mantiene acotado; si falla, no interrumpe el inicio de sesión.
 export async function registrarAcceso(a: Omit<AccesoRegistro, "at">): Promise<void> {
   try {
     const entrada = JSON.stringify({ ...a, at: new Date().toISOString() });
@@ -50,6 +53,7 @@ export async function registrarAcceso(a: Omit<AccesoRegistro, "at">): Promise<vo
   }
 }
 
+// Lee los accesos más recientes registrados, hasta el límite pedido.
 export async function getAccesos(limit = 100): Promise<AccesoRegistro[]> {
   try {
     const [row] = await db.select({ value: siteSettings.value }).from(siteSettings).where(eq(siteSettings.key, LOGIN_LOG_KEY)).limit(1);

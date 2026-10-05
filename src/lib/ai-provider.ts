@@ -31,6 +31,7 @@ export {
   type KeyStatus,
 } from "@/lib/ai-providers";
 
+// Lee los ajustes de IA guardados (proveedor, modelo y claves cifradas), una consulta por petición.
 const readSettings = cache(async (): Promise<AiSettings> => {
   try {
     const [row] = await db

@@ -4,6 +4,7 @@ import { getNewsletterSettings, getProviderStatus } from "@/lib/newsletter/setti
 import { sendMany } from "@/lib/newsletter/send";
 import { siteUrl } from "@/lib/utils";
 
+// Escapa los caracteres especiales de HTML para insertar texto ajeno en el correo sin riesgo.
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 
 /**

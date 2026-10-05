@@ -17,15 +17,18 @@ const SECRET =
 /** Una semana: cubre el ciclo de revisión sin dejar enlaces vivos para siempre. */
 export const PREVIEW_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
+// Calcula la firma HMAC de un id y su fecha de caducidad.
 function sign(id: string, exp: number): string {
   return createHmac("sha256", SECRET).update(`${id}.${exp}`).digest("base64url");
 }
 
+// Crea un token de vista previa: lleva la caducidad y su firma.
 export function signPreviewToken(id: string, ttlMs = PREVIEW_TTL_MS): string {
   const exp = Date.now() + ttlMs;
   return `${exp}.${sign(id, exp)}`;
 }
 
+// Comprueba que el token sea auténtico (firma en tiempo constante) y no haya caducado.
 export function verifyPreviewToken(id: string, token: string | undefined): boolean {
   if (!token || !SECRET) return false;
   const [expRaw, mac] = token.split(".");

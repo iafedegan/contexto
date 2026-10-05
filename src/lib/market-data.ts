@@ -17,8 +17,10 @@ export const MARKET_SERIES_KEYS = {
   cattle: "precio_novillo_gordo_medellin",
 } as const;
 
+// Clave de una serie de la franja: dólar, petróleo o ganado.
 export type MarketSeriesKey = keyof typeof MARKET_SERIES_KEYS;
 
+// Dato de la franja: último valor, el anterior y la fecha de la observación.
 export type MarketTickerEntry = {
   key: MarketSeriesKey;
   name: string;

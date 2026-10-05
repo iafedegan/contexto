@@ -26,8 +26,10 @@ export const AI_PROVIDERS = [
   },
 ] as const;
 
+// Identificador de proveedor de IA: cualquiera de los de la lista AI_PROVIDERS.
 export type AiProviderId = (typeof AI_PROVIDERS)[number]["id"];
 
+// Ajustes de IA guardados: proveedor activo, modelos y claves cifradas por proveedor.
 export type AiSettings = {
   provider: AiProviderId;
   model: string;
@@ -43,6 +45,7 @@ export type AiSettings = {
   models?: Partial<Record<AiProviderId, string[]>>;
 };
 
+// Estado de una clave para la pantalla de Configuración: sin revelarla, solo si existe y qué modelos permite.
 export type KeyStatus = {
   provider: AiProviderId;
   model: string;
@@ -55,6 +58,7 @@ export type KeyStatus = {
   masked: string | null;
 };
 
+// Ajustes iniciales: Anthropic con su modelo por defecto y ninguna clave.
 export const DEFAULT_AI_SETTINGS: AiSettings = {
   provider: "anthropic",
   model: "claude-sonnet-5",
@@ -62,6 +66,7 @@ export const DEFAULT_AI_SETTINGS: AiSettings = {
   models: {},
 };
 
+// Datos de un proveedor por su id; si no existe, el primero de la lista.
 export function providerMeta(id: AiProviderId) {
   return AI_PROVIDERS.find((p) => p.id === id) ?? AI_PROVIDERS[0];
 }

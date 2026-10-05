@@ -2,10 +2,15 @@ import "server-only";
 import { ImageResponse } from "next/og";
 import type { ChartSpec } from "@/lib/chart-svg";
 
+// Formato de números con separadores de Colombia y un decimal.
 const nf = new Intl.NumberFormat("es-CO", { maximumFractionDigits: 1 });
+// Colores de las series: turquesa, violeta, rosa y ámbar.
 const COL = ["#2dd4bf", "#a78bfa", "#f472b6", "#fbbf24"];
+// Segundo color de cada serie, para los degradados.
 const COL2 = ["#22d3ee", "#6366f1", "#fb7185", "#f97316"];
+// Colores de los sectores de la torta (hasta ocho).
 const PIE = ["#2dd4bf", "#a78bfa", "#f472b6", "#fbbf24", "#38bdf8", "#fb7185", "#a3e635", "#94a3b8"];
+// Ancho útil de la gráfica dentro de la imagen de 1200 píxeles.
 const W = 1104; // ancho útil (1200 − 2×48)
 
 /**
@@ -47,8 +52,10 @@ export async function graficaPng(c: ChartSpec): Promise<Uint8Array> {
   return new Uint8Array(await img.arrayBuffer());
 }
 
+// Un dato de la gráfica: etiqueta y valor.
 type Fila = { l: string; v: number };
 
+// Barras horizontales (hasta 9 filas), con el alto de cada barra ajustado al espacio disponible.
 function BarrasH({ filas }: { filas: Fila[] }) {
   const f9 = filas.slice(0, 9);
   const max = Math.max(1, ...f9.map((f) => Math.abs(f.v)));
@@ -68,6 +75,7 @@ function BarrasH({ filas }: { filas: Fila[] }) {
   );
 }
 
+// Barras verticales (hasta 12) o histograma, cuando van pegadas.
 function BarrasV({ filas, histograma }: { filas: Fila[]; histograma: boolean }) {
   const f = filas.slice(0, 12);
   const max = Math.max(1, ...f.map((x) => Math.abs(x.v)));
@@ -91,6 +99,7 @@ function BarrasV({ filas, histograma }: { filas: Fila[]; histograma: boolean }) 
   );
 }
 
+// Líneas o área de hasta cuatro series dibujadas en SVG, con la escala ajustada a los datos.
 function Lineas({ c }: { c: ChartSpec }) {
   const n = c.labels.length;
   const H = 290;
@@ -101,7 +110,9 @@ function Lineas({ c }: { c: ChartSpec }) {
   // La línea no necesita partir de cero (así se aprecia la variación); el área sí, porque su volumen se lee desde la base.
   const lo = area ? Math.min(0, minV) : minV - (maxV - minV || Math.abs(maxV) || 1) * 0.25;
   const hi = area ? Math.max(1, maxV) : maxV + (maxV - minV || Math.abs(maxV) || 1) * 0.15;
+  // Posición horizontal del punto i, centrado en su columna.
   const x = (i: number) => ((i + 0.5) * W) / n;
+  // Posición vertical de un valor según la escala, con margen arriba y abajo.
   const y = (v: number) => 14 + (1 - (v - lo) / (hi - lo || 1)) * (H - 28);
   return (
     <div style={{ display: "flex", flexDirection: "column", width: W }}>
@@ -130,11 +141,14 @@ function Lineas({ c }: { c: ChartSpec }) {
   );
 }
 
+// Torta o dona: reparte el círculo en sectores proporcionales (hasta ocho).
 function Torta({ c, filas, total }: { c: ChartSpec; filas: Fila[]; total: number }) {
   const f = filas.filter((x) => x.v > 0).slice(0, 8);
   const R = 170, cx = 180, cy = 180, ri = c.variant === "dona" ? 100 : 0;
   const acum = f.reduce<number[]>((a, x) => [...a, (a[a.length - 1] ?? 0) + x.v / total], []);
+  // Punto de la circunferencia para un radio y un ángulo, como texto de coordenadas SVG.
   const pt = (r: number, a: number) => `${(cx + r * Math.cos(a)).toFixed(2)} ${(cy + r * Math.sin(a)).toFixed(2)}`;
+  // Un sector por dato, con su ángulo inicial y final y la forma del arco.
   const trozos = f.map((x, i) => {
     const da = Math.min((x.v / total) * Math.PI * 2, Math.PI * 2 - 0.001);
     const a0 = -Math.PI / 2 + (i === 0 ? 0 : acum[i - 1]) * Math.PI * 2, a1 = a0 + da;

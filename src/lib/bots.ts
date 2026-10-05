@@ -40,6 +40,7 @@ const SCRAPER_PATTERNS = [
   /scraperapi|zenrows|brightdata|apify|crawler4j|nutch|heritrix|httrack|webcopier|sitesucker|teleport/i,
 ];
 
+// Decide si un User-Agent debe bloquearse: vacío, crawlers de entrenamiento de IA o herramientas de raspado.
 export function isBlockedBot(userAgent: string | null): boolean {
   const ua = userAgent?.trim() ?? "";
   if (!ua) return true; // sin User-Agent: ningún navegador real hace eso

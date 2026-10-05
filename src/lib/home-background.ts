@@ -68,10 +68,12 @@ export function derivePalette(base: string): Record<string, string> {
   };
 }
 
+// Indica si un color es oscuro según su luminosidad.
 export function isDark(hex: string): boolean {
   return luminance(hex) < 0.42;
 }
 
+// Tono atenuado de un color de texto, más claro u oscuro según el fondo.
 export function mutedOf(fg: string): string {
   return isDark(fg) ? shade(fg, 0.42, "light") : shade(fg, 0.38, "dark");
 }

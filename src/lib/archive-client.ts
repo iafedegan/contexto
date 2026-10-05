@@ -13,8 +13,10 @@ import { embed } from "./embeddings";
  */
 
 const BASE = process.env.ARCHIVE_API_BASE_URL;
+// Clave de acceso a la API del archivo histórico (opcional).
 const KEY = process.env.ARCHIVE_API_KEY;
 
+// Artículo tal como lo entrega la API del archivo histórico.
 export type ArchiveApiItem = {
   id: string;
   url: string;
@@ -26,8 +28,10 @@ export type ArchiveApiItem = {
   contentText?: string | null;
 };
 
+// Página de resultados de la API: artículos y cursor de la página siguiente.
 type ListResponse = { items: ArchiveApiItem[]; nextCursor: string | null };
 
+// Pide una página de 100 artículos a la API (solo lectura), opcionalmente solo los actualizados desde una fecha.
 async function fetchPage(cursor: string | null, since: string | null): Promise<ListResponse> {
   if (!BASE) throw new Error("ARCHIVE_API_BASE_URL no configurada");
   const url = new URL("/articles", BASE);
@@ -44,12 +48,14 @@ async function fetchPage(cursor: string | null, since: string | null): Promise<L
   return (await res.json()) as ListResponse;
 }
 
+// Huella SHA-256 del contenido origen: sirve para saber si un artículo cambió sin volver a calcular su embedding.
 function hashOf(item: ArchiveApiItem): string {
   return createHash("sha256")
     .update(`${item.title}\n${item.summary}\n${item.contentText ?? ""}`)
     .digest("hex");
 }
 
+// Resumen de una sincronización: artículos vistos, guardados y omitidos por no haber cambiado.
 export type SyncResult = { scanned: number; upserted: number; skipped: number };
 
 /**

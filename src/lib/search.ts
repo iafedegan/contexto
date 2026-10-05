@@ -29,6 +29,7 @@ export type SearchHit = {
   score: number;
 };
 
+// Constante de la fusión por rangos recíprocos (RRF) que mezcla los dos rankings.
 const K = 60; // constante RRF
 
 // Palabras vacías frecuentes en preguntas en español (no aportan a la búsqueda).
@@ -55,6 +56,7 @@ function toOrQuery(input: string): string {
   return [...new Set(words)].join(" or ");
 }
 
+// Búsqueda híbrida: mezcla similitud vectorial y texto completo en español sobre las notas propias y el archivo histórico, en una sola consulta SQL.
 export async function hybridSearch(query: string, limit = 20): Promise<SearchHit[]> {
   const q = toOrQuery(query);
   if (!q) return [];

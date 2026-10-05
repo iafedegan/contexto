@@ -18,8 +18,10 @@ export const DEFAULT_HOME_LAYOUT: Required<HomeLayoutConfig> = {
   zones: {},
 };
 
+// Identificador de una plantilla de portada.
 export type HomeTemplateId = NonNullable<HomeLayoutConfig["templateId"]>;
 
+// Descripción de una plantilla: id, nombre y cómo se presenta al editor.
 export type HomeTemplate = {
   id: HomeTemplateId;
   name: string;
@@ -87,6 +89,7 @@ export const RIVER_COLS: Record<number, string> = {
   3: "sm:grid-cols-2 xl:grid-cols-3",
   4: "sm:grid-cols-2 xl:grid-cols-4",
 };
+// Clases de cuadrícula según el número de columnas de «En breve» en horizontal.
 export const BREVE_COLS: Record<number, string> = {
   2: "sm:grid-cols-2",
   3: "sm:grid-cols-2 xl:grid-cols-3",

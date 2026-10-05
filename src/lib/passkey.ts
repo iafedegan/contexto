@@ -21,6 +21,7 @@ export async function rpInfo(): Promise<{ rpID: string; rpName: string; origin: 
   return { rpID, rpName: "CONtexto Ganadero", origin: `${proto}://${host}` };
 }
 
+// Secreto con el que se firma el token puente; en producción es obligatorio.
 function secret(): string {
   const s =
     process.env.AUTH_SECRET ??
@@ -29,6 +30,7 @@ function secret(): string {
   return s;
 }
 
+// Cookie temporal que guarda el desafío de la ceremonia WebAuthn.
 const CHALLENGE_COOKIE = "contexto.passkey-challenge";
 
 /** Guarda el challenge de una ceremonia WebAuthn en curso (registro o login). */
@@ -42,6 +44,7 @@ export async function guardarChallenge(challenge: string) {
   });
 }
 
+// Lee el desafío guardado y lo borra: solo sirve una vez.
 export async function leerYBorrarChallenge(): Promise<string | null> {
   const jar = await cookies();
   const v = jar.get(CHALLENGE_COOKIE)?.value ?? null;
@@ -63,6 +66,7 @@ export function firmarTokenPasskey(userId: string): string {
   return `${payload}.${firma}`;
 }
 
+// Verifica la firma y la caducidad del token puente; devuelve el id del usuario o null.
 export function verificarTokenPasskey(token: string): string | null {
   const [payload, firma] = token.split(".");
   if (!payload || !firma) return null;

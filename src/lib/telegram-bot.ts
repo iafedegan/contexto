@@ -41,20 +41,26 @@ type Msg = {
   photo?: { file_id: string; width: number }[];
   document?: { file_id: string; mime_type?: string; file_name?: string; file_size?: number };
 };
+// Actualización que envía Telegram: un mensaje o la pulsación de un botón.
 export type Update = { update_id: number; message?: Msg; callback_query?: { id: string; data?: string; message?: Msg } };
 
 // Mismos pasos y nombres que el asistente web (modo IA y modo manual).
 const PASOS_IA: Fase[] = ["tema", "resumen", "claves", "portada", "seccion", "cuerpo", "grafica", "seo", "final"];
+// Pasos del modo manual: empieza por el título.
 const PASOS_MANUAL: Fase[] = ["titulo", "resumen", "claves", "portada", "seccion", "cuerpo", "grafica", "seo", "final"];
+// Nombre de cada paso para el encabezado del panel.
 const NOMBRE_PASO: Partial<Record<Fase, string>> = {
   tema: "Título y contexto", titulo: "Título", resumen: "Resumen", claves: "Palabras clave", portada: "Imagen",
   seccion: "Sección y autor", cuerpo: "Cuerpo", grafica: "Gráfica", seo: "Buscadores", final: "Vista previa",
 };
+// Texto de ayuda: describe los nueve pasos y los comandos.
 const AYUDA =
   "✍️ <b>Redactor de CONtexto Ganadero</b>\n\nEs el mismo asistente del panel, en nueve pasos: Título y contexto · Resumen · Palabras clave · Portada · Sección y autor · Cuerpo · Gráfica · Buscadores · Vista previa.\n\nTodo ocurre en un solo mensaje que se va actualizando: usa los botones <b>⬅️ Atrás</b> y <b>Siguiente ➡️</b>. Lo que escribas en el chat se suma al tema (o responde al botón que pulsaste). También puedes enviar una <b>nota de voz, un audio o un video</b> (hasta 20 MB): lo transcribo y propongo títulos.\n\n/nueva — empezar un artículo con IA\n/estado — estado de la última nota\n/cancelar — descartar el flujo actual\n/ayuda — esta ayuda\n/desvincular — separar este Telegram de tu cuenta";
 
+// Direcciones web que contiene un texto, sin repetir.
 const urlsEn = (t: string) => [...new Set(t.match(/https?:\/\/[^\s<>"')]+/gi) ?? [])];
 
+// Convierte el HTML del cuerpo en texto para Telegram, marcando los intertítulos y las listas.
 function textoDeHtml(html: string): string {
   return html
     .replace(/<h2[^>]*>([\s\S]*?)<\/h2>/gi, "\n\n##$1##\n")
@@ -62,6 +68,7 @@ function textoDeHtml(html: string): string {
     .replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'")
     .replace(/\n{3,}/g, "\n\n").trim();
 }
+// Convierte las marcas de intertítulo en negrita de Telegram, escapando el resto.
 const conIntertitulos = (t: string) => esc(t).replace(/##([\s\S]*?)##/g, "<b>$1</b>");
 /** Cuerpo de la nota → mensaje de Telegram (intertítulos en negrita). */
 const cuerpoParaTelegram = (html: string) => conIntertitulos(textoDeHtml(html));
@@ -77,7 +84,9 @@ function htmlDeTexto(t: string): string {
     return /^##\s+/.test(b) ? `<h2>${e.replace(/^##\s+/, "")}</h2>` : `<p>${e.replace(/\n/g, "<br>")}</p>`;
   }).join("");
 }
+// Cuenta las palabras del cuerpo.
 const palabras = (html: string) => { const t = textoDeHtml(html).replace(/##/g, " ").trim(); return t ? t.split(/\s+/).length : 0; };
+// Recorta un texto a n caracteres con puntos suspensivos.
 const recorta = (t: string, n: number) => (t.length > n ? `${t.slice(0, n - 1).trimEnd()}…` : t);
 /** Contador de longitud como el del asistente web: ✅ dentro del rango ideal, ⚠️ fuera. */
 const contador = (len: number, min: number, max: number) => `${len} car. · ideal ${min}–${max} ${len >= min && len <= max ? "✅" : "⚠️"}`;
@@ -117,6 +126,7 @@ export function parseFecha(txt: string, ahora = new Date()): string | null {
     if (h > 23 || min > 59) return null;
   }
   if (!fecha && !conHora) return null;
+  // Fecha de hoy con la hora pedida, convertida de hora de Colombia a UTC.
   const hoyIso = () => new Date(Date.UTC(y, m, d, h + 5, min));
   if (!fecha) { // solo hora: hoy si aún no pasó, si no mañana
     let w = hoyIso(); if (w.getTime() <= ahora.getTime()) { d += 1; w = hoyIso(); }
@@ -128,12 +138,14 @@ export function parseFecha(txt: string, ahora = new Date()): string | null {
   if (explicita && (when.getUTCMonth() !== m || Number.isNaN(when.getTime()))) return null; // 31/02, etc.
   return Number.isNaN(when.getTime()) ? null : when.toISOString();
 }
+// Próximo lunes a las 8 p. m. (hora de Colombia) como fecha ISO: sugerencia para programar.
 function proximoLunes8pm(ahora = new Date()): string {
   const co = new Date(ahora.getTime() - 5 * 3600_000);
   let dias = (1 - co.getUTCDay() + 7) % 7;
   if (dias === 0 && co.getUTCHours() >= 20) dias = 7;
   return new Date(Date.UTC(co.getUTCFullYear(), co.getUTCMonth(), co.getUTCDate() + dias, 25)).toISOString();
 }
+// Fecha y hora completas en español de Colombia.
 const fmtHora = (iso: string) => new Intl.DateTimeFormat("es-CO", { dateStyle: "full", timeStyle: "short", timeZone: "America/Bogota" }).format(new Date(iso));
 
 // -------------------------------------------------------------------------------------------------------------
@@ -150,12 +162,17 @@ type Ctx = {
   aviso?: string;
 };
 
+// Lista de pasos según el modo (IA o manual).
 const pasos = (c: Ctx) => (c.e.modo === "manual" ? PASOS_MANUAL : PASOS_IA);
+// Indica si la conversación está en modo IA.
 const esIA = (c: Ctx) => c.e.modo !== "manual";
+// Guarda el estado de la conversación.
 const fin = (c: Ctx) => setEstado(c.chatId, c.e);
 
+// Aplica los cambios al estado y guarda el borrador de la nota en la base.
 async function guardar(c: Ctx, extra: Partial<EstadoChat> = {}) {
   Object.assign(c.e, extra);
+  // Un intento de guardar el borrador con todos los datos del estado.
   const intentar = () => guardarBorradorCore(c.userId, {
     id: c.e.articleId, title: c.e.title ?? "", excerpt: c.e.excerpt ?? "", body: c.e.body ?? "", tags: c.e.tags ?? [],
     categoryId: c.e.categoryId, coverImageUrl: c.e.coverUrl, coverImageAlt: c.e.coverAlt, metaTitle: c.e.metaTitle, metaDescription: c.e.metaDescription,
@@ -171,10 +188,13 @@ async function guardar(c: Ctx, extra: Partial<EstadoChat> = {}) {
 
 /** Los botones finales llevan el inicio del id de SU nota: un botón viejo no debe publicar otra nota. */
 const tk = (c: Ctx) => (c.e.articleId ?? "").slice(0, 8);
+// Enlace al panel web de la nota (o al listado si aún no existe).
 const enlacePanel = (c: Ctx) => (c.e.articleId ? siteUrl(`/panel/articulos/${c.e.articleId}?modo=ia&paso=vista`) : siteUrl("/panel/articulos"));
 /** Vista previa de la nota tal como se verá en el sitio: enlace firmado y caducable, se abre sin iniciar sesión (noindex). */
 const vistaUrl = (c: Ctx) => (c.e.articleId ? siteUrl(`/vista-previa/${c.e.articleId}?t=${signPreviewToken(c.e.articleId)}`) : null);
+// Botón con el enlace a la vista previa, si la nota ya existe.
 const botonVista = (c: Ctx): Boton[][] => { const u = vistaUrl(c); return u ? [[{ texto: "👁️ Vista previa en el sitio", url: u }]] : []; };
+// Línea de texto con el enlace a la vista previa firmada.
 const linkVista = (c: Ctx) => { const u = vistaUrl(c); return u ? `\n👁️ <a href="${u}">Vista previa del artículo</a> (se abre sin contraseña)` : ""; };
 
 // --- El panel: un solo mensaje que se reescribe -------------------------------------------------------------------
@@ -201,6 +221,7 @@ async function mostrar(c: Ctx, texto: string, filas: Boton[][] = []) {
 }
 /** Estado «trabajando…» dentro del propio panel (sin mensajes sueltos). */
 const ocupado = (c: Ctx, texto: string) => mostrar(c, `⏳ ${texto}`);
+// Borra el mensaje de la persona que se usó como entrada, para mantener limpia la conversación.
 async function borrarEntrada(c: Ctx) {
   if (c.entrada) { void borrar(c.chatId, c.entrada); c.entrada = undefined; }
 }
@@ -210,8 +231,10 @@ async function pedir(c: Ctx, espera: Espera, instruccion: string, actual?: strin
   await fin(c);
   return mostrar(c, `✏️ ${instruccion}${actual ? `\n\n<i>Actual:</i>\n<code>${esc(actual.slice(0, 1200))}</code>` : ""}`, [[{ texto: "✖ Cancelar", dato: "x:" }]]);
 }
+// Muestra un aviso de error dentro del panel.
 const fallo = (c: Ctx, msg: string) => { c.aviso = `⚠️ ${msg}`; return vista(c); };
 
+// Audita la nota en curso con los criterios SEO.
 const auditoria = (c: Ctx) => auditArticle({ title: c.e.title ?? "", excerpt: c.e.excerpt ?? "", body: c.e.body ?? "", metaTitle: c.e.metaTitle, metaDescription: c.e.metaDescription, tags: c.e.tags, focus: c.e.tags?.[0] || c.e.title, coverImageUrl: c.e.coverUrl ?? "", coverImageAlt: c.e.coverAlt, authorName: c.nombre });
 /** Encabezado mínimo: nombre del paso y «2/9». */
 function cab(c: Ctx, f: Fase, titulo?: string): string {
@@ -221,6 +244,7 @@ function cab(c: Ctx, f: Fase, titulo?: string): string {
 /** Navegación fija: «Atrás» (salvo en el primer paso) y «Siguiente». */
 const nav = (c: Ctx, sig: Boton = { texto: "Siguiente ➡️", dato: "n:" }): Boton[] =>
   pasos(c).indexOf(c.e.fase) > 0 ? [{ texto: "⬅️ Atrás", dato: "b:" }, sig] : [sig];
+// Nombre de la sección elegida para la nota.
 const nombreSeccion = async (c: Ctx) => (c.e.categoryId ? (await cats()).find((x) => x.id === c.e.categoryId)?.name : undefined);
 
 // --- Primer paso: Tema, título y contexto --------------------------------------------------------------------
@@ -241,12 +265,15 @@ async function pasoTema(c: Ctx) {
 async function subPanel(c: Ctx, texto: string) {
   await mostrar(c, texto, [[{ texto: "⬅️ Volver", dato: "i:ini" }]]);
 }
+// Pide qué investigar para buscar noticias.
 async function subNoticias(c: Ctx) {
   c.e.espera = "busqueda";
   await fin(c);
   return subPanel(c, "🔎 <b>¿Qué quieres investigar?</b>\nEscribe una persona, empresa o tema.");
 }
+// Pide un audio, nota de voz o video de hasta 20 MB para transcribir.
 const subEntrevista = (c: Ctx) => subPanel(c, "🎙️ Envíame una <b>nota de voz</b>, un <b>audio</b> o un <b>video</b> (hasta 20 MB). Transcribo lo que se oye.");
+// Pide pegar hasta cinco enlaces.
 const subEnlaces = (c: Ctx) => subPanel(c, "🔗 <b>Pega los enlaces</b> (hasta 5, uno por línea).");
 
 /** Suma el texto al tema (como escribir en el cuadro de tema) y lee los enlaces que traiga. */
@@ -261,6 +288,7 @@ async function agregarTema(c: Ctx, texto: string) {
   return proponer(c); // sigue solo: propone títulos con lo que escribiste
 }
 
+// Lee los enlaces recibidos y los agrega como material para redactar.
 async function leerEnlaces(c: Ctx, urls: string[]) {
   await ocupado(c, `Leyendo ${Math.min(urls.length, 5)} enlace${urls.length > 1 ? "s" : ""}…`);
   const r = await leerEnlacesCore(c.userId, { urls: urls.slice(0, 5).join("\n") });
@@ -271,6 +299,7 @@ async function leerEnlaces(c: Ctx, urls: string[]) {
   await fin(c);
 }
 
+// Busca ideas de temas con la IA y las ofrece como opciones.
 async function buscarIdeas(c: Ctx) {
   await escribiendo(c.chatId);
   await ocupado(c, "Buscando tendencias en internet… puede tardar hasta un minuto.");
@@ -287,11 +316,13 @@ async function buscarIdeas(c: Ctx) {
   ]);
 }
 
+// Borra las tarjetas de resultados mostradas antes.
 async function limpiarTarjetas(c: Ctx) {
   for (const id of c.e.tarjetas ?? []) void borrar(c.chatId, id);
   c.e.tarjetas = [];
 }
 
+// Busca noticias sobre la consulta y las muestra como tarjetas con botones.
 async function buscarNoticias(c: Ctx, consulta: string) {
   const q = consulta.trim();
   if (q.length < 3) { c.aviso = "⚠️ Escribe a quién o qué buscar (mínimo 3 caracteres)."; return subNoticias(c); }
@@ -305,7 +336,9 @@ async function buscarNoticias(c: Ctx, consulta: string) {
   return mostrarNoticias(c);
 }
 
+// Indica si una noticia ya fue marcada para referenciar.
 const esRef = (c: Ctx, url: string) => (c.e.refs ?? []).some((r) => r.url === url);
+// Botones de una tarjeta de noticia: referenciar, usar como tema y abrir.
 const botonesNoticia = (c: Ctx, k: number): Boton[][] => {
   const n = c.e.noticias?.[k];
   if (!n) return [];
@@ -319,6 +352,7 @@ const botonesNoticia = (c: Ctx, k: number): Boton[][] => {
 async function mostrarNoticias(c: Ctx) {
   const todas = c.e.noticias ?? [];
   const f = c.e.noticiasFiltro ?? "todo";
+  // Cuenta los resultados de cada tipo, para mostrar los filtros.
   const cuantos = (t: string) => (t === "todo" ? todas.length : todas.filter((n) => n.type === t).length);
   const etiquetas: Record<string, string> = { todo: "Todo", noticia: "Noticias", video: "Videos", oficial: "Oficiales" };
   const filtros: Boton[] = (["todo", "noticia", "video", "oficial"] as const)
@@ -352,6 +386,7 @@ async function noticiaComoTema(c: Ctx, k: number) {
   return proponer(c); // sigue solo: propone títulos y enfoques con esa noticia
 }
 
+// Propone títulos y enfoques a partir del tema y el material cargado.
 async function proponer(c: Ctx) {
   const topic = (c.e.topic ?? "").trim();
   if (!topic && !(c.e.material?.length)) { c.aviso = "⚠️ Escribe de qué trata la nota (o carga una entrevista o enlaces) y pulsa «Proponer títulos y contextos»."; return pasoTema(c); }
@@ -394,8 +429,10 @@ async function pasoEnfoques(c: Ctx) {
   ]);
 }
 
+// Muestra los títulos o los enfoques según la etapa.
 const pasoOpciones = (c: Ctx) => (c.e.etapa === "enfoque" ? pasoEnfoques(c) : pasoTitulos(c));
 
+// Redacta el borrador completo con la IA y avanza al siguiente paso.
 async function redactar(c: Ctx) {
   const titulo = (c.e.title ?? "").trim();
   const prompt = [c.e.topic, c.e.context].filter(Boolean).join("\n\n");
@@ -439,6 +476,7 @@ async function vista(c: Ctx) {
   }
 }
 
+// Cambia al paso indicado y lo muestra.
 async function paso(c: Ctx, f: Fase) {
   c.e.fase = f;
   c.e.espera = undefined;
@@ -446,6 +484,7 @@ async function paso(c: Ctx, f: Fase) {
   return f === "final" ? pasoFinal(c) : vista(c);
 }
 
+// Avanza al paso siguiente de la lista del modo en curso.
 async function siguiente(c: Ctx) {
   const l = pasos(c);
   const i = l.indexOf(c.e.fase);
@@ -460,14 +499,17 @@ function bloqueo(c: Ctx): string | null {
   return null;
 }
 
+// Botón para regenerar una parte del borrador con la IA.
 const regenerar = (c: Ctx, parte: "resumen" | "claves" | "cuerpo" | "seo"): Boton => ({ texto: "🔄 Regenerar", dato: `r:${parte}` });
 
+// Paso del título (modo manual): lo pide por texto.
 async function pasoTitulo(c: Ctx) {
   c.e.espera = "titulo";
   const t = c.e.title ?? "";
   await mostrar(c, `${cab(c, "titulo")}<b>¿Cuál es el título?</b>\n<i>Claro y concreto: lo que verá el lector y Google.</i>\n\n${t ? `📌 <b>${esc(t)}</b>\n<i>${contador(t.length, 15, 65)}</i>\n\nEscribe otro para cambiarlo.` : "✏️ Escríbelo en un mensaje.\n<i>Ej.: El precio del novillo gordo sube 4 % en Medellín</i>"}`, [nav(c)]);
 }
 
+// Paso del resumen: lo muestra con su contador de longitud y las acciones.
 async function pasoResumen(c: Ctx) {
   const x = c.e.excerpt ?? "";
   await mostrar(c, `${cab(c, "resumen")}${x ? esc(x) : "✏️ Escribe el resumen en un mensaje."}`, [
@@ -476,6 +518,7 @@ async function pasoResumen(c: Ctx) {
   ]);
 }
 
+// Paso de las palabras clave.
 async function pasoClaves(c: Ctx) {
   const t = c.e.tags ?? [];
   const filas: Boton[][] = [];
@@ -487,6 +530,7 @@ async function pasoClaves(c: Ctx) {
   ]);
 }
 
+// Paso del cuerpo: muestra el texto con su recuento de palabras y las acciones.
 async function pasoCuerpo(c: Ctx) {
   const b = c.e.body ?? "";
   const w = palabras(b);
@@ -509,6 +553,7 @@ async function pasoPortada(c: Ctx) {
   await mostrar(c, `${cab(c, "portada")}🖼️ ${c.e.coverUrl ? "Imagen lista" : "Sin imagen"}\n<i>Envía una foto o genera una con IA.</i>`, filas);
 }
 
+// Genera la imagen de portada con IA y la muestra.
 async function portadaIA(c: Ctx) {
   await escribiendo(c.chatId, "upload_photo");
   await ocupado(c, "Generando la imagen… puede tardar unos 20–40 segundos.");
@@ -522,6 +567,7 @@ async function portadaIA(c: Ctx) {
   return pasoPortada(c);
 }
 
+// Descarga una foto enviada por la persona y la usa como portada.
 async function fotoRecibida(c: Ctx, fileId: string) {
   const f = await descargarArchivo(fileId);
   if (!f) { c.aviso = "⚠️ No pude descargar la foto."; return vista(c); }
@@ -539,6 +585,7 @@ async function fotoRecibida(c: Ctx, fileId: string) {
 async function cats() {
   return db.select({ id: categories.id, name: categories.name, parentId: categories.parentId }).from(categories).orderBy(asc(categories.sortOrder), asc(categories.name));
 }
+// Descripción en palabras de la posición de la nota en la portada.
 const textoLugar = (pos: number | null | undefined) => (pos == null ? "sin destacar" : pos === 0 ? "portada principal" : pos === 1 ? "segunda destacada" : `lugar ${pos + 1}`);
 /** «📌 Portada del sitio: …»: dónde queda la nota en la portada (solo con permiso y con la nota ya guardada). */
 async function filaPortada(c: Ctx): Promise<Boton[][]> {
@@ -546,6 +593,7 @@ async function filaPortada(c: Ctx): Promise<Boton[][]> {
   const [a] = await db.select({ pos: articles.homePosition }).from(articles).where(eq(articles.id, c.e.articleId)).limit(1);
   return [[{ texto: `📌 Portada del sitio: ${textoLugar(a?.pos)}`, dato: `d:pm:${tk(c)}` }]];
 }
+// Muestra las secciones para elegir la de la nota.
 async function mostrarSecciones(c: Ctx) {
   const todas = await cats();
   const raices = todas.filter((x) => !x.parentId);
@@ -570,6 +618,7 @@ async function mostrarSecciones(c: Ctx) {
 
 /** «Buscar sección o subsección…» del asistente web: escribir un nombre lista las coincidencias. */
 async function buscarSeccion(c: Ctx, texto: string) {
+  // Normaliza un texto para comparar: sin tildes y en minúsculas.
   const n = (x: string) => x.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
   const q = n(texto.trim());
   const todas = await cats();
@@ -583,6 +632,7 @@ async function buscarSeccion(c: Ctx, texto: string) {
 // --- Gráfica con datos ---------------------------------------------------------------------------------------
 
 const tipoActual = (c: Ctx) => (c.e.tipoGrafica as TipoGrafica | undefined) ?? "auto";
+// Botones con los tipos de gráfica disponibles.
 const filasTipos = (c: Ctx): Boton[][] => {
   const t = tipoActual(c);
   const b = TIPOS_GRAFICA.map((x) => ({ texto: `${t === x.id ? "● " : ""}${x.label}`, dato: `g:${x.id}` }));
@@ -591,6 +641,7 @@ const filasTipos = (c: Ctx): Boton[][] => {
   return filas;
 };
 
+// Paso de la gráfica: pide el tema y el tipo.
 async function pasoGrafica(c: Ctx) {
   const t = tipoActual(c);
   const tema = c.e.chartTopic?.trim() || c.e.title || "";
@@ -602,6 +653,7 @@ async function pasoGrafica(c: Ctx) {
   ]);
 }
 
+// Envía la imagen de la gráfica generada con sus fuentes.
 async function enviarGrafica(c: Ctx) {
   const ch = c.e.chart;
   if (!ch) return;
@@ -623,6 +675,7 @@ async function enviarGrafica(c: Ctx) {
   ]);
 }
 
+// Genera la gráfica con datos de la web y la dibuja como imagen.
 async function generarGrafica(c: Ctx) {
   await escribiendo(c.chatId, "upload_photo");
   await ocupado(c, "Buscando datos y dibujando… puede tardar hasta un minuto.");
@@ -644,7 +697,9 @@ async function cambiarTipoGrafica(c: Ctx, tipo: TipoGrafica) {
   if (c.e.chartInsertada) { insertarGrafica(c); await guardar(c); }
 }
 
+// Patrones para retirar del cuerpo una gráfica insertada antes.
 const QUITAR_GRAFICA = [/<figure class="lx-chart" data-chart="[\w-]+">[\s\S]*?<\/figure>/g, /<figure><img [^>]*alt="Gráfica:[^>]*>(?:<figcaption>[\s\S]*?<\/figcaption>)?<\/figure>/g];
+// Inserta la gráfica generada (interactiva, con su imagen de respaldo) en el cuerpo de la nota.
 function insertarGrafica(c: Ctx) {
   const ch = c.e.chart; if (!ch?.pngUrl) return false;
   const spec = ch.spec as ChartSpec;
@@ -690,6 +745,7 @@ async function pasoFinal(c: Ctx) {
   return panelFinal(c);
 }
 
+// Panel final: vista previa y botones para guardar, enviar a revisión, programar o publicar según los permisos.
 async function panelFinal(c: Ctx) {
   const [info] = c.e.articleId ? await db.select({ estado: articles.status }).from(articles).where(eq(articles.id, c.e.articleId)).limit(1) : [];
   const pub = canPublish(c.role) && (await tienePermiso(c.userId, c.role, "publicar"));
@@ -723,11 +779,13 @@ function reiniciarSiTerminada(c: Ctx) {
   c.e.ultimoUpdate = ultimo;
 }
 
+// Tamaño máximo de archivo que Telegram deja descargar a un bot (20 MB).
 const MAX_TELEGRAM = 20 * 1024 * 1024;
 
 /** Telegram solo deja a un bot descargar archivos de hasta 20 MB: más allá, mejor decir cómo seguir que fallar en silencio. */
 const AVISO_PESADO = "⚠️ Telegram solo permite que un bot descargue archivos de hasta <b>20 MB</b>. Mándalo más corto o solo en audio, o súbelo desde el panel (allí el video no pesa: se saca el audio en tu navegador).";
 
+// Descarga y transcribe un audio, nota de voz o video y lo agrega como material.
 async function entrevista(c: Ctx, fileId: string, mime: string, nombre: string, tam?: number) {
   reiniciarSiTerminada(c);
   if (c.e.fase === "idle") { c.e.modo = "ia"; c.e.fase = "tema"; }
@@ -908,6 +966,7 @@ async function estadoNota(c: Ctx) {
   ]);
 }
 
+// Programa la publicación de la nota para la fecha indicada.
 async function programar(c: Ctx, iso: string) {
   try {
     await guardar(c);
@@ -954,6 +1013,7 @@ async function menuDistintivos(c: Ctx) {
   await mostrar(c, `⚡ <b>Distintivos y aviso</b>\n<b>${esc(recorta(a.title, 100))}</b>\n\n⚡ Última hora: <b>${a.b ? "sí" : "no"}</b> · 🔴 En desarrollo: <b>${a.l ? "sí" : "no"}</b>${a.status !== "publicado" ? "\n<i>Se verán en el sitio cuando la nota esté publicada.</i>" : ""}\n\n<i>Última hora: solo se muestra la más reciente y, al publicarla, avisa por notificación a quienes tienen la app (una vez). En desarrollo pone la etiqueta «En vivo».</i>`, filas);
 }
 
+// Interpreta el dato de un botón (acción:valor:token) y ejecuta la acción correspondiente.
 async function acciones(c: Ctx, d: string) {
   const [k, v = "", t = ""] = d.split(":");
   if ((k === "f" || k === "p" || k === "d") && t && !(c.e.articleId ?? "").startsWith(t)) {
@@ -1149,6 +1209,7 @@ async function acciones(c: Ctx, d: string) {
   }
 }
 
+// Acciones finales: guardar, enviar a revisión, programar y publicar, con confirmación y permisos.
 async function finales(c: Ctx, v: string) {
   if (!c.e.articleId && !c.e.title) return void (await mostrar(c, "No tengo una nota en curso. Envía /nueva para empezar."));
   await guardar(c);
@@ -1160,6 +1221,7 @@ async function finales(c: Ctx, v: string) {
   if (v === "p") {
     // Lista de comprobación, como en «Programar la publicación» del asistente web.
     const a = auditoria(c);
+    // Marca ✓ o ○ según se cumpla un requisito.
     const ok = (b: boolean, t: string) => `${b ? "✓" : "○"} ${t}`;
     return void (await mostrar(c, `📅 <b>Programar la publicación</b>\n<i>La nota queda guardada con todo y se publica sola a la hora elegida (hora de Colombia).</i>\n\n${[
       ok(Boolean(c.e.coverUrl), "Foto de portada"),

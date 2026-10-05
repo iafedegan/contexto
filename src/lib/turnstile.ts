@@ -12,6 +12,7 @@ export function turnstileEnabled(): boolean {
   return Boolean(process.env.TURNSTILE_SECRET_KEY?.trim() && process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY?.trim());
 }
 
+// Valida con Cloudflare el token de verificación humana. Sin claves devuelve verdadero; si Cloudflare no responde, tampoco bloquea.
 export async function verifyHuman(token: string | null | undefined, ip?: string): Promise<boolean> {
   if (!turnstileEnabled()) return true;
   if (!token) return false;

@@ -20,6 +20,7 @@ export type Theme =
   | "panel"
   | "acceso";
 
+// Nombre del sitio, de la variable de entorno o el predeterminado.
 export const SITE_NAME = process.env.NEXT_PUBLIC_SITE_NAME ?? "CONtexto Ganadero";
 
 /** Nombre "de galería" del tema, visible en los footers como firma de diseño. */

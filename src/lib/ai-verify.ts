@@ -52,6 +52,7 @@ export async function verifyApiKey(
     const google = (data.models ?? [])
       .filter((m) => (m.supportedGenerationMethods ?? ["generateContent"]).includes("generateContent"))
       .map((m) => (m.name ?? "").replace(/^models\//, ""));
+    // Ids de los modelos que devuelve la cuenta de Anthropic.
     const anthropic = (data.data ?? []).map((m) => m.id ?? "");
 
     return { ok: true, models: [...google, ...anthropic].filter(Boolean) };

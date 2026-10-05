@@ -11,6 +11,7 @@ import {
   type AnalyticsStatus,
 } from "@/lib/analytics";
 
+// Lee los ajustes de analítica de la base (una consulta por petición); si falla devuelve los valores por defecto.
 export const readAnalytics = cache(async (): Promise<AnalyticsSettings> => {
   try {
     const [row] = await db
@@ -50,6 +51,7 @@ export async function getSearchConsoleToken(): Promise<string> {
   return (await readAnalytics()).searchConsoleToken;
 }
 
+// Estado de la analítica para el panel: las variables de entorno mandan sobre lo guardado y se indica de dónde sale la clave de PageSpeed.
 export async function getAnalyticsStatus(): Promise<AnalyticsStatus> {
   const settings = await readAnalytics();
   const { key, source } = await getPsiKey();

@@ -17,6 +17,7 @@ export type EmailArticle = {
   publishedAt: Date | null;
 };
 
+// Datos necesarios para dibujar un boletín.
 export type NewsletterRender = {
   siteName: string;
   settings: NewsletterSettings;
@@ -33,9 +34,11 @@ export type NewsletterRender = {
   isTest?: boolean;
 };
 
+// Escapa los caracteres especiales de HTML.
 const esc = (s: string) =>
   s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 
+// Convierte una dirección relativa en absoluta del sitio.
 const absolute = (u: string) => (/^https?:\/\//i.test(u) ? u : siteUrl(u.startsWith("/") ? u : `/${u}`));
 
 /** Enlace a una nota, con parámetros para medir en analítica cuánto trae el boletín. */
@@ -47,6 +50,7 @@ function articleLink(slug: string, issue: number | null): string {
   return url.toString();
 }
 
+// Convierte un texto en párrafos HTML con el estilo dado.
 const paragraphs = (text: string, style: string) =>
   text
     .split(/\n\s*\n/)
@@ -55,12 +59,16 @@ const paragraphs = (text: string, style: string) =>
     .map((p) => `<p style="${style}">${esc(p).replace(/\n/g, "<br>")}</p>`)
     .join("");
 
+// Fecha larga en español de Colombia, en hora de Bogotá.
 const fmtDate = (d: Date) =>
   new Intl.DateTimeFormat("es-CO", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "America/Bogota" }).format(d);
 
+// Tipografía con serifa para los titulares del correo.
 const SERIF = "Georgia, 'Times New Roman', Times, serif";
+// Tipografía sin serifa para el texto del correo.
 const SANS = "-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
 
+// Genera el HTML completo del boletín, compatible con clientes de correo (tablas y estilos en línea).
 export function renderNewsletterHtml(r: NewsletterRender): string {
   const accent = r.settings.accentColor;
   const [lead, ...rest] = r.articles;

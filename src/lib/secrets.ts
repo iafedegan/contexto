@@ -14,6 +14,7 @@ import { createCipheriv, createDecipheriv, randomBytes, scryptSync } from "node:
  */
 const ALGO = "aes-256-gcm";
 
+// Deriva la clave de cifrado a partir del secreto de la aplicación (scrypt con sal fija).
 function key(): Buffer {
   const secret =
     process.env.AUTH_SECRET ??

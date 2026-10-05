@@ -18,18 +18,24 @@ export const SECTION_ELS: Array<{ id: SectionElId; label: string; hint: string; 
   { id: "filters", label: "Filtros", hint: "Atajos de fecha y subsección", gradient: false },
 ];
 
+// Rangos permitidos (tamaño y espaciado entre letras) de los textos del encabezado de sección.
 export const EL_RANGES = {
   size: { min: 8, max: 220 },
   tracking: { min: -2, max: 20 },
 } as const;
 
+// Grosores de letra permitidos.
 export const WEIGHTS = [300, 400, 500, 600, 700, 800, 900] as const;
 
+// Color hexadecimal válido de 3 o 6 dígitos.
 const HEX = /^#(?:[\da-f]{3}|[\da-f]{6})$/i;
+// Devuelve el color si es válido; si no, undefined.
 const hex = (v: unknown) => (typeof v === "string" && HEX.test(v) ? v : undefined);
+// Valida un número y lo acota al rango dado, con un decimal.
 const clamp = (v: unknown, min: number, max: number) =>
   typeof v === "number" && Number.isFinite(v) ? Math.min(max, Math.max(min, Math.round(v * 10) / 10)) : undefined;
 
+// Valida un degradado (dos colores y un ángulo); undefined si no es válido.
 export function sanitizeGradient(input: unknown): Gradient | undefined {
   if (!input || typeof input !== "object") return undefined;
   const g = input as Record<string, unknown>;
@@ -38,6 +44,7 @@ export function sanitizeGradient(input: unknown): Gradient | undefined {
   return from && to ? { from, to, angle: angle ?? 90 } : undefined;
 }
 
+// Convierte un degradado en la función CSS linear-gradient.
 export const gradientCss = (g: Gradient) => `linear-gradient(${g.angle}deg,${g.from},${g.to})`;
 
 /** Normaliza lo guardado a un objeto seguro. */

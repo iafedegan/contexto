@@ -18,6 +18,7 @@ export const TAG_AJUSTES = "ajustes";
 
 /** Un `Date` serializado por JSON.stringify: `2026-10-05T10:00:00.000Z`, exactamente con ese formato. */
 const FECHA_ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
+// Al leer el JSON, convierte de nuevo en fecha los textos con formato ISO exacto.
 const revivirFechas = (_clave: string, valor: unknown) =>
   typeof valor === "string" && FECHA_ISO.test(valor) ? new Date(valor) : valor;
 

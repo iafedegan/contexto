@@ -11,6 +11,7 @@
 
 export type AuditSeverity = "error" | "aviso" | "ok";
 
+// Un criterio de la auditoría SEO: si se cumple, su explicación y a qué grupo pertenece.
 export type AuditItem = {
   id: string;
   ok: boolean;
@@ -26,6 +27,7 @@ export type AuditItem = {
 
 /** Bloques de la nota: reflejan cómo Google evalúa un artículo (ver criterios en `GROUP_OF`). */
 export type AuditGroupId = "contenido" | "ficha" | "discover" | "lectura";
+// Grupos en los que se organizan los criterios de la auditoría.
 export const AUDIT_GROUPS: Record<AuditGroupId, string> = {
   contenido: "Contenido útil y confiable",
   ficha: "Ficha en buscadores",
@@ -50,6 +52,7 @@ const GROUP_OF: Record<string, AuditGroupId> = {
   portada: "discover", "portada-alt": "discover", alt: "discover",
   intertitulos: "lectura", parrafos: "lectura", frases: "lectura", etiquetas: "lectura",
 };
+// Criterios críticos: si fallan, limitan la nota final.
 const CRITICAL = new Set(["firma", "fuentes", "pendientes", "titulo-limpio"]);
 /** Peso por criterio: el contenido y la confianza pesan más que las meta etiquetas. */
 const WEIGHT: Record<string, number> = {
@@ -59,6 +62,7 @@ const WEIGHT: Record<string, number> = {
   intertitulos: 1, parrafos: 1, frases: 1, etiquetas: 1,
 };
 
+// Resultado de la auditoría: nota global, nota por bloque y lista de criterios.
 export type AuditResult = {
   score: number;
   /** Nota (0–100) por bloque; null si el bloque no tiene criterios evaluables. */
@@ -69,6 +73,7 @@ export type AuditResult = {
   stats: { words: number; minutes: number; paragraphs: number; headings: number };
 };
 
+// Datos de la nota que se audita.
 export type AuditInput = {
   title: string;
   excerpt: string;
@@ -84,6 +89,7 @@ export type AuditInput = {
   authorName?: string | null;
 };
 
+// Quita las etiquetas HTML y deja texto plano con espacios normalizados.
 const stripTags = (html: string) => html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
 
 /** Normaliza para comparar: sin tildes, minúsculas. */
@@ -95,6 +101,7 @@ const STOP = new Set(
   "el la los las un una unos unas de del al a y o u en con por para que se su sus lo es son sobre entre como mas más".split(" "),
 );
 
+// Palabras clave del enfoque de la nota, normalizadas (sin tildes ni símbolos).
 export function focusTerms(focus: string): string[] {
   return norm(focus)
     .split(/[^a-z0-9ñ]+/)
@@ -102,6 +109,7 @@ export function focusTerms(focus: string): string[] {
     .slice(0, 6);
 }
 
+// Audita una nota contra los criterios SEO y de confianza y devuelve la nota global, por bloque y el detalle de cada criterio.
 export function auditArticle(input: AuditInput): AuditResult {
   const title = (input.metaTitle || input.title).trim();
   const desc = (input.metaDescription || input.excerpt).trim();
@@ -115,6 +123,7 @@ export function auditArticle(input: AuditInput): AuditResult {
   const firstParagraph = norm(stripTags(input.body.split(/<\/p>/i)[0] ?? ""));
 
   const items: AuditItem[] = [];
+  // Registra el resultado de un criterio.
   const add = (
     id: string,
     ok: boolean,

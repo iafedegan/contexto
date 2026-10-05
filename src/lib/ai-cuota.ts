@@ -17,11 +17,15 @@ import { estimateCostUsd } from "@/lib/budget";
  * pisan. El costo es una ESTIMACIÓN por tokens (ver `estimateCostUsd`).
  */
 export const CUOTAS_KEY = "ai_quotas";
+// Cuota mensual de IA en dólares: una predeterminada para todos y excepciones por persona.
 export type Cuotas = { predeterminada: number | null; personas: Record<string, number> };
 
+// Mes en curso con formato AAAA-MM (UTC), para llevar el gasto por mes.
 const mesActual = () => new Date().toISOString().slice(0, 7);
+// Clave de site_settings donde se acumula el gasto de IA de un mes.
 const spendKey = (mes = mesActual()) => `ai_spend_${mes}`;
 
+// Lee las cuotas guardadas (una consulta por petición); si falla o no hay nada, no hay topes.
 export const getCuotas = cache(async (): Promise<Cuotas> => {
   try {
     const [row] = await db.select({ value: siteSettings.value }).from(siteSettings).where(eq(siteSettings.key, CUOTAS_KEY)).limit(1);
@@ -35,6 +39,7 @@ export const getCuotas = cache(async (): Promise<Cuotas> => {
   }
 });
 
+// Lee el gasto de IA acumulado del mes, por persona (una consulta por petición).
 export const getGastos = cache(async (): Promise<Record<string, number>> => {
   try {
     const [row] = await db.select({ value: siteSettings.value }).from(siteSettings).where(eq(siteSettings.key, spendKey())).limit(1);
@@ -51,6 +56,7 @@ export function cuotaDe(c: Cuotas, userId: string): number | null {
   return typeof propia === "number" ? propia : c.predeterminada;
 }
 
+// Formatea un monto en dólares: dos decimales por debajo de 10 y enteros por encima.
 export const fmtUsd = (n: number) => `US$ ${n.toFixed(n < 10 ? 2 : 0)}`;
 
 /** Se llama ANTES de gastar tokens: corta si la persona ya agotó su cuota. */
@@ -68,7 +74,9 @@ export async function verificarCuotaIA(userId: string): Promise<{ ok: true } | {
   return { ok: true };
 }
 
+// Uso de tokens que informa el modelo; según el proveedor llega como número o como objeto con total.
 type Uso = { inputTokens?: number | { total?: number } | undefined; outputTokens?: number | { total?: number } | undefined } | undefined;
+// Extrae el total de tokens de cualquiera de las dos formas de reportarlo.
 const n = (v: number | { total?: number } | undefined) => (typeof v === "number" ? v : (v?.total ?? 0));
 
 /** Se llama DESPUÉS de cada llamada al modelo con su `usage`. Nunca rompe la acción. */

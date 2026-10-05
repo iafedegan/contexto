@@ -26,6 +26,7 @@ export function base64UrlABytes(base64: string): Uint8Array<ArrayBuffer> {
   return bytes;
 }
 
+// Resultado de pedir la suscripción a notificaciones.
 export type ResultadoSuscripcion = "activada" | "bloqueada" | "rechazada" | "error";
 
 /** Pide el permiso (debe llamarse desde un clic) y registra la suscripción en el servidor. */

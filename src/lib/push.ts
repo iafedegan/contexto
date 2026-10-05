@@ -20,12 +20,15 @@ import { siteUrl } from "@/lib/utils";
  */
 
 const PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? "";
+// Clave privada VAPID, solo servidor.
 const PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY ?? "";
 
+// Indica si las claves VAPID están configuradas.
 export function pushConfigurado(): boolean {
   return Boolean(PUBLIC_KEY && PRIVATE_KEY);
 }
 
+// Registra los datos VAPID en la librería web-push y devuelve el nombre del sitio.
 async function configurar() {
   const { name } = await getSiteIdentity().catch(() => ({ name: "CONtexto Ganadero" }));
   webpush.setVapidDetails(
@@ -68,6 +71,7 @@ export function clavesPushValidas(keys: { p256dh: string; auth: string }): boole
   return b64.test(keys.p256dh) && b64.test(keys.auth);
 }
 
+// Resumen de un envío: enviados, caducados y fallidos.
 export type EnvioPush = { enviados: number; caducados: number; fallidos: number };
 
 /**
@@ -168,18 +172,22 @@ export async function borrarSuscripcion(endpoint: string) {
  * ------------------------------------------------------------------------------------------------------------ */
 
 const ENVIADOS_KEY = "push_enviados";
+// Nota ya avisada y cuándo.
 type Enviado = { id: string; at: string };
 
+// Indica si ya se avisó a los lectores de esta nota.
 export async function notaYaAvisada(id: string): Promise<boolean> {
   const [row] = await db.select({ v: siteSettings.value }).from(siteSettings).where(eq(siteSettings.key, ENVIADOS_KEY)).limit(1);
   return ((row?.v as Enviado[] | undefined) ?? []).some((x) => x.id === id);
 }
+// Registra que una nota ya se avisó (se conservan las últimas 200).
 async function marcarEnviado(id: string) {
   const [row] = await db.select({ v: siteSettings.value }).from(siteSettings).where(eq(siteSettings.key, ENVIADOS_KEY)).limit(1);
   const lista = [{ id, at: new Date().toISOString() }, ...(((row?.v as Enviado[] | undefined) ?? []).filter((x) => x.id !== id))].slice(0, 200);
   await db.insert(siteSettings).values({ key: ENVIADOS_KEY, value: lista as never }).onConflictDoUpdate({ target: siteSettings.key, set: { value: lista as never, updatedAt: new Date() } });
 }
 
+// Resultado de avisar una nota: el resumen del envío o el motivo por el que no se envió.
 export type AvisoNota = { ok: true; enviados: number; caducados: number; fallidos: number } | { ok: false; motivo: string };
 
 /**
@@ -215,6 +223,7 @@ export async function avisarNota(articleId: string, opts: { repetir?: boolean; u
 export function avisarSiUltimaHora(articleId: string | string[]) {
   const ids = Array.isArray(articleId) ? articleId : [articleId];
   if (!ids.length || !pushConfigurado()) return;
+  // Tarea que avisa a los lectores de las notas de última hora, una por una.
   const tarea = async () => {
     for (const id of ids) {
       try {

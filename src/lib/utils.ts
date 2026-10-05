@@ -1,6 +1,7 @@
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 
+// Une clases CSS resolviendo los conflictos de Tailwind.
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
@@ -30,10 +31,12 @@ function baseUrl(): string {
   return "http://localhost:3000";
 }
 
+// Dirección absoluta de una ruta del sitio.
 export function siteUrl(path = "/"): string {
   return new URL(path, baseUrl()).toString();
 }
 
+// Convierte un texto en una dirección legible: minúsculas, sin tildes ni símbolos.
 export function slugify(input: string): string {
   return input
     .normalize("NFD")

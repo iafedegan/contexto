@@ -34,6 +34,7 @@ export async function publicBase(): Promise<string | null> {
   return null;
 }
 
+// Pide a PageSpeed Insights el análisis de una página (móvil o escritorio) y lo convierte en un informe; devuelve un error legible si falla.
 export async function runPageSpeed(
   url: string,
   strategy: "mobile" | "desktop" = "mobile",
@@ -79,6 +80,7 @@ export async function runPageSpeed(
   if (!lh) return { ok: false, error: "Google no devolvió informe para esa dirección." };
 
   const cat = lh.categories ?? {};
+  // Convierte una puntuación de 0 a 1 en porcentaje entero.
   const pct = (v?: { score?: number | null }) =>
     typeof v?.score === "number" ? Math.round(v.score * 100) : null;
 

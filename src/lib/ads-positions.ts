@@ -28,6 +28,7 @@ export const AD_ZONE_SPECS = {
   footer: { width: 728, height: 90, label: "Pie — banner antes del pie (728×90)", where: "Todo el sitio, antes del pie" },
 } as const;
 
+// Posición publicitaria: cualquiera de las claves definidas en AD_ZONE_SPECS.
 export type AdPosition = keyof typeof AD_ZONE_SPECS;
 /** Alias histórico. */
 export type AdZoneKey = AdPosition;

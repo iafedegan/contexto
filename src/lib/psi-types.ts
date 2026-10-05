@@ -12,6 +12,7 @@ export type PsiAudit = {
   score: number | null;
 };
 
+// Informe completo de una página: puntuaciones, auditorías fallidas y momento de la consulta.
 export type PsiReport = {
   url: string;
   strategy: "mobile" | "desktop";
@@ -24,4 +25,5 @@ export type PsiReport = {
   fetchedAt: string;
 };
 
+// Resultado de pedir un análisis: el informe o un mensaje de error.
 export type PsiResult = { ok: true; report: PsiReport } | { ok: false; error: string };

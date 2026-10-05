@@ -18,9 +18,11 @@ export const draftKey = (userId: string) => `home_draft:${userId}`;
  * portada real y no una aproximación.
  */
 const holder = cache(() => ({ draft: null as PortadaDraft | null }));
+// Fija el borrador activo para esta petición.
 export const setPreviewDraft = (d: PortadaDraft | null) => {
   holder().draft = d;
 };
+// Borrador activo en esta petición, o null.
 export const getPreviewDraft = () => holder().draft;
 
 /** Valida lo que llega de la base (o del editor) antes de pintarlo. */
@@ -43,7 +45,9 @@ export function sanitizeDraft(input: unknown): PortadaDraft | null {
   const adDrafts: Record<string, AdDraft> = {};
   for (const [key, v] of Object.entries((r.adDrafts ?? {}) as Record<string, Record<string, unknown>>)) {
     if (!/^[a-z_]+(__\d)?$/.test(key)) continue;
+    // Acepta solo fechas con formato ISO.
     const dt = (u: unknown) => (typeof u === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,3})?)?(?:Z|[+-]\d{2}:\d{2})?$/.test(u) ? u : "");
+    // Acepta solo direcciones http(s) y las recorta.
     const http = (u: unknown) => (typeof u === "string" && /^https?:\/\//i.test(u) ? u.slice(0, 600) : "");
     adDrafts[key] = {
       imageUrl: http(v?.imageUrl),

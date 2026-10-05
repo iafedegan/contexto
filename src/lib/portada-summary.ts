@@ -4,6 +4,7 @@ import { HOME_TEMPLATES } from "@/lib/home-layout";
 import { REGIONS } from "@/lib/home-regions";
 import type { PopupConfig } from "@/lib/popup-types";
 
+// Diseño de portada con todos sus campos.
 type Layout = Required<HomeLayoutConfig>;
 
 /**
@@ -21,6 +22,7 @@ export type PortadaState = {
   auto?: boolean;
 };
 
+// Una línea del resumen de cambios pendientes de publicar.
 export type ChangeLine = {
   id: string;
   text: string;
@@ -41,10 +43,13 @@ export function stable(v: unknown): string {
   return JSON.stringify(v) ?? "null";
 }
 
+// Anuncio vacío, sin creatividad ni fechas.
 export const emptyAd: AdDraft = { imageUrl: "", clickUrl: "", html: "", active: false, startsAt: "", endsAt: "" };
 
+// Nombre de una plantilla por su id.
 const templateName = (id: string | undefined) => HOME_TEMPLATES.find((t) => t.id === id)?.name ?? "Personalizada";
 
+// Lista de nombres separados por comas, resumida si son más de los permitidos.
 const listar = (xs: string[], max = 3) =>
   xs.length <= max ? xs.join(", ") : `${xs.slice(0, max).join(", ")} y ${xs.length - max} más`;
 

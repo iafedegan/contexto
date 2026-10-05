@@ -14,6 +14,7 @@ export type BlockToolsOptions = {
   isCurrent?: () => boolean;
 };
 
+// Id de la hoja de estilos de las herramientas de bloque.
 const STYLE_ID = "cg-block-tools-style";
 
 /** Quita lo que añadió una pasada anterior (para repetirla tras refrescar). */
@@ -22,6 +23,7 @@ export function cleanupBlocks(root: ParentNode) {
   root.querySelectorAll("[data-cg-block]").forEach((n) => n.removeAttribute("data-cg-block"));
 }
 
+// Añade a cada bloque del lienzo los controles de edición, entre ellos el asa para cambiar su alto arrastrando.
 export function enhanceBlocks(doc: Document, root: ParentNode, opts: BlockToolsOptions) {
   cleanupBlocks(root);
   if (!doc.getElementById(STYLE_ID)) {
@@ -64,6 +66,7 @@ export function enhanceBlocks(doc: Document, root: ParentNode, opts: BlockToolsO
       let moved = false;
       const sx = ev.clientX, sy = ev.clientY;
       const scale = r0.width / (el.offsetWidth || r0.width) || 1;
+      // Mientras se arrastra: recalcula el alto mínimo del bloque.
       const move = (e: PointerEvent) => {
         if (Math.abs(e.clientX - sx) + Math.abs(e.clientY - sy) > 4) moved = true;
         h = Math.max(60, r0.height + (e.clientY - sy) / scale);
@@ -78,6 +81,7 @@ export function enhanceBlocks(doc: Document, root: ParentNode, opts: BlockToolsO
           el.style.width = `${widthPct}%`;
         }
       };
+      // Al soltar: deja de escuchar el arrastre y fija el alto solo si hubo movimiento.
       const up = () => {
         handle.removeEventListener("pointermove", move);
         handle.removeEventListener("pointerup", up);
@@ -134,6 +138,7 @@ export type ZoneMapItem = {
   h: number;
 };
 
+// Mapa de una zona del lienzo: sus medidas y los bloques que contiene, para el editor.
 export type ZoneMapData = {
   /** Identificador de la zona (`i<N>u<n>` en la portada, `s-<slug>u<n>` en secciones). */
   key: string | null;
@@ -152,7 +157,9 @@ export type ZoneMapData = {
   items: ZoneMapItem[];
 };
 
+// Selector de los bloques editables.
 const BLOCK_SEL = "[data-bslug],[data-bs-root]";
+// Indica si un elemento es un bloque exterior, no anidado dentro de otro.
 const isOuterBlock = (el: Element) => el.hasAttribute("data-bslug") || !el.closest("[data-bslug]");
 
 /**
@@ -167,7 +174,9 @@ export function measureZone(el: HTMLElement, up = 0): ZoneMapData | null {
   const cs = view?.getComputedStyle(container);
   const cr = container.getBoundingClientRect();
   if (cr.width < 10) return null;
+  // Posición y tamaño de un rectángulo relativos a su contenedor.
   const rel = (r: DOMRect) => ({ x: r.left - cr.left, y: r.top - cr.top, w: r.width, h: r.height });
+  // Título breve de un bloque, tomado de su encabezado o de su texto.
   const title = (n: Element) => (n.querySelector("h1,h2,h3,.entry-title")?.textContent ?? n.textContent ?? "").trim().slice(0, 40);
 
   const blocks = Array.from(container.querySelectorAll<HTMLElement>(BLOCK_SEL)).filter(isOuterBlock);

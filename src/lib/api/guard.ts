@@ -32,12 +32,14 @@ export async function guardApi(req: Request): Promise<{ ok: true; client: Verifi
   return { ok: true, client };
 }
 
+// Cabeceras CORS: la API pública admite peticiones desde cualquier origen, con la clave en una cabecera.
 export const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
   "Access-Control-Allow-Headers": "Authorization, X-API-Key, Content-Type",
 };
 
+// Respuesta JSON de la API pública, siempre con las cabeceras CORS.
 export function json(data: unknown, init?: ResponseInit) {
   return NextResponse.json(data, { ...init, headers: { ...CORS_HEADERS, ...init?.headers } });
 }

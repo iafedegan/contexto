@@ -1,6 +1,7 @@
 import "server-only";
 import { EMBEDDING_DIMENSIONS } from "@/db/schema";
 
+// Modelo de embeddings: configurable por entorno, por defecto text-embedding-3-small.
 const MODEL = process.env.EMBEDDING_MODEL ?? "text-embedding-3-small";
 
 /**

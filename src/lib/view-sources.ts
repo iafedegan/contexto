@@ -10,8 +10,10 @@ import { siteSettings } from "@/db/schema";
  */
 const claveMes = (d = new Date()) =>
   new Intl.DateTimeFormat("en-CA", { year: "numeric", month: "2-digit", timeZone: "America/Bogota" }).format(d).slice(0, 7);
+// Clave mensual donde se cuentan las fuentes de lectura.
 const key = (mes: string) => `view_sources_${mes}`;
 
+// Patrones de dominios de redes sociales y buscadores y el nombre con el que se agrupan.
 const REDES: [RegExp, string][] = [
   [/(^|\.)google\./, "Google"],
   [/(^|\.)bing\.com$/, "Bing"],
@@ -26,6 +28,7 @@ const REDES: [RegExp, string][] = [
   [/(^|\.)(news\.google\.com|discover\.google\.com)$/, "Google Noticias / Discover"],
 ];
 
+// Texto limpio para usar como etiqueta: minúsculas, solo caracteres seguros y largo acotado.
 const limpio = (s: unknown, max = 40) =>
   String(s ?? "").toLowerCase().replace(/[^a-z0-9áéíóúñü _.\-+/]/gi, "").trim().slice(0, max);
 
@@ -49,6 +52,7 @@ export function clasificarFuente(i: { utmSource?: string; utmMedium?: string; ut
   return h.slice(0, 60);
 }
 
+// Suma una lectura a la fuente indicada del mes actual; si falla, no afecta la lectura.
 export async function registrarFuente(articleId: string, etiqueta: string): Promise<void> {
   try {
     await db.execute(sql`
@@ -68,6 +72,7 @@ export async function registrarFuente(articleId: string, etiqueta: string): Prom
   }
 }
 
+// Origen de lecturas de una nota y cuántas aportó.
 export type FuenteLectura = { fuente: string; lecturas: number };
 
 /** Orígenes de un artículo en el mes actual y el anterior (≈ últimos 30-60 días), de mayor a menor. */

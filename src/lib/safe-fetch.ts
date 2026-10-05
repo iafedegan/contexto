@@ -53,6 +53,7 @@ export function ipPrivada(ip: string): boolean {
   return BLOQUEADAS.check(ip, version === 6 ? "ipv6" : "ipv4");
 }
 
+// Dirección IP resuelta y su familia (4 o 6).
 type Direccion = { address: string; family: number };
 
 /** `lookup` de la conexión: resuelve y rechaza si CUALQUIER respuesta apunta a una red no pública. */
@@ -71,8 +72,10 @@ function lookupSeguro(
   });
 }
 
+// Respuesta descargada: estado, tipo, cuerpo y la dirección final tras las redirecciones.
 export type RespuestaSegura = { status: number; tipo: string; cuerpo: string; url: URL };
 
+// Respuesta de una petición individual, antes de seguir redirecciones.
 type Salto = { status: number; tipo: string; location: string | null; cuerpo: string };
 
 /** Una sola petición GET, sin seguir redirecciones. */
@@ -97,6 +100,7 @@ function pedir(url: URL, maxBytes: number, cabeceras: Record<string, string>): P
         const partes: Buffer[] = [];
         let total = 0;
         let cerrado = false;
+        // Cierra la respuesta una sola vez con el cuerpo acumulado.
         const fin = () => {
           if (cerrado) return;
           cerrado = true;

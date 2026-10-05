@@ -10,17 +10,22 @@ import type { HomeTemplateId } from "@/lib/home-layout";
  */
 
 export type NavbarId = "masthead" | "couture" | "bold" | "glass" | "crest" | "gremial";
+// Identificadores de los pies de página disponibles.
 export type FooterId = "grand" | "atelier" | "copper" | "aurora" | "seal" | "gremial";
+// Identificador del cuerpo: coincide con el de las plantillas de portada.
 export type BodyId = HomeTemplateId;
 
+// Piezas elegidas para una plantilla compuesta: barra, cuerpo y pie.
 export type TemplateParts = {
   navbar?: NavbarId;
   body?: BodyId;
   footer?: FooterId;
 };
 
+// Opción de un selector: id, etiqueta y descripción.
 type Option<T> = { id: T; label: string; description: string };
 
+// Barras de navegación disponibles.
 export const NAVBARS: Option<NavbarId>[] = [
   { id: "masthead", label: "Cabecera de diario", description: "Fecha y edición arriba, logotipo grande centrado y menú en una franja." },
   { id: "couture", label: "Frontispicio", description: "Nombre espaciado y centrado, filetes finos y menú en dos líneas." },
@@ -30,6 +35,7 @@ export const NAVBARS: Option<NavbarId>[] = [
   { id: "gremial", label: "Gremial", description: "Logotipo rojo + lema, menú horizontal, buscador y «Mi cuenta»." },
 ];
 
+// Cuerpos de portada disponibles.
 export const BODIES: Option<BodyId>[] = [
   { id: "esmeralda", label: "Apertura + «Lo último»", description: "Nota principal grande y columna numerada con lo más reciente." },
   { id: "clasico", label: "Diario", description: "Portada de periódico: apertura, columnas con filetes y breves." },
@@ -39,6 +45,7 @@ export const BODIES: Option<BodyId>[] = [
   { id: "gremial", label: "Gremial", description: "Apertura + 3 destacadas, cuadrícula de noticias, accesos por sección, columnistas y boletín." },
 ];
 
+// Pies de página disponibles.
 export const FOOTERS: Option<FooterId>[] = [
   { id: "grand", label: "Pie completo", description: "Columnas de secciones, herramientas y legales." },
   { id: "atelier", label: "Pie editorial", description: "Firma centrada y enlaces discretos." },

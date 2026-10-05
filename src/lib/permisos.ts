@@ -13,6 +13,7 @@ import type { UserRole } from "@/db/schema";
 
 export const RANGO: Record<UserRole, number> = { redactor: 1, editor: 2, administrador: 3 };
 
+// Catálogo de permisos con el rol mínimo que los tiene por defecto.
 export const PERMISOS = [
   { id: "articulos", label: "Redactar artículos", hint: "Crear y editar artículos y mandarlos a revisión", min: "redactor" },
   { id: "publicar", label: "Publicar y eliminar artículos", hint: "Publicar, programar, despublicar y borrar", min: "editor" },
@@ -24,8 +25,11 @@ export const PERMISOS = [
   { id: "api", label: "API pública", hint: "Claves para terceros", min: "administrador" },
 ] as const satisfies readonly { id: string; label: string; hint: string; min: UserRole }[];
 
+// Identificador de un permiso.
 export type PermisoId = (typeof PERMISOS)[number]["id"];
+// Lista de ids de permiso, para validar entradas.
 export const PERMISO_IDS: readonly string[] = PERMISOS.map((p) => p.id);
+// Ajustes individuales: permisos encendidos o apagados y la exigencia de segundo factor.
 export type Ajustes = Partial<Record<PermisoId | typeof DOS_PASOS, boolean>>;
 
 /**
@@ -34,6 +38,7 @@ export type Ajustes = Partial<Record<PermisoId | typeof DOS_PASOS, boolean>>;
  * administrador nunca queda exento.
  */
 export const DOS_PASOS = "exigir_2fa";
+// Indica si la persona debe usar segundo factor: los administradores siempre; el resto, salvo que se les exima.
 export function exige2fa(role: UserRole, ajustes: Ajustes | undefined): boolean {
   if (role === "administrador") return true;
   return ajustes?.[DOS_PASOS] ?? true;
@@ -52,6 +57,7 @@ export function efectivo(role: UserRole, ajustes: Ajustes | undefined, id: Permi
   return typeof a === "boolean" ? a : porDefecto(role, id);
 }
 
+// Lista de permisos que una persona tiene realmente (su rol más los ajustes).
 export function efectivos(role: UserRole, ajustes: Ajustes | undefined): PermisoId[] {
   return PERMISOS.filter((p) => efectivo(role, ajustes, p.id)).map((p) => p.id);
 }

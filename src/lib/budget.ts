@@ -13,6 +13,7 @@ import { assistantQueries, siteSettings } from "@/db/schema";
  */
 const PRICE = { inputPerM: 3, outputPerM: 15 };
 
+// Coste estimado en dólares de una consulta según sus tokens de entrada y de salida.
 export function estimateCostUsd(inputTokens: number, outputTokens: number): number {
   return (
     (inputTokens / 1_000_000) * PRICE.inputPerM +
@@ -26,8 +27,10 @@ export function estimateCostUsd(inputTokens: number, outputTokens: number): numb
  * sirven de valor inicial mientras nadie los haya cambiado.
  */
 export const LIMITES_KEY = "assistant_limits";
+// Límites de uso del asistente: presupuesto mensual y tope de consultas por sesión.
 export type LimitesAsistente = { presupuestoMensualUsd: number; topePorSesion: number };
 
+// Límites vigentes: lo que guardó un administrador o, si no hay nada, los valores del entorno ya validados.
 export async function getLimites(): Promise<LimitesAsistente> {
   // Un valor no numérico en el entorno daría NaN, y `gasto >= NaN` nunca es verdadero: el tope quedaría
   // desactivado sin avisar. Se valida y, si no sirve, se usa el valor por defecto.
@@ -51,6 +54,7 @@ export async function getLimites(): Promise<LimitesAsistente> {
   }
 }
 
+// Resultado de comprobar el presupuesto: si se puede generar, el motivo si no, y el consumo actual.
 export type BudgetState = {
   allowGeneration: boolean;
   reason: "ok" | "presupuesto_mensual" | "limite_sesion";
@@ -58,6 +62,7 @@ export type BudgetState = {
   sessionCount: number;
 };
 
+// Comprueba el gasto del mes y las consultas del día de la sesión para decidir si el asistente puede generar una respuesta.
 export async function checkBudget(sessionId: string): Promise<BudgetState> {
   const { presupuestoMensualUsd: MONTHLY_BUDGET, topePorSesion: SESSION_LIMIT } = await getLimites();
   const startOfMonth = new Date();
@@ -93,6 +98,7 @@ export async function checkBudget(sessionId: string): Promise<BudgetState> {
   return { allowGeneration: true, reason: "ok", monthSpendUsd, sessionCount };
 }
 
+// Inicio del día actual en UTC.
 function startOfDay(): Date {
   const d = new Date();
   d.setUTCHours(0, 0, 0, 0);

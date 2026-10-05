@@ -15,9 +15,11 @@ import { tienePermiso } from "@/lib/permisos-server";
 import type { PermisoId } from "@/lib/permisos";
 
 declare module "next-auth" {
+  // Se amplía el tipo de sesión de Auth.js con el id y el rol de la persona.
   interface Session {
     user: { id: string; role: UserRole } & DefaultSession["user"];
   }
+  // Se amplía el tipo de usuario de Auth.js con su rol.
   interface User {
     role: UserRole;
   }
@@ -39,10 +41,14 @@ const secret =
  * propio cada app conserva su sesión.
  */
 const COOKIE_PREFIX = "contexto";
+// En producción las cookies de sesión solo viajan por HTTPS.
 const useSecureCookies = process.env.NODE_ENV === "production";
+// Nombre de la cookie de sesión en desarrollo.
 export const SESSION_COOKIE = `${COOKIE_PREFIX}.session-token`;
+// Nombre de la cookie de sesión en producción (con prefijo __Secure-).
 export const SESSION_COOKIE_SECURE = `__Secure-${COOKIE_PREFIX}.session-token`;
 
+// Configuración de Auth.js: sesión JWT de 8 h, cookies propias, acceso por correo y contraseña (+ 2FA o passkey) y datos de sesión leídos de la base en cada petición.
 export const { handlers, signIn, signOut, auth } = NextAuth({
   secret,
   trustHost: true,
@@ -188,6 +194,7 @@ const ROLE_RANK: Record<UserRole, number> = {
   administrador: 3,
 };
 
+// Exige sesión vigente y un rol mínimo; cierra el paso a cuentas desactivadas o inexistentes y devuelve los datos de la persona.
 export async function requireRole(min: UserRole) {
   const session = await auth();
   // `motivo` lo muestra la pantalla de login: así un redireccionamiento al
@@ -236,6 +243,7 @@ export async function requirePermiso(id: PermisoId) {
   return user;
 }
 
+// Indica si el rol puede publicar: editor o superior.
 export function canPublish(role: UserRole): boolean {
   return ROLE_RANK[role] >= ROLE_RANK.editor;
 }

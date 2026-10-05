@@ -21,13 +21,17 @@ export type ChartSpec = {
 
 /** Ancho del lienzo. Por defecto 800; la versión interactiva lo pide igual al ancho de su contenedor para que los textos no se encojan. */
 let W = 800;
+// Ancho mínimo del lienzo de la gráfica, en píxeles.
 const ANCHO_MIN = 300;
+// Ancho máximo del lienzo de la gráfica, en píxeles.
 const ANCHO_MAX = 900;
 /** Estilo «infografía moderna»: panel de vidrio oscuro con degradados neón (turquesa, violeta, rosa, ámbar). */
 const PALETTE = ["#2dd4bf", "#a78bfa", "#f472b6", "#fbbf24"];
+// Pares de colores de cada degradado de las barras.
 const GRAD: [string, string][] = [["#34d399", "#22d3ee"], ["#a78bfa", "#6366f1"], ["#f472b6", "#fb7185"], ["#fbbf24", "#f97316"]];
 /** Tonos del panel oscuro (imagen estática) y del modo transparente (hereda el color de texto y el fondo del sitio). */
 const DARK_TONE = { ink: "#ffffff", muted: "rgba(255,255,255,0.64)", grid: "rgba(255,255,255,0.11)", axis: "rgba(255,255,255,0.32)", edge: "#171a52", dot: "#14163f" };
+// Tonos del modo transparente: usan el color de texto y el fondo del sitio.
 const OPEN_TONE = {
   ink: "currentColor",
   muted: "color-mix(in srgb, currentColor 62%, transparent)",
@@ -36,15 +40,19 @@ const OPEN_TONE = {
   edge: "var(--bg, #fff)",
   dot: "var(--bg, #fff)",
 };
+// Tonos activos durante el dibujo; los fija renderChartSvg.
 let TONE = DARK_TONE;
+// Tipografía del texto dentro del SVG.
 const FONT = "Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif";
 
 /** Recorta con puntos suspensivos (no en seco). */
 const cortar = (t: string, n: number) => (t.length > n ? `${t.slice(0, Math.max(1, n - 1)).trimEnd()}…` : t);
 
+// Escapa los caracteres especiales de HTML/SVG.
 const esc = (s: string) =>
   s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 
+// Formato numérico de Colombia, hasta dos decimales.
 const nf = new Intl.NumberFormat("es-CO", { maximumFractionDigits: 2 });
 /** 1 250 000 -> «1,3 M»; 12 000 -> «12 mil»; independiente de la versión de ICU del navegador. */
 function compact(n: number): string {
@@ -54,10 +62,14 @@ function compact(n: number): string {
   if (a >= 1e4) return `${new Intl.NumberFormat("es-CO", { maximumFractionDigits: 1 }).format(n / 1e3)} mil`;
   return nf.format(n);
 }
+// Formato de un valor: abreviado desde un millón y completo por debajo.
 export const fmt = (n: number) => (Math.abs(n) >= 1e6 ? compact(n) : nf.format(n));
+// Formato de las marcas de los ejes (siempre abreviado).
 const fmtTick = (n: number) => compact(n);
 
+// Tipos de gráfica que se pueden pedir; «auto» deja elegir a la IA.
 export type TipoGrafica = "auto" | "vertical" | "horizontal" | "histograma" | "line" | "area" | "torta" | "dona";
+// Catálogo de tipos con su etiqueta y una pista de cuándo conviene cada uno.
 export const TIPOS_GRAFICA: { id: TipoGrafica; label: string; hint: string }[] = [
   { id: "auto", label: "Automático", hint: "La IA elige el que mejor cuenta los datos" },
   { id: "vertical", label: "Barras", hint: "Comparar categorías" },
@@ -130,12 +142,14 @@ function wrap(text: string, width: number, lines = 2): string[] {
   return out;
 }
 
+// Dibuja varias líneas de texto SVG, una debajo de otra.
 function lines(x: number, y: number, ls: string[], size: number, fill: string, anchor = "start", weight = 400, lh = 1.25) {
   return ls
     .map((l, i) => `<text x="${x}" y="${y + i * size * lh}" font-size="${size}" font-weight="${weight}" fill="${fill}" text-anchor="${anchor}">${esc(l)}</text>`)
     .join("");
 }
 
+// Opciones de dibujo: modo interactivo, series ocultas, id del degradado, transparencia y ancho.
 export type RenderOpts = {
   /** Marca los elementos con data-* y añade estilos/animaciones para la versión interactiva. */
   interactive?: boolean;
@@ -149,6 +163,7 @@ export type RenderOpts = {
   width?: number;
 };
 
+// Estilos y animaciones de la versión interactiva: barras que crecen, líneas que se dibujan y resalte al pasar el cursor.
 const STYLE = `<style>
 .lxc .mk{cursor:pointer;transition:opacity .15s ease,filter .15s ease}
 .lxc.hov .mk{opacity:.4}.lxc.hov .mk.on{opacity:1;filter:brightness(1.06)}
@@ -164,6 +179,7 @@ const STYLE = `<style>
 @media (prefers-reduced-motion:reduce){.lxc *{animation:none!important}.lxc .ln{stroke-dashoffset:0}}
 </style>`;
 
+// Dibuja la gráfica completa como SVG: título, leyenda, cifra destacada, ejes y marcas según su tipo.
 export function renderChartSvg(c: ChartSpec, opts: RenderOpts = {}): string {
   TONE = opts.transparent ? OPEN_TONE : DARK_TONE;
   W = Math.round(Math.min(ANCHO_MAX, Math.max(ANCHO_MIN, opts.width ?? 800)));
@@ -254,8 +270,10 @@ export function renderChartSvg(c: ChartSpec, opts: RenderOpts = {}): string {
   );
 }
 
+// Contexto de dibujo compartido por los distintos tipos de gráfica.
 type Ctx = { interactive: boolean; hidden: Set<number>; gid: string };
 
+// Dibuja barras verticales, histograma, líneas o área sobre ejes con escala redonda.
 function cartesian(c: ChartSpec, top: number, h: number, o: Ctx) {
   const compact = W < 560;
   const left = compact ? 44 : 58, right = compact ? 14 : 28, padT = 16;
@@ -271,7 +289,9 @@ function cartesian(c: ChartSpec, top: number, h: number, o: Ctx) {
   const shown = c.series.map((s, si) => ({ s, si })).filter((x) => !o.hidden.has(x.si));
   const all = shown.flatMap((x) => x.s.values);
   const sc = niceScale(Math.min(...all), Math.max(...all), 4, c.type !== "line");
+  // Posición vertical de un valor dentro del área de trazado.
   const y = (v: number) => top + padT + ph - ((v - sc.min) / (sc.max - sc.min || 1)) * ph;
+  // Posición horizontal del centro de la columna i.
   const cx = (i: number) => left + step * i + step / 2;
 
   let out = "";
@@ -339,6 +359,7 @@ function cartesian(c: ChartSpec, top: number, h: number, o: Ctx) {
   return out;
 }
 
+// Dibuja barras horizontales con los nombres a la izquierda.
 function hbars(c: ChartSpec, top: number, h: number, o: Ctx) {
   const compact = W < 560;
   // Área de nombres proporcional al ancho: 190 px en el lienzo ancho, ~36 % del ancho en pantallas chicas.
@@ -348,6 +369,7 @@ function hbars(c: ChartSpec, top: number, h: number, o: Ctx) {
   const shown = c.series.map((s, si) => ({ s, si })).filter((x) => !o.hidden.has(x.si));
   const all = shown.flatMap((x) => x.s.values);
   const sc = niceScale(Math.min(...all), Math.max(...all), Math.max(2, Math.min(4, Math.floor(pw / 85))));
+  // Posición horizontal de un valor dentro del área de trazado.
   const x = (v: number) => left + ((v - sc.min) / (sc.max - sc.min || 1)) * pw;
   const rowH = (h - 28) / c.labels.length;
   const nameLines = compact ? 3 : 2;
@@ -378,6 +400,7 @@ function hbars(c: ChartSpec, top: number, h: number, o: Ctx) {
   return out;
 }
 
+// Dibuja torta o dona con sectores proporcionales y el total en el centro.
 function donut(c: ChartSpec, top: number, h: number, o: Ctx) {
   const vals = c.series[0].values;
   const total = vals.reduce((a, b) => a + b, 0) || 1;
@@ -393,6 +416,7 @@ function donut(c: ChartSpec, top: number, h: number, o: Ctx) {
     const frac = v / total;
     const a1 = a0 + Math.min(frac, 0.9999) * Math.PI * 2;
     const large = a1 - a0 > Math.PI ? 1 : 0;
+    // Punto de la circunferencia para un ángulo y un radio dados.
     const p = (a: number, rad: number) => `${cx + rad * Math.cos(a)},${cy + rad * Math.sin(a)}`;
     const d = `M${p(a0, r)} A${r},${r} 0 ${large} 1 ${p(a1, r)} L${p(a1, ri)} A${ri},${ri} 0 ${large} 0 ${p(a0, ri)} Z`;
     out += `<path d="${d}" fill="url(#${o.gid}c${i % 4})" stroke="${TONE.edge}" stroke-width="3"${o.interactive ? ` class="mk sl" data-i="${i}" data-s="0" tabindex="0"` : ""}/>`;
@@ -413,10 +437,12 @@ function donut(c: ChartSpec, top: number, h: number, o: Ctx) {
 // --- Viaje del dato: el artículo guarda la gráfica como imagen incrustada ----
 
 const b64 = (s: string) => btoa(unescape(encodeURIComponent(s)));
+// Decodifica base64 respetando los caracteres con tilde.
 const unb64 = (s: string) => decodeURIComponent(escape(atob(s)));
 
 /** Datos de la gráfica en texto corto (para el marcador del editor). */
 export const encodeSpec = (c: ChartSpec) => b64(JSON.stringify(c)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+// Reconstruye los datos de una gráfica a partir del texto corto del marcador; null si no es válido.
 export function decodeSpec(token: string): ChartSpec | null {
   try {
     const c = JSON.parse(unb64(token.replace(/-/g, "+").replace(/_/g, "/"))) as ChartSpec;

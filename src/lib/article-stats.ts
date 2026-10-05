@@ -33,6 +33,7 @@ function lastDays(todayIso: string, days: number): string[] {
   );
 }
 
+// Fecha de hoy en hora de Colombia (AAAA-MM-DD), calculada en la base para que coincida con la de las lecturas.
 async function todayIso(): Promise<string> {
   const res = await db.execute(sql`select to_char(${TODAY_CO}, 'YYYY-MM-DD') as d`);
   return rowsOf<{ d: string }>(res)[0]?.d ?? new Date().toISOString().slice(0, 10);
@@ -135,4 +136,5 @@ export function pctChange(current: number, previous: number): number | null {
   return Math.round(((current - previous) / previous) * 100);
 }
 
+// Formateador de números con separadores de miles de Colombia.
 export const nf = new Intl.NumberFormat("es-CO");

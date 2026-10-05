@@ -30,6 +30,7 @@ const leerLayoutHome = cachear(
   { tags: [TAG_AJUSTES] },
 );
 
+// Configuración visual de la portada: la del borrador en la vista previa o la guardada (con caché entre peticiones).
 export const getHomeLayoutConfig = cache(async (): Promise<Required<HomeLayoutConfig>> => {
   // Vista previa del editor: el diseño sin publicar (ver src/lib/preview-draft.ts). Nunca pasa por la caché.
   const draft = getPreviewDraft();
@@ -48,6 +49,7 @@ const publishedCondition = and(
   lte(articles.publishedAt, sql`now()`),
 );
 
+// Datos de una nota para listados y tarjetas.
 export type ArticleListItem = {
   slug: string;
   title: string;
@@ -66,6 +68,7 @@ export type ArticleListItem = {
   isLive: boolean;
 };
 
+// Columnas que se leen de la base para armar un listado de notas.
 const listSelection = {
   slug: articles.slug,
   title: articles.title,
@@ -82,6 +85,7 @@ const listSelection = {
   isLive: articles.isLive,
 };
 
+// Últimas notas publicadas, de la más reciente a la más antigua.
 export async function getRecentArticles(limit = 12): Promise<ArticleListItem[]> {
   return db
     .select(listSelection)
@@ -93,12 +97,6 @@ export async function getRecentArticles(limit = 12): Promise<ArticleListItem[]> 
     .limit(limit);
 }
 
-/**
- * Como getRecentArticles, pero respeta el orden manual fijado por un editor en
- * /panel/portada (`articles.homePosition`): los artículos anclados van primero,
- * en el orden elegido, y el resto llena los huecos por fecha. Solo lo usa la
- * portada; RSS, llms.txt y el cintillo siguen el orden cronológico real.
- */
 /** Consulta de la portada con el orden manual, cacheada entre peticiones (la invalida el panel al publicar). */
 const leerPortada = cachear(
   "portada",
@@ -114,6 +112,12 @@ const leerPortada = cachear(
   { tags: [TAG_CONTENIDO], segundos: 60 },
 );
 
+/**
+ * Como getRecentArticles, pero respeta el orden manual fijado por un editor en
+ * /panel/portada (`articles.homePosition`): los artículos anclados van primero,
+ * en el orden elegido, y el resto llena los huecos por fecha. Solo lo usa la
+ * portada; RSS, llms.txt y el cintillo siguen el orden cronológico real.
+ */
 export async function getHomepageArticles(limit = 13): Promise<ArticleListItem[]> {
   await promoverProgramados();
   // Vista previa del editor: el orden y estilo de tarjetas sin publicar.
@@ -137,6 +141,7 @@ export async function getHomepageArticles(limit = 13): Promise<ArticleListItem[]
   }
   return leerPortada(limit);
 }
+// Filtros de una página de categoría: paginación, subcategoría y rango de fechas.
 export type CategoryFilters = {
   limit?: number;
   offset?: number;
@@ -148,6 +153,7 @@ export type CategoryFilters = {
   dateTo?: string;
 };
 
+// Resultado de leer una categoría: su ficha, subcategorías, notas de la página y total.
 type ListadoCategoria = {
   category: { name: string; description: string | null } | null;
   subcategories: { slug: string; name: string }[];
@@ -214,6 +220,7 @@ const leerCategoria = cachear(
   { tags: [TAG_CONTENIDO], segundos: 120 },
 );
 
+// Listado de una categoría (con sus subcategorías) leído de la caché; en la vista previa aplica el estilo de bloque sin publicar.
 export async function getArticlesByCategory(categorySlug: string, filters: CategoryFilters = {}): Promise<ListadoCategoria> {
   const listado = await leerCategoria(categorySlug, filters);
   // Vista previa del editor: el estilo de bloque sin publicar de cada nota (nunca entra en la caché).
@@ -226,6 +233,7 @@ export async function getArticlesByCategory(categorySlug: string, filters: Categ
   };
 }
 
+// Nota completa tal como la necesita la página de artículo.
 export type FullArticle = {
   id: string;
   slug: string;
@@ -247,6 +255,7 @@ export type FullArticle = {
   isLive: boolean;
 };
 
+// Busca una nota publicada por su dirección y la devuelve con su categoría y autor; antes promueve las programadas que ya vencieron.
 export async function getPublishedArticleBySlug(slug: string): Promise<FullArticle | null> {
   await promoverProgramados();
   const [row] = await db
@@ -316,6 +325,7 @@ export async function getArticleForPreview(
   return row ?? null;
 }
 
+// Ficha de un autor con sus notas publicadas; null si no existe.
 export async function getAuthorWithArticles(slug: string) {
   const [a] = await db.select().from(authors).where(eq(authors.slug, slug)).limit(1);
   if (!a) return null;
@@ -330,16 +340,18 @@ export async function getAuthorWithArticles(slug: string) {
   return { author: a, items };
 }
 
+// Todas las categorías, subcategorías incluidas, en su orden.
 export async function getAllCategories() {
   return db.select().from(categories).orderBy(categories.sortOrder, categories.name);
 }
 
-/** Solo las categorías de primer nivel (sin padre) — para el navbar. */
+// Categorías de primer nivel leídas de la caché de datos (5 minutos).
 const leerCategoriasPrincipales = cachear(
   "categorias-principales",
   () => db.select().from(categories).where(isNull(categories.parentId)).orderBy(categories.sortOrder, categories.name),
   { tags: [TAG_CONTENIDO], segundos: 300 },
 );
+/** Solo las categorías de primer nivel (sin padre) — para el navbar. */
 export const getTopLevelCategories = cache(() => leerCategoriasPrincipales());
 
 /**

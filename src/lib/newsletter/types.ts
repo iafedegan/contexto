@@ -22,6 +22,7 @@ export type NewsletterSettings = {
   subjectPrefix: string;
 };
 
+// Ajustes por defecto del boletín.
 export const DEFAULT_NEWSLETTER_SETTINGS: NewsletterSettings = {
   fromName: "CONtexto Ganadero",
   fromEmail: "",
@@ -34,13 +35,18 @@ export const DEFAULT_NEWSLETTER_SETTINGS: NewsletterSettings = {
   subjectPrefix: "",
 };
 
+// Color hexadecimal de seis dígitos.
 const HEX = /^#[\da-f]{6}$/i;
+// Formato básico de una dirección de correo.
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+// Texto limpio y recortado al máximo; vacío si el valor no es texto.
 const str = (v: unknown, max: number) => (typeof v === "string" ? v.trim().slice(0, max) : "");
 
+// Valida y limpia los ajustes recibidos: cada campo se recorta y lo inválido se sustituye por el valor por defecto.
 export function sanitizeNewsletterSettings(input: unknown): NewsletterSettings {
   const r = (input && typeof input === "object" ? input : {}) as Record<string, unknown>;
   const d = DEFAULT_NEWSLETTER_SETTINGS;
+  // Correo válido en minúsculas, o vacío.
   const email = (v: unknown) => (EMAIL.test(str(v, 160)) ? str(v, 160).toLowerCase() : "");
   return {
     fromName: str(r.fromName, 80) || d.fromName,

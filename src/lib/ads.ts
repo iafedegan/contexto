@@ -23,12 +23,14 @@ export type AdsZoneContent = {
   clickUrl: string | null;
 };
 
+// Condición SQL: anuncio activo y dentro de su vigencia (inicio pasado o vacío, fin futuro o vacío).
 const activeNow = and(
   eq(adsZones.active, true),
   or(isNull(adsZones.startsAt), sql`${adsZones.startsAt} <= now()`),
   or(isNull(adsZones.endsAt), gte(adsZones.endsAt, sql`now()`)),
 );
 
+// Fila de una zona publicitaria tal como la muestran el panel y el editor de portada.
 export type AdsZoneRow = {
   /** `home_top`, `home_top__2`… */
   key: string;
@@ -46,8 +48,10 @@ export type AdsZoneRow = {
   height: number;
 };
 
+// Fila de la tabla ads_zones.
 type Fila = typeof adsZones.$inferSelect;
 
+// Convierte una fila de la base (o su ausencia) en la fila del panel, con las medidas de su posición.
 function toRow(key: string, position: AdPosition, fila?: Fila): AdsZoneRow {
   const spec = AD_ZONE_SPECS[position];
   const n = suffixOf(key);
@@ -77,6 +81,7 @@ export async function getAdsZoneRows(): Promise<AdsZoneRow[]> {
   const filas = await db.select().from(adsZones);
   const rows: AdsZoneRow[] = [];
   for (const position of Object.keys(AD_ZONE_SPECS) as AdPosition[]) {
+    // Anuncios de esta posición, ordenados por su sufijo numérico.
     const propias = filas
       .filter((f) => positionOf(f.key) === position)
       .sort((a, b) => suffixOf(a.key) - suffixOf(b.key));
@@ -86,7 +91,7 @@ export async function getAdsZoneRows(): Promise<AdsZoneRow[]> {
   return rows;
 }
 
-/** Anuncios activos y vigentes: una consulta por petición, no una por posición. */
+// Anuncios activos leídos de la base y guardados 60 segundos entre peticiones.
 const leerAnunciosActivos = cachear(
   "anuncios-activos",
   (): Promise<AdsZoneContent[]> =>
@@ -97,6 +102,8 @@ const leerAnunciosActivos = cachear(
   { tags: [TAG_AJUSTES], segundos: 60 },
 );
 
+// Anuncios activos y vigentes (una consulta por petición); en la vista previa se mezclan con los borradores del editor.
+/** Anuncios activos y vigentes: una consulta por petición, no una por posición. */
 const activeAds = cache(async (): Promise<AdsZoneContent[]> => {
   const rows = await leerAnunciosActivos();
 

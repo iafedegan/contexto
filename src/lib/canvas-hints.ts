@@ -19,11 +19,15 @@ export type HintLabels = {
   note: (slug: string) => string | null;
 };
 
+// Id de la hoja de estilos de las ayudas que se inserta en el lienzo de edición.
 const STYLE_ID = "cg-hints-style";
+// Id de la etiqueta flotante que dice qué elemento se va a editar.
 const LABEL_ID = "cg-hint";
 
+// Elemento resaltado y el texto que lo describe.
 type Target = { el: HTMLElement; text: string };
 
+// Instala en el documento del lienzo las ayudas de edición: resalta con línea discontinua el bloque bajo el cursor y muestra una etiqueta. Devuelve la función que las retira.
 export function installCanvasHints(doc: Document, labels: HintLabels): () => void {
   if (!doc.getElementById(STYLE_ID)) {
     const st = doc.createElement("style");
@@ -48,12 +52,14 @@ export function installCanvasHints(doc: Document, labels: HintLabels): () => voi
   const tag = label;
 
   let current: HTMLElement | null = null;
+  // Quita el resaltado y oculta la etiqueta.
   const clear = () => {
     current?.removeAttribute("data-cg-hover");
     current = null;
     tag.removeAttribute("data-on");
   };
 
+  // Busca, desde el elemento bajo el cursor, el bloque editable más cercano (tarjeta, nota, región…) y su descripción.
   function find(from: Element | null): Target | null {
     if (!from) return null;
     const card = from.closest<HTMLElement>("[data-card-index]");
@@ -76,6 +82,7 @@ export function installCanvasHints(doc: Document, labels: HintLabels): () => voi
     return null;
   }
 
+  // Resalta el elemento y muestra su etiqueta junto al cursor.
   function show(t: Target) {
     if (current !== t.el) {
       current?.removeAttribute("data-cg-hover");
@@ -94,11 +101,13 @@ export function installCanvasHints(doc: Document, labels: HintLabels): () => voi
     tag.style.top = `${top}px`;
   }
 
+  // Al entrar el cursor en un elemento: lo resalta si es editable.
   const over = (e: MouseEvent) => {
     const t = find(e.target as Element | null);
     if (!t) return clear();
     show(t);
   };
+  // Al salir el cursor del documento: quita el resaltado.
   const out = (e: MouseEvent) => {
     if (!e.relatedTarget) clear();
   };

@@ -17,6 +17,7 @@ import { derivePalette, mutedOf } from "@/lib/home-background";
 
 export type RegionId = "navbar" | "hero" | "body" | "cards" | "footer" | "encabezado";
 
+// Estilos editables de un componente de la portada (fondo, colores, escalas…).
 export type RegionStyle = {
   /** Fondo del componente. */
   bg?: string;
@@ -50,8 +51,10 @@ export type RegionStyle = {
   hidden?: boolean;
 };
 
+// Estilos por región; cada región es opcional.
 export type RegionStyles = Partial<Record<RegionId, RegionStyle>>;
 
+// Catálogo de regiones editables con su etiqueta y los ajustes que admiten.
 export const REGIONS: Array<{
   id: RegionId;
   label: string;
@@ -97,6 +100,7 @@ export const REGIONS: Array<{
   },
 ];
 
+// Rangos permitidos (mínimo, máximo, paso y unidad) de cada ajuste numérico.
 export const RANGES = {
   titleScale: { min: 70, max: 160, step: 5, unit: "%" },
   textScale: { min: 80, max: 140, step: 5, unit: "%" },
@@ -107,8 +111,11 @@ export const RANGES = {
   maxWidth: { min: 720, max: 1920, step: 40, unit: "px" },
 } as const;
 
+// Color hexadecimal válido de 3 o 6 dígitos.
 const HEX = /^#(?:[\da-f]{3}|[\da-f]{6})$/i;
+// Devuelve el color si es válido; si no, undefined.
 const color = (v: unknown) => (typeof v === "string" && HEX.test(v) ? v : undefined);
+// Valida un número y lo acota al rango de su ajuste.
 const num = (v: unknown, key: keyof typeof RANGES) => {
   if (typeof v !== "number" || !Number.isFinite(v)) return undefined;
   const r = RANGES[key];
@@ -146,7 +153,9 @@ export function sanitizeRegions(input: unknown): RegionStyles {
   return out;
 }
 
+// Selector CSS de los titulares.
 const TITLES = ":is(h1,h2,h3,h4,.lx-display)";
+// Selector CSS del texto corrido.
 const TEXT = ":is(p,li,time,small,dd,dt,figcaption,nav a)";
 
 /** Hoja CSS con los estilos de cada componente. Cadena vacía si no hay nada. */

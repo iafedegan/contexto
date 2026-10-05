@@ -18,8 +18,10 @@ export const SECCIONES_KEY = "cg-secciones-editadas";
 export const ITEMS_EDIT_KEY = "cg-portada-bloques-editados";
 /** La vista previa cambió anuncios: el editor debe aplicarlos. */
 export const ADS_EDIT_KEY = "cg-portada-anuncios-editados";
+// Clave del navegador que avisa de que el borrador se aceptó y publicó.
 export const ACCEPTED_KEY = "cg-portada-aceptado";
 
+// Contenido completo de un borrador de portada: diseño, orden de notas, ventana emergente y anuncios.
 export type PortadaDraft = {
   layout: Required<HomeLayoutConfig>;
   /** Orden de las notas (por slug) y su estilo individual. */

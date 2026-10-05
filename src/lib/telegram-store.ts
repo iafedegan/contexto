@@ -11,9 +11,12 @@ import type { Material } from "@/lib/material-types";
  * `site_settings` (sin migración): `tg_links`, `tg_codes` y `tg_state_<chat>`.
  */
 const LINKS = "tg_links";
+// Clave de los códigos de vinculación pendientes.
 const CODES = "tg_codes";
+// Clave del estado de conversación de un chat.
 const estadoKey = (chat: number | string) => `tg_state_${chat}`;
 
+// Lee un valor de site_settings; devuelve el valor vacío si no existe o si falla.
 async function leer<T>(key: string, vacio: T): Promise<T> {
   try {
     const [row] = await db.select({ value: siteSettings.value }).from(siteSettings).where(eq(siteSettings.key, key)).limit(1);
@@ -22,13 +25,17 @@ async function leer<T>(key: string, vacio: T): Promise<T> {
     return vacio;
   }
 }
+// Guarda (o reemplaza) un valor en site_settings.
 async function escribir(key: string, value: unknown) {
   await db.insert(siteSettings).values({ key, value: value as never }).onConflictDoUpdate({ target: siteSettings.key, set: { value: value as never, updatedAt: new Date() } });
 }
 
+// Vínculo entre un chat de Telegram y una cuenta del panel.
 export type Vinculo = { userId: string; nombre: string; desde: string };
+// Todos los vínculos, indexados por id de chat.
 export const getVinculos = () => leer<Record<string, Vinculo>>(LINKS, {});
 
+// Vínculo de un chat, o null si no está vinculado.
 export async function vinculoDe(chatId: number | string): Promise<Vinculo | null> {
   return (await getVinculos())[String(chatId)] ?? null;
 }
@@ -58,6 +65,7 @@ export async function vincularConCodigo(codigo: string, chatId: number | string,
   return c.userId;
 }
 
+// Borra el vínculo de un chat y limpia su estado.
 export async function desvincular(chatId: number | string) {
   const links = await getVinculos();
   delete links[String(chatId)];
@@ -73,6 +81,7 @@ export type Espera =
   | "titulo" | "contexto" | "resumen" | "claves" | "cuerpo" | "metaTitle" | "metaDescription" | "alt" | "escena"
   | "graficaTema" | "correccion" | "fecha" | "enfoque" | "busqueda";
 
+// Estado de la conversación de un chat: paso actual, datos de la nota en curso y opciones elegidas.
 export type EstadoChat = {
   fase: Fase;
   /** Último update procesado: Telegram reintenta si tardamos y no hay que repetir nada. */
@@ -122,5 +131,7 @@ export type EstadoChat = {
   ramaSeccion?: string;
 };
 
+// Estado de un chat; por defecto, sin nota en curso.
 export const getEstado = (chatId: number | string) => leer<EstadoChat>(estadoKey(chatId), { fase: "idle" });
+// Guarda el estado de un chat.
 export const setEstado = (chatId: number | string, e: EstadoChat) => escribir(estadoKey(chatId), e);

@@ -23,8 +23,10 @@ export type SiteIdentity = {
   radioStreamUrl: string;
 };
 
+// Clave de site_settings donde se guarda la identidad del sitio.
 export const SITE_IDENTITY_KEY = "site_identity";
 
+// Identidad por defecto: nombre de la variable de entorno y textos genéricos.
 export const DEFAULT_IDENTITY: SiteIdentity = {
   name: env(process.env.NEXT_PUBLIC_SITE_NAME, "CONtexto Ganadero"),
   tagline: "Periodismo del sector ganadero",
@@ -34,7 +36,7 @@ export const DEFAULT_IDENTITY: SiteIdentity = {
   radioStreamUrl: "",
 };
 
-/** `cache()`: una sola consulta por render aunque la pidan layout y páginas. */
+// Fila de identidad leída de la base y cacheada 5 minutos entre peticiones.
 const leerIdentidad = cachear(
   "identidad",
   async () => {
@@ -48,6 +50,7 @@ const leerIdentidad = cachear(
   { tags: [TAG_AJUSTES], segundos: 300 },
 );
 
+/** `cache()`: una sola consulta por render aunque la pidan layout y páginas. */
 export const getSiteIdentity = cache(async (): Promise<SiteIdentity> => {
   try {
     return { ...DEFAULT_IDENTITY, ...((await leerIdentidad()) ?? {}) };

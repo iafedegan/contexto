@@ -6,13 +6,17 @@ const AUDIO: Record<string, string> = {
   mp3: "audio/mpeg", mpeg: "audio/mpeg", m4a: "audio/mp4", mp4: "audio/mp4", aac: "audio/aac",
   wav: "audio/wav", ogg: "audio/ogg", oga: "audio/ogg", opus: "audio/ogg", webm: "audio/webm", flac: "audio/flac",
 };
+// Extensión de archivo → tipo MIME de video.
 const VIDEO: Record<string, string> = {
   mp4: "video/mp4", m4v: "video/mp4", mov: "video/mov", mpeg: "video/mpeg", mpg: "video/mpg",
   avi: "video/avi", wmv: "video/wmv", flv: "video/x-flv", "3gp": "video/3gpp", webm: "video/webm",
 };
+// Conjunto de tipos de video que el modelo acepta.
 const VIDEO_ADMITIDOS = new Set(Object.values(VIDEO));
+// Nombres alternativos de tipos de video que se traducen al tipo admitido.
 const VIDEO_ALIAS: Record<string, string> = { "video/quicktime": "video/mov", "video/x-msvideo": "video/avi", "video/x-ms-wmv": "video/wmv", "video/x-m4v": "video/mp4" };
 
+// Texto para mostrar a la persona qué formatos se aceptan.
 export const FORMATOS_MEDIA = "audio (MP3, M4A, WAV, OGG, WEBM, AAC, FLAC) o video (MP4, MOV, WEBM, MPEG, AVI, WMV, 3GP)";
 
 /**
@@ -34,4 +38,5 @@ export function mimeMedia(name: string, declared = ""): string | null {
   return null;
 }
 
+// Indica si un tipo MIME es de video.
 export const esMimeVideo = (mime: string) => mime.startsWith("video/");
