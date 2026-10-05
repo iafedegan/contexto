@@ -33,9 +33,12 @@ const SECURITY_HEADERS: Record<string, string> = {
  * configura en el Firewall de Vercel (ver README).
  */
 const RATE_WINDOW_MS = 60_000;
+// Máximo de peticiones por IP y minuto (por instancia, aproximado a propósito).
 const RATE_MAX = 120;
+// Contadores de peticiones por IP; se vacían al crecer demasiado.
 const hits = new Map<string, { n: number; reset: number }>();
 
+// Indica si una IP pide páginas a un ritmo que ninguna persona alcanza.
 function tooFast(ip: string): boolean {
   const now = Date.now();
   const h = hits.get(ip);
@@ -48,6 +51,7 @@ function tooFast(ip: string): boolean {
   return h.n > RATE_MAX;
 }
 
+// Filtro de todas las peticiones: anti-scraping, redirecciones 301 de la taxonomía antigua, puerta del panel y cabeceras de seguridad.
 export async function proxy(req: NextRequest) {
   const { pathname, search } = req.nextUrl;
   const clean = pathname.replace(/\/+$/, "") || "/";
@@ -127,6 +131,7 @@ function applyHeaders(res: NextResponse, pathname?: string): NextResponse {
   return res;
 }
 
+// Rutas a las que se aplica el filtro: todas menos los archivos estáticos.
 export const config = {
   matcher: [
     "/((?!_next/static|_next/image|_not-found|favicon.ico|robots.txt|sitemap.xml|feed.xml|.*\\.(?:png|jpg|jpeg|gif|webp|svg|ico|css|js)$).*)",

@@ -27,6 +27,7 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
+// Etiqueta en español de cada estado editorial.
 const ESTADO: Record<string, string> = {
   borrador: "Borrador",
   en_revision: "En revisión",
@@ -35,6 +36,7 @@ const ESTADO: Record<string, string> = {
   archivado: "Archivado",
 };
 
+// Vista previa de una nota antes de publicar: con sesión del panel o con un enlace firmado; siempre sin indexar.
 export default async function VistaPreviaPage({
   params,
   searchParams,
