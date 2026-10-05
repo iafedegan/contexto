@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { articles, authors, categories } from "@/db/schema";
 import { guardApi, json, CORS_HEADERS } from "@/lib/api/guard";
 
+// Se calcula en cada petición, nunca durante la compilación.
 export const dynamic = "force-dynamic";
 
 /** GET /api/v1/articulos/{slug} — una nota publicada, con su cuerpo completo. */
@@ -35,6 +36,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
   return json(a);
 }
 
+// Respuesta a la comprobación previa de CORS de los navegadores.
 export function OPTIONS() {
   return new Response(null, { status: 204, headers: CORS_HEADERS });
 }

@@ -12,6 +12,7 @@
 import { randomUUID } from "node:crypto";
 import { requirePermiso } from "@/lib/auth";
 
+// Tipos de archivo admitidos y su extensión.
 const TIPOS: Record<string, string> = {
   "image/jpeg": "jpg",
   "image/png": "png",
@@ -25,12 +26,15 @@ const TIPOS: Record<string, string> = {
 /** 25 MB: suficiente para una foto de portada o un clip corto. */
 const MAX_BYTES = 25 * 1024 * 1024;
 
+// Cubeta de Supabase Storage donde se guardan los medios.
 const BUCKET = "media";
 
+// Resultado de subir un archivo: su dirección pública y tipo, o un error.
 export type UploadResult =
   | { ok: true; url: string; kind: "imagen" | "video" }
   | { ok: false; error: string };
 
+// Sube una imagen o un video a Supabase Storage tras validar su tipo y tamaño.
 export async function uploadMedia(formData: FormData): Promise<UploadResult> {
   await requirePermiso("articulos");
 

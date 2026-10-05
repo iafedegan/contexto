@@ -5,6 +5,7 @@ import { articles, categories } from "@/db/schema";
 import { requirePermiso } from "@/lib/auth";
 import { SeccionForm } from "@/components/panel/seccion-form";
 
+// Se calcula en cada petición, nunca durante la compilación.
 export const dynamic = "force-dynamic";
 
 /**

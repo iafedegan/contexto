@@ -9,6 +9,7 @@ import { redirects } from "@/db/schema";
  */
 export const dynamic = "force-dynamic";
 
+// Mapa de redirecciones uno a uno guardadas en la base, con caché de 5 minutos.
 export async function GET() {
   try {
     const rows = await db

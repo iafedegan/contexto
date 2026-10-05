@@ -7,6 +7,7 @@ import { requirePermiso } from "@/lib/auth";
 import { enviarAviso, pushConfigurado } from "@/lib/push";
 import { siteUrl } from "@/lib/utils";
 
+// Estado que se devuelve al formulario: si salió bien y el mensaje.
 export type AvisoState = { ok: boolean; message: string } | null;
 
 /**

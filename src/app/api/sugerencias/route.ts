@@ -10,6 +10,7 @@ import { articles } from "@/db/schema";
  */
 export const dynamic = "force-dynamic";
 
+// Hasta seis titulares publicados que contienen lo que la persona va tecleando.
 export async function GET(req: Request) {
   const q = new URL(req.url).searchParams.get("q")?.trim() ?? "";
   if (q.length < 3) return NextResponse.json({ items: [] });

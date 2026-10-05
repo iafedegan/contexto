@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { newsletterSubscribers } from "@/db/schema";
 import { verifyUnsubscribeToken } from "@/lib/newsletter/token";
 
+// Se calcula en cada petición, nunca durante la compilación.
 export const dynamic = "force-dynamic";
 
 /**
@@ -21,6 +22,7 @@ export async function POST(req: Request) {
   return NextResponse.json({ ok: true });
 }
 
+// Lleva a la página de confirmación de baja conservando los parámetros del enlace.
 export async function GET(req: Request) {
   const url = new URL(req.url);
   return NextResponse.redirect(new URL(`/boletin/baja?s=${encodeURIComponent(url.searchParams.get("s") ?? "")}&t=${encodeURIComponent(url.searchParams.get("t") ?? "")}`, req.url));

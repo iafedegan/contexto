@@ -30,6 +30,7 @@ const CSP = [
   "report-uri /api/csp-report",
 ].join("; ");
 
+// Configuración de Next.js: cabeceras de seguridad, imágenes remotas permitidas, límite de las acciones y versión del despliegue.
 const nextConfig: NextConfig = {
   poweredByHeader: false,
 
@@ -98,6 +99,7 @@ const nextConfig: NextConfig = {
   // reescribe aquí. Las redirecciones 301 de taxonomía están en middleware.ts.
 };
 
+// Exporta la configuración y deja la fase actual de Next en el entorno.
 export default function (phase: string): NextConfig {
   if (phase) {
     process.env.NEXT_PHASE = phase;

@@ -9,18 +9,24 @@ import { DRAFT_GENERATOR_SYSTEM } from "./prompts";
 import { factCheckDraft, ruleFactCheck, type FactCheck } from "./fact-checker";
 import { env } from "@/lib/env";
 
+// Modelo de lenguaje de los agentes, configurable por entorno.
 const MODEL = env(process.env.ASSISTANT_MODEL, "claude-sonnet-5");
+// Máximo de borradores que los agentes pueden generar por día.
 const DAILY_LIMIT = Number(env(process.env.AGENT_DAILY_DRAFT_LIMIT, "20"));
+// Indica si hay clave de Anthropic para usar el modelo real.
 const HAS_LLM = Boolean(process.env.ANTHROPIC_API_KEY);
 
+// Tipo de fuente estructurada admitida.
 type Source = (typeof agentSource.enumValues)[number];
 
+// Forma del borrador que debe devolver el modelo.
 const draftSchema = z.object({
   title: z.string().min(8),
   excerpt: z.string().min(20),
   body: z.string().min(50),
 });
 
+// Fuente estructurada de entrada: tipo, referencia y datos.
 export type StructuredSource = {
   kind: Source;
   ref: string; // URL o identificador legible de la fuente
@@ -28,8 +34,10 @@ export type StructuredSource = {
   rawText: string; // texto de la fuente para el verificador
 };
 
+// Borrador con título, resumen y cuerpo.
 type Draft = { title: string; excerpt: string; body: string };
 
+// Resultado de generar un borrador: su id y modo (IA o simulación), o el motivo por el que se omitió.
 export type GenerateResult =
   | { id: string; mode: "ia" | "simulacion"; hasUnverifiedClaims: boolean }
   | { skipped: string };
@@ -97,8 +105,10 @@ export async function generateDraft(source: StructuredSource): Promise<GenerateR
 // --- Generador por plantilla (sin IA) --------------------------------------
 
 const num = (v: unknown) => (typeof v === "number" ? v.toLocaleString("es-CO") : String(v));
+// Formatea un valor monetario en pesos colombianos.
 const money = (v: unknown) =>
   typeof v === "number" ? v.toLocaleString("es-CO") + " pesos" : String(v);
+// Fecha larga en español.
 const longDate = (iso: unknown) => {
   const d = new Date(String(iso));
   return Number.isNaN(d.getTime())
@@ -110,8 +120,10 @@ const longDate = (iso: unknown) => {
         timeZone: "UTC", // la fuente da fechas sin hora; evitar corrimiento por zona
       });
 };
+// Día del mes de una fecha ISO.
 const dayNum = (iso: unknown) => new Date(String(iso)).getUTCDate();
 
+// Redacta un borrador determinista a partir de los datos, sin usar IA (modo simulación).
 function simulateDraft(source: StructuredSource): Draft {
   const p = source.payload;
 

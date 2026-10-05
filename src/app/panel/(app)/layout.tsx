@@ -16,8 +16,10 @@ import { getAjustes } from "@/lib/permisos-server";
 /** Panel editorial — plantilla «Grafito & Jade». */
 export const dynamic = "force-dynamic";
 
+// Pantalla a la que se envía a quien debe activar su segundo factor.
 const RUTA_SEGURIDAD = "/panel/configuracion";
 
+// Estructura del panel: comprueba la sesión, obliga a activar el segundo factor si corresponde y pinta el menú según los permisos.
 export default async function PanelLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
   if (!session?.user) redirect("/panel/login?motivo=sesion");

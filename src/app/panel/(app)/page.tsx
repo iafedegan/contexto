@@ -23,8 +23,10 @@ import { AreaChart, Donut } from "@/components/panel/dash-charts";
 import { SubscriberMap } from "@/components/panel/subscriber-map";
 import { subscriberPoints as loadSubscriberPoints } from "@/lib/subscriber-map";
 
+// Se calcula en cada petición, nunca durante la compilación.
 export const dynamic = "force-dynamic";
 
+// Resumen del panel: notas por estado, borradores pendientes, consultas del asistente, tendencia de lecturas, suscriptores y notas más leídas.
 export default async function PanelHome() {
   await promoverProgramados();
   const [byStatus, pendingDrafts, queries7d, week, trend, subscriberPoints, top] = await Promise.all([
@@ -157,6 +159,7 @@ export default async function PanelHome() {
   );
 }
 
+// Indicador con su valor, su proporción y su color.
 function Kpi({ label, value, total, color, icon }: { label: string; value: number; total: number; color: string; icon: React.ReactNode }) {
   const pct = total > 0 ? Math.round((value / total) * 100) : 0;
   return (
@@ -174,6 +177,7 @@ function Kpi({ label, value, total, color, icon }: { label: string; value: numbe
   );
 }
 
+// Dato destacado con su etiqueta y su valor.
 function Highlight({
   label,
   value,

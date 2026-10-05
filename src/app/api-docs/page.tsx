@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import Script from "next/script";
 
+// Se calcula en cada petición, nunca durante la compilación.
 export const dynamic = "force-dynamic";
+// Título y descripción de la página de documentación.
 export const metadata: Metadata = {
   title: "Documentación de la API",
   description: "API pública para artículos, categorías y alta al boletín.",

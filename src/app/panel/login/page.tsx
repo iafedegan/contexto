@@ -30,6 +30,7 @@ function LoginForm() {
   const formRef = useRef<HTMLFormElement>(null);
   const isDemo = process.env.NODE_ENV !== "production";
 
+  // Inicia sesión con una passkey: pide el desafío, deja que el navegador lo firme y entrega el token al formulario.
   async function entrarConPasskey() {
     setError(null);
     setPendingPasskey(true);
@@ -59,6 +60,7 @@ function LoginForm() {
     }
   }
 
+  // Envía correo, contraseña y segundo factor a Auth.js y muestra el error si falla.
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setPending(true);
@@ -175,6 +177,7 @@ function LoginForm() {
   );
 }
 
+// Pantalla de inicio de sesión del panel.
 export default function LoginPage() {
   return (
     <div

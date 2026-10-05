@@ -7,9 +7,12 @@ import { getNewsletterSettings, getProviderStatus } from "@/lib/newsletter/setti
 import { createEdition, deleteSubscriber, unsubscribeSubscriber } from "./actions";
 import { SettingsForm } from "./settings-form";
 
+// Se calcula en cada petición, nunca durante la compilación.
 export const dynamic = "force-dynamic";
+// Hasta cinco minutos: el envío por tandas puede tardar.
 export const maxDuration = 300;
 
+// Formatea una fecha y hora en español de Colombia.
 const fmt = (d: Date | null) => (d ? new Intl.DateTimeFormat("es-CO", { dateStyle: "medium", timeStyle: "short", timeZone: "America/Bogota" }).format(d) : "—");
 
 export default async function NewsletterPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {

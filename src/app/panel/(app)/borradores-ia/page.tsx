@@ -8,10 +8,13 @@ import { formatDate } from "@/lib/utils";
 import { DEMO_SOURCES } from "@/agents/sources";
 import { approveDraft, rejectDraft, runAgentOnDemoSource } from "./actions";
 
+// Se calcula en cada petición, nunca durante la compilación.
 export const dynamic = "force-dynamic";
 
+// Modo en que trabajan los agentes: con IA si hay clave, o simulación por plantilla.
 const AGENT_MODE = process.env.ANTHROPIC_API_KEY ? "IA (Claude)" : "simulación por plantilla";
 
+// Cola de borradores de IA pendientes de aprobar o rechazar (exige el permiso «borradores_ia»).
 export default async function DraftsQueue() {
   await requirePermiso("borradores_ia");
   const rows = await db

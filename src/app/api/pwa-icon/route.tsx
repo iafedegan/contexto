@@ -3,11 +3,15 @@ import { join } from "node:path";
 import { ImageResponse } from "next/og";
 import { NextRequest } from "next/server";
 
+// Se ejecuta en Node.js, que necesita para leer el logo del disco.
 export const runtime = "nodejs";
 
+// Color de marca del ícono.
 const BRAND = "#1f6d3a";
+// Color del texto sobre el color de marca.
 const BRAND_FG = "#ffffff";
 
+// Logo en base64 para incrustarlo en la imagen del ícono.
 const LOGO_DATA_URL = `data:image/jpeg;base64,${readFileSync(
   join(process.cwd(), "public/logo/contexto-ganadero-logo.jpg"),
 ).toString("base64")}`;

@@ -10,6 +10,7 @@ import { passkeys } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { guardarChallenge, leerYBorrarChallenge, rpInfo } from "@/lib/passkey";
 
+// Estado que se devuelve al formulario: si salió bien y el mensaje.
 export type PasskeyState = { ok: boolean; message: string } | null;
 
 /** Lista las passkeys de la sesión activa, para pintarlas en Configuración. */
@@ -104,6 +105,7 @@ export async function confirmarRegistroPasskey(
   return { ok: true, message: "Passkey agregada." };
 }
 
+// Elimina una passkey de la cuenta de la persona con sesión.
 export async function eliminarPasskey(id: string) {
   const session = await auth();
   if (!session?.user) throw new Error("No autenticado.");

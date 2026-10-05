@@ -9,8 +9,10 @@ import { contactMessages } from "@/db/schema";
 import { requirePermiso } from "@/lib/auth";
 import { marcarAtendido } from "./actions";
 
+// Se calcula en cada petición, nunca durante la compilación.
 export const dynamic = "force-dynamic";
 
+// Bandeja de mensajes de contacto y pauta (exige el permiso «mensajes»).
 export default async function MensajesPage() {
   await requirePermiso("mensajes");
   const filas = await db

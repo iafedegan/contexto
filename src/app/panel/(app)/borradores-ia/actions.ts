@@ -67,6 +67,7 @@ export async function runAgentOnDemoSource(formData: FormData) {
   if ("skipped" in result) throw new Error(result.skipped);
 }
 
+// Rechaza un borrador de IA y guarda quién lo hizo y el motivo.
 export async function rejectDraft(formData: FormData) {
   const user = await requirePermiso("borradores_ia");
   const draftId = String(formData.get("draftId"));

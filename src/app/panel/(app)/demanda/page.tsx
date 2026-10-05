@@ -3,6 +3,7 @@ import { sql } from "drizzle-orm";
 import { db, rowsOf } from "@/db";
 import { Card } from "@/components/ui";
 
+// Se calcula en cada petición, nunca durante la compilación.
 export const dynamic = "force-dynamic";
 
 /**
@@ -34,6 +35,7 @@ export default async function DemandaPage() {
       GROUP BY mode`),
   ]);
 
+  // Normaliza el resultado de una consulta SQL a una lista tipada.
   const rows = <T,>(r: unknown) => rowsOf<Record<string, unknown>>(r) as unknown as T[];
 
   return (

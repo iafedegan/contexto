@@ -197,8 +197,10 @@ export async function saveAssistantLimits(presupuesto: number, tope: number): Pr
   return { ok: true, message: "Límites guardados." };
 }
 
+// Estado que se devuelve al formulario: si salió bien y el mensaje.
 export type CreateUserState = { ok: boolean; message: string } | null;
 
+// Roles que se pueden asignar.
 const ROLES: UserRole[] = ["redactor", "editor", "administrador"];
 
 /**
@@ -231,6 +233,7 @@ export async function createUser(_prev: CreateUserState, formData: FormData): Pr
   return { ok: true, message: `Cuenta creada para ${name}. Comparte la contraseña de forma segura.` };
 }
 
+// Estado que se devuelve al formulario: si salió bien y el mensaje.
 export type MiPerfilState = { ok: boolean; message: string } | null;
 
 /**

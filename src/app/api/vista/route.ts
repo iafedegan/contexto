@@ -14,6 +14,7 @@ import { clasificarFuente, registrarFuente } from "@/lib/view-sources";
  */
 export const dynamic = "force-dynamic";
 
+// Cuenta una lectura de la nota (señal del navegador) y su origen, sin guardar datos del visitante.
 export async function POST(req: Request) {
   let slug = "";
   let origen = { utmSource: "", utmMedium: "", utmCampaign: "", referrer: "" };

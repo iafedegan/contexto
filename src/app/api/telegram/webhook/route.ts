@@ -8,8 +8,10 @@ import { procesar, type Update } from "@/lib/telegram-bot";
  * minutos) sigue en segundo plano con `after`, para que Telegram no reintente el mismo mensaje.
  */
 export const dynamic = "force-dynamic";
+// Tiempo máximo: el trabajo puede llamar al modelo durante varios minutos.
 export const maxDuration = 300;
 
+// Recibe la actualización de Telegram: valida el secreto, responde 200 de inmediato y procesa en segundo plano.
 export async function POST(req: Request) {
   if (req.headers.get("x-telegram-bot-api-secret-token") !== secretoWebhook()) {
     return NextResponse.json({ error: "no autorizado" }, { status: 401 });

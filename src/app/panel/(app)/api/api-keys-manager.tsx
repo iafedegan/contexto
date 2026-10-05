@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { Check, Copy, KeyRound, Trash2 } from "lucide-react";
 import { createApiClient, deleteApiClient, toggleApiClient } from "./actions";
 
+// Clave de API tal como se lista en el panel.
 type Client = {
   id: string;
   name: string;
@@ -26,6 +27,7 @@ export function ApiKeysManager({ clients, canManage }: { clients: Client[]; canM
   const [msg, setMsg] = useState("");
   const [pending, start] = useTransition();
 
+  // Crea una clave y la muestra una sola vez.
   async function crear() {
     const r = await createApiClient(name);
     setMsg(r.message);

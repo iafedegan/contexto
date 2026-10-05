@@ -11,8 +11,10 @@ import { draftKey, sanitizeDraft } from "@/lib/preview-draft";
 import { countChanges, summarizeChanges, type PortadaState } from "@/lib/portada-summary";
 import type { AdDraft } from "@/components/panel/ads-zone-form";
 
+// Se calcula en cada petición, nunca durante la compilación.
 export const dynamic = "force-dynamic";
 
+// Pantalla del editor de portada y plantillas (exige el permiso «portada»).
 export default async function PortadaPage({
   searchParams,
 }: {

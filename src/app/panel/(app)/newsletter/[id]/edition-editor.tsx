@@ -4,9 +4,12 @@ import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { deleteEdition, previewEdition, saveEdition, sendEditionChunk, sendTestEmail } from "../actions";
 
+// Contenido editable de la edición.
 type Content = { subject: string; preheader: string; intro: string; articleSlugs: string[] };
+// Nota que se puede elegir para la edición.
 type Art = { slug: string; title: string; categoryName: string | null };
 
+// Editor de una edición del boletín: asunto, textos, notas elegidas y envío.
 export function EditionEditor({ id, status, recipients, progress, initial, articles }: {
   id: string; status: string; recipients: number; progress: { delivered: number; total: number; failed: number };
   initial: Content; articles: Art[];
@@ -29,8 +32,10 @@ export function EditionEditor({ id, status, recipients, progress, initial, artic
     return () => clearTimeout(t);
   }, [c]);
 
+  // Marca o desmarca una nota de la edición.
   const toggle = (slug: string) =>
     setC((p) => ({ ...p, articleSlugs: p.articleSlugs.includes(slug) ? p.articleSlugs.filter((s) => s !== slug) : [...p.articleSlugs, slug].slice(0, 12) }));
+  // Sube o baja una nota en el orden de la edición.
   const move = (i: number, d: number) =>
     setC((p) => {
       const a = [...p.articleSlugs]; const j = i + d;
@@ -39,6 +44,7 @@ export function EditionEditor({ id, status, recipients, progress, initial, artic
       return { ...p, articleSlugs: a };
     });
 
+  // Envía la edición a los suscriptores por tandas, tras pedir confirmación.
   async function send() {
     if (!confirm(`¿Enviar «${c.subject}» a ${recipients} suscriptores? No se puede deshacer.`)) return;
     setSending(true);
@@ -53,6 +59,7 @@ export function EditionEditor({ id, status, recipients, progress, initial, artic
     setSending(false);
   }
 
+  // Etiqueta de un campo del formulario.
   const label = (t: string) => <span className="text-sm font-medium">{t}</span>;
   return (
     <div className="flex flex-col gap-4">

@@ -18,6 +18,7 @@ import { users } from "@/db/schema";
 import { auth, requireRole } from "@/lib/auth";
 import { getSiteIdentity } from "@/lib/site-identity";
 
+// Datos para activar el segundo factor: secreto, código QR y enlace.
 export type MfaSetup = { secret: string; qr: string; uri: string };
 
 /** Genera un secreto nuevo y su código QR, sin tocar todavía la cuenta. */
@@ -32,6 +33,7 @@ export async function iniciarMfa(): Promise<MfaSetup> {
   return { secret, qr, uri };
 }
 
+// Estado que se devuelve al formulario: si salió bien y el mensaje.
 export type MfaState = { ok: boolean; message: string } | null;
 
 /** Activa el 2FA si el código corresponde al secreto recién generado. */

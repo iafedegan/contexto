@@ -18,14 +18,19 @@ import { contactMessages } from "@/db/schema";
 import { clientIp, hit } from "@/lib/rate-limit";
 import { verifyHuman } from "@/lib/turnstile";
 
+// Estado que se devuelve al formulario: si salió bien y el mensaje.
 export type ContactState = { ok: boolean; message: string } | null;
 
+// Largo máximo de cada campo.
 const MAX = { name: 120, email: 160, organization: 160, subject: 160, message: 4000 };
 
+// Formato básico de una dirección de correo.
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
+// Acción de los formularios de contacto y pauta: aplica las defensas, valida y guarda el mensaje.
 export async function enviarMensaje(_prev: ContactState, formData: FormData): Promise<ContactState> {
   const es = String(formData.get("locale") ?? "es") === "es";
+  // Respuesta de error en el idioma de la persona.
   const error = (esMsg: string, enMsg: string) => ({ ok: false, message: es ? esMsg : enMsg });
 
   // 1. Campo trampa: invisible para una persona, irresistible para un bot.

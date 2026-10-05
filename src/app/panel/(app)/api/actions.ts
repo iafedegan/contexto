@@ -7,6 +7,7 @@ import { apiClients } from "@/db/schema";
 import { requirePermiso } from "@/lib/auth";
 import { generateApiKey } from "@/lib/api/keys";
 
+// Refresca la pantalla de claves de API.
 const REVALIDATE = () => revalidatePath("/panel/api");
 
 /** Crea un cliente y devuelve la clave EN CLARO una sola vez: no se guarda así. */
@@ -21,12 +22,14 @@ export async function createApiClient(name: string): Promise<{ ok: boolean; key?
   return { ok: true, key, message: "Clave creada. Cópiala ahora: no se volverá a mostrar." };
 }
 
+// Activa o revoca una clave de API (requiere el permiso «api»).
 export async function toggleApiClient(id: string, active: boolean): Promise<void> {
   await requirePermiso("api");
   await db.update(apiClients).set({ active }).where(eq(apiClients.id, id));
   REVALIDATE();
 }
 
+// Borra una clave de API (requiere el permiso «api»).
 export async function deleteApiClient(id: string): Promise<void> {
   await requirePermiso("api");
   await db.delete(apiClients).where(eq(apiClients.id, id));

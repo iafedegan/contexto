@@ -8,6 +8,7 @@ import type { StructuredSource } from "./draft-generator";
  */
 export type DemoSource = StructuredSource & { key: string; label: string; description: string };
 
+// Fuentes estructuradas de demostración para probar los agentes.
 export const DEMO_SOURCES: DemoSource[] = [
   {
     key: "boletin_precios_medellin",
@@ -95,6 +96,7 @@ Montería. Se esperan 180 expositores y se realizarán 3 subastas. El remate de 
   },
 ];
 
+// Busca una fuente de demostración por su clave.
 export function getDemoSource(key: string): DemoSource | undefined {
   return DEMO_SOURCES.find((s) => s.key === key);
 }

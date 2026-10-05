@@ -12,8 +12,10 @@ import { SparklineZoom } from "@/components/panel/sparkline-zoom";
 import { dailySeries, hasDailyViews, nf, pctChange, siteWeekTotals, TODAY_CO } from "@/lib/article-stats";
 import { formatDate } from "@/lib/utils";
 
+// Se calcula en cada petición, nunca durante la compilación.
 export const dynamic = "force-dynamic";
 
+// Etiqueta en español de cada estado editorial.
 const STATUS_LABEL: Record<string, string> = {
   borrador: "Borrador",
   en_revision: "En revisión",
@@ -22,8 +24,10 @@ const STATUS_LABEL: Record<string, string> = {
   archivado: "Archivado",
 };
 
+// Estado editorial de una nota.
 type Status = (typeof articles.status.enumValues)[number];
 
+// Criterios de orden del listado.
 const SORTS = [
   { value: "actualizado", label: "Última edición" },
   { value: "publicado", label: "Fecha de publicación" },
@@ -32,15 +36,19 @@ const SORTS = [
   { value: "titulo", label: "Título (A-Z)" },
 ];
 
+// Días que abarca la minigráfica de lecturas de cada fila.
 const SPARK_DAYS = 14;
 
+// Parámetros de búsqueda de la dirección.
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
+// Primer valor de un parámetro de la dirección, sin espacios.
 function param(sp: Record<string, string | string[] | undefined>, key: string): string {
   const v = sp[key];
   return (Array.isArray(v) ? v[0] : v)?.trim() ?? "";
 }
 
+// Listado de notas con filtros, orden, estadísticas y acciones (exige el permiso «articulos»).
 export default async function ArticlesList({ searchParams }: { searchParams: SearchParams }) {
   await requirePermiso("articulos");
   await promoverProgramados();
@@ -404,6 +412,7 @@ export default async function ArticlesList({ searchParams }: { searchParams: Sea
   );
 }
 
+// Tarjeta con una cifra y su leyenda.
 function Stat({ label, value, children }: { label: string; value: string; children: React.ReactNode }) {
   return (
     <div className="lx-card flex min-w-0 flex-col gap-0.5 px-3 py-2">
@@ -416,6 +425,7 @@ function Stat({ label, value, children }: { label: string; value: string; childr
   );
 }
 
+// Celda de encabezado de la tabla.
 function Th({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
     <th
@@ -426,6 +436,7 @@ function Th({ children, className }: { children: React.ReactNode; className?: st
   );
 }
 
+// Celda de la tabla.
 function Td({ children, className }: { children: React.ReactNode; className?: string }) {
   return <td className={`border-b border-[var(--border)] px-5 py-3.5 ${className ?? ""}`}>{children}</td>;
 }

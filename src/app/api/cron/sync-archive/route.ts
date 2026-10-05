@@ -11,6 +11,7 @@ import { cronAutorizado } from "@/lib/cron-auth";
  */
 export const maxDuration = 300;
 
+// Sincroniza el índice del archivo (los últimos 3 días, o todo con full=1). Exige el secreto del cron.
 export async function GET(req: Request) {
   if (!cronAutorizado(req)) {
     return NextResponse.json({ error: "no autorizado" }, { status: 401 });

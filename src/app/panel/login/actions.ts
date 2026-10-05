@@ -24,8 +24,10 @@ export async function iniciarLoginPasskey() {
   return options;
 }
 
+// Resultado de verificar la passkey: el token puente o un mensaje.
 export type LoginPasskeyState = { ok: boolean; token?: string; message: string };
 
+// Verifica la respuesta del navegador a la passkey (firma, origen y contador) y, si es válida, entrega el token que completa el inicio de sesión.
 export async function confirmarLoginPasskey(
   respuesta: AuthenticationResponseJSON,
 ): Promise<LoginPasskeyState> {

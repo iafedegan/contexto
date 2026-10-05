@@ -3,10 +3,13 @@ import { db } from "@/db";
 import { articles, authors, categories } from "@/db/schema";
 import { guardApi, json, CORS_HEADERS } from "@/lib/api/guard";
 
+// Se calcula en cada petición, nunca durante la compilación.
 export const dynamic = "force-dynamic";
 
+// Condición SQL: nota publicada y ya vigente.
 const published = and(eq(articles.status, "publicado"), lte(articles.publishedAt, sql`now()`));
 
+// Campos que expone la API de cada nota.
 const row = {
   slug: articles.slug,
   title: articles.title,
@@ -56,6 +59,7 @@ export async function GET(req: Request) {
   });
 }
 
+// Respuesta a la comprobación previa de CORS de los navegadores.
 export function OPTIONS() {
   return new Response(null, { status: 204, headers: CORS_HEADERS });
 }

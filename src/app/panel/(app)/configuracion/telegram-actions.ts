@@ -6,6 +6,7 @@ import { guardarAjustesTelegram, leerAjustesTelegram, secretoWebhook, tg, tokenT
 import { crearCodigo, desvincular, getVinculos } from "@/lib/telegram-store";
 import { siteUrl } from "@/lib/utils";
 
+// Estado de la conexión con Telegram para la pantalla de configuración.
 export type EstadoTelegram = {
   token: boolean;
   origen: "entorno" | "panel" | null;
@@ -47,11 +48,13 @@ export async function conectarTelegram(token: string): Promise<{ ok: true; bot: 
   return { ok: true, bot: me.result.username ?? "" };
 }
 
+// Genera un código de vinculación (vale 10 minutos) para la cuenta de la persona.
 export async function codigoTelegram(): Promise<string> {
   const user = await requirePermiso("articulos");
   return crearCodigo(user.id);
 }
 
+// Desvincula un chat de Telegram.
 export async function desvincularTelegram(chatId: string) {
   const user = await requirePermiso("articulos");
   const vin = await getVinculos();

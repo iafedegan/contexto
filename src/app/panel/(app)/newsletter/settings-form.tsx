@@ -4,14 +4,18 @@ import { useState, useTransition } from "react";
 import { deleteResendKey, saveNewsletterSettings, saveResendKey } from "./actions";
 import type { NewsletterSettings } from "@/lib/newsletter/types";
 
+// Estado del proveedor de correo.
 type Provider = { configured: boolean; source: string | null; masked: string | null; dryRun: boolean };
 
+// Formulario de ajustes del boletín (remitente, textos y color) y de la clave del proveedor de correo.
 export function SettingsForm({ settings, provider, canManage }: { settings: NewsletterSettings; provider: Provider; canManage: boolean }) {
   const [s, setS] = useState(settings);
   const [key, setKey] = useState("");
   const [msg, setMsg] = useState("");
   const [pending, start] = useTransition();
+  // Actualiza un campo del formulario al escribir.
   const set = (k: keyof NewsletterSettings) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setS({ ...s, [k]: e.target.value });
+  // Campo de texto del formulario.
   const field = (label: string, k: keyof NewsletterSettings, type = "text") => (
     <label className="flex flex-col gap-1 text-sm">{label}
       <input type={type} className="lx-input" value={s[k]} onChange={set(k)} disabled={!canManage} />

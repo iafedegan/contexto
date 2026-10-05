@@ -25,9 +25,11 @@ import { getAnalyticsStatus } from "@/lib/analytics-server";
 import { saveAnalyticsSettings, saveSiteIdentity } from "./actions";
 import { env } from "@/lib/env";
 
+// Se calcula en cada petición, nunca durante la compilación.
 export const dynamic = "force-dynamic";
 
 
+// Pantalla de configuración en pestañas: sitio, equipo, seguridad, IA, analítica, anuncios, Telegram y más según el rol.
 export default async function ConfiguracionPage() {
   const session = await auth();
   const isAdmin = session?.user?.role === "administrador";
@@ -59,6 +61,7 @@ export default async function ConfiguracionPage() {
   ]);
 
   const accesos = isAdmin ? await getAccesos(100) : [];
+  // Fecha y hora de Colombia en formato corto.
   const fmtHora = (iso: string) =>
     new Intl.DateTimeFormat("es-CO", { day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit", hour12: true, timeZone: "America/Bogota" }).format(new Date(iso));
   const ultimo = new Map<string, string>();
@@ -442,6 +445,7 @@ function Section({
   );
 }
 
+// Campo de formulario con etiqueta y pista.
 function Field({
   label,
   hint,
@@ -464,6 +468,7 @@ function Field({
   );
 }
 
+// Tarjeta de estado con un valor y una marca de si está bien.
 function Stat({ label, value, ok }: { label: string; value: string; ok?: boolean }) {
   return (
     <div className="rounded-[var(--radius)] border border-[var(--border)] p-3">

@@ -18,6 +18,7 @@ import { AD_ZONE_SPECS, positionOf, suffixOf } from "@/lib/ads-positions";
 import { parseAdDate, validateAd } from "@/lib/ads-validate";
 import { invalidarCache } from "@/lib/data-cache";
 
+// Estado que se devuelve al formulario: si salió bien y el mensaje.
 export type AdsZoneState = { ok: boolean; message: string } | null;
 
 /**

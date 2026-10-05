@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { buildOpenApiSpec } from "@/lib/api/openapi";
 import { siteUrl } from "@/lib/utils";
 
+// Se calcula en cada petición, nunca durante la compilación.
 export const dynamic = "force-dynamic";
 
 /** GET /api/openapi.json — la especificación que consume /api-docs (Scalar). */

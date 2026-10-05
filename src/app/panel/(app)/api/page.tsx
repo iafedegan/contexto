@@ -4,10 +4,13 @@ import { apiClients } from "@/db/schema";
 import { requirePermiso } from "@/lib/auth";
 import { ApiKeysManager } from "./api-keys-manager";
 
+// Se calcula en cada petición, nunca durante la compilación.
 export const dynamic = "force-dynamic";
 
+// Formatea una fecha y hora en español de Colombia.
 const fmt = (d: Date | null) => (d ? new Intl.DateTimeFormat("es-CO", { dateStyle: "medium", timeStyle: "short", timeZone: "America/Bogota" }).format(d) : "Nunca");
 
+// Pantalla de claves de API para terceros (exige el permiso «api»).
 export default async function ApiPage() {
   const user = await requirePermiso("api");
   const clients = await db

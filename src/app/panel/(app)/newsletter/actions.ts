@@ -13,7 +13,9 @@ import { sendMany } from "@/lib/newsletter/send";
 import { NEWSLETTER_KEY, NEWSLETTER_SECRET_KEY, getNewsletterSettings, getProviderStatus } from "@/lib/newsletter/settings";
 import { sanitizeNewsletterSettings, type NewsletterSettings } from "@/lib/newsletter/types";
 
+// Formato básico de una dirección de correo.
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+// Refresca la pantalla del boletín.
 const REVALIDATE = () => revalidatePath("/panel/newsletter");
 
 /** Valida lo que llega del editor: el correo se genera a partir de estos textos. */
@@ -41,6 +43,7 @@ export async function createEdition() {
   redirect(`/panel/newsletter/${row.id}`);
 }
 
+// Guarda el contenido de una edición del boletín.
 export async function saveEdition(id: string, input: Partial<EditionContent>): Promise<{ ok: boolean; message: string }> {
   await requirePermiso("newsletter");
   const c = cleanContent(input);
@@ -55,6 +58,7 @@ export async function saveEdition(id: string, input: Partial<EditionContent>): P
   return { ok: true, message: "Borrador guardado" };
 }
 
+// Borra una edición del boletín.
 export async function deleteEdition(id: string): Promise<void> {
   await requirePermiso("newsletter");
   await db.delete(newsletterEditions).where(and(eq(newsletterEditions.id, id), eq(newsletterEditions.status, "borrador")));
@@ -111,6 +115,7 @@ export type SendProgress = {
   message?: string;
 };
 
+// Tiempo máximo de cada tanda de envío (40 s), para no pasar el límite de la función.
 const TIME_BUDGET_MS = 40_000;
 
 /** Suscriptores que deben recibir el boletín: confirmados y sin baja. */
@@ -244,6 +249,7 @@ export async function saveNewsletterSettings(input: Partial<NewsletterSettings>)
   return { ok: true, message: "Ajustes guardados" };
 }
 
+// Guarda cifrada la clave de Resend (solo administradores).
 export async function saveResendKey(key: string): Promise<{ ok: boolean; message: string }> {
   await requireRole("administrador");
   const k = key.trim();
@@ -258,6 +264,7 @@ export async function saveResendKey(key: string): Promise<{ ok: boolean; message
   return { ok: true, message: "Clave guardada (cifrada)" };
 }
 
+// Borra la clave de Resend guardada (solo administradores).
 export async function deleteResendKey(): Promise<void> {
   await requireRole("administrador");
   await db.delete(siteSettings).where(eq(siteSettings.key, NEWSLETTER_SECRET_KEY));

@@ -33,4 +33,5 @@ export const draftFromSource = inngest.createFunction(
   },
 );
 
+// Funciones en segundo plano que se registran en Inngest.
 export const functions = [syncArchive, draftFromSource];

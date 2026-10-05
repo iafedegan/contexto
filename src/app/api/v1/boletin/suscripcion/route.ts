@@ -6,7 +6,9 @@ import { guardApi, json, CORS_HEADERS } from "@/lib/api/guard";
 import { hit } from "@/lib/rate-limit";
 import { sendConfirmationEmail } from "@/lib/newsletter/confirm";
 
+// Se calcula en cada petición, nunca durante la compilación.
 export const dynamic = "force-dynamic";
+// Formato básico de una dirección de correo.
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 /**
@@ -60,6 +62,7 @@ export async function POST(req: Request) {
   return json({ ok: true, estado: "pendiente_de_confirmar" }, { status: 201 });
 }
 
+// Respuesta a la comprobación previa de CORS de los navegadores.
 export function OPTIONS() {
   return new Response(null, { status: 204, headers: CORS_HEADERS });
 }

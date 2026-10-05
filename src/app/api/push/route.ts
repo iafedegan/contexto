@@ -12,6 +12,7 @@ export const dynamic = "force-dynamic";
 /** Altas y bajas por IP y hora: un navegador real se suscribe una vez; esto frena el relleno masivo de la tabla. */
 const LIMITE_POR_HORA = 60;
 
+// Alta de una suscripción push, con validación del endpoint y límite por IP.
 export async function POST(req: Request) {
   try {
     const ip = clientIp(req.headers);
@@ -37,6 +38,7 @@ export async function POST(req: Request) {
   }
 }
 
+// Baja de una suscripción push.
 export async function DELETE(req: Request) {
   try {
     if (!(await hit(`push:ip:${clientIp(req.headers)}`, LIMITE_POR_HORA, 60 * 60)).allowed) {

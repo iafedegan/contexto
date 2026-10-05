@@ -4,8 +4,10 @@ import { contarSuscriptores, pushConfigurado } from "@/lib/push";
 import { AvisoForm } from "@/components/panel/aviso-form";
 import { notasRecientes } from "./actions";
 
+// Se calcula en cada petición, nunca durante la compilación.
 export const dynamic = "force-dynamic";
 
+// Pantalla para enviar avisos de última hora a los lectores (exige el permiso «avisos»).
 export default async function AvisosPage() {
   await requirePermiso("avisos");
   const [notas, suscriptores] = await Promise.all([

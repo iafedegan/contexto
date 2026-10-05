@@ -19,10 +19,12 @@ import {
   submitForReview,
 } from "@/app/panel/(app)/articulos/actions";
 
+// Se calcula en cada petición, nunca durante la compilación.
 export const dynamic = "force-dynamic";
 // Transcribir una entrevista o buscar noticias llama al modelo varios minutos: sin esto Vercel corta a los pocos segundos.
 export const maxDuration = 300;
 
+// Datos de la nota que se edita.
 type Initial = {
   id: string;
   title: string;
@@ -40,6 +42,7 @@ type Initial = {
   isLive: boolean;
 };
 
+// Nota vacía para el caso de un artículo nuevo.
 const EMPTY: Initial = {
   id: "",
   title: "",
@@ -57,6 +60,7 @@ const EMPTY: Initial = {
   isLive: false,
 };
 
+// Pantalla de una nota: elección de modo si es nueva, asistente paso a paso (IA o manual), o editor clásico con las estadísticas de lectura.
 export default async function ArticleEditorPage({
   params,
   searchParams,
@@ -207,6 +211,7 @@ export default async function ArticleEditorPage({
   );
 }
 
+// Panel de audiencia de una nota: lecturas totales, promedio, últimos días y mejor día.
 function ArticleStats({
   views,
   publishedAt,
@@ -219,6 +224,7 @@ function ArticleStats({
   best: Awaited<ReturnType<typeof bestDay>>;
 }) {
   const v = series.views;
+  // Suma de una lista de números.
   const sum = (a: number[]) => a.reduce((s, x) => s + x, 0);
   const today = v[v.length - 1] ?? 0;
   const last7 = sum(v.slice(-7));
@@ -284,6 +290,7 @@ function ArticleStats({
   );
 }
 
+// Pantalla para elegir cómo crear la nota: paso a paso a mano o con el asistente de IA.
 function ModeChooser() {
   const options = [
     {

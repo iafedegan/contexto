@@ -8,6 +8,7 @@ import { requirePermiso } from "@/lib/auth";
 import { slugify } from "@/lib/utils";
 import { invalidarCache } from "@/lib/data-cache";
 
+// Estado que se devuelve al formulario: si salió bien y el mensaje.
 export type SeccionState = { ok: boolean; message: string } | null;
 
 /**
@@ -63,6 +64,7 @@ export async function actualizarSeccion(_prev: SeccionState, formData: FormData)
 
 export type EstructuraResult = { ok: boolean; message: string };
 
+// Refresca el menú del sitio y las páginas de las secciones afectadas.
 async function refrescarMenu(slugs: (string | null | undefined)[] = []) {
   for (const s of slugs) {
     if (!s) continue;

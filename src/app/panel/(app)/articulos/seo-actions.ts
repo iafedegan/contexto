@@ -15,6 +15,7 @@ import { requirePermiso } from "@/lib/auth";
 import { signPreviewToken } from "@/lib/preview-token";
 import { publicBase, runPageSpeed, type PsiResult } from "@/lib/psi";
 
+// Analiza una nota con PageSpeed Insights: su dirección pública si ya está publicada, o la vista previa firmada si es borrador.
 export async function analizarConGoogle(
   articleId: string,
   strategy: "mobile" | "desktop" = "mobile",

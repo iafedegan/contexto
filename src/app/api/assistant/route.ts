@@ -8,11 +8,15 @@ import { checkBudget, estimateCostUsd } from "@/lib/budget";
 import { ASSISTANT_SYSTEM } from "@/agents/prompts";
 import { clientIp, hit } from "@/lib/rate-limit";
 
+// Se ejecuta en Node.js.
 export const runtime = "nodejs";
+// Tiempo máximo de la función: 30 segundos.
 export const maxDuration = 30;
 
 
+// Fuente citada en una respuesta.
 type CitedSource = { title: string; url: string; kind: "articulo" | "archivo" };
+// Cuerpo esperado de la petición.
 type Body = { question: string; sessionId: string; history?: { role: string; content: string }[] };
 
 /** Largo máximo de una pregunta: se embebe y se manda al modelo, así que cada carácter cuesta. */
@@ -20,6 +24,7 @@ const MAX_PREGUNTA = 600;
 /** Consultas por IP y hora. El `sessionId` lo manda el cliente y se puede cambiar a voluntad; la IP es el freno real al gasto. */
 const MAX_POR_IP_HORA = 40;
 
+// Responde una pregunta del lector: busca fuentes, comprueba límites y presupuesto, genera con citas o degrada a búsqueda, y registra la consulta.
 export async function POST(req: Request) {
   let body: Partial<Body>;
   try {
@@ -123,10 +128,12 @@ export async function POST(req: Request) {
   }
 }
 
+// Reduce las fuentes a los campos que se registran.
 function toCited(s: Array<{ title: string; url: string; kind: "articulo" | "archivo" }>): CitedSource[] {
   return s.map((x) => ({ title: x.title, url: x.url, kind: x.kind }));
 }
 
+// Registra la consulta en assistant_queries; si falla, no afecta la respuesta.
 async function log(
   sessionId: string,
   question: string,

@@ -14,6 +14,7 @@ import { POPUP_KEY, getSitePopup } from "@/lib/popup";
 import { draftKey, sanitizeDraft } from "@/lib/preview-draft";
 import { invalidarCache } from "@/lib/data-cache";
 
+// Orden y estilo de una nota en la portada.
 export type HomeLayoutEntry = {
   id: string;
   homeStyle: HomeStyle | null;
@@ -115,6 +116,7 @@ export async function saveHomeDraft(input: unknown): Promise<{ ok: boolean }> {
   return { ok: true };
 }
 
+// Escritura pendiente de un anuncio al publicar el borrador.
 type AdWrite = {
   key: string;
   name: string;
@@ -126,6 +128,7 @@ type AdWrite = {
   endsAt: Date | null;
 };
 
+// Compara dos fechas por su valor, aceptando nulos.
 const sameDate = (a: Date | null, b: Date | null) => (a?.getTime() ?? null) === (b?.getTime() ?? null);
 
 /**
@@ -271,6 +274,7 @@ export async function restoreHomeSnapshot(input: unknown): Promise<{ ok: boolean
           startsAt: o.startsAt ? new Date(String(o.startsAt)) : null,
           endsAt: o.endsAt ? new Date(String(o.endsAt)) : null,
         };
+        // Una fecha es válida si no existe o es una fecha real.
         const ok = (d: Date | null) => !d || !Number.isNaN(d.getTime());
         if (!ok(w.startsAt) || !ok(w.endsAt) || (w.html && w.imageUrl)) continue;
         await db

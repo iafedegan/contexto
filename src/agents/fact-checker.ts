@@ -5,8 +5,10 @@ import { z } from "zod";
 import { FACT_CHECKER_SYSTEM } from "./prompts";
 import { env } from "@/lib/env";
 
+// Modelo de lenguaje del verificador, configurable por entorno.
 const MODEL = env(process.env.ASSISTANT_MODEL, "claude-sonnet-5");
 
+// Forma de la respuesta del verificador: una lista de cifras contrastadas.
 const checksSchema = z.object({
   checks: z.array(
     z.object({
@@ -19,6 +21,7 @@ const checksSchema = z.object({
   ),
 });
 
+// Resultado de contrastar una cifra con la fuente.
 export type FactCheck = z.infer<typeof checksSchema>["checks"][number];
 
 /**
@@ -97,6 +100,7 @@ export function ruleFactCheck(
   return checks;
 }
 
+// Aplana un objeto anidado en pares ruta/valor.
 function flatten(obj: unknown, prefix = ""): Array<{ path: string; value: unknown }> {
   if (Array.isArray(obj)) {
     return obj.flatMap((v, i) => flatten(v, `${prefix}[${i}]`));
@@ -107,6 +111,7 @@ function flatten(obj: unknown, prefix = ""): Array<{ path: string; value: unknow
   return [{ path: prefix, value: obj }];
 }
 
+// Formas de escribir un valor para buscarlo en el texto.
 function valueVariants(value: string | number): string[] {
   if (typeof value === "string") return [value];
   return [
@@ -117,6 +122,7 @@ function valueVariants(value: string | number): string[] {
   ];
 }
 
+// Normaliza un texto para poder compararlo.
 function normalize(s: string): string {
   return s
     .toLowerCase()
@@ -126,6 +132,7 @@ function normalize(s: string): string {
     .replace(/\s+/g, " ");
 }
 
+// Indica si un texto menciona el campo al que pertenece un valor.
 function mentionsField(haystack: string, path: string): boolean {
   const leaf = path.split(/[.\[]/).pop()?.replace(/\W/g, "") ?? "";
   return leaf.length > 3 && haystack.includes(normalize(leaf));

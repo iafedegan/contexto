@@ -7,9 +7,12 @@ import { requirePermiso } from "@/lib/auth";
 import { getSelectableArticles } from "@/lib/newsletter/edition";
 import { EditionEditor } from "./edition-editor";
 
+// Se calcula en cada petición, nunca durante la compilación.
 export const dynamic = "force-dynamic";
+// Hasta cinco minutos: el envío por tandas puede tardar.
 export const maxDuration = 300;
 
+// Pantalla de una edición del boletín (exige el permiso «newsletter»).
 export default async function EditionPage({ params }: { params: Promise<{ id: string }> }) {
   await requirePermiso("newsletter");
   const { id } = await params;

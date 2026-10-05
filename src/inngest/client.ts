@@ -7,6 +7,7 @@ import { Inngest } from "inngest";
  */
 export const inngest = new Inngest({ id: "contexto-ganadero" });
 
+// Eventos que entiende Inngest, con sus datos.
 export type Events = {
   "archive/sync.requested": { data: { full?: boolean } };
   "agent/draft.requested": {

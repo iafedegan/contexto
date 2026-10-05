@@ -10,8 +10,10 @@ import { getRecentArticles } from "@/lib/content";
 // respuesta se cachea en la CDN 5 minutos.
 export const dynamic = "force-dynamic";
 
+// Número de notas que se descargan para leer sin conexión.
 const LIMIT = 25;
 
+// Lista las páginas e imágenes que el Service Worker descarga para leer sin conexión.
 export async function GET() {
   let items: Awaited<ReturnType<typeof getRecentArticles>> = [];
   try {

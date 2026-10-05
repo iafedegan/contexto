@@ -27,6 +27,7 @@ async function reindex(articleId: string) {
   if (vec) await db.update(articles).set({ embedding: vec }).where(eq(articles.id, articleId));
 }
 
+// Descarta la caché de datos y las páginas afectadas por una nota: portada, sitemap, feed, la nota, su categoría y su autor.
 async function revalidateArticle(articleId: string) {
   const [a] = await db
     .select({
@@ -60,6 +61,7 @@ async function requirePublicador() {
   return user;
 }
 
+// Guarda una nota desde el formulario: sanea el cuerpo, impide editar notas publicadas a quien no puede publicar, recalcula su embedding y, si se pide, publica, envía a revisión o programa.
 export async function saveArticle(formData: FormData) {
   const user = await requirePermiso("articulos");
   const id = String(formData.get("id") ?? "");
@@ -155,6 +157,7 @@ export async function saveArticle(formData: FormData) {
   redirect(`/panel/articulos/${articleId}?guardado=1`);
 }
 
+// Pasa un borrador a revisión; sobre una nota publicada falla para no sacarla del sitio.
 export async function submitForReview(articleId: string) {
   await requirePermiso("articulos");
   // Solo una nota en borrador (o ya en revisión) pasa a revisión: sobre una publicada la sacaría del sitio.
@@ -167,6 +170,7 @@ export async function submitForReview(articleId: string) {
   revalidatePath(`/panel/articulos/${articleId}`);
 }
 
+// Publica una nota (exige permiso y rol de editor): revalida el sitio y avisa a los lectores si es de última hora.
 export async function publishArticle(articleId: string) {
   await requirePublicador();
 
@@ -186,6 +190,7 @@ export async function publishArticle(articleId: string) {
   avisarSiUltimaHora(articleId);
 }
 
+// Programa la publicación de una nota para una fecha futura.
 export async function scheduleArticle(articleId: string, isoDateTime: string) {
   await requirePublicador();
   const when = new Date(isoDateTime);
@@ -199,6 +204,7 @@ export async function scheduleArticle(articleId: string, isoDateTime: string) {
   revalidatePath(`/panel/articulos/${articleId}`);
 }
 
+// Archiva una nota para retirarla del sitio sin borrarla.
 export async function unpublishArticle(articleId: string) {
   await requirePublicador();
   await db
@@ -227,6 +233,7 @@ export async function deleteArticle(articleId: string): Promise<{ ok: boolean; m
   return { ok: true, message: "Artículo eliminado." };
 }
 
+// Resultado del autoguardado: el id y la hora, o el motivo por el que no se guardó.
 export type AutosaveResult =
   | { ok: true; id: string; savedAt: string }
   | { ok: false; skipped?: boolean; error?: string };
