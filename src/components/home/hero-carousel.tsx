@@ -11,6 +11,7 @@ import { homeStyleImageScale, homeStyleTitleCss } from "@/lib/home-style";
 import { CoverArt } from "@/components/cover-art";
 import { DEFAULT_LOCALE, INTL_LOCALE, categoryLabel, localePath, type Locale } from "@/lib/i18n";
 
+// Tiempo entre diapositivas del carrusel automático.
 const AUTOPLAY_MS = 6000;
 
 /**
@@ -45,6 +46,7 @@ export function HeroCarousel({
   }, [count, paused, interactive, index]);
 
   if (count === 0) return null;
+  // Va a la diapositiva indicada, dando la vuelta en los extremos.
   const go = (i: number) => setIndex(((i % count) + count) % count);
   const active = items[index];
   const Wrapper: React.ElementType = interactive ? Link : "div";

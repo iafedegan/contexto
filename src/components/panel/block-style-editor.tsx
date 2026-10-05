@@ -25,6 +25,7 @@ export type ZoneBundle = {
   onLevel?: (n: number) => void;
 };
 
+// Editor de los estilos de un bloque: tamaño, fondo, texto, bordes y posición.
 export function BlockStyleEditor({
   title,
   style,
@@ -41,6 +42,7 @@ export function BlockStyleEditor({
   /** Sin marco ni título: va dentro de otro panel (p. ej. «Más ajustes» de una nota). */
   bare?: boolean;
 }) {
+  // Campo numérico con su rango.
   const numField = (label: string, value: number | undefined, min: number, max: number, key: keyof HomeStyle, hint?: string) => (
     <div className="flex items-center gap-2">
       <span className="w-28 shrink-0 text-xs text-[var(--fg-muted)]">{label}</span>
@@ -61,6 +63,7 @@ export function BlockStyleEditor({
       )}
     </div>
   );
+  // Deslizador con su rango.
   const slider = (label: string, value: number | undefined, min: number, max: number, key: keyof HomeStyle) => (
     <div>
       <div className="flex items-center justify-between text-xs">

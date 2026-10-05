@@ -10,6 +10,7 @@ export type { AdsZoneRow };
 /** Fecha en el formato que espera un <input type="datetime-local">. */
 function paraInput(d: Date | null): string {
   if (!d) return "";
+  // Rellena con cero a la izquierda hasta dos dígitos.
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
@@ -29,6 +30,7 @@ function aIso(v: FormDataEntryValue | null): string {
 /** Lo que el editor está escribiendo en un anuncio (aún sin guardar). Fechas en ISO. */
 export type AdDraft = { imageUrl: string; clickUrl: string; html: string; active: boolean; startsAt?: string; endsAt?: string };
 
+// Formulario de una zona publicitaria: creatividad (imagen o HTML), enlace, vigencia y activación.
 export function AdsZoneForm({
   zone,
   canManage,

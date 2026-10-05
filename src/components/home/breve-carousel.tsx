@@ -39,6 +39,7 @@ export function BreveCarousel({
 } & BuilderProps) {
   const track = useRef<HTMLDivElement>(null);
 
+  // Desplaza el carrusel una tarjeta hacia un lado.
   function scrollBy(dir: 1 | -1) {
     const el = track.current;
     if (!el) return;

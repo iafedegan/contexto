@@ -22,6 +22,7 @@ import { SectionPanel } from "@/components/panel/section-panel";
 import { AdsPanel } from "@/components/panel/ads-panel";
 import type { AdDraft, AdsZoneRow } from "@/components/panel/ads-zone-form";
 
+// Recorta un texto con puntos suspensivos.
 const recortar = (t: string, n: number) => (t.length > n ? `${t.slice(0, n - 1).trimEnd()}…` : t);
 
 /**
@@ -86,6 +87,7 @@ export function PreviewChrome({
     return null;
   });
   const boxRef = useRef<HTMLDivElement>(null);
+  // Empieza a arrastrar el panel de propiedades.
   function startDrag(e: React.PointerEvent) {
     const box = boxRef.current;
     if (!box) return;
@@ -94,6 +96,7 @@ export function PreviewChrome({
     const dx = e.clientX - r.left;
     const dy = e.clientY - r.top;
     let last = { x: r.left, y: r.top };
+    // Mueve el panel durante el arrastre.
     const move = (ev: PointerEvent) => {
       last = {
         x: Math.max(0, Math.min(window.innerWidth - 120, ev.clientX - dx)),
@@ -101,6 +104,7 @@ export function PreviewChrome({
       };
       setPos(last);
     };
+    // Termina el arrastre.
     const up = () => {
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", up);
@@ -144,11 +148,13 @@ export function PreviewChrome({
       }
     }, 600);
   }
+  // Aplica un cambio de diseño hecho en la vista previa.
   function editLayout(next: NonNullable<typeof layout>) {
     layoutRef.current = next;
     setLayout(next);
     persist();
   }
+  // Aplica un cambio de anuncio hecho en la vista previa.
   function editAd(key: string, d: AdDraft) {
     adDraftsRef.current = { ...adDraftsRef.current, [key]: d };
     setAdDrafts(adDraftsRef.current);
@@ -157,6 +163,7 @@ export function PreviewChrome({
   /** Cambia el estilo de un bloque (nota); `null` lo restablece. */
   function patchBlock(slug: string, partial: Partial<HomeStyle> | null) {
     const cur = itemsRef.current;
+    // Aplica un estilo a una nota.
     const apply = (st: HomeStyle | null): HomeStyle | null => {
       if (partial === null) return null;
       const merged = { ...(st ?? {}), ...partial } as Record<string, unknown>;
@@ -204,6 +211,7 @@ export function PreviewChrome({
     return () => clearTimeout(id);
   }, [selSlug, children, zoneUp]);
 
+  // Cambia el estilo de una zona.
   function setZone(key: string, z: ZoneStyle | undefined) {
     if (!layout) return;
     const zones = { ...(layout.zones ?? {}) };
@@ -211,6 +219,7 @@ export function PreviewChrome({
     else delete zones[key];
     editLayout({ ...layout, zones });
   }
+  // Reúne los datos de las zonas.
   const zoneBundle = (): ZoneBundle => ({
     map: zoneMap,
     style: zoneMap?.key ? layout?.zones?.[zoneMap.key] : undefined,
@@ -259,6 +268,7 @@ export function PreviewChrome({
 
   // Pistas al pasar el ratón: qué es cada parte y que se puede editar con un clic.
   useEffect(() => {
+    // Título del elemento que coincide con un selector.
     const titulo = (sel: string) => document.querySelector(sel)?.querySelector("h1,h2,h3")?.textContent?.trim() ?? "";
     const labels: HintLabels = {
       region: (id) => (id === "encabezado" ? "Encabezado de la sección" : (REGIONS.find((r) => r.id === id)?.label ?? null)),
@@ -285,6 +295,7 @@ export function PreviewChrome({
   }, []);
 
   useEffect(() => {
+    // Reacciona a los cambios del editor en otra pestaña.
     const onStorage = (e: StorageEvent) => {
       if (e.key === DRAFT_PING_KEY) router.refresh();
     };
@@ -313,6 +324,7 @@ export function PreviewChrome({
     return { ok: true };
   }, [router]);
 
+  // Revierte la última publicación.
   async function deshacer(prev: Anterior) {
     try {
       const res = await restoreHomeSnapshot(prev);
@@ -330,6 +342,7 @@ export function PreviewChrome({
     }
   }
 
+  // Elige el tipo de elemento que se edita.
   function elegir(kind: Foco) {
     setFoco(kind);
     setFlash((n) => n + 1);

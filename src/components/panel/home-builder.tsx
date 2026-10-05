@@ -32,13 +32,16 @@ import type { PopupConfig } from "@/lib/popup-types";
 import { ACCEPTED_KEY, DRAFT_PING_KEY, ADS_EDIT_KEY, ITEMS_EDIT_KEY, LAYOUT_EDIT_KEY, SECCIONES_KEY, type PortadaDraft } from "@/lib/portada-draft";
 import type { Anterior, Item, Layout } from "@/components/panel/portada-types";
 
+// Clave donde se recuerda que ya se mostró la guía.
 const GUIA_KEY = "cg:portada-guia-v1";
+// Clave donde se guarda lo último publicado, para poder deshacer.
 const PUBLICADO_KEY = "cg:portada-publicado";
 /** Aviso de una sola vez que debe sobrevivir a la recarga de la página (p. ej. «Se volvió a la versión anterior»). */
 const AVISO_KEY = "cg:portada-aviso";
 /** Cómo se ve el lienzo (zoom, marco, ampliado): se recuerda entre visitas. */
 const VISTA_KEY = "cg:portada-vista";
 
+// Recorta un texto con puntos suspensivos.
 const recortar = (t: string, n: number) => (t.length > n ? `${t.slice(0, n - 1).trimEnd()}…` : t);
 
 /** «hace 5 min», «hace 2 h»… para el aviso de borrador pendiente. */
@@ -52,6 +55,7 @@ function haceCuanto(iso: string): string {
   return `hace ${d} ${d === 1 ? "día" : "días"}`;
 }
 
+// Editor visual de la portada: plantilla, orden y estilo de las notas, secciones, anuncios y ventana emergente, con vista previa real.
 export function HomeBuilder({
   initialItems,
   initialLayout,
@@ -183,6 +187,7 @@ export function HomeBuilder({
     };
     const isFirst = firstDraft.current;
     firstDraft.current = false;
+    // Guarda el borrador del diseño en el servidor.
     const save = async () => {
       try {
         await saveHomeDraft(draft);
@@ -356,6 +361,7 @@ export function HomeBuilder({
   // ---------------------------------------------------------------- Otras pestañas
   // Lo que se hace en la vista previa (otra pestaña) llega aquí por localStorage.
   useEffect(() => {
+    // Reacciona a los cambios hechos desde la vista previa en otra pestaña.
     const onStorage = (e: StorageEvent) => {
       // Se publicó desde la vista previa: se recarga para partir de lo publicado.
       if (e.key === ACCEPTED_KEY) router.refresh();
@@ -417,6 +423,7 @@ export function HomeBuilder({
     else delete zones[key];
     patchLayout({ zones });
   }
+  // Reúne los datos de las zonas para el editor.
   const zoneBundle = (): ZoneBundle =>
     zoneMap?.key
       ? {
@@ -443,6 +450,7 @@ export function HomeBuilder({
         }
       : { map: null, style: undefined, onChange: () => {}, onSelect: () => {} };
 
+  // Mueve una nota a otra posición.
   function moveItem(from: number, to: number) {
     if (from === to || to < 0) return;
     setItems((prev) => {
@@ -456,6 +464,7 @@ export function HomeBuilder({
     setAuto(false);
   }
 
+  // Cambia el estilo de una nota.
   function patchStyle(index: number, partial: Partial<HomeStyle> | null) {
     setItems((prev) => {
       const next = prev.slice();
@@ -469,10 +478,12 @@ export function HomeBuilder({
     setAuto(false);
   }
 
+  // Cambia una parte del diseño.
   function patchLayout(partial: Partial<Layout>) {
     setLayout((prev) => ({ ...prev, ...partial }));
   }
 
+  // Elige una plantilla.
   function pickTemplate(config: Layout) {
     const teniaComposicion = Object.values(layout.parts ?? {}).some(Boolean);
     patchLayout({ ...config, parts: {}, sectionFilters: layout.sectionFilters });
@@ -486,12 +497,14 @@ export function HomeBuilder({
     }
   }
 
+  // Selecciona una nota para editarla.
   function selectNota(i: number) {
     setSelected(i);
     focusOn("nota");
     frameDoc.current?.querySelector(`[data-card-index="${i}"]`)?.scrollIntoView({ block: "center", behavior: "smooth" });
   }
 
+  // Cierra el panel de edición del elemento enfocado.
   function closeFoco() {
     setFoco(null);
     setSelected(null);
@@ -513,6 +526,7 @@ export function HomeBuilder({
     };
   }
 
+  // Muestra el aviso de publicación con la opción de deshacer.
   function mostrarPublicado(prev: Anterior, at: number) {
     setLastPub({ at, prev });
     showToast({
@@ -526,6 +540,7 @@ export function HomeBuilder({
     });
   }
 
+  // Publica el borrador del diseño en el sitio.
   async function publicar(): Promise<{ ok: boolean; message?: string }> {
     const draft: PortadaDraft = {
       layout,
@@ -553,6 +568,7 @@ export function HomeBuilder({
     return { ok: true };
   }
 
+  // Vuelve a lo que había antes de publicar.
   async function deshacerPublicacion(prev: Anterior) {
     try {
       const res = await restoreHomeSnapshot(prev);
@@ -578,6 +594,7 @@ export function HomeBuilder({
     }
   }
 
+  // Descarta el borrador.
   function descartar() {
     applySnap({ items: initialItems, layout: initialLayout, popup: initialPopup, adDrafts: {}, auto: false });
     closeFoco();
@@ -589,6 +606,7 @@ export function HomeBuilder({
     });
   }
 
+  // Devuelve las notas al orden y estilo automáticos.
   function volverAlOriginal() {
     const ordenadas = [...items]
       .map((i) => ({ ...i, homeStyle: null }))
@@ -618,10 +636,12 @@ export function HomeBuilder({
   // Con cambios sin publicar, salir (recargar, cerrar, navegar a otra pantalla) pide confirmar.
   useEffect(() => {
     if (count === 0) return;
+    // Avisa si hay cambios sin publicar al cerrar la pestaña.
     const antes = (e: BeforeUnloadEvent) => {
       e.preventDefault();
       e.returnValue = "";
     };
+    // Gestiona los clics en la vista previa.
     const clic = (e: MouseEvent) => {
       if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
       const a = (e.target as HTMLElement | null)?.closest("a[href]") as HTMLAnchorElement | null;
@@ -661,6 +681,7 @@ export function HomeBuilder({
     }
   }
   useEffect(() => {
+    // Atajos de teclado del editor.
     const h = (e: KeyboardEvent) => hotkey(e);
     window.addEventListener("keydown", h);
     return () => window.removeEventListener("keydown", h);
@@ -719,6 +740,7 @@ export function HomeBuilder({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Cambia el zoom, el marco o la ampliación de la vista previa.
   function cambiarVista(next: { zoom?: Zoom; framed?: boolean; ampliado?: boolean }) {
     if (next.zoom !== undefined) setZoom(next.zoom);
     if (next.framed !== undefined) setFramed(next.framed);
@@ -733,6 +755,7 @@ export function HomeBuilder({
     }
   }
 
+  // Cierra la guía y recuerda que ya se vio.
   function cerrarGuia() {
     setGuia(false);
     try {
@@ -761,6 +784,7 @@ export function HomeBuilder({
   }).length;
   const formatoPopup = popup.layout === "modal" ? "ventana centrada" : popup.layout === "banner" ? "franja inferior" : "esquina";
 
+  // Abre o cierra un bloque del panel.
   const toggle = (id: string) => (open: boolean) => setOpenBlocks((o) => ({ ...o, [id]: open }));
 
   return (

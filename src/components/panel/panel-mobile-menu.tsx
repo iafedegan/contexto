@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu, X } from "lucide-react";
 
+// Grupo de enlaces del menú del celular.
 export type MenuGroup = {
   id: string;
   label: string;
@@ -35,12 +36,14 @@ export function PanelMobileMenu({ groups, children }: { groups: MenuGroup[]; chi
 
   useEffect(() => {
     if (!open) return;
+    // Cierra el menú con la tecla Escape.
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         setOpen(false);
         button.current?.focus();
       }
     };
+    // Cierra el menú al tocar fuera.
     const onDown = (e: PointerEvent) => {
       const t = e.target as Node;
       if (!sheet.current?.contains(t) && !button.current?.contains(t)) setOpen(false);

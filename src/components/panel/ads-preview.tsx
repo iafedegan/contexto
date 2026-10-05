@@ -1,6 +1,7 @@
 import type { AdDraft, AdsZoneRow } from "@/components/panel/ads-zone-form";
 import { AD_ZONE_SPECS, type AdPosition } from "@/lib/ads-positions";
 
+// Indica si una dirección es http o https.
 const isHttp = (u: string) => /^https?:\/\//i.test(u);
 
 /**

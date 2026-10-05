@@ -9,9 +9,12 @@ import { cn, formatDate } from "@/lib/utils";
 import { CoverArt } from "@/components/cover-art";
 import { DEFAULT_LOCALE, INTL_LOCALE, categoryLabel, localePath, t, type Locale } from "@/lib/i18n";
 
+// Variantes de la tarjeta de periódico.
 type Variant = "lead" | "feature" | "compact";
+// Tamaño base del titular de cada variante.
 const BASE_PX: Record<Variant, number> = { lead: 46, feature: 22, compact: 17 };
 
+// Animación de entrada: aparece subiendo.
 const fadeUp = {
   hidden: { opacity: 0, y: 18 },
   show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] as const } },

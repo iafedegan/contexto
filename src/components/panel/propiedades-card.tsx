@@ -12,7 +12,9 @@ import { REGIONS, type RegionId, type RegionStyles } from "@/lib/home-regions";
 /** Qué se está editando: una nota concreta o una parte entera de la plantilla. */
 export type Foco = "nota" | "parte" | null;
 
+// Partes de la plantilla que se pueden editar.
 const PARTES: RegionId[] = ["navbar", "hero", "cards", "body", "footer"];
+// Etiqueta de una parte.
 const parteLabel = (id: RegionId) => REGIONS.find((r) => r.id === id)?.label ?? id;
 
 /**
@@ -140,6 +142,7 @@ export function PropiedadesCard({
   );
 }
 
+// Panel de propiedades de una nota seleccionada.
 function NotaPanel({
   nota,
   layout,

@@ -24,11 +24,13 @@ export function PopupEditor({
 }) {
   const [uploading, setUploading] = useState(false);
   const [msg, setMsg] = useState("");
+  // Cambia la configuración de la ventana emergente.
   const set = (p: Partial<PopupConfig>) => {
     setMsg("");
     onChange({ ...value, ...p });
   };
 
+  // Sube la imagen de la ventana emergente.
   async function upload(file: File) {
     setUploading(true);
     setMsg("");
@@ -187,6 +189,7 @@ export function PopupEditor({
   );
 }
 
+// Grupo de opciones con título.
 function Group({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <fieldset className="flex flex-col gap-2 border-t border-[var(--border)] pt-3">
@@ -196,6 +199,7 @@ function Group({ title, children }: { title: string; children: React.ReactNode }
   );
 }
 
+// Selector segmentado de opciones.
 function Seg<T extends string>({ value, onChange, options }: { value: T; onChange: (v: T) => void; options: [T, string][] }) {
   return (
     <div className="flex flex-wrap gap-1">
@@ -216,6 +220,7 @@ function Seg<T extends string>({ value, onChange, options }: { value: T; onChang
   );
 }
 
+// Selector de color con su etiqueta.
 function Color({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
   return (
     <label className="flex items-center gap-2 rounded-lg border border-[var(--border)] px-2 py-1.5 text-xs">
@@ -225,6 +230,7 @@ function Color({ label, value, onChange }: { label: string; value: string; onCha
   );
 }
 
+// Deslizador con su etiqueta y su valor.
 function Range({
   label,
   unit,

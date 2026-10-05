@@ -57,6 +57,7 @@ export function FontPicker({
   const [open, setOpen] = useState(false);
   const actual = HOME_FONTS.find((f) => f.id === value);
 
+  // Elige una tipografía.
   function pick(font: HomeTitleFont | undefined) {
     onChange(font);
     setOpen(false);
@@ -130,6 +131,7 @@ const TITLE_COLORS = [
   { label: "Violeta", value: "#8b5cf6" },
 ];
 
+// Selector de color con muestras y campo hexadecimal.
 export function ColorPicker({
   value,
   onChange,
@@ -185,6 +187,7 @@ export function ColorPicker({
   );
 }
 
+// Opción de tipografía con su muestra.
 function FontOption({
   children,
   selected,
@@ -214,6 +217,7 @@ function FontOption({
   );
 }
 
+// Selector de la plantilla de portada.
 export function TemplatePicker({
   layout,
   onPick,

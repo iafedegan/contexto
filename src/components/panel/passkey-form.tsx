@@ -9,6 +9,7 @@ import {
   iniciarRegistroPasskey,
 } from "@/app/panel/(app)/configuracion/passkey-actions";
 
+// Passkey registrada en la cuenta.
 type Passkey = {
   id: string;
   label: string | null;
@@ -23,6 +24,7 @@ export function PasskeyForm({ passkeys }: { passkeys: Passkey[] }) {
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
+  // Registra una passkey nueva en este dispositivo.
   function agregar() {
     setError(null);
     start(async () => {

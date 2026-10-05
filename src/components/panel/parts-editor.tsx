@@ -5,6 +5,7 @@ import type { HomeLayoutConfig } from "@/db/schema";
 import { HOME_TEMPLATES } from "@/lib/home-layout";
 import { BODIES, FOOTERS, NAVBARS, PRESET_PARTS, resolveParts, type TemplateParts } from "@/lib/template-parts";
 
+// Diseño de portada con todos sus campos.
 type Layout = Required<HomeLayoutConfig>;
 
 /**
@@ -17,6 +18,7 @@ export function PartsEditor({ layout, onChange }: { layout: Layout; onChange: (p
   const preset = PRESET_PARTS[layout.templateId];
   const custom = (Object.keys(parts) as (keyof TemplateParts)[]).some((k) => parts[k] !== preset[k]);
 
+  // Cambia una pieza de la plantilla compuesta.
   const setPart = (p: TemplateParts) => onChange({ parts: { ...parts, ...p } });
 
   return (
@@ -72,6 +74,7 @@ export function PartsEditor({ layout, onChange }: { layout: Layout; onChange: (p
   );
 }
 
+// Grupo de opciones con título.
 function Group({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div>
@@ -81,6 +84,7 @@ function Group({ title, children }: { title: string; children: React.ReactNode }
   );
 }
 
+// Lista de opciones para elegir una pieza.
 function Options<T extends string>({
   options,
   value,

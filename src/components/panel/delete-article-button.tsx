@@ -11,6 +11,7 @@ export function DeleteArticleButton({ id, title, published }: { id: string; titl
   const [pending, start] = useTransition();
   const [error, setError] = useState("");
 
+  // Pide confirmación y borra la nota.
   function onDelete() {
     const aviso = published
       ? `«${title}» está PUBLICADO: dejará de verse en el sitio y se borrará para siempre.\n\n¿Eliminarlo?`

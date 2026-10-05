@@ -25,10 +25,14 @@ import { DEFAULT_LOCALE, INTL_LOCALE, categoryLabel, localePath, t, type Locale 
  * plantilla que realmente los usa se renderiza.
  */
 const HeroCarousel = dynamic(() => import("@/components/home/hero-carousel").then((m) => m.HeroCarousel));
+// Tarjeta de mosaico, cargada solo cuando la plantilla la usa.
 const TileCard = dynamic(() => import("@/components/home/tile-card").then((m) => m.TileCard));
+// Tarjeta de periódico, cargada solo cuando la plantilla la usa.
 const BroadsheetCard = dynamic(() => import("@/components/home/broadsheet-card").then((m) => m.BroadsheetCard));
+// Mosaico asimétrico, cargado solo cuando la plantilla lo usa.
 const BentoTile = dynamic(() => import("@/components/home/bento-tile").then((m) => m.BentoTile));
 
+// Notas repartidas por zona de la portada: principal, segunda, columna y río.
 type Slots = {
   lead?: ArticleListItem;
   second?: ArticleListItem;
@@ -36,6 +40,7 @@ type Slots = {
   river: ArticleListItem[];
 };
 
+// Propiedades de una plantilla: las zonas, el diseño, el idioma y los indicadores.
 type TemplateProps = Slots &
   BuilderProps & {
     layout: Required<HomeLayoutConfig>;
@@ -73,7 +78,9 @@ export function ClasicoTemplate({
   if (!lead) return null;
   const horizontal = layout.breveDirection === "horizontal";
   const all = [lead, second, ...rail, ...river].filter((a): a is ArticleListItem => Boolean(a));
+  // Posición de una nota dentro de la lista completa.
   const indexOf = (a: ArticleListItem) => all.findIndex((x) => x.slug === a.slug);
+  // Envuelve una nota con su marca de edición para el editor.
   const wrap = (a: ArticleListItem, node: React.ReactNode, className?: string) => {
     const i = indexOf(a);
     return (
@@ -368,7 +375,9 @@ export function EsmeraldaTemplate({
 }: TemplateProps) {
   if (!lead) return null;
   const all = [lead, second, ...rail, ...river].filter((a): a is ArticleListItem => Boolean(a));
+  // Posición de una nota dentro de la lista completa.
   const indexOf = (a: ArticleListItem) => all.findIndex((x) => x.slug === a.slug);
+  // Envuelve una nota con su marca de edición para el editor.
   const wrap = (a: ArticleListItem, node: React.ReactNode, className?: string) => (
     <EditableCard
       key={a.slug}
@@ -429,8 +438,10 @@ const GREMIAL_TAG: Record<string, { bg: string; fg: string }> = {
   mundo: { bg: "#3d4f8a", fg: "#ffffff" },
   opinion: { bg: "#5b4a8a", fg: "#ffffff" },
 };
+// Colores por defecto de la etiqueta de la plantilla gremial.
 const GREMIAL_TAG_DEFAULT = { bg: "#c0392b", fg: "#ffffff" };
 
+// Etiqueta de sección de la plantilla gremial.
 function GremialTag({ a, locale }: { a: ArticleListItem; locale: Locale }) {
   if (!a.categorySlug) return null;
   const c = GREMIAL_TAG[a.categorySlug] ?? GREMIAL_TAG_DEFAULT;
@@ -470,6 +481,7 @@ function GremialCardLink({
   );
 }
 
+// Miniatura de la plantilla gremial.
 function GremialThumb({ a, sizes, priority = false }: { a: ArticleListItem; sizes: string; priority?: boolean }) {
   if (!a.coverImageUrl) return <CoverArt seed={a.slug} label={a.title} className="text-3xl" />;
   return (
@@ -505,7 +517,9 @@ export function GremialTemplate({
 }: TemplateProps) {
   if (!lead) return null;
   const all = [lead, second, ...rail, ...river].filter((a): a is ArticleListItem => Boolean(a));
+  // Posición de una nota dentro de la lista completa.
   const indexOf = (a: ArticleListItem) => all.findIndex((x) => x.slug === a.slug);
+  // Envuelve una nota con su marca de edición para el editor.
   const wrap = (a: ArticleListItem, node: React.ReactNode, className?: string) => (
     <EditableCard
       key={a.slug}
@@ -744,6 +758,7 @@ export function GremialTemplate({
   );
 }
 
+// Componente de cada plantilla de portada, por su identificador.
 export const TEMPLATE_COMPONENTS: Record<HomeTemplateId, (props: TemplateProps) => React.ReactElement | null> = {
   esmeralda: EsmeraldaTemplate,
   clasico: ClasicoTemplate,

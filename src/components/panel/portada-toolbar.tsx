@@ -22,8 +22,10 @@ import type { ChangeLine } from "@/lib/portada-summary";
 import { PublicarControles } from "@/components/panel/portada-publicar";
 import type { Zoom } from "@/components/panel/preview-frame";
 
+// Tamaño de pantalla simulado en la vista previa.
 export type Viewport = "escritorio" | "tablet" | "movil";
 
+// Propiedades de la barra de herramientas del editor.
 type Props = {
   /** Qué cambia al publicar (incluye advertencias). */
   changes: ChangeLine[];
@@ -56,6 +58,7 @@ type Props = {
   disabled?: boolean;
 };
 
+// Tamaños de pantalla disponibles.
 const VIEWPORTS = [
   ["escritorio", Monitor, "Mac"],
   ["tablet", Tablet, "iPad"],
@@ -77,11 +80,13 @@ export function PortadaToolbar(p: Props) {
   // Cerrar los desplegables al pulsar fuera o con Escape.
   useEffect(() => {
     if (!menu && !vista) return;
+    // Cierra el menú al pulsar fuera.
     const down = (e: PointerEvent) => {
       const t = e.target as Node;
       if (menu && menuWrap.current && !menuWrap.current.contains(t)) setMenu(false);
       if (vista && vistaWrap.current && !vistaWrap.current.contains(t)) setVista(false);
     };
+    // Cierra el menú con la tecla Escape.
     const key = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         setMenu(false);

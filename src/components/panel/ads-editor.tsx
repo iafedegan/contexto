@@ -6,6 +6,7 @@ import { addAdsZone } from "@/app/panel/(app)/configuracion/ads-actions";
 import { AdsZoneForm, type AdDraft, type AdsZoneRow } from "@/components/panel/ads-zone-form";
 import { AD_ZONE_SPECS, type AdPosition } from "@/lib/ads-positions";
 
+// Indica si una dirección es http o https.
 const isHttp = (u: string) => /^https?:\/\//i.test(u);
 
 /**
@@ -43,12 +44,14 @@ export function AdsEditor({
   }, [request]);
   const positions = [...new Set(zones.map((z) => z.position))] as AdPosition[];
 
+  // Abre o cierra el formulario de una zona.
   function toggle(key: string) {
     const next = openKey === key ? null : key;
     setOpenKey(next);
     onFocusZone?.(next);
   }
 
+  // Añade otro anuncio a una posición.
   function add(position: AdPosition) {
     setMsg("");
     start(async () => {

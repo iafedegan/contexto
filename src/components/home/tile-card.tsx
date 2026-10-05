@@ -20,6 +20,7 @@ const ACCENT: Record<string, string> = {
   "ciencia-y-tecnologia": "#7c3aed",
   opinion: "#be123c",
 };
+// Color de acento por defecto de la ficha.
 const DEFAULT_ACCENT = "#2563eb";
 
 /**

@@ -2,8 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 
+// Posición del panel.
 type Pos = { x: number; y: number };
 
+// Margen mínimo respecto a los bordes de la pantalla.
 const MARGIN = 8;
 /** Parte del panel que debe seguir visible al arrastrarlo fuera de pantalla. */
 const KEEP_VISIBLE = 120;
@@ -43,6 +45,7 @@ export function DraggablePanel({
     }
   });
 
+  // Mantiene el panel dentro de la pantalla.
   function clamp(x: number, y: number): Pos {
     const el = ref.current;
     const w = el?.offsetWidth ?? 380;
@@ -55,6 +58,7 @@ export function DraggablePanel({
 
   // Si la ventana se encoge, el panel podría quedar fuera de vista.
   useEffect(() => {
+    // Recoloca el panel al cambiar el tamaño de la ventana.
     function onResize() {
       const el = ref.current;
       if (!el) return;
@@ -65,6 +69,7 @@ export function DraggablePanel({
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
+  // Guarda la posición del panel.
   function persist(next: Pos) {
     try {
       window.localStorage.setItem(storageKey, JSON.stringify(next));
@@ -73,6 +78,7 @@ export function DraggablePanel({
     }
   }
 
+  // Empieza el arrastre.
   function onPointerDown(e: React.PointerEvent) {
     if (!(e.target as HTMLElement).closest("[data-drag-handle]")) return;
     const el = ref.current;
@@ -83,11 +89,13 @@ export function DraggablePanel({
     e.preventDefault();
   }
 
+  // Mueve el panel durante el arrastre.
   function onPointerMove(e: React.PointerEvent) {
     if (!drag.current) return;
     setPos(clamp(e.clientX - drag.current.dx, e.clientY - drag.current.dy));
   }
 
+  // Termina el arrastre y guarda la posición.
   function onPointerUp(e: React.PointerEvent) {
     if (!drag.current) return;
     drag.current = null;

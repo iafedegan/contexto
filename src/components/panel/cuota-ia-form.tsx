@@ -9,6 +9,7 @@ export function CuotaIaPredeterminada({ valor }: { valor: number | null }) {
   const [msg, setMsg] = useState("");
   const [pending, start] = useTransition();
 
+  // Guarda la cuota mensual de IA.
   function guardar() {
     const t = txt.trim().replace(",", ".");
     const usd = t === "" ? null : Number(t);
@@ -40,6 +41,7 @@ export function CuotaIaPredeterminada({ valor }: { valor: number | null }) {
   );
 }
 
+// Formatea un monto en dólares.
 const usd = (n: number) => `US$ ${n.toFixed(n < 10 ? 2 : 0)}`;
 
 /** Consumo de IA del mes frente al tope: barra, lo gastado y cuánto falta para agotarlo. */

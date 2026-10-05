@@ -3,8 +3,10 @@
 import { useId, useMemo, useState } from "react";
 import { Check, ChevronLeft, ChevronRight, FolderOpen, Search } from "lucide-react";
 
+// Opción de un selector: id y nombre.
 type Opcion = { id: string; name: string };
 
+// Normaliza un texto para comparar: sin tildes y en minúsculas.
 const norm = (s: string) => s.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
 
 /**
@@ -38,6 +40,7 @@ export function ChipPicker({
   const lista = useMemo(() => {
     const t = norm(q.trim());
     const f = t ? options.filter((o) => norm(o.name).includes(t)) : options;
+    // Peso de una opción al ordenar: primero la elegida y luego las sugeridas.
     const peso = (o: Opcion) => (o.id === value ? 2 : 0) + (sugeridas.includes(o.id) ? 1 : 0);
     return [...f].sort((a, b) => peso(b) - peso(a));
   }, [q, options, sugeridas, value]);
@@ -88,6 +91,7 @@ export function ChipPicker({
   );
 }
 
+// Botón de una opción del selector.
 function Ficha({ activa, onClick, texto, inicial, sugerida, tenue }: { activa: boolean; onClick: () => void; texto: string; inicial?: string; sugerida?: boolean; tenue?: boolean }) {
   return (
     <button
@@ -111,8 +115,10 @@ function Ficha({ activa, onClick, texto, inicial, sugerida, tenue }: { activa: b
   );
 }
 
+// Opción con su sección padre.
 type Nodo = Opcion & { parentId?: string | null };
 
+// Marca que indica una opción sugerida.
 const Sugerida = () => (
   <span className="shrink-0 rounded-full bg-[var(--accent-2)]/18 px-2 py-0.5 text-[0.6875rem] font-semibold text-[var(--accent-2)]">Sugerida</span>
 );
@@ -164,6 +170,7 @@ export function SectionTree({
     return m;
   }, [options, ids]);
   const raices = useMemo(() => options.filter((o) => !o.parentId || !ids.has(o.parentId)), [options, ids]);
+  // Sección principal a la que pertenece una opción.
   const raizDe = (o: Nodo | undefined) => (o?.parentId && ids.has(o.parentId) ? porId.get(o.parentId) : o);
   const actual = porId.get(value);
   const padre = actual?.parentId ? porId.get(actual.parentId) : undefined;
@@ -174,7 +181,9 @@ export function SectionTree({
   const ramaNodo = rama ? porId.get(rama) : undefined;
   const subs = ramaNodo ? (hijos.get(ramaNodo.id) ?? []) : [];
   const t = norm(q.trim());
+  // Indica si una sección o alguna de sus subsecciones está elegida.
   const contiene = (r: Nodo) => value === r.id || (hijos.get(r.id) ?? []).some((h) => h.id === value);
+  // Ruta de una opción: sección principal y subsección.
   const ruta = (o: Nodo) => {
     const p = o.parentId ? porId.get(o.parentId) : undefined;
     return p ? `${p.name} › ${o.name}` : o.name;
@@ -199,12 +208,14 @@ export function SectionTree({
       </button>
     );
   };
+  // Lista de subsecciones de una sección.
   const listaSubs = (r: Nodo) => (
     <ul role="radiogroup" aria-label={`Subsecciones de ${r.name}`} className="flex flex-col gap-0.5">
       <li>{opcion(r, `Toda la sección «${r.name}»`, true)}</li>
       {(hijos.get(r.id) ?? []).map((h) => <li key={h.id}>{opcion(h, h.name)}</li>)}
     </ul>
   );
+  // Fila de una sección con sus subsecciones.
   const filaSeccion = (r: Nodo) => {
     const n = hijos.get(r.id)?.length ?? 0;
     const abierta = rama === r.id;

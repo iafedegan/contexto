@@ -2,6 +2,7 @@
 
 import { Children, isValidElement, useEffect, useState, type ReactElement, type ReactNode } from "react";
 
+// Pestaña de la configuración: id, etiqueta e ícono.
 type TabDef = { id: string; label: string; icon: ReactNode };
 
 /**

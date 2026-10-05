@@ -6,14 +6,18 @@ import { cn, formatDate } from "@/lib/utils";
 import { CoverArt } from "@/components/cover-art";
 import { DEFAULT_LOCALE, INTL_LOCALE, categoryLabel, localePath, type Locale } from "@/lib/i18n";
 
+// Variantes de la tarjeta.
 type Variant = "lead" | "feature" | "compact";
+// Tamaños de la tarjeta.
 type Size = "sm" | "md" | "lg";
 
+// Tamaño del titular según variante y tamaño.
 const TITLE_SIZE_PX: Record<Variant, Record<Size, number>> = {
   lead: { sm: 24, md: 32, lg: 40 },
   feature: { sm: 16, md: 20, lg: 26 },
   compact: { sm: 15, md: 18, lg: 22 },
 };
+// Tamaño por defecto de cada variante.
 const DEFAULT_SIZE: Record<Variant, Size> = { lead: "md", feature: "md", compact: "md" };
 
 // Tamaño fijado a mano en /panel/portada (independiente de la sección donde
@@ -24,6 +28,7 @@ const BLOCK_LOOK: Record<Size, { image: boolean; aspect: string; dek: false | st
   lg: { image: true, aspect: "aspect-[16/9]", dek: "line-clamp-4 text-base" },
 };
 
+// Línea de autor y fecha.
 function Byline({ a, locale }: { a: ArticleListItem; locale: Locale }) {
   return (
     <p className="meta mt-2">
@@ -34,6 +39,7 @@ function Byline({ a, locale }: { a: ArticleListItem; locale: Locale }) {
   );
 }
 
+// Tarjeta de nota de la portada con su estilo manual.
 export function HomeCard({
   locale = DEFAULT_LOCALE,
   a,

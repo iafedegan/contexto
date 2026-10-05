@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils";
 
+// Formato de números de Colombia.
 const nf = new Intl.NumberFormat("es-CO");
 
 /** Gráfica de área suavizada (SVG puro, sin JS): línea, relleno degradado, rejilla y etiquetas de día. */
@@ -13,7 +14,9 @@ export function AreaChart({ labels, values, className }: { labels: string[]; val
   const top = Math.ceil(max / 4) * 4;
   const innerW = W - padL - 8;
   const innerH = H - padB - padT;
+  // Posición horizontal del punto i.
   const x = (i: number) => padL + (values.length === 1 ? innerW / 2 : (i / (values.length - 1)) * innerW);
+  // Posición vertical de un valor.
   const y = (v: number) => padT + innerH - (v / top) * innerH;
   const base = padT + innerH;
   const pts = values.map((v, i) => [x(i), y(v)] as const);

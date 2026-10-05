@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { Check, Info, TriangleAlert, X } from "lucide-react";
 
+// Datos del aviso emergente: mensaje y acción opcional.
 export type ToastData = {
   id: number;
   tone: "ok" | "info" | "error";

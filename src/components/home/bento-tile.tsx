@@ -10,8 +10,10 @@ import { cn, formatDate } from "@/lib/utils";
 import { CoverArt } from "@/components/cover-art";
 import { DEFAULT_LOCALE, INTL_LOCALE, categoryLabel, localePath, type Locale } from "@/lib/i18n";
 
+// Tamaños del mosaico.
 type Size = "xl" | "lg" | "md";
 
+// Tamaño base del titular según el tamaño del mosaico.
 const TITLE_PX: Record<Size, number> = { xl: 34, lg: 22, md: 14.5 };
 
 /**
@@ -45,6 +47,7 @@ export function BentoTile({
   const glowY = useSpring(50, { stiffness: 200, damping: 30 });
   const glow = useMotionTemplate`radial-gradient(280px circle at ${glowX}% ${glowY}%, rgba(255,255,255,0.14), transparent 65%)`;
 
+  // Inclina la tarjeta según la posición del cursor.
   function handleMove(e: React.MouseEvent<HTMLDivElement>) {
     const box = ref.current?.getBoundingClientRect();
     if (!box) return;
@@ -55,6 +58,7 @@ export function BentoTile({
     glowX.set(px * 100);
     glowY.set(py * 100);
   }
+  // Devuelve la tarjeta a su posición al salir el cursor.
   function handleLeave() {
     rotateX.set(0);
     rotateY.set(0);

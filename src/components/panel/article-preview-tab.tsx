@@ -4,10 +4,12 @@ import { useMemo, useSyncExternalStore } from "react";
 import { X } from "lucide-react";
 import { Frame, PREVIEW_STORAGE_KEY, type Props, type SitePreviewChrome } from "@/components/panel/site-article-preview";
 
+// Se suscribe a los cambios del borrador guardado en el navegador.
 const subscribe = (cb: () => void) => {
   window.addEventListener("storage", cb);
   return () => window.removeEventListener("storage", cb);
 };
+// Lee el borrador de la vista previa guardado en el navegador.
 const read = () => {
   try {
     return localStorage.getItem(PREVIEW_STORAGE_KEY);

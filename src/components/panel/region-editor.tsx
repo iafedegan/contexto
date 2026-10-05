@@ -11,6 +11,7 @@ import {
   type RegionStyles,
 } from "@/lib/home-regions";
 
+// Colores de muestra.
 const SWATCHES = ["#ffffff", "#f7f4ee", "#141210", "#0d2318", "#1a1430", "#7b1e2b", "#b45309", "#1d4ed8"];
 
 /**
@@ -38,8 +39,10 @@ export function RegionEditor({
   const visibles = REGIONS.filter((r) => !only || only.includes(r.id));
   const meta = REGIONS.find((r) => r.id === active)!;
   const s: RegionStyle = value[active] ?? {};
+  // Indica si la región admite un ajuste.
   const has = (k: keyof RegionStyle) => meta.controls.includes(k);
 
+  // Cambia el estilo de la región.
   function patch(p: Partial<RegionStyle>) {
     const merged = { ...s, ...p };
     for (const k of Object.keys(merged) as (keyof RegionStyle)[]) {
@@ -165,6 +168,7 @@ export function RegionEditor({
   );
 }
 
+// Grupo de ajustes con título.
 export function Group({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <fieldset className="flex flex-col gap-2.5 border-t border-[var(--border)] pt-3">
@@ -174,6 +178,7 @@ export function Group({ title, children }: { title: string; children: React.Reac
   );
 }
 
+// Fila de ajuste de color.
 export function ColorRow({
   label,
   value,
@@ -221,6 +226,7 @@ export function ColorRow({
   );
 }
 
+// Selector de tipografía.
 export function FontSelect({
   label,
   value,
@@ -255,6 +261,7 @@ export function FontSelect({
   );
 }
 
+// Deslizador de un ajuste numérico.
 function Slider({
   label,
   k,

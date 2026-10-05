@@ -59,8 +59,10 @@ import { aplicarTipo, decodeSpec, encodeSpec, renderChartSvg, svgDataUri, TIPOS_
 import { InteractiveChart } from "@/components/interactive-chart";
 import { auditArticle, scoreLabel, type AuditItem, type AuditResult } from "@/lib/seo-audit";
 
+// Opción de un selector: id y nombre.
 type Option = { id: string; name: string };
 
+// Etiqueta en español de cada estado editorial.
 const STATUS_LABEL: Record<string, string> = {
   borrador: "Borrador",
   en_revision: "En revisión",
@@ -69,6 +71,7 @@ const STATUS_LABEL: Record<string, string> = {
   archivado: "Archivado",
 };
 
+// Datos iniciales de la nota que abre el asistente.
 export type WizardInitial = {
   id: string;
   title: string;
@@ -87,6 +90,7 @@ export type WizardInitial = {
   homePosition?: number | null;
 };
 
+// Pasos del asistente en modo manual.
 const STEPS_MANUAL = [
   { key: "titulo", label: "Título" },
   { key: "resumen", label: "Resumen" },
@@ -99,6 +103,7 @@ const STEPS_MANUAL = [
   { key: "vista", label: "Vista previa" },
 ] as const;
 
+// Identificador de un paso del asistente.
 type StepKey = (typeof STEPS_MANUAL)[number]["key"] | "tema";
 
 // Con IA el primer paso pide título y contexto; el resto es igual, pero ya
@@ -108,6 +113,7 @@ const STEPS_IA: { key: StepKey; label: string }[] = [
   ...STEPS_MANUAL.slice(1),
 ];
 
+// Decodifica las entidades HTML de un texto.
 const decode = (s: string) =>
   s.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, "&");
 
@@ -124,6 +130,7 @@ function toText(html: string): string {
   return decode(t).replace(/\n{3,}/g, "\n\n").trim();
 }
 
+// Escapa los caracteres especiales de HTML.
 const escapeHtml = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
@@ -138,6 +145,7 @@ const linkify = (s: string) =>
  */
 /** Marcador de gráfica → <figure>. Se aplica tanto al texto simple como al cuerpo que ya trae HTML (p. ej. con el bloque de fuentes). */
 const MARCADOR_GRAFICA = /(?:<p[^>]*>\s*)?\[\[GRAFICA ([\w-]+) \| ([^|\]]*) \| ([^\]]*)\]\](?:\s*<\/p>)?/g;
+// Convierte los marcadores de gráfica del texto en las figuras que se dibujan.
 function expandirGraficas(html: string): string {
   return html.replace(MARCADOR_GRAFICA, (marca, datos: string, alt: string, fuente: string) => {
     const spec = decodeSpec(datos);
@@ -146,6 +154,7 @@ function expandirGraficas(html: string): string {
   });
 }
 
+// Convierte el texto escrito en HTML con párrafos e intertítulos.
 function toHtml(text: string): string {
   if (/<\/?(p|h2|h3|ul|ol|figure|blockquote|details)\b/i.test(text)) return expandirGraficas(text);
   return text
@@ -400,6 +409,7 @@ export function ArticleWizard({
   }, [step, enOpciones]);
   const isLast = step === STEPS.length - 1;
 
+  // Avanza al siguiente paso guardando el borrador.
   function next() {
     // En el paso del tema, «Siguiente» hace lo que toca: proponer opciones y,
     // con título y contexto elegidos, generar el borrador y pasar al resumen.
@@ -415,12 +425,14 @@ export function ArticleWizard({
     setError("");
     setStep((s) => Math.min(s + 1, STEPS.length - 1));
   }
+  // Vuelve al paso anterior.
   function back() {
     setError("");
     // En la pantalla de títulos y enfoque, «Atrás» vuelve a elegir la fuente, no al paso anterior.
     if (current.key === "tema" && enOpciones) return setEnOpciones(false);
     setStep((s) => Math.max(s - 1, 0));
   }
+  // Va al paso indicado.
   function goTo(i: number) {
     // Solo se puede saltar hacia delante si los pasos obligatorios previos están completos.
     for (let k = 0; k < i; k++) {
@@ -434,6 +446,7 @@ export function ArticleWizard({
     setStep(i);
   }
 
+  // Agrega palabras clave a partir de un texto separado por comas.
   function addTags(raw: string) {
     const nuevos = raw
       .split(",")
@@ -443,6 +456,7 @@ export function ArticleWizard({
     setTagDraft("");
   }
 
+  // Pide a la IA el borrador completo de la nota.
   function generate() {
     if (title.trim().length < 5) return setError("Escribe un título de al menos 5 caracteres.");
     if (prompt.length < 20 && material.length === 0) return setError("Añade un poco más de contexto (mínimo 20 caracteres) o carga una entrevista o enlaces.");
@@ -472,6 +486,7 @@ export function ArticleWizard({
     });
   }
 
+  // Pide una gráfica con datos de la web.
   function makeChart() {
     setChartError("");
     setChart(null);
@@ -486,6 +501,7 @@ export function ArticleWizard({
       setChart(res);
     });
   }
+  // Texto corto con los datos de una gráfica, para el marcador del cuerpo.
   function tokenDe(c: Extract<ChartResult, { ok: true }>, spec: ChartSpec) {
     const fuente = `Fuente: ${c.sourceNote || "Google Search"}. Consultado en: ${c.sources.slice(0, 3).map((x) => x.title).join(", ")}.`;
     const alt = spec.title.replace(/[|\]]/g, " ");
@@ -506,6 +522,7 @@ export function ArticleWizard({
       setTokenInsertado(tk);
     }
   }
+  // Inserta la gráfica generada en el cuerpo de la nota.
   function insertChart() {
     if (!chart) return;
     const tk = tokenDe(chart, chart.chart);
@@ -513,6 +530,7 @@ export function ArticleWizard({
     setTokenInsertado(tk);
     setChartError("");
   }
+  // Quita del cuerpo la gráfica insertada.
   function quitarGrafica() {
     if (tokenInsertado) setBody((b) => b.replace(tokenInsertado, "").replace(/\n{3,}/g, "\n\n").trimEnd() + "\n");
     setTokenInsertado(null);
@@ -536,6 +554,7 @@ export function ArticleWizard({
 
   /** Tope por archivo que acepta el modelo (audio ya extraído o video chico). */
   const MAX_ENTREVISTA = 20 * 1024 * 1024;
+  // Sube una entrevista de audio o video y la transcribe.
   function subirEntrevista(original: File) {
     setAudioError("");
     startAudio(async () => {
@@ -593,6 +612,7 @@ export function ArticleWizard({
       }
     });
   }
+  // Lee los enlaces pegados y los agrega como material.
   function cargarEnlaces() {
     setUrlsError("");
     startUrls(async () => {
@@ -605,6 +625,7 @@ export function ArticleWizard({
     });
   }
 
+  // Pide a la IA la imagen de portada.
   function makeCover() {
     setImgError("");
     startImg(async () => {
@@ -621,6 +642,7 @@ export function ArticleWizard({
     });
   }
 
+  // Busca noticias sobre el tema.
   function findNews() {
     setNewsError("");
     startNews(async () => {
@@ -630,10 +652,13 @@ export function ArticleWizard({
       setNewsOpen(true);
     });
   }
+  // Indica si una noticia ya está marcada para referenciar.
   const isRef = (n: NewsItem) => refs.some((r) => r.url === n.url);
+  // Marca o desmarca una noticia para referenciarla.
   function toggleRef(n: NewsItem) {
     setRefs((r) => (r.some((x) => x.url === n.url) ? r.filter((x) => x.url !== n.url) : [...r, n]));
   }
+  // Usa una noticia como tema de la nota.
   function elegirNoticiaComoTema(n: NewsItem) {
     setTopic(`${n.title}. ${n.summary} (Fuente: ${n.outlet}${n.date ? `, ${n.date}` : ""}).`);
     setOptions(null);
@@ -641,6 +666,7 @@ export function ArticleWizard({
     setNewsOpen(false);
   }
 
+  // Pide a la IA ideas de temas.
   function findIdeas() {
     setIdeasError("");
     startIdeas(async () => {
@@ -654,6 +680,7 @@ export function ArticleWizard({
     });
   }
 
+  // Pide títulos y enfoques para el tema.
   function suggest() {
     setError("");
     startGenerating(async () => {
@@ -677,6 +704,7 @@ export function ArticleWizard({
     seo: "seo",
   };
 
+  // Regenera una parte del borrador.
   function regenerate(part: DraftPart) {
     const current = {
       excerpt,
@@ -703,6 +731,7 @@ export function ArticleWizard({
     });
   }
 
+  // Sube la imagen de portada elegida.
   async function onCover(file: File) {
     setError("");
     setUploading(true);
@@ -1695,6 +1724,7 @@ function SeoBar({ score, items, focus }: { score: number; items: AuditItem[]; fo
     .sort((a, b) => (a.severity === b.severity ? b.weight - a.weight : a.severity === "error" ? -1 : 1));
   const done = items.length - pending.length;
   const color = score >= 75 ? "#16a34a" : score >= 55 ? "#d97706" : "#dc2626";
+  // Color del punto según la gravedad del criterio de la auditoría.
   const dot = (i: AuditItem) => (i.severity === "error" ? "#dc2626" : "#d97706");
 
   return (

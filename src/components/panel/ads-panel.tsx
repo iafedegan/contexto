@@ -19,6 +19,7 @@ const VIEW_POSITIONS: Record<View, AdPosition[]> = {
   nota: ["article_top", "article_sidebar", "footer"],
 };
 
+// Panel de anuncios del editor de portada: una zona por posición con su formulario.
 export function AdsPanel({
   layout,
   zones,

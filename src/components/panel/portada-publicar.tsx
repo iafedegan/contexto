@@ -38,9 +38,11 @@ export function PublicarControles({
   // Cerrar al pulsar fuera o con Escape.
   useEffect(() => {
     if (!open) return;
+    // Cierra el cuadro al pulsar fuera.
     const down = (e: PointerEvent) => {
       if (wrap.current && !wrap.current.contains(e.target as Node)) setOpen(false);
     };
+    // Cierra el cuadro con la tecla Escape.
     const key = (e: KeyboardEvent) => {
       if (e.key === "Escape") setOpen(false);
     };
@@ -52,6 +54,7 @@ export function PublicarControles({
     };
   }, [open]);
 
+  // Publica los cambios del diseño.
   async function publish() {
     setPublishing(true);
     setError("");

@@ -136,6 +136,7 @@ export function MfaForm({ activo }: { activo: boolean }) {
   );
 }
 
+// Mensaje de resultado del formulario de segundo factor.
 function Aviso({ estado }: { estado: MfaState }) {
   if (!estado) return null;
   return (

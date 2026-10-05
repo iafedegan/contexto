@@ -6,6 +6,7 @@ import { Inbox, KeyRound, LayoutDashboard, LayoutTemplate, Mail, Newspaper, Sett
 import type { PermisoId } from "@/lib/permisos";
 import { PanelMobileMenu } from "@/components/panel/panel-mobile-menu";
 
+// Elemento del menú del panel: dirección, etiqueta, ícono y permiso necesario.
 type Item = {
   href: string;
   label: string;
@@ -15,6 +16,7 @@ type Item = {
   /** Cómo la ve quien no es administrador (si sigue viéndola, con otro texto). */
   paraOtros?: { label: string; hint: string };
 };
+// Grupo de elementos del menú.
 type Group = { id: string; label: string; items: Item[] };
 
 /**
@@ -79,6 +81,7 @@ const GROUPS: Group[] = [
   },
 ];
 
+// Grupos y elementos que la persona puede ver según su rol y permisos.
 function gruposVisibles(role: string, permisos: string[]) {
   const esAdmin = role === "administrador";
   // Lo que el rol no puede usar ni se muestra (el servidor además lo exige).
@@ -90,6 +93,7 @@ function gruposVisibles(role: string, permisos: string[]) {
   })).filter((g) => g.items.length > 0);
 }
 
+// Ícono de cada elemento por su id.
 const ICONOS: Record<string, typeof Circle> = {
   "/panel": LayoutDashboard,
   "/panel/portada": LayoutTemplate,
@@ -139,6 +143,7 @@ export function PanelSidebarNav({ role, permisos }: { role: string; permisos: st
   );
 }
 
+// Menú lateral del panel, filtrado por rol y permisos.
 export function PanelNav({ role, permisos, children }: { role: string; permisos: string[]; children?: React.ReactNode }) {
   const groups = gruposVisibles(role, permisos);
 

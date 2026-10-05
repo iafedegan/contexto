@@ -12,6 +12,7 @@ import { SectionFiltersPicker } from "@/components/panel/section-filters-picker"
 import { EL_RANGES, SECTION_ELS, WEIGHTS } from "@/lib/section-els";
 import type { RegionId } from "@/lib/home-regions";
 
+// Diseño de portada con todos sus campos.
 type Layout = Required<HomeLayoutConfig>;
 
 /**
@@ -53,6 +54,7 @@ export function SectionPanel({
   const style: SectionElStyle = els[el] ?? {};
   const meta = SECTION_ELS.find((x) => x.id === el)!;
 
+  // Cambia el estilo de un elemento del encabezado de sección.
   function patchEl(p: Partial<SectionElStyle>) {
     const merged = { ...style, ...p } as Record<string, unknown>;
     for (const k of Object.keys(merged)) if (merged[k] === undefined) delete merged[k];

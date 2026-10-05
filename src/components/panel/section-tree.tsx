@@ -13,6 +13,7 @@ import {
   type EstructuraResult,
 } from "@/app/panel/(app)/secciones/actions";
 
+// Sección del árbol de navegación.
 export type SectionNode = {
   id: string;
   slug: string;
@@ -23,6 +24,7 @@ export type SectionNode = {
   parentId: string | null;
 };
 
+// Sección principal con sus subsecciones.
 type Branch = { node: SectionNode; kids: SectionNode[] };
 
 /** Respeta el orden que llega del servidor: es el MISMO de la barra del sitio (orden y nombre). */
@@ -61,6 +63,7 @@ export function SectionTree({ sections, onSaved }: { sections: SectionNode[]; on
       }
     });
   }
+  // Mueve la sección arrastrada al destino.
   function drop(targetId: string | null) {
     const id = dragId;
     setDragId(null);
@@ -68,6 +71,7 @@ export function SectionTree({ sections, onSaved }: { sections: SectionNode[]; on
     if (id && id !== targetId) run(() => moverSeccion(id, targetId));
   }
   const draggedHasKids = !!dragId && (tree.find((b) => b.node.id === dragId)?.kids.length ?? 0) > 0;
+  // Propiedades de arrastrar y soltar de una fila.
   const dnd = (id: string | null, canDrop: boolean) => ({
     onDragOver: (e: React.DragEvent) => {
       if (!dragId || !canDrop) return;

@@ -17,7 +17,9 @@ import type { AdDraft } from "@/components/panel/ads-zone-form";
 import { sql } from "drizzle-orm";
 import { makePage as makeCategoryPage } from "@/app/(public)/_pages/categoria";
 
+// Página de portada real, reutilizada para la vista previa.
 const Home = makePage("es");
+// Página de sección real, reutilizada para la vista previa.
 const Categoria = makeCategoryPage("es");
 
 /**
@@ -49,6 +51,7 @@ export async function applyDraftForRequest(opts: { popup?: "auto" | "show" | "hi
       .orderBy(sql`(${articles.homePosition} is null)`, articles.homePosition, sql`${articles.publishedAt} desc`);
     const adRows = await db.select().from(adsZones);
 
+    // Convierte una fecha a texto ISO, o vacío si no hay.
     const toIso = (d: Date | null) => (d ? d.toISOString() : "");
     const adsBase: Record<string, AdDraft> = {};
     const adNames: Record<string, string> = {};
@@ -96,6 +99,7 @@ export async function applyDraftForRequest(opts: { popup?: "auto" | "show" | "hi
   return { draft, changed, lines, anterior };
 }
 
+// Renderiza la portada o una sección real con el borrador del editor aplicado.
 export async function HomeRealPreview({ seccion }: { seccion?: string } = {}) {
   const { draft, changed, lines, anterior } = await applyDraftForRequest();
   let row: { id: string; slug: string; name: string; description: string | null; sortOrder: number; articleCount: number } | null = null;

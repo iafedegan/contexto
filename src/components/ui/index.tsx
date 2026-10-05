@@ -23,18 +23,22 @@ export function Button({
   return <button className={cn(styles, "disabled:opacity-50", className)} {...props} />;
 }
 
+// Campo de texto con el estilo del sitio.
 export function Input({ className, ...props }: React.InputHTMLAttributes<HTMLInputElement>) {
   return <input className={cn("lx-input", className)} {...props} />;
 }
 
+// Área de texto con el estilo del sitio.
 export function Textarea({ className, ...props }: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
   return <textarea className={cn("lx-input", className)} {...props} />;
 }
 
+// Contenedor tipo tarjeta.
 export function Card({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
   return <div className={cn("lx-card p-5", className)} {...props} />;
 }
 
+// Etiqueta pequeña de estado.
 export function Badge({ className, ...props }: React.HTMLAttributes<HTMLSpanElement>) {
   return <span className={cn("lx-chip", className)} {...props} />;
 }

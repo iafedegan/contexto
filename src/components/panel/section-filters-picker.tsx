@@ -2,6 +2,7 @@
 
 import type { SectionFiltersPos } from "@/db/schema";
 
+// Posibles ubicaciones de los filtros de sección.
 const OPTIONS: { id: SectionFiltersPos; label: string; hint: string }[] = [
   { id: "cabecera", label: "Junto al título", hint: "A la derecha del título (como viene en cada plantilla)" },
   { id: "izquierda", label: "Debajo · izquierda", hint: "Bajo el título, alineados a la izquierda" },

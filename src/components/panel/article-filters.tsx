@@ -3,6 +3,7 @@
 import { useRef } from "react";
 import Link from "next/link";
 
+// Opción de un filtro: valor y etiqueta.
 type Option = { value: string; label: string };
 
 /**
@@ -23,9 +24,11 @@ export function ArticleFilters({
   sorts: Option[];
 }) {
   const form = useRef<HTMLFormElement>(null);
+  // Envía el formulario de filtros.
   const submit = () => form.current?.requestSubmit();
   const active = Boolean(values.q || values.estado || values.categoria || values.autor);
 
+  // Selector de un filtro que envía el formulario al cambiar.
   const select = (name: string, value: string, label: string, options: Option[], all?: string) => (
     <label className="flex min-w-0 flex-col gap-0.5">
       <span className="lx-kicker text-[0.72rem] text-[var(--fg-muted)]">{label}</span>

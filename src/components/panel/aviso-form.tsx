@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import { BellRing, Check, Loader2, TriangleAlert } from "lucide-react";
 import { enviarAvisoUltimaHora, type AvisoState } from "@/app/panel/(app)/avisos/actions";
 
+// Formulario para enviar un aviso de última hora a los lectores.
 export function AvisoForm({
   notas,
   suscriptores,

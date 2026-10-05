@@ -5,6 +5,7 @@ import { Check, Loader2, TriangleAlert, UserPlus, X } from "lucide-react";
 import { createUser, type CreateUserState } from "@/app/panel/(app)/configuracion/actions";
 import type { UserRole } from "@/db/schema";
 
+// Roles que se pueden asignar a una cuenta nueva.
 const ROLES: UserRole[] = ["redactor", "editor", "administrador"];
 
 /** Genera una contraseña temporal legible, para no dejar el campo en blanco. */

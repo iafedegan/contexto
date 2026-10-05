@@ -16,6 +16,7 @@ type Parts = {
   kicker?: string;
 };
 
+// Cabecera de una nota: sección, titular, resumen, autor, fecha y portada, según las piezas de la plantilla.
 export function ArticleHero(p: Parts) {
   switch (p.theme) {
     case "clasico":

@@ -31,8 +31,10 @@ const BEZEL: Record<Device, { pad: number; radius: number; screenRadius: number;
   mac: { pad: 14, radius: 16, screenRadius: 4, base: 22 },
 };
 
+// Niveles de zoom de la vista previa.
 export type Zoom = "ajustar" | 0.75 | 1;
 
+// Marco de la vista previa que simula el tamaño de pantalla elegido.
 export function PreviewFrame({
   device,
   children,
@@ -65,6 +67,7 @@ export function PreviewFrame({
   useEffect(() => {
     const el = area.current;
     if (!el) return;
+    // Mide el espacio disponible.
     const set = () => setAvail({ w: el.clientWidth, h: el.clientHeight });
     set();
     const ro = new ResizeObserver(set);
@@ -89,6 +92,7 @@ export function PreviewFrame({
     doc.write("<!doctype html><html><head></head><body></body></html>");
     doc.close();
 
+    // Copia los estilos del documento al marco.
     const syncStyles = () => {
       doc.head.querySelectorAll("[data-copied]").forEach((n) => n.remove());
       document.head.querySelectorAll('style, link[rel="stylesheet"]').forEach((n) => {
