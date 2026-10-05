@@ -45,7 +45,7 @@ export default async function ArticlesList({ searchParams }: { searchParams: Sea
   await requirePermiso("articulos");
   await promoverProgramados();
   const session = await auth();
-  const canDelete = session?.user.role === "editor" || session?.user.role === "administrador";
+  const canDelete = session?.user?.role === "editor" || session?.user?.role === "administrador";
   const sp = await searchParams;
   const q = param(sp, "q").slice(0, 120);
   const estado = articles.status.enumValues.includes(param(sp, "estado") as Status)

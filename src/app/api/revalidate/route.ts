@@ -1,5 +1,6 @@
 import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
+import { invalidarCache } from "@/lib/data-cache";
 
 /**
  * Revalidación ISR *on-demand*. La dispara el panel editorial al publicar,
@@ -27,6 +28,8 @@ export async function POST(req: Request) {
   if (categorySlug) targets.add(`/categoria/${categorySlug}`);
   if (authorSlug) targets.add(`/autor/${authorSlug}`);
 
+  // Además de las rutas, se descarta la caché de datos de las lecturas del portal.
+  invalidarCache();
   for (const t of targets) revalidatePath(t);
 
   return NextResponse.json({ revalidated: [...targets], at: Date.now() });

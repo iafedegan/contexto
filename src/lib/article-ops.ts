@@ -1,6 +1,6 @@
 import "server-only";
 import { revalidatePath } from "next/cache";
-import { and, eq, gte, isNotNull, ne, sql } from "drizzle-orm";
+import { and, eq, gte, inArray, isNotNull, ne, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { articles, authors, categories } from "@/db/schema";
 import { embed } from "@/lib/embeddings";
@@ -8,6 +8,7 @@ import { sanitizeArticleHtml } from "@/lib/sanitize";
 import { avisarSiUltimaHora } from "@/lib/push";
 import { slugify } from "@/lib/utils";
 import { autorDeUsuario } from "@/lib/user-authors";
+import { invalidarCache } from "@/lib/data-cache";
 
 /**
  * Operaciones sobre notas SIN sesión de navegador ni permisos propios: quien las llama (las acciones del panel o el
@@ -86,6 +87,7 @@ export async function revalidarNota(articleId: string) {
     .where(eq(articles.id, articleId))
     .limit(1);
   if (!a) return;
+  invalidarCache();
   revalidatePath("/");
   revalidatePath("/sitemap.xml");
   revalidatePath("/feed.xml");
@@ -94,8 +96,14 @@ export async function revalidarNota(articleId: string) {
   if (a.authorSlug) revalidatePath(`/autor/${a.authorSlug}`);
 }
 
+/** Solo una nota en borrador (o ya en revisión) pasa a revisión; sobre una publicada la sacaría del sitio. */
 export async function enviarARevisionCore(articleId: string) {
-  await db.update(articles).set({ status: "en_revision", updatedAt: sql`now()` }).where(eq(articles.id, articleId));
+  const [fila] = await db
+    .update(articles)
+    .set({ status: "en_revision", updatedAt: sql`now()` })
+    .where(and(eq(articles.id, articleId), inArray(articles.status, ["borrador", "en_revision"])))
+    .returning({ id: articles.id });
+  if (!fila) throw new Error("Solo una nota en borrador puede enviarse a revisión.");
 }
 
 export async function publicarCore(articleId: string) {
@@ -137,6 +145,7 @@ export async function fijarPortadaCore(articleId: string, posicion: number | nul
       .where(and(isNotNull(articles.homePosition), gte(articles.homePosition, posicion), ne(articles.id, articleId)));
     await db.update(articles).set({ homePosition: posicion }).where(eq(articles.id, articleId));
   }
+  invalidarCache();
   revalidatePath("/");
   revalidatePath("/panel/portada");
   await revalidarNota(articleId);

@@ -22,6 +22,7 @@ import {
 } from "@/lib/ai-providers";
 import { verifyApiKey } from "@/lib/ai-verify";
 import { encryptSecret } from "@/lib/secrets";
+import { invalidarCache } from "@/lib/data-cache";
 
 /** Guarda la identidad del sitio y refresca TODO el portal, que la consume. */
 export async function saveSiteIdentity(formData: FormData) {
@@ -48,6 +49,7 @@ export async function saveSiteIdentity(formData: FormData) {
     });
 
   // El nombre y el lema salen en cabecera, pie y metadatos de todas las rutas.
+  invalidarCache();
   revalidatePath("/", "layout");
   revalidatePath("/panel/configuracion");
 }
@@ -434,6 +436,7 @@ export async function saveAnalyticsSettings(formData: FormData) {
     .onConflictDoUpdate({ target: siteSettings.key, set: { value, updatedAt: sql`now()` } });
 
   // El script de GA4 se inyecta en el layout público.
+  invalidarCache();
   revalidatePath("/", "layout");
   revalidatePath("/panel/configuracion");
 }

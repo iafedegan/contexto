@@ -30,7 +30,7 @@ export const dynamic = "force-dynamic";
 
 export default async function ConfiguracionPage() {
   const session = await auth();
-  const isAdmin = session?.user.role === "administrador";
+  const isAdmin = session?.user?.role === "administrador";
   const limites = await getLimites();
 
   const [identity, keyStatus, analytics, people, misPasskeys] = await Promise.all([

@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { sanitizeArticleHtml } from "@/lib/sanitize";
 import { redirect } from "next/navigation";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { articles, authors, categories } from "@/db/schema";
 import { canPublish, requirePermiso } from "@/lib/auth";
@@ -13,6 +13,7 @@ import { slugify } from "@/lib/utils";
 import { autorDeUsuario } from "@/lib/user-authors";
 import { fijarPortadaCore, guardarBorradorCore, type BorradorInput } from "@/lib/article-ops";
 import { tienePermiso } from "@/lib/permisos-server";
+import { invalidarCache } from "@/lib/data-cache";
 
 /** Recalcula y persiste el embedding del artículo (= reindexación para el asistente). */
 async function reindex(articleId: string) {
@@ -39,12 +40,24 @@ async function revalidateArticle(articleId: string) {
     .where(eq(articles.id, articleId))
     .limit(1);
   if (!a) return;
+  invalidarCache();
   revalidatePath("/");
   revalidatePath("/sitemap.xml");
   revalidatePath("/feed.xml");
   revalidatePath(`/articulo/${a.slug}`);
   if (a.categorySlug) revalidatePath(`/categoria/${a.categorySlug}`);
   if (a.authorSlug) revalidatePath(`/autor/${a.authorSlug}`);
+}
+
+/**
+ * Quién puede publicar: rol de editor o superior Y permiso «publicar». Es el mismo criterio para
+ * publicar, programar, despublicar y borrar; antes solo `publishArticle` lo exigía y un redactor
+ * con el permiso concedido podía programar (y el cron publicarlo) o borrar.
+ */
+async function requirePublicador() {
+  const user = await requirePermiso("publicar");
+  if (!canPublish(user.role)) throw new Error("Rol sin permiso de publicación.");
+  return user;
 }
 
 export async function saveArticle(formData: FormData) {
@@ -87,6 +100,14 @@ export async function saveArticle(formData: FormData) {
 
   let articleId = id;
   if (id) {
+    // Una nota publicada o programada ya está (o va a estar) a la vista de los lectores: solo quien
+    // puede publicar la modifica. Un redactor trabaja sobre borradores y revisión.
+    const [actual] = await db.select({ status: articles.status }).from(articles).where(eq(articles.id, id)).limit(1);
+    if (!actual) throw new Error("La nota ya no existe.");
+    if (actual.status === "publicado" || actual.status === "programado") {
+      const puedePublicar = canPublish(user.role) && (await tienePermiso(user.id, user.role, "publicar"));
+      if (!puedePublicar) throw new Error("Esta nota ya está publicada o programada: solo un editor puede modificarla.");
+    }
     await db.update(articles).set(values).where(eq(articles.id, id));
   } else {
     const [row] = await db
@@ -111,6 +132,7 @@ export async function saveArticle(formData: FormData) {
   }
   // Los distintivos (última hora, directo) salen en la cabecera y en las
   // tarjetas de todo el portal, así que se refresca el layout completo.
+  invalidarCache();
   revalidatePath("/", "layout");
   revalidatePath("/panel/articulos");
   // El asistente paso a paso puede, además de guardar, publicar o enviar a
@@ -135,16 +157,18 @@ export async function saveArticle(formData: FormData) {
 
 export async function submitForReview(articleId: string) {
   await requirePermiso("articulos");
-  await db
+  // Solo una nota en borrador (o ya en revisión) pasa a revisión: sobre una publicada la sacaría del sitio.
+  const [fila] = await db
     .update(articles)
     .set({ status: "en_revision", updatedAt: sql`now()` })
-    .where(eq(articles.id, articleId));
+    .where(and(eq(articles.id, articleId), inArray(articles.status, ["borrador", "en_revision"])))
+    .returning({ id: articles.id });
+  if (!fila) throw new Error("Solo una nota en borrador puede enviarse a revisión.");
   revalidatePath(`/panel/articulos/${articleId}`);
 }
 
 export async function publishArticle(articleId: string) {
-  const user = await requirePermiso("publicar");
-  if (!canPublish(user.role)) throw new Error("Rol sin permiso de publicación.");
+  await requirePublicador();
 
   await db
     .update(articles)
@@ -163,7 +187,7 @@ export async function publishArticle(articleId: string) {
 }
 
 export async function scheduleArticle(articleId: string, isoDateTime: string) {
-  await requirePermiso("publicar");
+  await requirePublicador();
   const when = new Date(isoDateTime);
   if (Number.isNaN(when.getTime()) || when.getTime() < Date.now()) {
     throw new Error("La fecha de programación debe ser futura.");
@@ -176,7 +200,7 @@ export async function scheduleArticle(articleId: string, isoDateTime: string) {
 }
 
 export async function unpublishArticle(articleId: string) {
-  await requirePermiso("publicar");
+  await requirePublicador();
   await db
     .update(articles)
     .set({ status: "archivado", updatedAt: sql`now()` })
@@ -191,7 +215,7 @@ export async function unpublishArticle(articleId: string) {
  * sin perderlo es «archivar» (unpublishArticle).
  */
 export async function deleteArticle(articleId: string): Promise<{ ok: boolean; message: string }> {
-  await requirePermiso("publicar");
+  await requirePublicador();
   const [a] = await db.select({ id: articles.id }).from(articles).where(eq(articles.id, articleId)).limit(1);
   if (!a) return { ok: false, message: "Ese artículo ya no existe." };
 

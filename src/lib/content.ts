@@ -13,18 +13,28 @@ import {
 } from "@/db/schema";
 import { DEFAULT_HOME_LAYOUT } from "@/lib/home-layout";
 import { getPreviewDraft } from "@/lib/preview-draft";
+import { cachear, TAG_AJUSTES, TAG_CONTENIDO } from "@/lib/data-cache";
 
 /** Disposición y plantilla de la portada, configuradas en /panel/portada. */
+/** Fila `home_layout` de site_settings, cacheada entre peticiones (la invalida el panel al guardar). */
+const leerLayoutHome = cachear(
+  "home-layout",
+  async () => {
+    const [row] = await db
+      .select({ value: siteSettings.value })
+      .from(siteSettings)
+      .where(eq(siteSettings.key, "home_layout"))
+      .limit(1);
+    return (row?.value as HomeLayoutConfig | undefined) ?? null;
+  },
+  { tags: [TAG_AJUSTES] },
+);
+
 export const getHomeLayoutConfig = cache(async (): Promise<Required<HomeLayoutConfig>> => {
-  // Vista previa del editor: el diseño sin publicar (ver src/lib/preview-draft.ts).
+  // Vista previa del editor: el diseño sin publicar (ver src/lib/preview-draft.ts). Nunca pasa por la caché.
   const draft = getPreviewDraft();
   if (draft) return { ...DEFAULT_HOME_LAYOUT, ...draft.layout };
-  const [row] = await db
-    .select({ value: siteSettings.value })
-    .from(siteSettings)
-    .where(eq(siteSettings.key, "home_layout"))
-    .limit(1);
-  return { ...DEFAULT_HOME_LAYOUT, ...((row?.value as HomeLayoutConfig) ?? {}) };
+  return { ...DEFAULT_HOME_LAYOUT, ...((await leerLayoutHome()) ?? {}) };
 });
 
 /**
@@ -89,6 +99,21 @@ export async function getRecentArticles(limit = 12): Promise<ArticleListItem[]> 
  * en el orden elegido, y el resto llena los huecos por fecha. Solo lo usa la
  * portada; RSS, llms.txt y el cintillo siguen el orden cronológico real.
  */
+/** Consulta de la portada con el orden manual, cacheada entre peticiones (la invalida el panel al publicar). */
+const leerPortada = cachear(
+  "portada",
+  (limit: number): Promise<ArticleListItem[]> =>
+    db
+      .select(listSelection)
+      .from(articles)
+      .leftJoin(categories, eq(articles.categoryId, categories.id))
+      .leftJoin(authors, eq(articles.authorId, authors.id))
+      .where(publishedCondition)
+      .orderBy(sql`(${articles.homePosition} is null)`, articles.homePosition, desc(articles.publishedAt))
+      .limit(limit),
+  { tags: [TAG_CONTENIDO], segundos: 60 },
+);
+
 export async function getHomepageArticles(limit = 13): Promise<ArticleListItem[]> {
   await promoverProgramados();
   // Vista previa del editor: el orden y estilo de tarjetas sin publicar.
@@ -110,18 +135,7 @@ export async function getHomepageArticles(limit = 13): Promise<ArticleListItem[]
     const seen = new Set(draft.items.map((d) => d.slug));
     return [...ordered, ...rows.filter((r) => !seen.has(r.slug))].slice(0, limit);
   }
-  return db
-    .select(listSelection)
-    .from(articles)
-    .leftJoin(categories, eq(articles.categoryId, categories.id))
-    .leftJoin(authors, eq(articles.authorId, authors.id))
-    .where(publishedCondition)
-    .orderBy(
-      sql`(${articles.homePosition} is null)`,
-      articles.homePosition,
-      desc(articles.publishedAt),
-    )
-    .limit(limit);
+  return leerPortada(limit);
 }
 export type CategoryFilters = {
   limit?: number;
@@ -134,15 +148,17 @@ export type CategoryFilters = {
   dateTo?: string;
 };
 
-export async function getArticlesByCategory(
-  categorySlug: string,
-  filters: CategoryFilters = {},
-): Promise<{
+type ListadoCategoria = {
   category: { name: string; description: string | null } | null;
   subcategories: { slug: string; name: string }[];
   items: ArticleListItem[];
   total: number;
-}> {
+};
+
+/** Lectura de una categoría con sus filtros, cacheada entre peticiones (cada combinación de filtros es una entrada). */
+const leerCategoria = cachear(
+  "categoria",
+  async (categorySlug: string, filters: CategoryFilters): Promise<ListadoCategoria> => {
   const { limit = 20, offset = 0, subcategorySlug, dateFrom, dateTo } = filters;
 
   const [cat] = await db
@@ -188,14 +204,25 @@ export async function getArticlesByCategory(
       : db.select({ count: sql<number>`count(*)::int` }).from(articles).where(where),
   ]);
 
-  // Vista previa del editor: el estilo de bloque sin publicar de cada nota.
-  const draft = getPreviewDraft();
-  const draftStyle = draft ? new Map(draft.items.map((d) => [d.slug, d.homeStyle])) : null;
   return {
     category: { name: cat.name, description: cat.description },
     subcategories: children,
-    items: draftStyle ? items.map((r) => (draftStyle.has(r.slug) ? { ...r, homeStyle: draftStyle.get(r.slug) ?? null } : r)) : items,
+    items,
     total: count,
+  };
+  },
+  { tags: [TAG_CONTENIDO], segundos: 120 },
+);
+
+export async function getArticlesByCategory(categorySlug: string, filters: CategoryFilters = {}): Promise<ListadoCategoria> {
+  const listado = await leerCategoria(categorySlug, filters);
+  // Vista previa del editor: el estilo de bloque sin publicar de cada nota (nunca entra en la caché).
+  const draft = getPreviewDraft();
+  const draftStyle = draft ? new Map(draft.items.map((d) => [d.slug, d.homeStyle])) : null;
+  if (!draftStyle) return listado;
+  return {
+    ...listado,
+    items: listado.items.map((r) => (draftStyle.has(r.slug) ? { ...r, homeStyle: draftStyle.get(r.slug) ?? null } : r)),
   };
 }
 
@@ -308,43 +335,49 @@ export async function getAllCategories() {
 }
 
 /** Solo las categorías de primer nivel (sin padre) — para el navbar. */
-export const getTopLevelCategories = cache(async () => {
-  return db
-    .select()
-    .from(categories)
-    .where(isNull(categories.parentId))
-    .orderBy(categories.sortOrder, categories.name);
-});
+const leerCategoriasPrincipales = cachear(
+  "categorias-principales",
+  () => db.select().from(categories).where(isNull(categories.parentId)).orderBy(categories.sortOrder, categories.name),
+  { tags: [TAG_CONTENIDO], segundos: 300 },
+);
+export const getTopLevelCategories = cache(() => leerCategoriasPrincipales());
 
 /**
  * Última hora (H-05): la nota marcada como `is_breaking` más reciente. Solo
  * una: la barra pierde su fuerza si se usa para todo.
  */
-export async function getBreakingArticle(): Promise<{ slug: string; title: string } | null> {
-  const [row] = await db
-    .select({ slug: articles.slug, title: articles.title })
-    .from(articles)
-    .where(and(publishedCondition, eq(articles.isBreaking, true)))
-    .orderBy(desc(articles.publishedAt))
-    .limit(1);
-  return row ?? null;
-}
+export const getBreakingArticle = cachear(
+  "ultima-hora",
+  async (): Promise<{ slug: string; title: string } | null> => {
+    const [row] = await db
+      .select({ slug: articles.slug, title: articles.title })
+      .from(articles)
+      .where(and(publishedCondition, eq(articles.isBreaking, true)))
+      .orderBy(desc(articles.publishedAt))
+      .limit(1);
+    return row ?? null;
+  },
+  { tags: [TAG_CONTENIDO], segundos: 60 },
+);
 
 /**
  * Más leídas (H-04). Se ordena por el contador de `views`, que alimenta el
  * beacon del cliente; se limita a los últimos 30 días para que la lista refleje
  * la actualidad y no un éxito de hace dos años.
  */
-export async function getMostReadArticles(limit = 5): Promise<ArticleListItem[]> {
-  return db
-    .select(listSelection)
-    .from(articles)
-    .leftJoin(categories, eq(articles.categoryId, categories.id))
-    .leftJoin(authors, eq(articles.authorId, authors.id))
-    .where(and(publishedCondition, gte(articles.publishedAt, sql`now() - interval '30 days'`)))
-    .orderBy(desc(articles.views), desc(articles.publishedAt))
-    .limit(limit);
-}
+export const getMostReadArticles = cachear(
+  "mas-leidas",
+  (limit: number = 5): Promise<ArticleListItem[]> =>
+    db
+      .select(listSelection)
+      .from(articles)
+      .leftJoin(categories, eq(articles.categoryId, categories.id))
+      .leftJoin(authors, eq(articles.authorId, authors.id))
+      .where(and(publishedCondition, gte(articles.publishedAt, sql`now() - interval '30 days'`)))
+      .orderBy(desc(articles.views), desc(articles.publishedAt))
+      .limit(limit),
+  { tags: [TAG_CONTENIDO], segundos: 300 },
+);
 
 /** Slugs para generateStaticParams (pre-render en build) y sitemap. */
 export async function getAllPublishedSlugs(): Promise<{ slug: string; updatedAt: Date }[]> {

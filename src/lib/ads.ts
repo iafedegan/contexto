@@ -5,6 +5,7 @@ import { db } from "@/db";
 import { adsZones } from "@/db/schema";
 import { AD_ZONE_SPECS, positionOf, suffixOf, type AdPosition } from "@/lib/ads-positions";
 import { getPreviewDraft } from "@/lib/preview-draft";
+import { cachear, TAG_AJUSTES } from "@/lib/data-cache";
 
 export * from "@/lib/ads-positions";
 
@@ -86,11 +87,18 @@ export async function getAdsZoneRows(): Promise<AdsZoneRow[]> {
 }
 
 /** Anuncios activos y vigentes: una consulta por petición, no una por posición. */
+const leerAnunciosActivos = cachear(
+  "anuncios-activos",
+  (): Promise<AdsZoneContent[]> =>
+    db
+      .select({ key: adsZones.key, html: adsZones.html, imageUrl: adsZones.imageUrl, clickUrl: adsZones.clickUrl })
+      .from(adsZones)
+      .where(activeNow),
+  { tags: [TAG_AJUSTES], segundos: 60 },
+);
+
 const activeAds = cache(async (): Promise<AdsZoneContent[]> => {
-  const rows = await db
-    .select({ key: adsZones.key, html: adsZones.html, imageUrl: adsZones.imageUrl, clickUrl: adsZones.clickUrl })
-    .from(adsZones)
-    .where(activeNow);
+  const rows = await leerAnunciosActivos();
 
   // Vista previa del editor: los anuncios que se están escribiendo se ven como
   // si ya estuvieran publicados (aunque falte marcarlos como activos).

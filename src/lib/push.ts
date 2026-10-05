@@ -1,7 +1,7 @@
 import "server-only";
 import webpush from "web-push";
 import { after } from "next/server";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { articles, pushSubscriptions, siteSettings } from "@/db/schema";
 import { getSiteIdentity } from "@/lib/site-identity";
@@ -34,6 +34,38 @@ async function configurar() {
     PRIVATE_KEY,
   );
   return name;
+}
+
+/**
+ * Servicios de push de los navegadores. Una suscripción solo se acepta si su `endpoint` es una URL
+ * https de uno de estos servicios: el servidor hará una petición a esa dirección cada vez que se
+ * envíe un aviso, así que aceptar cualquiera permitiría que un extraño lo usara contra redes internas.
+ */
+const HOSTS_PUSH = [
+  /(^|\.)googleapis\.com$/i, // Chrome, Edge y Samsung Internet (FCM)
+  /(^|\.)push\.services\.mozilla\.com$/i, // Firefox
+  /(^|\.)notify\.windows\.com$/i, // Edge/Windows (WNS)
+  /(^|\.)push\.apple\.com$/i, // Safari
+];
+
+/** `true` si el endpoint es https, sin credenciales ni puerto raro, y de un servicio de push conocido. */
+export function endpointPushValido(endpoint: string): boolean {
+  if (endpoint.length > 1000) return false;
+  let u: URL;
+  try {
+    u = new URL(endpoint);
+  } catch {
+    return false;
+  }
+  if (u.protocol !== "https:" || u.username || u.password) return false;
+  if (u.port && u.port !== "443") return false;
+  return HOSTS_PUSH.some((re) => re.test(u.hostname));
+}
+
+/** Las claves de una suscripción son cadenas base64url cortas; cualquier otra cosa no viene de un navegador. */
+export function clavesPushValidas(keys: { p256dh: string; auth: string }): boolean {
+  const b64 = /^[A-Za-z0-9_-]{16,200}$/;
+  return b64.test(keys.p256dh) && b64.test(keys.auth);
 }
 
 export type EnvioPush = { enviados: number; caducados: number; fallidos: number };
@@ -73,22 +105,30 @@ export async function enviarAviso(input: {
   let enviados = 0;
   let fallidos = 0;
 
-  await Promise.all(
-    subs.map(async (s) => {
-      try {
-        await webpush.sendNotification(
-          { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
-          payload,
-          { TTL: 60 * 60 * 6, urgency: input.urgente ? "high" : "normal" },
-        );
-        enviados += 1;
-      } catch (err) {
-        const status = (err as { statusCode?: number }).statusCode;
-        if (status === 404 || status === 410) caducadas.push(s.endpoint);
-        else fallidos += 1;
-      }
-    }),
-  );
+  // Por tandas de 50: con miles de suscriptores, lanzar todas las peticiones a la vez agota la memoria
+  // y los sockets de la función y alarga el envío más allá de su tiempo máximo.
+  const enviar = async (s: (typeof subs)[number]) => {
+    // Suscripciones antiguas con un endpoint que hoy no se aceptaría: se descartan sin llamarlo.
+    if (!endpointPushValido(s.endpoint)) {
+      caducadas.push(s.endpoint);
+      return;
+    }
+    try {
+      await webpush.sendNotification(
+        { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
+        payload,
+        { TTL: 60 * 60 * 6, urgency: input.urgente ? "high" : "normal" },
+      );
+      enviados += 1;
+    } catch (err) {
+      const status = (err as { statusCode?: number }).statusCode;
+      if (status === 404 || status === 410) caducadas.push(s.endpoint);
+      else fallidos += 1;
+    }
+  };
+  for (let i = 0; i < subs.length; i += 50) {
+    await Promise.all(subs.slice(i, i + 50).map(enviar));
+  }
 
   if (caducadas.length > 0) {
     await db.delete(pushSubscriptions).where(inArray(pushSubscriptions.endpoint, caducadas));
@@ -99,8 +139,8 @@ export async function enviarAviso(input: {
 
 /** Número de navegadores suscritos, para el panel. */
 export async function contarSuscriptores(): Promise<number> {
-  const filas = await db.select({ e: pushSubscriptions.endpoint }).from(pushSubscriptions);
-  return filas.length;
+  const [fila] = await db.select({ n: sql<number>`count(*)::int` }).from(pushSubscriptions);
+  return fila?.n ?? 0;
 }
 
 /** Alta o renovación de una suscripción. */

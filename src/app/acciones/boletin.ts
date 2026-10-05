@@ -88,12 +88,18 @@ export async function suscribirBoletin(
 
   try {
     const [existente] = await db
-      .select({ id: newsletterSubscribers.id, confirmed: newsletterSubscribers.confirmed })
+      .select({
+        id: newsletterSubscribers.id,
+        confirmed: newsletterSubscribers.confirmed,
+        unsubscribedAt: newsletterSubscribers.unsubscribedAt,
+      })
       .from(newsletterSubscribers)
       .where(eq(newsletterSubscribers.email, email))
       .limit(1);
 
-    if (existente?.confirmed) {
+    // «Ya suscrito» es confirmado Y sin baja. Quien se dio de baja conserva `confirmed = true`, y antes
+    // eso lo dejaba sin poder volver: el formulario decía «revisa tu correo» y no enviaba nada.
+    if (existente?.confirmed && !existente.unsubscribedAt) {
       // No se confirma ni se niega nada distinto: quien pregunta no debe poder
       // averiguar si una dirección ya está suscrita.
       return {
@@ -118,17 +124,27 @@ export async function suscribirBoletin(
       signupLat,
       signupLon,
     };
+    // Un mismo destinatario no recibe más de 3 correos de confirmación por hora, venga de la IP que venga:
+    // sin esto, cualquiera podía llenar de correos la bandeja de una persona ajena. La respuesta es la
+    // misma de siempre, para no revelar nada.
+    const puedeEnviar = (await hit(`boletin:correo:${email}`, 3, 60 * 60)).allowed;
     if (existente) {
-      await db
-        .update(newsletterSubscribers)
-        .set({ confirmToken, unsubscribedAt: null, ...datos })
-        .where(eq(newsletterSubscribers.id, existente.id));
+      // Quien vuelve tras una baja debe confirmar de nuevo (doble opt-in): hasta entonces no recibe nada.
+      // Solo se actualizan los datos que esta vez sí llegaron: el widget compacto trae solo el correo y no
+      // debe borrar el nombre o el celular de una alta anterior.
+      const nuevos = Object.fromEntries(Object.entries(datos).filter(([, v]) => v !== null && v !== undefined));
+      if (puedeEnviar) {
+        await db
+          .update(newsletterSubscribers)
+          .set({ confirmToken, confirmed: false, unsubscribedAt: null, ...nuevos })
+          .where(eq(newsletterSubscribers.id, existente.id));
+      }
     } else {
       await db.insert(newsletterSubscribers).values({ email, confirmToken, ...datos });
     }
     // El correo de confirmación sale en cuanto hay proveedor configurado. Un
     // fallo al enviarlo no debe romper el alta: queda pendiente y trazable.
-    await sendConfirmationEmail(email, confirmToken).catch(() => false);
+    if (puedeEnviar) await sendConfirmationEmail(email, confirmToken).catch(() => false);
   } catch {
     return {
       ok: false,

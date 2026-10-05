@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { syncArchiveIndex } from "@/lib/archive-client";
+import { cronAutorizado } from "@/lib/cron-auth";
 
 /**
  * Job periódico de sincronización del archivo histórico (SOLO LECTURA).
@@ -11,8 +12,7 @@ import { syncArchiveIndex } from "@/lib/archive-client";
 export const maxDuration = 300;
 
 export async function GET(req: Request) {
-  const auth = req.headers.get("authorization");
-  if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!cronAutorizado(req)) {
     return NextResponse.json({ error: "no autorizado" }, { status: 401 });
   }
 

@@ -160,10 +160,16 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       session.user.id = token.uid as string;
       session.user.role = token.role as UserRole;
       const [row] = await db
-        .select({ name: users.name, email: users.email, role: users.role })
+        .select({ name: users.name, email: users.email, role: users.role, active: users.active })
         .from(users)
         .where(eq(users.id, token.uid as string))
         .limit(1);
+      // Una cuenta desactivada pierde la sesión al instante: el JWT dura 8 h y, sin esta
+      // comprobación, seguiría entrando hasta que caducara. Sin `user`, todo el código que
+      // pregunta `session?.user` lo trata como «sin sesión» y manda al login.
+      if (row && !row.active) {
+        return { ...session, user: undefined } as unknown as typeof session;
+      }
       if (row) {
         session.user.name = row.name;
         session.user.email = row.email;
@@ -194,10 +200,12 @@ export async function requireRole(min: UserRole) {
   // valida por id y, si no aparece, se reconcilia por correo (estable) para
   // no echar al editor de una sesión que sigue siendo legítima.
   const [byId] = await db
-    .select({ id: users.id })
+    .select({ id: users.id, active: users.active })
     .from(users)
     .where(eq(users.id, session.user.id))
     .limit(1);
+  // La cuenta existe pero está desactivada: no se reconcilia por correo, se corta aquí.
+  if (byId && !byId.active) redirect("/panel/login?motivo=cuenta");
   if (byId) return session.user;
 
   const email = session.user.email?.toLowerCase().trim();

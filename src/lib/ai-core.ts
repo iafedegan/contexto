@@ -6,6 +6,7 @@ import { EDITOR_ASSIST_SYSTEM } from "@/agents/prompts";
 import { focusTerms } from "@/lib/seo-audit";
 import { getAiModel, getGroundedAi, getImageAi } from "@/lib/ai-provider";
 import { subirImagenBytes } from "@/lib/media-upload";
+import { descargarSeguro } from "@/lib/safe-fetch";
 import { PREFIJO_IMAGEN_IA } from "@/lib/ai-image";
 import { esMimeVideo, FORMATOS_MEDIA, mimeMedia } from "@/lib/media-mime";
 import { materialParaPrompt, type Material } from "@/lib/material-types";
@@ -987,14 +988,6 @@ export async function transcribirEntrevistaSubidaCore(userId: string, input: { p
 
 /* --- Lectura de enlaces --------------------------------------------------- */
 
-function ipPrivada(ip: string): boolean {
-  if (ip === "::1" || ip.startsWith("fc") || ip.startsWith("fd") || ip.startsWith("fe80") || ip === "::") return true;
-  const m = ip.match(/^(?:::ffff:)?(\d+)\.(\d+)\.(\d+)\.(\d+)$/);
-  if (!m) return false;
-  const [a, b] = [Number(m[1]), Number(m[2])];
-  return a === 10 || a === 127 || a === 0 || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 100 && b >= 64 && b <= 127);
-}
-
 const decodeHtml = (s: string) =>
   s.replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;|&apos;/g, "'")
     .replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(Number(n)));
@@ -1021,22 +1014,18 @@ async function leerUnEnlace(raw: string): Promise<Material | null> {
     return null;
   }
   if (!/^https?:$/.test(u.protocol)) return null;
-  // Protección SSRF: nada de direcciones internas.
-  const { lookup } = await import("node:dns/promises");
-  const dirs = await lookup(u.hostname, { all: true }).catch(() => []);
-  if (!dirs.length || dirs.some((d) => ipPrivada(d.address))) return null;
-  const r = await fetch(u, {
-    redirect: "follow",
-    signal: AbortSignal.timeout(10_000),
-    headers: { "user-agent": "Mozilla/5.0 (compatible; CONtextoGanadero-Redaccion/1.0)", accept: "text/html,application/xhtml+xml" },
+  // Protección SSRF (ver src/lib/safe-fetch.ts): IP validada en la propia conexión, redirecciones
+  // revisadas salto a salto y cuerpo limitado a 2 MB.
+  const r = await descargarSeguro(u, {
+    maxBytes: 2_000_000,
+    cabeceras: { "user-agent": "Mozilla/5.0 (compatible; CONtextoGanadero-Redaccion/1.0)", accept: "text/html,application/xhtml+xml" },
   });
-  if (!r.ok) return null;
-  const tipo = r.headers.get("content-type") ?? "";
-  if (!/text\/html|application\/xhtml|text\/plain/.test(tipo)) return null;
-  const html = (await r.text()).slice(0, 2_000_000);
-  const { title, text } = tipo.includes("text/plain") ? { title: u.hostname, text: html } : htmlATexto(html);
+  if (!r) return null;
+  if (!/text\/html|application\/xhtml|text\/plain/.test(r.tipo)) return null;
+  const html = r.cuerpo;
+  const { title, text } = r.tipo.includes("text/plain") ? { title: r.url.hostname, text: html } : htmlATexto(html);
   if (text.length < 200) return null;
-  return { kind: "enlace", title: title || u.hostname, text: text.slice(0, 30_000), url: u.toString() };
+  return { kind: "enlace", title: title || r.url.hostname, text: text.slice(0, 30_000), url: r.url.toString() };
 }
 
 /** Lee hasta 5 enlaces (una por línea): extrae titular y texto principal para redactar a partir de ellos. */

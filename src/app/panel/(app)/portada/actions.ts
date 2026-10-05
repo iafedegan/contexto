@@ -12,6 +12,7 @@ import { normalizeLayout } from "@/lib/home-layout-normalize";
 import { sanitizePopup, type PopupConfig } from "@/lib/popup-types";
 import { POPUP_KEY, getSitePopup } from "@/lib/popup";
 import { draftKey, sanitizeDraft } from "@/lib/preview-draft";
+import { invalidarCache } from "@/lib/data-cache";
 
 export type HomeLayoutEntry = {
   id: string;
@@ -46,6 +47,7 @@ export async function saveHomeLayout(entries: HomeLayoutEntry[]) {
         : isNotNull(articles.homePosition),
     );
 
+  invalidarCache();
   revalidatePath("/");
   revalidatePath("/panel/portada");
 }
@@ -54,6 +56,7 @@ export async function saveHomeLayout(entries: HomeLayoutEntry[]) {
 export async function resetHomeLayout() {
   await requirePermiso("portada");
   await db.update(articles).set({ homePosition: null, homeStyle: null }).where(isNotNull(articles.homePosition));
+  invalidarCache();
   revalidatePath("/");
   revalidatePath("/panel/portada");
 }
@@ -73,6 +76,7 @@ export async function saveHomeSectionLayout(input: HomeLayoutConfig) {
     .onConflictDoUpdate({ target: siteSettings.key, set: { value: config, updatedAt: sql`now()` } });
   // La plantilla tiñe TODO el portal (artículo, sección, buscador…), así que
   // se revalida el árbol entero y no solo la portada.
+  invalidarCache();
   revalidatePath("/", "layout");
   revalidatePath("/panel/portada");
 }
@@ -89,6 +93,7 @@ export async function saveSitePopup(input: PopupConfig): Promise<PopupConfig> {
     .insert(siteSettings)
     .values({ key: POPUP_KEY, value: config })
     .onConflictDoUpdate({ target: siteSettings.key, set: { value: config, updatedAt: sql`now()` } });
+  invalidarCache();
   revalidatePath("/", "layout");
   return config;
 }
@@ -176,7 +181,7 @@ export async function publishHomeDraft(): Promise<{ ok: boolean; message: string
     }
     if (adWrites.length) {
       const session = await auth();
-      if (session?.user.role !== "administrador") {
+      if (session?.user?.role !== "administrador") {
         return { ok: false, message: "Hay cambios en la publicidad y solo un administrador puede publicarlos. Descártalos o pídele a un administrador que publique." };
       }
     }
@@ -212,7 +217,10 @@ export async function publishHomeDraft(): Promise<{ ok: boolean; message: string
       .values(w)
       .onConflictDoUpdate({ target: adsZones.key, set: { html: w.html, imageUrl: w.imageUrl, clickUrl: w.clickUrl, active: w.active, startsAt: w.startsAt, endsAt: w.endsAt } });
   }
-  if (adWrites.length) revalidatePath("/", "layout");
+  if (adWrites.length) {
+    invalidarCache();
+    revalidatePath("/", "layout");
+  }
 
   await db.delete(siteSettings).where(eq(siteSettings.key, draftKey(user.id)));
   revalidatePath("/panel/portada");
@@ -249,7 +257,7 @@ export async function restoreHomeSnapshot(input: unknown): Promise<{ ok: boolean
 
   if (Array.isArray(r.ads) && r.ads.length) {
     const session = await auth();
-    if (session?.user.role === "administrador") {
+    if (session?.user?.role === "administrador") {
       for (const a of r.ads as unknown[]) {
         const o = (a ?? {}) as Record<string, unknown>;
         const key = typeof o.key === "string" ? o.key : "";
@@ -270,6 +278,7 @@ export async function restoreHomeSnapshot(input: unknown): Promise<{ ok: boolean
           .values({ key, name: AD_ZONE_SPECS[position].label, ...w })
           .onConflictDoUpdate({ target: adsZones.key, set: w });
       }
+      invalidarCache();
       revalidatePath("/", "layout");
     }
   }

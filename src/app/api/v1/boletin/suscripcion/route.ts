@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { newsletterSubscribers } from "@/db/schema";
 import { guardApi, json, CORS_HEADERS } from "@/lib/api/guard";
+import { hit } from "@/lib/rate-limit";
 import { sendConfirmationEmail } from "@/lib/newsletter/confirm";
 
 export const dynamic = "force-dynamic";
@@ -29,16 +30,29 @@ export async function POST(req: Request) {
   }
 
   const [existente] = await db
-    .select({ id: newsletterSubscribers.id, confirmed: newsletterSubscribers.confirmed })
+    .select({
+      id: newsletterSubscribers.id,
+      confirmed: newsletterSubscribers.confirmed,
+      unsubscribedAt: newsletterSubscribers.unsubscribedAt,
+    })
     .from(newsletterSubscribers)
     .where(eq(newsletterSubscribers.email, email))
     .limit(1);
 
-  if (existente?.confirmed) return json({ ok: true, estado: "ya_confirmado" });
+  // Confirmado y sin baja = ya suscrito. Quien se dio de baja puede volver, pero debe confirmar otra vez.
+  if (existente?.confirmed && !existente.unsubscribedAt) return json({ ok: true, estado: "ya_confirmado" });
+
+  // Como máximo 3 correos de confirmación por hora a una misma dirección (evita usar la API para saturar un buzón).
+  if (!(await hit(`boletin:correo:${email}`, 3, 60 * 60)).allowed) {
+    return json({ ok: true, estado: "pendiente_de_confirmar" }, { status: 201 });
+  }
 
   const confirmToken = randomUUID();
   if (existente) {
-    await db.update(newsletterSubscribers).set({ confirmToken, unsubscribedAt: null }).where(eq(newsletterSubscribers.id, existente.id));
+    await db
+      .update(newsletterSubscribers)
+      .set({ confirmToken, confirmed: false, unsubscribedAt: null })
+      .where(eq(newsletterSubscribers.id, existente.id));
   } else {
     await db.insert(newsletterSubscribers).values({ email, confirmToken });
   }

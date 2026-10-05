@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { cronAutorizado } from "@/lib/cron-auth";
 import { syncMarketData } from "@/lib/sync-market-data";
 
 /**
@@ -11,7 +12,7 @@ import { syncMarketData } from "@/lib/sync-market-data";
 export const maxDuration = 30;
 
 export async function GET(req: Request) {
-  if (req.headers.get("authorization") !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!cronAutorizado(req)) {
     return NextResponse.json({ error: "no autorizado" }, { status: 401 });
   }
 

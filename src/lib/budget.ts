@@ -29,9 +29,15 @@ export const LIMITES_KEY = "assistant_limits";
 export type LimitesAsistente = { presupuestoMensualUsd: number; topePorSesion: number };
 
 export async function getLimites(): Promise<LimitesAsistente> {
+  // Un valor no numérico en el entorno daría NaN, y `gasto >= NaN` nunca es verdadero: el tope quedaría
+  // desactivado sin avisar. Se valida y, si no sirve, se usa el valor por defecto.
+  const numero = (valor: string | undefined, defecto: number) => {
+    const n = Number(valor);
+    return valor?.trim() && Number.isFinite(n) && n >= 0 ? n : defecto;
+  };
   const porDefecto = {
-    presupuestoMensualUsd: Number(process.env.ASSISTANT_MONTHLY_BUDGET_USD ?? "150"),
-    topePorSesion: Number(process.env.ASSISTANT_SESSION_QUERY_LIMIT ?? "15"),
+    presupuestoMensualUsd: numero(process.env.ASSISTANT_MONTHLY_BUDGET_USD, 150),
+    topePorSesion: numero(process.env.ASSISTANT_SESSION_QUERY_LIMIT, 15),
   };
   try {
     const [row] = await db.select({ value: siteSettings.value }).from(siteSettings).where(eq(siteSettings.key, LIMITES_KEY)).limit(1);

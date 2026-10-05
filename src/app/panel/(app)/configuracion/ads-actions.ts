@@ -16,6 +16,7 @@ import { adsZones } from "@/db/schema";
 import { requireRole } from "@/lib/auth";
 import { AD_ZONE_SPECS, positionOf, suffixOf } from "@/lib/ads-positions";
 import { parseAdDate, validateAd } from "@/lib/ads-validate";
+import { invalidarCache } from "@/lib/data-cache";
 
 export type AdsZoneState = { ok: boolean; message: string } | null;
 
@@ -48,6 +49,7 @@ export async function saveAdsZone(_prev: AdsZoneState, formData: FormData): Prom
 
   // La pauta sale en la portada, en cada artículo y en el pie: se refresca
   // todo el sitio público, no solo una ruta.
+  invalidarCache();
   revalidatePath("/", "layout");
   revalidatePath("/panel/configuracion");
   revalidatePath("/panel/portada");
@@ -62,6 +64,7 @@ export async function clearAdsZone(key: string): Promise<void> {
     .update(adsZones)
     .set({ html: null, imageUrl: null, clickUrl: null, active: false, startsAt: null, endsAt: null })
     .where(eq(adsZones.key, key));
+  invalidarCache();
   revalidatePath("/", "layout");
   revalidatePath("/panel/configuracion");
   revalidatePath("/panel/portada");
@@ -92,6 +95,7 @@ export async function deleteAdsZone(key: string): Promise<void> {
   await requireRole("administrador");
   if (!positionOf(key) || !key.includes("__")) return;
   await db.delete(adsZones).where(eq(adsZones.key, key));
+  invalidarCache();
   revalidatePath("/", "layout");
   revalidatePath("/panel/configuracion");
   revalidatePath("/panel/portada");

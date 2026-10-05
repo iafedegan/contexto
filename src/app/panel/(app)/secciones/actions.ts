@@ -6,6 +6,7 @@ import { db } from "@/db";
 import { articles, categories } from "@/db/schema";
 import { requirePermiso } from "@/lib/auth";
 import { slugify } from "@/lib/utils";
+import { invalidarCache } from "@/lib/data-cache";
 
 export type SeccionState = { ok: boolean; message: string } | null;
 
@@ -51,6 +52,7 @@ export async function actualizarSeccion(_prev: SeccionState, formData: FormData)
   revalidatePath(`/categoria/${row.slug}`);
   revalidatePath(`/en/categoria/${row.slug}`);
   // El menú principal y el pie leen las categorías en cada página.
+  invalidarCache();
   revalidatePath("/", "layout");
   revalidatePath("/panel/portada");
 
@@ -68,6 +70,7 @@ async function refrescarMenu(slugs: (string | null | undefined)[] = []) {
     revalidatePath(`/en/categoria/${s}`);
   }
   // El menú y el pie leen las categorías en todas las páginas.
+  invalidarCache();
   revalidatePath("/", "layout");
   revalidatePath("/sitemap.xml");
   revalidatePath("/panel/portada");

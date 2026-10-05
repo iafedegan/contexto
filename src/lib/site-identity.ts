@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { siteSettings } from "@/db/schema";
 import { env } from "@/lib/env";
+import { cachear, TAG_AJUSTES } from "@/lib/data-cache";
 
 /**
  * Identidad del sitio, editable desde /panel/configuracion.
@@ -34,14 +35,22 @@ export const DEFAULT_IDENTITY: SiteIdentity = {
 };
 
 /** `cache()`: una sola consulta por render aunque la pidan layout y páginas. */
-export const getSiteIdentity = cache(async (): Promise<SiteIdentity> => {
-  try {
+const leerIdentidad = cachear(
+  "identidad",
+  async () => {
     const [row] = await db
       .select({ value: siteSettings.value })
       .from(siteSettings)
       .where(eq(siteSettings.key, SITE_IDENTITY_KEY))
       .limit(1);
-    return { ...DEFAULT_IDENTITY, ...((row?.value as Partial<SiteIdentity>) ?? {}) };
+    return (row?.value as Partial<SiteIdentity> | undefined) ?? null;
+  },
+  { tags: [TAG_AJUSTES], segundos: 300 },
+);
+
+export const getSiteIdentity = cache(async (): Promise<SiteIdentity> => {
+  try {
+    return { ...DEFAULT_IDENTITY, ...((await leerIdentidad()) ?? {}) };
   } catch {
     // Sin base de datos (build local): valores por defecto.
     return DEFAULT_IDENTITY;
