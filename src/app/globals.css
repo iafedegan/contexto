@@ -1623,3 +1623,6 @@ html[data-cg-overlay] .cg-consent { display: none; }
 @keyframes lxstep { from { opacity: 0; transform: translateY(8px); } }
 .lx-step { animation: lxstep 0.28s ease-out both; }
 @media (prefers-reduced-motion: reduce) { .lx-step { animation: none; } }
+
+/* El asistente de redacción ocupa exactamente la ventana (sin desplazamiento de página): se oculta el pie del panel. */
+body:has([data-asistente]) footer[data-theme="panel-amber"] { display: none; }

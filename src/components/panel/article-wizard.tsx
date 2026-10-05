@@ -18,12 +18,8 @@ import {
   Eye,
   ImagePlus,
   Loader2,
-  Lightbulb,
-  Link2,
-  Mic,
   RotateCcw,
   Save,
-  Search,
   Send,
   Sparkles,
   Trash2,
@@ -50,10 +46,11 @@ import {
   type TitleContextOptions,
 } from "@/app/panel/(app)/articulos/ai-actions";
 import { SectionTree } from "@/components/panel/section-picker";
+import { Carrusel, filasListas, useAltoVentana } from "@/components/panel/carrusel";
 import { textoDeSegmentos, type Material, type Participante, type Segmento } from "@/lib/material-types";
-import { ParticipantesForm, participantesListos, SegmentosEditor } from "@/components/panel/entrevista-editor";
+import { participantesListos, SegmentosEditor } from "@/components/panel/entrevista-editor";
 import { SiteArticlePreview, type SitePreviewChrome } from "@/components/panel/site-article-preview";
-import { IdeaCards, NewsCards } from "@/components/panel/wizard-fuentes";
+import { FuenteCards, PantallaEnlaces, PantallaEntrevista, PantallaIdeas, PantallaNoticias, type Fuente } from "@/components/panel/wizard-fuentes";
 import { WizardStepper } from "@/components/panel/wizard-stepper";
 import { duracionWav, esVideo, ExtraerAudioError, extraerAudioDeVideo, partirWav } from "@/lib/audio-extract";
 import { aplicarTipo, decodeSpec, encodeSpec, renderChartSvg, svgDataUri, TIPOS_GRAFICA, type ChartSpec, type TipoGrafica } from "@/lib/chart-svg";
@@ -210,17 +207,20 @@ export function ArticleWizard({
   const [options, setOptions] = useState<TitleContextOptions | null>(null);
   const [ideas, setIdeas] = useState<{ ideas: TopicIdea[]; sources: { title: string; url: string }[] } | null>(null);
   const [ideasError, setIdeasError] = useState("");
-  const [ideasOpen, setIdeasOpen] = useState(true);
   const [ideaElegida, setIdeaElegida] = useState<string | null>(null);
   const [newsQuery, setNewsQuery] = useState("");
   const [news, setNews] = useState<NewsItem[] | null>(null);
-  const [newsOpen, setNewsOpen] = useState(true);
   const [newsError, setNewsError] = useState("");
   const [refs, setRefs] = useState<NewsItem[]>([]);
   const [newsFiltro, setNewsFiltro] = useState<"todo" | NewsItem["type"]>("todo");
   const [searchingNews, startNews] = useTransition();
   const [enOpciones, setEnOpciones] = useState(false);
-  const [fuente, setFuente] = useState<"ideas" | "noticias" | "entrevista" | "enlaces" | null>(null);
+  // Alto de la ventana: decide cuántas filas de cada lista caben por página del carrusel.
+  const alto = useAltoVentana();
+  // Fuente cuya pantalla está abierta en el primer paso (null = la pantalla base) y, aparte, la grabación o enlace que se
+  // está revisando (-1 = el último cargado, para abrir la revisión justo al terminar de transcribir).
+  const [fuente, setFuente] = useState<Fuente | null>(null);
+  const [revisando, setRevisando] = useState<number | null>(null);
   const [progAbierto, setProgAbierto] = useState(false);
   const [progFecha, setProgFecha] = useState("");
   const [material, setMaterial] = useState<Material[]>([]);
@@ -421,8 +421,12 @@ export function ArticleWizard({
   // Vuelve al paso anterior.
   function back() {
     setError("");
-    // En la pantalla de títulos y enfoque, «Atrás» vuelve a elegir la fuente, no al paso anterior.
-    if (current.key === "tema" && enOpciones) return setEnOpciones(false);
+    // En el primer paso, «Atrás» sale de la pantalla en la que se está (títulos y enfoque, revisión o fuente), no al paso anterior.
+    if (current.key === "tema") {
+      if (enOpciones) return setEnOpciones(false);
+      if (revisando !== null) return setRevisando(null);
+      if (fuente) return setFuente(null);
+    }
     setStep((s) => Math.max(s - 1, 0));
   }
   // Va al paso indicado.
@@ -615,6 +619,9 @@ export function ArticleWizard({
         if (!res.ok) return setAudioError(res.error);
         setMaterial((m) => [...m, res.material]);
         setOptions(null);
+        // Recién transcrita: se abre la revisión para asignar quién dijo cada fragmento.
+        setFuente(null);
+        setRevisando(-1);
       } catch {
         setAudioError("No se pudo procesar el archivo. Inténtalo de nuevo.");
       } finally {
@@ -631,6 +638,7 @@ export function ArticleWizard({
       setMaterial((m) => [...m, ...res.materiales.filter((n) => !m.some((x) => x.url === n.url))]);
       setOptions(null);
       setUrlsTxt("");
+      setFuente(null);
       if (res.fallidos.length) setUrlsError(`No se pudieron leer: ${res.fallidos.join(", ")}`);
     });
   }
@@ -659,7 +667,6 @@ export function ArticleWizard({
       const res = await searchNewsAbout({ query: newsQuery, section: categories.find((c) => c.id === categoryId)?.name });
       if (!res.ok) return setNewsError(res.error);
       setNews(res.items);
-      setNewsOpen(true);
     });
   }
   // Indica si una noticia ya está marcada para referenciar.
@@ -673,7 +680,7 @@ export function ArticleWizard({
     setTopic(`${n.title}. ${n.summary} (Fuente: ${n.outlet}${n.date ? `, ${n.date}` : ""}).`);
     setOptions(null);
     setRefs((r) => (r.some((x) => x.url === n.url) ? r : [...r, n]));
-    setNewsOpen(false);
+    setFuente(null);
   }
 
   // Pide a la IA ideas de temas.
@@ -686,7 +693,6 @@ export function ArticleWizard({
       });
       if (!res.ok) return setIdeasError(res.error);
       setIdeas({ ideas: res.ideas, sources: res.sources });
-      setIdeasOpen(true);
     });
   }
 
@@ -762,12 +768,25 @@ export function ArticleWizard({
   const input =
     "w-full rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] px-4 py-3 outline-none transition focus:border-[var(--accent)] placeholder:text-[var(--fg-muted)]/50";
 
+  // Pantalla del primer paso: títulos y enfoque, la revisión de un material, la pantalla de una fuente o la base.
+  const enPantallaOpciones = enOpciones && !!options;
+  const idxRev = revisando === null || material.length === 0 ? null : Math.min(revisando < 0 ? material.length - 1 : revisando, material.length - 1);
+  const matRev = idxRev === null ? null : material[idxRev];
+  const subpantalla: Fuente | "revision" | null = current.key !== "tema" || enPantallaOpciones ? null : matRev ? "revision" : fuente;
+  // Vuelve a la pantalla base del primer paso.
+  const volverAlTema = () => {
+    setRevisando(null);
+    setFuente(null);
+  };
+
   return (
     <form
       action={saveArticle}
-      // La tarjeta del paso crece con su contenido (sin scroll interno): la página se desplaza y la barra de
-      // navegación queda fija abajo. Como mínimo ocupa la ventana, para que un paso corto no deje huecos.
-      className="-my-6 flex min-h-[max(30rem,calc(100dvh-var(--panel-header-h,61px)-5.75rem))] flex-col gap-3"
+      // En escritorio el asistente mide EXACTAMENTE la ventana (100dvh menos el margen del panel: 2 × 8 px, ya sin pie):
+      // cada paso cabe sin desplazarse, y lo largo (ideas, noticias, intervenciones…) va en carruseles.
+      // En pantallas pequeñas la página puede crecer, con la barra de navegación fija abajo.
+      data-asistente
+      className="-my-6 flex min-h-[max(30rem,calc(100dvh-var(--panel-header-h,61px)-5.75rem))] flex-col gap-3 lg:h-[calc(100dvh-1rem)] lg:min-h-0"
     >
       {/* Todo viaja oculto: el formulario solo se envía desde la vista previa. */}
       <input type="hidden" name="id" value={savedId} />
@@ -832,8 +851,9 @@ export function ArticleWizard({
       )}
 
       {/* --- Pantalla del paso + panel SEO lateral (escritorio) --- */}
-      <div className="flex flex-1 gap-3">
-      <div className="lx-card min-w-0 flex-1 p-5 sm:p-6" style={{ transform: "none" }}>
+      <div className="flex min-h-0 flex-1 gap-3">
+      {/* Sin desplazamiento propio salvo en una ventana demasiado baja (el `auto` solo actúa si no cabe). */}
+      <div className="lx-card flex min-h-0 min-w-0 flex-1 flex-col p-5 sm:p-6" style={{ transform: "none", overflowY: "auto" }}>
         {mode === "ia" && generated && PART_OF[current.key] && (
           <div className="mx-auto mb-3 flex max-w-2xl items-center gap-2 text-xs text-[var(--fg-muted)]">
             <Sparkles size={13} className="text-[var(--accent)]" />
@@ -847,7 +867,7 @@ export function ArticleWizard({
         {current.key === "tema" && (generating || error) && (
           <div
             role="status"
-            className={`sticky top-0 z-10 mx-auto mb-4 flex max-w-2xl items-center gap-3 rounded-[var(--radius)] border px-4 py-3 text-sm font-medium shadow-md ${
+            className={`absolute inset-x-5 top-3 z-10 mx-auto flex max-w-2xl items-center gap-3 rounded-[var(--radius)] border px-4 py-3 text-sm font-medium shadow-md sm:inset-x-6 ${
               generating
                 ? "border-[var(--accent)] bg-[var(--surface-2)]"
                 : "border-[var(--danger,#b4442e)] bg-[var(--surface-2)] text-[var(--danger,#b4442e)]"
@@ -867,230 +887,179 @@ export function ArticleWizard({
         )}
         {current.key === "tema" && (
           <Step
-            ancho={enOpciones && options ? "xl" : "md"}
-            title={enOpciones && options ? "Elige el título y el enfoque" : "Tema, título y contexto"}
-            hint={enOpciones && options ? (
-              <p className="flex items-baseline gap-3">
-                <span className="line-clamp-1 min-w-0 flex-1">
-                  <strong className="text-[var(--fg)]">Tema:</strong> {(topic.trim() || material[0]?.title || "—").slice(0, 200)}
-                  {material.length > 0 && ` · ${material.length} material${material.length > 1 ? "es" : ""} cargado${material.length > 1 ? "s" : ""}`}
-                </span>
-                <button type="button" onClick={() => setEnOpciones(false)} className="lx-link inline-flex shrink-0 items-center gap-1 text-xs font-semibold">
-                  <ArrowLeft size={12} /> Cambiar tema o fuente
-                </button>
-              </p>
-            ) : "Describe el tema, o parte de una noticia, una entrevista o unos enlaces. La IA propone títulos y enfoques; tú eliges y revisas cada paso."}
-          >
-                        {!(enOpciones && options) && (
-              <>
-            <textarea
-              autoFocus
-              value={topic}
-              onChange={(e) => setTopic(e.target.value)}
-              rows={3}
-              placeholder="Cuéntale a la IA de qué trata la nota. Ej.: el precio del novillo gordo subió 4 % en Medellín en septiembre según la Central Ganadera; menor entrada de ganado del Magdalena Medio…"
-              className={`${input} resize-y text-base leading-relaxed`}
-            />
-            <p className="-mt-1.5 flex flex-wrap items-center justify-between gap-x-4 gap-y-0.5 text-xs text-[var(--fg-muted)]">
-              <span>Cuanto más concreto (qué pasó, dónde, cuándo y según quién), mejores serán los títulos que proponga la IA.</span>
-              <span className={`tabular-nums font-medium ${topic.trim().length >= 10 || material.length > 0 ? "text-[#16a34a]" : ""}`} aria-live="polite">
-                {material.length > 0 ? "✓ Hay material cargado" : topic.trim().length >= 10 ? `✓ ${topic.trim().length} caracteres` : `${topic.trim().length} / 10 mínimo`}
-              </span>
-            </p>
-            <div className="mt-2">
-              <p className="lx-kicker text-[var(--fg-muted)]">¿Prefieres partir de otra cosa?</p>
-              <div role="tablist" aria-label="Fuente para empezar" className="mt-2 flex gap-2 overflow-x-auto pb-1">
-                <button type="button" role="tab" id="tab-ideas" aria-selected={fuente === "ideas"} aria-controls="panel-fuente" onClick={() => setFuente((x) => (x === "ideas" ? null : "ideas"))} className={`inline-flex items-center gap-2 whitespace-nowrap rounded-full border px-4 py-2 text-sm font-medium transition ${fuente === "ideas" ? "border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-fg)] shadow-sm" : "border-[var(--border)] bg-[var(--bg-2)] hover:border-[var(--accent)]"}`}>
-                  <Lightbulb size={15} aria-hidden /> Ideas de la IA
-                </button>
-                <button type="button" role="tab" id="tab-noticias" aria-selected={fuente === "noticias"} aria-controls="panel-fuente" onClick={() => setFuente((x) => (x === "noticias" ? null : "noticias"))} className={`inline-flex items-center gap-2 whitespace-nowrap rounded-full border px-4 py-2 text-sm font-medium transition ${fuente === "noticias" ? "border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-fg)] shadow-sm" : "border-[var(--border)] bg-[var(--bg-2)] hover:border-[var(--accent)]"}`}>
-                  <Search size={15} aria-hidden /> Buscar noticias
-                </button>
-                <button type="button" role="tab" id="tab-entrevista" aria-selected={fuente === "entrevista"} aria-controls="panel-fuente" onClick={() => setFuente((x) => (x === "entrevista" ? null : "entrevista"))} className={`inline-flex items-center gap-2 whitespace-nowrap rounded-full border px-4 py-2 text-sm font-medium transition ${fuente === "entrevista" ? "border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-fg)] shadow-sm" : "border-[var(--border)] bg-[var(--bg-2)] hover:border-[var(--accent)]"}`}>
-                  <Mic size={15} aria-hidden /> Voz o video
-                </button>
-                <button type="button" role="tab" id="tab-enlaces" aria-selected={fuente === "enlaces"} aria-controls="panel-fuente" onClick={() => setFuente((x) => (x === "enlaces" ? null : "enlaces"))} className={`inline-flex items-center gap-2 whitespace-nowrap rounded-full border px-4 py-2 text-sm font-medium transition ${fuente === "enlaces" ? "border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-fg)] shadow-sm" : "border-[var(--border)] bg-[var(--bg-2)] hover:border-[var(--accent)]"}`}>
-                  <Link2 size={15} aria-hidden /> Enlaces
-                </button>
-              </div>
-              {fuente && (
-              <div id="panel-fuente" role="tabpanel" aria-labelledby={`tab-${fuente}`} className="mt-3 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] p-4">
-                {fuente === "ideas" && <p className="mb-3 text-sm text-[var(--fg-muted)]">La IA busca en internet qué es tendencia en el sector, en Colombia y en el mundo, y te propone temas con sus fuentes.</p>}
-                {fuente === "noticias" && <p className="mb-3 text-sm text-[var(--fg-muted)]">Escribe una persona, empresa o tema (p. ej. «Joaquín Manjarrés»): investiga en medios, YouTube y fuentes oficiales. Eliges cuáles <strong>referenciar</strong> o usar <strong>como tema</strong>.</p>}
-                {fuente === "entrevista" && <p className="mb-3 text-sm text-[var(--fg-muted)]">Sube una nota de voz, un audio o un <strong>video</strong> y la IA transcribe lo que se oye. En un video, el navegador saca solo el audio: el video no se sube. Puedes corregir el texto antes de redactar.</p>}
-                {fuente === "enlaces" && <p className="mb-3 text-sm text-[var(--fg-muted)]">Pega hasta 5 enlaces (uno por línea): la IA lee cada página y redacta con palabras propias, atribuyendo.</p>}
-                {fuente === "ideas" && (
-                  <div>
-              
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-                <input
-                  value={ideasFocus}
-                  onChange={(e) => setIdeasFocus(e.target.value)}
-                  placeholder="Opcional: enfoque (p. ej. leche, exportaciones, sanidad)"
-                  className={`${input} min-w-0 flex-1 !py-2 text-sm`}
-                />
-                <button type="button" onClick={findIdeas} disabled={searchingIdeas || generating} className="lx-btn">
-                  {searchingIdeas ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
-                  {ideas ? "Buscar otros temas" : "Aconséjame temas"}
-                </button>
-              </div>
-              {searchingIdeas && <p role="status" className="mt-3 text-xs text-[var(--fg-muted)]">Buscando tendencias en internet… puede tardar hasta un minuto.</p>}
-              {ideasError && <p role="alert" className="mt-3 text-sm text-[var(--danger,#b4442e)]">{ideasError}</p>}
-              {ideas && !ideasOpen && (
-                <p className="mt-3 text-xs text-[var(--fg-muted)]">
-                  Tema elegido: revisa el cuadro de abajo y pulsa «Proponer títulos y contextos».{" "}
-                  <button type="button" onClick={() => setIdeasOpen(true)} className="lx-link font-semibold">Ver los temas sugeridos</button>
+            ancho="xl"
+            title={
+              enPantallaOpciones ? "Elige el título y el enfoque"
+              : subpantalla === "ideas" ? "Ideas de la IA"
+              : subpantalla === "noticias" ? "Buscar noticias"
+              : subpantalla === "entrevista" ? "Voz o video"
+              : subpantalla === "enlaces" ? "Enlaces"
+              : subpantalla === "revision" ? "Revisa lo que se dijo"
+              : "Tema, título y contexto"
+            }
+            hint={
+              enPantallaOpciones ? (
+                <p className="flex items-baseline gap-3">
+                  <span className="line-clamp-1 min-w-0 flex-1">
+                    <strong className="text-[var(--fg)]">Tema:</strong> {(topic.trim() || material[0]?.title || "—").slice(0, 200)}
+                    {material.length > 0 && ` · ${material.length} material${material.length > 1 ? "es" : ""} cargado${material.length > 1 ? "s" : ""}`}
+                  </span>
+                  <button type="button" onClick={() => setEnOpciones(false)} className="lx-link inline-flex shrink-0 items-center gap-1 text-xs font-semibold">
+                    <ArrowLeft size={12} /> Cambiar tema o fuente
+                  </button>
                 </p>
-              )}
-              {ideas && ideasOpen && (
-                <IdeaCards
-                  ideas={ideas.ideas}
-                  sources={ideas.sources}
-                  picked={ideaElegida}
-                  onPick={(i) => {
-                    setTopic(`${i.title}. ${i.angle}`);
-                    setIdeaElegida(i.title);
+              ) : subpantalla ? (
+                <p className="flex items-baseline gap-3">
+                  <span className="line-clamp-1 min-w-0 flex-1">
+                    {subpantalla === "ideas" && "La IA busca qué es tendencia en el sector, en Colombia y en el mundo. Elige un tema para usarlo."}
+                    {subpantalla === "noticias" && "Investiga una persona, empresa o tema. Elige cuáles referenciar o cuál usar como tema."}
+                    {subpantalla === "entrevista" && "Dinos quiénes hablan y sube la grabación: la IA la divide por intervenciones."}
+                    {subpantalla === "enlaces" && "La IA lee cada página y redacta con palabras propias."}
+                    {subpantalla === "revision" && matRev && `${matRev.title} · ${matRev.segmentos?.length ? "asigna quién dijo cada fragmento y corrige el texto" : "corrige el texto antes de redactar"}`}
+                  </span>
+                  <button type="button" onClick={volverAlTema} className="lx-link inline-flex shrink-0 items-center gap-1 text-xs font-semibold">
+                    <ArrowLeft size={12} /> Volver al tema
+                  </button>
+                </p>
+              ) : "Describe el tema, o parte de una noticia, una entrevista o unos enlaces. La IA propone títulos y enfoques; tú eliges y revisas cada paso."
+            }
+          >
+            {/* Cada fuente tiene su pantalla: así el tema, las ideas, las noticias y la grabación caben sin desplazarse. */}
+            {subpantalla === "ideas" && (
+              <PantallaIdeas
+                foco={ideasFocus}
+                onFoco={setIdeasFocus}
+                onBuscar={findIdeas}
+                buscando={searchingIdeas}
+                ocupado={generating}
+                error={ideasError}
+                ideas={ideas}
+                picked={ideaElegida}
+                onPick={(i) => {
+                  setTopic(`${i.title}. ${i.angle}`);
+                  setIdeaElegida(i.title);
+                  setOptions(null);
+                  setFuente(null);
+                }}
+                filas={filasListas(alto, 150, 195, 1, 3)}
+              />
+            )}
+            {subpantalla === "noticias" && (
+              <PantallaNoticias
+                consulta={newsQuery}
+                onConsulta={setNewsQuery}
+                onBuscar={findNews}
+                buscando={searchingNews}
+                ocupado={generating}
+                error={newsError}
+                news={news}
+                filtro={newsFiltro}
+                onFiltro={setNewsFiltro}
+                refs={refs}
+                isRef={isRef}
+                onTema={elegirNoticiaComoTema}
+                onRef={toggleRef}
+                filas={filasListas(alto, 160, 175, 1, 3)}
+              />
+            )}
+            {subpantalla === "entrevista" && (
+              <PantallaEntrevista
+                personas={personas}
+                onPersonas={setPersonas}
+                esEntrevista={esEntrevistaGrabada}
+                onEsEntrevista={setEsEntrevistaGrabada}
+                despues={quienesDespues}
+                onDespues={setQuienesDespues}
+                ocupado={audioBusy}
+                fase={audioFase}
+                error={audioError}
+                onArchivo={subirEntrevista}
+                filasPersonas={3}
+              />
+            )}
+            {subpantalla === "enlaces" && (
+              <PantallaEnlaces texto={urlsTxt} onTexto={setUrlsTxt} onCargar={cargarEnlaces} cargando={urlsBusy} error={urlsError} />
+            )}
+            {subpantalla === "revision" && matRev && idxRev !== null && (
+              matRev.segmentos?.length ? (
+                <SegmentosEditor
+                  material={matRev}
+                  filas={filasListas(alto, 40, 135, 1, 5)}
+                  onChange={(nuevo) => {
+                    setMaterial((x) => x.map((y, k) => (k === idxRev ? nuevo : y)));
                     setOptions(null);
-                    setIdeasOpen(false);
                   }}
                 />
-              )}
-              </div>
-                )}
-                {fuente === "noticias" && (
-                  <div>
-                
-                <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <input
-                    value={newsQuery}
-                    onChange={(e) => setNewsQuery(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        if (!searchingNews && newsQuery.trim().length >= 3) findNews();
-                      }
-                    }}
-                    placeholder="Persona, empresa o tema a investigar"
-                    className={`${input} min-w-0 flex-1 !py-2 text-sm`}
-                  />
-                  <button type="button" onClick={findNews} disabled={searchingNews || generating || newsQuery.trim().length < 3} className="lx-btn">
-                    {searchingNews ? <Loader2 size={15} className="animate-spin" /> : <Search size={15} />}
-                    {news ? "Buscar de nuevo" : "Buscar noticias"}
-                  </button>
-                </div>
-                {searchingNews && <p role="status" className="mt-3 text-xs text-[var(--fg-muted)]">Investigando en la web… puede tardar hasta un minuto.</p>}
-                {newsError && <p role="alert" className="mt-3 text-sm text-[var(--danger,#b4442e)]">{newsError}</p>}
-                {refs.length > 0 && (
-                  <p className="mt-3 text-xs text-[var(--fg-muted)]">
-                    <strong className="text-[var(--fg)]">Referencias elegidas ({refs.length}):</strong>{" "}
-                    {refs.map((r) => r.outlet || r.title).join(" · ")}. Irán enlazadas al final de la nota (los videos, además, incrustados).
-                  </p>
-                )}
-                {news && !newsOpen && (
-                  <p className="mt-3 text-xs text-[var(--fg-muted)]">
-                    Tema elegido: revisa el cuadro de abajo y pulsa «Proponer títulos y contextos».{" "}
-                    <button type="button" onClick={() => setNewsOpen(true)} className="lx-link font-semibold">Ver las noticias encontradas</button>
-                  </p>
-                )}
-                {news && newsOpen && (
-                  <NewsCards news={news} filtro={newsFiltro} onFiltro={setNewsFiltro} isRef={isRef} onTema={elegirNoticiaComoTema} onRef={toggleRef} />
-                )}
-              </div>
-                )}
-                {fuente === "entrevista" && (
-                  <div>
-                  <ParticipantesForm
-                    personas={personas}
-                    onPersonas={setPersonas}
-                    esEntrevista={esEntrevistaGrabada}
-                    onEsEntrevista={setEsEntrevistaGrabada}
-                    despues={quienesDespues}
-                    onDespues={setQuienesDespues}
-                    disabled={audioBusy}
-                  />
-                  <label className={`lx-btn cursor-pointer ${audioBusy || !participantesListos(personas, quienesDespues) ? "pointer-events-none opacity-60" : ""}`}>
-                    {audioBusy ? <Loader2 size={15} className="animate-spin" /> : <Mic size={15} />}
-                    {audioBusy ? audioFase || "Procesando…" : "Subir audio o video"}
-                    <input
-                      type="file"
-                      accept="audio/*,video/*,.mp3,.m4a,.wav,.ogg,.opus,.webm,.aac,.flac,.mp4,.m4v,.mov,.mpeg,.mpg,.avi,.wmv,.3gp"
-                      disabled={audioBusy || !participantesListos(personas, quienesDespues)}
-                      className="hidden"
-                      onChange={(e) => {
-                        const f = e.target.files?.[0];
-                        e.target.value = "";
-                        if (f) subirEntrevista(f);
-                      }}
-                    />
-                  </label>
-                  {!participantesListos(personas, quienesDespues) && <p className="mt-1.5 text-xs text-[var(--fg-muted)]">Escribe al menos un nombre para activar la subida.</p>}
-                  <p className="mt-1.5 text-xs text-[var(--fg-muted)]">Audio (MP3, M4A, WAV, OGG…) hasta 20 MB · video (MP4, MOV, WEBM…) de hasta unos 800 MB y 20 min de grabación. Puede tardar un par de minutos.</p>
-                  {audioError && <p role="alert" className="mt-2 text-sm text-[var(--danger,#b4442e)]">{audioError}</p>}
-                </div>
-                )}
-                {fuente === "enlaces" && (
-                  <div>
-                  
+              ) : (
+                <div className="flex min-h-0 flex-1 flex-col gap-2">
                   <textarea
-                    value={urlsTxt}
-                    onChange={(e) => setUrlsTxt(e.target.value)}
-                    rows={2}
-                    placeholder="https://…"
-                    className={`${input} resize-y !py-2 text-sm`}
+                    value={matRev.text}
+                    onChange={(e) => setMaterial((x) => x.map((y, k) => (k === idxRev ? { ...y, text: e.target.value } : y)))}
+                    aria-label="Texto de la fuente"
+                    className={`${input} min-h-[8rem] flex-1 resize-none text-sm leading-relaxed`}
                   />
-                  <button type="button" onClick={cargarEnlaces} disabled={urlsBusy || urlsTxt.trim().length < 8} className="lx-btn mt-2">
-                    {urlsBusy ? <Loader2 size={15} className="animate-spin" /> : <Link2 size={15} />}
-                    {urlsBusy ? "Leyendo…" : "Leer enlaces"}
-                  </button>
-                  {urlsError && <p role="alert" className="mt-2 text-sm text-[var(--danger,#b4442e)]">{urlsError}</p>}
+                  {matRev.url && <a href={matRev.url} target="_blank" rel="noopener noreferrer" className="lx-link shrink-0 text-xs">Abrir enlace ↗</a>}
                 </div>
-                )}
-              </div>
-              )}
-              {material.length > 0 && (
-                <ul className="mt-4 flex flex-col gap-2">
-                  {material.map((m, i) => (
-                    <li key={`${m.kind}-${i}-${m.title}`} className="rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] p-3">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="rounded-full bg-[var(--accent)]/12 px-2 py-0.5 text-[0.6875rem] font-semibold uppercase tracking-wide text-[var(--accent)]">
-                          {m.kind === "entrevista" ? "Entrevista" : "Enlace"}
-                        </span>
-                        <span className="min-w-0 flex-1 truncate text-sm font-semibold">{m.title}</span>
-                        <span className="text-xs text-[var(--fg-muted)]">{m.segmentos?.length ? `${m.segmentos.length} intervenciones · ` : ""}{m.text.length.toLocaleString("es-CO")} car.</span>
-                        <button type="button" onClick={() => { setMaterial((x) => x.filter((_, k) => k !== i)); setOptions(null); }} className="lx-link text-xs">Quitar</button>
-                      </div>
-                      <details className="mt-2" open={Boolean(m.segmentos?.length)}>
-                        <summary className="cursor-pointer text-xs text-[var(--accent)]">{m.segmentos?.length ? "Revisar quién dijo cada fragmento" : "Ver y corregir el texto"}</summary>
-                        {m.segmentos?.length ? (
-                          <SegmentosEditor
-                            material={m}
-                            onChange={(nuevo) => {
-                              setMaterial((x) => x.map((y, k) => (k === i ? nuevo : y)));
-                              setOptions(null);
-                            }}
-                          />
-                        ) : (
-                          <textarea
-                            value={m.text}
-                            onChange={(e) => setMaterial((x) => x.map((y, k) => (k === i ? { ...y, text: e.target.value } : y)))}
-                            rows={8}
-                            className={`${input} mt-2 resize-y text-sm leading-relaxed`}
-                          />
-                        )}
-                        {m.url && <a href={m.url} target="_blank" rel="noopener noreferrer" className="lx-link mt-1 inline-block text-xs">Abrir enlace ↗</a>}
-                      </details>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-              </>
+              )
             )}
 
-            {options && enOpciones && (
+            {subpantalla === null && !enPantallaOpciones && (
+              <div className="grid min-h-0 flex-1 gap-4 @2xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] @2xl:items-stretch">
+                <div className="flex min-h-0 min-w-0 flex-col gap-2.5">
+                  <textarea
+                    autoFocus
+                    value={topic}
+                    onChange={(e) => setTopic(e.target.value)}
+                    aria-label="Tema de la nota"
+                    placeholder="Cuéntale a la IA de qué trata la nota. Ej.: el precio del novillo gordo subió 4 % en Medellín en septiembre según la Central Ganadera; menor entrada de ganado del Magdalena Medio…"
+                    className={`${input} min-h-[7rem] flex-1 resize-none text-base leading-relaxed`}
+                  />
+                  <p className="flex shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-0.5 text-xs text-[var(--fg-muted)]">
+                    <span>Cuanto más concreto (qué pasó, dónde, cuándo y según quién), mejores serán los títulos.</span>
+                    <span className={`tabular-nums font-medium ${topic.trim().length >= 10 || material.length > 0 ? "text-[#16a34a]" : ""}`} aria-live="polite">
+                      {material.length > 0 ? "✓ Hay material cargado" : topic.trim().length >= 10 ? `✓ ${topic.trim().length} caracteres` : `${topic.trim().length} / 10 mínimo`}
+                    </span>
+                  </p>
+                  {material.length > 0 && (
+                    <Carrusel
+                      etiqueta="Material cargado"
+                      items={material}
+                      filas={filasListas(alto, 202, 52, 1, 4)}
+                      maxColumnas={1}
+                      anchoMinimo={200}
+                      separacion="gap-1.5"
+                      render={(m, i) => (
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] px-3 py-2">
+                          <span className="rounded-full bg-[var(--accent)]/12 px-2 py-0.5 text-[0.6875rem] font-semibold uppercase tracking-wide text-[var(--accent)]">
+                            {m.kind === "entrevista" ? "Entrevista" : "Enlace"}
+                          </span>
+                          <span className="min-w-0 flex-1 truncate text-sm font-semibold" title={m.title}>{m.title}</span>
+                          <span className="text-xs text-[var(--fg-muted)]">{m.segmentos?.length ? `${m.segmentos.length} intervenciones · ` : ""}{m.text.length.toLocaleString("es-CO")} car.</span>
+                          <button type="button" onClick={() => setRevisando(i)} className="lx-link text-xs font-semibold">
+                            {m.segmentos?.length ? "Revisar quién dijo qué" : "Ver y corregir"}
+                          </button>
+                          <button type="button" onClick={() => { setMaterial((x) => x.filter((_, k) => k !== i)); setOptions(null); }} className="lx-link text-xs">Quitar</button>
+                        </div>
+                      )}
+                    />
+                  )}
+                </div>
+                <FuenteCards
+                  onElegir={setFuente}
+                  notas={{
+                    ideas: ideaElegida ? "Tema elegido" : ideas ? `${ideas.ideas.length} temas` : undefined,
+                    noticias: refs.length ? `${refs.length} referencia${refs.length > 1 ? "s" : ""}` : news ? `${news.length} resultados` : undefined,
+                    entrevista: material.some((m) => m.kind === "entrevista") ? "Cargada" : undefined,
+                    enlaces: material.some((m) => m.kind === "enlace") ? `${material.filter((m) => m.kind === "enlace").length} cargados` : undefined,
+                  }}
+                />
+              </div>
+            )}
+
+            {options && enPantallaOpciones && (
               <>
                 {/* Las dos elecciones en una sola hoja: título a la izquierda y enfoque a la derecha. */}
-                <div className="grid items-start gap-3 md:grid-cols-2">
+                <div className="grid items-start gap-3 @2xl:grid-cols-2">
                   <section aria-labelledby="op-titulo" className="flex flex-col gap-2 rounded-[var(--radius-lg)] border border-[var(--border)] p-3.5">
                     <div className="flex items-baseline justify-between gap-2">
                       <h3 id="op-titulo" className="lx-kicker text-[var(--accent)]">1 · Título</h3>
@@ -1104,7 +1073,7 @@ export function ArticleWizard({
                           role="radio"
                           aria-checked={title === t}
                           onClick={() => setTitle(t)}
-                          className={`flex items-start gap-2.5 rounded-[var(--radius)] border px-3 py-2 text-left transition focus-visible:outline-2 focus-visible:outline-offset-2 ${
+                          className={`flex items-start gap-2.5 rounded-[var(--radius)] border px-3 py-1.5 text-left transition focus-visible:outline-2 focus-visible:outline-offset-2 ${
                             title === t ? "border-[var(--accent)] bg-[var(--accent)]/8" : "border-[var(--border)] hover:border-[var(--accent)]"
                           }`}
                         >
@@ -1129,18 +1098,23 @@ export function ArticleWizard({
                       <h3 id="op-enfoque" className="lx-kicker text-[var(--accent)]">2 · Enfoque</h3>
                       <span className="text-xs text-[var(--fg-muted)]">Cómo contar la nota · opcional</span>
                     </div>
-                    <div role="radiogroup" aria-labelledby="op-enfoque" className="flex flex-col gap-1.5">
-                      {options.contexts.map((c, i) => (
+                    {/* Los enfoques (y «Sin enfoque especial») van por páginas si no caben. */}
+                    <Carrusel
+                      etiqueta="Enfoques propuestos"
+                      items={[...options.contexts, null]}
+                      filas={filasListas(alto, 185, 66, 2, 5)}
+                      maxColumnas={1}
+                      anchoMinimo={200}
+                      separacion="gap-1.5"
+                      render={(c, i) => c ? (
                         <button
-                          key={c.label}
                           type="button"
-                          role="radio"
-                          aria-checked={pickedContext === i}
+                          aria-pressed={pickedContext === i}
                           onClick={() => {
                             setPickedContext(i);
                             setContext(c.text);
                           }}
-                          className={`flex items-start gap-2.5 rounded-[var(--radius)] border px-3 py-2.5 text-left transition focus-visible:outline-2 focus-visible:outline-offset-2 ${
+                          className={`flex w-full items-start gap-2.5 rounded-[var(--radius)] border px-3 py-2.5 text-left transition focus-visible:outline-2 focus-visible:outline-offset-2 ${
                             pickedContext === i ? "border-[var(--accent)] bg-[var(--accent)]/8" : "border-[var(--border)] hover:border-[var(--accent)]"
                           }`}
                         >
@@ -1150,23 +1124,23 @@ export function ArticleWizard({
                             <span className="mt-0.5 line-clamp-2 block text-[0.78rem] leading-snug text-[var(--fg-muted)]" title={c.text}>{c.text}</span>
                           </span>
                         </button>
-                      ))}
-                      <button
-                        type="button"
-                        role="radio"
-                        aria-checked={pickedContext === -1}
-                        onClick={() => {
-                          setPickedContext(-1);
-                          setContext("");
-                        }}
-                        className={`flex items-center gap-2.5 rounded-[var(--radius)] border px-3 py-2 text-left text-sm transition focus-visible:outline-2 focus-visible:outline-offset-2 ${
-                          pickedContext === -1 ? "border-[var(--accent)] bg-[var(--accent)]/8 font-semibold" : "border-dashed border-[var(--border)] text-[var(--fg-muted)] hover:border-[var(--accent)]"
-                        }`}
-                      >
-                        <Punto on={pickedContext === -1} />
-                        Sin enfoque especial
-                      </button>
-                    </div>
+                      ) : (
+                        <button
+                          type="button"
+                          aria-pressed={pickedContext === -1}
+                          onClick={() => {
+                            setPickedContext(-1);
+                            setContext("");
+                          }}
+                          className={`flex w-full items-center gap-2.5 rounded-[var(--radius)] border px-3 py-2 text-left text-sm transition focus-visible:outline-2 focus-visible:outline-offset-2 ${
+                            pickedContext === -1 ? "border-[var(--accent)] bg-[var(--accent)]/8 font-semibold" : "border-dashed border-[var(--border)] text-[var(--fg-muted)] hover:border-[var(--accent)]"
+                          }`}
+                        >
+                          <Punto on={pickedContext === -1} />
+                          Sin enfoque especial
+                        </button>
+                      )}
+                    />
                     <textarea
                       value={context}
                       onChange={(e) => {
@@ -1176,7 +1150,7 @@ export function ArticleWizard({
                       rows={2}
                       placeholder="O escribe el tuyo"
                       aria-label="Enfoque propio"
-                      className={`${input} resize-y !py-2 text-sm leading-relaxed`}
+                      className={`${input} resize-none !py-2 text-sm leading-relaxed`}
                     />
                   </section>
                 </div>
@@ -1195,7 +1169,7 @@ export function ArticleWizard({
         )}
 
         {current.key === "titulo" && (
-          <Step title="¿Cuál es el título?" hint="Claro y concreto: lo que verá el lector y Google. Ideal entre 15 y 65 caracteres.">
+          <Step centrado title="¿Cuál es el título?" hint="Claro y concreto: lo que verá el lector y Google. Ideal entre 15 y 65 caracteres.">
             <input
               autoFocus
               value={title}
@@ -1209,7 +1183,7 @@ export function ArticleWizard({
         )}
 
         {current.key === "resumen" && (
-          <Step title="Resume la noticia" hint="Dos o tres líneas que expliquen por qué importa. Es la entradilla y, por defecto, la descripción en buscadores.">
+          <Step centrado title="Resume la noticia" hint="Dos o tres líneas que expliquen por qué importa. Es la entradilla y, por defecto, la descripción en buscadores.">
             <textarea
               autoFocus
               value={excerpt}
@@ -1223,7 +1197,7 @@ export function ArticleWizard({
         )}
 
         {current.key === "claves" && (
-          <Step title="Palabras clave" hint="Temas de la nota. Escribe una y pulsa Enter o coma. Ayudan a relacionar artículos y al buscador interno.">
+          <Step centrado title="Palabras clave" hint="Temas de la nota. Escribe una y pulsa Enter o coma. Ayudan a relacionar artículos y al buscador interno.">
             <div className={`${input} flex flex-wrap items-center gap-2 py-2`}>
               {tags.map((t) => (
                 <span key={t} className="lx-chip inline-flex items-center gap-1">
@@ -1264,8 +1238,8 @@ export function ArticleWizard({
         )}
 
         {current.key === "seccion" && (
-          <Step ancho="lg" title="Sección y autor" hint="Dónde se publica y quién firma. Puedes dejarlo para después.">
-            <SectionTree options={categories} value={categoryId} onChange={setCategoryId} sugeridas={seccionesSugeridas} firma={authorName ?? "tu usuario, al guardar"}>
+          <Step ancho="xl" title="Sección y autor" hint="Dónde se publica y quién firma. Puedes dejarlo para después.">
+            <SectionTree options={categories} value={categoryId} onChange={setCategoryId} sugeridas={seccionesSugeridas} firma={authorName ?? "tu usuario, al guardar"} filas={filasListas(alto, 130, 38)}>
               {canPortada ? (
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] px-3.5 py-2.5">
                   <div className="min-w-0 flex-1 basis-48">
@@ -1298,8 +1272,8 @@ export function ArticleWizard({
 
         {current.key === "cuerpo" && (
           <Step title="Escribe el cuerpo" hint="Párrafos separados por una línea en blanco. Las direcciones https://… se convierten en enlaces.">
-            <div className="overflow-hidden rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] focus-within:border-[var(--accent)]">
-              <div className="flex flex-wrap items-center gap-1 border-b border-[var(--border)] px-2 py-1.5">
+            <div className="flex min-h-[9rem] flex-1 flex-col overflow-hidden rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] focus-within:border-[var(--accent)]">
+              <div className="flex shrink-0 flex-wrap items-center gap-1 border-b border-[var(--border)] px-2 py-1.5">
                 <button
                   type="button"
                   onClick={() => {
@@ -1324,27 +1298,27 @@ export function ArticleWizard({
                 autoFocus
                 value={body}
                 onChange={(e) => setBody(e.target.value)}
-                rows={12}
                 placeholder={"Primer párrafo con lo más importante…\n\n## Qué explica el alza\n\nSegundo párrafo…"}
-                className="block min-h-[18rem] w-full resize-y border-0 bg-transparent px-4 py-3 text-base leading-relaxed outline-none"
+                className="block min-h-0 w-full flex-1 resize-none border-0 bg-transparent px-4 py-3 text-base leading-relaxed outline-none"
               />
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex shrink-0 items-center gap-3">
               <div className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-[var(--border)]" role="meter" aria-valuenow={words} aria-valuemin={0} aria-valuemax={400} aria-label="Palabras">
                 <span className="absolute inset-y-0 left-0 rounded-full transition-all duration-300" style={{ width: `${Math.min(100, (words / 400) * 100)}%`, background: words >= 250 ? "#16a34a" : "#d97706" }} />
               </div>
               <span className="text-xs text-[var(--fg-muted)]">{words >= 250 ? "Buena longitud ✓" : "Se recomiendan al menos 250"}</span>
             </div>
-            <p className="flex items-center gap-2 text-xs text-[var(--fg-muted)]">
+            <p className="flex shrink-0 items-center gap-2 text-xs text-[var(--fg-muted)]">
               <BarChart3 size={13} className="shrink-0 text-[var(--accent)]" /> ¿Tiene cifras? En «Gráfica» la IA arma una y la ves antes de insertarla.
             </p>
           </Step>
         )}
 
         {current.key === "grafica" && (
-          <Step ancho="lg" title="Gráfica con datos" hint="Opcional. La IA busca cifras en la web, las dibuja y tú eliges el tipo. La ves aquí antes de insertarla en la nota.">
-            <div className="flex flex-col gap-5">
-              <div className="flex flex-col gap-3">
+          <Step ancho="xl" title="Gráfica con datos" hint="Opcional. La IA busca cifras en la web, las dibuja y tú eliges el tipo. La ves aquí antes de insertarla en la nota.">
+            {/* Controles a la izquierda, la gráfica a la derecha: se ven a la vez, sin bajar. */}
+            <div className="grid min-h-0 flex-1 gap-4 @2xl:grid-cols-2 @2xl:grid-rows-[minmax(0,1fr)]">
+              <div className="flex flex-col gap-3 @2xl:self-start">
                 <label className="flex flex-col gap-1.5">
                   <span className="lx-kicker text-[var(--fg-muted)]">¿Qué quieres graficar?</span>
                   <textarea
@@ -1381,18 +1355,23 @@ export function ArticleWizard({
                 </button>
                 {chartError && <p role="alert" className="text-sm text-[var(--danger,#b4442e)]">{chartError}</p>}
               </div>
-              <div className="min-w-0">
+              <div className="min-h-0 min-w-0">
                 {chart ? (
-                  <div className="flex flex-col gap-3">
-                    <InteractiveChart key={`${chart.chart.type}-${chart.chart.variant ?? ""}-${chart.chart.title}`} spec={chart.chart} />
-                    <p className="text-xs text-[var(--fg-muted)]">
-                      Datos que encontró la IA en la web: <strong>verifica las fuentes antes de publicar.</strong> {chart.sourceNote}
-                    </p>
-                    <ul className="flex flex-wrap gap-x-3 gap-y-1 text-xs">
-                      {chart.sources.map((x) => (
-                        <li key={x.url}><a href={x.url} target="_blank" rel="noreferrer" className="lx-link">{x.title} ↗</a></li>
-                      ))}
-                    </ul>
+                  <div className="flex h-full min-h-[14rem] flex-col gap-3">
+                    <div className="min-h-0 flex-1">
+                      <InteractiveChart key={`${chart.chart.type}-${chart.chart.variant ?? ""}-${chart.chart.title}`} spec={chart.chart} compacto />
+                    </div>
+                    <details className="text-xs text-[var(--fg-muted)]">
+                      <summary className="cursor-pointer">
+                        Datos que encontró la IA en la web: <strong>verifica las fuentes antes de publicar.</strong>
+                      </summary>
+                      <p className="mt-1.5">{chart.sourceNote}</p>
+                      <ul className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1">
+                        {chart.sources.map((x) => (
+                          <li key={x.url}><a href={x.url} target="_blank" rel="noreferrer" className="lx-link">{x.title} ↗</a></li>
+                        ))}
+                      </ul>
+                    </details>
                     <div className="flex flex-wrap items-center gap-2">
                       <button type="button" onClick={insertChart} className="lx-btn">
                         <Check size={15} /> {tokenInsertado ? "Actualizar en la nota" : "Insertar en la nota"}
@@ -1406,7 +1385,7 @@ export function ArticleWizard({
                     </div>
                   </div>
                 ) : (
-                  <div className="grid min-h-[16rem] place-items-center rounded-[var(--radius)] border border-dashed border-[var(--border-strong)] bg-[var(--surface-2)]/50 p-6 text-center text-sm text-[var(--fg-muted)]">
+                  <div className="grid h-full min-h-[12rem] place-items-center rounded-[var(--radius)] border border-dashed border-[var(--border-strong)] bg-[var(--surface-2)]/50 p-6 text-center text-sm text-[var(--fg-muted)]">
                     {chartBusy ? <span className="inline-flex items-center gap-2"><Loader2 size={16} className="animate-spin" /> Buscando datos y dibujando…</span> : "Aquí verás la gráfica en cuanto la generes."}
                   </div>
                 )}
@@ -1416,11 +1395,13 @@ export function ArticleWizard({
         )}
 
         {current.key === "portada" && (
-          <Step ancho="lg" title="Imagen de portada" hint="La foto que ilustra la nota en el sitio y al compartirla. Es opcional: sin ella se usa una ilustración con la sección.">
-            {/* --- Imagen --- */}
-            <section aria-labelledby="pt-imagen" className="rounded-[var(--radius-lg)] border border-[var(--border)] p-4 sm:p-5">
+          <Step ancho="xl" title="Imagen de portada" hint="La foto que ilustra la nota en el sitio y al compartirla. Es opcional: sin ella se usa una ilustración con la sección.">
+            {/* --- Imagen: la foto a la izquierda y sus ajustes a la derecha --- */}
+            <section aria-labelledby="pt-imagen" className="grid gap-4 rounded-[var(--radius-lg)] border border-[var(--border)] p-4 @2xl:grid-cols-[1.4fr_1fr] @2xl:items-start sm:p-5">
               <h3 id="pt-imagen" className="sr-only">Imagen de portada</h3>
-              <p className="text-xs text-[var(--fg-muted)]">{cover ? "Se publica con esta imagen." : "Sin imagen todavía."}</p>
+              <div
+                className="min-w-0"
+              >
               <div
                 onDragOver={(e) => { e.preventDefault(); setArrastre(true); }}
                 onDragLeave={() => setArrastre(false)}
@@ -1430,7 +1411,7 @@ export function ArticleWizard({
                   const f = e.dataTransfer.files?.[0];
                   if (f && f.type.startsWith("image/")) void onCover(f);
                 }}
-                className={`relative mt-3 aspect-[16/9] w-full overflow-hidden rounded-[var(--radius)] border transition ${cover ? "border-[var(--border)]" : "border-dashed"} ${arrastre ? "border-[var(--accent)] bg-[var(--accent)]/10" : "bg-[var(--surface-2)]/60"}`}
+                className={`relative aspect-[16/9] max-h-[min(24rem,45dvh)] w-full overflow-hidden rounded-[var(--radius)] border transition ${cover ? "border-[var(--border)]" : "border-dashed"} ${arrastre ? "border-[var(--accent)] bg-[var(--accent)]/10" : "bg-[var(--surface-2)]/60"}`}
               >
                 {cover ? (
                   <>
@@ -1472,12 +1453,14 @@ export function ArticleWizard({
                   </div>
                 )}
               </div>
-              {imgError && <p role="alert" className="mt-3 text-sm text-[var(--danger,#b4442e)]">{imgError}</p>}
-              <div className="mt-3 flex flex-col gap-2 text-sm">
+              </div>
+              <div className="flex min-w-0 flex-col gap-3 text-sm">
+                <p className="text-xs text-[var(--fg-muted)]">{cover ? "Se publica con esta imagen." : "Sin imagen todavía."}</p>
+                {imgError && <p role="alert" className="text-sm text-[var(--danger,#b4442e)]">{imgError}</p>}
                 {cover && (
                   <input value={coverAlt} onChange={(e) => setCoverAlt(e.target.value)} placeholder="Qué se ve en la foto (texto alternativo)" className={`${input} text-sm`} />
                 )}
-                <div className="flex flex-wrap gap-x-5 gap-y-1">
+                <div className="flex flex-col gap-2">
                   <details className="min-w-0">
                     <summary className="lx-link cursor-pointer text-xs font-medium">Pegar la URL de una imagen</summary>
                     <input value={cover} onChange={(e) => setCover(e.target.value)} placeholder="https://…" className={`${input} mt-2 text-sm`} />
@@ -1494,7 +1477,9 @@ export function ArticleWizard({
         )}
 
         {current.key === "seo" && (
-          <Step title="Cómo se verá en Google" hint="Opcional. Si lo dejas vacío se usan el título y el resumen.">
+          <Step ancho="xl" title="Cómo se verá en Google" hint="Opcional. Si lo dejas vacío se usan el título y el resumen.">
+            <div className="grid gap-4 @2xl:grid-cols-2 @2xl:items-start">
+            <div className="flex flex-col gap-3">
             <input
               value={metaTitle}
               onChange={(e) => setMetaTitle(e.target.value)}
@@ -1505,12 +1490,13 @@ export function ArticleWizard({
             <textarea
               value={metaDescription}
               onChange={(e) => setMetaDescription(e.target.value)}
-              rows={3}
+              rows={4}
               placeholder={excerpt || "Descripción para buscadores"}
-              className={`${input} resize-y`}
+              className={`${input} resize-none`}
             />
             <Counter value={(metaDescription || excerpt).length} min={70} max={155} />
-            <div className="mt-1 rounded-[var(--radius-lg)] border border-[var(--border)] bg-white p-4 text-left shadow-sm">
+            </div>
+            <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-white p-4 text-left shadow-sm">
               <p className="mb-2 text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-[#70757a]">Así aparece en Google</p>
               <div className="flex items-center gap-2.5">
                 <span className="grid size-7 shrink-0 place-items-center rounded-full bg-[#f1f3f4] text-xs font-bold text-[#202124]">C</span>
@@ -1522,11 +1508,12 @@ export function ArticleWizard({
               <p className="mt-2 line-clamp-2 text-[1.15rem] leading-snug text-[#1a0dab]">{metaTitle || title || "Título de la nota"}</p>
               <p className="mt-1 line-clamp-2 text-sm leading-snug text-[#4d5156]">{metaDescription || excerpt || "La descripción de la nota aparecerá aquí."}</p>
             </div>
+            </div>
           </Step>
         )}
 
         {current.key === "vista" && (
-          <div className="flex h-[calc(100dvh-var(--panel-header-h,61px)-17rem)] min-h-[24rem] flex-col gap-3">
+          <div className="flex min-h-[24rem] flex-1 flex-col gap-3">
             <div className="flex flex-wrap items-center gap-3">
               <button type="button" onClick={back} className="lx-link inline-flex items-center gap-1 text-sm">
                 <ArrowLeft size={14} /> Volver a editar
@@ -1596,7 +1583,7 @@ export function ArticleWizard({
 
       {/* --- Navegación --- */}
       <div className="sticky bottom-0 z-20 flex shrink-0 items-center justify-between gap-3 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 shadow-md">
-        {step > 0 || (current.key === "tema" && enOpciones) ? (
+        {step > 0 || (current.key === "tema" && (enPantallaOpciones || subpantalla)) ? (
           <button type="button" onClick={back} className="lx-btn lx-btn-ghost">
             <ArrowLeft size={15} /> Atrás
           </button>
@@ -1699,15 +1686,19 @@ export function ArticleWizard({
   );
 }
 
-/** Estructura común de cada paso: título, una línea de ayuda y el contenido, con una entrada suave. */
-function Step({ title, hint, children, ancho = "md" }: { title: string; hint: React.ReactNode; children: React.ReactNode; ancho?: "md" | "lg" | "xl" }) {
+/**
+ * Estructura común de cada paso: título, una línea de ayuda y el contenido, con una entrada suave.
+ * Ocupa el alto que deja la tarjeta (`flex-1`) y es un contenedor de consulta: los pasos que lo piden se parten en
+ * dos columnas según SU ancho (`@2xl:`), no el de la ventana, porque el panel SEO le quita espacio a la derecha.
+ */
+function Step({ title, hint, children, ancho = "md", centrado = false }: { title: string; hint: React.ReactNode; children: React.ReactNode; ancho?: "md" | "lg" | "xl"; /** Pasos cortos: se centran en vertical en vez de quedar pegados arriba con un hueco debajo. */ centrado?: boolean }) {
   return (
-    <div className={`lx-step mx-auto flex w-full flex-col gap-5 ${ancho === "xl" ? "max-w-5xl" : ancho === "lg" ? "max-w-3xl" : "max-w-2xl"}`}>
-      <header className="flex flex-col gap-1">
+    <div className={`lx-step @container mx-auto flex min-h-0 w-full flex-col gap-4 ${centrado ? "my-auto" : "flex-1"} ${ancho === "xl" ? "max-w-5xl" : ancho === "lg" ? "max-w-3xl" : "max-w-2xl"}`}>
+      <header className="flex shrink-0 flex-col gap-1">
         <h2 className="lx-display text-2xl font-semibold tracking-tight">{title}</h2>
         <div className="text-sm leading-snug text-[var(--fg-muted)]">{hint}</div>
       </header>
-      <div className="flex flex-col gap-3.5">{children}</div>
+      <div className="flex min-h-0 flex-1 flex-col gap-3.5">{children}</div>
     </div>
   );
 }
@@ -1841,18 +1832,21 @@ function SeoBar({ score, items, focus }: { score: number; items: AuditItem[]; fo
   );
 }
 
-/** Panel SEO lateral (escritorio): nota, barra y la lista completa de criterios. */
+/** Panel SEO lateral (escritorio): nota, barra y los criterios, por páginas (lo que falta y lo cumplido), sin desplazarse. */
 function SeoPanel({ score, items, groups, capped, focus }: { score: number; items: AuditItem[]; groups: AuditResult["groups"]; capped: boolean; focus?: string }) {
-  const [verTodo, setVerTodo] = useState(false);
+  const [vista, setVista] = useState<"falta" | "cumplido">("falta");
+  const alto = useAltoVentana();
   const pending = items
     .filter((i) => !i.ok)
     .sort((a, b) => (a.severity === b.severity ? b.weight - a.weight : a.severity === "error" ? -1 : 1));
   const passed = items.filter((i) => i.ok);
   const color = score >= 75 ? "#16a34a" : score >= 55 ? "#d97706" : "#dc2626";
+  // Si no queda nada pendiente, se muestra lo cumplido.
+  const mostrar = vista === "falta" && pending.length > 0 ? "falta" : "cumplido";
 
   return (
-    <aside className="lx-card sticky top-4 hidden max-h-[calc(100dvh-2rem)] w-72 shrink-0 flex-col self-start overflow-hidden p-0 lg:flex xl:w-80" aria-label="Puntuación SEO">
-      <div className="border-b border-[var(--border)] p-4">
+    <aside className="lx-card hidden min-h-0 w-72 shrink-0 flex-col p-0 lg:flex xl:w-80" style={{ transform: "none" }} aria-label="Puntuación SEO">
+      <div className="shrink-0 border-b border-[var(--border)] p-4">
         <p className="lx-kicker text-[var(--fg-muted)]">SEO en vivo</p>
         <div className="mt-1 flex items-baseline gap-2">
           <span className="text-3xl font-semibold tabular-nums" style={{ color }}>
@@ -1893,44 +1887,39 @@ function SeoPanel({ score, items, groups, capped, focus }: { score: number; item
           {focus ? `Palabra clave: «${focus}»` : "Añade palabras clave para medir la principal."}
         </p>
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto p-4">
-        {pending.length > 0 && (
-          <>
-            <p className="lx-kicker mb-2 text-[var(--fg-muted)]">Qué falta ({pending.length})</p>
-            <ul className="flex flex-col gap-2.5">
-              {(verTodo ? pending : pending.slice(0, 4)).map((i) => (
-                <li key={i.id} className="flex items-start gap-2 text-sm leading-snug">
-                  <span
-                    className="mt-1.5 size-2 shrink-0 rounded-full"
-                    style={{ background: i.severity === "error" ? "#dc2626" : "#d97706" }}
-                  />
-                  <span>
-                    {i.text}
-                    {i.help && <span className="block text-xs text-[var(--fg-muted)]">{i.help}</span>}
-                    {STEP_OF[i.id] && <span className="block text-xs text-[var(--accent)]">→ {STEP_OF[i.id]}</span>}
-                  </span>
-                </li>
-              ))}
-            </ul>
-            {pending.length > 4 && (
-              <button type="button" onClick={() => setVerTodo((v) => !v)} className="lx-link mt-2 text-xs font-semibold">
-                {verTodo ? "Ver menos" : `Ver las ${pending.length - 4} restantes`}
-              </button>
-            )}
-          </>
-        )}
-        {passed.length > 0 && (
-          <details className="mt-4 group">
-            <summary className="lx-kicker cursor-pointer text-[var(--fg-muted)]">Cumplido ({passed.length})</summary>
-            <ul className="mt-2 flex flex-col gap-1.5">
-              {passed.map((i) => (
-                <li key={i.id} className="flex items-start gap-2 text-xs text-[var(--fg-muted)]">
-                  <Check size={12} className="mt-0.5 shrink-0 text-[#16a34a]" /> {i.text}
-                </li>
-              ))}
-            </ul>
-          </details>
-        )}
+      <div className="flex min-h-0 flex-1 flex-col gap-2.5 p-4">
+        <div role="group" aria-label="Criterios" className="grid shrink-0 grid-cols-2 gap-1 rounded-full border border-[var(--border)] bg-[var(--surface)] p-1">
+          {([["falta", `Falta (${pending.length})`], ["cumplido", `Cumplido (${passed.length})`]] as const).map(([v, texto]) => (
+            <button key={v} type="button" aria-pressed={mostrar === v} onClick={() => setVista(v)}
+              className={`rounded-full px-2 py-1 text-xs font-semibold transition ${mostrar === v ? "bg-[var(--accent)] text-[var(--accent-fg,#fff)] shadow-sm" : "text-[var(--fg-muted)] hover:text-[var(--fg)]"}`}>
+              {texto}
+            </button>
+          ))}
+        </div>
+        <Carrusel
+          key={mostrar}
+          etiqueta={mostrar === "falta" ? "Criterios pendientes" : "Criterios cumplidos"}
+          items={mostrar === "falta" ? pending : passed}
+          filas={filasListas(alto, 245, 92, 2, 6)}
+          maxColumnas={1}
+          anchoMinimo={120}
+          render={(i) =>
+            mostrar === "falta" ? (
+              <span className="flex items-start gap-2 text-sm leading-snug">
+                <span className="mt-1.5 size-2 shrink-0 rounded-full" style={{ background: i.severity === "error" ? "#dc2626" : "#d97706" }} />
+                <span>
+                  {i.text}
+                  {i.help && <span className="line-clamp-2 block text-xs text-[var(--fg-muted)]">{i.help}</span>}
+                  {STEP_OF[i.id] && <span className="block text-xs text-[var(--accent)]">→ {STEP_OF[i.id]}</span>}
+                </span>
+              </span>
+            ) : (
+              <span className="flex items-start gap-2 text-xs text-[var(--fg-muted)]">
+                <Check size={12} className="mt-0.5 shrink-0 text-[#16a34a]" /> {i.text}
+              </span>
+            )
+          }
+        />
       </div>
     </aside>
   );

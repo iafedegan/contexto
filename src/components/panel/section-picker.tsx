@@ -2,6 +2,7 @@
 
 import { useId, useMemo, useState } from "react";
 import { Check, ChevronLeft, ChevronRight, FolderOpen, Search } from "lucide-react";
+import { Carrusel } from "@/components/panel/carrusel";
 
 // Opción de un selector: id y nombre.
 type Opcion = { id: string; name: string };
@@ -34,6 +35,9 @@ const Marca = ({ on, fuerte }: { on: boolean; fuerte?: boolean }) => (
  * las secciones; al elegir una con ramas, a la derecha salen sus subsecciones (arriba «Toda la sección»). Sin
  * desplegar nada ni perderse en un árbol largo. Arriba: dónde se publicará (y quién firma), buscador y las sugeridas
  * para esta nota. En pantallas angostas las subsecciones se despliegan debajo de su sección.
+ *
+ * Sin desplazamiento: cada lista va en un carrusel de `filas` filas por página (el asistente calcula cuántas caben
+ * en la ventana), y en un ancho amplio los datos de la nota quedan a la izquierda y el selector a la derecha.
  */
 export function SectionTree({
   options,
@@ -41,6 +45,7 @@ export function SectionTree({
   onChange,
   sugeridas = [],
   firma,
+  filas = 8,
   children,
 }: {
   options: Nodo[];
@@ -49,6 +54,8 @@ export function SectionTree({
   sugeridas?: string[];
   /** Quién firma la nota: se muestra junto a «Se publicará en». */
   firma?: string;
+  /** Filas que caben por página en cada lista (el resto se recorre con el carrusel). */
+  filas?: number;
   /** Contenido propio del asistente que va justo debajo de «Se publicará en» (p. ej. el lugar en la portada). */
   children?: React.ReactNode;
 }) {
@@ -89,8 +96,7 @@ export function SectionTree({
     return (
       <button
         type="button"
-        role="radio"
-        aria-checked={activa}
+        aria-pressed={activa}
         onClick={() => onChange(activa ? "" : o.id)}
         className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm transition focus-visible:outline-2 focus-visible:outline-[var(--accent)] ${
           activa ? "bg-[var(--accent)] font-semibold text-[var(--accent-fg)] shadow-sm" : `hover:bg-[var(--surface-2)] ${tenue ? "text-[var(--fg-muted)]" : ""}`
@@ -102,11 +108,12 @@ export function SectionTree({
       </button>
     );
   };
-  // Lista de subsecciones de una sección.
+  // Subsecciones de una sección, con «Toda la sección» al principio.
+  const itemsSubs = (r: Nodo) => [r, ...(hijos.get(r.id) ?? [])];
+  // Lista (sin carrusel) de subsecciones, para el despliegue en pantallas angostas.
   const listaSubs = (r: Nodo) => (
     <ul role="radiogroup" aria-label={`Subsecciones de ${r.name}`} className="flex flex-col gap-0.5">
-      <li>{opcion(r, `Toda la sección «${r.name}»`, true)}</li>
-      {(hijos.get(r.id) ?? []).map((h) => <li key={h.id}>{opcion(h, h.name)}</li>)}
+      {itemsSubs(r).map((h) => <li key={h.id}>{opcion(h, h.id === r.id ? `Toda la sección «${r.name}»` : h.name, h.id === r.id)}</li>)}
     </ul>
   );
   // Fila de una sección con sus subsecciones.
@@ -115,7 +122,7 @@ export function SectionTree({
     const abierta = rama === r.id;
     const elegida = contiene(r);
     return (
-      <li key={r.id}>
+      <div key={r.id}>
         <button
           type="button"
           aria-current={abierta ? "true" : undefined}
@@ -134,20 +141,22 @@ export function SectionTree({
           {n > 0 && (
             <span className="flex shrink-0 items-center gap-0.5 text-xs text-[var(--fg-muted)]">
               {n}
-              <ChevronRight size={14} className={`transition-transform ${abierta ? "rotate-90 md:rotate-0" : ""}`} />
+              <ChevronRight size={14} className={`transition-transform ${abierta ? "rotate-90 @sm:rotate-0" : ""}`} />
             </span>
           )}
         </button>
-        {abierta && n > 0 && <div className="ml-4 mt-1 border-l-2 border-[var(--border)] pl-2 md:hidden">{listaSubs(r)}</div>}
-      </li>
+        {abierta && n > 0 && <div className="ml-4 mt-1 border-l-2 border-[var(--border)] pl-2 @sm:hidden">{listaSubs(r)}</div>}
+      </div>
     );
   };
 
   const coincidencias = t ? options.filter((o) => norm(o.name).includes(t)).sort((a, b) => Number(sugeridas.includes(b.id)) - Number(sugeridas.includes(a.id))) : [];
   const sugs = sugeridas.map((x) => porId.get(x)).filter((x): x is Nodo => !!x).slice(0, 6);
 
+  const hayRama = !!ramaNodo && subs.length > 0;
   return (
-    <div className="flex flex-col gap-2.5">
+    <div className="grid gap-3 @2xl:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] @2xl:items-start">
+      <div className="flex min-w-0 flex-col gap-2.5">
       {/* Dónde se publicará y quién firma */}
       <div className="flex items-center gap-3 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] px-3.5 py-2.5">
         <span className={`grid size-9 shrink-0 place-items-center rounded-full ${actual ? "bg-[var(--accent)] text-[var(--accent-fg)]" : "bg-[var(--surface-2)] text-[var(--fg-muted)]"}`}>
@@ -158,21 +167,12 @@ export function SectionTree({
           <p className={`truncate text-sm ${actual ? "font-semibold" : "text-[var(--fg-muted)]"}`} aria-live="polite">
             {actual ? `${padre ? `${padre.name} › ` : ""}${actual.name}` : "Sin sección · puedes dejarlo para después"}
           </p>
-          {firma && <p className="truncate text-xs text-[var(--fg-muted)] sm:hidden">Firma: <strong className="text-[var(--fg)]">{firma}</strong></p>}
+          {firma && <p className="truncate text-xs text-[var(--fg-muted)]" title="La nota la firma quien la escribe: tu usuario. No se puede cambiar.">Firma: <strong className="text-[var(--fg)]">{firma}</strong></p>}
         </div>
         {actual && (
           <button type="button" onClick={() => onChange("")} className="lx-link shrink-0 text-xs font-semibold">
             Quitar
           </button>
-        )}
-        {firma && (
-          <div className="hidden min-w-0 max-w-[40%] shrink-0 items-center gap-2 border-l border-[var(--border)] pl-3 sm:flex" title="La nota la firma quien la escribe: tu usuario. No se puede cambiar.">
-            <span aria-hidden className="grid size-7 shrink-0 place-items-center rounded-full bg-[var(--surface-2)] text-xs font-bold">{firma.charAt(0).toUpperCase()}</span>
-            <span className="min-w-0 leading-tight">
-              <span className="lx-kicker block text-[var(--fg-muted)]">Firma</span>
-              <span className="block truncate text-sm font-semibold">{firma}</span>
-            </span>
-          </div>
         )}
       </div>
 
@@ -200,10 +200,12 @@ export function SectionTree({
           })}
         </div>
       )}
+      </div>
 
-      {/* Sin scroll propio: se desplaza con la hoja del asistente. El buscador va en la cabecera de la columna izquierda. */}
-      <div className={`grid rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] ${t ? "" : "md:grid-cols-2"}`}>
-        <div className={`flex min-w-0 flex-col ${t ? "" : "md:border-r md:border-[var(--border)]"}`}>
+      {/* Dos columnas, como el sitio: secciones | subsecciones. Cada lista es un carrusel de `filas` filas por página. */}
+      <div className="@container min-w-0 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)]">
+      <div className={`grid ${t ? "" : "@sm:grid-cols-2"}`}>
+        <div className={`flex min-w-0 flex-col ${t ? "" : "@sm:border-r @sm:border-[var(--border)]"}`}>
           <div className="relative p-2 pb-1">
             <Search size={15} aria-hidden className="pointer-events-none absolute left-5 top-1/2 -translate-y-1/2 text-[var(--fg-muted)]" />
             <input
@@ -221,36 +223,64 @@ export function SectionTree({
             />
           </div>
           {t ? (
-            <ul role="radiogroup" aria-labelledby={`${id}-l`} className="flex flex-col gap-0.5 p-2 pt-1">
-              {coincidencias.map((o) => <li key={o.id}>{opcion(o, ruta(o))}</li>)}
-              {coincidencias.length === 0 && <li className="px-3 py-4 text-center text-sm text-[var(--fg-muted)]">Nada coincide con «{q}».</li>}
-            </ul>
+            coincidencias.length === 0 ? (
+              <p className="px-3 py-4 text-center text-sm text-[var(--fg-muted)]">Nada coincide con «{q}».</p>
+            ) : (
+              <Carrusel
+                key={t}
+                etiqueta="Resultados de la búsqueda"
+                items={coincidencias}
+                filas={filas}
+                maxColumnas={1}
+                separacion="gap-0.5"
+                anchoMinimo={120}
+                className="p-2 pt-1"
+                render={(o) => opcion(o, ruta(o))}
+              />
+            )
           ) : (
             <>
               <p className="lx-kicker px-4 pb-1 pt-2 text-[var(--fg-muted)]">Secciones · {raices.length}</p>
-              <ul className="flex flex-col gap-0.5 p-2 pt-0">{raices.map(filaSeccion)}</ul>
+              <Carrusel
+                etiqueta="Secciones"
+                items={raices}
+                filas={filas}
+                maxColumnas={1}
+                separacion="gap-0.5"
+                anchoMinimo={120}
+                paginaInicial={Math.max(0, Math.floor(raices.findIndex((r) => r.id === rama) / filas))}
+                className="p-2 pt-0"
+                render={filaSeccion}
+              />
             </>
           )}
         </div>
         {!t && (
-          <div className="hidden md:block" aria-live="polite">
-            <div className="md:sticky md:-top-[3.3rem]">
-              <p className="lx-kicker truncate px-4 pb-1 pt-[3.5rem] text-[var(--fg-muted)]">
-                {ramaNodo && subs.length > 0 ? `Dentro de ${ramaNodo.name} · ${subs.length}` : "Subsecciones"}
+          <div className="hidden @sm:block" aria-live="polite">
+            <p className="lx-kicker truncate px-4 pb-1 pt-[3.5rem] text-[var(--fg-muted)]">
+              {hayRama ? `Dentro de ${ramaNodo!.name} · ${subs.length}` : "Subsecciones"}
+            </p>
+            {hayRama ? (
+              <Carrusel
+                key={ramaNodo!.id}
+                etiqueta={`Subsecciones de ${ramaNodo!.name}`}
+                items={itemsSubs(ramaNodo!)}
+                filas={filas}
+                maxColumnas={1}
+                separacion="gap-0.5"
+                anchoMinimo={120}
+                className="p-2 pt-0"
+                render={(h) => opcion(h, h.id === ramaNodo!.id ? `Toda la sección «${ramaNodo!.name}»` : h.name, h.id === ramaNodo!.id)}
+              />
+            ) : (
+              <p className="flex items-center gap-2 px-3 py-6 text-sm text-[var(--fg-muted)]">
+                <ChevronLeft size={16} aria-hidden className="shrink-0" />
+                {ramaNodo ? `«${ramaNodo.name}» no tiene subsecciones.` : "Elige una sección para ver lo que contiene."}
               </p>
-              <div className="p-2 pt-0">
-                {ramaNodo && subs.length > 0 ? (
-                  listaSubs(ramaNodo)
-                ) : (
-                  <p className="flex items-center gap-2 px-3 py-6 text-sm text-[var(--fg-muted)]">
-                    <ChevronLeft size={16} aria-hidden className="shrink-0" />
-                    {ramaNodo ? `«${ramaNodo.name}» no tiene subsecciones.` : "Elige una sección para ver lo que contiene."}
-                  </p>
-                )}
-              </div>
-            </div>
+            )}
           </div>
         )}
+      </div>
       </div>
     </div>
   );

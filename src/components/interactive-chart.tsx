@@ -48,7 +48,7 @@ const chip = (on: boolean) =>
  * que se ve, clic para fijar un dato, tabla, descarga CSV y pantalla completa. Trae una tabla oculta con los datos
  * para lectores de pantalla.
  */
-export function InteractiveChart({ spec, caption }: { spec: ChartSpec; caption?: string }) {
+export function InteractiveChart({ spec, caption, compacto = false }: { spec: ChartSpec; caption?: string; /** Solo el dibujo (con su globo al pasar el cursor): sin controles, indicadores ni acciones. Para la vista previa del asistente. */ compacto?: boolean }) {
   const uid = useId().replace(/[^a-z0-9]/gi, "");
   const fig = useRef<HTMLElement>(null);
   const box = useRef<HTMLDivElement>(null);
@@ -198,10 +198,10 @@ export function InteractiveChart({ spec, caption }: { spec: ChartSpec; caption?:
   return (
     <figure
       ref={fig}
-      className="lx-chart-fig my-8 rounded-2xl border border-[color-mix(in_srgb,currentColor_14%,transparent)] bg-transparent p-3 text-[var(--fg)] sm:p-5 [&:fullscreen]:overflow-auto [&:fullscreen]:bg-[var(--bg)] [&:fullscreen]:p-8"
+      className={`lx-chart-fig ${compacto ? "my-0 flex h-full min-h-0 flex-col !p-2" : "my-8"} rounded-2xl border border-[color-mix(in_srgb,currentColor_14%,transparent)] bg-transparent p-3 text-[var(--fg)] sm:p-5 [&:fullscreen]:overflow-auto [&:fullscreen]:bg-[var(--bg)] [&:fullscreen]:p-8`}
     >
       {/* Controles */}
-      <div className="lx-ui not-prose mb-3 flex flex-col gap-2.5">
+      {!compacto && <div className="lx-ui not-prose mb-3 flex flex-col gap-2.5">
         <div role="group" aria-label="Tipo de gráfica" className="flex gap-1.5 overflow-x-auto pb-0.5">
           {FORMAS.filter((f) => (f.id === "torta" || f.id === "dona" ? !temporal && spec.series[refIdx].values.every((v) => v > 0) : true)).map((f) => (
             <button key={f.id} type="button" aria-pressed={forma === f.id} className={chip(forma === f.id)} onClick={() => { setForma(f.id); setSel(null); }}>
@@ -245,12 +245,15 @@ export function InteractiveChart({ spec, caption }: { spec: ChartSpec; caption?:
           )}
           {filtrado && <button type="button" onClick={reiniciar} className="font-semibold text-[var(--accent)] underline-offset-4 hover:underline">Restablecer</button>}
         </div>
-      </div>
+      </div>}
 
       {/* Gráfica */}
       <div
         ref={box}
-        className="relative overflow-hidden text-[var(--fg)] [&>div>svg]:h-auto [&>div>svg]:w-full [&_svg]:touch-manipulation"
+        className={`relative overflow-hidden text-[var(--fg)] [&>div>svg]:w-full [&_svg]:touch-manipulation ${
+          // En el asistente el dibujo se ajusta al alto que deja la pantalla (conserva su proporción), en vez de crecer con el ancho.
+          compacto ? "min-h-0 flex-1 [&>div]:h-full [&>div>svg]:h-full" : "[&>div>svg]:h-auto"
+        }`}
         onPointerMove={(e) => {
           const el = (e.target as Element).closest?.("[data-i]");
           if (el) show(el, e.clientX, e.clientY);
@@ -287,14 +290,14 @@ export function InteractiveChart({ spec, caption }: { spec: ChartSpec; caption?:
         )}
       </div>
 
-      {detalle && (
+      {detalle && !compacto && (
         <p role="status" className="lx-ui not-prose mt-2 rounded-lg border border-[var(--accent)]/40 px-3 py-2 text-sm">
           {detalle}
         </p>
       )}
 
       {/* Indicadores y acciones */}
-      <dl className="lx-ui not-prose mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+      {!compacto && <dl className="lx-ui not-prose mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
         {kpis.map((k) => (
           <div key={k.k} className="rounded-xl border border-[color-mix(in_srgb,currentColor_14%,transparent)] px-3 py-2">
             <dt className="text-[0.68rem] font-semibold uppercase tracking-[0.14em] opacity-65">{k.k}</dt>
@@ -302,15 +305,15 @@ export function InteractiveChart({ spec, caption }: { spec: ChartSpec; caption?:
             <dd className="truncate text-xs opacity-65">{k.s}</dd>
           </div>
         ))}
-      </dl>
-      <div className="lx-ui not-prose mt-3 flex flex-wrap items-center gap-2">
+      </dl>}
+      {!compacto && <div className="lx-ui not-prose mt-3 flex flex-wrap items-center gap-2">
         <button type="button" aria-pressed={tabla} className={chip(tabla)} onClick={() => setTabla((v) => !v)}>{tabla ? "Ocultar tabla" : "Ver tabla de datos"}</button>
         <button type="button" className={chip(false)} onClick={csv}>Descargar datos (CSV)</button>
         <button type="button" className={chip(false)} onClick={() => (document.fullscreenElement ? document.exitFullscreen() : fig.current?.requestFullscreen?.())}>Pantalla completa</button>
         <span className="ml-auto text-xs opacity-65">Toca o haz clic en un dato para fijarlo.</span>
-      </div>
+      </div>}
 
-      {tabla && (
+      {tabla && !compacto && (
         <div className="lx-ui not-prose mt-3 overflow-x-auto">
           <table className="w-full text-sm">
             <thead>

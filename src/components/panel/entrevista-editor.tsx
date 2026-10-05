@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Plus, Trash2, TriangleAlert, Users } from "lucide-react";
+import { Carrusel } from "@/components/panel/carrusel";
 import { formatoTiempo, SIN_IDENTIFICAR, sinIdentificar, textoDeSegmentos, type Material, type Participante, type Segmento } from "@/lib/material-types";
 
 /** ¿Se puede subir ya la grabación? Hace falta al menos una persona con nombre, o avisar que se identificarán después. */
@@ -21,6 +22,7 @@ export function ParticipantesForm({
   despues,
   onDespues,
   disabled,
+  filas = 3,
 }: {
   personas: Participante[];
   onPersonas: (p: Participante[]) => void;
@@ -29,10 +31,12 @@ export function ParticipantesForm({
   despues: boolean;
   onDespues: (v: boolean) => void;
   disabled?: boolean;
+  /** Personas por página del carrusel (hasta 8 personas no caben todas sin desplazarse). */
+  filas?: number;
 }) {
   const cambiar = (i: number, parcial: Partial<Participante>) => onPersonas(personas.map((p, k) => (k === i ? { ...p, ...parcial } : p)));
   return (
-    <fieldset disabled={disabled} className="mb-3 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] p-3">
+    <fieldset disabled={disabled} className="rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] p-3">
       <legend className="flex items-center gap-1.5 px-1 text-sm font-semibold">
         <Users size={15} aria-hidden /> ¿Quiénes intervienen en la grabación?
       </legend>
@@ -40,9 +44,18 @@ export function ParticipantesForm({
         Escribe el nombre y el cargo de cada persona que habla. La IA los usa para decir quién dijo cada cosa; después puedes corregir cualquier intervención.
       </p>
       {!despues && (
-        <ul className="flex flex-col gap-2">
-          {personas.map((p, i) => (
-            <li key={i} className="grid grid-cols-[1fr_1fr_auto] items-center gap-2">
+        // Al añadir o quitar a alguien se vuelve a montar el carrusel, abierto en la página de la última persona.
+        <Carrusel
+          key={personas.length}
+          etiqueta="Personas que intervienen"
+          items={personas}
+          filas={filas}
+          maxColumnas={1}
+          anchoMinimo={240}
+          separacion="gap-2"
+          paginaInicial={Math.floor((personas.length - 1) / filas)}
+          render={(p, i) => (
+            <div className="grid grid-cols-[1fr_1fr_auto] items-center gap-2">
               <input
                 value={p.nombre}
                 onChange={(e) => cambiar(i, { nombre: e.target.value })}
@@ -67,9 +80,9 @@ export function ParticipantesForm({
               >
                 <Trash2 size={15} aria-hidden />
               </button>
-            </li>
-          ))}
-        </ul>
+            </div>
+          )}
+        />
       )}
       {!despues && personas.length < 8 && (
         <button type="button" onClick={() => onPersonas([...personas, { nombre: "", cargo: "" }])} className="lx-link mt-2 inline-flex items-center gap-1 text-sm font-medium">
@@ -117,7 +130,7 @@ function AgregarPersona({ onAgregar }: { onAgregar: (p: Participante) => void })
  * Revisión de una transcripción dividida: el editor asigna quién dijo cada fragmento (por intervención o por voz
  * completa) y corrige el texto. El texto que va a la IA se recalcula con cada cambio.
  */
-export function SegmentosEditor({ material, onChange }: { material: Material; onChange: (m: Material) => void }) {
+export function SegmentosEditor({ material, onChange, filas = 3 }: { material: Material; onChange: (m: Material) => void; /** Intervenciones por página del carrusel. */ filas?: number }) {
   const segmentos = material.segmentos ?? [];
   const nombres = (material.participantes ?? []).map((p) => p.nombre);
   const opciones = [...nombres, SIN_IDENTIFICAR];
@@ -127,49 +140,59 @@ export function SegmentosEditor({ material, onChange }: { material: Material; on
   const pendientes = sinIdentificar(segmentos);
 
   return (
-    <div className="mt-2 flex flex-col gap-3">
-      {pendientes > 0 && (
-        <p role="status" className="flex items-start gap-2 rounded-[var(--radius)] bg-[#fbecd2] px-3 py-2 text-xs text-[#6b4a05]">
-          <TriangleAlert size={14} className="mt-0.5 shrink-0" aria-hidden />
-          <span>
-            {pendientes} intervención{pendientes > 1 ? "es" : ""} sin identificar. Asigna quién habla: la nota solo cita con nombre a quien está identificado.
-          </span>
-        </p>
-      )}
-      <div className="rounded-[var(--radius)] border border-[var(--border)] p-2.5">
-        <p className="mb-1.5 text-xs font-semibold">{nombres.length ? "¿Falta alguien? Añade a la persona" : "Escribe quién habla para poder asignarlo"}</p>
-        <AgregarPersona onAgregar={(p) => onChange({ ...material, participantes: [...(material.participantes ?? []), p] })} />
-      </div>
-      {voces.length > 0 && nombres.length > 0 && (
+    // Ajustes a la izquierda (avisos, añadir personas, asignar voces) y las intervenciones, por páginas, a la derecha.
+    <div className="grid min-h-0 gap-3 @2xl:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] @2xl:items-start">
+      <div className="flex min-w-0 flex-col gap-3">
+        {pendientes > 0 && (
+          <p role="status" className="flex items-start gap-2 rounded-[var(--radius)] bg-[#fbecd2] px-3 py-2 text-xs text-[#6b4a05]">
+            <TriangleAlert size={14} className="mt-0.5 shrink-0" aria-hidden />
+            <span>
+              {pendientes} intervención{pendientes > 1 ? "es" : ""} sin identificar. Asigna quién habla: la nota solo cita con nombre a quien está identificado.
+            </span>
+          </p>
+        )}
         <div className="rounded-[var(--radius)] border border-[var(--border)] p-2.5">
-          <p className="mb-1.5 text-xs font-semibold">Asignar una voz completa</p>
-          <ul className="flex flex-col gap-1.5">
-            {voces.map((v) => (
-              <li key={v} className="flex flex-wrap items-center gap-2 text-sm">
-                <span className="min-w-28 font-medium">{v}</span>
-                <span aria-hidden>→</span>
-                <select
-                  aria-label={`Quién es ${v}`}
-                  defaultValue=""
-                  onChange={(e) => e.target.value && aplicar(segmentos.map((s) => (s.hablante === v ? { ...s, hablante: e.target.value } : s)))}
-                  className="lx-input !w-auto"
-                >
-                  <option value="">Elegir persona…</option>
-                  {nombres.map((n) => (
-                    <option key={n} value={n}>
-                      {n}
-                    </option>
-                  ))}
-                </select>
-              </li>
-            ))}
-          </ul>
+          <p className="mb-1.5 text-xs font-semibold">{nombres.length ? "¿Falta alguien? Añade a la persona" : "Escribe quién habla para poder asignarlo"}</p>
+          <AgregarPersona onAgregar={(p) => onChange({ ...material, participantes: [...(material.participantes ?? []), p] })} />
         </div>
-      )}
-      <ol className="flex max-h-[28rem] flex-col gap-2 overflow-y-auto pr-1">
-        {segmentos.map((s, i) => (
-          <li key={i} className="rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg)] p-2">
+        {voces.length > 0 && nombres.length > 0 && (
+          <div className="rounded-[var(--radius)] border border-[var(--border)] p-2.5">
+            <p className="mb-1.5 text-xs font-semibold">Asignar una voz completa</p>
+            <ul className="flex flex-col gap-1.5">
+              {voces.map((v) => (
+                <li key={v} className="flex flex-wrap items-center gap-2 text-sm">
+                  <span className="min-w-20 font-medium">{v}</span>
+                  <span aria-hidden>→</span>
+                  <select
+                    aria-label={`Quién es ${v}`}
+                    defaultValue=""
+                    onChange={(e) => e.target.value && aplicar(segmentos.map((s) => (s.hablante === v ? { ...s, hablante: e.target.value } : s)))}
+                    className="lx-input !w-auto"
+                  >
+                    <option value="">Elegir persona…</option>
+                    {nombres.map((n) => (
+                      <option key={n} value={n}>
+                        {n}
+                      </option>
+                    ))}
+                  </select>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+      <Carrusel
+        etiqueta="Intervenciones de la grabación"
+        items={segmentos}
+        filas={filas}
+        maxColumnas={1}
+        anchoMinimo={240}
+        separacion="gap-2"
+        render={(s, i) => (
+          <div className="rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg)] p-2">
             <div className="mb-1 flex flex-wrap items-center gap-2">
+              <span className="text-xs tabular-nums text-[var(--fg-muted)]">{i + 1} / {segmentos.length}</span>
               {s.inicio !== undefined && <span className="rounded bg-[var(--bg-2)] px-1.5 py-0.5 font-mono text-[0.6875rem] text-[var(--fg-muted)]">{formatoTiempo(s.inicio)}</span>}
               <select
                 aria-label={`Quién habla en la intervención ${i + 1}`}
@@ -191,13 +214,13 @@ export function SegmentosEditor({ material, onChange }: { material: Material; on
             <textarea
               value={s.texto}
               onChange={(e) => aplicar(segmentos.map((x, k) => (k === i ? { ...x, texto: e.target.value } : x)))}
-              rows={Math.min(8, Math.max(2, Math.ceil(s.texto.length / 90)))}
+              rows={3}
               aria-label={`Texto de la intervención ${i + 1}`}
-              className="lx-input resize-y text-sm leading-relaxed"
+              className="lx-input resize-none text-sm leading-relaxed"
             />
-          </li>
-        ))}
-      </ol>
+          </div>
+        )}
+      />
     </div>
   );
 }
