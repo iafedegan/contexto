@@ -81,7 +81,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
   return (
     <div data-theme="panel" className="lx-shell">
       {/* Barra lateral (escritorio): azul marino con la navegación agrupada y la cuenta al pie. */}
-      <aside data-theme="panel-header" className="group/sb fixed inset-y-0 left-0 z-50 hidden w-16 flex-col gap-6 overflow-y-auto overflow-x-hidden bg-[linear-gradient(180deg,#16315c,#0f2347)] px-3 py-6 text-[var(--fg)] shadow-[8px_0_30px_-18px_rgba(10,25,60,0.6)] transition-[width] duration-200 ease-out hover:w-64 focus-within:w-64 lg:flex">
+      <aside data-theme="panel-header" className="peer/sb group/sb fixed inset-y-0 left-0 z-50 hidden w-16 flex-col gap-6 overflow-y-auto overflow-x-hidden bg-[linear-gradient(180deg,#16315c,#0f2347)] px-3 py-6 text-[var(--fg)] shadow-[8px_0_30px_-18px_rgba(10,25,60,0.6)] transition-[width] duration-200 ease-out hover:w-64 focus-within:w-64 lg:flex">
         <Link href="/panel" className="flex items-center gap-3 rounded-xl px-1">
           <span className="shrink-0"><LogoMark size={36} /></span>
           <span className="lx-display whitespace-nowrap text-base font-semibold leading-tight opacity-0 transition-opacity duration-150 group-hover/sb:opacity-100 group-focus-within/sb:opacity-100">Panel editorial</span>
@@ -101,7 +101,8 @@ export default async function PanelLayout({ children }: { children: React.ReactN
           </form>
         </div>
       </aside>
-      <div className="flex min-h-dvh flex-col lg:pl-16">
+      {/* Al desplegarse el menú lateral (cursor o foco encima) el contenido se encoge en vez de quedar tapado. */}
+      <div className="flex min-h-dvh flex-col transition-[padding-left] duration-200 ease-out lg:pl-16 lg:peer-hover/sb:pl-64 lg:peer-focus-within/sb:pl-64">
       {/* La barra del panel va en claro (tema `panel-ui`), igual que la barra
           del editor de portada: es cromo de herramienta, no parte del sitio.
           El contenido de cada pantalla conserva su propio tema debajo. */}

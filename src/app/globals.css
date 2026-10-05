@@ -1626,3 +1626,6 @@ html[data-cg-overlay] .cg-consent { display: none; }
 
 /* El asistente de redacción ocupa exactamente la ventana (sin desplazamiento de página): se oculta el pie del panel. */
 body:has([data-asistente]) footer[data-theme="panel-amber"] { display: none; }
+
+/* ...y usa todo el ancho de la ventana, no el máximo de lectura del resto del panel. */
+main > div:has([data-asistente]) { max-width: none; }

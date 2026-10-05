@@ -92,11 +92,41 @@ function cifrasSinRespaldo(html: string, respaldo: string): string[] {
   for (const m of texto.match(/\d[\d.,]*\d/g) ?? []) if (!base.has(dig(m))) malas.add(m);
   return [...malas];
 }
+/** Texto comparable: sin etiquetas, tildes, signos ni mayúsculas, con los espacios colapsados. */
+const comparable = (x: string) =>
+  x.replace(/<[^>]+>/g, " ").normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+/** Citas textuales («…», “…” o "…" de 5+ palabras) del cuerpo que NO aparecen literalmente en el material de respaldo. */
+function citasSinRespaldo(html: string, respaldo: string): string[] {
+  const base = comparable(respaldo);
+  const texto = html.replace(/<[^>]+>/g, "");
+  const malas: string[] = [];
+  for (const m of texto.matchAll(/«([^»]+)»|“([^”]+)”|"([^"]+)"/g)) {
+    const cita = (m[1] ?? m[2] ?? m[3] ?? "").trim();
+    if (cita.split(/\s+/).length < 5) continue;
+    if (!base.includes(comparable(cita))) malas.push(cita);
+  }
+  return malas;
+}
+/** Quita los párrafos, viñetas y citas que contienen una cita inventada: mejor omitir que atribuir palabras que nadie dijo. */
+function sinCitasInventadas(html: string, malas: string[]): string {
+  if (!malas.length) return html;
+  const fuera = malas.map(comparable);
+  return html.replace(/<(p|li|blockquote)\b[^>]*>[\s\S]*?<\/\1>/gi, (blk) => {
+    const t = comparable(blk);
+    return fuera.some((m) => t.includes(m)) ? "" : blk;
+  });
+}
 /** Quita los párrafos/viñetas con cifras que no constan en las fuentes: mejor omitir que inventar. */
 function sinCifrasInventadas(html: string, malas: string[]): string {
   if (!malas.length) return html;
   return html.replace(/<(p|li)\b[^>]*>[\s\S]*?<\/\1>/gi, (blk) => (malas.some((m) => blk.includes(m)) ? "" : blk));
 }
+
+/** Cómo mantener la nota sobre su tema y cómo citar a las fuentes: va en la generación completa y en la reescritura del cuerpo. */
+const REGLAS_ENFOQUE_Y_CITAS = [
+  "ENFOQUE (obligatorio): la nota desarrolla EXACTAMENTE el hecho del título y del encargo. Abre con ese hecho; cada párrafo siguiente debe explicarlo, ampliarlo o dar su contexto directo, y enlazarse con el anterior con una frase puente. Las cifras y el contexto del sector entran solo si ayudan a entender ESE hecho; no cambies de tema, no abras secciones sobre asuntos distintos y no rellenes con estadísticas generales.",
+  "CITAS (obligatorio cuando existan): incluye de 2 a 4 citas textuales de las declaraciones literales que consten en el material o en el dossier (o en el texto de las noticias de referencia). Cada una va entre comillas angulares «…», copiada EXACTAMENTE, atribuida a quien la dijo con su cargo («dijo …», «según …») y con la frase clave dentro de <strong>…</strong>. Una cita larga puede ir en un <blockquote><p>…</p></blockquote>. Si no hay declaraciones literales, NO inventes ninguna: parafrasea y atribuye.",
+].join("\n");
 
 // Genera el borrador de una nota con el modelo a partir del tema, el contexto y el material; si no hay modelo o falla, devuelve un esquema determinista. Verifica que las cifras del texto existan en las fuentes.
 export async function generateArticleDraftCore(userId: string, input: {
@@ -107,6 +137,8 @@ export async function generateArticleDraftCore(userId: string, input: {
   references?: { title: string; outlet: string; url: string; videoId?: string }[];
   /** Entrevista transcrita o texto de enlaces: material primario del que sale la nota. */
   material?: Material[];
+  /** Indicaciones del editor sobre cómo escribir (tono, estructura, qué incluir o evitar). Tienen prioridad. */
+  instrucciones?: string;
 }): Promise<GenerateResult> {
 
   const tema = input.title.trim();
@@ -151,7 +183,9 @@ export async function generateArticleDraftCore(userId: string, input: {
       refs.length
         ? `NOTICIAS DE REFERENCIA (las eligió el periodista): ${refs.map((r, i) => `[${i + 1}] ${r.outlet}: «${r.title}»`).join("; ")}. Atribúyelas en el texto («según …») sin copiar frases textuales: redacta con palabras propias.`
         : "",
-      "REGLA DE ORO: la nota debe ser 100 % real y verificable. Usa SOLO hechos, cifras, fechas, nombres, cargos y declaraciones que consten en el encargo, el material o el dossier. Si algo no consta, NO lo escribas (no lo deduzcas, no lo redondees, no lo completes con conocimiento propio). Atribuye cada dato a su fuente en el texto («según el DANE, con corte a junio de 2026…»). La nota debe apoyarse en CIFRAS AUDITABLES: incluye las cifras clave que traiga el dossier o el material (mínimo tres cuando existan), cada una con su unidad, su periodo y la entidad que la publica, y nunca mezcles periodos o unidades sin decirlo. Sin citas textuales que no estén en el material. Es preferible una nota más corta y exacta que una larga con datos dudosos.",
+      input.instrucciones?.trim() ? `INSTRUCCIONES DEL EDITOR (síguelas con prioridad sobre el estilo por defecto, sin inventar hechos):\n${input.instrucciones.trim().slice(0, 1500)}` : "",
+      REGLAS_ENFOQUE_Y_CITAS,
+      "REGLA DE ORO: la nota debe ser 100 % real y verificable. Usa SOLO hechos, cifras, fechas, nombres, cargos y declaraciones que consten en el encargo, el material o el dossier. Si algo no consta, NO lo escribas (no lo deduzcas, no lo redondees, no lo completes con conocimiento propio). Atribuye cada dato a su fuente en el texto («según el DANE, con corte a junio de 2026…»). La nota debe apoyarse en CIFRAS AUDITABLES: incluye las cifras clave que traiga el dossier o el material (mínimo tres cuando existan), cada una con su unidad, su periodo y la entidad que la publica, y nunca mezcles periodos o unidades sin decirlo. Es preferible una nota más corta y exacta que una larga con datos dudosos.",
     ]
       .filter(Boolean)
       .join("\n\n");
@@ -180,6 +214,19 @@ export async function generateArticleDraftCore(userId: string, input: {
       await registrarUsoIA(userId, usage);
       malas = cifrasSinRespaldo(object.body, respaldo);
       object.body = sinCifrasInventadas(object.body, malas);
+    }
+    // 3) Citas: una cita entre comillas solo se queda si aparece literalmente en el respaldo.
+    let citasMalas = citasSinRespaldo(object.body, respaldo);
+    if (citasMalas.length) {
+      ({ object, usage } = await generateObject({
+        model,
+        schema: draftSchema,
+        system: EDITOR_ASSIST_SYSTEM,
+        prompt: `${prompt}\n\nCORRECCIÓN OBLIGATORIA: estas citas de tu borrador NO aparecen textualmente en el material ni en el dossier: ${citasMalas.map((c) => `«${c}»`).join(" | ")}. Cítalas exactamente como constan o parafrasea sin comillas.`,
+      }));
+      await registrarUsoIA(userId, usage);
+      citasMalas = citasSinRespaldo(object.body, respaldo);
+      object.body = sinCitasInventadas(object.body, citasMalas);
     }
     const draft = stripMarkers(object);
     if (fuentes.length) draft.body = `${draft.body}${fuentesHtml(fuentes)}`;
@@ -284,7 +331,7 @@ const PART_SCHEMAS = {
 const PART_TASK: Record<DraftPart, string> = {
   excerpt: "Escribe SOLO una nueva entradilla (2-3 líneas, 70-155 caracteres ideal) que explique por qué importa la noticia.",
   tags: "Propón SOLO un nuevo conjunto de 3 a 6 palabras clave o etiquetas, en minúsculas, específicas del tema. La primera debe ser la palabra clave principal.",
-  body: "Redacta SOLO un nuevo cuerpo en HTML (<p>, <h2>), de al menos 250 palabras, con intertítulos. Sin llaves ni marcadores: el texto sale listo para publicar; si falta un dato, redacta sin él en vez de inventarlo.",
+  body: "Redacta SOLO un nuevo cuerpo en HTML (<p>, <h2>, <strong>, <blockquote>), de al menos 250 palabras, con intertítulos. Conserva el bloque <details> de «Fuentes consultadas» si la versión actual lo trae. Sin llaves ni marcadores: el texto sale listo para publicar; si falta un dato, redacta sin él en vez de inventarlo.",
   seo: "Propón SOLO un nuevo título SEO (15-65 caracteres) y una meta descripción en prosa (70-155 caracteres).",
 };
 
@@ -304,6 +351,10 @@ export async function regenerateDraftPartCore(userId: string, input: {
   part: DraftPart;
   current: string;
   section?: string;
+  /** Indicaciones del editor sobre cómo escribir esta parte. Tienen prioridad. */
+  instrucciones?: string;
+  /** Entrevista o texto de enlaces del que sale la nota (para citar y no salirse del tema). */
+  material?: Material[];
 }): Promise<RegenerateResult> {
   const model = await getAiModel();
   if (!model) {
@@ -312,22 +363,31 @@ export async function regenerateDraftPartCore(userId: string, input: {
   try {
     const cuotaIA = await verificarCuotaIA(userId);
     if (!cuotaIA.ok) return { ok: false, error: cuotaIA.message };
-    const { object, usage: uso1 } = await generateObject({
-      model,
-      schema: PART_SCHEMAS[input.part],
-      system: EDITOR_ASSIST_SYSTEM,
-      prompt: [
-        `TÍTULO: ${input.title.trim()}`,
-        input.section ? `SECCIÓN: ${input.section}` : "",
-        `ENCARGO Y NOTAS:\n${input.prompt.trim()}`,
-        input.current ? `VERSIÓN ACTUAL (el editor la rechazó; propón otra claramente distinta):\n${input.current.slice(0, 4000)}` : "",
-        `TAREA: ${PART_TASK[input.part]}`,
-      ]
-        .filter(Boolean)
-        .join("\n\n"),
-    });
+    const mat = materialParaPrompt(input.material);
+    const instr = input.instrucciones?.trim() ?? "";
+    const prompt = [
+      `TÍTULO: ${input.title.trim()}`,
+      input.section ? `SECCIÓN: ${input.section}` : "",
+      `ENCARGO Y NOTAS:\n${input.prompt.trim()}`,
+      mat ? `MATERIAL DE PARTIDA:\n${mat}` : "",
+      input.current
+        ? `VERSIÓN ACTUAL (${instr ? "reescríbela aplicando las instrucciones del editor" : "el editor la rechazó; propón otra claramente distinta"}; los hechos, cifras y citas solo pueden salir de aquí, del encargo o del material, no inventes otros):\n${input.current.slice(0, 9000)}`
+        : "",
+      instr ? `INSTRUCCIONES DEL EDITOR (síguelas con prioridad sobre el estilo por defecto, sin inventar hechos):\n${instr.slice(0, 1500)}` : "",
+      input.part === "body" ? REGLAS_ENFOQUE_Y_CITAS : "",
+      `TAREA: ${PART_TASK[input.part]}`,
+    ]
+      .filter(Boolean)
+      .join("\n\n");
+    const { object, usage: uso1 } = await generateObject({ model, schema: PART_SCHEMAS[input.part], system: EDITOR_ASSIST_SYSTEM, prompt });
     await registrarUsoIA(userId, uso1);
-    return { ok: true, part: input.part, value: stripMarkers(object) };
+    const value: Partial<GeneratedDraft> = stripMarkers(object);
+    // El cuerpo reescrito también pasa por la verificación: sin cifras ni citas que no consten en lo que se le dio.
+    if (value.body) {
+      const respaldo = [input.title, input.prompt, mat, input.current].join("\n");
+      value.body = sinCitasInventadas(sinCifrasInventadas(value.body, cifrasSinRespaldo(value.body, respaldo)), citasSinRespaldo(value.body, respaldo));
+    }
+    return { ok: true, part: input.part, value };
   } catch (err) {
     console.error("regenerateDraftPart:", err);
     const detalle = err && typeof err === "object" && "message" in err ? String((err as Error).message) : "";

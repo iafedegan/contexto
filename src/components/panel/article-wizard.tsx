@@ -45,6 +45,7 @@ import {
   type DraftPart,
   type TitleContextOptions,
 } from "@/app/panel/(app)/articulos/ai-actions";
+import { EditorCuerpo, expandirGraficas } from "@/components/panel/editor-cuerpo";
 import { SectionTree } from "@/components/panel/section-picker";
 import { Carrusel, filasListas, useAltoVentana } from "@/components/panel/carrusel";
 import { textoDeSegmentos, type Material, type Participante, type Segmento } from "@/lib/material-types";
@@ -53,10 +54,9 @@ import { SiteArticlePreview, type SitePreviewChrome } from "@/components/panel/s
 import { FuenteCards, PantallaEnlaces, PantallaEntrevista, PantallaIdeas, PantallaNoticias, type Fuente } from "@/components/panel/wizard-fuentes";
 import { WizardStepper } from "@/components/panel/wizard-stepper";
 import { duracionWav, esVideo, ExtraerAudioError, extraerAudioDeVideo, partirWav } from "@/lib/audio-extract";
-import { aplicarTipo, decodeSpec, encodeSpec, renderChartSvg, svgDataUri, TIPOS_GRAFICA, type ChartSpec, type TipoGrafica } from "@/lib/chart-svg";
+import { aplicarTipo, encodeSpec, renderChartSvg, TIPOS_GRAFICA, type ChartSpec, type TipoGrafica } from "@/lib/chart-svg";
 import { InteractiveChart } from "@/components/interactive-chart";
 import { auditArticle, scoreLabel, type AuditItem, type AuditResult } from "@/lib/seo-audit";
-import { escapeMinimo as escapeHtml } from "@/lib/escape";
 import { ESTADO_LABEL as STATUS_LABEL } from "@/lib/estados";
 
 // Opción de un selector: id y nombre.
@@ -103,66 +103,6 @@ const STEPS_IA: { key: StepKey; label: string }[] = [
   { key: "tema", label: "Título y contexto" },
   ...STEPS_MANUAL.slice(1),
 ];
-
-// Decodifica las entidades HTML de un texto.
-const decode = (s: string) =>
-  s.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, "&");
-
-/**
- * HTML sencillo del borrador -> texto editable (párrafos y «## » intertítulos).
- * Si trae otras etiquetas (figuras, listas…) se deja en HTML para no perderlas.
- */
-function toText(html: string): string {
-  const t = html
-    .replace(/<h2[^>]*>([\s\S]*?)<\/h2>/gi, "## $1\n\n")
-    .replace(/<p[^>]*>([\s\S]*?)<\/p>/gi, "$1\n\n")
-    .replace(/<br\s*\/?>/gi, "\n");
-  if (/<[a-z/][^>]*>/i.test(t)) return html;
-  return decode(t).replace(/\n{3,}/g, "\n\n").trim();
-}
-
-/** Convierte las URL escritas a mano en enlaces. */
-const linkify = (s: string) =>
-  s.replace(/https?:\/\/[^\s<]+[^\s<.,;:!?)]/g, (u) => `<a href="${u}" rel="noopener">${u}</a>`);
-
-/**
- * Texto plano -> HTML: cada bloque separado por una línea en blanco es un
- * párrafo; una línea que empieza por "## " es un intertítulo. Si el redactor
- * ya escribió HTML, se respeta tal cual.
- */
-/** Marcador de gráfica → <figure>. Se aplica tanto al texto simple como al cuerpo que ya trae HTML (p. ej. con el bloque de fuentes). */
-const MARCADOR_GRAFICA = /(?:<p[^>]*>\s*)?\[\[GRAFICA ([\w-]+) \| ([^|\]]*) \| ([^\]]*)\]\](?:\s*<\/p>)?/g;
-// Convierte los marcadores de gráfica del texto en las figuras que se dibujan.
-function expandirGraficas(html: string): string {
-  return html.replace(MARCADOR_GRAFICA, (marca, datos: string, alt: string, fuente: string) => {
-    const spec = decodeSpec(datos);
-    if (!spec) return marca;
-    return `<figure class="lx-chart" data-chart="${datos}"><img src="${svgDataUri(renderChartSvg(spec))}" alt="${escapeHtml(alt)}" loading="lazy"><figcaption>${escapeHtml(fuente)}</figcaption></figure>`;
-  });
-}
-
-// Convierte el texto escrito en HTML con párrafos e intertítulos.
-function toHtml(text: string): string {
-  if (/<\/?(p|h2|h3|ul|ol|figure|blockquote|details)\b/i.test(text)) return expandirGraficas(text);
-  return text
-    .split(/\n\s*\n/)
-    .map((b) => b.trim())
-    .filter(Boolean)
-    .map((b) => {
-      // Gráfica insertada con IA: [[GRAFICA <datos> | texto alternativo | fuente]]
-      const g = /^\[\[GRAFICA ([\w-]+) \| ([^|\]]*) \| ([^\]]*)\]\]$/.exec(b);
-      if (g) {
-        const spec = decodeSpec(g[1]);
-        if (spec) {
-          return `<figure class="lx-chart" data-chart="${g[1]}"><img src="${svgDataUri(renderChartSvg(spec))}" alt="${escapeHtml(g[2])}" loading="lazy"><figcaption>${escapeHtml(g[3])}</figcaption></figure>`;
-        }
-      }
-      return b.startsWith("## ")
-        ? `<h2>${escapeHtml(b.slice(3))}</h2>`
-        : `<p>${linkify(escapeHtml(b)).replace(/\n/g, "<br>")}</p>`;
-    })
-    .join("\n");
-}
 
 /** Creación manual de un artículo, una pantalla por paso, con vista previa final. */
 export function ArticleWizard({
@@ -253,7 +193,6 @@ export function ArticleWizard({
   const [aiNote, setAiNote] = useState("");
   const [aiNotaCerrada, setAiNotaCerrada] = useState(false);
   const [arrastre, setArrastre] = useState(false);
-  const cuerpoRef = useRef<HTMLTextAreaElement>(null);
   const [generating, startGenerating] = useTransition();
   const [title, setTitle] = useState(initial?.title ?? "");
   const [excerpt, setExcerpt] = useState(initial?.excerpt ?? "");
@@ -261,7 +200,10 @@ export function ArticleWizard({
   const [tagDraft, setTagDraft] = useState("");
   const [categoryId, setCategoryId] = useState(initial?.categoryId ?? "");
   const [authorId] = useState(initial?.authorId ?? miAutorId ?? "");
-  const [body, setBody] = useState(() => (initial?.body ? toText(initial.body) : ""));
+  // El cuerpo se guarda como HTML (el editor lo muestra ya formateado). Las gráficas viajan como marcador `[[GRAFICA …]]`.
+  const [body, setBody] = useState(initial?.body ?? "");
+  // Indicaciones del editor para la IA sobre cómo escribir (tono, estructura, qué citar…).
+  const [instrucciones, setInstrucciones] = useState("");
   const [breaking, setBreaking] = useState(initial?.isBreaking ?? false);
   const [live, setLive] = useState(initial?.isLive ?? false);
   // Portada del sitio: «none» = sin destacar, «0» = principal, «1» = segunda; «keep» = ocupa otro lugar fijado desde el editor de portada.
@@ -276,8 +218,9 @@ export function ArticleWizard({
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
 
-  const words = body.trim() ? body.trim().split(/\s+/).length : 0;
-  const bodyHtml = toHtml(body);
+  const textoPlano = body.replace(/\[\[GRAFICA[^\]]*\]\]/g, " ").replace(/<details[\s\S]*?<\/details>/gi, " ").replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").trim();
+  const words = textoPlano ? textoPlano.split(/\s+/).length : 0;
+  const bodyHtml = expandirGraficas(body);
   // Misma auditoría que el editor completo. La palabra clave principal es la
   // primera etiqueta; si aún no hay, se usa el título.
   const audit = useMemo(
@@ -465,12 +408,13 @@ export function ArticleWizard({
         section: categories.find((c) => c.id === categoryId)?.name,
         references: refs.map((r) => ({ title: r.title, outlet: r.outlet, url: r.url, videoId: r.videoId })),
         material,
+        instrucciones,
       });
       if (!res.ok) return setError(res.error);
       const d = res.draft;
       setTitle(title.trim() || d.title);
       setExcerpt(d.excerpt);
-      setBody(toText(d.body));
+      setBody(d.body);
       setMetaTitle(d.metaTitle);
       setMetaDescription(d.metaDescription);
       setTags(d.tags.map((t) => t.toLowerCase()).slice(0, 12));
@@ -681,6 +625,12 @@ export function ArticleWizard({
     setOptions(null);
     setRefs((r) => (r.some((x) => x.url === n.url) ? r : [...r, n]));
     setFuente(null);
+    // Se lee la página de la noticia como material: así la nota se escribe SOBRE ella y puede citar sus palabras textuales.
+    if (n.type !== "video") {
+      void leerEnlaces({ urls: n.url }).then((res) => {
+        if (res.ok) setMaterial((m) => [...m, ...res.materiales.filter((x) => !m.some((y) => y.url === x.url))]);
+      });
+    }
   }
 
   // Pide a la IA ideas de temas.
@@ -736,12 +686,14 @@ export function ArticleWizard({
         part,
         current,
         section: categories.find((c) => c.id === categoryId)?.name,
+        instrucciones,
+        material,
       });
       if (!res.ok) return setError(res.error);
       const v = res.value;
       if (v.excerpt) setExcerpt(v.excerpt);
       if (v.tags) setTags(v.tags.map((t) => t.toLowerCase()).slice(0, 12));
-      if (v.body) setBody(toText(v.body));
+      if (v.body) setBody(v.body);
       if (v.metaTitle) setMetaTitle(v.metaTitle);
       if (v.metaDescription) setMetaDescription(v.metaDescription);
     });
@@ -1155,6 +1107,16 @@ export function ArticleWizard({
                   </section>
                 </div>
 
+                <label className="flex flex-col gap-1">
+                  <span className="lx-kicker text-[var(--fg-muted)]">Cómo quieres que se escriba (opcional)</span>
+                  <input
+                    value={instrucciones}
+                    onChange={(e) => setInstrucciones(e.target.value)}
+                    placeholder="Ej.: tono formal, abre con la declaración del ministro, cita sus palabras, no te desvíes a otros temas"
+                    className={`${input} !py-2 text-sm`}
+                  />
+                </label>
+
                 {generated && (
                   <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--fg-muted)]">
                     Ya hay un borrador: «Siguiente» para revisarlo.
@@ -1271,46 +1233,41 @@ export function ArticleWizard({
         )}
 
         {current.key === "cuerpo" && (
-          <Step title="Escribe el cuerpo" hint="Párrafos separados por una línea en blanco. Las direcciones https://… se convierten en enlaces.">
-            <div className="flex min-h-[9rem] flex-1 flex-col overflow-hidden rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] focus-within:border-[var(--accent)]">
-              <div className="flex shrink-0 flex-wrap items-center gap-1 border-b border-[var(--border)] px-2 py-1.5">
-                <button
-                  type="button"
-                  onClick={() => {
-                    const el = cuerpoRef.current;
-                    const ini = el?.selectionStart ?? body.length;
-                    const linea = body.lastIndexOf("\n", ini - 1) + 1;
-                    if (body.slice(linea, linea + 3) === "## ") return el?.focus();
-                    setBody(body.slice(0, linea) + "## " + body.slice(linea));
-                    requestAnimationFrame(() => { el?.focus(); el?.setSelectionRange(ini + 3, ini + 3); });
+          <Step ancho="xl" title="Escribe el cuerpo" hint="Escribe sobre el texto ya formateado, como en un procesador de texto: negrita, intertítulos, citas, listas y enlaces desde la barra.">
+            <EditorCuerpo
+              value={body}
+              onChange={setBody}
+              placeholder="Primer párrafo con lo más importante…"
+              resumen={<>{words} palabras · {Math.max(1, Math.round(words / 200))} min</>}
+            />
+            {mode === "ia" && generated && (
+              // Si el borrador no convence, se le dice a la IA cómo reescribirlo (tono, enfoque, qué citar…).
+              <div className="flex shrink-0 flex-wrap items-center gap-2">
+                <input
+                  value={instrucciones}
+                  onChange={(e) => setInstrucciones(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      if (!generating) regenerate("body");
+                    }
                   }}
-                  className="rounded-md px-2.5 py-1 text-xs font-semibold text-[var(--fg-muted)] transition hover:bg-[var(--surface-2)] hover:text-[var(--fg)]"
-                  title="Convierte la línea actual en un intertítulo"
-                >
-                  H2 · Intertítulo
+                  aria-label="Instrucciones para la IA"
+                  placeholder="¿No te gusta? Dile a la IA cómo escribirlo: más corto, tono formal, cita más al ministro, enfócate en…"
+                  className={`${input} min-w-0 flex-1 !py-2 text-sm`}
+                />
+                <button type="button" onClick={() => regenerate("body")} disabled={generating} className="lx-btn">
+                  {generating ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
+                  {generating ? "Reescribiendo…" : "Reescribir con IA"}
                 </button>
-                <span className="ml-auto pr-1 text-xs tabular-nums text-[var(--fg-muted)]">
-                  {words} palabras · {Math.max(1, Math.round(words / 200))} min
-                </span>
               </div>
-              <textarea
-                ref={cuerpoRef}
-                autoFocus
-                value={body}
-                onChange={(e) => setBody(e.target.value)}
-                placeholder={"Primer párrafo con lo más importante…\n\n## Qué explica el alza\n\nSegundo párrafo…"}
-                className="block min-h-0 w-full flex-1 resize-none border-0 bg-transparent px-4 py-3 text-base leading-relaxed outline-none"
-              />
-            </div>
+            )}
             <div className="flex shrink-0 items-center gap-3">
               <div className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-[var(--border)]" role="meter" aria-valuenow={words} aria-valuemin={0} aria-valuemax={400} aria-label="Palabras">
                 <span className="absolute inset-y-0 left-0 rounded-full transition-all duration-300" style={{ width: `${Math.min(100, (words / 400) * 100)}%`, background: words >= 250 ? "#16a34a" : "#d97706" }} />
               </div>
               <span className="text-xs text-[var(--fg-muted)]">{words >= 250 ? "Buena longitud ✓" : "Se recomiendan al menos 250"}</span>
             </div>
-            <p className="flex shrink-0 items-center gap-2 text-xs text-[var(--fg-muted)]">
-              <BarChart3 size={13} className="shrink-0 text-[var(--accent)]" /> ¿Tiene cifras? En «Gráfica» la IA arma una y la ves antes de insertarla.
-            </p>
           </Step>
         )}
 
@@ -1693,7 +1650,7 @@ export function ArticleWizard({
  */
 function Step({ title, hint, children, ancho = "md", centrado = false }: { title: string; hint: React.ReactNode; children: React.ReactNode; ancho?: "md" | "lg" | "xl"; /** Pasos cortos: se centran en vertical en vez de quedar pegados arriba con un hueco debajo. */ centrado?: boolean }) {
   return (
-    <div className={`lx-step @container mx-auto flex min-h-0 w-full flex-col gap-4 ${centrado ? "my-auto" : "flex-1"} ${ancho === "xl" ? "max-w-5xl" : ancho === "lg" ? "max-w-3xl" : "max-w-2xl"}`}>
+    <div className={`lx-step @container mx-auto flex min-h-0 w-full flex-col gap-4 ${centrado ? "my-auto" : "flex-1"} ${ancho === "xl" ? "max-w-none" : ancho === "lg" ? "max-w-3xl" : "max-w-2xl"}`}>
       <header className="flex shrink-0 flex-col gap-1">
         <h2 className="lx-display text-2xl font-semibold tracking-tight">{title}</h2>
         <div className="text-sm leading-snug text-[var(--fg-muted)]">{hint}</div>

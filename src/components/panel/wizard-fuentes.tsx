@@ -138,7 +138,7 @@ export function PantallaIdeas({
             items={ideas.ideas}
             filas={filas}
             anchoMinimo={250}
-            maxColumnas={3}
+            maxColumnas={4}
             render={(i) => <IdeaCard i={i} elegido={picked === i.title} onPick={onPick} />}
           />
           {ideas.sources.length > 0 && (
@@ -276,7 +276,7 @@ export function PantallaNoticias({
             items={lista}
             filas={filas}
             anchoMinimo={340}
-            maxColumnas={2}
+            maxColumnas={3}
             render={(n) => <NewsCard n={n} ref_={isRef(n)} onTema={onTema} onRef={onRef} />}
           />
         </>
