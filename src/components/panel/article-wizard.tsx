@@ -50,11 +50,12 @@ import {
   type TitleContextOptions,
 } from "@/app/panel/(app)/articulos/ai-actions";
 import { SectionTree } from "@/components/panel/section-picker";
-import type { Material } from "@/lib/material-types";
+import { textoDeSegmentos, type Material, type Participante, type Segmento } from "@/lib/material-types";
+import { ParticipantesForm, participantesListos, SegmentosEditor } from "@/components/panel/entrevista-editor";
 import { SiteArticlePreview, type SitePreviewChrome } from "@/components/panel/site-article-preview";
 import { IdeaCards, NewsCards } from "@/components/panel/wizard-fuentes";
 import { WizardStepper } from "@/components/panel/wizard-stepper";
-import { esVideo, ExtraerAudioError, extraerAudioDeVideo, partirWav } from "@/lib/audio-extract";
+import { duracionWav, esVideo, ExtraerAudioError, extraerAudioDeVideo, partirWav } from "@/lib/audio-extract";
 import { aplicarTipo, decodeSpec, encodeSpec, renderChartSvg, svgDataUri, TIPOS_GRAFICA, type ChartSpec, type TipoGrafica } from "@/lib/chart-svg";
 import { InteractiveChart } from "@/components/interactive-chart";
 import { auditArticle, scoreLabel, type AuditItem, type AuditResult } from "@/lib/seo-audit";
@@ -224,6 +225,10 @@ export function ArticleWizard({
   const [progFecha, setProgFecha] = useState("");
   const [material, setMaterial] = useState<Material[]>([]);
   const [audioError, setAudioError] = useState("");
+  // Quiénes intervienen en la grabación (lo declara el editor antes de transcribir) y si es una entrevista.
+  const [personas, setPersonas] = useState<Participante[]>([{ nombre: "", cargo: "" }]);
+  const [esEntrevistaGrabada, setEsEntrevistaGrabada] = useState(false);
+  const [quienesDespues, setQuienesDespues] = useState(false);
   const [audioBusy, startAudio] = useTransition();
   const [audioFase, setAudioFase] = useState("");
   const [urlsTxt, setUrlsTxt] = useState("");
@@ -546,6 +551,10 @@ export function ArticleWizard({
   // Sube una entrevista de audio o video y la transcribe.
   function subirEntrevista(original: File) {
     setAudioError("");
+    if (!participantesListos(personas, quienesDespues)) return setAudioError("Escribe quiénes intervienen en la grabación, o marca que los identificarás después.");
+    // Lo que declaró el editor viaja con el archivo para que la IA etiquete cada intervención con el nombre correcto.
+    const declarados = quienesDespues ? [] : personas.map((p) => ({ nombre: p.nombre.trim(), cargo: p.cargo.trim() })).filter((p) => p.nombre);
+    const contexto = (parte?: { n: number; de: number }) => JSON.stringify({ participantes: declarados, esEntrevista: esEntrevistaGrabada, parte });
     startAudio(async () => {
       try {
         let f = original;
@@ -567,29 +576,42 @@ export function ArticleWizard({
         if (f !== original && f.type === "audio/wav") {
           // Audio sacado de un video: se manda en trozos de ~3 MB directo al servidor (sin pasar por el almacenamiento).
           const partes = await partirWav(f, 3 * 1024 * 1024);
-          const textos: string[] = [];
-          let primero: Material | null = null;
+          const materiales: Material[] = [];
+          // Segundos que ya pasaron cuando empieza cada parte: los tiempos de cada trozo se suman a este desfase.
+          const desfases: number[] = [];
+          let corrido = 0;
           for (let i = 0; i < partes.length; i++) {
             setAudioFase(partes.length > 1 ? `Transcribiendo… parte ${i + 1} de ${partes.length}` : "Transcribiendo…");
             const fd = new FormData();
             fd.append("audio", partes[i]);
+            fd.append("contexto", contexto({ n: i + 1, de: partes.length }));
             const r = await transcribirEntrevista(fd);
             if (!r.ok) return setAudioError(`${r.error}${partes.length > 1 ? ` (parte ${i + 1} de ${partes.length})` : ""}`);
-            primero ??= r.material;
-            textos.push(r.material.text);
+            materiales.push(r.material);
+            desfases.push(corrido);
+            corrido += await duracionWav(partes[i]);
           }
+          const primero = materiales[0];
           if (!primero) return setAudioError("No se pudo transcribir.");
-          res = { ok: true as const, material: { ...primero, title: `Entrevista: ${original.name.replace(/\.[a-z0-9]+$/i, "").slice(0, 80)}`, text: textos.join("\n\n") } };
+          const titulo = `Entrevista: ${original.name.replace(/\.[a-z0-9]+$/i, "").slice(0, 80)}`;
+          if (materiales.every((m) => m.segmentos?.length)) {
+            // Todas las partes llegaron divididas por intervenciones: se unen con los tiempos corridos.
+            const segmentos: Segmento[] = materiales.flatMap((m, i) => (m.segmentos ?? []).map((sg) => ({ ...sg, inicio: sg.inicio === undefined ? undefined : sg.inicio + desfases[i] })));
+            res = { ok: true as const, material: { ...primero, title: titulo, segmentos, text: textoDeSegmentos(segmentos) } };
+          } else {
+            res = { ok: true as const, material: { ...primero, title: titulo, text: materiales.map((m) => m.text).join("\n\n") } };
+          }
         } else if (f.size <= 3.5 * 1024 * 1024) {
           const fd = new FormData();
           fd.append("audio", f);
+          fd.append("contexto", contexto());
           res = await transcribirEntrevista(fd);
         } else {
           const c = await crearSubidaAudio({ name: f.name, type: f.type, size: f.size });
           if (!c.ok) return setAudioError(c.error);
           const put = await fetch(c.uploadUrl, { method: "PUT", headers: { "content-type": f.type || "audio/mpeg" }, body: f });
           if (!put.ok) return setAudioError(`No se pudo subir el archivo (${put.status}): ${(await put.text().catch(() => "")).replace(/[{}"]/g, " ").slice(0, 160)}`);
-          res = await transcribirEntrevistaSubida({ path: c.path, name: original.name });
+          res = await transcribirEntrevistaSubida({ path: c.path, name: original.name, contexto: contexto() });
         }
         if (!res.ok) return setAudioError(res.error);
         setMaterial((m) => [...m, res.material]);
@@ -972,13 +994,22 @@ export function ArticleWizard({
                 )}
                 {fuente === "entrevista" && (
                   <div>
-                  
-                  <label className={`lx-btn cursor-pointer ${audioBusy ? "pointer-events-none opacity-60" : ""}`}>
+                  <ParticipantesForm
+                    personas={personas}
+                    onPersonas={setPersonas}
+                    esEntrevista={esEntrevistaGrabada}
+                    onEsEntrevista={setEsEntrevistaGrabada}
+                    despues={quienesDespues}
+                    onDespues={setQuienesDespues}
+                    disabled={audioBusy}
+                  />
+                  <label className={`lx-btn cursor-pointer ${audioBusy || !participantesListos(personas, quienesDespues) ? "pointer-events-none opacity-60" : ""}`}>
                     {audioBusy ? <Loader2 size={15} className="animate-spin" /> : <Mic size={15} />}
                     {audioBusy ? audioFase || "Procesando…" : "Subir audio o video"}
                     <input
                       type="file"
                       accept="audio/*,video/*,.mp3,.m4a,.wav,.ogg,.opus,.webm,.aac,.flac,.mp4,.m4v,.mov,.mpeg,.mpg,.avi,.wmv,.3gp"
+                      disabled={audioBusy || !participantesListos(personas, quienesDespues)}
                       className="hidden"
                       onChange={(e) => {
                         const f = e.target.files?.[0];
@@ -987,6 +1018,7 @@ export function ArticleWizard({
                       }}
                     />
                   </label>
+                  {!participantesListos(personas, quienesDespues) && <p className="mt-1.5 text-xs text-[var(--fg-muted)]">Escribe al menos un nombre para activar la subida.</p>}
                   <p className="mt-1.5 text-xs text-[var(--fg-muted)]">Audio (MP3, M4A, WAV, OGG…) hasta 20 MB · video (MP4, MOV, WEBM…) de hasta unos 800 MB y 20 min de grabación. Puede tardar un par de minutos.</p>
                   {audioError && <p role="alert" className="mt-2 text-sm text-[var(--danger,#b4442e)]">{audioError}</p>}
                 </div>
@@ -1019,17 +1051,27 @@ export function ArticleWizard({
                           {m.kind === "entrevista" ? "Entrevista" : "Enlace"}
                         </span>
                         <span className="min-w-0 flex-1 truncate text-sm font-semibold">{m.title}</span>
-                        <span className="text-xs text-[var(--fg-muted)]">{m.text.length.toLocaleString("es-CO")} car.</span>
+                        <span className="text-xs text-[var(--fg-muted)]">{m.segmentos?.length ? `${m.segmentos.length} intervenciones · ` : ""}{m.text.length.toLocaleString("es-CO")} car.</span>
                         <button type="button" onClick={() => { setMaterial((x) => x.filter((_, k) => k !== i)); setOptions(null); }} className="lx-link text-xs">Quitar</button>
                       </div>
-                      <details className="mt-2">
-                        <summary className="cursor-pointer text-xs text-[var(--accent)]">Ver y corregir el texto</summary>
-                        <textarea
-                          value={m.text}
-                          onChange={(e) => setMaterial((x) => x.map((y, k) => (k === i ? { ...y, text: e.target.value } : y)))}
-                          rows={8}
-                          className={`${input} mt-2 resize-y text-sm leading-relaxed`}
-                        />
+                      <details className="mt-2" open={Boolean(m.segmentos?.length)}>
+                        <summary className="cursor-pointer text-xs text-[var(--accent)]">{m.segmentos?.length ? "Revisar quién dijo cada fragmento" : "Ver y corregir el texto"}</summary>
+                        {m.segmentos?.length ? (
+                          <SegmentosEditor
+                            material={m}
+                            onChange={(nuevo) => {
+                              setMaterial((x) => x.map((y, k) => (k === i ? nuevo : y)));
+                              setOptions(null);
+                            }}
+                          />
+                        ) : (
+                          <textarea
+                            value={m.text}
+                            onChange={(e) => setMaterial((x) => x.map((y, k) => (k === i ? { ...y, text: e.target.value } : y)))}
+                            rows={8}
+                            className={`${input} mt-2 resize-y text-sm leading-relaxed`}
+                          />
+                        )}
                         {m.url && <a href={m.url} target="_blank" rel="noopener noreferrer" className="lx-link mt-1 inline-block text-xs">Abrir enlace ↗</a>}
                       </details>
                     </li>

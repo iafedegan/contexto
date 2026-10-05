@@ -113,3 +113,9 @@ export async function partirWav(wav: File, maxBytes: number): Promise<File[]> {
   }
   return out;
 }
+
+/** Duración en segundos de un WAV mono de 16 bits (como los que genera este archivo): lo que pesan los datos entre lo que dura cada segundo. */
+export async function duracionWav(wav: File): Promise<number> {
+  const rate = new DataView(await wav.slice(0, 44).arrayBuffer()).getUint32(24, true);
+  return rate > 0 ? Math.max(0, wav.size - 44) / (rate * 2) : 0;
+}
