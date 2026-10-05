@@ -49,7 +49,7 @@ import {
   type DraftPart,
   type TitleContextOptions,
 } from "@/app/panel/(app)/articulos/ai-actions";
-import { SectionTree } from "@/components/panel/chip-picker";
+import { SectionTree } from "@/components/panel/section-picker";
 import type { Material } from "@/lib/material-types";
 import { SiteArticlePreview, type SitePreviewChrome } from "@/components/panel/site-article-preview";
 import { IdeaCards, NewsCards } from "@/components/panel/wizard-fuentes";

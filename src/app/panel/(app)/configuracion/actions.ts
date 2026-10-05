@@ -443,15 +443,3 @@ export async function saveAnalyticsSettings(formData: FormData) {
   revalidatePath("/", "layout");
   revalidatePath("/panel/configuracion");
 }
-
-/** Borra la clave de PageSpeed guardada en el panel (no toca el entorno). */
-export async function deletePsiKey() {
-  await requireRole("administrador");
-  const actual = await readAnalytics();
-  const value: AnalyticsSettings = { ...actual, psiKey: null };
-  await db
-    .insert(siteSettings)
-    .values({ key: ANALYTICS_KEY, value })
-    .onConflictDoUpdate({ target: siteSettings.key, set: { value, updatedAt: sql`now()` } });
-  revalidatePath("/panel/configuracion");
-}

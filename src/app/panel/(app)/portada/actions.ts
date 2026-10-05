@@ -26,7 +26,7 @@ export type HomeLayoutEntry = {
  * principal). Cualquier artículo que tuviera algo fijado y ya no esté en la
  * lista vuelve a su comportamiento por defecto.
  */
-export async function saveHomeLayout(entries: HomeLayoutEntry[]) {
+async function saveHomeLayout(entries: HomeLayoutEntry[]) {
   await requirePermiso("portada");
 
   await Promise.all(
@@ -54,7 +54,7 @@ export async function saveHomeLayout(entries: HomeLayoutEntry[]) {
 }
 
 /** Quita todo el diseño manual: la portada vuelve a su comportamiento por defecto. */
-export async function resetHomeLayout() {
+async function resetHomeLayout() {
   await requirePermiso("portada");
   await db.update(articles).set({ homePosition: null, homeStyle: null }).where(isNotNull(articles.homePosition));
   invalidarCache();
@@ -67,7 +67,7 @@ export async function resetHomeLayout() {
  * contenido): si "En breve" es vertical u horizontal, cuántas columnas, y
  * cuántas columnas tiene la cuadrícula "Lo más reciente".
  */
-export async function saveHomeSectionLayout(input: HomeLayoutConfig) {
+async function saveHomeSectionLayout(input: HomeLayoutConfig) {
   await requirePermiso("portada");
   // El estilo por componente acaba convertido en CSS: se guarda ya validado.
   const config = normalizeLayout(input);
@@ -87,7 +87,7 @@ export async function saveHomeSectionLayout(input: HomeLayoutConfig) {
  * lo pinta cualquier página pública; sube la versión para que el popup nuevo
  * se muestre también a quien ya cerró el anterior.
  */
-export async function saveSitePopup(input: PopupConfig): Promise<PopupConfig> {
+async function saveSitePopup(input: PopupConfig): Promise<PopupConfig> {
   await requirePermiso("portada");
   const config = sanitizePopup({ ...input, version: (Number(input.version) || 0) + 1 });
   await db
