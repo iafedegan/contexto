@@ -15,8 +15,10 @@ import { migrate } from "drizzle-orm/pglite/migrator";
 import * as schema from "../src/db/schema";
 import { seed } from "../src/db/seed-data";
 
+// Carpeta de la base de datos local embebida.
 const DIR = process.env.PGLITE_DATA_DIR ?? `${process.cwd()}/.pglite`;
 
+// Prepara la base local: la crea, aplica las migraciones y carga los datos de ejemplo.
 async function main() {
   if (process.env.DATABASE_URL || process.env.DATABASE_URL_POOLED) {
     console.log("DATABASE_URL definido -> se omite PGlite. Usa `npm run db:setup`.");

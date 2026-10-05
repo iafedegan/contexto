@@ -15,10 +15,12 @@ import * as schema from "./schema";
  */
 type DB = PostgresJsDatabase<typeof schema> & PgliteDatabase<typeof schema>;
 
+// Carpeta de la base embebida: /tmp en Vercel, o la configurada.
 export const PGLITE_DIR = process.env.VERCEL
   ? `/tmp/.pglite`
   : process.env.PGLITE_DATA_DIR ?? `${process.cwd()}/.pglite`;
 
+// Instancias compartidas en globalThis, para que la recarga en caliente no abra conexiones nuevas.
 const g = globalThis as unknown as {
   __cg_db?: DB;
   __cg_pglite?: import("@electric-sql/pglite").PGlite;
@@ -52,6 +54,7 @@ function connectionString(): string | null {
   return null;
 }
 
+// Indica si se usa la base embebida (no hay cadena de conexión).
 export function isEmbeddedDb(): boolean {
   return connectionString() === null;
 }
@@ -69,6 +72,7 @@ export function getPglite() {
   return g.__cg_pglite;
 }
 
+// Crea la conexión real: Postgres gestionado si hay cadena, o PGlite embebida.
 function init(): DB {
   const url = connectionString();
   if (url) {
@@ -90,6 +94,7 @@ function init(): DB {
   return drizzlePglite(getPglite(), { schema }) as unknown as DB;
 }
 
+// Base de datos exportada: conecta al primer uso (carga perezosa).
 export const db: DB = new Proxy({} as DB, {
   get(_t, prop) {
     g.__cg_db ??= init();

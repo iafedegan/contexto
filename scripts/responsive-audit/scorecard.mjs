@@ -1,11 +1,17 @@
 // Resumen por tipo de pantalla. Uso: node scripts/responsive-audit/scorecard.mjs <tanda> "<etiqueta>" <archivo.ndjson>[,<archivo>...]
 import fs from "node:fs";
 import path from "node:path";
+// Corrida, etiqueta y archivos a puntuar.
 const [run, label, files] = process.argv.slice(2);
+// Carpeta de datos de la corrida.
 const dir = path.join(path.resolve(process.env.AUDIT_OUT || ".audit"), "data", run);
+// Filas de resultados de todos los archivos.
 const rows = files.split(",").flatMap((f) => fs.readFileSync(path.join(dir, f), "utf8").trim().split("\n").filter(Boolean).map((l) => JSON.parse(l))).filter((r) => r.a);
+// Clase de dispositivo según el tamaño de pantalla.
 const clase = (vp) => { const [w, h] = vp.split("x").map(Number); return w <= 430 || (w <= 932 && h <= 430) ? "movil" : w <= 1024 ? "tableta" : "escritorio"; };
+// Promedio con un decimal.
 const mean = (xs) => (xs.length ? Math.round((xs.reduce((s, x) => s + x, 0) / xs.length) * 10) / 10 : 0);
+// Mediana.
 const med = (xs) => { const s = [...xs].sort((a, b) => a - b); return s.length ? s[Math.floor(s.length / 2)] : 0; };
 console.log(`## ${label}: ${rows.length} vistas medidas`);
 console.log("grupo".padEnd(11), "n".padStart(4), "desbord".padStart(7), "cortes".padStart(6), "choques".padStart(7), "txt peq.".padStart(8), "tap<24".padStart(6), "tap<36".padStart(6), "iosZoom".padStart(7), "chrome% med".padStart(11), "chrome% max".padStart(11));

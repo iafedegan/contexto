@@ -1,8 +1,11 @@
 import fs from "node:fs"; import path from "node:path";
 // uso: node scripts/responsive-audit/report.mjs <tanda> <archivo.ndjson> [summary|detail]
 const [run, name, mode = "summary"] = process.argv.slice(2);
+// Archivo de resultados a resumir.
 const file = path.join(path.resolve(process.env.AUDIT_OUT || ".audit"), "data", run, name);
+// Filas de resultados con auditoría.
 const rows = fs.readFileSync(file, "utf8").trim().split("\n").filter(Boolean).map((l) => JSON.parse(l)).filter((r) => r.a);
+// Orden en que se muestran los tamaños de pantalla.
 const order = ["320x568","360x740","375x667","390x844","430x932","667x375","844x390","768x1024","820x1180","1024x768","1024x1366","1280x720","1440x900","1920x1080","2560x1440"];
 rows.sort((x, y) => x.route.localeCompare(y.route) || order.indexOf(x.vp) - order.indexOf(y.vp));
 if (mode === "summary") {

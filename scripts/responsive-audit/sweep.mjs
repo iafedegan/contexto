@@ -3,14 +3,21 @@ import fs from "node:fs";
 import path from "node:path";
 import { launch, entrar, setVp, visit, audit, alargarTitulares, writeLine, readLines, sleep, publicarPlantilla, filmstrip, DATA, SHOTS } from "./lib.mjs";
 
+// Especificación de la corrida.
 const spec = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+// Archivo de resultados.
 const out = path.join(DATA, `${spec.name}.ndjson`);
 if (!spec.append && !spec.resume) fs.writeFileSync(out, "");
+// Combinaciones ya auditadas, para reanudar.
 const done = new Set(spec.resume ? readLines(out).filter((r) => r.a).map((r) => r.route + "|" + r.vp) : []);
+// Capturas pedidas.
 const shotSet = new Set((spec.shots || []).map((s) => s.route + "@" + s.vp));
+// Indica si se capturan todas las pantallas.
 const shotAll = spec.shotAll === true;
 
+// Navegador y página en uso.
 let browser, page;
+// Abre el navegador y entra al panel si hace falta.
 async function start() {
   if (browser) { try { await browser.close(); } catch {} }
   ({ browser, page } = await launch());
@@ -29,6 +36,7 @@ if (spec.template && !spec.resume) {
   console.log("plantilla", spec.template, ok ? "publicada" : "NO ENCONTRADA");
 }
 
+// Recorre la página hacia abajo para activar lo que carga al desplazarse.
 async function autoScroll() {
   await page.evaluate(async () => {
     await new Promise((res) => { let y = 0; const step = () => { window.scrollBy(0, 700); y += 700; if (y < document.documentElement.scrollHeight && y < 30000) setTimeout(step, 60); else res(); }; step(); });
@@ -37,6 +45,7 @@ async function autoScroll() {
   await page.evaluate(() => window.scrollTo(0, 0)); await sleep(300);
 }
 
+// Audita una ruta en un tamaño de pantalla.
 async function one(route, vpKey, ri, vi) {
   await setVp(page, vpKey);
   const v = await visit(page, route.url, { wait: route.wait ?? 1300, ip: `10.${spec.ipBase ?? 1}.${ri}.${vi}` });
@@ -66,6 +75,7 @@ async function one(route, vpKey, ri, vi) {
   writeLine(out, { theme: spec.theme || null, route: route.id, url: route.url, vp: vpKey, status: v.status, errs: v.errs, err, a, scrolled, shot });
 }
 
+// Recorre todas las rutas y tamaños de pantalla, guardando cada resultado.
 let ri = 0, n = 0; const total = spec.routes.length * spec.vps.length; const t0 = Date.now();
 for (const route of spec.routes) {
   ri++; let vi = 0;

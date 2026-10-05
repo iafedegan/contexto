@@ -7,6 +7,7 @@ import { eq } from "drizzle-orm";
 import type { db as DbType } from "./index";
 import * as schema from "./schema";
 
+// Base de datos de cualquiera de los dos drivers.
 type AnyDb = typeof DbType;
 
 /**
@@ -71,8 +72,10 @@ const PARENT_CATS = [
   { slug: "radio", name: "Radio", description: "Emisora, transmisiones y pódcast del sector.", sortOrder: 14 },
 ];
 
+// Dirección de una categoría principal.
 type ParentSlug = (typeof PARENT_CATS)[number]["slug"];
 
+// Subcategorías de ejemplo con su categoría principal.
 const CHILD_CATS: Array<{
   slug: string;
   name: string;
@@ -143,6 +146,7 @@ const CHILD_CATS: Array<{
   { slug: "gobierno-petro", name: "Gobierno Petro", description: "Seguimiento a la política agropecuaria del gobierno.", legacyPaths: ["/gobierno-petro"], sortOrder: 5, parent: "especiales" },
 ];
 
+// Notas de ejemplo que se cargan en la demostración.
 const ARTICLES: Array<{
   slug: string;
   title: string;
@@ -261,6 +265,7 @@ const ARTICLES: Array<{
   },
 ];
 
+// Registros de ejemplo del archivo histórico simulado.
 const ARCHIVE: Array<{
   externalId: string;
   title: string;
@@ -310,6 +315,7 @@ const ARCHIVE: Array<{
   },
 ];
 
+// Carga los datos de ejemplo si la base está vacía; devuelve si los creó.
 export async function seed(db: AnyDb): Promise<{ created: boolean }> {
   const existing = await db.select({ id: schema.articles.id }).from(schema.articles).limit(1);
   if (existing.length > 0) return { created: false };
@@ -345,6 +351,7 @@ export async function seed(db: AnyDb): Promise<{ created: boolean }> {
   // --- Taxonomía (padres primero, luego hijas con parentId) ---
   await db.insert(schema.categories).values(PARENT_CATS).onConflictDoNothing();
   const parents = await db.select().from(schema.categories);
+  // Id de una categoría principal por su dirección.
   const parentId = (slug: string) => parents.find((c) => c.slug === slug)?.id ?? null;
   await db
     .insert(schema.categories)
@@ -376,7 +383,9 @@ export async function seed(db: AnyDb): Promise<{ created: boolean }> {
 
   const cats = await db.select().from(schema.categories);
   const authors = await db.select().from(schema.authors);
+  // Id de una categoría por su dirección.
   const catId = (slug: string) => cats.find((c) => c.slug === slug)?.id ?? null;
+  // Id de un autor por su dirección.
   const authorId = (slug: string) => authors.find((a) => a.slug === slug)?.id ?? null;
 
   // --- Artículos ---

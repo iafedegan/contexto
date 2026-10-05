@@ -3,12 +3,17 @@
 import fs from "node:fs";
 import path from "node:path";
 
+// Carpeta donde se escriben las especificaciones.
 const out = path.join(path.resolve(process.env.AUDIT_OUT || ".audit"), "specs");
 fs.mkdirSync(out, { recursive: true });
+// Nota de ejemplo para auditar.
 const ART = `/articulo/${process.env.AUDIT_ARTICLE || "precio-novillo-gordo-sube-4-por-ciento-en-medellin"}`;
+// Sección de ejemplo para auditar.
 const CAT = `/categoria/${process.env.AUDIT_CATEGORY || "ganaderia"}`;
+// Crea la definición de una ruta.
 const r = (id, url, extra = {}) => ({ id, url, ...extra });
 
+// Rutas públicas que se auditan.
 const PUBLICAS = [
   r("home", "/"), r("categoria", CAT), r("articulo", ART), r("autor", "/autor/redaccion"), r("buscar", "/buscar"), r("buscar-q", "/buscar?q=ganado"),
   r("asistente", "/asistente"), r("boletin", "/boletin"), r("boletin-confirmar", "/boletin/confirmar"), r("boletin-baja", "/boletin/baja"), r("contacto", "/contacto"),
@@ -16,9 +21,12 @@ const PUBLICAS = [
   r("editorial", "/politica-editorial"), r("faq", "/preguntas-frecuentes"), r("quienes", "/quienes-somos"), r("terminos", "/terminos-y-condiciones"), r("offline", "/offline"),
   r("404", "/esta-ruta-no-existe"), r("en-home", "/en"), r("en-articulo", `/en${ART}`), r("en-boletin", "/en/boletin"),
 ];
+// Tamaños de pantalla principales.
 const CORE = ["390x844", "320x568", "768x1024", "1440x900", "375x667", "430x932", "1024x768", "1280x720", "1920x1080"];
+// Capturas que se toman.
 const shots = ["home", "categoria", "articulo", "buscar", "boletin", "contacto", "quienes", "asistente"].flatMap((route) => ["390x844", "768x1024", "1440x900"].map((vp) => ({ route, vp })));
 
+// Escribe una especificación en disco.
 const write = (name, spec) => fs.writeFileSync(path.join(out, `${name}.json`), JSON.stringify({ name, ...spec }, null, 1));
 
 // 1) Todas las páginas públicas con la plantilla activa
@@ -26,6 +34,7 @@ write("publico", { vps: CORE, routes: PUBLICAS, shots, ipBase: 1 });
 
 // 2) Las seis plantillas (se publica cada una desde el editor: necesita la sesión del panel)
 const PLANTILLAS = { esmeralda: "Esmeralda Real", clasico: "Clásico", revista: "Revista", compacto: "Compacto", vanguardia: "Vanguardia", gremial: "Gremial" };
+// Rutas clave para las pruebas rápidas.
 const CLAVE = PUBLICAS.filter((x) => ["home", "categoria", "articulo", "buscar", "boletin", "quienes"].includes(x.id));
 Object.entries(PLANTILLAS).forEach(([id, label], n) => {
   write(`plantilla-${id}`, {

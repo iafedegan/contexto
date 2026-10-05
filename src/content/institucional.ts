@@ -12,13 +12,16 @@
 
 import type { Locale } from "@/lib/i18n";
 
+// Bloque de un documento: párrafo, lista, título u otro.
 export type Bloque =
   | { tipo: "parrafo"; texto: string }
   | { tipo: "lista"; items: string[] }
   | { tipo: "datos"; items: { etiqueta: string; valor: string; href?: string }[] };
 
+// Sección de un documento con sus bloques.
 export type Seccion = { id: string; titulo: string; bloques: Bloque[] };
 
+// Documento institucional: política, términos, quiénes somos…
 export type DocumentoInstitucional = {
   slug: string;
   /** Formulario que se inserta al final, si aplica. */
@@ -29,8 +32,10 @@ export type DocumentoInstitucional = {
   secciones: Record<Locale, Seccion[]>;
 };
 
+// Fecha de la última actualización de los documentos.
 const ACTUALIZADO = "22 de septiembre de 2026";
 
+// Textos de las páginas institucionales en español e inglés.
 export const DOCUMENTOS: DocumentoInstitucional[] = [
   // ------------------------------------------------------------- Contacto
   {
@@ -1001,8 +1006,10 @@ export const DOCUMENTOS: DocumentoInstitucional[] = [
   },
 ];
 
+// Direcciones de todos los documentos.
 export const DOC_SLUGS = DOCUMENTOS.map((d) => d.slug);
 
+// Busca un documento institucional por su dirección.
 export function documento(slug: string): DocumentoInstitucional | undefined {
   return DOCUMENTOS.find((d) => d.slug === slug);
 }

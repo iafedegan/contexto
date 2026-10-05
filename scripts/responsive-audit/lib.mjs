@@ -8,8 +8,11 @@ import { createRequire } from "node:module";
 import fs from "node:fs";
 import path from "node:path";
 
+// Permite cargar paquetes de CommonJS desde un módulo.
 const require = createRequire(import.meta.url);
+// Librería para controlar Chrome (se carga al usarla).
 let puppeteer;
+// Generador de códigos de segundo factor (se carga al usarlo).
 let generateSync;
 try {
   puppeteer = require("puppeteer-core");
@@ -19,12 +22,18 @@ try {
 }
 ({ generateSync } = require("otplib"));
 
+// Dirección del sitio que se audita.
 export const BASE = process.env.AUDIT_BASE_URL || "http://localhost:3000";
+// Nombre de la corrida, para separar resultados.
 export const RUN = process.env.AUDIT_RUN || "run";
+// Carpeta de salida de los resultados.
 export const OUT = path.resolve(process.env.AUDIT_OUT || ".audit");
+// Carpeta de datos de esta corrida.
 export const DATA = path.join(OUT, "data", RUN);
+// Carpeta de capturas de esta corrida.
 export const SHOTS = path.join(DATA, "shots");
 fs.mkdirSync(SHOTS, { recursive: true });
+// Ruta del navegador Chrome: la de la variable o la primera que exista.
 const CHROME = process.env.CHROME_PATH || [
   "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
   "/usr/bin/google-chrome",
@@ -32,9 +41,13 @@ const CHROME = process.env.CHROME_PATH || [
   "/usr/bin/chromium",
 ].find((p) => fs.existsSync(p));
 
+// Pausa asíncrona en milisegundos.
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+// Identificación de un navegador de escritorio.
 export const UA_DESK = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+// Identificación de un iPhone.
 export const UA_IOS = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1";
+// Identificación de un iPad.
 export const UA_IPAD = "Mozilla/5.0 (iPad; CPU OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1";
 
 /** Catálogo de pantallas: el tipo decide el user-agent y si hay táctil (pointer: coarse). */
@@ -58,6 +71,7 @@ export const VP = {
   "3440x1440": { w: 3440, h: 1440, kind: "desktop" },
 };
 
+// Abre Chrome y una página nueva.
 export async function launch() {
   if (!CHROME) { console.error("No encuentro Chrome: define CHROME_PATH."); process.exit(1); }
   const browser = await puppeteer.launch({ executablePath: CHROME, headless: "new", args: ["--no-sandbox"] });
@@ -67,6 +81,7 @@ export async function launch() {
   return { browser, page };
 }
 
+// Ajusta el tamaño de pantalla y el tipo de dispositivo.
 export async function setVp(page, key) {
   const v = VP[key];
   const phone = v.kind.startsWith("phone");
@@ -111,7 +126,9 @@ export function auditFn() {
   res.viewportMeta = meta ? meta.content : null;
   // «details» cerrados: su contenido no se ve (pero conserva caja): no cuenta.
   const skip = (el) => !!el.closest("nextjs-portal, script, style, noscript, #cg-hint, [data-audit-ignore]") || (!!el.closest("details:not([open])") && !el.closest("summary") && el.tagName !== "SUMMARY");
+  // Indica si un elemento es visible.
   const vis = (cs, r) => cs.display !== "none" && cs.visibility !== "hidden" && parseFloat(cs.opacity) > 0.02 && r.width > 0 && r.height > 0;
+  // Selector corto de un elemento.
   const sel = (el) => {
     let s = el.tagName.toLowerCase();
     if (el.id) s += "#" + el.id;
@@ -119,8 +136,11 @@ export function auditFn() {
     if (c) s += "." + c;
     return s.slice(0, 70);
   };
+  // Ruta corta del elemento dentro del documento.
   const path = (el) => { const parts = []; let e = el; for (let i = 0; i < 4 && e && e !== document.body; i++, e = e.parentElement) parts.unshift(sel(e)); return parts.join(" > "); };
+  // Texto o etiqueta accesible de un elemento.
   const txt = (el) => (el.innerText || el.getAttribute("aria-label") || el.getAttribute("title") || el.getAttribute("alt") || "").trim().replace(/\s+/g, " ").slice(0, 40);
+  // Indica si el elemento está dentro de uno de posición fija.
   const hasFixedAncestor = (el) => { for (let e = el; e && e !== document.body; e = e.parentElement) { if (getComputedStyle(e).position === "fixed") return true; } return false; };
 
   const all = [...document.body.querySelectorAll("*")];
@@ -334,10 +354,13 @@ export function auditFn() {
   return res;
 }
 
+// Visita una dirección y recoge los errores de consola.
 export async function visit(page, url, { wait = 1200, ip = null } = {}) {
   const errs = [];
   await page.setExtraHTTPHeaders(ip ? { "x-forwarded-for": ip } : {});
+  // Registra los errores de la página.
   const onErr = (e) => errs.push("pageerror: " + String(e.message).slice(0, 140));
+  // Registra los mensajes de error de la consola.
   const onCon = (m) => { if (m.type() === "error") errs.push(m.text().slice(0, 140)); };
   page.on("pageerror", onErr); page.on("console", onCon);
   let status = null;
@@ -373,8 +396,11 @@ export async function alargarTitulares(page, n = 130) {
   }, n);
 }
 
+// Ejecuta la auditoría de adaptabilidad en la página.
 export const audit = (page) => page.evaluate(auditFn);
+// Agrega una línea JSON a un archivo.
 export function writeLine(file, obj) { fs.appendFileSync(file, JSON.stringify(obj) + "\n"); }
+// Lee un archivo de líneas JSON.
 export function readLines(file) { return fs.existsSync(file) ? fs.readFileSync(file, "utf8").trim().split("\n").filter(Boolean).map((l) => JSON.parse(l)) : []; }
 
 /** Capturas al ritmo de un lector: una pantalla por scroll (las animaciones de entrada ya se dispararon). */

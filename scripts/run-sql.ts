@@ -6,18 +6,21 @@ import "dotenv/config";
 import { readFileSync } from "node:fs";
 import postgres from "postgres";
 
+// Archivo SQL a ejecutar.
 const file = process.argv[2];
 if (!file) {
   console.error("Falta la ruta del archivo .sql");
   process.exit(1);
 }
 
+// Conexión a la base de datos.
 const url = process.env.DATABASE_URL;
 if (!url) {
   console.error("Falta DATABASE_URL");
   process.exit(1);
 }
 
+// Cliente de una sola conexión.
 const sql = postgres(url, { max: 1 });
 
 try {

@@ -9,20 +9,29 @@
 // hash en el nombre, así que nunca quedan desactualizados).
 
 const VERSION = new URL(self.location.href).searchParams.get("v") || "dev";
+// Caché de la estructura mínima de la aplicación, con la versión del despliegue.
 const SHELL_CACHE = `cg-shell-${VERSION}`;
+// Caché de páginas visitadas.
 const PAGES_CACHE = "cg-pages";
+// Caché de imágenes.
 const IMAGES_CACHE = "cg-images";
+// Caché de archivos estáticos de la compilación.
 const ASSETS_CACHE = "cg-assets";
 // Índice de notas descargadas (títulos) para listarlas en /offline.
 const META_CACHE = "cg-meta";
+// Dirección interna del índice de notas descargadas.
 const OFFLINE_INDEX = "/__offline-index";
+// Página que se muestra sin conexión.
 const OFFLINE_URL = "/offline";
 
 // Límites de espacio: lo más antiguo sale primero.
 const MAX_PAGES = 60;
+// Máximo de imágenes guardadas.
 const MAX_IMAGES = 80;
+// Máximo de archivos estáticos guardados.
 const MAX_ASSETS = 200;
 
+// Archivos que se guardan al instalar el Service Worker.
 const APP_SHELL = [OFFLINE_URL, "/manifest.webmanifest"];
 
 // Rutas que nunca deben servirse desde caché (editorial/autenticado/IA/streams).
@@ -38,6 +47,7 @@ const NEVER_CACHE_PREFIXES = [
   "/api/offline",
 ];
 
+// Indica si una ruta no debe guardarse nunca en caché.
 function isNeverCache(pathname) {
   return NEVER_CACHE_PREFIXES.some((p) => pathname.startsWith(p));
 }
@@ -98,6 +108,7 @@ self.addEventListener("fetch", (event) => {
   }
 });
 
+// Navegación: primero la red; si falla, la copia guardada o la página sin conexión.
 async function networkFirstNavigation(request) {
   const cache = await caches.open(PAGES_CACHE);
   try {
@@ -115,6 +126,7 @@ async function networkFirstNavigation(request) {
   }
 }
 
+// Imagen optimizada: primero la caché; si no está, la red; sin red, la original descargada.
 async function optimizedImage(request, url) {
   const cache = await caches.open(IMAGES_CACHE);
   const cached = await cache.match(request);
@@ -133,6 +145,7 @@ async function optimizedImage(request, url) {
   }
 }
 
+// Responde con lo guardado y lo actualiza en segundo plano.
 async function staleWhileRevalidate(request, cacheName, max) {
   const cache = await caches.open(cacheName);
   const cached = await cache.match(request);
@@ -166,6 +179,7 @@ self.addEventListener("message", (event) => {
   if (event.data && event.data.type === "sync-offline") event.waitUntil(syncOffline());
 });
 
+// Descarga las páginas e imágenes de las últimas notas para leer sin conexión.
 async function syncOffline() {
   if (syncing) return;
   syncing = true;
