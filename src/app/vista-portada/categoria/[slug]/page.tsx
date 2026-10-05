@@ -7,10 +7,13 @@ import { makePage } from "@/app/(public)/_pages/categoria";
  * y pie), para verla y ajustarla dentro del lienzo. Solo editores; no indexable.
  */
 export const dynamic = "force-dynamic";
+// Título de la página; no se indexa en buscadores.
 export const metadata: Metadata = { title: "Vista previa de sección", robots: { index: false, follow: false } };
 
+// Página de sección reutilizada para la vista previa del editor.
 const Categoria = makePage("es");
 
+// Vista previa de una sección dentro del editor de portada.
 export default async function Page(props: {
   params: Promise<{ slug: string }>;
   searchParams: Promise<{ subcategoria?: string; desde?: string; hasta?: string; pagina?: string; popup?: string }>;

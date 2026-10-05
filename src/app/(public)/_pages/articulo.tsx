@@ -25,6 +25,7 @@ import { PREFIJO_IMAGEN_IA } from "@/lib/ai-image";
 /** Artículo — plantilla «Marfil & Burdeos». */
 export const revalidate = 3600;
 
+// Parámetros de la ruta: la dirección de la nota.
 type Params = { params: Promise<{ slug: string }> };
 
 /**
@@ -44,6 +45,7 @@ export async function generateStaticParams() {
   return [];
 }
 
+// Metadatos de la nota: título, descripción, canónica y datos para redes.
 async function generateMetadataImpl({ params }: Params): Promise<Metadata> {
   const { slug } = await params;
   const a = await getPublishedArticleBySlug(slug).catch(() => null);
@@ -51,6 +53,7 @@ async function generateMetadataImpl({ params }: Params): Promise<Metadata> {
   return articleMetadata({ ...a, authorName: a.authorName, categoryName: a.categoryName });
 }
 
+// Página de una nota publicada: cuerpo saneado, autor, relacionados y datos estructurados; 404 si no existe.
 async function ArticlePage({ params, locale }: Params & { locale: Locale }) {
   const { slug } = await params;
   const a = await getPublishedArticleBySlug(slug).catch(() => null);

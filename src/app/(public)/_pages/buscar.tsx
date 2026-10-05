@@ -16,6 +16,7 @@ export const metadata: Metadata = {
   robots: { index: false, follow: true }, // resultados de búsqueda no se indexan
 };
 
+// Búsquedas de ejemplo que se sugieren cuando no hay consulta.
 const SUGERENCIAS = [
   "precio del novillo gordo",
   "sistemas silvopastoriles",
@@ -23,10 +24,12 @@ const SUGERENCIAS = [
   "exportaciones de carne",
 ];
 
+// Parámetros de la búsqueda: texto, sección y rango de fechas.
 type SP = {
   searchParams: Promise<{ q?: string; seccion?: string; desde?: string; hasta?: string }>;
 };
 
+// Página de búsqueda: resultados del índice unificado con filtros por sección y fechas.
 async function SearchPage({ searchParams, locale }: SP & { locale: Locale }) {
   const { q = "", seccion = "", desde = "", hasta = "" } = await searchParams;
   const query = q.trim();

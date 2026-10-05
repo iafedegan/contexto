@@ -7,9 +7,12 @@ import { SiteShell } from "@/components/site-shell";
 import { getSiteTheme } from "@/lib/site-theme";
 import { verifyUnsubscribeToken } from "@/lib/newsletter/token";
 
+// Se calcula en cada petición, nunca durante la compilación.
 export const dynamic = "force-dynamic";
+// Título de la página; no se indexa en buscadores.
 export const metadata: Metadata = { title: "Darme de baja del boletín", robots: { index: false, follow: false } };
 
+// Acción que da de baja al suscriptor si el enlace está firmado correctamente.
 async function darDeBaja(formData: FormData) {
   "use server";
   const s = String(formData.get("s") ?? "");

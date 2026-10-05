@@ -8,12 +8,15 @@ import { NewsletterForm } from "@/components/newsletter-form";
 import { getSiteTheme } from "@/lib/site-theme";
 import { getSiteIdentity } from "@/lib/site-identity";
 
+// Se calcula en cada petición, nunca durante la compilación.
 export const dynamic = "force-dynamic";
+// Título y descripción de la página.
 export const metadata: Metadata = {
   title: "Free newsletter",
   description: "Subscribe for free to the newsletter: the most important cattle-sector news, straight to your inbox.",
 };
 
+// Beneficios que se muestran junto al formulario.
 const POINTS = [
   { icon: Newspaper, t: "The essentials, every edition", d: "A curated summary from the newsroom, no filler." },
   { icon: Mail, t: "At your pace", d: "It lands when we publish, without flooding your inbox." },

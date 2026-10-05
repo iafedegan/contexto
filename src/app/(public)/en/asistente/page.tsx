@@ -10,8 +10,10 @@ import type { Metadata } from "next";
 // Supabase desde el servidor de build y el despliegue caía por timeout.
 export const dynamic = "force-dynamic";
 
+// Título y descripción de la página; no se indexa si así lo indica.
 export const metadata: Metadata = {
   title: "Assistant",
   robots: { index: false, follow: true },
 };
+// Página: se construye con la plantilla compartida de su tipo.
 export default makePage("en");

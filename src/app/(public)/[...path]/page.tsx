@@ -13,6 +13,7 @@ import { redirects } from "@/db/schema";
  */
 export const dynamic = "force-dynamic";
 
+// Rutas que no existen: aplica las redirecciones antiguas (taxonomía legada y tabla redirects) o responde 404.
 export default async function CatchAll({ params }: { params: Promise<{ path: string[] }> }) {
   const { path } = await params;
   const fromPath = "/" + path.join("/");

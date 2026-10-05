@@ -19,7 +19,9 @@ import { auth } from "@/lib/auth";
 import { verifyPreviewToken } from "@/lib/preview-token";
 import { redirect } from "next/navigation";
 
+// Se calcula en cada petición, nunca durante la compilación.
 export const dynamic = "force-dynamic";
+// Título de la vista previa; no se indexa.
 export const metadata: Metadata = {
   title: "Vista previa",
   robots: { index: false, follow: false },

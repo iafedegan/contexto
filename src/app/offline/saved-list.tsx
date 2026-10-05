@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+// Nota guardada para leer sin conexión.
 type Saved = { slug: string; title: string };
 
 /**

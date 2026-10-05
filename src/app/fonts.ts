@@ -64,6 +64,7 @@ export const marcellus = Marcellus({ subsets: ["latin"], display: "swap", preloa
 /** Documentos institucionales — serif de cuerpo. */
 export const sourceSerif = Source_Serif_4({ subsets: ["latin"], display: "swap", preload: false, variable: "--f-source-serif" });
 
+// Variables CSS de todas las tipografías, para aplicarlas al documento.
 export const fontVariables = [
   playfair,
   interTight,

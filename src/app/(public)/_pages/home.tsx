@@ -31,6 +31,7 @@ import { formatMarketValue, getMarketTicker } from "@/lib/market-data";
  */
 export const revalidate = 300;
 
+// Portada: notas con el orden manual, plantilla elegida en el panel, anuncios y franja de indicadores.
 async function HomePage({ locale }: { locale: Locale }) {
   let articles: Awaited<ReturnType<typeof getHomepageArticles>> = [];
   let layout = DEFAULT_HOME_LAYOUT;

@@ -5,6 +5,7 @@ import { siteUrl } from "@/lib/utils";
 // Sitemap dinámico. Revalida con la misma cadencia que el contenido.
 export const dynamic = "force-dynamic";
 
+// Mapa del sitio: portada, páginas institucionales, secciones, autores y notas publicadas.
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base: MetadataRoute.Sitemap = [
     { url: siteUrl("/"), changeFrequency: "hourly", priority: 1 },

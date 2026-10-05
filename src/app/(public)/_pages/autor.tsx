@@ -12,8 +12,10 @@ import { siteUrl } from "@/lib/utils";
 /** Autor — plantilla «Champán & Perla». */
 export const revalidate = 3600;
 
+// Parámetros de la ruta: la dirección del autor.
 type Params = { params: Promise<{ slug: string }> };
 
+// Metadatos de la página del autor.
 async function generateMetadataImpl({ params }: Params): Promise<Metadata> {
   const { slug } = await params;
   const data = await getAuthorWithArticles(slug).catch(() => null);
@@ -25,6 +27,7 @@ async function generateMetadataImpl({ params }: Params): Promise<Metadata> {
   };
 }
 
+// Página de un autor con sus notas; 404 si no existe.
 async function AuthorPage({ params, locale }: Params & { locale: Locale }) {
   const { slug } = await params;
   const data = await getAuthorWithArticles(slug).catch(() => null);

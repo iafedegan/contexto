@@ -15,11 +15,14 @@ import { blockStylesCss } from "@/lib/home-style";
 /** Sección — plantilla «Cobre & Obsidiana». */
 export const revalidate = 600;
 
+// Parámetros de la ruta: la dirección de la sección.
 type Params = { params: Promise<{ slug: string }> };
 /** Filtros de la sección: subcategoría, rango de fechas y página. */
 type Query = Promise<{ subcategoria?: string; desde?: string; hasta?: string; pagina?: string }>;
+// Parámetros de la ruta y filtros de la dirección.
 type PageProps = Params & { searchParams?: Query };
 
+// Notas por página.
 const PAGE_SIZE = 24;
 
 /**
@@ -31,6 +34,7 @@ export async function generateStaticParams() {
   return [];
 }
 
+// Metadatos de la sección.
 async function generateMetadataImpl({ params }: Params): Promise<Metadata> {
   const { slug } = await params;
   const { category } = await getArticlesByCategory(slug, { limit: 1 }).catch(() => ({
@@ -50,6 +54,7 @@ async function generateMetadataImpl({ params }: Params): Promise<Metadata> {
   };
 }
 
+// Página de una sección: notas con filtros por subsección y fechas, y paginación; 404 si no existe.
 async function CategoryPage({ params, searchParams, locale }: PageProps & { locale: Locale }) {
   const { slug } = await params;
   const { subcategoria, desde, hasta, pagina } = (await searchParams) ?? {};
@@ -321,6 +326,7 @@ async function CategoryPage({ params, searchParams, locale }: PageProps & { loca
 }
 
 
+// Clases de los botones de paginación.
 const BOTON_PAG =
   "lx-ui grid min-h-11 min-w-11 place-items-center rounded-full border border-[var(--border)] px-3 text-sm transition hover:border-[var(--accent)] hover:text-[var(--accent)]";
 

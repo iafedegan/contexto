@@ -13,6 +13,7 @@ import { siteUrl } from "@/lib/utils";
  */
 export const dynamic = "force-dynamic";
 
+// Escapa los caracteres especiales de XML.
 function esc(s: string): string {
   return s
     .replace(/&/g, "&amp;")
@@ -21,6 +22,7 @@ function esc(s: string): string {
     .replace(/"/g, "&quot;");
 }
 
+// Mapa del sitio para Google Noticias: notas de las últimas 48 horas.
 export async function GET() {
   const identity = await getSiteIdentity().catch(() => null);
   const nombre = identity?.name ?? "CONtexto Ganadero";

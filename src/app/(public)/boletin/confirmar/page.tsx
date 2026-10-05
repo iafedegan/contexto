@@ -7,7 +7,9 @@ import { SiteShell } from "@/components/site-shell";
 import { RefineLocation } from "@/components/refine-location";
 import { getSiteTheme } from "@/lib/site-theme";
 
+// Se calcula en cada petición, nunca durante la compilación.
 export const dynamic = "force-dynamic";
+// Título de la página; no se indexa en buscadores.
 export const metadata: Metadata = { title: "Confirmar suscripción", robots: { index: false, follow: false } };
 
 /** Enlace del correo de confirmación (doble opt-in): al abrirlo, la suscripción queda activa. */

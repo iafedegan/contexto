@@ -15,6 +15,7 @@ import { documento, type Bloque } from "@/content/institucional";
 import { localePath, type Locale } from "@/lib/i18n";
 import Link from "next/link";
 
+// Crea la función de metadatos de una página institucional según su documento e idioma.
 export function makeMetadata(slug: string, locale: Locale) {
   return function generateMetadata(): Metadata {
     const doc = documento(slug);
@@ -28,6 +29,7 @@ export function makeMetadata(slug: string, locale: Locale) {
   };
 }
 
+// Crea la página de un documento institucional (política, términos, quiénes somos…).
 export function makePage(slug: string, locale: Locale) {
   return async function Page() {
     const doc = documento(slug);
@@ -104,6 +106,7 @@ export function makePage(slug: string, locale: Locale) {
   };
 }
 
+// Pinta un bloque de un documento institucional (párrafo, lista, título…).
 function BloqueVista({ bloque }: { bloque: Bloque }) {
   if (bloque.tipo === "parrafo") {
     return <p className="text-[1.02rem] leading-relaxed">{bloque.texto}</p>;

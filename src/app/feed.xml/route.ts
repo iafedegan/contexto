@@ -3,6 +3,7 @@ import { buildFeed, RSS_HEADERS } from "@/lib/rss";
 /** Feed RSS general: las últimas notas de todas las secciones, con texto completo. */
 export const dynamic = "force-dynamic";
 
+// Feed RSS general del sitio.
 export async function GET() {
   try {
     const feed = await buildFeed();

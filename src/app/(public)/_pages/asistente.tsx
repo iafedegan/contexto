@@ -11,6 +11,7 @@ export const metadata: Metadata = {
     "Asistente conversacional de CONtexto Ganadero: responde con base en el archivo completo del medio y cita cada fuente.",
 };
 
+// Página del asistente conversacional.
 async function AssistantPage({ locale }: { locale: Locale }) {
   const site = await getSiteTheme();
   return (

@@ -10,12 +10,14 @@ export const metadata: Metadata = {
     "Cómo trabaja la redacción de CONtexto Ganadero: verificación, uso de asistentes de IA y atribución de autoría.",
 };
 
+// Secciones del índice de la política editorial.
 const SECCIONES = [
   { id: "ia", label: "Uso de asistentes de IA" },
   { id: "asistente", label: "Asistente de consultas" },
   { id: "archivo", label: "Archivo histórico" },
 ];
 
+// Página de la política editorial y de uso de IA.
 async function PoliticaEditorial({ locale }: { locale: Locale }) {
   const site = await getSiteTheme();
   return (

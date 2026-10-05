@@ -10,6 +10,7 @@ import { siteUrl } from "@/lib/utils";
 // Supabase desde el servidor de build y el despliegue caía por timeout.
 export const dynamic = "force-dynamic";
 
+// Título y descripción de la página; no se indexa si así lo indica.
 export const metadata: Metadata = {
   title: "Suscríbete por RSS",
   description: "Recibe las noticias de CONtexto Ganadero en tu lector RSS: el feed general y uno por cada sección.",

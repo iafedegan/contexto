@@ -1,8 +1,10 @@
 import type { MetadataRoute } from "next";
 import { env } from "@/lib/env";
 
+// Nombre de la aplicación instalable.
 const SITE_NAME = env(process.env.NEXT_PUBLIC_SITE_NAME, "CONtexto Ganadero");
 
+// Manifiesto de la PWA: nombre, colores, íconos y modo de pantalla.
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name: `${SITE_NAME} — Noticias del sector ganadero colombiano`,

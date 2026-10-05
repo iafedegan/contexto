@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { SavedList } from "./saved-list";
 
+// Título de la página sin conexión.
 export const metadata: Metadata = {
   title: "Sin conexión",
   robots: { index: false, follow: false },

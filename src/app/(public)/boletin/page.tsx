@@ -8,12 +8,15 @@ import { NewsletterForm } from "@/components/newsletter-form";
 import { getSiteTheme } from "@/lib/site-theme";
 import { getSiteIdentity } from "@/lib/site-identity";
 
+// Se calcula en cada petición, nunca durante la compilación.
 export const dynamic = "force-dynamic";
+// Título y descripción de la página.
 export const metadata: Metadata = {
   title: "Boletín gratuito",
   description: "Suscríbete gratis al boletín: lo más importante del sector ganadero, directo a tu correo.",
 };
 
+// Beneficios que se muestran junto al formulario.
 const PUNTOS = [
   { icon: Newspaper, t: "Lo esencial de cada edición", d: "Un resumen curado por la redacción, sin relleno ni ruido." },
   { icon: Mail, t: "A tu ritmo", d: "Llega a tu correo cuando publicamos, sin saturar tu bandeja." },
