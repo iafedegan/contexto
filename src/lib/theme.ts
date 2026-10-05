@@ -1,3 +1,4 @@
+import { env } from "@/lib/env";
 /**
  * Temas de plantilla. Cada clave corresponde a un bloque `[data-theme="…"]`
  * en `globals.css` y a una variante de navbar/footer/tarjeta.
@@ -21,7 +22,7 @@ export type Theme =
   | "acceso";
 
 // Nombre del sitio, de la variable de entorno o el predeterminado.
-export const SITE_NAME = process.env.NEXT_PUBLIC_SITE_NAME ?? "CONtexto Ganadero";
+export const SITE_NAME = env(process.env.NEXT_PUBLIC_SITE_NAME, "CONtexto Ganadero");
 
 /** Nombre "de galería" del tema, visible en los footers como firma de diseño. */
 export const THEME_LABEL: Record<Theme, string> = {

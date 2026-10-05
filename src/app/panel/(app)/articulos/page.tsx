@@ -9,20 +9,13 @@ import { auth, requirePermiso } from "@/lib/auth";
 import { DeleteArticleButton } from "@/components/panel/delete-article-button";
 import { ArticleFilters } from "@/components/panel/article-filters";
 import { SparklineZoom } from "@/components/panel/sparkline-zoom";
-import { dailySeries, hasDailyViews, nf, pctChange, siteWeekTotals, TODAY_CO } from "@/lib/article-stats";
+import { dailySeries, hasDailyViews, pctChange, siteWeekTotals, TODAY_CO } from "@/lib/article-stats";
 import { formatDate } from "@/lib/utils";
+import { nfCO as nf } from "@/lib/format";
+import { ESTADO_LABEL as STATUS_LABEL } from "@/lib/estados";
 
 // Se calcula en cada petición, nunca durante la compilación.
 export const dynamic = "force-dynamic";
-
-// Etiqueta en español de cada estado editorial.
-const STATUS_LABEL: Record<string, string> = {
-  borrador: "Borrador",
-  en_revision: "En revisión",
-  programado: "Programado",
-  publicado: "Publicado",
-  archivado: "Archivado",
-};
 
 // Estado editorial de una nota.
 type Status = (typeof articles.status.enumValues)[number];

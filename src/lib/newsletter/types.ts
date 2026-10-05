@@ -1,3 +1,5 @@
+import { EMAIL_RE } from "@/lib/validate";
+import { HEX6 as HEX } from "@/lib/validate";
 /**
  * Ajustes del boletín (sin "server-only": los usa también el formulario del
  * panel). Se guardan en `site_settings` con la clave `newsletter_settings`;
@@ -35,10 +37,6 @@ export const DEFAULT_NEWSLETTER_SETTINGS: NewsletterSettings = {
   subjectPrefix: "",
 };
 
-// Color hexadecimal de seis dígitos.
-const HEX = /^#[\da-f]{6}$/i;
-// Formato básico de una dirección de correo.
-const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 // Texto limpio y recortado al máximo; vacío si el valor no es texto.
 const str = (v: unknown, max: number) => (typeof v === "string" ? v.trim().slice(0, max) : "");
 
@@ -47,7 +45,7 @@ export function sanitizeNewsletterSettings(input: unknown): NewsletterSettings {
   const r = (input && typeof input === "object" ? input : {}) as Record<string, unknown>;
   const d = DEFAULT_NEWSLETTER_SETTINGS;
   // Correo válido en minúsculas, o vacío.
-  const email = (v: unknown) => (EMAIL.test(str(v, 160)) ? str(v, 160).toLowerCase() : "");
+  const email = (v: unknown) => (EMAIL_RE.test(str(v, 160)) ? str(v, 160).toLowerCase() : "");
   return {
     fromName: str(r.fromName, 80) || d.fromName,
     fromEmail: email(r.fromEmail),

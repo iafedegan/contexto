@@ -1,7 +1,5 @@
 import { cn } from "@/lib/utils";
-
-// Formato de números de Colombia.
-const nf = new Intl.NumberFormat("es-CO");
+import { nfCO as nf } from "@/lib/format";
 
 /** Mini-gráfica de barras (SVG, sin JS) para la tabla de artículos. */
 export function ViewsSparkline({ values, className }: { values: number[]; className?: string }) {

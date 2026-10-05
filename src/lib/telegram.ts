@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { siteSettings } from "@/db/schema";
 import { decryptSecret, encryptSecret } from "@/lib/secrets";
+import { escapeMinimo } from "@/lib/escape";
 
 /**
  * Cliente mínimo de la API de bots de Telegram. El token del bot vive en `TELEGRAM_BOT_TOKEN` (entorno) o, si no
@@ -73,7 +74,7 @@ export async function tg<T = unknown>(metodo: string, cuerpo: Record<string, unk
 }
 
 // Escapa los caracteres especiales para el formato HTML de Telegram.
-export const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+export const esc = escapeMinimo;
 
 // Un botón: texto y un dato de retorno o una dirección.
 export type Boton = { texto: string; dato?: string; url?: string };

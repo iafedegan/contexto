@@ -58,18 +58,11 @@ import { esVideo, ExtraerAudioError, extraerAudioDeVideo, partirWav } from "@/li
 import { aplicarTipo, decodeSpec, encodeSpec, renderChartSvg, svgDataUri, TIPOS_GRAFICA, type ChartSpec, type TipoGrafica } from "@/lib/chart-svg";
 import { InteractiveChart } from "@/components/interactive-chart";
 import { auditArticle, scoreLabel, type AuditItem, type AuditResult } from "@/lib/seo-audit";
+import { escapeMinimo as escapeHtml } from "@/lib/escape";
+import { ESTADO_LABEL as STATUS_LABEL } from "@/lib/estados";
 
 // Opción de un selector: id y nombre.
 type Option = { id: string; name: string };
-
-// Etiqueta en español de cada estado editorial.
-const STATUS_LABEL: Record<string, string> = {
-  borrador: "Borrador",
-  en_revision: "En revisión",
-  programado: "Programado",
-  publicado: "Publicado",
-  archivado: "Archivado",
-};
 
 // Datos iniciales de la nota que abre el asistente.
 export type WizardInitial = {
@@ -129,10 +122,6 @@ function toText(html: string): string {
   if (/<[a-z/][^>]*>/i.test(t)) return html;
   return decode(t).replace(/\n{3,}/g, "\n\n").trim();
 }
-
-// Escapa los caracteres especiales de HTML.
-const escapeHtml = (s: string) =>
-  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
 /** Convierte las URL escritas a mano en enlaces. */
 const linkify = (s: string) =>

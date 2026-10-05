@@ -6,9 +6,8 @@
  */
 import type { Metadata } from "next";
 import { siteUrl } from "./utils";
+import { SITE_NAME } from "./theme";
 
-// Nombre del sitio para los metadatos y los datos estructurados.
-const SITE_NAME = process.env.NEXT_PUBLIC_SITE_NAME ?? "CONtexto Ganadero";
 // El logo del NewsArticle/Organization apuntaba a /logo-512.png, un archivo
 // que nunca existió en public/ (404): Google Rich Results marcaba el schema
 // como inválido en cada nota. Es el logo real que ya usa el resto del sitio.

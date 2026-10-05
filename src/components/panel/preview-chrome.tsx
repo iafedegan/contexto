@@ -21,9 +21,7 @@ import type { ZoneBundle } from "@/components/panel/block-style-editor";
 import { SectionPanel } from "@/components/panel/section-panel";
 import { AdsPanel } from "@/components/panel/ads-panel";
 import type { AdDraft, AdsZoneRow } from "@/components/panel/ads-zone-form";
-
-// Recorta un texto con puntos suspensivos.
-const recortar = (t: string, n: number) => (t.length > n ? `${t.slice(0, n - 1).trimEnd()}…` : t);
+import { recortar } from "@/lib/format";
 
 /**
  * Marco de la pestaña «Vista previa»: barra con el estado y «Publicar cambios»

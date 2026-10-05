@@ -1,7 +1,5 @@
 import { cn } from "@/lib/utils";
-
-// Formato de números de Colombia.
-const nf = new Intl.NumberFormat("es-CO");
+import { nfCO as nf } from "@/lib/format";
 
 /** Gráfica de área suavizada (SVG puro, sin JS): línea, relleno degradado, rejilla y etiquetas de día. */
 export function AreaChart({ labels, values, className }: { labels: string[]; values: number[]; className?: string }) {

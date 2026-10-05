@@ -1,6 +1,7 @@
 import type { HomeStyle } from "@/db/schema";
 import { HOME_FONTS, homeFontFamily, type HomeTitleFont } from "@/lib/home-fonts";
 import { gradientCss, sanitizeGradient } from "@/lib/section-els";
+import { acotar as num, colorHex as hex } from "@/lib/validate";
 
 /**
  * Estilo de título fijado a mano en /panel/portada, resuelto a CSS. Compartido
@@ -53,14 +54,6 @@ export function homeStyleTitleCss(
 export function homeStyleImageScale(style: HomeStyle | null | undefined): number {
   return style?.imageScale ?? 100;
 }
-
-// Color hexadecimal válido de 3 o 6 dígitos.
-const HEX = /^#(?:[\da-f]{3}|[\da-f]{6})$/i;
-// Devuelve el color si es válido; si no, undefined.
-const hex = (v: unknown) => (typeof v === "string" && HEX.test(v) ? v : undefined);
-// Valida un número y lo acota al rango dado, redondeado al entero.
-const num = (v: unknown, min: number, max: number) =>
-  typeof v === "number" && Number.isFinite(v) ? Math.min(max, Math.max(min, Math.round(v))) : undefined;
 
 /** Valida el estilo de una tarjeta antes de guardarlo o de convertirlo en CSS. */
 export function sanitizeHomeStyle(input: unknown): HomeStyle | null {

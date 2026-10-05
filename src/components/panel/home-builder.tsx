@@ -31,6 +31,7 @@ import { usePortadaHistory, type EditorSnap } from "@/components/panel/use-porta
 import type { PopupConfig } from "@/lib/popup-types";
 import { ACCEPTED_KEY, DRAFT_PING_KEY, ADS_EDIT_KEY, ITEMS_EDIT_KEY, LAYOUT_EDIT_KEY, SECCIONES_KEY, type PortadaDraft } from "@/lib/portada-draft";
 import type { Anterior, Item, Layout } from "@/components/panel/portada-types";
+import { recortar } from "@/lib/format";
 
 // Clave donde se recuerda que ya se mostró la guía.
 const GUIA_KEY = "cg:portada-guia-v1";
@@ -40,9 +41,6 @@ const PUBLICADO_KEY = "cg:portada-publicado";
 const AVISO_KEY = "cg:portada-aviso";
 /** Cómo se ve el lienzo (zoom, marco, ampliado): se recuerda entre visitas. */
 const VISTA_KEY = "cg:portada-vista";
-
-// Recorta un texto con puntos suspensivos.
-const recortar = (t: string, n: number) => (t.length > n ? `${t.slice(0, n - 1).trimEnd()}…` : t);
 
 /** «hace 5 min», «hace 2 h»… para el aviso de borrador pendiente. */
 function haceCuanto(iso: string): string {

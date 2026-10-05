@@ -13,9 +13,7 @@ import {
   setUserPermission,
   toggleUserActive,
 } from "@/app/panel/(app)/configuracion/actions";
-
-// Roles que se pueden asignar.
-const ROLES: UserRole[] = ["redactor", "editor", "administrador"];
+import { ROLES } from "@/lib/permisos";
 
 /**
  * Fila de persona. El cambio de rol se aplica al instante (sin botón de

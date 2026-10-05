@@ -136,5 +136,3 @@ export function pctChange(current: number, previous: number): number | null {
   return Math.round(((current - previous) / previous) * 100);
 }
 
-// Formateador de números con separadores de miles de Colombia.
-export const nf = new Intl.NumberFormat("es-CO");

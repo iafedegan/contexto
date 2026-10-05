@@ -5,50 +5,15 @@ import { sanitizeArticleHtml } from "@/lib/sanitize";
 import { redirect } from "next/navigation";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { articles, authors, categories } from "@/db/schema";
+import { articles } from "@/db/schema";
 import { canPublish, requirePermiso } from "@/lib/auth";
-import { embed } from "@/lib/embeddings";
 import { avisarSiUltimaHora } from "@/lib/push";
 import { slugify } from "@/lib/utils";
 import { autorDeUsuario } from "@/lib/user-authors";
 import { fijarPortadaCore, guardarBorradorCore, type BorradorInput } from "@/lib/article-ops";
 import { tienePermiso } from "@/lib/permisos-server";
 import { invalidarCache } from "@/lib/data-cache";
-
-/** Recalcula y persiste el embedding del artículo (= reindexación para el asistente). */
-async function reindex(articleId: string) {
-  const [a] = await db
-    .select({ title: articles.title, excerpt: articles.excerpt, body: articles.body })
-    .from(articles)
-    .where(eq(articles.id, articleId))
-    .limit(1);
-  if (!a) return;
-  const vec = await embed(`${a.title}\n\n${a.excerpt}\n\n${a.body.replace(/<[^>]+>/g, " ").slice(0, 6000)}`);
-  if (vec) await db.update(articles).set({ embedding: vec }).where(eq(articles.id, articleId));
-}
-
-// Descarta la caché de datos y las páginas afectadas por una nota: portada, sitemap, feed, la nota, su categoría y su autor.
-async function revalidateArticle(articleId: string) {
-  const [a] = await db
-    .select({
-      slug: articles.slug,
-      categorySlug: categories.slug,
-      authorSlug: authors.slug,
-    })
-    .from(articles)
-    .leftJoin(categories, eq(articles.categoryId, categories.id))
-    .leftJoin(authors, eq(articles.authorId, authors.id))
-    .where(eq(articles.id, articleId))
-    .limit(1);
-  if (!a) return;
-  invalidarCache();
-  revalidatePath("/");
-  revalidatePath("/sitemap.xml");
-  revalidatePath("/feed.xml");
-  revalidatePath(`/articulo/${a.slug}`);
-  if (a.categorySlug) revalidatePath(`/categoria/${a.categorySlug}`);
-  if (a.authorSlug) revalidatePath(`/autor/${a.authorSlug}`);
-}
+import { reindexarNota, revalidarNota } from "@/lib/article-ops";
 
 /**
  * Quién puede publicar: rol de editor o superior Y permiso «publicar». Es el mismo criterio para
@@ -124,7 +89,7 @@ export async function saveArticle(formData: FormData) {
     articleId = row.id;
   }
 
-  await reindex(articleId);
+  await reindexarNota(articleId);
   // Lugar en la portada del sitio (solo con permiso «portada»; «keep» o ausente = no tocar).
   const portadaPos = String(formData.get("portadaPos") ?? "keep");
   if ((portadaPos === "0" || portadaPos === "1" || portadaPos === "none") && (await tienePermiso(user.id, user.role, "portada"))) {
@@ -184,8 +149,8 @@ export async function publishArticle(articleId: string) {
     })
     .where(eq(articles.id, articleId));
 
-  await reindex(articleId);
-  await revalidateArticle(articleId);
+  await reindexarNota(articleId);
+  await revalidarNota(articleId);
   revalidatePath(`/panel/articulos/${articleId}`);
   avisarSiUltimaHora(articleId);
 }
@@ -211,7 +176,7 @@ export async function unpublishArticle(articleId: string) {
     .update(articles)
     .set({ status: "archivado", updatedAt: sql`now()` })
     .where(eq(articles.id, articleId));
-  await revalidateArticle(articleId);
+  await revalidarNota(articleId);
   revalidatePath(`/panel/articulos/${articleId}`);
 }
 
@@ -226,7 +191,7 @@ export async function deleteArticle(articleId: string): Promise<{ ok: boolean; m
   if (!a) return { ok: false, message: "Ese artículo ya no existe." };
 
   // Las rutas se invalidan ANTES: después ya no hay fila de la que leer slug, sección y autor.
-  await revalidateArticle(articleId);
+  await revalidarNota(articleId);
   await db.delete(articles).where(eq(articles.id, articleId));
   revalidatePath("/panel/articulos");
   revalidatePath("/panel");

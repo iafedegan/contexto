@@ -19,6 +19,7 @@ import { signPreviewToken } from "@/lib/preview-token";
 import { avisarNota, contarSuscriptores, notaYaAvisada, pushConfigurado } from "@/lib/push";
 import { siteUrl } from "@/lib/utils";
 import { subirImagenBytes } from "@/lib/media-upload";
+import { recortar as recorta } from "@/lib/format";
 
 /**
  * Bot de redacción por Telegram. Recorre el mismo asistente que el panel web, con los mismos nueve pasos y las mismas
@@ -86,8 +87,6 @@ function htmlDeTexto(t: string): string {
 }
 // Cuenta las palabras del cuerpo.
 const palabras = (html: string) => { const t = textoDeHtml(html).replace(/##/g, " ").trim(); return t ? t.split(/\s+/).length : 0; };
-// Recorta un texto a n caracteres con puntos suspensivos.
-const recorta = (t: string, n: number) => (t.length > n ? `${t.slice(0, n - 1).trimEnd()}…` : t);
 /** Contador de longitud como el del asistente web: ✅ dentro del rango ideal, ⚠️ fuera. */
 const contador = (len: number, min: number, max: number) => `${len} car. · ideal ${min}–${max} ${len >= min && len <= max ? "✅" : "⚠️"}`;
 

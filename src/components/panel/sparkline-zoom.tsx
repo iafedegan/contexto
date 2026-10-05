@@ -7,9 +7,7 @@ import { ViewsSparkline } from "@/components/panel/views-chart";
 import { fuentesDeNota } from "@/app/panel/(app)/articulos/fuentes-actions";
 import type { FuenteLectura } from "@/lib/view-sources";
 import { AreaChart } from "@/components/panel/dash-charts";
-
-// Formato de números de Colombia.
-const nf = new Intl.NumberFormat("es-CO");
+import { nfCO as nf } from "@/lib/format";
 
 /** Etiqueta «d mmm» del día `atras` días antes de hoy (hora de Colombia). */
 function etiqueta(atras: number): string {

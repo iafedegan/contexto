@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { articles, authors, categories } from "@/db/schema";
 import { env } from "@/lib/env";
 import { siteUrl } from "@/lib/utils";
+import { escapeXml as esc } from "@/lib/escape";
 
 /**
  * Feeds RSS 2.0 del sitio: el general (/feed.xml) y uno por sección
@@ -17,10 +18,6 @@ import { siteUrl } from "@/lib/utils";
  */
 
 const ITEMS = 40;
-
-// Escapa los caracteres especiales de XML.
-const esc = (s: string) =>
-  s.replace(/[<>&'"]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", "'": "&apos;", '"': "&quot;" })[c]!);
 
 /** CDATA seguro: `]]>` dentro del HTML cerraría la sección antes de tiempo. */
 const cdata = (s: string) => `<![CDATA[${s.replace(/]]>/g, "]]]]><![CDATA[>")}]]>`;

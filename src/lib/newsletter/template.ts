@@ -1,5 +1,6 @@
 import { siteUrl } from "@/lib/utils";
 import type { NewsletterSettings } from "@/lib/newsletter/types";
+import { escapeHtml as esc } from "@/lib/escape";
 
 /**
  * Correo del boletín. Maquetación con tablas y estilos en línea: es lo único
@@ -33,10 +34,6 @@ export type NewsletterRender = {
   /** Marca «prueba» arriba, para no confundirla con un envío real. */
   isTest?: boolean;
 };
-
-// Escapa los caracteres especiales de HTML.
-const esc = (s: string) =>
-  s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 
 // Convierte una dirección relativa en absoluta del sitio.
 const absolute = (u: string) => (/^https?:\/\//i.test(u) ? u : siteUrl(u.startsWith("/") ? u : `/${u}`));

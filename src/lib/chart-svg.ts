@@ -1,3 +1,5 @@
+import { escapeHtml as esc } from "@/lib/escape";
+import { nfCO2 as nf } from "@/lib/format";
 /**
  * Gráficas como SVG estático a partir de datos ya validados. Convenciones que
  * se respetan siempre: título y unidad explícitos, fuente al pie, barras desde
@@ -48,12 +50,6 @@ const FONT = "Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif";
 /** Recorta con puntos suspensivos (no en seco). */
 const cortar = (t: string, n: number) => (t.length > n ? `${t.slice(0, Math.max(1, n - 1)).trimEnd()}…` : t);
 
-// Escapa los caracteres especiales de HTML/SVG.
-const esc = (s: string) =>
-  s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
-
-// Formato numérico de Colombia, hasta dos decimales.
-const nf = new Intl.NumberFormat("es-CO", { maximumFractionDigits: 2 });
 /** 1 250 000 -> «1,3 M»; 12 000 -> «12 mil»; independiente de la versión de ICU del navegador. */
 function compact(n: number): string {
   const a = Math.abs(n);

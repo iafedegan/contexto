@@ -11,13 +11,14 @@ import { ArticleEditor } from "@/components/article-editor";
 import { ArticleWizard } from "@/components/panel/article-wizard";
 import { siteChrome } from "@/components/panel/site-chrome";
 import { ViewsBarChart } from "@/components/panel/views-chart";
-import { articleSeries, bestDay, nf, pctChange } from "@/lib/article-stats";
+import { articleSeries, bestDay, pctChange } from "@/lib/article-stats";
 import { formatDate } from "@/lib/utils";
 import {
   publishArticle,
   scheduleArticle,
   submitForReview,
 } from "@/app/panel/(app)/articulos/actions";
+import { nfCO as nf } from "@/lib/format";
 
 // Se calcula en cada petición, nunca durante la compilación.
 export const dynamic = "force-dynamic";

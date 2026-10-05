@@ -1,3 +1,4 @@
+import { acotar, HEX6 as HEX } from "@/lib/validate";
 /**
  * Ventana emergente (popup) del portal, diseñada en /panel/portada.
  * Sin "server-only": lo comparten el editor (cliente), el popup público y la
@@ -62,16 +63,13 @@ export const DEFAULT_POPUP: PopupConfig = {
   version: 1,
 };
 
-// Color hexadecimal de seis dígitos.
-const HEX = /^#[\da-f]{6}$/i;
 // Devuelve el valor si está entre las opciones permitidas; si no, el de defecto.
 const pick = <T extends string>(v: unknown, opts: readonly T[], def: T): T =>
   opts.includes(v as T) ? (v as T) : def;
 // Texto recortado al máximo; vacío si el valor no es texto.
 const str = (v: unknown, max: number) => (typeof v === "string" ? v.slice(0, max) : "");
 // Número válido acotado al rango y redondeado; el valor de defecto si no es un número.
-const num = (v: unknown, min: number, max: number, def: number) =>
-  typeof v === "number" && Number.isFinite(v) ? Math.min(max, Math.max(min, Math.round(v))) : def;
+const num = (v: unknown, min: number, max: number, def: number) => acotar(v, min, max) ?? def;
 /** Solo URLs http(s) o rutas propias: nada de `javascript:`. */
 const url = (v: unknown) => {
   const s = str(v, 600).trim();

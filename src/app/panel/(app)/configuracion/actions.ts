@@ -23,6 +23,7 @@ import {
 import { verifyApiKey } from "@/lib/ai-verify";
 import { encryptSecret } from "@/lib/secrets";
 import { invalidarCache } from "@/lib/data-cache";
+import { ROLES } from "@/lib/permisos";
 
 /** Guarda la identidad del sitio y refresca TODO el portal, que la consume. */
 export async function saveSiteIdentity(formData: FormData) {
@@ -199,9 +200,6 @@ export async function saveAssistantLimits(presupuesto: number, tope: number): Pr
 
 // Estado que se devuelve al formulario: si salió bien y el mensaje.
 export type CreateUserState = { ok: boolean; message: string } | null;
-
-// Roles que se pueden asignar.
-const ROLES: UserRole[] = ["redactor", "editor", "administrador"];
 
 /**
  * Alta de una persona nueva, con contraseña temporal que se le entrega a

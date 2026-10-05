@@ -12,9 +12,8 @@ import { buildMessage, nextIssueNumber, prepareRender, type EditionContent } fro
 import { sendMany } from "@/lib/newsletter/send";
 import { NEWSLETTER_KEY, NEWSLETTER_SECRET_KEY, getNewsletterSettings, getProviderStatus } from "@/lib/newsletter/settings";
 import { sanitizeNewsletterSettings, type NewsletterSettings } from "@/lib/newsletter/types";
+import { EMAIL_RE } from "@/lib/validate";
 
-// Formato básico de una dirección de correo.
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 // Refresca la pantalla del boletín.
 const REVALIDATE = () => revalidatePath("/panel/newsletter");
 

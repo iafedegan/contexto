@@ -1,5 +1,6 @@
 import type { Gradient, SectionElId, SectionElStyle } from "@/db/schema";
 import { HOME_FONTS, homeFontFamily, type HomeTitleFont } from "@/lib/home-fonts";
+import { acotar, colorHex as hex } from "@/lib/validate";
 
 /**
  * Cada elemento suelto del encabezado de una sección (migas, etiqueta, título,
@@ -27,13 +28,8 @@ export const EL_RANGES = {
 // Grosores de letra permitidos.
 export const WEIGHTS = [300, 400, 500, 600, 700, 800, 900] as const;
 
-// Color hexadecimal válido de 3 o 6 dígitos.
-const HEX = /^#(?:[\da-f]{3}|[\da-f]{6})$/i;
-// Devuelve el color si es válido; si no, undefined.
-const hex = (v: unknown) => (typeof v === "string" && HEX.test(v) ? v : undefined);
 // Valida un número y lo acota al rango dado, con un decimal.
-const clamp = (v: unknown, min: number, max: number) =>
-  typeof v === "number" && Number.isFinite(v) ? Math.min(max, Math.max(min, Math.round(v * 10) / 10)) : undefined;
+const clamp = (v: unknown, min: number, max: number) => acotar(v, min, max, 1);
 
 // Valida un degradado (dos colores y un ángulo); undefined si no es válido.
 export function sanitizeGradient(input: unknown): Gradient | undefined {

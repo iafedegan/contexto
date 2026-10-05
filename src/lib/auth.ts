@@ -12,7 +12,7 @@ import { verifyHuman } from "@/lib/turnstile";
 import { dispositivoDe, registrarAcceso } from "@/lib/login-log";
 import { verificarTokenPasskey } from "@/lib/passkey";
 import { tienePermiso } from "@/lib/permisos-server";
-import type { PermisoId } from "@/lib/permisos";
+import { RANGO, type PermisoId } from "@/lib/permisos";
 
 declare module "next-auth" {
   // Se amplía el tipo de sesión de Auth.js con el id y el rol de la persona.
@@ -188,19 +188,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
 // --- Autorización por rol ------------------------------------------------
 
-const ROLE_RANK: Record<UserRole, number> = {
-  redactor: 1,
-  editor: 2,
-  administrador: 3,
-};
-
 // Exige sesión vigente y un rol mínimo; cierra el paso a cuentas desactivadas o inexistentes y devuelve los datos de la persona.
 export async function requireRole(min: UserRole) {
   const session = await auth();
   // `motivo` lo muestra la pantalla de login: así un redireccionamiento al
   // login deja de ser un misterio (¿sesión vencida o cuenta no encontrada?).
   if (!session?.user) redirect("/panel/login?motivo=sesion");
-  if (ROLE_RANK[session.user.role] < ROLE_RANK[min]) throw new Error("SIN_PERMISO");
+  if (RANGO[session.user.role] < RANGO[min]) throw new Error("SIN_PERMISO");
 
   // La sesión JWT sobrevive a la cuenta: en local la BD se recrea en cada
   // arranque y los ids cambian, aunque el correo siga siendo el mismo. Se
@@ -222,7 +216,7 @@ export async function requireRole(min: UserRole) {
       .from(users)
       .where(eq(users.email, email))
       .limit(1);
-    if (byEmail?.active && ROLE_RANK[byEmail.role] >= ROLE_RANK[min]) {
+    if (byEmail?.active && RANGO[byEmail.role] >= RANGO[min]) {
       return { ...session.user, id: byEmail.id, role: byEmail.role };
     }
   }
@@ -245,5 +239,5 @@ export async function requirePermiso(id: PermisoId) {
 
 // Indica si el rol puede publicar: editor o superior.
 export function canPublish(role: UserRole): boolean {
-  return ROLE_RANK[role] >= ROLE_RANK.editor;
+  return RANGO[role] >= RANGO.editor;
 }

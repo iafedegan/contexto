@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { articles, categories } from "@/db/schema";
 import { getSiteIdentity } from "@/lib/site-identity";
 import { siteUrl } from "@/lib/utils";
+import { escapeXml as esc } from "@/lib/escape";
 
 /**
  * Sitemap de Google News (SEO-07).
@@ -12,15 +13,6 @@ import { siteUrl } from "@/lib/utils";
  * sitemap general no sirve para News, por eso va en su propia ruta.
  */
 export const dynamic = "force-dynamic";
-
-// Escapa los caracteres especiales de XML.
-function esc(s: string): string {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
 
 // Mapa del sitio para Google Noticias: notas de las últimas 48 horas.
 export async function GET() {

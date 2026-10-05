@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { escapeHtml as esc } from "@/lib/escape";
 
 // Punto del mapa: ubicación de un suscriptor.
 export type SubscriberPoint = {
@@ -18,9 +19,6 @@ export type SubscriberPoint = {
   accuracy: number | null;
   date: string | null;
 };
-
-// Escapa los caracteres especiales para usarlos en HTML.
-const esc = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
 // Hoja de estilos de Leaflet, cargada desde un CDN.
 const LEAFLET_CSS = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";

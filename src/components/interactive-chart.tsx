@@ -2,14 +2,13 @@
 
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { aplicarTipo, chartProblem, fmt, renderChartSvg, type ChartSpec, type TipoGrafica } from "@/lib/chart-svg";
+import { nfCO2 as nf } from "@/lib/format";
 
 // Globo informativo: posición, título y filas con color, nombre y valor.
 type Tip = { x: number; y: number; title: string; rows: { color: string; name: string; value: string }[] };
 
 // Colores de las series.
 const COLORS = ["#2dd4bf", "#a78bfa", "#f472b6", "#fbbf24"];
-// Formato de números de Colombia, hasta dos decimales.
-const nf = new Intl.NumberFormat("es-CO", { maximumFractionDigits: 2 });
 // Formatea una variación porcentual con signo.
 const pct = (n: number) => `${n >= 0 ? "+" : "−"}${new Intl.NumberFormat("es-CO", { maximumFractionDigits: 1 }).format(Math.abs(n))} %`;
 

@@ -1,9 +1,8 @@
 import "server-only";
 import { ImageResponse } from "next/og";
 import type { ChartSpec } from "@/lib/chart-svg";
+import { nfCO1 as nf } from "@/lib/format";
 
-// Formato de números con separadores de Colombia y un decimal.
-const nf = new Intl.NumberFormat("es-CO", { maximumFractionDigits: 1 });
 // Colores de las series: turquesa, violeta, rosa y ámbar.
 const COL = ["#2dd4bf", "#a78bfa", "#f472b6", "#fbbf24"];
 // Segundo color de cada serie, para los degradados.

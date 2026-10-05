@@ -3,6 +3,7 @@ import type { HomeTitleFont } from "@/lib/home-fonts";
 import { gradientCss, sanitizeGradient } from "@/lib/section-els";
 import { homeFontFamily } from "@/lib/home-fonts";
 import { derivePalette, mutedOf } from "@/lib/home-background";
+import { acotar, colorHex as color } from "@/lib/validate";
 
 /**
  * Estilo por COMPONENTE de la plantilla (navbar, hero, cuerpo, tarjetas, pie),
@@ -111,16 +112,8 @@ export const RANGES = {
   maxWidth: { min: 720, max: 1920, step: 40, unit: "px" },
 } as const;
 
-// Color hexadecimal válido de 3 o 6 dígitos.
-const HEX = /^#(?:[\da-f]{3}|[\da-f]{6})$/i;
-// Devuelve el color si es válido; si no, undefined.
-const color = (v: unknown) => (typeof v === "string" && HEX.test(v) ? v : undefined);
 // Valida un número y lo acota al rango de su ajuste.
-const num = (v: unknown, key: keyof typeof RANGES) => {
-  if (typeof v !== "number" || !Number.isFinite(v)) return undefined;
-  const r = RANGES[key];
-  return Math.min(r.max, Math.max(r.min, Math.round(v)));
-};
+const num = (v: unknown, key: keyof typeof RANGES) => acotar(v, RANGES[key].min, RANGES[key].max);
 
 /** Normaliza un valor de la BD a un `RegionStyles` seguro. */
 export function sanitizeRegions(input: unknown): RegionStyles {

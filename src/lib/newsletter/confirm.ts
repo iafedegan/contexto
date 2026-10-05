@@ -3,9 +3,7 @@ import { getSiteIdentity } from "@/lib/site-identity";
 import { getNewsletterSettings, getProviderStatus } from "@/lib/newsletter/settings";
 import { sendMany } from "@/lib/newsletter/send";
 import { siteUrl } from "@/lib/utils";
-
-// Escapa los caracteres especiales de HTML para insertar texto ajeno en el correo sin riesgo.
-const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
+import { escapeHtml as esc } from "@/lib/escape";
 
 /**
  * Correo de confirmación de la suscripción (doble opt-in): hasta que el lector

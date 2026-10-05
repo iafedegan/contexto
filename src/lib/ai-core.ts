@@ -12,7 +12,7 @@ import { esMimeVideo, FORMATOS_MEDIA, mimeMedia } from "@/lib/media-mime";
 import { materialParaPrompt, type Material } from "@/lib/material-types";
 import { registrarCostoIA, registrarUsoIA, verificarCuotaIA } from "@/lib/ai-cuota";
 import { aplicarTipo, chartProblem, renderChartSvg, TIPOS_GRAFICA, type ChartSpec, type TipoGrafica } from "@/lib/chart-svg";
-
+import { escapeHtml as esc } from "@/lib/escape";
 
 // Forma que debe tener el borrador que devuelve el modelo: título, resumen, cuerpo, ficha SEO, etiquetas, palabras clave y variantes de ficha.
 const draftSchema = z.object({
@@ -202,8 +202,6 @@ export async function generateArticleDraftCore(userId: string, input: {
 
 /** Cierra el cuerpo con las noticias de referencia enlazadas (señal de fuentes y evidencia). */
 function fuentesHtml(refs: { title: string; outlet: string; url: string; videoId?: string }[]): string {
-  // Escapa los caracteres especiales de HTML.
-  const esc = (t: string) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   const videos = refs.filter((r) => r.videoId && /^[\w-]{6,20}$/.test(r.videoId));
   const incrustados = videos.length
     ? `<h2>Videos relacionados</h2>${videos

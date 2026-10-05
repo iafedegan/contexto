@@ -13,6 +13,9 @@ import type { UserRole } from "@/db/schema";
 
 export const RANGO: Record<UserRole, number> = { redactor: 1, editor: 2, administrador: 3 };
 
+// Roles que se pueden asignar a una cuenta, de menor a mayor.
+export const ROLES: UserRole[] = ["redactor", "editor", "administrador"];
+
 // Catálogo de permisos con el rol mínimo que los tiene por defecto.
 export const PERMISOS = [
   { id: "articulos", label: "Redactar artículos", hint: "Crear y editar artículos y mandarlos a revisión", min: "redactor" },

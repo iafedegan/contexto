@@ -1,4 +1,5 @@
 import type { ZoneStyle } from "@/db/schema";
+import { acotar as clamp } from "@/lib/validate";
 
 /**
  * Zonas del cuerpo: el contenedor que agrupa varios bloques (p. ej. la lista
@@ -11,10 +12,6 @@ import type { ZoneStyle } from "@/db/schema";
 const KEY = /^(?:i\d{1,3}|s-[\w-]{1,120})(?:u[0-3])?$/;
 // Formato válido de columnas personalizadas, por ejemplo «2fr 1fr».
 const TPL = /^(?:\d+(?:\.\d+)?fr)(?:\s\d+(?:\.\d+)?fr){0,5}$/;
-
-// Valida un número y lo acota al rango dado.
-const clamp = (v: unknown, min: number, max: number) =>
-  typeof v === "number" && Number.isFinite(v) ? Math.min(max, Math.max(min, Math.round(v))) : undefined;
 
 // Valida los estilos de las zonas del cuerpo antes de guardarlos o pintarlos.
 export function sanitizeZones(input: unknown): Record<string, ZoneStyle> {

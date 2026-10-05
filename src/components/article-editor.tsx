@@ -36,6 +36,7 @@ import { analizarConGoogle } from "@/app/panel/(app)/articulos/seo-actions";
 import type { PsiReport } from "@/lib/psi-types";
 import { embedHtml, parseEmbed } from "@/lib/embeds";
 import { auditArticle, scoreLabel } from "@/lib/seo-audit";
+import { ESTADO_LABEL } from "@/lib/estados";
 
 // Opción de un selector: id y nombre.
 type Option = { id: string; name: string };
@@ -58,14 +59,7 @@ type Initial = {
 };
 
 // Etiqueta en español de cada estado editorial.
-const STATUS_LABEL: Record<string, string> = {
-  nuevo: "Nuevo",
-  borrador: "Borrador",
-  en_revision: "En revisión",
-  programado: "Programado",
-  publicado: "Publicado",
-  archivado: "Archivado",
-};
+const STATUS_LABEL: Record<string, string> = { nuevo: "Nuevo", ...ESTADO_LABEL };
 
 // Editor clásico de una nota: texto, portada, SEO con auditoría, acciones de publicación y generación con IA.
 export function ArticleEditor({

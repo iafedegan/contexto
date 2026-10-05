@@ -18,10 +18,11 @@ import {
 import { db } from "@/db";
 import { agentDrafts, articles, assistantQueries } from "@/db/schema";
 import { Card } from "@/components/ui";
-import { nf, pctChange, siteDailySeries, siteWeekTotals } from "@/lib/article-stats";
+import { pctChange, siteDailySeries, siteWeekTotals } from "@/lib/article-stats";
 import { AreaChart, Donut } from "@/components/panel/dash-charts";
 import { SubscriberMap } from "@/components/panel/subscriber-map";
 import { subscriberPoints as loadSubscriberPoints } from "@/lib/subscriber-map";
+import { nfCO as nf } from "@/lib/format";
 
 // Se calcula en cada petición, nunca durante la compilación.
 export const dynamic = "force-dynamic";

@@ -5,11 +5,10 @@ import { newsletterSubscribers } from "@/db/schema";
 import { guardApi, json, CORS_HEADERS } from "@/lib/api/guard";
 import { hit } from "@/lib/rate-limit";
 import { sendConfirmationEmail } from "@/lib/newsletter/confirm";
+import { EMAIL_RE } from "@/lib/validate";
 
 // Se calcula en cada petición, nunca durante la compilación.
 export const dynamic = "force-dynamic";
-// Formato básico de una dirección de correo.
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 /**
  * POST /api/v1/boletin/suscripcion — alta al boletín para integraciones de

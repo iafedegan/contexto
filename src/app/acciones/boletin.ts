@@ -21,12 +21,10 @@ import { clientIp, hit } from "@/lib/rate-limit";
 import { verifyHuman } from "@/lib/turnstile";
 import { sendConfirmationEmail } from "@/lib/newsletter/confirm";
 import { reverseGeocode, sourceFromAccuracy, validAccuracy, validCoords } from "@/lib/geo-reverse";
+import { EMAIL_RE } from "@/lib/validate";
 
 // Estado que se devuelve al formulario: si salió bien y el mensaje.
 export type BoletinState = { ok: boolean; message: string } | null;
-
-// Formato básico de una dirección de correo.
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 // Acción del formulario de suscripción: aplica las defensas (campo trampa, límites, verificación humana), guarda los datos y envía el correo de confirmación.
 export async function suscribirBoletin(
