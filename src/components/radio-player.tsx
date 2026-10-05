@@ -33,6 +33,7 @@ export function RadioPlayer({
     };
   }, []);
 
+  // Reproduce o pausa la emisora.
   async function alternar() {
     if (estado === "sonando") {
       audioRef.current?.pause();

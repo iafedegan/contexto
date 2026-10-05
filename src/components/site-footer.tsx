@@ -34,6 +34,7 @@ function toolLinks(locale: Locale) {
   ];
 }
 
+// Año en curso, para el aviso de derechos.
 const YEAR = new Date().getFullYear();
 
 
@@ -100,6 +101,7 @@ export function SiteFooter({
   }
 }
 
+// Propiedades del pie: tema, idioma, navegación e identidad.
 type FooterProps = {
   SITE_NAME: string;
   nav: NavItem[];
@@ -110,6 +112,7 @@ type FooterProps = {
   ARCHIVE_NOTE: string;
 };
 
+// Firma de diseño del pie.
 function Signature({ theme, locale = "es" }: { theme: Theme; locale?: Locale }) {
   return (
     <span className="lx-kicker text-[0.72rem] text-[var(--fg-muted)] opacity-70">
@@ -193,6 +196,7 @@ function GremialFooter({ nav, theme, locale, LEGAL, TOOLS, ARCHIVE_NOTE, SITE_NA
   );
 }
 
+// Columna de enlaces del pie.
 function FooterColumn({ title, items }: { title: string; items: NavItem[] }) {
   return (
     <div>
@@ -221,6 +225,7 @@ function esFichero(href: string): boolean {
   return /\.(xml|txt)$/.test(href);
 }
 
+// Enlace del pie.
 function FooterLink({
   href,
   className,

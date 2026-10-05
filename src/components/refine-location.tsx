@@ -14,12 +14,14 @@ export function RefineLocation({ token }: { token: string }) {
   const [state, setState] = useState<"idle" | "working" | "done" | "error">("idle");
   const auto = useRef(false);
 
+  // Envía la ubicación precisa al servidor.
   async function send(p: Pick<GeoPoint, "lat" | "lon" | "acc">) {
     setState("working");
     const res = await afinarUbicacion({ token, lat: p.lat, lon: p.lon, accuracy: p.acc });
     setState(res.ok ? "done" : "error");
   }
 
+  // Pide la ubicación al navegador y la envía si la persona acepta.
   async function pedir() {
     setState("working");
     if (!(await captureGeo())) return setState("error");

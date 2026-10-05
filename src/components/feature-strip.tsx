@@ -5,6 +5,7 @@ import { formatDate } from "@/lib/utils";
 import { CoverArt } from "@/components/cover-art";
 import { DEFAULT_LOCALE, INTL_LOCALE, localePath, t, type Locale } from "@/lib/i18n";
 
+// Elemento de la franja: etiqueta y nota.
 type Item = { label: string; article: ArticleListItem };
 
 /**

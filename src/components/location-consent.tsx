@@ -41,6 +41,7 @@ export function LocationConsent() {
 
   if (!open) return null;
 
+  // Pide la ubicación al navegador y la guarda si la persona acepta.
   async function permitir() {
     writeCookie(LOC_COOKIE, "granted", 365);
     setMsg("Buscando tu ubicación…");
@@ -49,6 +50,7 @@ export function LocationConsent() {
     setMsg("No pudimos obtener tu ubicación. Revisa el permiso del navegador.");
     setTimeout(() => setOpen(false), 4000);
   }
+  // Recuerda que la persona no quiere compartir su ubicación.
   function rechazar() {
     writeCookie(LOC_COOKIE, "denied", 90);
     setOpen(false);

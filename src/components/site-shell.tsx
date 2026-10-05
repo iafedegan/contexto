@@ -138,6 +138,7 @@ export async function navOverflow(locale: Locale = DEFAULT_LOCALE): Promise<NavI
   }
 }
 
+// Secciones principales del sitio para la navegación, traducidas al idioma.
 export async function navItems(locale: Locale = DEFAULT_LOCALE): Promise<NavItem[]> {
   try {
     // Solo las de primer nivel, y como mucho ocho (N-04): más opciones

@@ -5,9 +5,11 @@ import { Bell, Check, X } from "lucide-react";
 import { t, type Locale } from "@/lib/i18n";
 import { esPwaInstalada, renovarSuscripcion, soportaPush, suscribirPush } from "@/lib/push-client";
 
+// Clave donde se recuerda que la persona descartó los avisos.
 const NO_KEY = "cg:avisos-no";
 /** Tras un «Ahora no» no se vuelve a preguntar en dos semanas. */
 const ESPERA_MS = 14 * 24 * 3600_000;
+// Espera antes de mostrar el aviso, para no estorbar la lectura.
 const RETRASO_MS = 8000;
 
 /**
@@ -44,6 +46,7 @@ export function PwaAvisos() {
     return () => clearTimeout(espera);
   }, [publicKey]);
 
+  // Oculta el aviso y recuerda la decisión.
   function descartar() {
     try {
       localStorage.setItem(NO_KEY, String(Date.now()));
@@ -53,6 +56,7 @@ export function PwaAvisos() {
     setVisible(false);
   }
 
+  // Activa las notificaciones desde el aviso.
   async function activar() {
     setFase("ocupado");
     const r = await suscribirPush(publicKey);

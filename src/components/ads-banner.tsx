@@ -31,6 +31,7 @@ export async function AdsBanner({ zone, className }: { zone: AdPosition; classNa
   );
 }
 
+// Creatividad de imagen de un anuncio, con enlace patrocinado si lo tiene.
 function AdsCreative({
   imageUrl,
   clickUrl,

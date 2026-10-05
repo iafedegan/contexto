@@ -3,9 +3,12 @@
 import { useEffect, useRef, useState } from "react";
 import { Gauge, Pause, Play, Square, Volume2 } from "lucide-react";
 
+// Velocidades de lectura en voz alta disponibles.
 const VELOCIDADES = [0.75, 1, 1.25, 1.5, 1.75, 2] as const;
+// Clave donde se recuerda la velocidad elegida.
 const VELOCIDAD_KEY = "cg:tts-velocidad";
 
+// Lee la velocidad guardada, o 1 si no hay.
 function cargarVelocidad(): number {
   try {
     const v = Number(localStorage.getItem(VELOCIDAD_KEY));
@@ -51,6 +54,7 @@ export function ListenArticle({
     setSupported(ok);
     if (!ok) return;
     setRate(cargarVelocidad());
+    // Carga las voces disponibles del navegador.
     const cargar = () => {
       voces.current = window.speechSynthesis.getVoices();
     };
@@ -62,6 +66,7 @@ export function ListenArticle({
     };
   }, []);
 
+  // Texto de la nota sin etiquetas, listo para leer en voz alta.
   function textoPlano() {
     const div = document.createElement("div");
     div.innerHTML = body;
@@ -77,6 +82,7 @@ export function ListenArticle({
     const candidatas = voces.current.filter((v) => v.lang.toLowerCase().startsWith(lang.slice(0, 2).toLowerCase()));
     if (candidatas.length === 0) return undefined;
     const exactas = candidatas.filter((v) => v.lang.toLowerCase() === lang.toLowerCase());
+    // Ordena las voces poniendo primero las de español.
     const orden = (lista: SpeechSynthesisVoice[]) =>
       [...lista].sort((a, b) => Number(a.localService) - Number(b.localService));
     return orden(exactas)[0] ?? orden(candidatas)[0];
@@ -106,6 +112,7 @@ export function ListenArticle({
     utterances.forEach((u) => window.speechSynthesis.speak(u));
   }
 
+  // Empieza a leer la nota en voz alta.
   function reproducir() {
     if (!supported) return;
     window.speechSynthesis.cancel();
@@ -115,21 +122,25 @@ export function ListenArticle({
     setState("playing");
   }
 
+  // Pausa la lectura.
   function pausar() {
     window.speechSynthesis.pause();
     setState("paused");
   }
 
+  // Reanuda la lectura.
   function reanudar() {
     window.speechSynthesis.resume();
     setState("playing");
   }
 
+  // Detiene la lectura.
   function detener() {
     window.speechSynthesis.cancel();
     setState("idle");
   }
 
+  // Pasa a la siguiente velocidad y la recuerda.
   function cambiarVelocidad() {
     const actual = VELOCIDADES.indexOf(rate as (typeof VELOCIDADES)[number]);
     const siguiente = VELOCIDADES[(actual + 1) % VELOCIDADES.length];

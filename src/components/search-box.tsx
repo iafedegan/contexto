@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
 import { localePath, t, type Locale } from "@/lib/i18n";
 
+// Sugerencia de búsqueda: titular y dirección.
 type Sugerencia = { title: string; slug: string };
 
 /**
@@ -73,6 +74,7 @@ export function SearchBox({
   }, []);
 
   useEffect(() => {
+    // Cierra las sugerencias al hacer clic fuera.
     const fuera = (e: MouseEvent) => {
       if (caja.current && !caja.current.contains(e.target as Node)) setAbierto(false);
     };

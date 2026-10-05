@@ -33,6 +33,7 @@ export function PushToggle({ locale, publicKey }: { locale: Locale; publicKey: s
     };
   }, []);
 
+  // Activa o desactiva las notificaciones de este navegador.
   async function alternar() {
     setOcupado(true);
     try {

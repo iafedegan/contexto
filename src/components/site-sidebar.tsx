@@ -16,6 +16,7 @@ import { localePath, t, type Locale } from "@/lib/i18n";
 /** Clave pública VAPID: es pública por definición, va al cliente sin problema. */
 const VAPID_PUBLIC = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? "";
 
+// Barra lateral: notas más leídas, anuncios, boletín, avisos y redes sociales.
 export async function SiteSidebar({ locale }: { locale: Locale }) {
   const masLeidas = await getMostReadArticles(5).catch(() => []);
 
@@ -87,6 +88,7 @@ export async function SiteSidebar({ locale }: { locale: Locale }) {
   );
 }
 
+// Redes sociales del medio.
 const REDES = [
   { nombre: "Facebook", href: "https://www.facebook.com/contextoganadero", Icono: FacebookIcon },
   { nombre: "Instagram", href: "https://www.instagram.com/contextoganadero", Icono: InstagramIcon },

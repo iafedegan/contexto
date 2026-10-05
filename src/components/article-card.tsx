@@ -6,6 +6,7 @@ import { formatDate } from "@/lib/utils";
 import { homeStyleImageScale, homeStyleTitleCss } from "@/lib/home-style";
 import { DEFAULT_LOCALE, INTL_LOCALE, categoryLabel, localePath, type Locale } from "@/lib/i18n";
 
+// Variantes visuales de la tarjeta de nota.
 export type CardVariant = "lead" | "gold" | "copper" | "pearl" | "rail";
 
 /**
@@ -39,6 +40,7 @@ function mediaScaleStyle(scale: number): React.CSSProperties | undefined {
   return scale === 100 ? undefined : { width: `${scale}%`, marginInline: "auto" };
 }
 
+// Propiedades de la tarjeta: nota, variante, tamaño y estilo manual.
 type Props = {
   a: ArticleListItem;
   variant?: CardVariant;
@@ -70,6 +72,7 @@ export function ArticleCard({
   }
 }
 
+// Línea de datos de la nota: autor y fecha.
 function Meta({
   a,
   locale,
@@ -87,6 +90,7 @@ function Meta({
   );
 }
 
+// Rótulo sobre el titular: la sección, o la etiqueta «En vivo» cuando la nota es un directo.
 function Kicker({
   a,
   locale,

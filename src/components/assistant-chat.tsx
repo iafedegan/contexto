@@ -3,7 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import { LogoMark } from "@/components/logo-mark";
 
+// Fuente que respalda una respuesta.
 type Source = { n: number; title: string; url: string; kind: "articulo" | "archivo"; summary: string };
+// Mensaje de la conversación: de la persona o del asistente, con su modo y fuentes.
 type Msg = {
   role: "user" | "assistant";
   text: string;
@@ -11,6 +13,7 @@ type Msg = {
   sources?: Source[];
 };
 
+// Preguntas de ejemplo para empezar.
 const EJEMPLOS = [
   "¿Cómo se comportó el precio del novillo gordo?",
   "¿Qué avances hay en sistemas silvopastoriles?",
@@ -29,6 +32,7 @@ export function AssistantChat({ compact = false }: { compact?: boolean }) {
     if (compact) finRef.current?.scrollIntoView({ block: "end", behavior: "smooth" });
   }, [compact, messages, busy]);
 
+  // Envía la pregunta al asistente y agrega su respuesta a la conversación.
   async function send(question: string) {
     setBusy(true);
     setError(false);

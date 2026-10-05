@@ -39,6 +39,7 @@ function esOscuro(boton: HTMLElement | null): boolean {
   return OSCURAS.has(tema ?? "");
 }
 
+// Botón para alternar entre modo claro y oscuro.
 export function ThemeToggle({ locale, className = "" }: { locale: Locale; className?: string }) {
   const oscuro = useSyncExternalStore(
     suscribir,
@@ -46,6 +47,7 @@ export function ThemeToggle({ locale, className = "" }: { locale: Locale; classN
     () => false, // en el servidor aún no se conoce la preferencia
   );
 
+  // Cambia de modo y lo recuerda.
   function alternar() {
     const nuevo = !esOscuro(document.querySelector("[data-site-root]"));
     document.documentElement.dataset.dark = nuevo ? "1" : "0";

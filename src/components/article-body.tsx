@@ -1,6 +1,7 @@
 import { InteractiveChart } from "@/components/interactive-chart";
 import { decodeSpec } from "@/lib/chart-svg";
 
+// Patrón de las figuras de gráfica que inserta el asistente en el cuerpo.
 const CHART_FIGURE = /<figure\b[^>]*\bdata-chart="([\w-]+)"[^>]*>([\s\S]*?)<\/figure>/g;
 
 /**
@@ -38,12 +39,14 @@ function fuentesDesplegables(html: string): string {
  * (error ya corregido en el editor), aquí se convierte en la figura de la gráfica para que se dibuje igual.
  */
 const MARCADOR_GRAFICA = /(?:<p[^>]*>\s*)?\[\[GRAFICA ([\w-]+) \| ([^|\]]*) \| ([^\]]*)\]\](?:\s*<\/p>)?/g;
+// Convierte el marcador interno de gráfica, si quedó sin convertir, en la figura que se dibuja.
 function marcadoresAGraficas(html: string): string {
   return html.replace(MARCADOR_GRAFICA, (marca, datos: string, _alt: string, fuente: string) =>
     decodeSpec(datos) ? `<figure class="lx-chart" data-chart="${datos}"><figcaption>${fuente}</figcaption></figure>` : marca,
   );
 }
 
+// Cuerpo de una nota: HTML ya saneado, con tablas desplazables, fuentes plegables y gráficas interactivas.
 export function ArticleBody({ html: crudo, className }: { html: string; className?: string }) {
   const html = envolverTablas(fuentesDesplegables(marcadoresAGraficas(crudo)));
   const parts: React.ReactNode[] = [];

@@ -21,13 +21,16 @@ import { localePath, t, type Locale } from "@/lib/i18n";
  */
 export type MobileLook = "masthead" | "couture" | "bold" | "glass" | "crest";
 
+// Elemento del menú: dirección y etiqueta.
 type Item = { href: string; label: string };
 
+// Textos del menú en cada idioma.
 const LABELS = {
   es: { open: "Abrir menú", close: "Cerrar menú" },
   en: { open: "Open menu", close: "Close menu" },
 } as const;
 
+// Menú lateral del celular con las secciones y las herramientas.
 export function MobileNav({
   look,
   name,
@@ -55,6 +58,7 @@ export function MobileNav({
     // El aviso de ubicación (z-90, fuera de la cabecera) quedaba por encima del menú: se oculta mientras está abierto.
     document.documentElement.setAttribute("data-cg-overlay", "1");
     closeRef.current?.focus();
+    // Cierra el menú con la tecla Escape.
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
     window.addEventListener("keydown", onKey);
     return () => {

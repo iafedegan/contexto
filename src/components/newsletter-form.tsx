@@ -7,6 +7,7 @@ import { suscribirBoletin, type BoletinState } from "@/app/acciones/boletin";
 import { t, type Locale } from "@/lib/i18n";
 import { GEO_EVENT, readGeo } from "@/lib/geo-consent";
 
+// Se suscribe a los cambios de la ubicación compartida.
 const subscribeGeo = (cb: () => void) => {
   window.addEventListener(GEO_EVENT, cb);
   window.addEventListener("storage", cb);

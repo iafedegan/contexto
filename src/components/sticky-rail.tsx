@@ -22,6 +22,7 @@ export function StickyRail({ rail = "nav" }: { rail?: string }) {
   useLayoutEffect(() => {
     const header = ref.current?.closest("header");
     if (!header) return;
+    // Mide el espacio disponible para fijar la columna.
     const medir = () => {
       const fila = header.querySelector<HTMLElement>(rail);
       // Cabecera oculta (display:none en móvil) o sin fila: nada que medir.

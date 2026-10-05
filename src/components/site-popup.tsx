@@ -5,6 +5,7 @@ import { X } from "lucide-react";
 import { parseEmbed } from "@/lib/embeds";
 import type { PopupConfig } from "@/lib/popup-types";
 
+// Un día en milisegundos.
 const DAY = 86_400_000;
 
 /**
@@ -39,6 +40,7 @@ export function SitePopup({
 
   useEffect(() => {
     if (!open) return;
+    // Cierra la ventana con la tecla Escape.
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && close();
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -52,6 +54,7 @@ export function SitePopup({
     return () => document.documentElement.removeAttribute("data-cg-popup");
   }, [open, preview]);
 
+  // Cierra la ventana y recuerda que ya se mostró.
   function close() {
     setOpen(false);
     if (!preview) remember(config.frequency, storageKey);
@@ -157,6 +160,7 @@ export function SitePopup({
   );
 }
 
+// Imagen o video de la ventana emergente.
 function Media({ config }: { config: PopupConfig }) {
   if (!config.mediaUrl) return null;
   if (config.mediaType === "image") {
@@ -183,6 +187,7 @@ function Media({ config }: { config: PopupConfig }) {
   return null;
 }
 
+// Decide si la ventana debe mostrarse según su frecuencia.
 function shouldShow(freq: PopupConfig["frequency"], key: string): boolean {
   try {
     if (freq === "always") return true;
@@ -196,6 +201,7 @@ function shouldShow(freq: PopupConfig["frequency"], key: string): boolean {
   }
 }
 
+// Recuerda que la ventana ya se mostró.
 function remember(freq: PopupConfig["frequency"], key: string) {
   try {
     if (freq === "session") sessionStorage.setItem(key, "1");

@@ -16,16 +16,19 @@ import { t, type Locale } from "@/lib/i18n";
 export function ShareButtons({ title, locale }: { title: string; locale: Locale }) {
   const [copiado, setCopiado] = useState(false);
 
+  // Dirección actual de la página, sin el fragmento (#).
   function url() {
     return typeof window === "undefined" ? "" : window.location.href.split("#")[0];
   }
 
+  // Abre el servicio de la red social con la dirección y el título.
   function abrir(plantilla: (u: string, t: string) => string) {
     const u = encodeURIComponent(url());
     const ti = encodeURIComponent(title);
     window.open(plantilla(u, ti), "_blank", "noopener,noreferrer,width=640,height=560");
   }
 
+  // Copia la dirección al portapapeles.
   async function copiar() {
     try {
       await navigator.clipboard.writeText(url());
@@ -75,6 +78,7 @@ export function ShareButtons({ title, locale }: { title: string; locale: Locale 
   );
 }
 
+// Botón de compartir con su ícono.
 function Boton({
   etiqueta,
   onClick,

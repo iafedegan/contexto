@@ -19,6 +19,7 @@ const THEMES = {
   noche: { label: "Noche", bg: "#121212", fg: "#e7e5e4", muted: "#a8a29e", rule: "#2e2e2e" },
 } as const;
 
+// Tipografías disponibles en el modo lectura.
 const FONTS = {
   serif: { label: "Serif", css: "var(--f-source-serif, Georgia), Georgia, serif" },
   clasica: { label: "Clásica", css: "var(--f-playfair, Georgia), Georgia, serif" },
@@ -26,13 +27,19 @@ const FONTS = {
   redonda: { label: "Redonda", css: "var(--f-outfit, system-ui), system-ui, sans-serif" },
 } as const;
 
+// Identificador de un tema de lectura.
 type ThemeId = keyof typeof THEMES;
+// Identificador de una tipografía de lectura.
 type FontId = keyof typeof FONTS;
+// Preferencias de lectura: tema, tipografía y tamaño.
 type Prefs = { theme: ThemeId; font: FontId; size: number };
 
+// Preferencias por defecto.
 const DEFAULT: Prefs = { theme: "papel", font: "serif", size: 20 };
+// Clave donde se guardan las preferencias.
 const KEY = "cg:modo-revista";
 
+// Lee las preferencias guardadas, o las de defecto.
 function loadPrefs(): Prefs {
   try {
     const raw = JSON.parse(localStorage.getItem(KEY) ?? "null") as Partial<Prefs> | null;
@@ -47,6 +54,7 @@ function loadPrefs(): Prefs {
   }
 }
 
+// Modo lectura a pantalla completa con tema, tipografía y tamaño ajustables.
 export function ReaderMode({
   title,
   excerpt,
@@ -81,6 +89,7 @@ export function ReaderMode({
     setOpen(true);
   }
 
+  // Cambia las preferencias y las guarda.
   function update(p: Partial<Prefs>) {
     setPrefs((prev) => {
       const next = { ...prev, ...p };
@@ -130,6 +139,7 @@ export function ReaderMode({
     if (!open) return;
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+    // Atajos de teclado del modo lectura.
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setOpen(false);
       if (e.key === "ArrowRight" || e.key === "PageDown" || e.key === " ") {

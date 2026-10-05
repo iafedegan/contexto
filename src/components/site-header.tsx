@@ -13,8 +13,10 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { StickyRail } from "@/components/sticky-rail";
 import { cn } from "@/lib/utils";
 
+// Elemento de la navegación: dirección y etiqueta.
 export type NavItem = { href: string; label: string };
 
+// Propiedades de la cabecera.
 type Props = {
   theme: Theme;
   nav: NavItem[];
@@ -296,6 +298,7 @@ function GremialHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extra
   );
 }
 
+// Cabecera de la plantilla compacta.
 function BoldHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extra: NavItem[]; locale: Locale; identity: SiteIdentity }) {
   return (
     <header data-region="navbar" className="sticky top-0 z-40 bg-[var(--nav-bg)] px-4 py-2 lg:py-3">

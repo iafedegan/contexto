@@ -37,7 +37,9 @@ import type { PsiReport } from "@/lib/psi-types";
 import { embedHtml, parseEmbed } from "@/lib/embeds";
 import { auditArticle, scoreLabel } from "@/lib/seo-audit";
 
+// Opción de un selector: id y nombre.
 type Option = { id: string; name: string };
+// Datos iniciales de la nota que se edita.
 type Initial = {
   id: string;
   title: string;
@@ -55,6 +57,7 @@ type Initial = {
   isLive: boolean;
 };
 
+// Etiqueta en español de cada estado editorial.
 const STATUS_LABEL: Record<string, string> = {
   nuevo: "Nuevo",
   borrador: "Borrador",
@@ -64,6 +67,7 @@ const STATUS_LABEL: Record<string, string> = {
   archivado: "Archivado",
 };
 
+// Editor clásico de una nota: texto, portada, SEO con auditoría, acciones de publicación y generación con IA.
 export function ArticleEditor({
   initial,
   categories,
@@ -112,6 +116,7 @@ export function ArticleEditor({
   const [psiError, setPsiError] = useState("");
   const [psiPending, startPsi] = useTransition();
 
+  // Pide a PageSpeed Insights el análisis de la nota en móvil o escritorio.
   function auditar(strategy: "mobile" | "desktop") {
     setPsiError("");
     startPsi(async () => {
@@ -158,6 +163,7 @@ export function ArticleEditor({
     setUrlVideo("");
   }
 
+  // Sube la imagen de portada elegida y la asigna a la nota.
   async function onPortada(file: File) {
     const res = await subir(file, "portada");
     if (!res) return;
@@ -210,6 +216,7 @@ export function ArticleEditor({
   const words = audit.stats.words;
   const minutes = audit.stats.minutes;
 
+  // Pide al asistente un borrador con IA a partir del título y el contexto.
   function generar() {
     setAiError(null);
     setAiNote(null);
@@ -921,6 +928,7 @@ function PsiScore({ label, value }: { label: string; value: number | null }) {
   );
 }
 
+// Campo de formulario con etiqueta y pista.
 function Field({
   label,
   hint,
@@ -943,6 +951,7 @@ function Field({
   );
 }
 
+// Separador visual entre secciones del editor.
 function Divider() {
   return <hr className="my-4 border-0 border-t border-[var(--border)]" />;
 }
@@ -969,6 +978,7 @@ function Meter({ value, min, max }: { value: number; min: number; max: number })
   );
 }
 
+// Punto de color según la nota de la auditoría SEO.
 function ScoreDot({ score }: { score: number }) {
   return (
     <span className="hidden items-center gap-1.5 text-xs text-[var(--fg-muted)] md:flex">
@@ -1006,6 +1016,7 @@ function ScoreRing({ score }: { score: number }) {
   );
 }
 
+// Selector de opciones con etiqueta.
 function Select({
   name,
   defaultValue,
@@ -1041,6 +1052,7 @@ function Select({
   );
 }
 
+// Etiqueta de color con el estado de la nota.
 function StatusChip({ status }: { status: string }) {
   const live = status === "publicado";
   return (

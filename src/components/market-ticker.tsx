@@ -32,6 +32,7 @@ export async function MarketTicker({ locale }: { locale: Locale }) {
   );
 }
 
+// Flecha de variación respecto al dato anterior.
 function TrendIcon({ current, previous }: { current: number; previous: number | null }) {
   if (previous == null || current === previous) return <Minus size={11} aria-hidden />;
   return current > previous ? (
@@ -41,6 +42,7 @@ function TrendIcon({ current, previous }: { current: number; previous: number | 
   );
 }
 
+// Formatea el valor según la unidad de cada indicador.
 function formatValue(entry: MarketTickerEntry): string {
   switch (entry.key) {
     case "trm":

@@ -5,6 +5,7 @@
  */
 type Props = { size?: number; className?: string };
 
+// Ícono de Facebook.
 export function FacebookIcon({ size = 17, className }: Props) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden className={className}>
@@ -13,6 +14,7 @@ export function FacebookIcon({ size = 17, className }: Props) {
   );
 }
 
+// Ícono de Instagram.
 export function InstagramIcon({ size = 17, className }: Props) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden className={className}>
@@ -23,6 +25,7 @@ export function InstagramIcon({ size = 17, className }: Props) {
   );
 }
 
+// Ícono de Youtube.
 export function YoutubeIcon({ size = 17, className }: Props) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden className={className}>
@@ -32,6 +35,7 @@ export function YoutubeIcon({ size = 17, className }: Props) {
   );
 }
 
+// Ícono de Linkedin.
 export function LinkedinIcon({ size = 17, className }: Props) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden className={className}>
@@ -40,6 +44,7 @@ export function LinkedinIcon({ size = 17, className }: Props) {
   );
 }
 
+// Ícono de X (Twitter).
 export function XIcon({ size = 17, className }: Props) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden className={className}>
@@ -48,6 +53,7 @@ export function XIcon({ size = 17, className }: Props) {
   );
 }
 
+// Ícono de Whatsapp.
 export function WhatsappIcon({ size = 17, className }: Props) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" aria-hidden className={className}>

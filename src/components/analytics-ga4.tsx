@@ -26,6 +26,7 @@ export function Gtm({ id }: { id: string }) {
   );
 }
 
+// Inserta Google Analytics 4 con el identificador configurado (solo en el portal público).
 export function Ga4({ id }: { id: string }) {
   if (!id) return null;
   return (

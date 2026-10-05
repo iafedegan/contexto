@@ -4,8 +4,10 @@ import { useEffect } from "react";
 
 /** Cada cuánto se renueva lo descargado para leer sin conexión. */
 const SYNC_EVERY_MS = 30 * 60 * 1000;
+// Clave donde se recuerda la última descarga para leer sin conexión.
 const SYNC_KEY = "cg:offline-sync";
 
+// Datos de red que ofrece el navegador: ahorro de datos y tipo de conexión.
 type NetworkInformation = { saveData?: boolean; effectiveType?: string; type?: string };
 
 /**

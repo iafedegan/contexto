@@ -29,9 +29,11 @@ export function MoreMenu({
   // Se cierra al pulsar fuera o con Escape: comportamiento esperado de un menú.
   useEffect(() => {
     if (!open) return;
+    // Cierra el menú al hacer clic fuera.
     const fuera = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     };
+    // Cierra el menú con la tecla Escape.
     const esc = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
     document.addEventListener("mousedown", fuera);
     document.addEventListener("keydown", esc);

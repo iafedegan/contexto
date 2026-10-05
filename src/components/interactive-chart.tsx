@@ -3,12 +3,17 @@
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { aplicarTipo, chartProblem, fmt, renderChartSvg, type ChartSpec, type TipoGrafica } from "@/lib/chart-svg";
 
+// Globo informativo: posición, título y filas con color, nombre y valor.
 type Tip = { x: number; y: number; title: string; rows: { color: string; name: string; value: string }[] };
 
+// Colores de las series.
 const COLORS = ["#2dd4bf", "#a78bfa", "#f472b6", "#fbbf24"];
+// Formato de números de Colombia, hasta dos decimales.
 const nf = new Intl.NumberFormat("es-CO", { maximumFractionDigits: 2 });
+// Formatea una variación porcentual con signo.
 const pct = (n: number) => `${n >= 0 ? "+" : "−"}${new Intl.NumberFormat("es-CO", { maximumFractionDigits: 1 }).format(Math.abs(n))} %`;
 
+// Formas en que se puede ver la gráfica.
 const FORMAS: { id: Exclude<TipoGrafica, "auto">; label: string }[] = [
   { id: "vertical", label: "Barras" },
   { id: "horizontal", label: "Horizontal" },
@@ -27,9 +32,12 @@ function formaDe(c: ChartSpec): Exclude<TipoGrafica, "auto"> {
   return c.labels.some((l) => l.length > 14) || c.labels.length > 7 ? "horizontal" : "vertical";
 }
 
+// Patrón de nombres de mes abreviados en español.
 const MESES = /\b(ene|feb|mar|abr|may|jun|jul|ago|sep|oct|nov|dic)/i;
+// Indica si las etiquetas son fechas o periodos, para sugerir líneas.
 const esTemporal = (labels: string[]) => labels.every((l) => /\b(19|20)\d{2}\b/.test(l) || MESES.test(l) || /^t[1-4]\b/i.test(l.trim()));
 
+// Clases de un botón de opción según esté activo.
 const chip = (on: boolean) =>
   `inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium transition focus-visible:outline-2 focus-visible:outline-offset-2 ${
     on ? "border-transparent bg-[var(--accent)] text-[var(--accent-fg,#fff)]" : "border-[color-mix(in_srgb,currentColor_22%,transparent)] hover:border-[var(--accent)]"
@@ -115,6 +123,7 @@ export function InteractiveChart({ spec, caption }: { spec: ChartSpec; caption?:
     if (sel !== null) el.querySelectorAll(`[data-i="${sel}"]`).forEach((n) => n.classList.add("sel"));
   }, [svg, sel]);
 
+  // Filas del globo informativo para el elemento bajo el cursor.
   function describe(el: Element): Tip["rows"] {
     const i = Number(el.getAttribute("data-i"));
     const sAttr = el.getAttribute("data-s");
@@ -131,6 +140,7 @@ export function InteractiveChart({ spec, caption }: { spec: ChartSpec; caption?:
     });
   }
 
+  // Muestra el globo junto al cursor.
   function show(el: Element, clientX: number, clientY: number) {
     const b = box.current;
     if (!b) return;
@@ -143,6 +153,7 @@ export function InteractiveChart({ spec, caption }: { spec: ChartSpec; caption?:
     svgEl?.querySelectorAll(`.mk[data-i="${i}"]${s === null || esTorta ? "" : `[data-s="${s}"]`}`).forEach((n) => n.classList.add("on"));
     setTip({ x: Math.min(Math.max(clientX - r.left, 8), r.width - 8), y: Math.max(clientY - r.top, 8), title: view.labels[i], rows: describe(el) });
   }
+  // Oculta el globo.
   function hide() {
     const svgEl = box.current?.querySelector("svg");
     svgEl?.classList.remove("hov");
@@ -150,11 +161,14 @@ export function InteractiveChart({ spec, caption }: { spec: ChartSpec; caption?:
     setTip(null);
   }
 
+  // Vuelve la gráfica a su forma y series originales.
   function reiniciar() {
     setForma(formaDe(spec)); setDesde(0); setHasta(n0 - 1); setOrden("orig"); setHidden([]); setSel(null);
   }
 
+  // Descarga los datos de la gráfica como CSV.
   function csv() {
+    // Escapa un valor como celda CSV entre comillas.
     const q = (x: string | number) => `"${String(x).replace(/"/g, '""')}"`;
     const filas = [[q(`${view.title} (${view.unit})`), ...view.series.map((s) => q(s.name))].join(",")];
     view.labels.forEach((l, i) => filas.push([q(l), ...view.series.map((s) => s.values[i])].join(",")));
@@ -174,6 +188,7 @@ export function InteractiveChart({ spec, caption }: { spec: ChartSpec; caption?:
     return `${view.labels[sel]}: ${nf.format(v)} ${view.unit} · ${Math.round((v / total) * 100)} % del total · puesto ${rank} de ${vals.length}${prev && temporal && orden === "orig" ? ` · ${pct(((v - prev) / Math.abs(prev)) * 100)} frente a ${view.labels[sel - 1]}` : ""}`;
   })() : null;
 
+  // Muestra u oculta una serie al pulsar su leyenda.
   const alternar = (e: { target: EventTarget | null }) => {
     const el = (e.target as Element).closest?.("[data-i]");
     if (!el) return setSel(null);

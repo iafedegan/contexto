@@ -7,6 +7,7 @@ export function ReadingProgress() {
   const [pct, setPct] = useState(0);
 
   useEffect(() => {
+    // Calcula el avance de lectura según el desplazamiento.
     const onScroll = () => {
       const h = document.documentElement.scrollHeight - window.innerHeight;
       setPct(h > 0 ? Math.min(100, (window.scrollY / h) * 100) : 0);

@@ -6,6 +6,7 @@ import { Check, Loader2, Send, TriangleAlert } from "lucide-react";
 import { enviarMensaje, type ContactState } from "@/app/acciones/contacto";
 import type { Locale } from "@/lib/i18n";
 
+// Textos del formulario en español e inglés.
 const COPY = {
   es: {
     tituloContacto: "Escríbenos",
@@ -134,9 +135,11 @@ export function ContactForm({ kind, locale }: { kind: "contacto" | "comercial"; 
   );
 }
 
+// Clases de los campos de texto.
 const INPUT =
   "w-full rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] px-3.5 py-2.5 text-[0.95rem] outline-none transition focus:border-[var(--accent)]";
 
+// Campo con su etiqueta.
 function Campo({ etiqueta, children }: { etiqueta: string; children: React.ReactNode }) {
   return (
     <label className="flex flex-col gap-1.5">

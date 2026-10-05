@@ -19,6 +19,7 @@ export function ToroFlotante() {
   const [montado, setMontado] = useState(false);
   useEffect(() => {
     if (!abierto) return;
+    // Cierra el panel con la tecla Escape.
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && setAbierto(false);
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
