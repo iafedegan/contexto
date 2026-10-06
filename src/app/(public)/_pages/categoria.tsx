@@ -96,7 +96,7 @@ async function CategoryPage({ params, searchParams, locale }: PageProps & { loca
   // atajos de fecha (C-09) son enlaces, no botones: cada rango tiene su propia
   // URL, cacheable y compartible. El formulario es GET y funciona sin JavaScript.
   const filters = (
-    <div data-el="filters" className={`flex flex-wrap items-center gap-x-3 gap-y-2 ${pos === "barra" ? "lg:justify-between" : A.justify}`}>
+    <div data-el="filters" className={`flex flex-wrap items-center gap-x-3 gap-y-2 ${A.justify}`}>
       <div className={`flex flex-wrap items-center gap-1.5 ${A.justify}`}>
         {RANGOS.map((r) => {
           const desdeISO = r.dias === null ? "" : isoHaceDias(r.dias);
@@ -233,24 +233,22 @@ async function CategoryPage({ params, searchParams, locale }: PageProps & { loca
             <span className="text-[var(--accent)]">{categoryLabel(locale, slug, category.name)}</span>
           </nav>
         }
-        filters={pos === "cabecera" ? filters : undefined}
+        // En «cabecera» y «barra» los filtros van al lado de las etiquetas (n publicaciones · actualizado), no en un bloque aparte.
+        filters={undefined}
         chips={
           <>
             <span className="lx-chip border-[var(--border-strong)] text-[var(--accent)]">
               {total} {t(locale, "section.count")}
             </span>
             <span className="lx-chip">{t(locale, "section.live")}</span>
+            {(pos === "cabecera" || pos === "barra") && filters}
           </>
         }
       />
 
-      {pos !== "cabecera" && pos !== "oculto" && (
+      {pos !== "cabecera" && pos !== "barra" && pos !== "oculto" && (
         <div
-          className={
-            pos === "barra"
-              ? "mb-8 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--bg-2)] px-4 py-3"
-              : `mb-8 flex ${pos === "centro" ? "justify-center" : pos === "derecha" ? "justify-end" : "justify-start"}`
-          }
+          className={`mb-8 flex ${pos === "centro" ? "justify-center" : pos === "derecha" ? "justify-end" : "justify-start"}`}
         >
           {filters}
         </div>
