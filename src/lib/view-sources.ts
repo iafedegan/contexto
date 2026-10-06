@@ -2,6 +2,7 @@ import "server-only";
 import { inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { siteSettings } from "@/db/schema";
+import { clasificarFuente } from "@/lib/fuente-lectura";
 
 /**
  * «¿Desde dónde los leen?»: origen de cada lectura (UTM de campañas y boletín, o el sitio de
@@ -13,44 +14,8 @@ const claveMes = (d = new Date()) =>
 // Clave mensual donde se cuentan las fuentes de lectura.
 const key = (mes: string) => `view_sources_${mes}`;
 
-// Patrones de dominios de redes sociales y buscadores y el nombre con el que se agrupan.
-const REDES: [RegExp, string][] = [
-  [/(^|\.)google\./, "Google"],
-  [/(^|\.)bing\.com$/, "Bing"],
-  [/duckduckgo\.com$|ecosia\.org$|yahoo\./, "Otros buscadores"],
-  [/(^|\.)(facebook\.com|fb\.com|fb\.me|l\.facebook\.com|lm\.facebook\.com)$/, "Facebook"],
-  [/(^|\.)instagram\.com$/, "Instagram"],
-  [/(^|\.)(t\.co|twitter\.com|x\.com)$/, "X (Twitter)"],
-  [/(^|\.)(wa\.me|whatsapp\.com)$/, "WhatsApp"],
-  [/(^|\.)(youtube\.com|youtu\.be)$/, "YouTube"],
-  [/(^|\.)linkedin\.com$|lnkd\.in$/, "LinkedIn"],
-  [/(^|\.)(tiktok\.com)$/, "TikTok"],
-  [/(^|\.)(news\.google\.com|discover\.google\.com)$/, "Google Noticias / Discover"],
-];
-
-// Texto limpio para usar como etiqueta: minúsculas, solo caracteres seguros y largo acotado.
-const limpio = (s: unknown, max = 40) =>
-  String(s ?? "").toLowerCase().replace(/[^a-z0-9áéíóúñü _.\-+/]/gi, "").trim().slice(0, max);
-
-/** Etiqueta legible del origen: UTM primero (es lo que el equipo etiquetó), luego el referente, luego «Directo». */
-export function clasificarFuente(i: { utmSource?: string; utmMedium?: string; utmCampaign?: string; referrer?: string; host?: string }): string {
-  const src = limpio(i.utmSource);
-  if (src) {
-    const med = limpio(i.utmMedium);
-    const camp = limpio(i.utmCampaign, 30);
-    return `UTM · ${src}${med ? ` / ${med}` : ""}${camp ? ` / ${camp}` : ""}`;
-  }
-  let h = "";
-  try {
-    h = i.referrer ? new URL(i.referrer).hostname.replace(/^www\./, "").toLowerCase() : "";
-  } catch {
-    h = "";
-  }
-  if (!h) return "Directo";
-  if (i.host && (h === i.host.replace(/^www\./, "") || h.endsWith(`.${i.host.replace(/^www\./, "")}`))) return "Interno (otras páginas del sitio)";
-  for (const [re, name] of REDES) if (re.test(h)) return name;
-  return h.slice(0, 60);
-}
+// Origen de cada lectura: la clasificación (pura) vive en fuente-lectura.ts para poder probarla sin base de datos.
+export { clasificarFuente };
 
 // Suma una lectura a la fuente indicada del mes actual; si falla, no afecta la lectura.
 export async function registrarFuente(articleId: string, etiqueta: string): Promise<void> {

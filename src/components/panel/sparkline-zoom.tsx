@@ -89,7 +89,7 @@ export function SparklineZoom({ values, title, articleId }: { values: number[]; 
                   <p className="mt-2 text-sm text-[var(--fg-muted)]">Cargando…</p>
                 ) : fuentes.length === 0 ? (
                   <p className="mt-2 text-sm text-[var(--fg-muted)]">
-                    Todavía no hay orígenes registrados: se empiezan a contar desde ahora (UTM de campañas y boletín, buscadores y redes).
+                    Todavía no hay orígenes registrados: se empiezan a contar desde ahora (UTM de campañas y boletín, lectores RSS, buscadores y redes).
                   </p>
                 ) : (
                   <ul className="mt-3 flex flex-col gap-2.5">
@@ -109,6 +109,11 @@ export function SparklineZoom({ values, title, articleId }: { values: number[]; 
                     })}
                   </ul>
                 )}
+                {/* Aclaración que evita confundir «la leí en mi lector» con «la leyeron en el sitio». */}
+                <p className="mt-4 text-xs leading-relaxed text-[var(--fg-muted)]">
+                  Solo cuenta quien abre la nota en el sitio y permanece unos segundos. Lo que se lee dentro de un lector RSS (el
+                  resumen en Feedly, por ejemplo) no llega al sitio y no se puede contar; al pulsar «Leer la nota completa» sí se registra, como «Lector RSS».
+                </p>
               </div>
             )}
           </div>

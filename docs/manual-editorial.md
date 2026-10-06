@@ -13,6 +13,8 @@ El administrador puede ajustar permisos persona por persona (Configuración → 
 ## 2. Resumen
 Muestra lecturas de los últimos 7 días, notas por estado, las más leídas, pendientes (notas en revisión y borradores de IA) y el mapa de dónde se suscriben los lectores.
 
+**¿Desde dónde los leen?** En Artículos, al pulsar la gráfica de una nota se ve el origen de sus lecturas: buscadores, redes, campañas (UTM), boletín, push y **Lector RSS** (Feedly, Inoreader…). Una lectura solo se cuenta cuando alguien abre la nota en el sitio y se queda unos segundos. Lo que se lee *dentro* del lector RSS (el resumen) no llega al sitio y no se puede contar; los enlaces de los feeds llevan `utm_source=rss`, así que al pulsar «Leer la nota completa» la visita queda registrada como «Lector RSS». Las notas que un lector ya había descargado antes de este cambio conservan su enlace anterior y se cuentan como «Directo».
+
 ## 3. Crear una nota (asistente de 9 pasos)
 **Artículos → Nuevo artículo**. Hay dos modos: *manual* y *con IA*. Cada paso cabe en pantalla; lo largo se recorre con carruseles. Se guarda solo como borrador mientras escribes.
 

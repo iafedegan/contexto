@@ -19,6 +19,14 @@ import { escapeXml as esc } from "@/lib/escape";
 
 const ITEMS = 40;
 
+/**
+ * Enlace de una nota tal como va en el feed: con UTM (`utm_source=rss`) para que, al abrirla desde el lector, la
+ * lectura se cuente como «Lector RSS» y no como «Directo» (Feedly y casi todos los lectores no envían referente).
+ * El `guid` queda con la dirección limpia: es la identidad de la nota en el lector y no debe cambiar.
+ * La página declara su canonical sin UTM, así que esto no duplica contenido para buscadores.
+ */
+const conUtm = (url: string, campana: string) => `${url}?utm_source=rss&utm_medium=feed&utm_campaign=${encodeURIComponent(campana)}`;
+
 /** CDATA seguro: `]]>` dentro del HTML cerraría la sección antes de tiempo. */
 const cdata = (s: string) => `<![CDATA[${s.replace(/]]>/g, "]]]]><![CDATA[>")}]]>`;
 
@@ -83,15 +91,16 @@ export async function buildFeed(categorySlug?: string): Promise<{ xml: string } 
 
   const items = rows.map((a) => {
     const url = siteUrl(`/articulo/${a.slug}`);
+    const enlace = conUtm(url, category?.slug ?? "general");
     const cover = a.coverImageUrl ? absUrl(a.coverImageUrl) : null;
     const coverHtml = cover
       ? `<p><img src="${esc(cover)}" alt="${esc(a.coverImageAlt ?? a.title)}"/></p>`
       : "";
-    const content = `${coverHtml}<p>${esc(a.excerpt)}</p><p><a href="${url}">Leer la nota completa en ${esc(siteName)}</a></p>`;
+    const content = `${coverHtml}<p>${esc(a.excerpt)}</p><p><a href="${esc(enlace)}">Leer la nota completa en ${esc(siteName)}</a></p>`;
     return [
       "<item>",
       `<title>${esc(a.title)}</title>`,
-      `<link>${url}</link>`,
+      `<link>${esc(enlace)}</link>`,
       `<guid isPermaLink="true">${url}</guid>`,
       `<description>${esc(a.excerpt)}</description>`,
       `<content:encoded>${cdata(content)}</content:encoded>`,
