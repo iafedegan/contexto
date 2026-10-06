@@ -29,8 +29,12 @@ export function PasskeyForm({ passkeys }: { passkeys: Passkey[] }) {
     setError(null);
     start(async () => {
       try {
-        const options = await iniciarRegistroPasskey();
-        const respuesta = await startRegistration(options);
+        const inicio = await iniciarRegistroPasskey();
+        if (!inicio.ok) {
+          setError(inicio.message);
+          return;
+        }
+        const respuesta = await startRegistration(inicio.options);
         const nombre =
           typeof navigator !== "undefined" && /iphone|ipad/i.test(navigator.userAgent)
             ? "iPhone/iPad"

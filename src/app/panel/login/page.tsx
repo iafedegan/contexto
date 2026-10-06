@@ -35,8 +35,12 @@ function LoginForm() {
     setError(null);
     setPendingPasskey(true);
     try {
-      const options = await iniciarLoginPasskey();
-      const respuesta = await startAuthentication(options);
+      const inicio = await iniciarLoginPasskey();
+      if (!inicio.ok) {
+        setError(inicio.message);
+        return;
+      }
+      const respuesta = await startAuthentication(inicio.options);
       const verificado = await confirmarLoginPasskey(respuesta);
       if (!verificado.ok || !verificado.token) {
         setError(verificado.message || "No se pudo verificar la passkey.");

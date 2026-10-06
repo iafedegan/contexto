@@ -4,13 +4,13 @@ import NextAuth, { type DefaultSession } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
-import { verifySync as verifyTotp } from "otplib";
 import { db } from "@/db";
 import { users, type UserRole } from "@/db/schema";
 import { clearHits, clientIp, hit } from "@/lib/rate-limit";
 import { verifyHuman } from "@/lib/turnstile";
-import { dispositivoDe, registrarAcceso } from "@/lib/login-log";
-import { verificarTokenPasskey } from "@/lib/passkey";
+import { dispositivoDe, enmascararCorreo, registrarAcceso } from "@/lib/login-log";
+import { consumirTokenPasskey } from "@/lib/passkey";
+import { verificarCodigoTotp } from "@/lib/totp";
 import { tienePermiso } from "@/lib/permisos-server";
 import { RANGO, type PermisoId } from "@/lib/permisos";
 
@@ -93,17 +93,19 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
          * clave mal tecleada de una cuenta desactivada o de un 2FA pendiente.
          */
         const rechazar = (motivo: string) => {
-          console.warn(`[login] rechazado (${email || "sin correo"}): ${motivo}`);
+          // El correo va enmascarado: los logs del servidor no deben guardar direcciones completas (H-20).
+          console.warn(`[login] rechazado (${enmascararCorreo(email)}): ${motivo}`);
           return null;
         };
 
-        // Login con passkey: la verificación criptográfica ya ocurrió en
-        // confirmarLoginPasskey (src/app/panel/login/actions.ts); este token
-        // firmado y de 60 s solo confirma que fue ESTA petición la que pasó
-        // por ahí, sin repetir contraseña ni TOTP.
+        // Login con passkey: la verificación criptográfica (con verificación del
+        // usuario obligatoria) ya ocurrió en confirmarLoginPasskey
+        // (src/app/panel/login/actions.ts); este token firmado, de 60 s y de UN SOLO
+        // USO solo confirma que fue ESTA petición la que pasó por ahí, sin repetir
+        // contraseña ni TOTP. Reutilizarlo, aunque no haya caducado, se rechaza.
         if (passkeyToken) {
-          const uid = verificarTokenPasskey(passkeyToken);
-          if (!uid) return rechazar("token de passkey inválido o caducado");
+          const uid = await consumirTokenPasskey(passkeyToken);
+          if (!uid) return rechazar("token de passkey inválido, caducado o ya usado");
           const [u] = await db.select().from(users).where(eq(users.id, uid)).limit(1);
           if (!u) return rechazar("passkey de una cuenta que ya no existe");
           if (!u.active) return rechazar("la cuenta está desactivada");
@@ -140,8 +142,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         if (u.totpEnabled) {
           if (!u.totpSecret) return rechazar("2FA activado pero sin secreto guardado");
           if (!totp) return rechazar("falta el código de verificación (2FA)");
-          if (!verifyTotp({ token: totp, secret: u.totpSecret }).valid) {
-            return rechazar("código de verificación incorrecto");
+          // Tolerancia de un paso de reloj y código de un solo uso (ver src/lib/totp.ts).
+          const segundoFactor = await verificarCodigoTotp(u.id, u.totpSecret, totp);
+          if (!segundoFactor.ok) {
+            return rechazar(segundoFactor.motivo === "reutilizado" ? "código de verificación ya utilizado" : "código de verificación incorrecto");
           }
         }
 

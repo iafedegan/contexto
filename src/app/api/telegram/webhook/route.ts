@@ -1,5 +1,5 @@
 import { after, NextResponse } from "next/server";
-import { enviar, secretoWebhook } from "@/lib/telegram";
+import { enviar, webhookAutorizado } from "@/lib/telegram";
 import { procesar, type Update } from "@/lib/telegram-bot";
 
 /**
@@ -13,9 +13,15 @@ export const maxDuration = 300;
 
 // Recibe la actualización de Telegram: valida el secreto, responde 200 de inmediato y procesa en segundo plano.
 export async function POST(req: Request) {
-  if (req.headers.get("x-telegram-bot-api-secret-token") !== secretoWebhook()) {
-    return NextResponse.json({ error: "no autorizado" }, { status: 401 });
+  // Comparación en tiempo constante. Si el servidor no tiene secreto configurado (producción sin AUTH_SECRET ni
+  // TELEGRAM_WEBHOOK_SECRET) se responde 503, no 401: es un fallo de configuración, no un intento no autorizado.
+  let autorizado: boolean;
+  try {
+    autorizado = webhookAutorizado(req.headers.get("x-telegram-bot-api-secret-token"));
+  } catch {
+    return NextResponse.json({ error: "webhook sin configurar" }, { status: 503 });
   }
+  if (!autorizado) return NextResponse.json({ error: "no autorizado" }, { status: 401 });
   let update: Update;
   try {
     update = (await req.json()) as Update;

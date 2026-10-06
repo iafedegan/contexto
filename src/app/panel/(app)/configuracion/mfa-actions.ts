@@ -11,12 +11,13 @@
 
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { generateSecret, generateURI, verifySync } from "otplib";
+import { generateSecret, generateURI } from "otplib";
 import QRCode from "qrcode";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import { auth, requireRole } from "@/lib/auth";
 import { getSiteIdentity } from "@/lib/site-identity";
+import { codigoTotpValido, verificarCodigoTotp } from "@/lib/totp";
 
 // Datos para activar el segundo factor: secreto, código QR y enlace.
 export type MfaSetup = { secret: string; qr: string; uri: string };
@@ -43,7 +44,8 @@ export async function confirmarMfa(_prev: MfaState, formData: FormData): Promise
   const token = String(formData.get("token") ?? "").replace(/\s/g, "");
 
   if (!secret || !token) return { ok: false, message: "Falta el código de verificación." };
-  if (!verifySync({ token, secret }).valid) {
+  // Solo demuestra que la aplicación ya tiene el secreto: no se gasta el código (ver `codigoTotpValido`).
+  if (!codigoTotpValido(secret, token)) {
     return { ok: false, message: "El código no coincide. Comprueba la hora del teléfono e inténtalo otra vez." };
   }
 
@@ -68,8 +70,12 @@ export async function desactivarMfa(_prev: MfaState, formData: FormData): Promis
     .limit(1);
 
   if (!u?.totpSecret) return { ok: false, message: "La cuenta no tiene verificación en dos pasos." };
-  if (!verifySync({ token, secret: u.totpSecret }).valid) {
-    return { ok: false, message: "El código no coincide." };
+  const verificacion = await verificarCodigoTotp(me.id, u.totpSecret, token);
+  if (!verificacion.ok) {
+    return {
+      ok: false,
+      message: verificacion.motivo === "reutilizado" ? "Ese código ya se usó. Espera al siguiente (cambia cada 30 s)." : "El código no coincide.",
+    };
   }
 
   await db

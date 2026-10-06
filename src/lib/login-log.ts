@@ -24,6 +24,18 @@ export type AccesoRegistro = {
   dispositivo: string;
 };
 
+/**
+ * Correo enmascarado para los logs del servidor (`ed***@gmail.com`): permite al equipo reconocer la cuenta sin dejar la
+ * dirección completa, que es un dato personal, en un sistema de logs con retención ajena (H-20).
+ */
+export function enmascararCorreo(correo: string | null | undefined): string {
+  const c = (correo ?? "").trim();
+  const arroba = c.lastIndexOf("@");
+  if (arroba < 1) return c ? "***" : "sin correo";
+  const local = c.slice(0, arroba);
+  return `${local.slice(0, Math.min(2, Math.max(1, local.length - 1)))}***${c.slice(arroba)}`;
+}
+
 /** «Chrome · macOS» a partir del user-agent (sin guardar la cadena completa). */
 export function dispositivoDe(ua: string | null | undefined): string {
   const u = ua ?? "";

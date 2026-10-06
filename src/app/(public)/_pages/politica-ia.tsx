@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { Locale } from "@/lib/i18n";
 import { SiteShell } from "@/components/site-shell";
 import { getSiteTheme } from "@/lib/site-theme";
@@ -41,8 +42,8 @@ async function PoliticaIA({ locale }: { locale: Locale }) {
             </section>
           ))}
           <p>
-            Esta política complementa nuestra <a href="/politica-editorial">política editorial</a>. Si ves un error o una cifra dudosa en una nota,
-            escríbenos desde la página de <a href="/contacto">contacto</a>.
+            Esta política complementa nuestra <Link href="/politica-editorial">política editorial</Link>. Si ves un error o una cifra dudosa en una nota,
+            escríbenos desde la página de <Link href="/contacto">contacto</Link>.
           </p>
         </div>
       </article>

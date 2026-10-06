@@ -3,6 +3,7 @@ import { createHmac } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { siteSettings } from "@/db/schema";
+import { claveDe, igualesSeguro, secretoRaiz } from "@/lib/claves";
 import { decryptSecret, encryptSecret } from "@/lib/secrets";
 import { escapeMinimo } from "@/lib/escape";
 
@@ -47,10 +48,36 @@ export async function tokenTelegram(): Promise<string | null> {
   return g.token ? decryptSecret(g.token) : null;
 }
 
-/** Secreto del webhook derivado de AUTH_SECRET (no hay que configurar nada más): Telegram lo reenvía en cada petición. */
+/**
+ * Secreto del webhook: Telegram lo reenvía en cada petición y es lo único que distingue a Telegram de cualquiera
+ * que conozca la URL. Se deriva con HKDF de `TELEGRAM_WEBHOOK_SECRET` o, si no existe, de `AUTH_SECRET` (ver
+ * `src/lib/claves.ts`). En producción es obligatorio: sin ninguna de las dos lanza un error, en vez de caer en un
+ * valor calculable desde el repositorio.
+ */
 export function secretoWebhook(): string {
-  const s = process.env.TELEGRAM_WEBHOOK_SECRET ?? process.env.AUTH_SECRET ?? "contexto-ganadero-dev-secret";
+  return claveDe("webhook-telegram").toString("hex"); // 64 caracteres [0-9a-f], válidos para Telegram
+}
+
+/**
+ * Secreto con el que se registró el webhook antes de las claves por propósito (HMAC directo, 48 caracteres).
+ * Solo se acepta: así un webhook ya registrado sigue funcionando hasta que se vuelva a registrar desde
+ * Configuración → Telegram, que ya usa el secreto nuevo. Nunca se emite.
+ */
+function secretoWebhookHeredado(): string {
+  const s = process.env.TELEGRAM_WEBHOOK_SECRET?.trim() || secretoRaiz();
   return createHmac("sha256", s).update("telegram-webhook").digest("hex").slice(0, 48);
+}
+
+/**
+ * `true` si la cabecera `X-Telegram-Bot-Api-Secret-Token` de la petición coincide con el secreto vigente (o con el
+ * heredado). La comparación es en tiempo constante. Lanza si el servidor no tiene secreto configurado: quien
+ * llama debe responder 503, no 401, para que se note que falta configurar.
+ */
+export function webhookAutorizado(cabecera: string | null): boolean {
+  if (!cabecera) return false;
+  const vigente = igualesSeguro(cabecera, secretoWebhook());
+  const heredado = igualesSeguro(cabecera, secretoWebhookHeredado());
+  return vigente || heredado;
 }
 
 // Respuesta de la API de Telegram: resultado o descripción del error.

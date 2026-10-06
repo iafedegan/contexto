@@ -33,6 +33,29 @@ export async function hit(
   }
 }
 
+/**
+ * Marca una clave como usada: `true` solo la PRIMERA vez dentro de `ttlSeconds`. Sirve para lo que debe valer una sola
+ * vez (el token puente de una passkey, un código TOTP ya consumido). Es el mismo UPSERT atómico de `hit`, con tope 1,
+ * y por eso hereda su política: si la tabla no existe o la base falla, deja pasar.
+ */
+export async function usoUnico(key: string, ttlSeconds: number): Promise<boolean> {
+  return (await hit(key, 1, ttlSeconds)).allowed;
+}
+
+/**
+ * Borra los contadores cuya ventana venció hace más de una hora (hallazgo H-25). Sin esto la tabla crecía con cada IP y
+ * cada correo que intentaba entrar o suscribirse, y con cada código de un solo uso. Una hora de margen no afecta a
+ * nada: un contador vencido se reinicia solo en su próximo uso. Devuelve cuántos borró (0 si la tabla no existe).
+ */
+export async function purgarLimitesVencidos(): Promise<number> {
+  try {
+    const res = await db.execute(sql`delete from rate_limits where reset_at < now() - interval '1 hour' returning key`);
+    return rowsOf(res).length;
+  } catch {
+    return 0;
+  }
+}
+
 /** Borra el contador (p. ej. tras un login correcto). */
 export async function clearHits(key: string): Promise<void> {
   try {
