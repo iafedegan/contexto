@@ -72,7 +72,7 @@ export function CardMedia({
   return (
     <div className={`lx-media relative w-full overflow-hidden ${ratio}`}>
       {src ? (
-        <Image src={src} alt={alt} fill priority={priority} sizes={sizes} quality={90} className="object-cover" />
+        <Image src={src} alt={alt} fill priority={priority} fetchPriority={priority ? "high" : undefined} sizes={sizes} quality={90} className="object-cover" />
       ) : (
         <CoverArt seed={seed} label={label} className="absolute inset-0 text-[6rem]" />
       )}

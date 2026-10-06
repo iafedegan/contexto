@@ -91,6 +91,7 @@ export function BentoTile({
             alt={a.coverImageAlt ?? a.title}
             fill
             priority={priority}
+            fetchPriority={priority ? "high" : undefined}
             sizes="(min-width: 1024px) 40vw, (min-width: 640px) 50vw, 100vw"
             className="object-cover opacity-90 transition-transform duration-700 ease-out group-hover:scale-[1.08] group-hover:opacity-100"
           />

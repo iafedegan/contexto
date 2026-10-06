@@ -93,6 +93,7 @@ export function HomeCard({
               width={variant === "lead" ? 1120 : 640}
               height={variant === "lead" ? 630 : 427}
               priority={priority}
+              fetchPriority={priority ? "high" : undefined}
               sizes={variant === "lead" ? "(min-width: 1024px) 62vw, 100vw" : "(min-width: 640px) 33vw, 100vw"}
             />
             )}

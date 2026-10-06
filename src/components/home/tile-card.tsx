@@ -69,6 +69,7 @@ export function TileCard({
               alt={a.coverImageAlt ?? a.title}
               fill
               priority={priority}
+              fetchPriority={priority ? "high" : undefined}
               sizes="(min-width: 1024px) 24vw, (min-width: 640px) 33vw, 50vw"
               className="object-cover transition-[filter,transform] duration-150 ease-out group-hover:scale-[1.015] group-hover:brightness-[1.03]"
             />

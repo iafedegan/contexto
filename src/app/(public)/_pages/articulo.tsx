@@ -181,6 +181,7 @@ export function ArticleDocument({
               alt={a.coverImageAlt ?? a.title}
               fill
               priority
+              fetchPriority="high"
               sizes="(min-width: 1280px) 1200px, 100vw"
               quality={90}
               className="object-cover"

@@ -114,6 +114,7 @@ export function BroadsheetCard({
               width={variant === "lead" ? 1400 : 700}
               height={variant === "lead" ? 700 : 438}
               priority={priority}
+              fetchPriority={priority ? "high" : undefined}
               sizes={variant === "lead" ? "(min-width: 1024px) 65vw, 100vw" : "(min-width: 640px) 45vw, 100vw"}
               className="grayscale-[0.15] transition-[filter] duration-500 group-hover:grayscale-0"
             />

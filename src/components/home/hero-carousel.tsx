@@ -119,6 +119,7 @@ export function HeroCarousel({
                     alt={active.coverImageAlt ?? active.title}
                     fill
                     priority={index === 0}
+                    fetchPriority={index === 0 ? "high" : undefined}
                     sizes="100vw"
                     quality={90}
                     className="object-cover"
