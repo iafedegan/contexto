@@ -31,7 +31,7 @@ import {
   generateArticleDraft,
   type GeneratedDraft,
 } from "@/app/panel/(app)/articulos/ai-actions";
-import { uploadMedia } from "@/app/panel/(app)/articulos/media-actions";
+import { subirMedia } from "@/components/panel/subir-media";
 import { analizarConGoogle } from "@/app/panel/(app)/articulos/seo-actions";
 import type { PsiReport } from "@/lib/psi-types";
 import { embedHtml, parseEmbed } from "@/lib/embeds";
@@ -128,9 +128,7 @@ export function ArticleEditor({
     setMediaError("");
     setSubiendo(destino);
     try {
-      const fd = new FormData();
-      fd.set("file", file);
-      const res = await uploadMedia(fd);
+      const res = await subirMedia(file);
       if (!res.ok) {
         setMediaError(res.error);
         return null;

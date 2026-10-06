@@ -1,14 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { sanitizeArticleHtml } from "@/lib/sanitize";
 import { redirect } from "next/navigation";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { agentDrafts, articles } from "@/db/schema";
+import { agentDrafts } from "@/db/schema";
 import { requirePermiso } from "@/lib/auth";
-import { autorDeUsuario } from "@/lib/user-authors";
-import { slugify } from "@/lib/utils";
+import { aprobarBorradorCore } from "@/lib/article-ops";
 import { generateDraft } from "@/agents/draft-generator";
 import { getDemoSource } from "@/agents/sources";
 
@@ -19,37 +17,11 @@ import { getDemoSource } from "@/agents/sources";
  */
 export async function approveDraft(draftId: string) {
   const user = await requirePermiso("borradores_ia");
-
-  const [d] = await db.select().from(agentDrafts).where(eq(agentDrafts.id, draftId)).limit(1);
-  if (!d || d.status !== "pendiente") throw new Error("Borrador no disponible.");
-
-  const [article] = await db
-    .insert(articles)
-    .values({
-      slug: slugify(d.title) || slugify(`nota-${Date.now()}`),
-      title: d.title,
-      excerpt: d.excerpt,
-      body: sanitizeArticleHtml(d.body),
-      categoryId: d.suggestedCategoryId,
-      status: "borrador",
-      createdBy: user.id, // atribución al editor humano
-      authorId: await autorDeUsuario(user.id), // la nota se firma con la ficha del editor que aprueba, no con el sistema
-      originDraftId: d.id,
-    })
-    .returning({ id: articles.id });
-
-  await db
-    .update(agentDrafts)
-    .set({
-      status: "aprobado",
-      approvedBy: user.id,
-      approvedAt: sql`now()`,
-      publishedArticleId: article.id,
-    })
-    .where(eq(agentDrafts.id, draftId));
+  // Un solo sitio y una sola transacción (ver `aprobarBorradorCore`): aprobar dos veces no crea dos notas.
+  const articleId = await aprobarBorradorCore(user.id, draftId);
 
   revalidatePath("/panel/borradores-ia");
-  redirect(`/panel/articulos/${article.id}?desde_borrador=1`);
+  redirect(`/panel/articulos/${articleId}?desde_borrador=1`);
 }
 
 /**
@@ -75,6 +47,7 @@ export async function rejectDraft(formData: FormData) {
   const draftId = String(formData.get("draftId"));
   const reason = String(formData.get("reason") ?? "").trim();
 
+  // Solo se rechaza lo que sigue pendiente: sin esta condición, rechazar un borrador ya aprobado dejaba su nota huérfana.
   await db
     .update(agentDrafts)
     .set({
@@ -83,7 +56,7 @@ export async function rejectDraft(formData: FormData) {
       approvedAt: sql`now()`,
       rejectionReason: reason || "Sin motivo especificado",
     })
-    .where(eq(agentDrafts.id, draftId));
+    .where(and(eq(agentDrafts.id, draftId), eq(agentDrafts.status, "pendiente")));
 
   revalidatePath("/panel/borradores-ia");
 }

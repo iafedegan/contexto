@@ -1,20 +1,16 @@
 import "server-only";
-import { randomUUID } from "node:crypto";
+import { tipoPorFirma } from "@/lib/media-firma";
+import { subirBytesMedia } from "@/lib/media-storage";
 
-// Extensión de archivo que corresponde a cada tipo de imagen admitido.
-const EXT: Record<string, string> = { "image/png": "png", "image/jpeg": "jpg", "image/webp": "webp" };
-
-/** Sube bytes de una imagen al bucket público «media» de Supabase. Sin permisos propios: quien llama ya los comprobó. */
-export async function subirImagenBytes(bytes: Uint8Array, mime: "image/png" | "image/jpeg" | "image/webp"): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
-  const supabaseUrl = process.env.SUPABASE_URL;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!supabaseUrl || !serviceKey) return { ok: false, error: "Falta configurar SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY en el servidor." };
-  const name = `${randomUUID()}.${EXT[mime]}`;
-  const res = await fetch(`${supabaseUrl}/storage/v1/object/media/${name}`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${serviceKey}`, apikey: serviceKey, "Content-Type": mime, "x-upsert": "false" },
-    body: Buffer.from(bytes),
-  });
-  if (!res.ok) return { ok: false, error: `No se pudo subir la imagen a Supabase (${res.status}).` };
-  return { ok: true, url: `${supabaseUrl}/storage/v1/object/public/media/${name}` };
+/**
+ * Sube bytes de una imagen (portada generada por IA, foto recibida por Telegram) al bucket público «media» de Supabase.
+ * Sin permisos propios: quien llama ya los comprobó. El tipo con el que se guarda y se sirve lo decide la FIRMA real de
+ * los bytes (H-22), no el que declara quien llama (un modelo de IA puede etiquetar como PNG una imagen JPEG): si no son
+ * los de una imagen, no se sube.
+ */
+export async function subirImagenBytes(bytes: Uint8Array): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
+  const tipo = tipoPorFirma(bytes);
+  if (!tipo || tipo.kind !== "imagen") return { ok: false, error: "El archivo no es una imagen válida." };
+  const sub = await subirBytesMedia(bytes, tipo);
+  return sub.ok ? { ok: true, url: sub.url } : sub;
 }

@@ -1,7 +1,7 @@
 import "server-only";
 import { randomInt } from "node:crypto";
-import { eq } from "drizzle-orm";
-import { db } from "@/db";
+import { eq, sql } from "drizzle-orm";
+import { db, rowsOf } from "@/db";
 import { siteSettings } from "@/db/schema";
 import type { NewsItem } from "@/lib/ai-core";
 import type { Material } from "@/lib/material-types";
@@ -40,36 +40,56 @@ export async function vinculoDe(chatId: number | string): Promise<Vinculo | null
   return (await getVinculos())[String(chatId)] ?? null;
 }
 
+/**
+ * Los vínculos y los códigos viven cada uno en UNA fila de `site_settings` (un objeto JSON por clave). Antes se leía el
+ * objeto entero, se modificaba en memoria y se reescribía: dos personas vinculando o desvinculando a la vez se pisaban y
+ * una perdía su cambio (H-23). Ahora cada cambio es una sola sentencia atómica (`||` y `-` sobre el JSON dentro de
+ * Postgres) o ocurre en una transacción que bloquea la fila (`FOR UPDATE`).
+ */
+type Codigos = Record<string, { userId: string; exp: number }>;
+
 /** Código de 6 caracteres, válido 10 minutos, para vincular el Telegram de ESTA persona del panel. */
 export async function crearCodigo(userId: string): Promise<string> {
   const alfabeto = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   const codigo = Array.from({ length: 6 }, () => alfabeto[randomInt(alfabeto.length)]).join("");
-  const codes = await leer<Record<string, { userId: string; exp: number }>>(CODES, {});
   const ahora = Date.now();
-  for (const [k, v] of Object.entries(codes)) if (v.exp < ahora) delete codes[k];
-  codes[codigo] = { userId, exp: ahora + 10 * 60_000 };
-  await escribir(CODES, codes);
+  const entrada = JSON.stringify({ userId, exp: ahora + 10 * 60_000 });
+  // Una sola sentencia: descarta los vencidos y añade el nuevo, sin leer antes.
+  await db.execute(sql`
+    insert into site_settings (key, value, updated_at)
+    values (${CODES}, jsonb_build_object(${codigo}::text, ${entrada}::jsonb), now())
+    on conflict (key) do update set
+      value = coalesce(
+        (select jsonb_object_agg(k, v) from jsonb_each(site_settings.value) as t(k, v) where (v ->> 'exp')::bigint >= ${ahora}),
+        '{}'::jsonb
+      ) || jsonb_build_object(${codigo}::text, ${entrada}::jsonb),
+      updated_at = now()
+  `);
   return codigo;
 }
 
-/** Consume un código y guarda el vínculo. Devuelve el userId o null si no existe / venció. */
+/** Consume un código y guarda el vínculo. Devuelve el userId o null si no existe / venció. Un código solo sirve una vez, aunque lleguen dos mensajes a la vez. */
 export async function vincularConCodigo(codigo: string, chatId: number | string, nombre: string): Promise<string | null> {
-  const codes = await leer<Record<string, { userId: string; exp: number }>>(CODES, {});
-  const c = codes[codigo.toUpperCase().trim()];
-  if (!c || c.exp < Date.now()) return null;
-  delete codes[codigo.toUpperCase().trim()];
-  await escribir(CODES, codes);
-  const links = await getVinculos();
-  links[String(chatId)] = { userId: c.userId, nombre, desde: new Date().toISOString() };
-  await escribir(LINKS, links);
-  return c.userId;
+  const clave = codigo.toUpperCase().trim();
+  return db.transaction(async (tx) => {
+    // Se bloquea la fila de códigos: quien llegue segundo espera y ya no encuentra el código.
+    const filas = rowsOf<{ value: Codigos }>(await tx.execute(sql`select value from site_settings where key = ${CODES} for update`));
+    const c = filas[0]?.value?.[clave];
+    if (!c || c.exp < Date.now()) return null;
+    await tx.execute(sql`update site_settings set value = value - ${clave}::text, updated_at = now() where key = ${CODES}`);
+    const vinculo = JSON.stringify({ userId: c.userId, nombre, desde: new Date().toISOString() });
+    await tx.execute(sql`
+      insert into site_settings (key, value, updated_at)
+      values (${LINKS}, jsonb_build_object(${String(chatId)}::text, ${vinculo}::jsonb), now())
+      on conflict (key) do update set value = site_settings.value || jsonb_build_object(${String(chatId)}::text, ${vinculo}::jsonb), updated_at = now()
+    `);
+    return c.userId;
+  });
 }
 
 // Borra el vínculo de un chat y limpia su estado.
 export async function desvincular(chatId: number | string) {
-  const links = await getVinculos();
-  delete links[String(chatId)];
-  await escribir(LINKS, links);
+  await db.execute(sql`update site_settings set value = value - ${String(chatId)}::text, updated_at = now() where key = ${LINKS}`);
   await escribir(estadoKey(chatId), {});
 }
 

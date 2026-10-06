@@ -61,7 +61,10 @@ export async function hybridSearch(query: string, limit = 20): Promise<SearchHit
   const q = toOrQuery(query);
   if (!q) return [];
 
-  const queryVec = await embed(q);
+  // El embedding se calcula sobre la pregunta ORIGINAL, no sobre `q`: la lista «palabra or palabra» sin acentos ni palabras
+  // vacías sirve para el texto completo, pero le quita al modelo justo lo que entiende (el orden, los matices, las
+  // palabras que unen) y empeoraba la parte semántica (H-16).
+  const queryVec = await embed(query);
   const vecLiteral = queryVec ? toVectorLiteral(queryVec) : null;
 
   // Un solo round-trip: CTEs para cada señal y fusión RRF en SQL.
@@ -97,7 +100,8 @@ export async function hybridSearch(query: string, limit = 20): Promise<SearchHit
             @@ websearch_to_tsquery('spanish', (SELECT q FROM params))
     ),
     lexical_ranked AS (
-      SELECT *, row_number() OVER (ORDER BY rank DESC) AS rn FROM lexical LIMIT 50
+      -- ORDER BY rn antes del LIMIT: sin él, Postgres no garantiza que las 50 filas sean las mejores.
+      SELECT *, row_number() OVER (ORDER BY rank DESC, id) AS rn FROM lexical ORDER BY rn LIMIT 50
     ),
     semantic AS (
       SELECT 'articulo'::text AS kind, a.id::text AS id, a.title,
@@ -116,7 +120,7 @@ export async function hybridSearch(query: string, limit = 20): Promise<SearchHit
       WHERE ar.embedding IS NOT NULL AND (SELECT vec FROM params) IS NOT NULL
     ),
     semantic_ranked AS (
-      SELECT *, row_number() OVER (ORDER BY dist ASC) AS rn FROM semantic LIMIT 50
+      SELECT *, row_number() OVER (ORDER BY dist ASC, id) AS rn FROM semantic ORDER BY rn LIMIT 50
     ),
     fused AS (
       SELECT kind, id, title, summary, url, published_at, image, category_slug, category_name,

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Eye, EyeOff, ImagePlus, Loader2 } from "lucide-react";
-import { uploadMedia } from "@/app/panel/(app)/articulos/media-actions";
+import { subirMedia } from "./subir-media";
 import { parseEmbed } from "@/lib/embeds";
 import type { PopupConfig } from "@/lib/popup-types";
 
@@ -35,9 +35,7 @@ export function PopupEditor({
     setUploading(true);
     setMsg("");
     try {
-      const fd = new FormData();
-      fd.set("file", file);
-      const res = await uploadMedia(fd);
+      const res = await subirMedia(file);
       if (!res.ok) return setMsg(res.error);
       set({ mediaUrl: res.url, mediaType: res.kind === "video" ? "video" : "image" });
     } catch {

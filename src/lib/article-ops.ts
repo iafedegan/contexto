@@ -2,7 +2,7 @@ import "server-only";
 import { revalidatePath } from "next/cache";
 import { and, eq, gte, inArray, isNotNull, ne, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { articles, authors, categories } from "@/db/schema";
+import { agentDrafts, articles, authors, categories } from "@/db/schema";
 import { embed } from "@/lib/embeddings";
 import { sanitizeArticleHtml } from "@/lib/sanitize";
 import { emitir } from "@/lib/eventos";
@@ -105,6 +105,48 @@ export async function revalidarNotas(articleIds: string[]) {
 // Como `revalidarNotas`, para una sola nota.
 export const revalidarNota = (articleId: string) => revalidarNotas([articleId]);
 
+/**
+ * Aprueba un borrador de IA: lo pasa de «pendiente» a «aprobado» y crea el artículo en BORRADOR (nunca publicado),
+ * atribuido a quien aprueba. Todo en una transacción y con el estado reclamado en la propia sentencia (`UPDATE … WHERE
+ * status = 'pendiente' RETURNING`): dos aprobaciones a la vez no pueden crear dos notas, porque solo una gana el reclamo
+ * (antes la comprobación del estado y el cambio eran pasos separados; H-23). Devuelve el id de la nota o lanza si el
+ * borrador ya no está pendiente.
+ */
+export async function aprobarBorradorCore(userId: string, draftId: string): Promise<string> {
+  // Se resuelve ANTES de abrir la transacción: dentro de ella no debe usarse otra conexión (en PGlite, la de desarrollo,
+  // una consulta ajena a la transacción espera a que esta termine y nunca terminaría).
+  const authorId = await autorDeUsuario(userId); // la nota se firma con la ficha de quien aprueba, no con el sistema
+  return db.transaction(async (tx) => {
+    const [d] = await tx
+      .update(agentDrafts)
+      .set({ status: "aprobado", approvedBy: userId, approvedAt: sql`now()` })
+      .where(and(eq(agentDrafts.id, draftId), eq(agentDrafts.status, "pendiente")))
+      .returning();
+    if (!d) throw new Error("Borrador no disponible.");
+
+    let slug = slugify(d.title) || slugify(`nota-${Date.now()}`);
+    const [dup] = await tx.select({ id: articles.id }).from(articles).where(eq(articles.slug, slug)).limit(1);
+    if (dup) slug = `${slug}-${Date.now().toString(36)}`;
+
+    const [article] = await tx
+      .insert(articles)
+      .values({
+        slug,
+        title: d.title,
+        excerpt: d.excerpt,
+        body: sanitizeArticleHtml(d.body),
+        categoryId: d.suggestedCategoryId,
+        status: "borrador",
+        createdBy: userId, // atribución al editor humano
+        authorId,
+        originDraftId: d.id,
+      })
+      .returning({ id: articles.id });
+    await tx.update(agentDrafts).set({ publishedArticleId: article.id }).where(eq(agentDrafts.id, draftId));
+    return article.id;
+  });
+}
+
 /** Solo una nota en borrador (o ya en revisión) pasa a revisión; sobre una publicada la sacaría del sitio. */
 export async function enviarARevisionCore(articleId: string) {
   const [fila] = await db
@@ -133,14 +175,22 @@ export async function programarCore(articleId: string, isoDateTime: string) {
   await db.update(articles).set({ status: "programado", scheduledFor: when, updatedAt: sql`now()` }).where(eq(articles.id, articleId));
 }
 
-/** Distintivos de la nota: «Última hora» (barra roja, solo la más reciente) y «En vivo / en desarrollo» (etiqueta). */
-export async function distintivosCore(articleId: string, d: { isBreaking?: boolean; isLive?: boolean }) {
+/** Retira la nota del sitio sin borrarla (estado «archivado») y refresca el sitio. */
+export async function archivarCore(articleId: string) {
+  await db.update(articles).set({ status: "archivado", updatedAt: sql`now()` }).where(eq(articles.id, articleId));
+  await revalidarNota(articleId);
+}
+
+/** Distintivos de la nota: «Última hora» (barra roja, solo la más reciente) y «En vivo / en desarrollo» (etiqueta). Devuelve `false` si la nota ya no existe. */
+export async function distintivosCore(articleId: string, d: { isBreaking?: boolean; isLive?: boolean }): Promise<boolean> {
   const set: { isBreaking?: boolean; isLive?: boolean } = {};
   if (typeof d.isBreaking === "boolean") set.isBreaking = d.isBreaking;
   if (typeof d.isLive === "boolean") set.isLive = d.isLive;
-  if (!Object.keys(set).length) return;
-  await db.update(articles).set({ ...set, updatedAt: sql`now()` }).where(eq(articles.id, articleId));
+  if (!Object.keys(set).length) return true;
+  const filas = await db.update(articles).set({ ...set, updatedAt: sql`now()` }).where(eq(articles.id, articleId)).returning({ id: articles.id });
+  if (!filas.length) return false;
   await revalidarNota(articleId);
+  return true;
 }
 
 /**

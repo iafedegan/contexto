@@ -570,7 +570,7 @@ async function portadaIA(c: Ctx) {
 async function fotoRecibida(c: Ctx, fileId: string) {
   const f = await descargarArchivo(fileId);
   if (!f) { c.aviso = "⚠️ No pude descargar la foto."; return vista(c); }
-  const up = await subirImagenBytes(f.bytes, "image/jpeg");
+  const up = await subirImagenBytes(f.bytes);
   if (!up.ok) { c.aviso = `⚠️ ${esc(up.error)}`; return vista(c); }
   c.e.coverUrl = up.url; c.e.coverAlt = c.e.title ?? "";
   await guardar(c);
@@ -659,7 +659,7 @@ async function enviarGrafica(c: Ctx) {
   const spec = ch.spec as ChartSpec;
   const png = await graficaPng(spec);
   // La imagen que ves aquí es EXACTAMENTE la que queda de respaldo en la nota: se sube ahora y se guarda su URL.
-  const sub = await subirImagenBytes(png, "image/png");
+  const sub = await subirImagenBytes(png);
   if (!sub.ok) { c.aviso = `⚠️ No pude guardar la imagen de la gráfica: ${esc(sub.error)}`; return pasoGrafica(c); }
   ch.pngUrl = sub.url;
   await fin(c);

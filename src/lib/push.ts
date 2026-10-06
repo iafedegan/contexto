@@ -5,6 +5,7 @@ import { and, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { articles, pushSubscriptions, siteSettings } from "@/db/schema";
 import { getSiteIdentity } from "@/lib/site-identity";
+import { usoUnico } from "@/lib/rate-limit";
 import { env } from "@/lib/env";
 import { siteUrl } from "@/lib/utils";
 
@@ -180,11 +181,24 @@ export async function notaYaAvisada(id: string): Promise<boolean> {
   const [row] = await db.select({ v: siteSettings.value }).from(siteSettings).where(eq(siteSettings.key, ENVIADOS_KEY)).limit(1);
   return ((row?.v as Enviado[] | undefined) ?? []).some((x) => x.id === id);
 }
-// Registra que una nota ya se avisó (se conservan las últimas 200).
-async function marcarEnviado(id: string) {
-  const [row] = await db.select({ v: siteSettings.value }).from(siteSettings).where(eq(siteSettings.key, ENVIADOS_KEY)).limit(1);
-  const lista = [{ id, at: new Date().toISOString() }, ...(((row?.v as Enviado[] | undefined) ?? []).filter((x) => x.id !== id))].slice(0, 200);
-  await db.insert(siteSettings).values({ key: ENVIADOS_KEY, value: lista as never }).onConflictDoUpdate({ target: siteSettings.key, set: { value: lista as never, updatedAt: new Date() } });
+// Registra que una nota ya se avisó (se conservan las últimas 200). Una sola sentencia atómica: antes se leía la lista, se
+// modificaba y se reescribía, y dos avisos a la vez se pisaban (H-23).
+export async function registrarNotaAvisada(id: string) {
+  const entrada = JSON.stringify({ id, at: new Date().toISOString() });
+  await db.execute(sql`
+    insert into site_settings (key, value, updated_at)
+    values (${ENVIADOS_KEY}, jsonb_build_array(${entrada}::jsonb), now())
+    on conflict (key) do update set
+      value = (
+        select coalesce(jsonb_agg(e order by i), '[]'::jsonb)
+        from jsonb_array_elements(
+          jsonb_build_array(${entrada}::jsonb) ||
+          coalesce((select jsonb_agg(x order by o) from jsonb_array_elements(site_settings.value) with ordinality as y(x, o) where y.x ->> 'id' <> ${id}), '[]'::jsonb)
+        ) with ordinality as t(e, i)
+        where i <= 200
+      ),
+      updated_at = now()
+  `);
 }
 
 // Resultado de avisar una nota: el resumen del envío o el motivo por el que no se envió.
@@ -202,7 +216,11 @@ export async function avisarNota(articleId: string, opts: { repetir?: boolean; u
     .where(and(eq(articles.id, articleId), eq(articles.status, "publicado")))
     .limit(1);
   if (!nota) return { ok: false, motivo: "La nota no está publicada todavía." };
-  if (!opts.repetir && (await notaYaAvisada(articleId))) return { ok: false, motivo: "Esta nota ya se avisó a los lectores." };
+  // Dos formas de saber que ya se avisó: la lista (lo avisado hasta ahora) y un reclamo atómico (dos personas pulsando
+  // «avisar» a la vez: solo una lo consigue). El reclamo dura más de un año; `repetir` lo salta a propósito.
+  if (!opts.repetir && ((await notaYaAvisada(articleId)) || !(await usoUnico(`push-aviso:${articleId}`, 400 * 24 * 3600)))) {
+    return { ok: false, motivo: "Esta nota ya se avisó a los lectores." };
+  }
 
   const res = await enviarAviso({
     titulo: nota.title,
@@ -212,7 +230,7 @@ export async function avisarNota(articleId: string, opts: { repetir?: boolean; u
     tag: `nota-${nota.id.slice(0, 8)}`,
     urgente: nota.breaking || opts.urgente,
   });
-  await marcarEnviado(articleId).catch(() => {});
+  await registrarNotaAvisada(articleId).catch(() => {});
   return { ok: true, ...res };
 }
 

@@ -76,8 +76,8 @@ export async function generateCoverImageCore(userId: string, input: {
       ({ image } = await generateImage({ model: respaldo, prompt, aspectRatio: "16:9" }));
     }
     await registrarCostoIA(userId, COSTO_IMAGEN_USD);
-    const mime = image.mediaType === "image/jpeg" ? "image/jpeg" : image.mediaType === "image/webp" ? "image/webp" : "image/png";
-    const up = await subirImagenBytes(image.uint8Array, mime);
+    // El tipo con el que se guarda lo decide la firma de los bytes, no lo que declare el modelo.
+    const up = await subirImagenBytes(image.uint8Array);
     if (!up.ok) return { ok: false, error: up.error };
     return { ok: true, url: up.url, alt: `${PREFIJO_IMAGEN_IA} ${scene}`.slice(0, 300), scene };
   } catch (err) {

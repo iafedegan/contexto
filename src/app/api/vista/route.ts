@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { articles, articleViewsDaily } from "@/db/schema";
+import { clientIp, hit } from "@/lib/rate-limit";
 import { clasificarFuente, registrarFuente } from "@/lib/view-sources";
 
 /**
@@ -10,7 +11,11 @@ import { clasificarFuente, registrarFuente } from "@/lib/view-sources";
  * Lo llama un beacon del cliente y no el render del servidor: con ISR una
  * página se renderiza una vez y se sirve cacheada miles de veces, así que
  * contar renders no mide lectores. El endpoint solo incrementa un entero; no
- * guarda IP, cookie ni identificador alguno del visitante.
+ * guarda cookie ni identificador alguno del visitante.
+ *
+ * Contra la inflación de «Más leídas» y de las fuentes de tráfico (H-19), una misma IP cuenta UNA lectura por nota cada
+ * 6 horas y no más de 120 lecturas por hora en total: el resto responde ok sin contar. La IP solo vive esas horas como
+ * clave del límite (`rate_limits`, que el mantenimiento diario purga); nunca se guarda junto a la lectura.
  */
 export const dynamic = "force-dynamic";
 
@@ -28,6 +33,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false }, { status: 400 });
   }
   if (!slug) return NextResponse.json({ ok: false }, { status: 400 });
+
+  const ip = clientIp(req.headers);
+  const [porNota, porIp] = await Promise.all([hit(`vista:${ip}:${slug}`, 1, 6 * 3600), hit(`vista:ip:${ip}`, 120, 3600)]);
+  if (!porNota.allowed || !porIp.allowed) return NextResponse.json({ ok: true, contada: false });
 
   try {
     const [row] = await db
@@ -50,5 +59,5 @@ export async function POST(req: Request) {
   } catch {
     // Un fallo del contador nunca debe romper la lectura del artículo.
   }
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, contada: true });
 }
