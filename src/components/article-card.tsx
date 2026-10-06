@@ -131,8 +131,10 @@ function LeadCard({ a, priority, locale }: { a: ArticleListItem; priority?: bool
   return (
     /* Desde md el texto va SOBRE la foto, en la misma celda de cuadrícula: la tarjeta mide lo que
        mida lo mayor entre el 16:11 de la foto y el texto, y la foto se estira para llenarla. Antes el
-       texto era `absolute` sobre un alto fijo: un titular largo se salía por arriba, recortado. */
-    <article data-bs-root={a.slug} className="lx-card lx-reveal group relative md:grid [&>*]:md:col-start-1 [&>*]:md:row-start-1">
+       texto era `absolute` sobre un alto fijo: un titular largo se salía por arriba, recortado.
+       La nota de apertura (con `priority`) no hace la animación de entrada: con opacidad 0 al inicio, el LCP
+       esperaba a que terminara. */
+    <article data-bs-root={a.slug} className={`lx-card ${priority ? "" : "lx-reveal"} group relative md:grid [&>*]:md:col-start-1 [&>*]:md:row-start-1`}>
       <div className="lx-shine pointer-events-none absolute inset-0 z-[3]" />
       <div className="lx-inlay pointer-events-none absolute inset-0 z-[2]" />
       <Link
@@ -180,7 +182,7 @@ function LeadCard({ a, priority, locale }: { a: ArticleListItem; priority?: bool
 function GoldCard({ a, priority, locale }: { a: ArticleListItem; priority?: boolean; locale: Locale }) {
   const st = cardStyle(a, "gold");
   return (
-    <article data-bs-root={a.slug} className="lx-card lx-reveal group flex h-full flex-col">
+    <article data-bs-root={a.slug} className={`lx-card ${priority ? "" : "lx-reveal"} group flex h-full flex-col`}>
       <div className="lx-shine pointer-events-none absolute inset-0 z-[3]" />
       {!st.hideMedia && (
         <Link
