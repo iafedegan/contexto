@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { siteSettings } from "@/db/schema";
 import { decryptSecret, maskSecret } from "@/lib/secrets";
+import { cachear, TAG_AJUSTES } from "@/lib/data-cache";
 import {
   ANALYTICS_KEY,
   DEFAULT_ANALYTICS,
@@ -11,15 +12,20 @@ import {
   type AnalyticsStatus,
 } from "@/lib/analytics";
 
-// Lee los ajustes de analítica de la base (una consulta por petición); si falla devuelve los valores por defecto.
+// Lee los ajustes de analítica de la base y los guarda entre peticiones (60 s, o hasta que el panel los cambie y llame a `invalidarCache`). Lo pide el layout raíz en CADA página: sin esta caché cada visita costaba una consulta. Si la lectura falla no se guarda nada.
+const leerAnalytics = cachear(
+  "analytics",
+  async (): Promise<AnalyticsSettings> => {
+    const [row] = await db.select({ value: siteSettings.value }).from(siteSettings).where(eq(siteSettings.key, ANALYTICS_KEY)).limit(1);
+    return { ...DEFAULT_ANALYTICS, ...((row?.value as Partial<AnalyticsSettings>) ?? {}) };
+  },
+  { tags: [TAG_AJUSTES] },
+);
+
+// Ajustes de analítica (memoizados dentro de la petición y en la caché de datos); si la base falla devuelve los valores por defecto.
 export const readAnalytics = cache(async (): Promise<AnalyticsSettings> => {
   try {
-    const [row] = await db
-      .select({ value: siteSettings.value })
-      .from(siteSettings)
-      .where(eq(siteSettings.key, ANALYTICS_KEY))
-      .limit(1);
-    return { ...DEFAULT_ANALYTICS, ...((row?.value as Partial<AnalyticsSettings>) ?? {}) };
+    return await leerAnalytics();
   } catch {
     return DEFAULT_ANALYTICS;
   }
