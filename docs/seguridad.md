@@ -101,6 +101,9 @@ La política de privacidad (`/politica-de-privacidad`) declara qué se recoge, p
 | Correo y fecha de baja | Se conservan para no volver a escribirle, hasta que la persona pida borrarlos |
 | Supresión a petición | Un administrador borra el registro entero en Newsletter → Suscriptores |
 
+Salvaguardas, porque borrar es irreversible: mientras **no haya proveedor de correo configurado** nadie ha recibido el correo
+de confirmación y, por tanto, nadie ha podido confirmar, así que no se elimina ninguna alta pendiente; y `RETENCION_BOLETIN=off`
+detiene todo el trabajo sin tocar código.
 El CSV de suscriptores solo lleva correo, estado y fecha de alta, y lo exporta quien tenga el permiso «newsletter».
 Pruebas: `newsletter/retencion.test.ts`, `newsletter/alta.test.ts`.
 
@@ -115,7 +118,8 @@ por hora, venga de la IP que venga; una alta pendiente conserva su token y sus d
   firmada y luego se confirma (si no es lo que dice ser, se borra). La función de Vercel solo admite ~4,5 MB por petición.
 - Cuota de 60 subidas por persona y hora.
 - Cada día se borran los archivos del bucket sin uso desde hace más de 7 días (notas borradas, subidas abandonadas); nunca más
-  de 200 por pasada, y no se borra nada si no se encuentra ninguna referencia (señal de que algo falla).
+  de 200 por pasada, y no se borra nada si no se encuentra ninguna referencia (señal de que algo falla). `MEDIA_CLEANUP=off`
+  detiene la limpieza sin tocar código.
 Pruebas: `media-firma.test.ts`, `media-limpieza.test.ts`.
 
 ## 9. Endpoints públicos y sus límites (H-19)

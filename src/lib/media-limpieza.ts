@@ -32,6 +32,8 @@ export type ResultadoLimpieza = { revisados: number; borrados: number; omitida?:
 
 /** Borra los medios huérfanos con más de `dias` días. Se omite sola si algo no cuadra. */
 export async function limpiarMediaHuerfana(opciones: { dias?: number; ahora?: Date } = {}): Promise<ResultadoLimpieza> {
+  // Válvula de seguridad: borrar archivos es irreversible, así que se puede detener sin tocar código.
+  if (process.env.MEDIA_CLEANUP === "off") return { revisados: 0, borrados: 0, omitida: "desactivada con MEDIA_CLEANUP=off" };
   if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) return { revisados: 0, borrados: 0, omitida: "sin almacenamiento configurado" };
   const limite = (opciones.ahora ?? new Date()).getTime() - (opciones.dias ?? DIAS_DE_GRACIA) * 24 * 3600_000;
   const objetos = await listarMedia();

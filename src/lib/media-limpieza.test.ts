@@ -102,6 +102,19 @@ test("una ejecución no borra más de 200 archivos", async () => {
   }
 });
 
+test("MEDIA_CLEANUP=off la detiene aunque haya huérfanos", async () => {
+  const s = simularStorage([{ name: "huerfana.png", created_at: dias(40) }]);
+  process.env.MEDIA_CLEANUP = "off";
+  try {
+    const r = await limpieza.limpiarMediaHuerfana();
+    assert.match(r.omitida ?? "", /MEDIA_CLEANUP=off/);
+    assert.deepEqual(s.borrados, []);
+  } finally {
+    delete process.env.MEDIA_CLEANUP;
+    s.restaurar();
+  }
+});
+
 test("sin Supabase configurado la limpieza se omite sin fallar", async () => {
   delete process.env.SUPABASE_URL;
   const r = await limpieza.limpiarMediaHuerfana();

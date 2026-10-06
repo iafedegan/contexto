@@ -20,7 +20,7 @@ const completo = { firstName: "Ana", lastName: "Pérez", mobile: "3001112233", b
 
 test("al confirmar, la IP del alta se borra; el resto de los datos se conserva", async () => {
   await bd.db.insert(t).values({ email: "confirmada@example.com", confirmed: true, ...completo });
-  const r = await ret.aplicarRetencion();
+  const r = await ret.aplicarRetencion({ proveedorConfigurado: true });
   assert.ok(r.ipsBorradas >= 1);
   const f = await fila("confirmada@example.com");
   assert.equal(f.signupIp, null);
@@ -33,7 +33,7 @@ test("una alta sin confirmar se elimina a los 30 días, no antes", async () => {
     { email: "vieja@example.com", confirmed: false, createdAt: dias(31), ...completo },
     { email: "reciente@example.com", confirmed: false, createdAt: dias(5), ...completo },
   ]);
-  await ret.aplicarRetencion();
+  await ret.aplicarRetencion({ proveedorConfigurado: true });
   assert.equal(await fila("vieja@example.com"), undefined);
   assert.equal((await fila("reciente@example.com")).signupIp, "203.0.113.7", "la reciente sigue como estaba, IP incluida: aún no ha confirmado");
 });
@@ -43,7 +43,7 @@ test("a los 30 días de una baja se borran los datos personales y queda el corre
     { email: "baja-vieja@example.com", confirmed: true, unsubscribedAt: dias(40), ...completo },
     { email: "baja-reciente@example.com", confirmed: true, unsubscribedAt: dias(5), ...completo },
   ]);
-  const r = await ret.aplicarRetencion();
+  const r = await ret.aplicarRetencion({ proveedorConfigurado: true });
   assert.ok(r.bajasDepuradas >= 1);
   const vieja = await fila("baja-vieja@example.com");
   assert.equal(vieja.email, "baja-vieja@example.com");
@@ -55,6 +55,30 @@ test("a los 30 días de una baja se borran los datos personales y queda el corre
 });
 
 test("es idempotente: una segunda pasada no encuentra nada que hacer", async () => {
-  const r = await ret.aplicarRetencion();
+  const r = await ret.aplicarRetencion({ proveedorConfigurado: true });
   assert.deepEqual(r, { ipsBorradas: 0, altasSinConfirmarEliminadas: 0, bajasDepuradas: 0 });
+});
+
+test("sin proveedor de correo nadie pudo confirmar: no se elimina ninguna alta pendiente, aunque sea vieja", async () => {
+  await bd.db.insert(t).values({ email: "pendiente-sin-correo@example.com", confirmed: false, createdAt: dias(90), ...completo });
+  const r = await ret.aplicarRetencion({ proveedorConfigurado: false });
+  assert.equal(r.altasSinConfirmarEliminadas, 0);
+  assert.match((r.omitidas ?? []).join(" "), /proveedor de correo/);
+  assert.ok(await fila("pendiente-sin-correo@example.com"), "la alta sigue ahí");
+  // Con proveedor sí se elimina.
+  await ret.aplicarRetencion({ proveedorConfigurado: true });
+  assert.equal(await fila("pendiente-sin-correo@example.com"), undefined);
+});
+
+test("RETENCION_BOLETIN=off detiene todo el trabajo", async () => {
+  await bd.db.insert(t).values({ email: "vieja-off@example.com", confirmed: false, createdAt: dias(90), ...completo });
+  process.env.RETENCION_BOLETIN = "off";
+  try {
+    const r = await ret.aplicarRetencion({ proveedorConfigurado: true });
+    assert.deepEqual({ a: r.ipsBorradas, b: r.altasSinConfirmarEliminadas, c: r.bajasDepuradas }, { a: 0, b: 0, c: 0 });
+    assert.match((r.omitidas ?? []).join(" "), /RETENCION_BOLETIN=off/);
+    assert.ok(await fila("vieja-off@example.com"));
+  } finally {
+    delete process.env.RETENCION_BOLETIN;
+  }
 });
