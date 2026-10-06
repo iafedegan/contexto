@@ -7,7 +7,7 @@
  * `npm run db:setup` contra tu Postgres gestionado.
  */
 import "dotenv/config";
-import { existsSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, rmSync } from "node:fs";
 import { PGlite } from "@electric-sql/pglite";
 import { vector } from "@electric-sql/pglite/vector";
 import { drizzle } from "drizzle-orm/pglite";
@@ -61,13 +61,6 @@ async function main() {
     CREATE INDEX IF NOT EXISTS archive_fts_es
       ON archive_index USING gin (to_tsvector('spanish', title || ' ' || summary));
   `);
-
-  // SQL manual idempotente que en producción se pega a mano en Supabase y no
-  // está en las migraciones numeradas: sin él, pantallas como Configuración
-  // (passkeys) fallan con 500 en local.
-  for (const f of ["passkeys.sql", "newsletter_subscriber_details.sql"]) {
-    await client.exec(readFileSync(`${process.cwd()}/drizzle/manual/${f}`, "utf8"));
-  }
 
   const { created } = await seed(db as never);
   await client.close();

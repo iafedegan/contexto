@@ -1,4 +1,3 @@
-import { promoverProgramados } from "@/lib/scheduled";
 import Link from "next/link";
 import { sql } from "drizzle-orm";
 import {
@@ -36,7 +35,6 @@ export const dynamic = "force-dynamic";
 
 // Resumen del panel: notas por estado, borradores pendientes, consultas del asistente, tendencia de lecturas, suscriptores y notas más leídas.
 export default async function PanelHome() {
-  await promoverProgramados();
   const [session, byStatus, pendingDrafts, queries7d, week, trend, subscriberPoints, top] = await Promise.all([
     auth(),
     db.select({ status: articles.status, n: sql<number>`count(*)::int` }).from(articles).groupBy(articles.status),

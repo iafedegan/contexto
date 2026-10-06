@@ -24,3 +24,14 @@ export function acotar(v: unknown, min: number, max: number, decimales = 0): num
   const f = 10 ** decimales;
   return Math.min(max, Math.max(min, Math.round(v * f) / f));
 }
+
+/**
+ * Fecha de nacimiento `AAAA-MM-DD` real y plausible (entre 1900 y hoy). Devuelve el mismo texto o `null`: una fecha
+ * imposible (`2020-02-31`) o un texto cualquiera no debe llegar a una columna `date` y romper el alta completa.
+ */
+export function fechaNacimientoValida(v: unknown, hoy = new Date()): string | null {
+  if (typeof v !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(v)) return null;
+  const d = new Date(`${v}T00:00:00Z`);
+  if (Number.isNaN(d.getTime()) || d.toISOString().slice(0, 10) !== v) return null;
+  return d.getUTCFullYear() >= 1900 && d.getTime() <= hoy.getTime() ? v : null;
+}

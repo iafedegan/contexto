@@ -12,16 +12,17 @@
  * trazable el consentimiento.
  */
 
-import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { newsletterSubscribers } from "@/db/schema";
-import { headers } from "next/headers";
 import { clientIp, hit } from "@/lib/rate-limit";
 import { verifyHuman } from "@/lib/turnstile";
 import { sendConfirmationEmail } from "@/lib/newsletter/confirm";
+import { solicitarAlta } from "@/lib/newsletter/alta";
 import { reverseGeocode, sourceFromAccuracy, validAccuracy, validCoords } from "@/lib/geo-reverse";
-import { EMAIL_RE } from "@/lib/validate";
+import { EMAIL_RE, fechaNacimientoValida } from "@/lib/validate";
 
 // Estado que se devuelve al formulario: si salió bien y el mensaje.
 export type BoletinState = { ok: boolean; message: string } | null;
@@ -55,7 +56,7 @@ export async function suscribirBoletin(
   // widget compacto de la barra lateral sigue siendo solo-correo.
   const firstName = String(formData.get("firstName") ?? "").trim().slice(0, 120) || null;
   const lastName = String(formData.get("lastName") ?? "").trim().slice(0, 120) || null;
-  const birthDate = String(formData.get("birthDate") ?? "").trim() || null;
+  const birthDate = fechaNacimientoValida(String(formData.get("birthDate") ?? "").trim());
   const mobile = String(formData.get("mobile") ?? "").trim().slice(0, 40) || null;
 
   // Trazabilidad interna (nunca se le muestra al suscriptor): Vercel ya
@@ -88,29 +89,10 @@ export async function suscribirBoletin(
   }
 
   try {
-    const [existente] = await db
-      .select({
-        id: newsletterSubscribers.id,
-        confirmed: newsletterSubscribers.confirmed,
-        unsubscribedAt: newsletterSubscribers.unsubscribedAt,
-      })
-      .from(newsletterSubscribers)
-      .where(eq(newsletterSubscribers.email, email))
-      .limit(1);
-
-    // «Ya suscrito» es confirmado Y sin baja. Quien se dio de baja conserva `confirmed = true`, y antes
-    // eso lo dejaba sin poder volver: el formulario decía «revisa tu correo» y no enviaba nada.
-    if (existente?.confirmed && !existente.unsubscribedAt) {
-      // No se confirma ni se niega nada distinto: quien pregunta no debe poder
-      // averiguar si una dirección ya está suscrita.
-      return {
-        ok: true,
-        message: es ? "Listo. Revisa tu correo para confirmar." : "Done. Check your inbox to confirm.",
-      };
-    }
-
-    const confirmToken = randomUUID();
-    const datos = {
+    // Un solo sitio decide qué pasa con la dirección (ver src/lib/newsletter/alta.ts): ya suscrita no cambia nada ni lo
+    // revela; quien se dio de baja confirma de nuevo; una alta pendiente conserva su token y sus datos y solo completa
+    // lo que estaba vacío; y cada dirección recibe como mucho 3 correos de confirmación por hora.
+    const alta = await solicitarAlta(email, {
       firstName,
       lastName,
       birthDate,
@@ -124,28 +106,10 @@ export async function suscribirBoletin(
       signupCountry,
       signupLat,
       signupLon,
-    };
-    // Un mismo destinatario no recibe más de 3 correos de confirmación por hora, venga de la IP que venga:
-    // sin esto, cualquiera podía llenar de correos la bandeja de una persona ajena. La respuesta es la
-    // misma de siempre, para no revelar nada.
-    const puedeEnviar = (await hit(`boletin:correo:${email}`, 3, 60 * 60)).allowed;
-    if (existente) {
-      // Quien vuelve tras una baja debe confirmar de nuevo (doble opt-in): hasta entonces no recibe nada.
-      // Solo se actualizan los datos que esta vez sí llegaron: el widget compacto trae solo el correo y no
-      // debe borrar el nombre o el celular de una alta anterior.
-      const nuevos = Object.fromEntries(Object.entries(datos).filter(([, v]) => v !== null && v !== undefined));
-      if (puedeEnviar) {
-        await db
-          .update(newsletterSubscribers)
-          .set({ confirmToken, confirmed: false, unsubscribedAt: null, ...nuevos })
-          .where(eq(newsletterSubscribers.id, existente.id));
-      }
-    } else {
-      await db.insert(newsletterSubscribers).values({ email, confirmToken, ...datos });
-    }
-    // El correo de confirmación sale en cuanto hay proveedor configurado. Un
-    // fallo al enviarlo no debe romper el alta: queda pendiente y trazable.
-    if (puedeEnviar) await sendConfirmationEmail(email, confirmToken).catch(() => false);
+    });
+    // El correo de confirmación sale en cuanto hay proveedor configurado. Un fallo al enviarlo no debe romper el alta:
+    // queda pendiente y trazable. La respuesta es la misma de siempre, para no revelar nada.
+    if (alta.estado === "pendiente" && alta.enviar) await sendConfirmationEmail(email, alta.token).catch(() => false);
   } catch {
     return {
       ok: false,
@@ -157,4 +121,22 @@ export async function suscribirBoletin(
     ok: true,
     message: es ? "Listo. Revisa tu correo para confirmar." : "Done. Check your inbox to confirm.",
   };
+}
+
+/**
+ * Confirma la suscripción (segundo paso del doble opt-in). Es una acción del servidor (POST): solo la dispara la persona
+ * al pulsar el botón de /boletin/confirmar, nunca un servicio que abra el enlace del correo con un GET (H-10). Con la
+ * confirmación, además, se borra la IP del alta: ya no hace falta (ver `src/lib/newsletter/retencion.ts`).
+ */
+export async function confirmarSuscripcion(formData: FormData): Promise<void> {
+  const token = String(formData.get("t") ?? "");
+  if (token.length < 16 || token.length > 80) redirect("/boletin/confirmar");
+  const ip = clientIp(await headers());
+  if ((await hit(`boletin:confirmar:${ip}`, 20, 60 * 60)).allowed) {
+    await db
+      .update(newsletterSubscribers)
+      .set({ confirmed: true, unsubscribedAt: null, signupIp: null })
+      .where(eq(newsletterSubscribers.confirmToken, token));
+  }
+  redirect(`/boletin/confirmar?t=${encodeURIComponent(token)}`);
 }

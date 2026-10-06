@@ -79,24 +79,31 @@ export async function reindexarNota(articleId: string) {
   if (vec) await db.update(articles).set({ embedding: vec }).where(eq(articles.id, articleId));
 }
 
-// Descarta la caché de datos y las páginas afectadas por una nota: portada, sitemap, feed, la nota, su categoría y su autor.
-export async function revalidarNota(articleId: string) {
-  const [a] = await db
+// Descarta la caché de datos y las páginas afectadas por una o varias notas: portada, sitemap, feed y, de cada nota, su página, su categoría y su autor. Es el ÚNICO sitio que lo hace (el panel, Telegram y la publicación programada pasan por aquí).
+export async function revalidarNotas(articleIds: string[]) {
+  if (!articleIds.length) return;
+  const filas = await db
     .select({ slug: articles.slug, categorySlug: categories.slug, authorSlug: authors.slug })
     .from(articles)
     .leftJoin(categories, eq(articles.categoryId, categories.id))
     .leftJoin(authors, eq(articles.authorId, authors.id))
-    .where(eq(articles.id, articleId))
-    .limit(1);
-  if (!a) return;
+    .where(inArray(articles.id, articleIds));
+  if (!filas.length) return;
   invalidarCache();
   revalidatePath("/");
   revalidatePath("/sitemap.xml");
   revalidatePath("/feed.xml");
-  revalidatePath(`/articulo/${a.slug}`);
-  if (a.categorySlug) revalidatePath(`/categoria/${a.categorySlug}`);
-  if (a.authorSlug) revalidatePath(`/autor/${a.authorSlug}`);
+  const rutas = new Set<string>();
+  for (const a of filas) {
+    rutas.add(`/articulo/${a.slug}`);
+    if (a.categorySlug) rutas.add(`/categoria/${a.categorySlug}`);
+    if (a.authorSlug) rutas.add(`/autor/${a.authorSlug}`);
+  }
+  for (const ruta of rutas) revalidatePath(ruta);
 }
+
+// Como `revalidarNotas`, para una sola nota.
+export const revalidarNota = (articleId: string) => revalidarNotas([articleId]);
 
 /** Solo una nota en borrador (o ya en revisión) pasa a revisión; sobre una publicada la sacaría del sitio. */
 export async function enviarARevisionCore(articleId: string) {

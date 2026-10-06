@@ -669,7 +669,7 @@ export const DOCUMENTOS: DocumentoInstitucional[] = [
             {
               tipo: "lista",
               items: [
-                "Boletín: correo electrónico y, opcionalmente, nombre, con la única finalidad de enviar el boletín informativo.",
+                "Boletín: tu correo electrónico (obligatorio) y, si decides darlos, nombre, apellido, celular y fecha de nacimiento. Con el alta se registran también la ciudad, el país y el código postal aproximados que se deducen de tu conexión y, solo si lo autorizas en el aviso de ubicación del sitio, la ubicación que comparte tu dispositivo, de la que se deduce el barrio.",
                 "Formularios de contacto y comerciales: nombre, correo, organización y el mensaje que decidas enviarnos.",
                 "Navegación: datos de uso agregados y seudonimizados con fines estadísticos y de mejora del portal.",
               ],
@@ -688,7 +688,17 @@ export const DOCUMENTOS: DocumentoInstitucional[] = [
             {
               tipo: "parrafo",
               texto:
-                "Los datos se tratan únicamente para las finalidades indicadas al recogerlos y se conservan mientras dure la relación o hasta que solicites su supresión. Los datos del boletín se eliminan al darte de baja.",
+                "Los datos del boletín se usan para enviarte el boletín y para conocer, de forma agregada, de qué zonas y edades nos leen, con fines estadísticos y editoriales. No se venden ni se ceden a terceros distintos de los encargados del punto 5. Los datos de los formularios de contacto se usan solo para atender tu solicitud.",
+            },
+            {
+              tipo: "lista",
+              items: [
+                "Alta sin confirmar: se elimina por completo a los 30 días.",
+                "Dirección IP de la conexión: se borra en cuanto confirmas tu suscripción.",
+                "Baja del boletín: a los 30 días se borran tu nombre, apellido, celular, fecha de nacimiento y ubicación; solo se conservan tu correo y la fecha de baja, para no volver a escribirte.",
+                "Mensajes de contacto: mientras dure la gestión de tu solicitud.",
+                "Puedes pedir en cualquier momento que borremos todo, incluido tu correo, escribiendo a habeasdata@fedegan.org.co.",
+              ],
             },
           ],
         },
@@ -737,7 +747,7 @@ export const DOCUMENTOS: DocumentoInstitucional[] = [
             {
               tipo: "lista",
               items: [
-                "Newsletter: email address and, optionally, name, solely to send the newsletter.",
+                "Newsletter: your email address (required) and, if you choose to give them, first name, last name, mobile number and date of birth. On sign-up we also record the approximate city, country and postal code inferred from your connection and, only if you allow it in the site's location notice, the location your device shares, from which the neighbourhood is derived.",
                 "Contact and commercial forms: name, email, organisation and the message you choose to send.",
                 "Browsing: aggregated, pseudonymised usage data for statistics and site improvement.",
               ],
@@ -755,7 +765,17 @@ export const DOCUMENTOS: DocumentoInstitucional[] = [
             {
               tipo: "parrafo",
               texto:
-                "Data is processed only for the purposes stated when collected and kept for as long as the relationship lasts or until you ask for deletion. Newsletter data is deleted when you unsubscribe.",
+                "Newsletter data is used to send you the newsletter and to understand, in aggregate, where and in which age groups our readers are, for statistical and editorial purposes. It is not sold or shared with anyone other than the processors in section 5. Contact-form data is used only to handle your request.",
+            },
+            {
+              tipo: "lista",
+              items: [
+                "Unconfirmed sign-up: deleted entirely after 30 days.",
+                "IP address of the connection: deleted as soon as you confirm your subscription.",
+                "Newsletter unsubscribe: after 30 days your first name, last name, mobile number, date of birth and location are deleted; only your email and the unsubscribe date are kept, so we do not write to you again.",
+                "Contact messages: for as long as your request is being handled.",
+                "You can ask us at any time to delete everything, including your email, by writing to habeasdata@fedegan.org.co.",
+              ],
             },
           ],
         },

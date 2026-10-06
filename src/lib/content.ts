@@ -1,4 +1,3 @@
-import { promoverProgramados } from "@/lib/scheduled";
 import "server-only";
 import { cache } from "react";
 import { and, desc, eq, gte, inArray, isNull, lte, sql } from "drizzle-orm";
@@ -40,8 +39,9 @@ export const getHomeLayoutConfig = cache(async (): Promise<Required<HomeLayoutCo
 
 /**
  * Consultas de lectura del portal público. Todas filtran por estado "publicado"
- * y publishedAt <= now (los "programado" se materializan por un job de cron que
- * los pasa a "publicado" y dispara revalidación).
+ * y publishedAt <= now. Las lecturas NO escriben: los "programado" los pasa a
+ * "publicado" `procesarProgramadas` (src/lib/scheduled.ts), que además
+ * revalida el sitio; lo ejecutan el cron y el aviso del navegador.
  */
 
 const publishedCondition = and(
@@ -119,7 +119,6 @@ const leerPortada = cachear(
  * portada; RSS, llms.txt y el cintillo siguen el orden cronológico real.
  */
 export async function getHomepageArticles(limit = 13): Promise<ArticleListItem[]> {
-  await promoverProgramados();
   // Vista previa del editor: el orden y estilo de tarjetas sin publicar.
   const draft = getPreviewDraft();
   if (draft) {
@@ -257,7 +256,6 @@ export type FullArticle = {
 
 // Busca una nota publicada por su dirección y la devuelve con su categoría y autor; antes promueve las programadas que ya vencieron.
 export async function getPublishedArticleBySlug(slug: string): Promise<FullArticle | null> {
-  await promoverProgramados();
   const [row] = await db
     .select({
       id: articles.id,
