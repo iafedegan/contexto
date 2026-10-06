@@ -3,10 +3,11 @@
 import { useState, useTransition } from "react";
 import { saveAssistantLimits } from "@/app/panel/(app)/configuracion/actions";
 
-/** Presupuesto mensual y tope por sesión del asistente público. */
-export function LimitesAsistenteForm({ presupuesto, tope }: { presupuesto: number; tope: number }) {
+/** Presupuesto mensual y tope por sesión del asistente público, y tope diario de borradores de los agentes de IA. */
+export function LimitesAsistenteForm({ presupuesto, tope, borradores }: { presupuesto: number; tope: number; borradores: number }) {
   const [p, setP] = useState(String(presupuesto));
   const [t, setT] = useState(String(tope));
+  const [b, setB] = useState(String(borradores));
   const [msg, setMsg] = useState("");
   const [pending, start] = useTransition();
 
@@ -20,11 +21,15 @@ export function LimitesAsistenteForm({ presupuesto, tope }: { presupuesto: numbe
         Tope por sesión (consultas)
         <input className="lx-input py-1.5" style={{ width: "9rem" }} inputMode="numeric" value={t} onChange={(e) => setT(e.target.value)} />
       </label>
+      <label className="flex flex-col gap-1 text-sm">
+        Borradores de IA por día
+        <input className="lx-input py-1.5" style={{ width: "9rem" }} inputMode="numeric" value={b} onChange={(e) => setB(e.target.value)} />
+      </label>
       <button
         type="button"
         className="lx-btn"
         disabled={pending}
-        onClick={() => start(async () => setMsg((await saveAssistantLimits(Number(p.replace(",", ".")), Number(t))).message))}
+        onClick={() => start(async () => setMsg((await saveAssistantLimits(Number(p.replace(",", ".")), Number(t), Number(b))).message))}
       >
         Guardar límites
       </button>

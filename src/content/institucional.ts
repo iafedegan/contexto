@@ -1024,5 +1024,6 @@ export const MENU_SECUNDARIO: { slug: string; label: Record<Locale, string> }[] 
   { slug: "politica-de-privacidad", label: { es: "Política de privacidad", en: "Privacy policy" } },
   { slug: "politica-de-cookies", label: { es: "Política de cookies", en: "Cookie policy" } },
   { slug: "politica-editorial", label: { es: "Política editorial", en: "Editorial policy" } },
+  { slug: "politica-de-ia", label: { es: "Uso de inteligencia artificial", en: "AI use policy" } },
   { slug: "derechos-de-autor", label: { es: "Derechos de autor", en: "Copyright" } },
 ];

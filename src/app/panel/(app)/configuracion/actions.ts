@@ -180,8 +180,8 @@ export async function setAiQuota(userId: string | null, usd: number | null): Pro
   return { ok: true, message: "Cuota guardada." };
 }
 
-/** Presupuesto mensual (USD) y tope de consultas por sesión del asistente público. Solo administradores. */
-export async function saveAssistantLimits(presupuesto: number, tope: number): Promise<{ ok: boolean; message: string }> {
+/** Presupuesto mensual (USD), tope de consultas por sesión del asistente público y tope diario de borradores de IA. Solo administradores. */
+export async function saveAssistantLimits(presupuesto: number, tope: number, topeBorradoresDia: number): Promise<{ ok: boolean; message: string }> {
   await requireRole("administrador");
   if (!Number.isFinite(presupuesto) || presupuesto < 0 || presupuesto > 1_000_000) {
     return { ok: false, message: "El presupuesto debe ser un monto en dólares entre 0 y 1.000.000." };
@@ -189,7 +189,10 @@ export async function saveAssistantLimits(presupuesto: number, tope: number): Pr
   if (!Number.isInteger(tope) || tope < 1 || tope > 1000) {
     return { ok: false, message: "El tope por sesión debe ser un número entero entre 1 y 1000." };
   }
-  const value = { presupuestoMensualUsd: Math.round(presupuesto * 100) / 100, topePorSesion: tope };
+  if (!Number.isInteger(topeBorradoresDia) || topeBorradoresDia < 0 || topeBorradoresDia > 500) {
+    return { ok: false, message: "El tope diario de borradores de IA debe ser un entero entre 0 y 500 (0 los suspende)." };
+  }
+  const value = { presupuestoMensualUsd: Math.round(presupuesto * 100) / 100, topePorSesion: tope, topeBorradoresDia };
   await db
     .insert(siteSettings)
     .values({ key: LIMITES_KEY, value })

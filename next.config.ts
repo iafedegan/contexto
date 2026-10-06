@@ -19,7 +19,7 @@ const CSP = [
   "img-src 'self' data: blob: https:",
   "media-src 'self' https:",
   // /api-docs (Scalar) llama a su propio worker cargado desde jsdelivr.
-  "connect-src 'self' https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com https://www.googletagmanager.com https://challenges.cloudflare.com https://cdn.jsdelivr.net",
+  "connect-src 'self' https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com https://www.googletagmanager.com https://challenges.cloudflare.com https://cdn.jsdelivr.net https://*.supabase.co",
   // 'self': el editor de portada enmarca /vista-portada del propio sitio.
   "frame-src 'self' https://www.youtube-nocookie.com https://player.vimeo.com https://challenges.cloudflare.com https://www.googletagmanager.com",
   "worker-src 'self'",

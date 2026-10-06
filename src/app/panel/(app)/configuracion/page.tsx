@@ -399,8 +399,9 @@ export default async function ConfiguracionPage() {
           <Stat label="Modelo" value={keyStatus.model} />
           <Stat label="Presupuesto mensual" value={`US$ ${limites.presupuestoMensualUsd}`} />
           <Stat label="Tope por sesión" value={`${limites.topePorSesion} consultas`} />
+          <Stat label="Borradores de IA por día" value={`${limites.topeBorradoresDia}`} />
         </div>
-        {isAdmin && <LimitesAsistenteForm presupuesto={limites.presupuestoMensualUsd} tope={limites.topePorSesion} />}
+        {isAdmin && <LimitesAsistenteForm presupuesto={limites.presupuestoMensualUsd} tope={limites.topePorSesion} borradores={limites.topeBorradoresDia} />}
         <p className="mt-4 flex items-start gap-2 rounded-[var(--radius)] bg-[var(--surface-2)] p-3 text-xs leading-relaxed text-[var(--fg-muted)]">
           <ShieldCheck size={14} className="mt-px shrink-0 text-[var(--accent-2)]" />
           Sin clave, el asistente responde en modo búsqueda (recupera y cita fuentes, sin generar) y

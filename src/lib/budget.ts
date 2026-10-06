@@ -28,7 +28,7 @@ export function estimateCostUsd(inputTokens: number, outputTokens: number): numb
  */
 export const LIMITES_KEY = "assistant_limits";
 // Límites de uso del asistente: presupuesto mensual y tope de consultas por sesión.
-export type LimitesAsistente = { presupuestoMensualUsd: number; topePorSesion: number };
+export type LimitesAsistente = { presupuestoMensualUsd: number; topePorSesion: number; topeBorradoresDia: number };
 
 // Límites vigentes: lo que guardó un administrador o, si no hay nada, los valores del entorno ya validados.
 export async function getLimites(): Promise<LimitesAsistente> {
@@ -41,6 +41,8 @@ export async function getLimites(): Promise<LimitesAsistente> {
   const porDefecto = {
     presupuestoMensualUsd: numero(process.env.ASSISTANT_MONTHLY_BUDGET_USD, 150),
     topePorSesion: numero(process.env.ASSISTANT_SESSION_QUERY_LIMIT, 15),
+    // Tope diario de borradores de los agentes de IA (la propuesta §6.3 exige un límite de volumen configurable).
+    topeBorradoresDia: numero(process.env.AGENT_DAILY_DRAFT_LIMIT, 20),
   };
   try {
     const [row] = await db.select({ value: siteSettings.value }).from(siteSettings).where(eq(siteSettings.key, LIMITES_KEY)).limit(1);
@@ -48,6 +50,7 @@ export async function getLimites(): Promise<LimitesAsistente> {
     return {
       presupuestoMensualUsd: typeof v.presupuestoMensualUsd === "number" ? v.presupuestoMensualUsd : porDefecto.presupuestoMensualUsd,
       topePorSesion: typeof v.topePorSesion === "number" ? v.topePorSesion : porDefecto.topePorSesion,
+      topeBorradoresDia: typeof v.topeBorradoresDia === "number" ? v.topeBorradoresDia : porDefecto.topeBorradoresDia,
     };
   } catch {
     return porDefecto;

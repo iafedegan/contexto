@@ -7,6 +7,7 @@ import { eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { agentDrafts, articles } from "@/db/schema";
 import { requirePermiso } from "@/lib/auth";
+import { autorDeUsuario } from "@/lib/user-authors";
 import { slugify } from "@/lib/utils";
 import { generateDraft } from "@/agents/draft-generator";
 import { getDemoSource } from "@/agents/sources";
@@ -32,6 +33,7 @@ export async function approveDraft(draftId: string) {
       categoryId: d.suggestedCategoryId,
       status: "borrador",
       createdBy: user.id, // atribución al editor humano
+      authorId: await autorDeUsuario(user.id), // la nota se firma con la ficha del editor que aprueba, no con el sistema
       originDraftId: d.id,
     })
     .returning({ id: articles.id });

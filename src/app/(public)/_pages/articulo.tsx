@@ -183,7 +183,7 @@ export function ArticleDocument({
               priority
               fetchPriority="high"
               sizes="(min-width: 1280px) 1200px, 100vw"
-              quality={90}
+              quality={75}
               className="object-cover"
             />
           ) : (

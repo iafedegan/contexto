@@ -121,7 +121,7 @@ export function HeroCarousel({
                     priority={index === 0}
                     fetchPriority={index === 0 ? "high" : undefined}
                     sizes="100vw"
-                    quality={90}
+                    quality={75}
                     className="object-cover"
                   />
                 </div>

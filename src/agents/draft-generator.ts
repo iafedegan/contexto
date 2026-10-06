@@ -8,11 +8,10 @@ import { agentDrafts, type agentSource } from "@/db/schema";
 import { DRAFT_GENERATOR_SYSTEM } from "./prompts";
 import { factCheckDraft, ruleFactCheck, type FactCheck } from "./fact-checker";
 import { env } from "@/lib/env";
+import { getLimites } from "@/lib/budget";
 
 // Modelo de lenguaje de los agentes, configurable por entorno.
 const MODEL = env(process.env.ASSISTANT_MODEL, "claude-sonnet-5");
-// Máximo de borradores que los agentes pueden generar por día.
-const DAILY_LIMIT = Number(env(process.env.AGENT_DAILY_DRAFT_LIMIT, "20"));
 // Indica si hay clave de Anthropic para usar el modelo real.
 const HAS_LLM = Boolean(process.env.ANTHROPIC_API_KEY);
 
@@ -51,6 +50,8 @@ export type GenerateResult =
  * completo (fuente → borrador → verificación → cola) queda igual de demostrable.
  */
 export async function generateDraft(source: StructuredSource): Promise<GenerateResult> {
+  // Tope diario de borradores: lo fija un administrador en Configuración → Asistente (por defecto, el del entorno).
+  const DAILY_LIMIT = (await getLimites()).topeBorradoresDia;
   const startOfDay = new Date();
   startOfDay.setUTCHours(0, 0, 0, 0);
   const [{ n }] = await db

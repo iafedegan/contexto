@@ -18,7 +18,9 @@
     "db:extras:post": "tsx scripts/run-sql.ts drizzle/manual/99_post_indexes.sql",
     "db:seed": "tsx scripts/seed.ts",
     "db:setup": "npm run db:extras:pre && npm run db:generate && npm run db:migrate && npm run db:extras:post && npm run db:seed",
-    "check:modulos": "node scripts/check-modulos.mjs"
+    "check:modulos": "node scripts/check-modulos.mjs",
+    "test": "tsx --conditions=react-server --tsconfig tsconfig.json --test \"src/**/*.test.ts\" \"scripts/*.test.ts\"",
+    "docs:bd": "node scripts/doc-bd.mjs"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^4.0.60",
