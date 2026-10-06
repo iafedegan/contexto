@@ -11,7 +11,7 @@
  * (layout.tsx), y por defecto cada `next/font` PRECARGA su archivo — así que
  * cada visita bajaba las 12 familias (~25 archivos) aunque solo una pareja se
  * llegara a usar. Solo `interTight` (la más reutilizada: UI de casi todos los
- * temas y del panel) se precarga; el resto solo se descarga cuando su
+ * temas y del panel) y `playfair` (los titulares de la plantilla en producción) se precargan; el resto solo se descarga cuando su
  * `font-family` realmente se pinta.
  */
 import {
@@ -29,8 +29,8 @@ import {
   Syne,
 } from "next/font/google";
 
-/** Portada — titulares de alta moda editorial. */
-export const playfair = Playfair_Display({ subsets: ["latin"], display: "swap", preload: false, variable: "--f-playfair" });
+/** Portada — titulares de alta moda editorial. También se precarga: es la tipografía de los titulares de la plantilla en producción (Esmeralda), y descubrirla recién al leer el CSS retrasaba el LCP. */
+export const playfair = Playfair_Display({ subsets: ["latin"], display: "swap", variable: "--f-playfair" });
 /** UI neutra de alta densidad (portada, buscador, panel). La única que se precarga: la usan casi todos los temas. */
 export const interTight = Inter_Tight({ subsets: ["latin"], display: "swap", variable: "--f-inter" });
 /** Artículo — didona de contraste extremo. */
