@@ -30,7 +30,7 @@ export function SectionHeader({ theme, kicker, title, description, chips, breadc
     case "clasico":
       // Diario: cabecera centrada entre filetes dobles, como una sección impresa.
       return (
-        <header data-region="encabezado" className="relative mb-12 pt-8 text-center">
+        <header data-region="encabezado" className="relative mb-12 pt-2 text-center">
           <div className="flex justify-center">{breadcrumb}</div>
           <div className="mt-2 border-y-4 border-double border-[var(--fg)] py-6 lg:grid lg:grid-cols-[1fr_auto_1fr] lg:items-end lg:gap-6">
             <span className="hidden lg:block" />
@@ -49,7 +49,7 @@ export function SectionHeader({ theme, kicker, title, description, chips, breadc
     case "revista":
       // Revista: título enorme en cursiva, alineado a la izquierda, con aire.
       return (
-        <header data-region="encabezado" className="relative mb-14 pt-12">
+        <header data-region="encabezado" className="relative mb-14 pt-3">
           {breadcrumb}
           <div className="mt-6 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div className="min-w-0">
@@ -106,9 +106,9 @@ export function SectionHeader({ theme, kicker, title, description, chips, breadc
     case "home":
       // Esmeralda: frontispicio centrado, rombos y filetes de pan de oro.
       return (
-        <header data-region="encabezado" className="relative mb-14 pt-10 text-center">
+        <header data-region="encabezado" className="relative mb-14 pt-2 text-center">
           <div className="flex justify-center">{breadcrumb}</div>
-          <div className="mt-8 flex items-center justify-center gap-4 text-[var(--accent)]">
+          <div className="flex items-center justify-center gap-4 text-[var(--accent)]">
             <span className="h-px w-16 bg-gradient-to-r from-transparent to-[var(--accent)] md:w-40" />
             <span aria-hidden>◆</span>
             <p data-el="kicker" className="lx-kicker">{kicker}</p>
@@ -132,7 +132,7 @@ export function SectionHeader({ theme, kicker, title, description, chips, breadc
     default:
       // Resto: lámina con filete.
       return (
-        <header data-region="encabezado" className="relative mb-14 pt-10">
+        <header data-region="encabezado" className="relative mb-14 pt-3">
           {breadcrumb}
           <div className="mt-6 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div className="min-w-0">

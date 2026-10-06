@@ -37,7 +37,7 @@ export type ShellVariant =
 const SHELL: Record<ShellVariant, { main: string; fx: string }> = {
   portada: { main: "shell flex-1 py-8 sm:py-12", fx: "lx-grain" },
   articulo: { main: "shell flex-1 py-10 sm:py-14", fx: "lx-grain" },
-  seccion: { main: "shell flex-1 py-8 sm:py-12", fx: "lx-grain lx-aurora lx-vignette" },
+  seccion: { main: "shell flex-1 pb-8 pt-3 sm:pb-12 sm:pt-4", fx: "lx-grain lx-aurora lx-vignette" },
   autor: { main: "shell flex-1 py-10 sm:py-14", fx: "lx-grain" },
   buscar: { main: "shell flex-1 py-8 sm:py-12", fx: "lx-grain lx-aurora" },
   asistente: { main: "shell flex-1 py-8 sm:py-12", fx: "lx-grain lx-aurora" },
