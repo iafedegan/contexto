@@ -11,6 +11,7 @@ import { MobileNav, type MobileLook } from "@/components/mobile-nav";
 import { RadioPlayer } from "@/components/radio-player";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { StickyRail } from "@/components/sticky-rail";
+import { AutoHideBand } from "@/components/auto-hide-band";
 import { cn } from "@/lib/utils";
 
 // Elemento de la navegación: dirección y etiqueta.
@@ -161,6 +162,7 @@ function MastheadHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extr
         </div>
       </div>
 
+      <AutoHideBand>
       <div className="mx-auto max-w-7xl px-6 pb-6 pt-10 text-center">
         <div className="flex items-center justify-center gap-6">
           <span className="hidden h-px flex-1 bg-gradient-to-r from-transparent to-[var(--border-strong)] md:block" />
@@ -175,6 +177,7 @@ function MastheadHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extr
           <span className="hidden h-px flex-1 bg-gradient-to-l from-transparent to-[var(--border-strong)] md:block" />
         </div>
       </div>
+      </AutoHideBand>
 
       <nav
         aria-label={t(locale, "nav.sections")}

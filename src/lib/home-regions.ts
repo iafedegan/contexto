@@ -229,6 +229,10 @@ export function regionsCss(input: RegionStyles | undefined, scope = "[data-site-
       // obedecen a text-align.
       const justify = { left: "flex-start", center: "center", right: "flex-end" }[s.align];
       decl.push(`text-align:${s.align}`);
+      // Los bloques centrados con `mx-auto` (descripción, líneas decorativas) también se pegan al lado elegido.
+      if (s.align !== "center") {
+        rules.push(`${sel} .mx-auto{margin-left:${s.align === "left" ? "0" : "auto"}!important;margin-right:${s.align === "left" ? "auto" : "0"}!important}`);
+      }
       rules.push(
         `${sel} :is(p,h1,h2,h3,h4,figcaption,.text-center,.text-left,.text-right){text-align:${s.align}!important}`,
         `${sel} :is(.flex,.lx-navrail,.inline-flex){justify-content:${justify}!important}`,
