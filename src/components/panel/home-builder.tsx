@@ -824,7 +824,7 @@ export function HomeBuilder({
 
         {/* Marco del lienzo: la portada real, a escala de su ancho elegido. */}
         <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--bg-2)] p-3 shadow-[var(--shadow)]">
-          <div className="h-[calc(100dvh-13rem)] min-h-[30rem]">
+          <div className="h-[calc(100dvh-11.5rem)] min-h-[30rem]">
             {resume ? (
               <div className="grid h-full place-items-center p-6" data-theme="panel-ui">
                 <div className="max-w-md text-center">
@@ -866,7 +866,7 @@ export function HomeBuilder({
         className={`flex flex-col gap-3 text-[var(--fg)] ${resumePending ? "opacity-50" : ""} ${
           ampliado
             ? `fixed bottom-[4.75rem] right-4 z-40 max-h-[calc(100dvh-15rem)] w-[23rem] max-w-[calc(100vw-2rem)] overflow-y-auto rounded-[var(--radius-lg)] bg-[var(--bg)] p-2 shadow-2xl ${panelAbierto ? "" : "hidden"}`
-            : "xl:sticky xl:top-24 xl:max-h-[calc(100dvh-7rem)] xl:overflow-y-auto xl:pr-1"
+            : "xl:sticky xl:top-[calc(var(--panel-header-h,0px)+0.75rem)] xl:max-h-[calc(100dvh-1.5rem)] xl:overflow-y-auto xl:pr-1"
         }`}
       >
         {guia && !ampliado && <PortadaGuia onClose={cerrarGuia} />}

@@ -1629,3 +1629,7 @@ body:has([data-asistente]) footer[data-theme="panel-amber"] { display: none; }
 
 /* ...y usa todo el ancho de la ventana, no el máximo de lectura del resto del panel. */
 main > div:has([data-asistente]) { max-width: none; }
+
+/* Ancho del menú lateral del panel (cerrado o desplegado): lo usan las pantallas que ocupan todo el ancho, como el editor de portada. */
+.lx-shell { --sb-w: 4rem; }
+.lx-shell:has(> aside:hover), .lx-shell:has(> aside:focus-within) { --sb-w: 16rem; }

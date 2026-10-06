@@ -108,7 +108,7 @@ export function PortadaToolbar(p: Props) {
     <div
       data-theme="panel-ui"
       data-tour="barra"
-      className="sticky z-30 flex flex-wrap items-center gap-2 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--bg)] px-3 py-2.5 text-[var(--fg)] shadow-[var(--shadow)]"
+      className="sticky z-30 flex flex-wrap items-center gap-2 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--bg)]/95 px-3 py-2.5 backdrop-blur text-[var(--fg)] shadow-[var(--shadow)]"
       style={{ top: "calc(var(--panel-header-h, 0px) + 0.75rem)" }}
     >
       <a
@@ -143,7 +143,7 @@ export function PortadaToolbar(p: Props) {
               p.viewport === id ? "bg-[var(--accent)] text-[var(--accent-fg)]" : "text-[var(--fg-muted)] hover:text-[var(--accent)]"
             }`}
           >
-            <Icono size={14} /> {etiqueta}
+            <Icono size={14} /> <span className="hidden min-[1500px]:inline">{etiqueta}</span>
           </button>
         ))}
       </div>
@@ -156,7 +156,7 @@ export function PortadaToolbar(p: Props) {
           aria-expanded={vista}
           className="inline-flex h-9 items-center gap-1.5 rounded-full border border-[var(--border-strong)] px-3.5 text-xs font-semibold transition hover:border-[var(--accent)] hover:text-[var(--accent)]"
         >
-          <SlidersHorizontal size={13} /> Vista
+          <SlidersHorizontal size={13} /> <span className="hidden min-[1500px]:inline">Vista</span>
           <ChevronDown size={12} className={vista ? "rotate-180 transition-transform" : "transition-transform"} aria-hidden />
         </button>
         {vista && (
@@ -194,7 +194,7 @@ export function PortadaToolbar(p: Props) {
           p.ampliado ? "border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-fg)]" : "border-[var(--border-strong)] hover:border-[var(--accent)] hover:text-[var(--accent)]"
         }`}
       >
-        {p.ampliado ? <Minimize2 size={13} /> : <Maximize2 size={13} />} {p.ampliado ? "Reducir" : "Ampliar"}
+        {p.ampliado ? <Minimize2 size={13} /> : <Maximize2 size={13} />} <span className="hidden min-[1500px]:inline">{p.ampliado ? "Reducir" : "Ampliar"}</span>
       </button>
 
       {p.inSection && (
@@ -213,7 +213,7 @@ export function PortadaToolbar(p: Props) {
         title="Abre la portada a tamaño real en otra pestaña; se actualiza sola mientras editas"
         className="inline-flex h-9 items-center gap-1.5 rounded-full border border-[var(--border-strong)] px-3.5 text-xs font-semibold transition hover:border-[var(--accent)] hover:text-[var(--accent)]"
       >
-        <ExternalLink size={13} /> Vista previa
+        <ExternalLink size={13} /> <span className="hidden min-[1500px]:inline">Vista previa</span>
       </button>
 
       {/* ----------------------------------------------------- Más acciones */}
@@ -225,7 +225,7 @@ export function PortadaToolbar(p: Props) {
           aria-expanded={menu}
           className="inline-flex h-9 items-center gap-1.5 rounded-full border border-[var(--border)] px-3 text-xs font-semibold transition hover:border-[var(--accent)] hover:text-[var(--accent)]"
         >
-          <MoreHorizontal size={15} /> Más
+          <MoreHorizontal size={15} /> <span className="hidden min-[1500px]:inline">Más</span>
         </button>
         {menu && (
           <div role="menu" className="absolute right-0 top-[calc(100%+0.5rem)] z-50 w-72 rounded-[var(--radius-lg)] border border-[var(--border-strong)] bg-[var(--bg)] p-1.5 shadow-2xl">
