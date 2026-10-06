@@ -3,17 +3,15 @@
 import { revalidatePath } from "next/cache";
 import { sanitizeArticleHtml } from "@/lib/sanitize";
 import { redirect } from "next/navigation";
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { articles } from "@/db/schema";
 import { canPublish, requirePermiso } from "@/lib/auth";
-import { avisarSiUltimaHora } from "@/lib/push";
 import { slugify } from "@/lib/utils";
 import { autorDeUsuario } from "@/lib/user-authors";
-import { fijarPortadaCore, guardarBorradorCore, type BorradorInput } from "@/lib/article-ops";
+import { archivarCore, distintivosCore, enviarARevisionCore, fijarPortadaCore, guardarBorradorCore, programarCore, publicarCore, reindexarNota, revalidarNota, type BorradorInput } from "@/lib/article-ops";
 import { tienePermiso } from "@/lib/permisos-server";
 import { invalidarCache } from "@/lib/data-cache";
-import { reindexarNota, revalidarNota } from "@/lib/article-ops";
 
 /**
  * Quién puede publicar: rol de editor o superior Y permiso «publicar». Es el mismo criterio para
@@ -122,61 +120,31 @@ export async function saveArticle(formData: FormData) {
   redirect(`/panel/articulos/${articleId}?guardado=1`);
 }
 
-// Pasa un borrador a revisión; sobre una nota publicada falla para no sacarla del sitio.
+// Pasa un borrador a revisión; sobre una nota publicada falla para no sacarla del sitio (la regla vive en `enviarARevisionCore`).
 export async function submitForReview(articleId: string) {
   await requirePermiso("articulos");
-  // Solo una nota en borrador (o ya en revisión) pasa a revisión: sobre una publicada la sacaría del sitio.
-  const [fila] = await db
-    .update(articles)
-    .set({ status: "en_revision", updatedAt: sql`now()` })
-    .where(and(eq(articles.id, articleId), inArray(articles.status, ["borrador", "en_revision"])))
-    .returning({ id: articles.id });
-  if (!fila) throw new Error("Solo una nota en borrador puede enviarse a revisión.");
+  await enviarARevisionCore(articleId);
   revalidatePath(`/panel/articulos/${articleId}`);
 }
 
-// Publica una nota (exige permiso y rol de editor): revalida el sitio y avisa a los lectores si es de última hora.
+// Publica una nota (exige permiso y rol de editor). Todo lo demás —estado, embedding, revalidación y el aviso push de «Última hora» por el evento nota.publicada— lo hace `publicarCore`, la misma máquina de estados que usa Telegram.
 export async function publishArticle(articleId: string) {
   await requirePublicador();
-
-  await db
-    .update(articles)
-    .set({
-      status: "publicado",
-      publishedAt: sql`coalesce(${articles.publishedAt}, now())`,
-      scheduledFor: null,
-      updatedAt: sql`now()`,
-    })
-    .where(eq(articles.id, articleId));
-
-  await reindexarNota(articleId);
-  await revalidarNota(articleId);
+  await publicarCore(articleId);
   revalidatePath(`/panel/articulos/${articleId}`);
-  avisarSiUltimaHora(articleId);
 }
 
-// Programa la publicación de una nota para una fecha futura.
+// Programa la publicación de una nota para una fecha futura (la validación vive en `programarCore`).
 export async function scheduleArticle(articleId: string, isoDateTime: string) {
   await requirePublicador();
-  const when = new Date(isoDateTime);
-  if (Number.isNaN(when.getTime()) || when.getTime() < Date.now()) {
-    throw new Error("La fecha de programación debe ser futura.");
-  }
-  await db
-    .update(articles)
-    .set({ status: "programado", scheduledFor: when, updatedAt: sql`now()` })
-    .where(eq(articles.id, articleId));
+  await programarCore(articleId, isoDateTime);
   revalidatePath(`/panel/articulos/${articleId}`);
 }
 
 // Archiva una nota para retirarla del sitio sin borrarla.
 export async function unpublishArticle(articleId: string) {
   await requirePublicador();
-  await db
-    .update(articles)
-    .set({ status: "archivado", updatedAt: sql`now()` })
-    .where(eq(articles.id, articleId));
-  await revalidarNota(articleId);
+  await archivarCore(articleId);
   revalidatePath(`/panel/articulos/${articleId}`);
 }
 
@@ -187,9 +155,7 @@ export async function unpublishArticle(articleId: string) {
 export async function setArticleFlag(articleId: string, flag: "isBreaking" | "isLive", value: boolean): Promise<{ ok: boolean; message?: string }> {
   await requirePublicador();
   if (flag !== "isBreaking" && flag !== "isLive") return { ok: false, message: "Marca no válida." };
-  const res = await db.update(articles).set({ [flag]: value, updatedAt: sql`now()` }).where(eq(articles.id, articleId)).returning({ id: articles.id });
-  if (res.length === 0) return { ok: false, message: "Esa nota ya no existe." };
-  await revalidarNota(articleId);
+  if (!(await distintivosCore(articleId, { [flag]: value }))) return { ok: false, message: "Esa nota ya no existe." };
   revalidatePath("/panel/articulos");
   return { ok: true };
 }

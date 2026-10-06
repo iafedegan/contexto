@@ -1,7 +1,9 @@
 import "server-only";
+import { randomUUID } from "node:crypto";
 import { and, eq, gte, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { assistantQueries, siteSettings } from "@/db/schema";
+import { firmar, igualesSeguro } from "@/lib/claves";
 
 /**
  * Control de consumo del asistente conversacional.
@@ -55,6 +57,87 @@ export async function getLimites(): Promise<LimitesAsistente> {
   } catch {
     return porDefecto;
   }
+}
+
+/** Cookie con la sesión del asistente: la emite el servidor, firmada. Antes la inventaba el navegador y cambiarla evadía el tope por sesión. */
+export const SESION_ASISTENTE_COOKIE = "contexto.asistente";
+
+/**
+ * Sesión del asistente a partir de la cookie. Si falta o su firma no vale (la cambiaron a mano), se crea una nueva y
+ * `nueva` es verdadero: quien responde debe enviar `valor` como cookie. Una persona puede descartar sus cookies para
+ * obtener otra sesión, así que el freno real al gasto no es este tope sino el de cada IP (ver la ruta) y el presupuesto mensual.
+ */
+export function sesionAsistente(cookie: string | undefined): { id: string; nueva: boolean; valor: string } {
+  const [id, firma] = (cookie ?? "").split(".");
+  if (id && firma && /^[0-9a-f-]{36}$/.test(id)) {
+    try {
+      if (igualesSeguro(firma, firmar("sesion-asistente", id).slice(0, 22))) return { id, nueva: false, valor: cookie! };
+    } catch {
+      /* sin secreto configurado: se emite una sesión nueva igualmente */
+    }
+  }
+  const nuevo = randomUUID();
+  let valor = nuevo;
+  try {
+    valor = `${nuevo}.${firmar("sesion-asistente", nuevo).slice(0, 22)}`;
+  } catch {
+    /* sin AUTH_SECRET (solo en desarrollo sin configurar): la sesión no va firmada */
+  }
+  return { id: nuevo, nueva: true, valor };
+}
+
+/** Lo que se aparta del presupuesto mensual antes de llamar al modelo: una respuesta típica cuesta bastante menos. */
+export const RESERVA_USD = 0.02;
+/** Coste aproximado del embedding de la pregunta (text-embedding-3-small, ~150 tokens): se suma a toda consulta. */
+export const COSTO_EMBEDDING_USD = 0.00001;
+
+// Resultado de reservar presupuesto: el id de la fila reservada, o el motivo por el que no se puede generar.
+export type Reserva = { ok: true; id: string } | { ok: false; reason: "presupuesto_mensual" | "limite_sesion" };
+
+/**
+ * Aparta presupuesto ANTES de generar, de forma atómica (H-07). Comprobar el gasto y registrarlo después eran pasos
+ * separados: varias consultas a la vez veían el mismo gasto y todas pasaban. Aquí, bajo un candado de transacción, se
+ * comprueba el tope mensual (contando lo ya reservado) y el de la sesión, y se inserta la fila con la reserva; al terminar,
+ * `liquidarGeneracion` la ajusta al coste real. Si el proceso muere a medias, la reserva se queda y cuenta como gasto.
+ */
+export async function reservarGeneracion(sessionId: string, question: string): Promise<Reserva> {
+  const { presupuestoMensualUsd, topePorSesion } = await getLimites();
+  const inicioMes = new Date();
+  inicioMes.setUTCDate(1);
+  inicioMes.setUTCHours(0, 0, 0, 0);
+  return db.transaction(async (tx) => {
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtext('assistant-budget'))`);
+    const [mes] = await tx.select({ gasto: sql<string>`coalesce(sum(${assistantQueries.costUsd}), 0)` }).from(assistantQueries).where(gte(assistantQueries.createdAt, inicioMes));
+    if (Number(mes?.gasto ?? 0) + RESERVA_USD > presupuestoMensualUsd) return { ok: false, reason: "presupuesto_mensual" } as const;
+    const [sesion] = await tx
+      .select({ n: sql<number>`count(*)::int` })
+      .from(assistantQueries)
+      .where(and(gte(assistantQueries.createdAt, startOfDay()), eq(assistantQueries.sessionId, sessionId)));
+    if (Number(sesion?.n ?? 0) >= topePorSesion) return { ok: false, reason: "limite_sesion" } as const;
+    const [fila] = await tx
+      .insert(assistantQueries)
+      .values({ sessionId, question: question.slice(0, 2000), mode: "generativo", citedSources: [], answered: false, costUsd: RESERVA_USD.toFixed(6) })
+      .returning({ id: assistantQueries.id });
+    return { ok: true, id: fila.id } as const;
+  });
+}
+
+/** Cierra una reserva: deja en la fila lo que de verdad ocurrió (modo, fuentes citadas, tokens y coste real). */
+export async function liquidarGeneracion(
+  id: string,
+  r: { mode: "generativo" | "semantico_degradado"; cited: Array<{ title: string; url: string; kind: "articulo" | "archivo" }>; answered: boolean; inputTokens: number; outputTokens: number },
+): Promise<void> {
+  await db
+    .update(assistantQueries)
+    .set({
+      mode: r.mode,
+      citedSources: r.cited,
+      answered: r.answered,
+      inputTokens: r.inputTokens,
+      outputTokens: r.outputTokens,
+      costUsd: (estimateCostUsd(r.inputTokens, r.outputTokens) + COSTO_EMBEDDING_USD).toFixed(6),
+    })
+    .where(eq(assistantQueries.id, id));
 }
 
 // Resultado de comprobar el presupuesto: si se puede generar, el motivo si no, y el consumo actual.

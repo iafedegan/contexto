@@ -22,7 +22,6 @@ const EJEMPLOS = [
 
 /** `compact`: versión para el cuadro flotante (altura propia con desplazamiento y el campo fijo abajo). */
 export function AssistantChat({ compact = false }: { compact?: boolean }) {
-  const [sessionId] = useState(() => crypto.randomUUID());
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Msg[]>([]);
   const [busy, setBusy] = useState(false);
@@ -41,7 +40,7 @@ export function AssistantChat({ compact = false }: { compact?: boolean }) {
       const res = await fetch("/api/assistant", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question, sessionId }),
+        body: JSON.stringify({ question }),
       });
       if (!res.ok) throw new Error(String(res.status));
       const data = (await res.json()) as { mode: Msg["mode"]; answer: string; sources: Source[] };

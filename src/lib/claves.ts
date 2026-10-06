@@ -17,7 +17,7 @@ import { createHash, createHmac, hkdfSync, timingSafeEqual } from "node:crypto";
  */
 
 /** Usos que tienen clave propia. */
-export type Proposito = "cifrado-secretos" | "passkey-puente" | "baja-boletin" | "webhook-telegram" | "token-previa";
+export type Proposito = "cifrado-secretos" | "passkey-puente" | "baja-boletin" | "webhook-telegram" | "token-previa" | "sesion-asistente";
 
 /** Variable de entorno que, si se define, sustituye a `AUTH_SECRET` como raíz de ese propósito. */
 export const ENV_PROPIO: Record<Proposito, string> = {
@@ -26,6 +26,7 @@ export const ENV_PROPIO: Record<Proposito, string> = {
   "baja-boletin": "NEWSLETTER_LINK_SECRET",
   "webhook-telegram": "TELEGRAM_WEBHOOK_SECRET",
   "token-previa": "PREVIEW_TOKEN_SECRET",
+  "sesion-asistente": "ASSISTANT_SESSION_SECRET",
 };
 
 // Secreto fijo que solo se usa con `next dev`, para que el panel funcione sin configurar nada.
