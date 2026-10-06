@@ -97,30 +97,6 @@ async function CategoryPage({ params, searchParams, locale }: PageProps & { loca
   // URL, cacheable y compartible. El formulario es GET y funciona sin JavaScript.
   const filters = (
     <div data-el="filters" className={`flex flex-wrap items-center gap-x-3 gap-y-2 ${A.justify}`}>
-      <div className={`flex flex-wrap items-center gap-1.5 ${A.justify}`}>
-        {RANGOS.map((r) => {
-          const desdeISO = r.dias === null ? "" : isoHaceDias(r.dias);
-          const activo = r.dias === null ? !desde && !hasta : desde === desdeISO && !hasta;
-          const sp = new URLSearchParams();
-          if (subcategoria) sp.set("subcategoria", subcategoria);
-          if (desdeISO) sp.set("desde", desdeISO);
-          const qs = sp.toString();
-          return (
-            <Link
-              key={r.clave}
-              href={localePath(locale, `/categoria/${slug}${qs ? `?${qs}` : ""}`)}
-              aria-current={activo ? "true" : undefined}
-              className={`lx-ui inline-flex min-h-10 items-center rounded-full border px-3 text-[0.68rem] uppercase tracking-[0.12em] lg:min-h-7 transition ${
-                activo
-                  ? "border-[var(--accent)]/60 bg-[var(--accent)]/15 text-[var(--accent)]"
-                  : "border-transparent text-[var(--fg-muted)] hover:text-[var(--accent)]"
-              }`}
-            >
-              {t(locale, r.clave)}
-            </Link>
-          );
-        })}
-      </div>
       {/* Filtros de la sección. Formulario GET: cada combinación es una URL
           propia, enlazable y cacheable, y funciona sin JavaScript. */}
       {subcategories.length > 0 && (
@@ -352,21 +328,6 @@ function paginasVisibles(actual: number, total: number): (number | null)[] {
     previo = n;
   }
   return salida;
-}
-
-/** Atajos de fecha del C-09: todo, hoy, últimos 7 días, últimos 30 días. */
-const RANGOS = [
-  { clave: "section.rangeAll", dias: null },
-  { clave: "section.rangeToday", dias: 0 },
-  { clave: "section.rangeWeek", dias: 7 },
-  { clave: "section.rangeMonth", dias: 30 },
-] as const;
-
-/** Fecha ISO (YYYY-MM-DD) de hace N días, en la zona del servidor. */
-function isoHaceDias(dias: number): string {
-  const d = new Date();
-  d.setDate(d.getDate() - dias);
-  return d.toISOString().slice(0, 10);
 }
 
 /** Fábrica: la misma página en cualquier idioma de interfaz. */
