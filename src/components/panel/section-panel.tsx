@@ -122,7 +122,7 @@ export function SectionPanel({
                 </button>
               ))}
             </div>
-            <p className="mt-1.5 text-xs text-[var(--fg-muted)]">{meta.hint}</p>
+            <p className="mt-1.5 truncate text-xs text-[var(--fg-muted)]" title={meta.hint}>{meta.hint}</p>
           </div>
 
           <div className="flex flex-col gap-3 rounded-[var(--radius)] border border-[var(--border)] bg-white p-3">
@@ -157,6 +157,15 @@ export function SectionPanel({
               className="w-full accent-[var(--accent)]"
             />
 
+            {!style.gradient && <ColorRow label="Color" value={style.color} onChange={(color) => patchEl({ color })} />}
+
+            {/* Lo menos usado (grosor, mayúsculas, espaciado, degradado) queda plegado. */}
+            <details className="group rounded-lg border border-[var(--border)] bg-[var(--surface-2)]/50" open={style.weight !== undefined || style.upper !== undefined || style.tracking !== undefined || !!style.gradient || undefined}>
+              <summary className="flex cursor-pointer list-none items-center justify-between px-3 py-2 text-xs font-semibold [&::-webkit-details-marker]:hidden">
+                Más opciones de texto
+                <span aria-hidden className="text-[var(--fg-muted)] transition group-open:rotate-180">⌄</span>
+              </summary>
+              <div className="flex flex-col gap-3 border-t border-[var(--border)] p-3">
             <div className="flex items-center gap-2">
               <span className="w-24 shrink-0 text-xs text-[var(--fg-muted)]">Grosor</span>
               <select
@@ -210,7 +219,8 @@ export function SectionPanel({
                 onChange={(gradient) => patchEl({ gradient, ...(gradient ? { color: undefined } : {}) })}
               />
             )}
-            {!style.gradient && <ColorRow label="Color" value={style.color} onChange={(color) => patchEl({ color })} />}
+              </div>
+            </details>
 
             {els[el] && (
               <button type="button" onClick={() => onChange({ sectionEls: Object.fromEntries(Object.entries(els).filter(([k]) => k !== el)) })} className="inline-flex items-center gap-1.5 self-start rounded-full border border-[var(--border)] px-3 py-1.5 text-xs font-medium hover:border-[var(--accent)] hover:text-[var(--accent)]">

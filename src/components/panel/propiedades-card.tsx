@@ -104,7 +104,7 @@ export function PropiedadesCard({
           <div>
             <p className="text-sm font-semibold">Elige qué quieres cambiar</p>
             <p className="mt-1 text-xs leading-relaxed text-[var(--fg-muted)]">
-              Haz clic en una parte de la página. Si pasas el ratón por encima, verás qué es cada cosa. O elige una parte aquí:
+              Haz clic en la página o elige una parte:
             </p>
             <div className="mt-3 flex flex-wrap gap-1.5">
               {PARTES.map((id) => (

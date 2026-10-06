@@ -137,7 +137,9 @@ export function RegionEditor({
                       onClick={() => patch({ align: v })}
                       className={`rounded-md border px-2 py-1 text-xs transition ${
                         s.align === v
-                          ? "border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-fg)]"
+                          ? v === undefined
+                            ? "border-[var(--accent)] bg-transparent text-[var(--accent)]"
+                            : "border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-fg)]"
                           : "border-[var(--border)] hover:border-[var(--border-strong)]"
                       }`}
                     >
@@ -189,39 +191,36 @@ export function ColorRow({
   onChange: (v: string | undefined) => void;
 }) {
   return (
-    <div className="flex items-center gap-2">
-      <span className="w-14 shrink-0 text-xs text-[var(--fg-muted)]">{label}</span>
-      <button
-        type="button"
-        onClick={() => onChange(undefined)}
-        className={`rounded-md border px-2 py-1 text-[0.72rem] font-semibold ${
-          !value ? "border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-fg)]" : "border-[var(--border)]"
-        }`}
-      >
-        Auto
-      </button>
-      <div className="flex flex-1 flex-wrap gap-1">
+    <div className="flex flex-col gap-1.5">
+      <span className="text-xs text-[var(--fg-muted)]">{label}</span>
+      {/* Una sola fila ordenada: «sin color» (automático), las muestras y el selector de color exacto. */}
+      <div role="group" aria-label={label} className="grid grid-cols-10 items-center justify-items-center gap-1">
+        <button
+          type="button"
+          title="Automático (el de la plantilla)"
+          aria-label={`${label}: automático`}
+          aria-pressed={!value}
+          onClick={() => onChange(undefined)}
+          className={`relative size-6 overflow-hidden rounded-full border bg-white transition hover:scale-110 ${!value ? "ring-2 ring-[var(--accent)] ring-offset-1" : "border-[var(--border-strong)]"}`}
+        >
+          <span aria-hidden className="absolute left-1/2 top-[-20%] h-[140%] w-px -translate-x-1/2 rotate-45 bg-[#c0392b]" />
+        </button>
         {SWATCHES.map((c) => (
           <button
             key={c}
             type="button"
             title={c}
             aria-label={`${label} ${c}`}
+            aria-pressed={value?.toLowerCase() === c}
             onClick={() => onChange(c)}
             style={{ background: c }}
-            className={`size-5 rounded-full border ${
-              value?.toLowerCase() === c ? "ring-2 ring-[var(--accent)] ring-offset-1" : "border-[var(--border-strong)]"
-            }`}
+            className={`size-6 rounded-full border transition hover:scale-110 ${value?.toLowerCase() === c ? "ring-2 ring-[var(--accent)] ring-offset-1" : "border-[var(--border-strong)]"}`}
           />
         ))}
+        <label title="Elegir un color exacto" className="relative size-6 cursor-pointer overflow-hidden rounded-full border border-[var(--border-strong)] transition hover:scale-110" style={{ background: "conic-gradient(red, yellow, lime, aqua, blue, magenta, red)" }}>
+          <input type="color" value={value ?? "#ffffff"} onChange={(e) => onChange(e.target.value)} aria-label={`${label}: color exacto`} className="absolute inset-0 size-full cursor-pointer opacity-0" />
+        </label>
       </div>
-      <input
-        type="color"
-        value={value ?? "#ffffff"}
-        onChange={(e) => onChange(e.target.value)}
-        aria-label={`${label}: color exacto`}
-        className="size-7 shrink-0 cursor-pointer rounded border border-[var(--border)] bg-transparent p-0.5"
-      />
     </div>
   );
 }

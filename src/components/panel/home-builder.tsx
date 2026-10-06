@@ -40,7 +40,8 @@ const PUBLICADO_KEY = "cg:portada-publicado";
 /** Aviso de una sola vez que debe sobrevivir a la recarga de la página (p. ej. «Se volvió a la versión anterior»). */
 const AVISO_KEY = "cg:portada-aviso";
 /** Cómo se ve el lienzo (zoom, marco, ampliado): se recuerda entre visitas. */
-const VISTA_KEY = "cg:portada-vista";
+// «v2»: el marco de dispositivo pasó a estar apagado por defecto; se descarta la preferencia anterior.
+const VISTA_KEY = "cg:portada-vista-v2";
 
 /** «hace 5 min», «hace 2 h»… para el aviso de borrador pendiente. */
 function haceCuanto(iso: string): string {
@@ -223,13 +224,14 @@ export function HomeBuilder({
     const e = secElRef.current;
     let css = "";
     if (f === "parte" || (inSec && f !== null)) {
-      css += `[data-region="${r}"]{outline:2px dashed #84a21f;outline-offset:-2px}`;
-      if (r === "encabezado") css += `[data-el="${e}"]{outline:2px solid #84a21f;outline-offset:3px}`;
+      css += `[data-region="${r}"]{outline:2px dashed #2563eb88;outline-offset:-2px}`;
+      // La pieza elegida: contorno azul firme, halo suave y un pulso al elegirla, para ubicarla de un vistazo.
+      if (r === "encabezado") css += `[data-el="${e}"]{outline:3px solid #2563eb;outline-offset:4px;border-radius:6px;box-shadow:0 0 0 9px rgba(37,99,235,.16);animation:cgselpulse .7s ease-out}@keyframes cgselpulse{from{box-shadow:0 0 0 22px rgba(37,99,235,.35)}}`;
     }
     if (f === "nota" && c !== null) {
-      css += `[data-card-index="${c}"]{outline:3px solid #84a21f;outline-offset:2px}`;
+      css += `[data-card-index="${c}"]{outline:3px solid #2563eb;outline-offset:3px;box-shadow:0 0 0 9px rgba(37,99,235,.16)}`;
       const it = itemsRef.current[c];
-      if (it) css += `[data-bs-root="${it.slug}"]:not([data-bslug] *){outline:3px solid #84a21f;outline-offset:2px}`;
+      if (it) css += `[data-bs-root="${it.slug}"]:not([data-bslug] *){outline:3px solid #2563eb;outline-offset:3px;box-shadow:0 0 0 9px rgba(37,99,235,.16)}`;
     }
     st.textContent = css;
   }
