@@ -96,7 +96,7 @@ async function CategoryPage({ params, searchParams, locale }: PageProps & { loca
   // atajos de fecha (C-09) son enlaces, no botones: cada rango tiene su propia
   // URL, cacheable y compartible. El formulario es GET y funciona sin JavaScript.
   const filters = (
-    <div data-el="filters" className={pos === "barra" ? "flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between lg:gap-6" : `flex flex-col gap-2.5 ${A.items}`}>
+    <div data-el="filters" className={`flex flex-wrap items-center gap-x-3 gap-y-2 ${pos === "barra" ? "lg:justify-between" : A.justify}`}>
       <div className={`flex flex-wrap items-center gap-1.5 ${A.justify}`}>
         {RANGOS.map((r) => {
           const desdeISO = r.dias === null ? "" : isoHaceDias(r.dias);
@@ -110,10 +110,10 @@ async function CategoryPage({ params, searchParams, locale }: PageProps & { loca
               key={r.clave}
               href={localePath(locale, `/categoria/${slug}${qs ? `?${qs}` : ""}`)}
               aria-current={activo ? "true" : undefined}
-              className={`lx-ui inline-flex min-h-10 items-center rounded-full border px-3 text-[0.72rem] uppercase tracking-[0.12em] lg:min-h-8 transition ${
+              className={`lx-ui inline-flex min-h-10 items-center rounded-full border px-3 text-[0.68rem] uppercase tracking-[0.12em] lg:min-h-7 transition ${
                 activo
-                  ? "border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-fg)]"
-                  : "border-[var(--border)] text-[var(--fg-muted)] hover:border-[var(--accent)] hover:text-[var(--accent)]"
+                  ? "border-[var(--accent)]/60 bg-[var(--accent)]/15 text-[var(--accent)]"
+                  : "border-transparent text-[var(--fg-muted)] hover:text-[var(--accent)]"
               }`}
             >
               {t(locale, r.clave)}
@@ -124,10 +124,17 @@ async function CategoryPage({ params, searchParams, locale }: PageProps & { loca
       {/* Filtros de la sección. Formulario GET: cada combinación es una URL
           propia, enlazable y cacheable, y funciona sin JavaScript. */}
       {subcategories.length > 0 && (
+        // Los filtros avanzados quedan plegados tras un solo botón; se abre un panel flotante (sin JavaScript: <details>).
+        <details className="group relative" open={filtrando || undefined}>
+          <summary className="lx-ui inline-flex min-h-10 cursor-pointer list-none items-center gap-1.5 rounded-full border border-[var(--border)] px-3 text-[0.68rem] uppercase tracking-[0.12em] text-[var(--fg-muted)] transition hover:border-[var(--accent)] hover:text-[var(--accent)] group-open:border-[var(--accent)] group-open:text-[var(--accent)] lg:min-h-7 [&::-webkit-details-marker]:hidden">
+            <svg aria-hidden viewBox="0 0 24 24" className="size-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M4 6h16M7 12h10M10 18h4" /></svg>
+            {t(locale, "section.filter")}
+            {filtrando && <span aria-hidden className="size-1.5 rounded-full bg-[var(--accent)]" />}
+          </summary>
         <form
           action={localePath(locale, `/categoria/${slug}`)}
           method="get"
-          className={`flex flex-wrap items-end gap-2 ${A.justify}`}
+          className="absolute right-0 top-[calc(100%+0.5rem)] z-30 flex w-[min(30rem,calc(100vw-2rem))] flex-wrap items-end gap-3 rounded-[var(--radius-lg)] border border-[var(--border-strong,var(--border))] bg-[var(--bg-2)] p-4 text-left shadow-2xl"
         >
           <label className="flex min-w-[8.5rem] flex-col gap-1">
             <span className="lx-kicker !text-[0.72rem] text-[var(--fg-muted)]">{t(locale, "section.subcategory")}</span>
@@ -181,6 +188,7 @@ async function CategoryPage({ params, searchParams, locale }: PageProps & { loca
             </Link>
           )}
         </form>
+        </details>
       )}
     </div>
   );
