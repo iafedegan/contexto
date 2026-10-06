@@ -5,6 +5,7 @@
 - **El archivo histórico es de SOLO LECTURA**: nunca escribir a la API origen; `archive_index` solo lo actualiza `src/lib/archive-client.ts`.
 - **Rutas de contenido**: mantenerlas estáticas (`revalidate` + `generateStaticParams`). La revalidación real es on-demand desde las Server Actions al publicar.
 - **IA**: ningún contenido de agente se publica sin acción explícita de un editor. El asistente no responde sin fuentes citables.
+- **Arquitectura modular**: el código se organiza en módulos de dominio con dependencias dirigidas (ver `docs/ARQUITECTURA.md`). `npm run lint` incluye `scripts/check-modulos.mjs`: no añadas importaciones fuera del grafo de `scripts/modulos.config.json`; para reaccionar a lo que ocurre en otro módulo usa eventos (`src/lib/eventos.ts`, cableado en `src/lib/oyentes.ts`).
 - Antes de commit: `npm run lint && npm run typecheck && npm run build`.
 - Migraciones: editar `src/db/schema.ts` → `npm run db:generate` → revisar el SQL → `npm run db:migrate`. Índices vectoriales/FTS van en `drizzle/manual/99_post_indexes.sql`.
 

@@ -8,7 +8,7 @@
     "build": "next build",
     "build:local": "PGLITE_DATA_DIR=memory:// next build",
     "start": "next start",
-    "lint": "eslint src scripts",
+    "lint": "eslint src scripts && node scripts/check-modulos.mjs",
     "typecheck": "tsc --noEmit",
     "db:local:reset": "rm -rf .pglite && tsx scripts/dev-setup.ts",
     "db:generate": "drizzle-kit generate",
@@ -17,7 +17,8 @@
     "db:extras:pre": "tsx scripts/run-sql.ts drizzle/manual/00_pre_extensions.sql",
     "db:extras:post": "tsx scripts/run-sql.ts drizzle/manual/99_post_indexes.sql",
     "db:seed": "tsx scripts/seed.ts",
-    "db:setup": "npm run db:extras:pre && npm run db:generate && npm run db:migrate && npm run db:extras:post && npm run db:seed"
+    "db:setup": "npm run db:extras:pre && npm run db:generate && npm run db:migrate && npm run db:extras:post && npm run db:seed",
+    "check:modulos": "node scripts/check-modulos.mjs"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^4.0.60",

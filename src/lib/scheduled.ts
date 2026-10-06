@@ -2,7 +2,7 @@ import "server-only";
 import { and, eq, lte, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { articles } from "@/db/schema";
-import { avisarSiUltimaHora } from "@/lib/push";
+import { emitir } from "@/lib/eventos";
 
 /** Última vez que esta instancia ejecutó la pasada (ver el límite de una por minuto). */
 let ultimaPasada = 0;
@@ -26,7 +26,7 @@ export async function promoverProgramados(opciones: { forzar?: boolean } = {}): 
       .set({ status: "publicado", publishedAt: sql`${articles.scheduledFor}`, updatedAt: sql`now()` })
       .where(and(eq(articles.status, "programado"), lte(articles.scheduledFor, sql`now()`)))
       .returning({ id: articles.id });
-    if (r.length) avisarSiUltimaHora(r.map((x) => x.id));
+    if (r.length) emitir("nota.publicada", { ids: r.map((x) => x.id) });
     return r.length;
   } catch {
     return 0;

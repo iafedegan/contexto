@@ -5,7 +5,7 @@ import { db } from "@/db";
 import { articles, authors, categories } from "@/db/schema";
 import { embed } from "@/lib/embeddings";
 import { sanitizeArticleHtml } from "@/lib/sanitize";
-import { avisarSiUltimaHora } from "@/lib/push";
+import { emitir } from "@/lib/eventos";
 import { slugify } from "@/lib/utils";
 import { autorDeUsuario } from "@/lib/user-authors";
 import { invalidarCache } from "@/lib/data-cache";
@@ -116,7 +116,7 @@ export async function publicarCore(articleId: string) {
     .where(eq(articles.id, articleId));
   await reindexarNota(articleId);
   await revalidarNota(articleId);
-  avisarSiUltimaHora(articleId);
+  emitir("nota.publicada", { ids: [articleId] });
 }
 
 /** Programa la publicación; lanza si la fecha no es válida o ya pasó. */

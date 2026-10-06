@@ -1,0 +1,173 @@
+{
+  "descripcion": "Mapa de módulos del monolito modular. `rutas` son expresiones regulares sobre la ruta relativa a src/ (la primera que coincide manda). `puedeUsar` es el grafo PERMITIDO de dependencias; todo lo demás es una violación. Ver docs/ARQUITECTURA.md.",
+  "modulos": {
+    "orquestacion": {
+      "titulo": "Orquestación (proxy, tareas Inngest)",
+      "rutas": [
+        "^proxy\\.ts$",
+        "^inngest/",
+        "^instrumentation\\.ts$",
+        "^lib/oyentes\\.ts$"
+      ],
+      "puedeUsar": [
+        "*"
+      ]
+    },
+    "infra": {
+      "titulo": "Infraestructura, modelo de diseño y piezas comunes",
+      "rutas": [
+        "^db/",
+        "^components/ui/",
+        "^content/",
+        "^components/(logo-mark|social-icons|turnstile|radio-player|interactive-chart)\\.tsx$",
+        "^lib/(data-cache|safe-fetch|rate-limit|env|escape|validate|format|utils|cron-auth|i18n|budget|bots|media-mime|media-upload|nav-limits|home-fonts|home-regions|template-parts|home-style|ads-types|home-layout|home-layout-normalize|home-background|section-els|popup-types|site-identity|turnstile|eventos|zones|theme|geo-reverse|embeddings|chart-svg|chart-png)\\.tsx?$",
+        "^lib/api/"
+      ],
+      "puedeUsar": []
+    },
+    "acceso": {
+      "titulo": "Usuarios y acceso",
+      "rutas": [
+        "^lib/(auth|passkey|permisos|permisos-server|secrets|login-log|user-authors)\\.ts$",
+        "^app/api/auth/"
+      ],
+      "puedeUsar": [
+        "infra"
+      ]
+    },
+    "archivo": {
+      "titulo": "Archivo histórico (solo lectura)",
+      "rutas": [
+        "^lib/archive-client\\.ts$",
+        "^app/api/cron/sync-archive/"
+      ],
+      "puedeUsar": [
+        "infra"
+      ]
+    },
+    "contenido": {
+      "titulo": "Contenido editorial",
+      "rutas": [
+        "^components/home/tile-card\\.tsx$",
+        "^components/section/",
+        "^lib/(article-ops|article-stats|content|seo|seo-audit|sanitize|scheduled|redirects|rss|search|estados|embeds|embeddings|preview-token|preview-draft)\\.ts$",
+        "^components/(article-card|article-body|cover-art|json-ld|share-buttons|reading-progress|reader-mode|listen-article|live-badge|breaking-bar|view-counter)\\.tsx$",
+        "^components/home/(home-card|bento-tile|broadsheet-card)\\.tsx$"
+      ],
+      "puedeUsar": [
+        "infra",
+        "acceso"
+      ]
+    },
+    "ia": {
+      "titulo": "Asistente e IA editorial",
+      "rutas": [
+        "^agents/",
+        "^lib/ai/",
+        "^lib/(ai-[a-z-]+|ai/[a-z-]+|audio-extract|material-types)\\.tsx?$",
+        "^app/panel/\\(app\\)/articulos/(ai-actions|fuentes-actions)\\.ts$",
+        "^components/(assistant-chat|toro-bot|toro-flotante)\\.tsx$"
+      ],
+      "puedeUsar": [
+        "infra",
+        "acceso",
+        "contenido",
+        "archivo",
+        "analitica"
+      ]
+    },
+    "portada-tema": {
+      "titulo": "Portada, plantillas y tema",
+      "rutas": [
+        "^lib/(site-[a-z-]+|theme|zones|ads|ads-positions|ads-validate|popup|canvas-hints|portada-[a-z-]+|preview-chrome|block-tools)\\.tsx?$",
+        "^components/home/(?!templates)",
+        "^components/(site-header|site-footer|site-shell|site-popup|sticky-rail|more-menu|mobile-nav|theme-toggle|locale-switch|ads-banner|feature-strip|inicio-en-seccion|auto-hide-band)\\.tsx$"
+      ],
+      "puedeUsar": [
+        "infra",
+        "acceso",
+        "contenido"
+      ]
+    },
+    "newsletter": {
+      "titulo": "Boletín",
+      "rutas": [
+        "^lib/newsletter/",
+        "^components/newsletter-form\\.tsx$",
+        "^app/api/boletin/",
+        "^app/api/v1/boletin/",
+        "^app/acciones/boletin\\.ts$"
+      ],
+      "puedeUsar": [
+        "infra",
+        "acceso",
+        "contenido",
+        "portada-tema",
+        "canales"
+      ]
+    },
+    "canales": {
+      "titulo": "Canales (push, Telegram, PWA)",
+      "rutas": [
+        "^lib/(push|push-client|telegram[a-z-]*)\\.ts$",
+        "^app/api/(push|telegram)/",
+        "^components/(push-toggle|pwa-[a-z-]+|location-consent|refine-location)\\.tsx$",
+        "^lib/geo-consent\\.ts$",
+        "^app/acciones/ubicacion\\.ts$",
+        "^lib/geo-consent\\.ts$"
+      ],
+      "puedeUsar": [
+        "infra",
+        "acceso",
+        "contenido",
+        "ia"
+      ]
+    },
+    "analitica": {
+      "titulo": "Analítica y mercado",
+      "rutas": [
+        "^lib/(analytics[a-z-]*|view-sources|psi|psi-types|geo-reverse|subscriber-map|market-data|sync-market-data)\\.ts$",
+        "^components/analytics-ga4\\.tsx$",
+        "^app/api/(vista|cron/sync-market-data)/",
+        "^app/acciones/analitica"
+      ],
+      "puedeUsar": [
+        "infra",
+        "acceso",
+        "contenido"
+      ]
+    },
+    "ui-panel": {
+      "titulo": "Panel editorial (composición)",
+      "rutas": [
+        "^app/panel/",
+        "^components/panel/",
+        "^components/article-editor\\.tsx$",
+        "^app/api/(cron|inngest|revalidate|redirects|sugerencias|csp-report|offline|openapi\\.json|assistant|v1)/"
+      ],
+      "puedeUsar": [
+        "*"
+      ]
+    },
+    "ui-sitio": {
+      "titulo": "Sitio público (composición)",
+      "rutas": [
+        "^app/",
+        "^components/",
+        "^content/"
+      ],
+      "puedeUsar": [
+        "*"
+      ]
+    },
+    "otros": {
+      "titulo": "Sin clasificar",
+      "rutas": [
+        ".*"
+      ],
+      "puedeUsar": [
+        "*"
+      ]
+    }
+  }
+}

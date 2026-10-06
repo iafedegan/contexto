@@ -1,0 +1,5 @@
+{
+ "nota": "Violaciones heredadas: solo pueden bajar. Se reescribe con `npm run check:modulos -- --actualizar` tras corregir.",
+ "total": 0,
+ "violaciones": []
+}

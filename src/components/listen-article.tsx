@@ -51,6 +51,7 @@ export function ListenArticle({
 
   useEffect(() => {
     const ok = typeof window !== "undefined" && "speechSynthesis" in window;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- la síntesis de voz solo se puede detectar en el navegador
     setSupported(ok);
     if (!ok) return;
     setRate(cargarVelocidad());

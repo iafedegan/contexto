@@ -1,0 +1,120 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1800 1230" width="1800" height="1230"><defs><marker id="a" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0L10 5L0 10z" fill="#5b6b7b"/></marker><linearGradient id="g" x1="0" x2="1"><stop offset="0" stop-color="#14284b"/><stop offset="1" stop-color="#2d5aa3"/></linearGradient></defs>
+<rect width="1800" height="1230" fill="#f6f8fb"/>
+<rect x="0" y="0" width="1800" height="86" rx="0" fill="url(#g)" stroke="none" stroke-width="1.5"/>
+<text x="40" y="42" font-family="Inter,Helvetica,Arial,sans-serif" font-size="30" font-weight="800" fill="#fff" text-anchor="start">CONtexto Ganadero · Arquitectura de la aplicación</text>
+<text x="40" y="68" font-family="Inter,Helvetica,Arial,sans-serif" font-size="14.5" font-weight="400" fill="#cfe0ff" text-anchor="start">Next.js 16 (App Router) · un solo proyecto, dos mitades (sitio público + panel editorial) · Postgres/Supabase + pgvector · IA con revisión humana</text>
+<rect x="30" y="110" width="1740" height="120" rx="18" fill="#eef3fb" stroke="#1f3f78" stroke-width="2"/>
+<text x="52" y="140" font-family="Inter,Helvetica,Arial,sans-serif" font-size="14" font-weight="800" fill="#1f3f78" text-anchor="start">1 · QUIÉNES USAN LA APLICACIÓN</text>
+<rect x="52" y="154" width="326" height="62" rx="12" fill="#fff" stroke="#9db4d8" stroke-width="1.5"/>
+<text x="66" y="178" font-family="Inter,Helvetica,Arial,sans-serif" font-size="16" font-weight="700" fill="#1f3f78" text-anchor="start">Lectores</text>
+<text x="66" y="200" font-family="Inter,Helvetica,Arial,sans-serif" font-size="12.5" font-weight="400" fill="#4a5a6b" text-anchor="start">Web y PWA instalable · móvil/escritorio · ES / EN</text>
+<rect x="398" y="154" width="326" height="62" rx="12" fill="#fff" stroke="#9db4d8" stroke-width="1.5"/>
+<text x="412" y="178" font-family="Inter,Helvetica,Arial,sans-serif" font-size="16" font-weight="700" fill="#1f3f78" text-anchor="start">Redacción</text>
+<text x="412" y="200" font-family="Inter,Helvetica,Arial,sans-serif" font-size="12.5" font-weight="400" fill="#4a5a6b" text-anchor="start">Redactor · Editor · Administrador (rangos 1-3)</text>
+<rect x="744" y="154" width="326" height="62" rx="12" fill="#fff" stroke="#9db4d8" stroke-width="1.5"/>
+<text x="758" y="178" font-family="Inter,Helvetica,Arial,sans-serif" font-size="16" font-weight="700" fill="#1f3f78" text-anchor="start">Telegram</text>
+<text x="758" y="200" font-family="Inter,Helvetica,Arial,sans-serif" font-size="12.5" font-weight="400" fill="#4a5a6b" text-anchor="start">Bot: borradores de IA para aprobar</text>
+<rect x="1090" y="154" width="326" height="62" rx="12" fill="#fff" stroke="#9db4d8" stroke-width="1.5"/>
+<text x="1104" y="178" font-family="Inter,Helvetica,Arial,sans-serif" font-size="16" font-weight="700" fill="#1f3f78" text-anchor="start">Clientes API</text>
+<text x="1104" y="200" font-family="Inter,Helvetica,Arial,sans-serif" font-size="12.5" font-weight="400" fill="#4a5a6b" text-anchor="start">Terceros con clave · /api/v1 (solo lectura)</text>
+<rect x="1436" y="154" width="326" height="62" rx="12" fill="#fff" stroke="#9db4d8" stroke-width="1.5"/>
+<text x="1450" y="178" font-family="Inter,Helvetica,Arial,sans-serif" font-size="16" font-weight="700" fill="#1f3f78" text-anchor="start">Buscadores y RSS</text>
+<text x="1450" y="200" font-family="Inter,Helvetica,Arial,sans-serif" font-size="12.5" font-weight="400" fill="#4a5a6b" text-anchor="start">Google · sitemap · feed.xml · news-sitemap</text>
+<rect x="30" y="250" width="1740" height="92" rx="18" fill="#fbf3e1" stroke="#6b4a05" stroke-width="2"/>
+<text x="52" y="280" font-family="Inter,Helvetica,Arial,sans-serif" font-size="14" font-weight="800" fill="#6b4a05" text-anchor="start">2 · BORDE · VERCEL</text>
+<rect x="52" y="290" width="412" height="46" rx="10" fill="#fff" stroke="#e0c681" stroke-width="1.5"/>
+<text x="64" y="310" font-family="Inter,Helvetica,Arial,sans-serif" font-size="14.5" font-weight="700" fill="#6b4a05" text-anchor="start">proxy.ts (middleware)</text>
+<text x="64" y="328" font-family="Inter,Helvetica,Arial,sans-serif" font-size="12" font-weight="400" fill="#5b4a1f" text-anchor="start">Protege /panel · cabeceras · CSP (solo reporte)</text>
+<rect x="484" y="290" width="412" height="46" rx="10" fill="#fff" stroke="#e0c681" stroke-width="1.5"/>
+<text x="496" y="310" font-family="Inter,Helvetica,Arial,sans-serif" font-size="14.5" font-weight="700" fill="#6b4a05" text-anchor="start">Auth.js v5</text>
+<text x="496" y="328" font-family="Inter,Helvetica,Arial,sans-serif" font-size="12" font-weight="400" fill="#5b4a1f" text-anchor="start">Sesión JWT · 2FA TOTP obligatorio · passkeys</text>
+<rect x="916" y="290" width="412" height="46" rx="10" fill="#fff" stroke="#e0c681" stroke-width="1.5"/>
+<text x="928" y="310" font-family="Inter,Helvetica,Arial,sans-serif" font-size="14.5" font-weight="700" fill="#6b4a05" text-anchor="start">Cron de Vercel</text>
+<text x="928" y="328" font-family="Inter,Helvetica,Arial,sans-serif" font-size="12" font-weight="400" fill="#5b4a1f" text-anchor="start">Publicar programadas · sync archivo · mercado</text>
+<rect x="1348" y="290" width="412" height="46" rx="10" fill="#fff" stroke="#e0c681" stroke-width="1.5"/>
+<text x="1360" y="310" font-family="Inter,Helvetica,Arial,sans-serif" font-size="14.5" font-weight="700" fill="#6b4a05" text-anchor="start">Caché de datos</text>
+<text x="1360" y="328" font-family="Inter,Helvetica,Arial,sans-serif" font-size="12" font-weight="400" fill="#5b4a1f" text-anchor="start">unstable_cache + etiquetas · invalidación al publicar</text>
+<rect x="30" y="362" width="1740" height="310" rx="18" fill="#e9f7f4" stroke="#0f766e" stroke-width="2"/>
+<text x="52" y="392" font-family="Inter,Helvetica,Arial,sans-serif" font-size="14" font-weight="800" fill="#0f766e" text-anchor="start">3 · APLICACIÓN NEXT.JS (src/app)</text>
+<rect x="52" y="406" width="540" height="250" rx="12" fill="#fff" stroke="#0f766e" stroke-width="1.5"/>
+<text x="66" y="432" font-family="Inter,Helvetica,Arial,sans-serif" font-size="16" font-weight="700" fill="#0f766e" text-anchor="start">Sitio público  (public)</text>
+<text x="66" y="456" font-family="Inter,Helvetica,Arial,sans-serif" font-size="13.5" font-weight="400" fill="#33414f" text-anchor="start">Portada · plantillas configurables (Esmeralda, Clásico…)</text>
+<text x="66" y="476" font-family="Inter,Helvetica,Arial,sans-serif" font-size="13.5" font-weight="400" fill="#33414f" text-anchor="start">Sección /categoria/[slug] · filtros · feed por sección</text>
+<text x="66" y="496" font-family="Inter,Helvetica,Arial,sans-serif" font-size="13.5" font-weight="400" fill="#33414f" text-anchor="start">Artículo /articulo/[slug] · gráficas · escuchar · compartir</text>
+<text x="66" y="516" font-family="Inter,Helvetica,Arial,sans-serif" font-size="13.5" font-weight="400" fill="#33414f" text-anchor="start">Buscar · Asistente con fuentes citables · Autor</text>
+<text x="66" y="536" font-family="Inter,Helvetica,Arial,sans-serif" font-size="13.5" font-weight="400" fill="#33414f" text-anchor="start">Boletín (alta, confirmar, baja) · Contacto · legales</text>
+<text x="66" y="556" font-family="Inter,Helvetica,Arial,sans-serif" font-size="13.5" font-weight="400" fill="#33414f" text-anchor="start">Versión en inglés /en/… · /offline · PWA · push</text>
+<text x="66" y="576" font-family="Inter,Helvetica,Arial,sans-serif" font-size="13.5" font-weight="400" fill="#33414f" text-anchor="start">Rutas ISR + revalidación bajo demanda al publicar</text>
+<text x="66" y="596" font-family="Inter,Helvetica,Arial,sans-serif" font-size="13.5" font-weight="400" fill="#33414f" text-anchor="start">Sitemap · robots · feed.xml · news-sitemap</text>
+<rect x="610" y="406" width="600" height="250" rx="12" fill="#fff" stroke="#0f766e" stroke-width="1.5"/>
+<text x="624" y="432" font-family="Inter,Helvetica,Arial,sans-serif" font-size="16" font-weight="700" fill="#0f766e" text-anchor="start">Panel editorial  /panel</text>
+<text x="624" y="456" font-family="Inter,Helvetica,Arial,sans-serif" font-size="13.5" font-weight="400" fill="#33414f" text-anchor="start">Resumen: lecturas, estados, mapa de suscriptores</text>
+<text x="624" y="476" font-family="Inter,Helvetica,Arial,sans-serif" font-size="13.5" font-weight="400" fill="#33414f" text-anchor="start">Artículos: lista, interruptores Última hora / En vivo</text>
+<text x="624" y="496" font-family="Inter,Helvetica,Arial,sans-serif" font-size="13.5" font-weight="400" fill="#33414f" text-anchor="start">Asistente de redacción de 9 pasos (manual o con IA):</text>
+<text x="624" y="516" font-family="Inter,Helvetica,Arial,sans-serif" font-size="13.5" font-weight="400" fill="#33414f" text-anchor="start">   · carruseles · editor tipo Word · citas · gráficas · portada</text>
+<text x="624" y="536" font-family="Inter,Helvetica,Arial,sans-serif" font-size="13.5" font-weight="400" fill="#33414f" text-anchor="start">   · voz/video → transcripción por intervenciones</text>
+<text x="624" y="556" font-family="Inter,Helvetica,Arial,sans-serif" font-size="13.5" font-weight="400" fill="#33414f" text-anchor="start">Portada y plantillas: editor visual con vista previa real</text>
+<text x="624" y="576" font-family="Inter,Helvetica,Arial,sans-serif" font-size="13.5" font-weight="400" fill="#33414f" text-anchor="start">Secciones · Newsletter · Avisos · Mensajes · Demanda</text>
+<text x="624" y="596" font-family="Inter,Helvetica,Arial,sans-serif" font-size="13.5" font-weight="400" fill="#33414f" text-anchor="start">Borradores de IA (aprobación) · Configuración · API pública</text>
+<rect x="1228" y="406" width="520" height="250" rx="12" fill="#fff" stroke="#0f766e" stroke-width="1.5"/>
+<text x="1242" y="432" font-family="Inter,Helvetica,Arial,sans-serif" font-size="16" font-weight="700" fill="#0f766e" text-anchor="start">Server Actions + API routes</text>
+<text x="1242" y="456" font-family="Inter,Helvetica,Arial,sans-serif" font-size="13.5" font-weight="400" fill="#33414f" text-anchor="start">Mutaciones del panel = Server Actions (sin REST paralelo)</text>
+<text x="1242" y="476" font-family="Inter,Helvetica,Arial,sans-serif" font-size="13.5" font-weight="400" fill="#33414f" text-anchor="start">/api/v1 artículos · categorías · suscripción (con clave)</text>
+<text x="1242" y="496" font-family="Inter,Helvetica,Arial,sans-serif" font-size="13.5" font-weight="400" fill="#33414f" text-anchor="start">/api/assistant · /api/push · /api/vista (lecturas)</text>
+<text x="1242" y="516" font-family="Inter,Helvetica,Arial,sans-serif" font-size="13.5" font-weight="400" fill="#33414f" text-anchor="start">/api/boletin/baja · exportar · /api/revalidate</text>
+<text x="1242" y="536" font-family="Inter,Helvetica,Arial,sans-serif" font-size="13.5" font-weight="400" fill="#33414f" text-anchor="start">/api/cron/* · /api/telegram/webhook · /api/inngest</text>
+<text x="1242" y="556" font-family="Inter,Helvetica,Arial,sans-serif" font-size="13.5" font-weight="400" fill="#33414f" text-anchor="start">/api/csp-report · /api/offline · /api/openapi.json</text>
+<text x="1242" y="576" font-family="Inter,Helvetica,Arial,sans-serif" font-size="13.5" font-weight="400" fill="#33414f" text-anchor="start">Cada acción valida sesión y permiso en el servidor</text>
+<text x="1242" y="596" font-family="Inter,Helvetica,Arial,sans-serif" font-size="13.5" font-weight="400" fill="#33414f" text-anchor="start">Límite de peticiones en Postgres (429)</text>
+<rect x="30" y="692" width="1740" height="196" rx="18" fill="#f3eefd" stroke="#7c3aed" stroke-width="2"/>
+<text x="52" y="722" font-family="Inter,Helvetica,Arial,sans-serif" font-size="14" font-weight="800" fill="#7c3aed" text-anchor="start">4 · LÓGICA DE NEGOCIO (src/lib · agents · inngest)</text>
+<rect x="52" y="736" width="326" height="136" rx="12" fill="#fff" stroke="#c7b3f0" stroke-width="1.5"/>
+<text x="66" y="762" font-family="Inter,Helvetica,Arial,sans-serif" font-size="16" font-weight="700" fill="#7c3aed" text-anchor="start">Seguridad</text>
+<text x="66" y="790" font-family="Inter,Helvetica,Arial,sans-serif" font-size="13" font-weight="400" fill="#33414f" text-anchor="start">permisos · auth · passkey · secrets</text>
+<text x="66" y="812" font-family="Inter,Helvetica,Arial,sans-serif" font-size="13" font-weight="400" fill="#33414f" text-anchor="start">rate-limit · turnstile · safe-fetch (SSRF)</text>
+<text x="66" y="834" font-family="Inter,Helvetica,Arial,sans-serif" font-size="13" font-weight="400" fill="#33414f" text-anchor="start">sanitize · escape · validate</text>
+<rect x="398" y="736" width="326" height="136" rx="12" fill="#fff" stroke="#c7b3f0" stroke-width="1.5"/>
+<text x="412" y="762" font-family="Inter,Helvetica,Arial,sans-serif" font-size="16" font-weight="700" fill="#7c3aed" text-anchor="start">Contenido</text>
+<text x="412" y="790" font-family="Inter,Helvetica,Arial,sans-serif" font-size="13" font-weight="400" fill="#33414f" text-anchor="start">article-ops · seo + seo-audit</text>
+<text x="412" y="812" font-family="Inter,Helvetica,Arial,sans-serif" font-size="13" font-weight="400" fill="#33414f" text-anchor="start">scheduled · redirects · rss · search</text>
+<text x="412" y="834" font-family="Inter,Helvetica,Arial,sans-serif" font-size="13" font-weight="400" fill="#33414f" text-anchor="start">embeddings (pgvector)</text>
+<rect x="744" y="736" width="326" height="136" rx="12" fill="#fff" stroke="#c7b3f0" stroke-width="1.5"/>
+<text x="758" y="762" font-family="Inter,Helvetica,Arial,sans-serif" font-size="16" font-weight="700" fill="#7c3aed" text-anchor="start">IA</text>
+<text x="758" y="790" font-family="Inter,Helvetica,Arial,sans-serif" font-size="13" font-weight="400" fill="#33414f" text-anchor="start">ai-core: borrador, opciones, citas</text>
+<text x="758" y="812" font-family="Inter,Helvetica,Arial,sans-serif" font-size="13" font-weight="400" fill="#33414f" text-anchor="start">verifica cifras y citas con las fuentes</text>
+<text x="758" y="834" font-family="Inter,Helvetica,Arial,sans-serif" font-size="13" font-weight="400" fill="#33414f" text-anchor="start">imágenes · gráficas · transcripción</text>
+<rect x="1090" y="736" width="326" height="136" rx="12" fill="#fff" stroke="#c7b3f0" stroke-width="1.5"/>
+<text x="1104" y="762" font-family="Inter,Helvetica,Arial,sans-serif" font-size="16" font-weight="700" fill="#7c3aed" text-anchor="start">Sitio</text>
+<text x="1104" y="790" font-family="Inter,Helvetica,Arial,sans-serif" font-size="13" font-weight="400" fill="#33414f" text-anchor="start">home-layout · site-theme · zones</text>
+<text x="1104" y="812" font-family="Inter,Helvetica,Arial,sans-serif" font-size="13" font-weight="400" fill="#33414f" text-anchor="start">ads · popup · template-parts</text>
+<text x="1104" y="834" font-family="Inter,Helvetica,Arial,sans-serif" font-size="13" font-weight="400" fill="#33414f" text-anchor="start">data-cache · i18n · format</text>
+<rect x="1436" y="736" width="326" height="136" rx="12" fill="#fff" stroke="#c7b3f0" stroke-width="1.5"/>
+<text x="1450" y="762" font-family="Inter,Helvetica,Arial,sans-serif" font-size="16" font-weight="700" fill="#7c3aed" text-anchor="start">Canales</text>
+<text x="1450" y="790" font-family="Inter,Helvetica,Arial,sans-serif" font-size="13" font-weight="400" fill="#33414f" text-anchor="start">newsletter · push · telegram</text>
+<text x="1450" y="812" font-family="Inter,Helvetica,Arial,sans-serif" font-size="13" font-weight="400" fill="#33414f" text-anchor="start">archive-client (solo lectura)</text>
+<text x="1450" y="834" font-family="Inter,Helvetica,Arial,sans-serif" font-size="13" font-weight="400" fill="#33414f" text-anchor="start">market-data · analytics</text>
+<rect x="30" y="908" width="1740" height="126" rx="18" fill="#fdf1e3" stroke="#b45309" stroke-width="2"/>
+<text x="52" y="938" font-family="Inter,Helvetica,Arial,sans-serif" font-size="14" font-weight="800" fill="#b45309" text-anchor="start">5 · DATOS</text>
+<rect x="52" y="948" width="820" height="72" rx="12" fill="#fff" stroke="#e8b680" stroke-width="1.5"/>
+<text x="66" y="974" font-family="Inter,Helvetica,Arial,sans-serif" font-size="16" font-weight="700" fill="#b45309" text-anchor="start">Postgres (Supabase) + pgvector · Drizzle ORM</text>
+<text x="66" y="996" font-family="Inter,Helvetica,Arial,sans-serif" font-size="12.5" font-weight="400" fill="#4a3a2a" text-anchor="start">users · passkeys · articles · categories · authors · site_settings · newsletter · agent_drafts · assistant_queries · redirects · rate_limits · push · ads</text>
+<text x="66" y="1012" font-family="Inter,Helvetica,Arial,sans-serif" font-size="12.5" font-weight="400" fill="#4a3a2a" text-anchor="start">Local: PGlite (sin servidor) · Esquema en src/db/schema.ts · migraciones con drizzle-kit</text>
+<rect x="890" y="948" width="420" height="72" rx="12" fill="#fff" stroke="#e8b680" stroke-width="1.5"/>
+<text x="904" y="974" font-family="Inter,Helvetica,Arial,sans-serif" font-size="16" font-weight="700" fill="#b45309" text-anchor="start">Supabase Storage</text>
+<text x="904" y="996" font-family="Inter,Helvetica,Arial,sans-serif" font-size="12.5" font-weight="400" fill="#4a3a2a" text-anchor="start">Imágenes, audio y medios subidos desde el panel</text>
+<rect x="1328" y="948" width="420" height="72" rx="12" fill="#fff" stroke="#e8b680" stroke-width="1.5"/>
+<text x="1342" y="974" font-family="Inter,Helvetica,Arial,sans-serif" font-size="16" font-weight="700" fill="#b45309" text-anchor="start">Archivo histórico (API origen)</text>
+<text x="1342" y="996" font-family="Inter,Helvetica,Arial,sans-serif" font-size="12.5" font-weight="400" fill="#4a3a2a" text-anchor="start">SOLO LECTURA · índice local archive_index</text>
+<rect x="30" y="1054" width="1740" height="100" rx="18" fill="#eef1f5" stroke="#475569" stroke-width="2"/>
+<text x="52" y="1084" font-family="Inter,Helvetica,Arial,sans-serif" font-size="14" font-weight="800" fill="#475569" text-anchor="start">6 · SERVICIOS EXTERNOS</text>
+<rect x="52" y="1098" width="326" height="44" rx="10" fill="#fff" stroke="#b8c2cf" stroke-width="1.5"/>
+<text x="215" y="1126" font-family="Inter,Helvetica,Arial,sans-serif" font-size="13.5" font-weight="600" fill="#334155" text-anchor="middle">Gemini / Claude (Vercel AI SDK)</text>
+<rect x="398" y="1098" width="326" height="44" rx="10" fill="#fff" stroke="#b8c2cf" stroke-width="1.5"/>
+<text x="561" y="1126" font-family="Inter,Helvetica,Arial,sans-serif" font-size="13.5" font-weight="600" fill="#334155" text-anchor="middle">Búsqueda web con fuentes (Google)</text>
+<rect x="744" y="1098" width="326" height="44" rx="10" fill="#fff" stroke="#b8c2cf" stroke-width="1.5"/>
+<text x="907" y="1126" font-family="Inter,Helvetica,Arial,sans-serif" font-size="13.5" font-weight="600" fill="#334155" text-anchor="middle">Inngest · tareas en segundo plano</text>
+<rect x="1090" y="1098" width="326" height="44" rx="10" fill="#fff" stroke="#b8c2cf" stroke-width="1.5"/>
+<text x="1253" y="1126" font-family="Inter,Helvetica,Arial,sans-serif" font-size="13.5" font-weight="600" fill="#334155" text-anchor="middle">Web Push · Telegram Bot API</text>
+<rect x="1436" y="1098" width="326" height="44" rx="10" fill="#fff" stroke="#b8c2cf" stroke-width="1.5"/>
+<text x="1599" y="1126" font-family="Inter,Helvetica,Arial,sans-serif" font-size="13.5" font-weight="600" fill="#334155" text-anchor="middle">Turnstile · OpenStreetMap/Leaflet</text>
+<line x1="215" y1="230" x2="215" y2="248" stroke="#5b6b7b" stroke-width="2.4" marker-end="url(#a)"/><line x1="900" y1="230" x2="900" y2="248" stroke="#5b6b7b" stroke-width="2.4" marker-end="url(#a)"/><line x1="1500" y1="230" x2="1500" y2="248" stroke="#5b6b7b" stroke-width="2.4" marker-end="url(#a)"/><line x1="215" y1="342" x2="215" y2="360" stroke="#5b6b7b" stroke-width="2.4" marker-end="url(#a)"/><line x1="900" y1="342" x2="900" y2="360" stroke="#5b6b7b" stroke-width="2.4" marker-end="url(#a)"/><line x1="1500" y1="342" x2="1500" y2="360" stroke="#5b6b7b" stroke-width="2.4" marker-end="url(#a)"/><line x1="215" y1="672" x2="215" y2="690" stroke="#5b6b7b" stroke-width="2.4" marker-end="url(#a)"/><line x1="900" y1="672" x2="900" y2="690" stroke="#5b6b7b" stroke-width="2.4" marker-end="url(#a)"/><line x1="1500" y1="672" x2="1500" y2="690" stroke="#5b6b7b" stroke-width="2.4" marker-end="url(#a)"/><line x1="215" y1="888" x2="215" y2="906" stroke="#5b6b7b" stroke-width="2.4" marker-end="url(#a)"/><line x1="900" y1="888" x2="900" y2="906" stroke="#5b6b7b" stroke-width="2.4" marker-end="url(#a)"/><line x1="1500" y1="888" x2="1500" y2="906" stroke="#5b6b7b" stroke-width="2.4" marker-end="url(#a)"/><line x1="215" y1="1034" x2="215" y2="1052" stroke="#5b6b7b" stroke-width="2.4" marker-end="url(#a)"/><line x1="900" y1="1034" x2="900" y2="1052" stroke="#5b6b7b" stroke-width="2.4" marker-end="url(#a)"/><line x1="1500" y1="1034" x2="1500" y2="1052" stroke="#5b6b7b" stroke-width="2.4" marker-end="url(#a)"/><text x="40" y="1214" font-family="Inter,Helvetica,Arial,sans-serif" font-size="13" font-weight="500" fill="#475569">Reglas de la casa: el contenido de IA nunca se publica sin acción de un editor · el asistente no responde sin fuentes citables · el archivo histórico es solo lectura.</text></svg>

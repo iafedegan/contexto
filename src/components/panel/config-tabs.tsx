@@ -21,6 +21,7 @@ export function ConfigTabs({ tabs, children }: { tabs: TabDef[]; children: React
 
   useEffect(() => {
     const hash = window.location.hash.replace("#", "");
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- el hash de la URL solo existe en el navegador
     if (hash && tabs.some((t) => t.id === hash)) setActive(hash);
     // Solo al montar: el hash es la intención de navegación inicial, no algo
     // a re-sincronizar si el usuario cambia de pestaña manualmente después.
