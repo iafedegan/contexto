@@ -7,10 +7,10 @@ export function AreaChart({ labels, values, className }: { labels: string[]; val
   const H = 220;
   const padL = 34;
   const padB = 28;
-  const padT = 14;
+  const padT = 30;
   const max = Math.max(4, ...values);
   const top = Math.ceil(max / 4) * 4;
-  const innerW = W - padL - 8;
+  const innerW = W - padL - 26;
   const innerH = H - padB - padT;
   // Posición horizontal del punto i.
   const x = (i: number) => padL + (values.length === 1 ? innerW / 2 : (i / (values.length - 1)) * innerW);
@@ -32,6 +32,8 @@ export function AreaChart({ labels, values, className }: { labels: string[]; val
   const area = `${path} L${x(values.length - 1)},${padT + innerH} L${x(0)},${padT + innerH} Z`;
   const ticks = [0, 1, 2, 3, 4].map((k) => (top / 4) * k);
   const last = pts[pts.length - 1];
+  // Día con más lecturas: se resalta.
+  const maxIdx = values.indexOf(Math.max(...values));
   return (
     <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Lecturas diarias: ${values.map((v) => nf.format(v)).join(", ")}`} className={cn("block h-auto w-full", className)}>
       <defs>
@@ -49,7 +51,14 @@ export function AreaChart({ labels, values, className }: { labels: string[]; val
       <path d={area} fill="url(#dash-area)" />
       <path d={path} fill="none" stroke="var(--accent)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
       {pts.map((p, i) => (
-        <circle key={i} cx={p[0]} cy={p[1]} r={i === pts.length - 1 ? 5 : 3} fill="var(--bg)" stroke="var(--accent)" strokeWidth="2.5" />
+        <g key={i}>
+          <title>{`${labels[i]}: ${nf.format(values[i])} lecturas`}</title>
+          <circle cx={p[0]} cy={p[1]} r={i === pts.length - 1 ? 5 : 3.5} fill="var(--bg)" stroke="var(--accent)" strokeWidth="2.5" />
+          {/* Valor sobre cada punto (pocos días): se lee sin buscar el eje. */}
+          {values.length <= 14 && (
+            <text x={p[0]} y={p[1] - 12} textAnchor="middle" fontSize="12" fontWeight={i === maxIdx ? 700 : 500} fill={i === maxIdx ? "var(--accent)" : "var(--fg)"}>{nf.format(values[i])}</text>
+          )}
+        </g>
       ))}
       {last && <circle cx={last[0]} cy={last[1]} r="11" fill="var(--accent)" opacity="0.15" />}
       {labels.map((l, i) => (
