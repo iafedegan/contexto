@@ -7,6 +7,7 @@ import { articles, articleViewsDaily, authors, categories } from "@/db/schema";
 import { Badge, Button } from "@/components/ui";
 import { auth, requirePermiso } from "@/lib/auth";
 import { DeleteArticleButton } from "@/components/panel/delete-article-button";
+import { MarcasNota } from "@/components/panel/marcas-nota";
 import { ArticleFilters } from "@/components/panel/article-filters";
 import { SparklineZoom } from "@/components/panel/sparkline-zoom";
 import { dailySeries, hasDailyViews, pctChange, siteWeekTotals, TODAY_CO } from "@/lib/article-stats";
@@ -110,6 +111,8 @@ export default async function ArticlesList({ searchParams }: { searchParams: Sea
       title: articles.title,
       slug: articles.slug,
       status: articles.status,
+      isBreaking: articles.isBreaking,
+      isLive: articles.isLive,
       updatedAt: articles.updatedAt,
       publishedAt: articles.publishedAt,
       scheduledFor: articles.scheduledFor,
@@ -283,6 +286,7 @@ export default async function ArticlesList({ searchParams }: { searchParams: Sea
                       Ver en el sitio ↗
                     </a>
                   )}
+                  {canDelete && <MarcasNota id={r.id} breaking={r.isBreaking} live={r.isLive} />}
                   {canDelete && <DeleteArticleButton id={r.id} title={r.title} published={r.status === "publicado"} />}
                 </div>
               </div>
@@ -344,7 +348,7 @@ export default async function ArticlesList({ searchParams }: { searchParams: Sea
                     {/* Con la columna «Autor» oculta (pantallas medianas), la firma va en su propia línea. */}
                     <div className="mt-0.5 text-xs text-[var(--fg-muted)] 2xl:hidden">Por {r.author ?? "autor sin asignar"}</div>
                   </Td>
-                  <Td>
+                  <Td className="min-w-[15rem]">
                     <Badge
                       className={
                         r.status === "publicado" ? "border-[var(--border-strong)] text-[var(--accent)]" : ""
@@ -354,6 +358,9 @@ export default async function ArticlesList({ searchParams }: { searchParams: Sea
                     </Badge>
                     {r.status === "programado" && r.scheduledFor && (
                       <span className="ml-2 text-xs text-[var(--fg-muted)]">{formatDate(r.scheduledFor)}</span>
+                    )}
+                    {canDelete && (
+                      <div className="mt-2"><MarcasNota id={r.id} breaking={r.isBreaking} live={r.isLive} /></div>
                     )}
                   </Td>
                   <Td className="hidden 2xl:table-cell">{r.author ?? "—"}</Td>

@@ -181,6 +181,20 @@ export async function unpublishArticle(articleId: string) {
 }
 
 /**
+ * Pone o quita «Última hora» o «En desarrollo» (en vivo) de una nota desde la lista, sin abrir el editor.
+ * No envía la notificación push de última hora: ese aviso solo sale al publicar la nota.
+ */
+export async function setArticleFlag(articleId: string, flag: "isBreaking" | "isLive", value: boolean): Promise<{ ok: boolean; message?: string }> {
+  await requirePublicador();
+  if (flag !== "isBreaking" && flag !== "isLive") return { ok: false, message: "Marca no válida." };
+  const res = await db.update(articles).set({ [flag]: value, updatedAt: sql`now()` }).where(eq(articles.id, articleId)).returning({ id: articles.id });
+  if (res.length === 0) return { ok: false, message: "Esa nota ya no existe." };
+  await revalidarNota(articleId);
+  revalidatePath("/panel/articulos");
+  return { ok: true };
+}
+
+/**
  * Borra el artículo para siempre (sus lecturas diarias se van con él; un
  * borrador de IA que lo originó solo pierde el enlace). Quitarlo del sitio
  * sin perderlo es «archivar» (unpublishArticle).
