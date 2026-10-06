@@ -216,7 +216,7 @@ async function CategoryPage({ params, searchParams, locale }: PageProps & { loca
           <nav
             data-el="breadcrumb"
             aria-label="breadcrumb"
-            className="lx-ui flex flex-wrap items-center gap-2 text-[0.72rem] uppercase tracking-[0.2em] text-[var(--fg-muted)]"
+            className="sr-only lx-ui flex flex-wrap items-center gap-2 text-[0.72rem] uppercase tracking-[0.2em] text-[var(--fg-muted)]"
           >
             <Link href={localePath(locale, "/")} className="lx-link">
               {locale === "es" ? "Inicio" : "Home"}
