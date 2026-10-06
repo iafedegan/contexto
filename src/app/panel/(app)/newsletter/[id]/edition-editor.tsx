@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { deleteEdition, previewEdition, saveEdition, sendEditionChunk, sendTestEmail } from "../actions";
 
 // Contenido editable de la edición.
@@ -14,6 +15,7 @@ export function EditionEditor({ id, status, recipients, progress, initial, artic
   id: string; status: string; recipients: number; progress: { delivered: number; total: number; failed: number };
   initial: Content; articles: Art[];
 }) {
+  const router = useRouter();
   const [c, setC] = useState(initial);
   const [html, setHtml] = useState("");
   const [mobile, setMobile] = useState(false);
@@ -91,7 +93,7 @@ export function EditionEditor({ id, status, recipients, progress, initial, artic
             <div className="flex flex-col gap-3 border-t border-[var(--border)] pt-4">
               <div className="flex flex-wrap gap-2">
                 <button className="lx-btn-ghost" disabled={pending || sending} onClick={() => start(async () => setMsg((await saveEdition(id, c)).message))}>Guardar borrador</button>
-                <button className="lx-btn-ghost text-red-600" disabled={sending} onClick={async () => { if (confirm("¿Eliminar este borrador?")) { await deleteEdition(id); location.assign("/panel/newsletter"); } }}>Eliminar</button>
+                <button className="lx-btn-ghost text-red-600" disabled={sending} onClick={async () => { if (confirm("¿Eliminar este borrador?")) { await deleteEdition(id); router.push("/panel/newsletter"); } }}>Eliminar</button>
               </div>
               <div className="flex gap-2">
                 <input className="lx-input flex-1" type="email" placeholder="correo para la prueba" value={to} onChange={(e) => setTo(e.target.value)} />

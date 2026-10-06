@@ -3,7 +3,7 @@
  * Objetivo: no perder posicionamiento acumulado. Seguimiento en Search Console.
  *
  * Dos capas:
- *  1. Prefijos de taxonomía legada -> se resuelven en middleware (sin DB, en borde).
+ *  1. Prefijos de taxonomía legada -> se resuelven en el proxy (src/proxy.ts; sin DB, en borde).
  *  2. Casos uno-a-uno -> tabla `redirects` en Postgres (resueltos en not-found).
  *
  * Las URLs del ARCHIVO histórico (artículos individuales del sistema legado)

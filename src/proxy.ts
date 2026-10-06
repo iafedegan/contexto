@@ -3,16 +3,19 @@ import { LEGACY_SYSTEM_REDIRECTS, resolveLegacyTaxonomy } from "@/lib/redirects"
 import { isBlockedBot } from "@/lib/bots";
 
 /**
- * Middleware de borde.
+ * Proxy de borde (en Next.js 16 el antiguo «middleware» se llama `proxy.ts`).
  *
  * Responsabilidades:
- *  1. Redirecciones 301 de taxonomía legada (mapa estático) + uno-a-uno
- *     (tabla `redirects`, cacheada en memoria vía /api/redirects).
+ *  1. Redirecciones 301 de la taxonomía legada (mapa estático de `src/lib/redirects.ts`, sin tocar la base de datos).
+ *     Las redirecciones uno-a-uno (tabla `redirects`) las resuelve la ruta comodín `src/app/(public)/[...path]`, que
+ *     solo consulta la base cuando una dirección no existe: ninguna página que sí existe paga esa consulta.
  *  2. Cabeceras de seguridad en todas las respuestas.
  *  3. Puerta de acceso al panel editorial (/panel/*).
- *  4. Anti-scraping: 403 a herramientas de scraping y crawlers de
- *     entrenamiento de IA (src/lib/bots.ts), y 429 a una IP que pide páginas
- *     a un ritmo que ninguna persona alcanza.
+ *  4. Anti-abuso, sin depender del User-Agent para nada que importe (H-13): 403 solo a los crawlers de entrenamiento
+ *     de IA y a los copiadores de sitios que se declaran como tales (src/lib/bots.ts, lista explícita y documentada;
+ *     las auditorías, los monitores y los validadores nunca se bloquean) y 429 a una IP que pide páginas a un ritmo que
+ *     ninguna persona alcanza. El freno global y fuerte contra el raspado se configura en el Firewall de Vercel
+ *     (docs/seguridad.md); el límite de aquí es por instancia y aproximado a propósito.
  *
  * El archivo histórico (artículos individuales del sistema legado) NUNCA se
  * enruta aquí: vive en su dominio y rutas originales.
@@ -35,6 +38,8 @@ const SECURITY_HEADERS: Record<string, string> = {
 const RATE_WINDOW_MS = 60_000;
 // Máximo de peticiones por IP y minuto (por instancia, aproximado a propósito).
 const RATE_MAX = 120;
+// Recursos que el navegador pide junto a cada página y no son páginas: no cuentan para el ritmo por IP.
+const RECURSOS_PWA = /^\/(manifest\.webmanifest|icon|apple-icon|opengraph-image|twitter-image|offline)(\/|$)/;
 // Contadores de peticiones por IP; se vacían al crecer demasiado.
 const hits = new Map<string, { n: number; reset: number }>();
 
@@ -67,17 +72,27 @@ export async function proxy(req: NextRequest) {
       return applyHeaders(new NextResponse("Acceso automatizado no permitido.", { status: 403 }));
     }
     const ip = (req.headers.get("x-forwarded-for")?.split(",")[0] ?? "").trim();
-    // No cuentan: los prefetch y navegaciones internas de Next (cabeceras `rsc` y
-    // `next-router-prefetch`; Next quita `?_rsc=` antes de llegar aquí; una
-    // sola página visible dispara decenas, y bloquearlos deja a un lector
-    // normal en pantalla negra) ni el panel, que ya exige sesión y limita el
-    // login por su cuenta. El raspado va por documentos HTML, que sí cuentan.
+    // No cuentan: los prefetch y navegaciones internas de Next (una sola página
+    // visible dispara decenas, y bloquearlos deja a un lector normal en pantalla
+    // negra). Next 16 quita `rsc` y `next-router-prefetch` ANTES de llegar al
+    // proxy, pero esas peticiones del enrutador del navegador conservan
+    // `next-url` y viajan como `fetch` (`sec-fetch-dest: empty`), no como
+    // documento; es lo que se mira, además de las cabeceras antiguas. El panel (que ya exige sesión y limita el
+    // login por su cuenta), las rutas `/api` (cada una con su propio límite en la
+    // base de datos) ni los recursos de la PWA que el navegador pide con cada
+    // página (manifiesto e íconos): contarlos hacía que una sola visita gastara
+    // cuatro o cinco de las 120 peticiones y que una oficina con varias personas
+    // detrás de una IP quedara bloqueada con un uso normal. El raspado va por
+    // documentos HTML, que sí cuentan.
     const esNavegacionInterna =
+      req.headers.has("next-url") ||
+      req.headers.get("sec-fetch-dest") === "empty" ||
       req.headers.has("rsc") ||
       req.headers.has("next-router-prefetch") ||
       req.headers.get("purpose") === "prefetch";
     const esPanel = pathname.startsWith("/panel");
-    if (ip && !esNavegacionInterna && !esPanel && tooFast(ip)) {
+    const esPagina = !pathname.startsWith("/api/") && !RECURSOS_PWA.test(pathname);
+    if (ip && esPagina && !esNavegacionInterna && !esPanel && tooFast(ip)) {
       return applyHeaders(
         new NextResponse("Demasiadas peticiones. Espera un momento.", {
           status: 429,

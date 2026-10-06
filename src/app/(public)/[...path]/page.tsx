@@ -5,7 +5,7 @@ import { redirects } from "@/db/schema";
 
 /**
  * Catch-all de baja prioridad. Resuelve las redirecciones 301 uno-a-uno de la
- * tabla `redirects` (las de taxonomía completa las hace el middleware).
+ * tabla `redirects` (las de taxonomía completa las hace el proxy, src/proxy.ts).
  * Si no hay coincidencia -> 404.
  *
  * NOTA: los artículos del archivo histórico NO llegan aquí: viven en el dominio

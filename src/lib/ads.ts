@@ -7,6 +7,7 @@ import { AD_ZONE_SPECS, positionOf, suffixOf, type AdPosition } from "@/lib/ads-
 import { getPreviewDraft } from "@/lib/preview-draft";
 import { cachear, TAG_AJUSTES } from "@/lib/data-cache";
 
+// Las posiciones y medidas de cada zona viven en ads-positions (sin servidor, para usarlas también en el navegador).
 export * from "@/lib/ads-positions";
 
 /**

@@ -19,7 +19,7 @@ export default function Icon() {
   return new ImageResponse(
     (
       <div style={{ width: "100%", height: "100%", display: "flex", borderRadius: 6, overflow: "hidden" }}>
-        {/* eslint-disable-next-line @next/next/no-img-element -- next/og no admite next/image */}
+        {/* next/og no admite next/image: aquí va una <img> a propósito */}
         <img
           src={LOGO_DATA_URL}
           width={size.width}

@@ -1,5 +1,10 @@
 import "server-only";
 
+/**
+ * Material de entrada del asistente de redacción: transcribe entrevistas (audio y video, pequeños por el formulario y
+ * grandes por subida firmada) y lee los enlaces que pega la redacción (con descarga segura contra SSRF).
+ */
+
 import { generateObject, generateText } from "ai";
 import { z } from "zod";
 import { getAiModel, getImageAi } from "@/lib/ai-provider";

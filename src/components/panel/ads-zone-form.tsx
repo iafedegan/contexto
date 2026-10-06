@@ -1,5 +1,10 @@
 "use client";
 
+/**
+ * Formulario de una zona de pauta en Configuración → Publicidad: creatividad en HTML o imagen, enlace de clic, fechas de
+ * vigencia y activación. Solo lo ve un administrador (ver `ads-actions.ts`).
+ */
+
 import { useActionState } from "react";
 import { Check, Loader2, TriangleAlert, Trash2 } from "lucide-react";
 import { clearAdsZone, deleteAdsZone, saveAdsZone, type AdsZoneState } from "@/app/panel/(app)/configuracion/ads-actions";

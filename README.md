@@ -107,14 +107,14 @@ paleta curada + monograma.
 | 1 | Sin migración del archivo · integración de solo lectura | `src/lib/archive-client.ts` (nunca escribe al origen), tabla `archive_index`, cron `src/app/api/cron/sync-archive` |
 | 2 | Sin CMS comercial · panel a medida | `src/app/panel/**` (roles, borradores, programación, vista previa, asistencia SEO) |
 | 3 | Un solo motor de base de datos | `src/db/schema.ts` — contenido, usuarios, avisos, series de datos y vectores en el mismo Postgres |
-| 4 | Generación estática + borde | `revalidate` + `generateStaticParams` en las rutas de contenido; revalidación *on-demand* en `src/app/api/revalidate` y en las Server Actions del panel |
+| 4 | Generación estática + borde | Notas y autores son estáticos (ISR: `revalidate` + `generateStaticParams`). La portada y las categorías se generan por visita (`force-dynamic`: prerenderizarlas consultaba Supabase desde el servidor de compilación y el despliegue caía por tiempo de espera, y las categorías filtran por parámetros de la dirección), pero leen de una caché de datos de 60 s (`src/lib/data-cache.ts`) que las acciones del panel invalidan al instante al publicar: ninguna visita consulta la base. Revalidación *on-demand* en `src/app/api/revalidate` y en las Server Actions del panel |
 | 5 | Módulos de dominio, un solo deploy | `src/lib` (contenido, búsqueda, archivo, seo), `src/agents`, `src/inngest` — separados en código, un despliegue |
 | 6 | IA con aprobación humana obligatoria | `agent_drafts.status`, `src/app/panel/borradores-ia` — aprobar crea un borrador atribuido al editor; publicar es un paso aparte |
 
 ## SEO técnico (corrige los hallazgos del diagnóstico)
 
 - **`NewsArticle` JSON-LD** — `src/lib/seo.ts` + `src/components/json-ld.tsx`, en cada artículo.
-- **`robots.txt`** permite explícitamente buscadores y crawlers de IA (GPTBot, ClaudeBot, PerplexityBot…) — `src/app/robots.ts`.
+- **`robots.txt`** permite los buscadores y los buscadores de IA que citan y enlazan (PerplexityBot, OAI-SearchBot…) y rechaza los crawlers que copian contenido para entrenar modelos (GPTBot, ClaudeBot, CCBot…) — `src/app/robots.ts` y `src/lib/bots.ts`; el proxy los rechaza además con 403.
 - **Metadatos por artículo** derivados de título/resumen, sin acumulación de keywords — `articleMetadata()`.
 - **Sitemap XML dinámico**, **RSS**, **canonical** — `src/app/sitemap.ts`, `src/app/feed.xml`, `alternates.canonical`.
 - **`llms.txt`** — `src/app/llms.txt/route.ts`.
@@ -144,10 +144,10 @@ verificable). Tope diario configurable. Encolados vía Inngest
 
 | Criterio | Estado en el scaffold |
 |---|---|
-| Home/categoría/artículo estáticos, regenerados al publicar | ✅ ISR + revalidación on-demand en Server Actions |
+| Notas y autores estáticos, regenerados al publicar; portada y categorías sin consultar la base en cada visita | ✅ ISR + revalidación on-demand en Server Actions; portada y categorías con caché de datos que se invalida al publicar |
 | Lighthouse móvil ≥ 90 / LCP ≤ 2.5 s | ⏳ base lista (RSC, next/font, next/image, JS mínimo); medir con datos reales |
 | `NewsArticle` JSON-LD válido en 100 % de artículos nuevos | ✅ emitido siempre desde el servidor |
-| `robots.txt` permite crawlers de buscadores y de IA | ✅ |
+| `robots.txt` permite buscadores y buscadores de IA que enlazan, y rechaza el entrenamiento de modelos | ✅ |
 | 0 artículos del archivo transformados; URLs legadas 200/301 | ✅ archivo solo lectura; 301 en proxy + tabla `redirects` |
 | Asistente: 0 respuestas sin cita verificable | ✅ modo generativo solo con fuentes; declina si no hay |
 | Nada generado por agentes visible sin aprobación registrada | ✅ `agent_drafts` + atribución al editor |
@@ -158,25 +158,31 @@ verificable). Tope diario configurable. Encolados vía Inngest
 
 ## Pendiente / siguientes pasos
 
-- Provisionar el proyecto Supabase y Vercel (variables + `vercel.json` ya listo con crons).
-- Sanitizar el HTML del cuerpo en el panel (p. ej. `sanitize-html`) antes de persistir.
-- Editor enriquecido (TipTap) en lugar del textarea HTML.
-- Flujo de alta de 2FA (`otplib` ya instalado: `generateSecret` + `generateURI` + QR).
-- Cliente real de la API del archivo histórico (ajustar `src/lib/archive-client.ts` al contrato real).
-- Gestión de `ads_zones` y newsletter en el panel.
-- Tests e2e (Playwright) de los criterios de aceptación.
+- Provisionar el proyecto Supabase y Vercel (variables + `vercel.json` ya listo con crons) y configurar el Firewall de Vercel (`docs/seguridad.md`).
+- Cliente real de la API del archivo histórico: el cliente ya valida, reintenta y es reanudable, pero hay que contrastarlo con el contrato real de la API (`src/lib/archive-client.ts`).
+- Tests e2e (Playwright) de los criterios de aceptación; hoy hay pruebas unitarias y de integración (`npm test`, PGlite en memoria).
+- Medir con datos reales (Search Console, Vercel Speed Insights): ver `docs/medicion-core-web-vitals.md`.
 
 ## Tareas programadas y el plan de Vercel
 
 `vercel.json` declara dos crons con **frecuencia diaria**, que es el máximo que
-permite el plan Hobby. En cuanto el proyecto pase a Pro conviene devolverlos a
-su cadencia real, porque de ella depende que una nota programada se publique a
-su hora y no al día siguiente:
+permite el plan Hobby (y solo admite dos):
+
+| Cron | Qué hace |
+|---|---|
+| `/api/cron/publish-scheduled` (11:00 UTC) | Publica las notas programadas que ya llegaron a su hora **y revalida el sitio** (`procesarProgramadas`, `src/lib/scheduled.ts`); refresca TRM/petróleo; y hace el **mantenimiento diario** (`src/lib/mantenimiento.ts`): purga la tabla `rate_limits`, aplica la retención de datos de suscriptores y borra los medios huérfanos. |
+| `/api/cron/sync-archive` (07:00 UTC) | Sincroniza el índice del archivo histórico. Es **reanudable**: guarda el cursor tras cada página, así que la carga completa de ~41.000 notas se completa en varias ejecuciones (`?full=1` para forzarla, `?reiniciar=1` para empezar de cero). |
+
+Para que una nota programada salga a su hora sin esperar al cron del día, el
+navegador de cualquier visitante avisa a `/api/programadas` (como mucho una vez
+cada cinco minutos por navegador y una pasada por minuto en todo el sitio;
+`ProgramadasTick`). Las lecturas públicas **no escriben**. Con un programador
+externo (p. ej. Supabase `pg_cron`) se puede llamar cada minuto a
+`/api/cron/publish-scheduled?solo=programados` con `Authorization: Bearer $CRON_SECRET`.
+
+En cuanto el proyecto pase a Pro conviene devolver los crons a su cadencia real:
 
 ```json
 { "path": "/api/cron/publish-scheduled", "schedule": "*/5 * * * *" }
 { "path": "/api/cron/sync-archive",      "schedule": "0 */6 * * *" }
 ```
-
-Mientras tanto, la publicación programada puede dispararse a mano desde el
-panel o invocando el endpoint con la cabecera `Authorization: Bearer $CRON_SECRET`.

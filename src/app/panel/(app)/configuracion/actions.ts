@@ -207,9 +207,9 @@ export type CreateUserState = { ok: boolean; message: string } | null;
 /**
  * Alta de una persona nueva, con contraseña temporal que se le entrega a
  * mano (por ningún canal automático: no hay envío de correo configurado).
- * Se le pide que la cambie luego — no hay pantalla de "cambiar contraseña"
- * todavía, así que por ahora queda como tarea del administrador comunicarla
- * de forma segura.
+ * La persona la cambia por una propia en Configuración → Mis datos
+ * (`actualizarMiPerfil`, que pide la contraseña actual); al administrador le
+ * queda comunicarle la temporal de forma segura.
  */
 export async function createUser(_prev: CreateUserState, formData: FormData): Promise<CreateUserState> {
   await requireRole("administrador");

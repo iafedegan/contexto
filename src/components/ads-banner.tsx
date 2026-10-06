@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { AD_ZONE_SPECS, getAdsForPosition, type AdPosition } from "@/lib/ads";
+import { SANDBOX_ANUNCIO, documentoPublicitario } from "@/lib/ads-frame";
 import { cn } from "@/lib/utils";
 
 /**
@@ -20,8 +21,19 @@ export async function AdsBanner({ zone, className }: { zone: AdPosition; classNa
             Publicidad
           </span>
           {content.html ? (
-            // Creatividad HTML cargada por un administrador en el panel.
-            <div className="lx-ad-html w-full overflow-hidden rounded-[var(--radius)]" dangerouslySetInnerHTML={{ __html: content.html }} />
+            // Creatividad HTML cargada por un administrador en el panel. Va en un iframe con sandbox y documento propio, no
+            // inyectada en la página: así su JavaScript no toca el DOM ni las cookies del sitio ni puede redirigir a quien
+            // lo lee (ver src/lib/ads-frame.ts, H-26). El tamaño es el de la posición (§9 del Anexo comercial).
+            <iframe
+              title="Publicidad"
+              srcDoc={documentoPublicitario(content.html)}
+              sandbox={SANDBOX_ANUNCIO}
+              referrerPolicy="no-referrer"
+              loading="lazy"
+              scrolling="no"
+              className="block w-full overflow-hidden rounded-[var(--radius)] border-0"
+              style={{ maxWidth: spec.width, height: spec.height }}
+            />
           ) : content.imageUrl ? (
             <AdsCreative imageUrl={content.imageUrl} clickUrl={content.clickUrl} width={spec.width} height={spec.height} />
           ) : null}

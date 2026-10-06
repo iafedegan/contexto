@@ -1,5 +1,9 @@
 import "server-only";
 
+/**
+ * Primer paso del asistente de redacción: propone títulos y enfoques (contextos) a partir del tema y del material reunido.
+ */
+
 import { generateObject } from "ai";
 import { z } from "zod";
 import { EDITOR_ASSIST_SYSTEM } from "@/agents/prompts";

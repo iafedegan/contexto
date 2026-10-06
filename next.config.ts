@@ -1,41 +1,19 @@
 import type { NextConfig } from "next";
+import { cabeceraCsp } from "./src/lib/csp";
 
-/**
- * Política de seguridad de contenido (CSP). Va en modo SOLO INFORME: el
- * navegador no bloquea nada, solo avisa a /api/csp-report de lo que habría
- * bloqueado. Tras unos días sin avisos legítimos (publicidad, Tag Manager…),
- * se cambia la cabecera a `Content-Security-Policy` para hacerla obligatoria.
- *
- * `'unsafe-inline'` en scripts es necesario sin nonces, y los nonces obligarían
- * a renderizar cada visita (perderíamos la caché ISR). El resto de directivas
- * sí cierran lo importante: de dónde se cargan scripts, marcos y formularios.
- */
-const CSP = [
-  "default-src 'self'",
-  // unpkg.com: Leaflet del mapa de suscriptores, cargado por CDN sin instalarlo (ver subscriber-map.tsx).
-  "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://challenges.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com",
-  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://unpkg.com",
-  "font-src 'self' data: https://fonts.gstatic.com",
-  "img-src 'self' data: blob: https:",
-  "media-src 'self' https:",
-  // /api-docs (Scalar) llama a su propio worker cargado desde jsdelivr.
-  "connect-src 'self' https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com https://www.googletagmanager.com https://challenges.cloudflare.com https://cdn.jsdelivr.net https://*.supabase.co",
-  // 'self': el editor de portada enmarca /vista-portada del propio sitio.
-  "frame-src 'self' https://www.youtube-nocookie.com https://player.vimeo.com https://challenges.cloudflare.com https://www.googletagmanager.com",
-  "worker-src 'self'",
-  "object-src 'none'",
-  "base-uri 'self'",
-  "form-action 'self'",
-  "frame-ancestors 'self'",
-  "report-uri /api/csp-report",
-].join("; ");
+// Política de seguridad de contenido: obligatoria en producción, con válvulas por entorno (ver src/lib/csp.ts).
+const CSP = cabeceraCsp();
+// /api-docs (Scalar) necesita `eval` y sus tipografías: política propia, solo para esa ruta.
+const CSP_DOCS = cabeceraCsp(process.env, { documentacionApi: true });
 
 // Configuración de Next.js: cabeceras de seguridad, imágenes remotas permitidas, límite de las acciones y versión del despliegue.
 const nextConfig: NextConfig = {
   poweredByHeader: false,
 
-  // Las acciones del servidor admiten 1 MB por defecto; el audio de una entrevista se manda en trozos de ~3 MB (OJO: en Vercel el tope real por petición es 4,5 MB, suba lo que suba este valor).
-  experimental: { serverActions: { bodySizeLimit: "50mb" } },
+  // Las acciones del servidor admiten 1 MB por defecto. En Vercel el tope real por petición es 4,5 MB, así que se declara ese
+  // valor y no uno mayor que prometa lo que la plataforma no cumple: el audio de una entrevista se manda en trozos de ~3 MB y
+  // los archivos grandes (hasta 25 MB) se suben directo a Storage con una dirección firmada (ver media-actions.ts).
+  experimental: { serverActions: { bodySizeLimit: "4.5mb" } },
 
   // Identifica cada despliegue: el Service Worker se registra con esta
   // versión y así los teléfonos toman el diseño nuevo sin intervención manual.
@@ -79,10 +57,12 @@ const nextConfig: NextConfig = {
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           { key: "X-DNS-Prefetch-Control", value: "on" },
-          { key: "Content-Security-Policy-Report-Only", value: CSP },
           { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
         ],
       },
+      // La CSP va aparte para que cada ruta reciba UNA sola: todas menos /api-docs, y /api-docs con la suya.
+      { source: "/((?!api-docs$).*)", headers: [{ key: CSP.key, value: CSP.value }] },
+      { source: "/api-docs", headers: [{ key: CSP_DOCS.key, value: CSP_DOCS.value }] },
       {
         // El Service Worker debe revalidarse siempre: nunca servir una versión
         // vieja de la lógica de caché offline desde un CDN/browser cache.
@@ -96,7 +76,7 @@ const nextConfig: NextConfig = {
   },
 
   // El archivo histórico vive en el sistema legado; ninguna de sus URLs se
-  // reescribe aquí. Las redirecciones 301 de taxonomía están en middleware.ts.
+  // reescribe aquí. Las redirecciones 301 de taxonomía están en src/proxy.ts.
 };
 
 // Exporta la configuración y deja la fase actual de Next en el entorno.

@@ -1,5 +1,10 @@
 import "server-only";
 
+/**
+ * Gráficas del asistente de redacción: a partir del tema y del texto de la nota busca cifras en fuentes confiables y propone
+ * una gráfica (barras, líneas o torta) con su fuente; nunca inventa datos.
+ */
+
 import { generateObject, generateText, type ToolSet } from "ai";
 import { z } from "zod";
 import { getGroundedAi } from "@/lib/ai-provider";

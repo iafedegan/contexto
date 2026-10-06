@@ -17,8 +17,8 @@ sustituibles) sin su coste operativo (red, despliegues múltiples, consistencia 
 ## 2. Mapa de módulos y dependencias permitidas
 | Módulo | Responsabilidad | Puede usar |
 |---|---|---|
-| **infra** | Base de datos (esquema/cliente), caché, límites de uso, SSRF, utilidades, modelo de diseño y piezas de UI comunes | — |
-| **acceso** | Usuarios, sesiones, 2FA, passkeys, permisos y roles | infra |
+| **infra** | Base de datos (esquema/cliente), caché, límites de uso y códigos de un solo uso, claves por propósito (`claves.ts`), SSRF, política de contenido (`csp.ts`), política de bots, almacenamiento de medios (`media-*`), utilidades, modelo de diseño y piezas de UI comunes | — |
+| **acceso** | Usuarios, sesiones, 2FA (`totp.ts`), passkeys, cifrado de secretos, permisos y roles | infra |
 | **archivo** | Archivo histórico (solo lectura) | infra |
 | **contenido** | Notas, secciones, autores, SEO, búsqueda, programación, redirecciones | infra, acceso |
 | **ia** | Borrador, opciones, gráficas, ideas, noticias, portada, transcripción, verificación de cifras y citas | infra, acceso, contenido, archivo, analitica |
@@ -26,7 +26,7 @@ sustituibles) sin su coste operativo (red, despliegues múltiples, consistencia 
 | **newsletter** | Suscripción, ediciones y envío del boletín | infra, acceso, contenido, portada-tema, canales |
 | **canales** | Push, Telegram, PWA, consentimiento de ubicación | infra, acceso, contenido, ia |
 | **analitica** | Lecturas, mercado, PageSpeed, mapa de suscriptores | infra, acceso, contenido |
-| **orquestacion** | `proxy.ts`, tareas Inngest, `instrumentation.ts`, cableado de eventos | todos |
+| **orquestacion** | `proxy.ts`, tareas Inngest, `instrumentation.ts`, cableado de eventos, mantenimiento diario (`mantenimiento.ts`) | todos |
 | **ui-panel / ui-sitio** | Pantallas: componen módulos, no contienen reglas de negocio | todos |
 
 Regla de oro: **los módulos de dominio no importan pantallas** (`ui-*`), y entre sí solo siguen las flechas de la tabla.
@@ -41,7 +41,8 @@ Las importaciones `import type` no cuentan (se borran al compilar y no crean dep
 - **API pública `/api/v1`** como contrato hacia terceros (solo lectura, con clave).
 
 ## 4. Datos
-Un solo Postgres (Supabase) + pgvector, esquema en `src/db/schema.ts`. Cada tabla pertenece a un módulo:
+Un solo Postgres (Supabase) + pgvector, esquema en `src/db/schema.ts`; todas las tablas y columnas están en migraciones numeradas
+(`drizzle/`), y una prueba falla si se separan. Cada tabla pertenece a un módulo:
 `contenido` (articles, categories, authors, redirects), `acceso` (users, passkeys, sessions), `newsletter`
 (newsletter_*), `ia` (agent_drafts, assistant_queries), `canales` (push_subscriptions), `analitica`
 (article_views_daily), `archivo` (archive_index), `portada-tema` y configuración (site_settings, ads_zones).

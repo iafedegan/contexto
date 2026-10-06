@@ -8,7 +8,7 @@ import { AI_SEARCH_BOTS, AI_TRAINING_BOTS } from "@/lib/bots";
  *  - Buscadores de IA que citan y enlazan (ChatGPT search, Perplexity…):
  *    permitidos; traen lectores.
  *  - Crawlers que copian para ENTRENAR modelos (GPTBot, CCBot…): bloqueados.
- *    El middleware (src/proxy.ts) además los rechaza con 403, porque
+ *    El proxy (src/proxy.ts) además los rechaza con 403, porque
  *    robots.txt es solo una petición y no todos la respetan.
  */
 export default function robots(): MetadataRoute.Robots {

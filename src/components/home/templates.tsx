@@ -485,9 +485,9 @@ function GremialCardLink({
 function GremialThumb({ a, sizes, priority = false }: { a: ArticleListItem; sizes: string; priority?: boolean }) {
   if (!a.coverImageUrl) return <CoverArt seed={a.slug} label={a.title} className="text-3xl" />;
   return (
-    // eslint-disable-next-line @next/next/no-img-element -- miniaturas dentro
-    // del editor de portada (sin dominio conocido en build); en el sitio
-    // público next/image ya sirve estas mismas URLs en otras plantillas.
+    // Miniaturas dentro del editor de portada (sin dominio conocido en build); en el
+    // sitio público next/image ya sirve estas mismas URLs en otras plantillas.
+    // eslint-disable-next-line @next/next/no-img-element
     <img src={a.coverImageUrl} alt={a.coverImageAlt ?? a.title} sizes={sizes} className="size-full object-cover" loading={priority ? "eager" : "lazy"} />
   );
 }

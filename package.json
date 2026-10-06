@@ -20,7 +20,9 @@
     "db:setup": "npm run db:extras:pre && npm run db:generate && npm run db:migrate && npm run db:extras:post && npm run db:seed",
     "check:modulos": "node scripts/check-modulos.mjs",
     "test": "tsx --conditions=react-server --tsconfig tsconfig.json --test \"src/**/*.test.ts\" \"scripts/*.test.ts\"",
-    "docs:bd": "node scripts/doc-bd.mjs"
+    "docs:bd": "node scripts/doc-bd.mjs",
+    "smoke": "node scripts/smoke.mjs",
+    "audit:prod": "npm audit --omit=dev --audit-level=high"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^4.0.60",
@@ -39,7 +41,7 @@
     "framer-motion": "^13.4.3",
     "inngest": "^4.20.0",
     "lucide-react": "^1.42.0",
-    "next": "16.3.4",
+    "next": "16.3.8",
     "next-auth": "^5.0.0-beta.32",
     "otplib": "^13.5.0",
     "postgres": "^3.4.9",
@@ -64,7 +66,7 @@
     "dotenv": "^17.4.2",
     "drizzle-kit": "^0.31.10",
     "eslint": "^9",
-    "eslint-config-next": "16.3.4",
+    "eslint-config-next": "16.3.8",
     "tailwindcss": "^4",
     "tsx": "^4.23.13",
     "typescript": "^5"

@@ -8,6 +8,12 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      # Valores dummy para que la compilación (SSG) y el sitio de la prueba de humo no fallen por falta de entorno.
+      NEXT_PUBLIC_SITE_URL: https://www.contextoganadero.com
+      NEXT_PUBLIC_SITE_NAME: CONtexto Ganadero
+      AUTH_SECRET: ci-placeholder-secret-ci-placeholder-secret
+      CRON_SECRET: ci-placeholder-cron-secret
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -15,12 +21,24 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      # Dependencias de PRODUCCIÓN: falla con vulnerabilidades altas o críticas. Las de baja severidad de
+      # @simplewebauthn/server (certificados de atestación) no aplican: el alta de passkeys usa attestationType «none».
+      - name: Auditoría de dependencias
+        run: npm run audit:prod
       - run: npm run lint
       - run: npm run typecheck
+      # Pruebas unitarias y de integración (PGlite en memoria): permisos, sanitización, límites, claves, acceso,
+      # boletín, programación, archivo histórico, búsqueda, medios, esquema y arquitectura.
       - run: npm test
       - run: npm run build
-        env:
-          # Valores dummy para que el build (SSG) no falle por falta de entorno.
-          NEXT_PUBLIC_SITE_URL: https://www.contextoganadero.com
-          NEXT_PUBLIC_SITE_NAME: CONtexto Ganadero
-          AUTH_SECRET: ci-placeholder-secret-ci-placeholder-secret
+      # Sitio compilado en marcha + pruebas de extremo a extremo por HTTP (scripts/smoke.mjs): cabeceras de seguridad,
+      # acceso al panel, cron y webhook sin secreto, política de bots, asistente sin fuentes, boletín y lecturas.
+      - name: Prueba de humo
+        run: |
+          npx tsx scripts/dev-setup.ts
+          npx next start -p 3999 > next.log 2>&1 &
+          SERVER=$!
+          trap 'kill $SERVER 2>/dev/null || true' EXIT
+          if ! SMOKE_URL=http://127.0.0.1:3999 npm run smoke; then
+            echo "--- registro del servidor ---"; cat next.log; exit 1
+          fi
