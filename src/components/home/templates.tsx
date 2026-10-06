@@ -10,7 +10,7 @@ import { EditableCard, type BuilderProps } from "@/components/home/editable-card
 import { NewsletterForm } from "@/components/newsletter-form";
 import { CoverArt } from "@/components/cover-art";
 import type { ArticleListItem } from "@/lib/content";
-import { BREVE_COLS, RIVER_COLS, type HomeTemplateId } from "@/lib/home-layout";
+import { BREVE_COLS, RIVER_COLS, anchaEnCelular, type HomeTemplateId } from "@/lib/home-layout";
 import type { HomeLayoutConfig } from "@/db/schema";
 import { cn, formatDate } from "@/lib/utils";
 import { DEFAULT_LOCALE, INTL_LOCALE, categoryLabel, localePath, t, type Locale } from "@/lib/i18n";
@@ -394,15 +394,15 @@ export function EsmeraldaTemplate({
   const aside = [second, ...rail].filter((a): a is ArticleListItem => Boolean(a));
 
   return (
-    <div className="flex flex-col gap-16">
-      <section className="grid grid-cols-1 gap-8 xl:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
+    <div className="flex flex-col gap-10 sm:gap-16">
+      <section className="grid grid-cols-1 gap-7 sm:gap-8 xl:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
         {wrap(lead, <ArticleCard a={lead} locale={locale} variant="lead" priority={interactive} />)}
         <aside>
           <p className="lx-kicker text-[var(--accent)]">{t(locale, "home.cover")}</p>
           <h2 className="lx-display mt-2 text-2xl font-semibold tracking-tight md:text-3xl">
             {t(locale, "home.latest")}
           </h2>
-          <div className="mt-6 flex flex-col gap-5">
+          <div className="mt-5 flex flex-col gap-4 sm:mt-6 sm:gap-5">
             {aside.map((a, i) => wrap(a, <ArticleCard a={a} locale={locale} variant="rail" index={i} />))}
           </div>
         </aside>
@@ -416,10 +416,16 @@ export function EsmeraldaTemplate({
               {t(locale, "home.recent")}
             </h2>
           </div>
-          <div className={cn("mt-8 grid gap-7", RIVER_COLS[layout.riverColumns] ?? RIVER_COLS[3])}>
-            {river.map((a) =>
-              wrap(a, <ArticleCard a={a} locale={locale} />, a.homeStyle?.span === 2 ? "sm:col-span-2" : undefined),
-            )}
+          {/* Celular: de a dos por fila, con la primera a todo el ancho como nota destacada; desde sm, la rejilla de siempre. */}
+          <div className={cn("mt-6 grid grid-cols-2 gap-3 sm:mt-8 sm:gap-7", RIVER_COLS[layout.riverColumns] ?? RIVER_COLS[3])}>
+            {river.map((a, i) => {
+              const ancha = anchaEnCelular(i, river.length);
+              return wrap(
+                a,
+                <ArticleCard a={a} locale={locale} compact={!ancha} />,
+                cn(ancha && "max-sm:col-span-2", a.homeStyle?.span === 2 && "sm:col-span-2"),
+              );
+            })}
           </div>
         </section>
       )}

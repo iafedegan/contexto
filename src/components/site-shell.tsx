@@ -7,6 +7,8 @@ import { ReadingProgress } from "@/components/reading-progress";
 import { BreakingBar } from "@/components/breaking-bar";
 import { AdsBanner } from "@/components/ads-banner";
 import { SiteHeader, type NavItem } from "@/components/site-header";
+import { SeccionesChips } from "@/components/secciones-chips";
+import { MobileTabBar } from "@/components/mobile-tab-bar";
 import { SiteFooter } from "@/components/site-footer";
 import type { Theme } from "@/lib/theme";
 import { DEFAULT_LOCALE, categoryLabel, t, type Locale } from "@/lib/i18n";
@@ -35,7 +37,7 @@ export type ShellVariant =
  * editorial.
  */
 const SHELL: Record<ShellVariant, { main: string; fx: string }> = {
-  portada: { main: "shell flex-1 py-8 sm:py-12", fx: "lx-grain" },
+  portada: { main: "shell flex-1 pb-8 pt-4 sm:py-12", fx: "lx-grain" },
   articulo: { main: "shell flex-1 py-10 sm:py-14", fx: "lx-grain" },
   seccion: { main: "shell flex-1 pb-8 pt-3 sm:pb-12 sm:pt-4", fx: "lx-grain lx-aurora lx-vignette" },
   autor: { main: "shell flex-1 py-10 sm:py-14", fx: "lx-grain" },
@@ -101,6 +103,8 @@ export async function SiteShell({
       {/* Última hora por encima de todo: si hay urgencia, es lo primero. */}
       <BreakingBar locale={locale} />
       <SiteHeader theme={theme} nav={nav} extraNav={extraNav} locale={locale} identity={identity} variant={site.parts.navbar} />
+      {/* Celular y tablet: las secciones a un toque, sin abrir el menú (solo en la portada). */}
+      {variant === "portada" && nav.length > 0 && <SeccionesChips items={nav} locale={locale} />}
       {aboveMain}
       <main id="contenido" data-region="body" className={mainClassName ?? shell.main}>
         {/* Honestidad con el lector: la interfaz cambia de idioma, las notas no. */}
@@ -121,6 +125,8 @@ export async function SiteShell({
       {/* Popup diseñado en /panel/portada (si está activo). */}
       {popup.enabled && <SitePopup config={popup} />}
       <SiteFooter theme={theme} nav={nav} locale={locale} identity={identity} variant={site.parts.footer} />
+      {/* Barra de pestañas del celular: DENTRO del contenedor con `data-theme`, para heredar la paleta de la plantilla. */}
+      <MobileTabBar />
     </div>
   );
 }

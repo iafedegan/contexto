@@ -8,6 +8,7 @@ import { LogoMark } from "@/components/logo-mark";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { RadioPlayer } from "@/components/radio-player";
 import { localePath, t, type Locale } from "@/lib/i18n";
+import { EVENTO_ABRIR_MENU } from "@/lib/pestanas";
 
 /**
  * Navbar de móvil y tablet (debajo de 1024 px): barra compacta arriba y menú a
@@ -50,6 +51,13 @@ export function MobileNav({
   const closeRef = useRef<HTMLButtonElement>(null);
   const label = LABELS[locale === "en" ? "en" : "es"];
   const all = [...nav, ...extra];
+
+  // La pestaña «Secciones» de la barra inferior pide abrir este mismo menú (src/components/mobile-tab-bar.tsx).
+  useEffect(() => {
+    const abrir = () => setOpen(true);
+    window.addEventListener(EVENTO_ABRIR_MENU, abrir);
+    return () => window.removeEventListener(EVENTO_ABRIR_MENU, abrir);
+  }, []);
 
   useEffect(() => {
     if (!open) return;

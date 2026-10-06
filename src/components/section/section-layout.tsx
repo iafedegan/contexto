@@ -4,6 +4,7 @@ import { HomeCard } from "@/components/home/home-card";
 import { TileCard } from "@/components/home/tile-card";
 import { BentoTile } from "@/components/home/bento-tile";
 import type { ArticleListItem } from "@/lib/content";
+import { anchaEnCelular } from "@/lib/home-layout";
 import type { Locale } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
@@ -262,10 +263,15 @@ export function SectionGrid({ theme, items, locale }: { theme: string; items: Ar
             )}
           </section>
           {grid.length > 0 && (
-            <div className="grid grid-cols-1 gap-7 sm:grid-cols-2 lg:grid-cols-3">
-              {grid.map((a, i) => (
-                <ArticleCard key={a.slug} a={a} locale={locale} variant="gold" index={i} />
-              ))}
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 sm:gap-7 lg:grid-cols-3">
+              {grid.map((a, i) => {
+                const ancha = anchaEnCelular(i, grid.length);
+                return (
+                  <div key={a.slug} className={ancha ? "max-sm:col-span-2" : undefined}>
+                    <ArticleCard a={a} locale={locale} variant="gold" index={i} compact={!ancha} />
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>

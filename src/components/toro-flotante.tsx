@@ -9,7 +9,8 @@ import { LogoMark } from "@/components/logo-mark";
 
 /**
  * Avatar flotante del asistente: el toro de caricatura, fijo en la esquina inferior derecha de todo el
- * portal. Al tocarlo abre el asistente. No aparece en el propio asistente ni se queda tapando: tiene
+ * portal (en el celular no: ahí es la pestaña central de la barra inferior, `MobileTabBar`, y no tapa la lectura).
+ * Al tocarlo abre el asistente. No aparece en el propio asistente ni se queda tapando: tiene
  * una «x» para ocultarlo hasta la siguiente carga.
  */
 export function ToroFlotante() {
@@ -36,7 +37,7 @@ export function ToroFlotante() {
           role="dialog"
           aria-label={en ? "Archive assistant" : "Asistente del archivo"}
           hidden={!abierto}
-          className="toro-dialogo fixed bottom-[max(9rem,calc(env(safe-area-inset-bottom)+8.5rem))] right-[max(0.75rem,env(safe-area-inset-right))] z-30 flex h-[min(34rem,calc(100dvh-11.5rem))] w-[min(26rem,calc(100vw-1.5rem))] flex-col overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border-strong)] bg-[var(--bg)] text-[var(--fg)] shadow-[0_24px_60px_-20px_rgba(0,0,0,0.55)] print:hidden"
+          className="toro-dialogo max-md:hidden fixed bottom-[max(9rem,calc(env(safe-area-inset-bottom)+8.5rem))] right-[max(0.75rem,env(safe-area-inset-right))] z-30 flex h-[min(34rem,calc(100dvh-11.5rem))] w-[min(26rem,calc(100vw-1.5rem))] flex-col overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border-strong)] bg-[var(--bg)] text-[var(--fg)] shadow-[0_24px_60px_-20px_rgba(0,0,0,0.55)] print:hidden"
         >
           <div className="flex shrink-0 items-center gap-3 border-b border-[var(--border)] bg-[var(--bg-2)] px-4 py-3">
             <LogoMark size={26} />
@@ -53,7 +54,7 @@ export function ToroFlotante() {
           </div>
         </div>
       )}
-    <div className="toro-wrap pointer-events-none fixed bottom-[max(1rem,env(safe-area-inset-bottom))] right-[max(0.75rem,env(safe-area-inset-right))] z-30 print:hidden">
+    <div className="toro-wrap pointer-events-none max-md:hidden fixed bottom-[max(1rem,env(safe-area-inset-bottom))] right-[max(0.75rem,env(safe-area-inset-right))] z-30 print:hidden">
       <div className="group pointer-events-auto relative">
         <button
           type="button"

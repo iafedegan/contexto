@@ -17,7 +17,9 @@ export function LocationConsent() {
   useEffect(() => {
     const decision = readCookie(LOC_COOKIE);
     if (!decision) {
-      const id = setTimeout(() => setOpen(true), 1500);
+      // En el celular espera más: a los 1,5 s tapaba la primera pantalla, justo cuando la persona la está mirando.
+      const espera = window.matchMedia("(max-width: 767px)").matches ? 9000 : 1500;
+      const id = setTimeout(() => setOpen(true), espera);
       return () => clearTimeout(id);
     }
     // Ya permitió antes: se refresca la posición solo si el navegador no volvería a preguntar.
@@ -60,19 +62,25 @@ export function LocationConsent() {
     <div
       role="dialog"
       aria-label="Permiso de ubicación"
-      // `cg-consent`: se oculta mientras hay un popup abierto (globals.css), para que no se apilen.
-      className="cg-consent fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-[90] mx-auto flex max-w-xl flex-col gap-2.5 rounded-2xl border border-[#4a4234] bg-[#141210] p-3 text-[#f7f4ee] shadow-2xl sm:flex-row sm:items-center sm:gap-3 sm:p-4"
+      // `cg-consent`: se oculta mientras hay un popup abierto (globals.css), para que no se apilen. En el celular es una tira
+      // compacta (texto a la izquierda, botones apilados a la derecha) que se apoya sobre la barra de pestañas.
+      className="cg-consent fixed inset-x-3 bottom-[calc(var(--cg-barra,0px)+0.5rem)] z-[90] mx-auto grid max-w-xl grid-cols-[1fr_auto] items-center gap-x-3 gap-y-2 rounded-2xl border border-[#4a4234] bg-[#141210]/95 p-3 text-[#f7f4ee] shadow-2xl backdrop-blur sm:bottom-[max(0.75rem,env(safe-area-inset-bottom))] sm:flex sm:gap-3 sm:p-4"
     >
       <LocateFixed size={20} className="hidden shrink-0 text-[#d9a05b] sm:block" />
-      <p className="flex-1 text-[0.8125rem] leading-snug sm:text-sm">
-        {msg || "¿Nos dejas saber en qué zona te encuentras? Solo lo usamos para entender de dónde nos leen; tu navegador te pedirá permiso."}
+      <p className="flex-1 text-[0.75rem] leading-snug sm:text-sm">
+        {msg || (
+          <>
+            <span className="sm:hidden">¿De qué zona nos lees? Solo para estadísticas; tu navegador te pedirá permiso.</span>
+            <span className="hidden sm:inline">¿Nos dejas saber en qué zona te encuentras? Solo lo usamos para entender de dónde nos leen; tu navegador te pedirá permiso.</span>
+          </>
+        )}
       </p>
-      <div className="flex shrink-0 gap-2">
-        <button type="button" onClick={rechazar} className="min-h-11 flex-1 rounded-full border border-[#4a4234] px-4 text-xs font-semibold sm:flex-none">
-          Ahora no
-        </button>
-        <button type="button" onClick={permitir} className="min-h-11 flex-1 rounded-full bg-[#b4622e] px-4 text-xs font-semibold text-white sm:flex-none">
+      <div className="flex shrink-0 flex-col gap-1.5 sm:flex-row sm:gap-2">
+        <button type="button" onClick={permitir} className="min-h-10 rounded-full bg-[#b4622e] px-4 text-xs font-semibold text-white sm:order-2 sm:min-h-11">
           Permitir
+        </button>
+        <button type="button" onClick={rechazar} className="min-h-9 rounded-full px-4 text-xs font-semibold text-[#d9d2c4] sm:order-1 sm:min-h-11 sm:border sm:border-[#4a4234]">
+          Ahora no
         </button>
       </div>
     </div>

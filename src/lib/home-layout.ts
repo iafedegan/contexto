@@ -82,6 +82,14 @@ export function splitHomeSlots<T>(items: T[]): { lead?: T; second?: T; rail: T[]
   return { lead, second, rail: tail.slice(0, 4), river: tail.slice(4) };
 }
 
+/**
+ * En el celular las notas van de a dos por fila, salvo las que ocupan todo el ancho: la primera (la destacada) y, si tras
+ * ella queda un número impar de notas, la última, para no dejar una tarjeta sola con medio ancho vacío.
+ */
+export function anchaEnCelular(indice: number, total: number): boolean {
+  return indice === 0 || (indice === total - 1 && (total - 1) % 2 === 1);
+}
+
 // Tailwind necesita ver las clases completas en el código fuente (no arma
 // nombres de clase dinámicos), de ahí el mapa explícito en vez de interpolar.
 export const RIVER_COLS: Record<number, string> = {

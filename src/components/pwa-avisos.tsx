@@ -73,8 +73,7 @@ export function PwaAvisos() {
       role="dialog"
       aria-live="polite"
       aria-label={t(locale, "push.prompt.title")}
-      className="fixed inset-x-3 bottom-3 z-[90] mx-auto max-w-md rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-4 text-[var(--fg)] shadow-2xl sm:left-auto sm:right-4 sm:mx-0"
-      style={{ marginBottom: "env(safe-area-inset-bottom, 0px)" }}
+      className="fixed inset-x-3 bottom-[calc(var(--cg-barra,0px)+0.5rem)] z-[90] transition-[bottom] duration-300 motion-reduce:transition-none mx-auto max-w-md rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-4 text-[var(--fg)] shadow-2xl sm:bottom-3 sm:left-auto sm:right-4 sm:mx-0 sm:mb-[env(safe-area-inset-bottom,0px)]"
     >
       {fase === "hecho" ? (
         <p className="flex items-center gap-2 text-sm font-medium">

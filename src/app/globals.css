@@ -1508,6 +1508,23 @@ a {
 .lx-ad-html table { max-width: 100%; height: auto; }
 .lx-ad-html iframe { max-width: 100%; }
 
+/* Barra de pestañas del celular (src/components/mobile-tab-bar.tsx).
+   `--cg-barra-alto` es lo que mide la barra y reserva el pie de la página (constante, para que esconderla no mueva el
+   documento y no se dispare un parpadeo al llegar al final). `--cg-barra` es donde se apoyan los avisos fijos
+   (ubicación, notificaciones): encima de la barra mientras se ve, y en el borde cuando se esconde al bajar.
+   Fuera del celular, o sin barra, ambas valen 0. */
+:root { --cg-barra: 0px; --cg-barra-alto: 0px; }
+@media (max-width: 767px) {
+  :root:has(.cg-tabbar) { --cg-barra-alto: calc(3.75rem + env(safe-area-inset-bottom, 0px)); --cg-barra: var(--cg-barra-alto); }
+  body:has(.cg-tabbar) { padding-bottom: var(--cg-barra-alto); }
+  :root[data-cg-barra-oculta]:has(.cg-tabbar) { --cg-barra: env(safe-area-inset-bottom, 0px); }
+  .cg-consent { transition: bottom 0.3s ease; }
+  @media (prefers-reduced-motion: reduce) { .cg-consent { transition: none; } }
+  /* El menú de pantalla completa vive dentro de la cabecera (que queda por debajo de la barra): sin esto, la barra tapaba
+     sus últimos enlaces y las herramientas del pie del menú. */
+  html[data-cg-overlay] .cg-tabbar { display: none; }
+}
+
 /* Un popup abierto (cualquier formato) tiene prioridad sobre el aviso de ubicación. */
 html[data-cg-popup] .cg-consent,
 html[data-cg-overlay] .cg-consent { display: none; }

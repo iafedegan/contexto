@@ -48,6 +48,8 @@ type Props = {
   index?: number;
   /** Idioma de la interfaz: fechas, «Por» y nombres de sección. */
   locale?: Locale;
+  /** En el celular la tarjeta se compacta para ir de a dos por fila (solo variante «gold»): sin resumen, titular menor. */
+  compact?: boolean;
 };
 
 /** Tarjeta editorial. Cada plantilla usa la variante que le corresponde. */
@@ -57,6 +59,7 @@ export function ArticleCard({
   priority = false,
   index,
   locale = DEFAULT_LOCALE,
+  compact = false,
 }: Props) {
   switch (variant) {
     case "lead":
@@ -68,7 +71,7 @@ export function ArticleCard({
     case "rail":
       return <RailCard a={a} index={index} locale={locale} />;
     default:
-      return <GoldCard a={a} priority={priority} locale={locale} />;
+      return <GoldCard a={a} priority={priority} locale={locale} compact={compact} />;
   }
 }
 
@@ -77,14 +80,17 @@ function Meta({
   a,
   locale,
   className = "",
+  compact = false,
 }: {
   a: ArticleListItem;
   locale: Locale;
   className?: string;
+  /** En el celular, y en una tarjeta compacta, solo la fecha: el autor no cabe en media pantalla. */
+  compact?: boolean;
 }) {
   return (
     <p className={`text-xs text-[var(--fg-muted)] ${className}`}>
-      {a.authorName ? `${a.authorName} · ` : ""}
+      {a.authorName && <span className={compact ? "max-sm:hidden" : undefined}>{`${a.authorName} · `}</span>}
       {a.publishedAt ? formatDate(a.publishedAt, INTL_LOCALE[locale]) : ""}
     </p>
   );
@@ -129,12 +135,16 @@ function Kicker({
 function LeadCard({ a, priority, locale }: { a: ArticleListItem; priority?: boolean; locale: Locale }) {
   const st = cardStyle(a, "lead");
   return (
-    /* Desde md el texto va SOBRE la foto, en la misma celda de cuadrícula: la tarjeta mide lo que
-       mida lo mayor entre el 16:11 de la foto y el texto, y la foto se estira para llenarla. Antes el
-       texto era `absolute` sobre un alto fijo: un titular largo se salía por arriba, recortado.
+    /* El texto va SOBRE la foto, en la misma celda de cuadrícula, en todos los tamaños: la tarjeta mide lo que
+       mida lo mayor entre la foto y el texto, y la foto se estira para llenarla. En el celular la foto es vertical
+       (4:5) y el titular sale encima, como en una app de noticias; antes la foto iba arriba y el texto debajo, y la
+       portada era una pila de rectángulos iguales. Antes el texto era `absolute` sobre un alto fijo: un titular largo
+       se salía por arriba, recortado.
+       La columna es `minmax(0,1fr)`: con `auto` y un titular largo (más alto que el 16:11 de la foto), la foto
+       estirada trasladaba su alto a ancho y la columna se hacía más ancha que la tarjeta, recortando el texto por la derecha.
        La nota de apertura (con `priority`) no hace la animación de entrada: con opacidad 0 al inicio, el LCP
        esperaba a que terminara. */
-    <article data-bs-root={a.slug} className={`lx-card ${priority ? "" : "lx-reveal"} group relative md:grid [&>*]:md:col-start-1 [&>*]:md:row-start-1`}>
+    <article data-bs-root={a.slug} className={`lx-card ${priority ? "" : "lx-reveal"} group relative grid grid-cols-[minmax(0,1fr)] [&>*]:col-start-1 [&>*]:row-start-1`}>
       <div className="lx-shine pointer-events-none absolute inset-0 z-[3]" />
       <div className="lx-inlay pointer-events-none absolute inset-0 z-[2]" />
       <Link
@@ -149,16 +159,16 @@ function LeadCard({ a, priority, locale }: { a: ArticleListItem; priority?: bool
           alt={a.coverImageAlt ?? a.title}
           seed={a.slug}
           label={a.categoryName ?? a.title}
-          ratio="aspect-[16/11] md:h-full"
+          ratio="aspect-[4/5] h-full sm:aspect-[16/11]"
           priority={priority}
           sizes="(min-width: 1280px) 900px, (min-width: 768px) 60vw, 100vw"
         />
       </Link>
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 hidden h-3/4 bg-gradient-to-t from-[var(--bg)] via-[var(--bg)]/80 to-transparent md:block" />
-      <div className="relative z-[4] p-6 md:self-end md:p-9">
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[66%] bg-gradient-to-t from-[var(--bg)] via-[var(--bg)]/75 to-transparent md:h-3/4 md:via-[var(--bg)]/80" />
+      <div className="relative z-[4] p-5 md:self-end md:p-9 max-md:self-end">
         <Kicker a={a} locale={locale} className="text-[var(--accent)]" />
         <h2
-          className="lx-display mt-3 text-2xl font-semibold leading-[1.12] tracking-tight sm:text-3xl md:text-[2.75rem]"
+          className="lx-display mt-2.5 text-2xl font-semibold leading-[1.12] tracking-tight sm:text-3xl md:mt-3 md:text-[2.75rem]"
           style={st.title}
         >
           <Link href={localePath(locale, `/articulo/${a.slug}`)} className="transition-colors hover:text-[var(--link)] after:absolute after:inset-0 after:z-[2]">
@@ -167,19 +177,19 @@ function LeadCard({ a, priority, locale }: { a: ArticleListItem; priority?: bool
         </h2>
         {!st.hideExcerpt && (
           <p
-            className={`mt-3 max-w-xl text-sm leading-relaxed text-[var(--fg-muted)] md:text-base ${st.excerptClamp}`}
+            className={`mt-3 hidden max-w-xl text-sm leading-relaxed text-[var(--fg-muted)] sm:block md:text-base ${st.excerptClamp}`}
           >
             {a.excerpt}
           </p>
         )}
-        <Meta a={a} locale={locale} className="mt-4" />
+        <Meta a={a} locale={locale} className="mt-3 md:mt-4" />
       </div>
     </article>
   );
 }
 
 /* ------------------------------------------- Portada: rejilla pan de oro */
-function GoldCard({ a, priority, locale }: { a: ArticleListItem; priority?: boolean; locale: Locale }) {
+function GoldCard({ a, priority, locale, compact = false }: { a: ArticleListItem; priority?: boolean; locale: Locale; compact?: boolean }) {
   const st = cardStyle(a, "gold");
   return (
     <article data-bs-root={a.slug} className={`lx-card ${priority ? "" : "lx-reveal"} group flex h-full flex-col`}>
@@ -199,19 +209,20 @@ function GoldCard({ a, priority, locale }: { a: ArticleListItem; priority?: bool
           />
         </Link>
       )}
-      <div className="flex flex-1 flex-col gap-2.5 p-5">
-        <Kicker a={a} locale={locale} className="text-[var(--accent)]" />
-        <h3 className="lx-display text-xl font-semibold leading-snug" style={st.title}>
+      {/* `!`: el titular y el rótulo traen su tamaño en línea o en una clase sin capa, y en media pantalla deben ceder. */}
+      <div className={`flex flex-1 flex-col gap-2.5 p-5 ${compact ? "max-sm:gap-1.5 max-sm:p-3" : ""}`}>
+        <Kicker a={a} locale={locale} className={`text-[var(--accent)] ${compact ? "max-sm:!text-[0.6rem] max-sm:!tracking-[0.14em] max-sm:leading-snug" : ""}`} />
+        <h3 className={`lx-display text-xl font-semibold leading-snug ${compact ? "max-sm:!text-[0.95rem] max-sm:!leading-[1.25]" : ""}`} style={st.title}>
           <Link href={localePath(locale, `/articulo/${a.slug}`)} className="transition-colors hover:text-[var(--link)] after:absolute after:inset-0 after:z-[2]">
             {a.title}
           </Link>
         </h3>
         {!st.hideExcerpt && (
-          <p className={`text-sm leading-relaxed text-[var(--fg-muted)] ${st.excerptClamp}`}>
+          <p className={`text-sm leading-relaxed text-[var(--fg-muted)] ${st.excerptClamp} ${compact ? "max-sm:hidden" : ""}`}>
             {a.excerpt}
           </p>
         )}
-        <Meta a={a} locale={locale} className="mt-auto pt-3" />
+        <Meta a={a} locale={locale} className="mt-auto pt-3 max-sm:pt-1.5" compact={compact} />
       </div>
     </article>
   );
@@ -221,13 +232,13 @@ function GoldCard({ a, priority, locale }: { a: ArticleListItem; priority?: bool
 function RailCard({ a, index, locale }: { a: ArticleListItem; index?: number; locale: Locale }) {
   const st = cardStyle(a, "rail");
   return (
-    <article data-bs-root={a.slug} className="lx-reveal group flex gap-4 border-b border-[var(--border)] pb-4 last:border-0">
+    <article data-bs-root={a.slug} className="lx-reveal group flex gap-3 border-b border-[var(--border)] pb-4 last:border-0 sm:gap-4">
       {typeof index === "number" && (
-        <span className="lx-display w-8 shrink-0 text-2xl font-semibold text-[var(--accent)] opacity-60">
+        <span className="lx-display w-6 shrink-0 text-xl font-semibold text-[var(--accent)] opacity-60 sm:w-8 sm:text-2xl">
           {String(index + 1).padStart(2, "0")}
         </span>
       )}
-      <div className="min-w-0 flex-1">
+      <div className="min-w-0 flex-1 leading-snug">
         <Kicker a={a} locale={locale} className="text-xs text-[var(--fg-muted)]" />
         <h3 className="lx-display mt-1.5 text-lg font-medium leading-snug" style={st.title}>
           <Link href={localePath(locale, `/articulo/${a.slug}`)} className="lx-link">
@@ -236,16 +247,17 @@ function RailCard({ a, index, locale }: { a: ArticleListItem; index?: number; lo
         </h3>
         <Meta a={a} locale={locale} className="mt-2" />
       </div>
+      {/* La miniatura también va en el celular: sin ella «Lo último» era una lista de texto plano. */}
       {!st.hideMedia && (
-      <Link href={localePath(locale, `/articulo/${a.slug}`)} className="hidden shrink-0 sm:block" aria-hidden tabIndex={-1}>
-        <span className="lx-media block size-20 overflow-hidden rounded-[var(--radius)]">
+      <Link href={localePath(locale, `/articulo/${a.slug}`)} className="block shrink-0" aria-hidden tabIndex={-1}>
+        <span className="lx-media block size-[5.25rem] overflow-hidden rounded-[var(--radius)] sm:size-20">
           <CardMedia
             src={a.coverImageUrl}
             alt=""
             seed={a.slug}
             label={a.categoryName ?? a.title}
             ratio="aspect-square"
-            sizes="80px"
+            sizes="84px"
           />
         </span>
       </Link>

@@ -89,6 +89,25 @@ estilo de cada tarjeta (`articles.homeStyle`).
 | `/panel/**` | Grafito & Jade | Barra de herramienta densa | Space Grotesk · Inter Tight |
 | `/panel/login` | Platino | Sin navbar (vestíbulo) | Outfit · JetBrains Mono |
 
+### Navegación y portada en el celular (< 768 px)
+
+El celular no es el escritorio apretado: tiene su propia disposición (`SiteShell` la monta en todas las plantillas y
+todos los temas, con los tokens de la plantilla activa).
+
+- **Barra de pestañas inferior** (`src/components/mobile-tab-bar.tsx`): Inicio, Secciones (abre el menú de pantalla
+  completa), el **asistente** —el toro, en un círculo elevado al centro—, Buscar y Boletín. Se esconde al bajar por la
+  página y vuelve al subir; con el teclado enfocado dentro, siempre se ve. La pestaña activa sale de la ruta
+  (`src/lib/pestanas.ts`, con prueba). El toro flotante de escritorio no se pinta aquí: ya vive en la barra.
+- **Chips de secciones** (`src/components/secciones-chips.tsx`) bajo la cabecera de la portada: las secciones a un toque,
+  con desplazamiento horizontal.
+- **Portada**: apertura vertical (4:5) con el titular sobre la foto, «Lo último» con miniaturas y el río de notas en dos
+  columnas (la primera nota y, si queda una impar al final, la última ocupan el ancho: `anchaEnCelular` en
+  `src/lib/home-layout.ts`, con prueba). El pie reparte sus columnas de enlaces de a dos.
+- **Avisos fijos** (ubicación, notificaciones): se apoyan sobre la barra con `--cg-barra` y bajan al borde cuando ella se
+  esconde; `--cg-barra-alto` (constante) reserva el pie de la página para que esconderla no mueva el documento
+  (`globals.css`). El aviso de ubicación sale a los 9 s en el celular (a 1,5 s en escritorio).
+- El menú de pantalla completa marca `html[data-cg-overlay]`, y con eso la barra se oculta mientras está abierto.
+
 Efectos compartidos (`lx-*` en `globals.css`): grano, aurora animada, viñeta,
 barrido de luz en tarjetas, marco interior metálico, texto con lámina de oro,
 aparición al hacer scroll (`animation-timeline: view()`) y capitular en el

@@ -34,7 +34,7 @@ export async function SiteSidebar({ locale }: { locale: Locale }) {
                   href={localePath(locale, `/articulo/${a.slug}`)}
                   className="group flex items-baseline gap-3 py-3"
                 >
-                  <span className="lx-display text-lg leading-none text-[var(--accent-2)]">
+                  <span className="lx-display w-7 shrink-0 text-lg leading-none text-[var(--accent-2)]">
                     {String(i + 1).padStart(2, "0")}
                   </span>
                   <span className="lx-display flex-1 text-[0.95rem] leading-snug transition-colors group-hover:text-[var(--accent)]">

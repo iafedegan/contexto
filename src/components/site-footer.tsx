@@ -129,9 +129,10 @@ function GrandFooter({ nav, theme, locale, LEGAL, TOOLS, ARCHIVE_NOTE, SITE_NAME
         aria-hidden
         className="h-px w-full bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent"
       />
-      <div className="mx-auto max-w-7xl px-6 py-16">
-        <div className="grid grid-cols-1 gap-12 md:grid-cols-2 lg:grid-cols-[1.3fr_1fr_1fr_1fr_1fr]">
-          <div>
+      <div className="mx-auto max-w-7xl px-6 py-12 sm:py-16">
+        {/* En el celular las cuatro columnas de enlaces van de a dos: antes eran una sola pila de ~1 500 px. */}
+        <div className="grid grid-cols-2 gap-x-6 gap-y-10 md:gap-12 lg:grid-cols-[1.3fr_1fr_1fr_1fr_1fr]">
+          <div className="col-span-2 md:col-span-1">
             <span className="lx-display lx-foil text-3xl font-semibold">{SITE_NAME}</span>
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-[var(--fg-muted)]">
 {t(locale, "footer.blurb")}
@@ -171,9 +172,10 @@ function GremialFooter({ nav, theme, locale, LEGAL, TOOLS, ARCHIVE_NOTE, SITE_NA
         ["--border" as string]: "rgba(255,255,255,.18)",
       }}
     >
-      <div className="mx-auto max-w-7xl px-6 py-16">
-        <div className="grid grid-cols-1 gap-12 md:grid-cols-2 lg:grid-cols-[1.3fr_1fr_1fr_1fr_1fr]">
-          <div>
+      <div className="mx-auto max-w-7xl px-6 py-12 sm:py-16">
+        {/* En el celular las cuatro columnas de enlaces van de a dos: antes eran una sola pila de ~1 500 px. */}
+        <div className="grid grid-cols-2 gap-x-6 gap-y-10 md:gap-12 lg:grid-cols-[1.3fr_1fr_1fr_1fr_1fr]">
+          <div className="col-span-2 md:col-span-1">
             <span className="lx-display text-3xl font-semibold">{SITE_NAME}</span>
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-[var(--fg-muted)]">{t(locale, "footer.blurb")}</p>
             <Link href={localePath(locale, "/asistente")} className="lx-btn mt-6">
@@ -201,7 +203,7 @@ function FooterColumn({ title, items }: { title: string; items: NavItem[] }) {
   return (
     <div>
       <h2 className="lx-kicker text-[var(--accent)]">{title}</h2>
-      <ul className="mt-4 flex flex-col gap-2.5 text-sm text-[var(--fg-muted)]">
+      <ul className="mt-4 flex flex-col gap-2.5 text-sm text-[var(--fg-muted)] pointer-coarse:gap-0">
         {items.map((i) => (
           <li key={i.href}>
             <FooterLink href={i.href} className="lx-link">

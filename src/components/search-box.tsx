@@ -103,7 +103,7 @@ export function SearchBox({
           aria-label={t(locale, "search.label")}
           className="min-w-[12rem] flex-1 border-0 bg-transparent py-2 text-[1rem] outline-none placeholder:text-[var(--fg-muted)]/60"
         />
-        <button type="submit" className="lx-btn min-h-11">
+        <button type="submit" className="lx-btn min-h-11 max-sm:w-full">
           {t(locale, "search.button")}
         </button>
       </form>

@@ -76,8 +76,8 @@ async function HomePage({ locale }: { locale: Locale }) {
   const props = { lead, second, rail, river, layout, locale, market: marketFormatted };
 
   const cintillo = (
-    <div className="mb-10 overflow-hidden border-y border-[var(--border)] py-2.5">
-      <div className="lx-marquee text-[0.72rem] uppercase tracking-[0.25em] text-[var(--fg-muted)]">
+    <div className="mb-4 overflow-hidden border-b border-[var(--border)] py-2.5 sm:mb-10 sm:border-y">
+      <div className="lx-marquee text-[0.72rem] uppercase tracking-[0.14em] text-[var(--fg-muted)] sm:tracking-[0.25em]">
         {[...market, ...articles, ...market, ...articles].map((item, i) =>
           "value" in item ? (
             <span
