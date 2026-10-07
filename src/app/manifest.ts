@@ -8,6 +8,8 @@ export default function manifest(): MetadataRoute.Manifest {
     short_name: SITE_NAME,
     description:
       "Noticias, análisis y datos del sector ganadero y agropecuario de Colombia.",
+    // Identidad propia de la app instalada y ícono con versión: Android no reutiliza el ícono viejo del atajo de antes.
+    id: "/?app=cg-2",
     start_url: "/?source=pwa",
     scope: "/",
     display: "standalone",
@@ -18,16 +20,16 @@ export default function manifest(): MetadataRoute.Manifest {
     lang: "es-CO",
     categories: ["news", "agriculture"],
     icons: [
-      { src: "/api/pwa-icon?size=192", sizes: "192x192", type: "image/png", purpose: "any" },
-      { src: "/api/pwa-icon?size=512", sizes: "512x512", type: "image/png", purpose: "any" },
+      { src: "/api/pwa-icon?size=192&v=2", sizes: "192x192", type: "image/png", purpose: "any" },
+      { src: "/api/pwa-icon?size=512&v=2", sizes: "512x512", type: "image/png", purpose: "any" },
       {
-        src: "/api/pwa-icon?size=192&maskable=1",
+        src: "/api/pwa-icon?size=192&maskable=1&v=2",
         sizes: "192x192",
         type: "image/png",
         purpose: "maskable",
       },
       {
-        src: "/api/pwa-icon?size=512&maskable=1",
+        src: "/api/pwa-icon?size=512&maskable=1&v=2",
         sizes: "512x512",
         type: "image/png",
         purpose: "maskable",
