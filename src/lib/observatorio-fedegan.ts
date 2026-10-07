@@ -76,8 +76,10 @@ async function bajar(pId: number, columnas: number[], filas: number[], desde: st
 // Departamentos tal como los numera el sistema (1 a 34; el 33 es el total nacional).
 const COLUMNAS_DEPARTAMENTOS = Array.from({ length: 34 }, (_, i) => i + 1);
 
+// La caché de datos sobrevive entre despliegues: si cambia la forma de lo guardado se sube la versión del nombre (v2: se añadieron
+// los documentos), y además `normalizar` rellena lo que falte, para que un valor viejo nunca rompa la página.
 const leer = cachear(
-  "observatorio-fedegan",
+  "observatorio-fedegan-v2",
   async (desde: string): Promise<Observatorio> => {
     const ahora = new Date();
     const anio = ahora.getFullYear();
@@ -145,10 +147,15 @@ const leer = cachear(
   { tags: ["indicadores"], segundos: SEGUNDOS },
 );
 
+/** Completa lo que falte en un valor guardado con una versión anterior (listas vacías). */
+export function normalizar(o: Partial<Observatorio> | null | undefined): Observatorio {
+  return { generales: o?.generales ?? [], departamental: o?.departamental ?? [], hato: o?.hato ?? [], documentos: o?.documentos ?? [] };
+}
+
 /** Todo el Observatorio; vacío (y la página lo dice) si el origen no está disponible. */
 export async function getObservatorio(): Promise<Observatorio> {
   try {
-    return await leer(rangoDeMeses(new Date(), MESES_VENTANA).desde);
+    return normalizar(await leer(rangoDeMeses(new Date(), MESES_VENTANA).desde));
   } catch {
     return { generales: [], departamental: [], hato: [], documentos: [] };
   }
