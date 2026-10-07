@@ -206,6 +206,8 @@ function GoldCard({ a, priority, locale, compact = false }: { a: ArticleListItem
             seed={a.slug}
             label={a.categoryName ?? a.title}
             priority={priority}
+            // De a dos por fila en el celular la imagen mide la mitad de la pantalla, no toda.
+            sizes={compact ? "(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 48vw" : undefined}
           />
         </Link>
       )}
@@ -234,7 +236,7 @@ function RailCard({ a, index, locale }: { a: ArticleListItem; index?: number; lo
   return (
     <article data-bs-root={a.slug} className="lx-reveal group flex gap-3 border-b border-[var(--border)] pb-4 last:border-0 sm:gap-4">
       {typeof index === "number" && (
-        <span className="lx-display w-6 shrink-0 text-xl font-semibold text-[var(--accent)] opacity-60 sm:w-8 sm:text-2xl">
+        <span className="lx-display w-6 shrink-0 text-xl font-semibold text-[var(--accent)] opacity-90 sm:w-8 sm:text-2xl">
           {String(index + 1).padStart(2, "0")}
         </span>
       )}

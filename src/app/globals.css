@@ -987,21 +987,27 @@ a {
 
 /* ============================ Movimiento ================================= */
 
-.lx-reveal {
-  animation: lx-rise 0.9s var(--ease-lux) both;
-}
-
-@supports (animation-timeline: view()) {
+/* El deslizamiento al aparecer solo se anima en pantallas anchas y a quien no pidió menos movimiento. En el celular cada tarjeta
+   con su propia línea de tiempo de scroll encarecía el cálculo de estilos y el primer pintado, y no aporta lo que cuesta. */
+@media (min-width: 768px) and (prefers-reduced-motion: no-preference) {
   .lx-reveal {
-    animation: lx-rise linear both;
-    animation-timeline: view();
-    animation-range: entry 0% cover 28%;
+    animation: lx-rise 0.9s var(--ease-lux) both;
+  }
+
+  @supports (animation-timeline: view()) {
+    .lx-reveal {
+      animation: lx-rise linear both;
+      animation-timeline: view();
+      animation-range: entry 0% cover 28%;
+    }
   }
 }
 
+/* Solo se desliza: el texto nunca arranca transparente. Con opacidad 0 el titular de la apertura (el LCP) tardaba más de un
+   segundo en contar como pintado, y lo que aún no había terminado de aparecer fallaba la prueba de contraste de accesibilidad. */
 @keyframes lx-rise {
-  from { opacity: 0; transform: translateY(26px); }
-  to { opacity: 1; transform: none; }
+  from { transform: translateY(22px); }
+  to { transform: none; }
 }
 
 .lx-marquee {

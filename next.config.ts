@@ -27,6 +27,14 @@ const nextConfig: NextConfig = {
   // y no debe pasar por el bundler del servidor.
   serverExternalPackages: ["@electric-sql/pglite"],
 
+  // Cada página es una función de Vercel y arrastraba ~58 MB de archivos que en producción no se usan: PGlite (la base
+  // embebida del modo local, 20 MB) y sharp (el optimizador de imágenes, que en Vercel corre en su propia infraestructura,
+  // no dentro de la función). Una función más liviana arranca antes en frío. En producción la base es Postgres por
+  // `DATABASE_URL`; sin ella el modo PGlite solo funciona en local.
+  outputFileTracingExcludes: {
+    "/*": ["node_modules/@electric-sql/pglite/**/*", "node_modules/sharp/**/*", "node_modules/@img/**/*"],
+  },
+
   // Imágenes remotas del CDN de medios. Ajustar al dominio real de assets.
   images: {
     formats: ["image/avif", "image/webp"],

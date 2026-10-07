@@ -87,7 +87,7 @@ export function LocationConsent() {
         )}
       </p>
       <div className="flex shrink-0 flex-col gap-1.5 sm:flex-row sm:gap-2">
-        <button type="button" onClick={permitir} className="min-h-10 rounded-full bg-[#b4622e] px-4 text-xs font-semibold text-white sm:order-2 sm:min-h-11">
+        <button type="button" onClick={permitir} className="min-h-10 rounded-full bg-[#a85a28] px-4 text-xs font-semibold text-white sm:order-2 sm:min-h-11">
           Permitir
         </button>
         <button type="button" onClick={rechazar} className="min-h-9 rounded-full px-4 text-xs font-semibold text-[#d9d2c4] sm:order-1 sm:min-h-11 sm:border sm:border-[#4a4234]">
