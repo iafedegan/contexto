@@ -132,6 +132,14 @@ leche cruda, leche en polvo y carne deshuesada, y el índice de costos. Todo sal
 (`src/lib/observatorio-fedegan.ts`, un catálogo con el número de indicador, columnas y filas; caché de 6 h) y se dibuja
 con `src/components/observatorio-*.tsx`. Para añadir otro indicador basta una fila del catálogo.
 
+**Documentos.** La sección «Documentos» del Observatorio enlaza las 11 bibliotecas de la página «General» de FEDEGÁN (coyuntura,
+balance y perspectivas, cifras de referencia, PIB, costos, empleo…). Se leen de esa misma página (`parsearBibliotecas`) y los
+archivos los sirve FEDEGÁN: aquí solo se enlazan (pestaña nueva). Buscador por título, año o nombre.
+
+**Diseño del Observatorio.** Portada con las cifras clave que cuentan hacia arriba, «Lo que dicen los datos» (frases que se arman
+solas con las cifras: `observatorio-resumen.ts`, con pruebas) y el mapa de fondo; índice lateral que sigue la lectura (barra de
+pestañas pegada en el celular); secciones numeradas con icono; tarjetas con mínimo, promedio y máximo del rango.
+
 ### Logo
 
 El logo es el emblema del diseño de marca (el toro, los anillos y la «Cg» en dorado y crema) sobre una baldosa del verde de

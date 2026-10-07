@@ -105,3 +105,10 @@ export const ultimoConDato = (series: { valores: (number | null)[] }[]) => {
   return n - 1;
 };
 
+
+const MESES_LARGOS: Record<string, string> = { ene: "enero", feb: "febrero", mar: "marzo", abr: "abril", may: "mayo", jun: "junio", jul: "julio", ago: "agosto", sep: "septiembre", oct: "octubre", nov: "noviembre", dic: "diciembre" };
+/** «ago/2026» → «agosto de 2026»; «2025» → «2025». */
+export const periodoLargo = (p: string) => {
+  const [m, a] = p.split("/");
+  return a ? `${MESES_LARGOS[m] ?? m} de ${a}` : p;
+};

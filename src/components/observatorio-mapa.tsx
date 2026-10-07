@@ -5,13 +5,12 @@ import { DEPARTAMENTOS, MAPA_ALTO, MAPA_ANCHO } from "@/lib/colombia-mapa";
 import { compacto, pct } from "@/lib/graficas";
 import { nfCO } from "@/lib/format";
 import type { Departamental } from "@/lib/observatorio-fedegan";
+import { colorCalor, normaDepartamento as norma } from "@/lib/mapa-util";
 
 /**
  * Mapa de calor de Colombia por departamento (inventario de bovinos y predios ganaderos), con el año en una barra que
  * también se puede reproducir, la ficha del departamento que se mira y el ranking al lado. El color sale de la plantilla.
  */
-// Mismo nombre aunque cambien tildes, mayúsculas, puntos y comas: «Bogotá D.C.» = «BOGOTA, D.C.».
-const norma = (n: string) => n.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[.,]/g, "").replace(/\s+/g, " ").trim().toUpperCase();
 const bonito = (n: string) => n.replace(/\s+/g, " ").trim();
 
 export function ObservatorioMapa({ datos, etiquetas }: { datos: Departamental[]; etiquetas: { bovinos: string; predios: string; year: string; national: string; share: string; rank: string; play: string; pause: string; top: string } }) {
@@ -44,7 +43,7 @@ export function ObservatorioMapa({ datos, etiquetas }: { datos: Departamental[];
   const total = d.nacional[anio] ?? filas.reduce((t, f) => t + f.v, 0);
   const totalPrevio = anio > 0 ? d.nacional[anio - 1] ?? null : null;
   const activo = (foco && porClave.get(foco)) || porClave.get(filas[0]?.clave ?? "");
-  const relleno = (v: number | undefined) => (v === undefined ? "var(--surface-2)" : `color-mix(in oklab, var(--accent) ${Math.round(14 + 78 * Math.sqrt(v / calc.max))}%, var(--bg-2))`);
+  const relleno = (v: number | undefined) => colorCalor(v, calc.max);
   const maxAnio = filas[0]?.v ?? 1;
 
   return (

@@ -2,17 +2,11 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import type { IndicadorGeneral } from "@/lib/observatorio-fedegan";
-import { compacto, formatear, marcasEje, pct, tramos, trazoSuave, ultimoConDato, variacion } from "@/lib/graficas";
+import { compacto, formatear, marcasEje, pct, periodoLargo, tramos, trazoSuave, ultimoConDato, variacion } from "@/lib/graficas";
 
 /** Una serie por color: tres de la plantilla y siete más que se leen sobre fondo claro y oscuro. */
 export const PALETA = ["var(--accent)", "var(--accent-2)", "#60a5fa", "#f472b6", "#a78bfa", "#fb923c", "#2dd4bf", "#facc15", "#f87171", "#94a3b8"];
 const MES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
-const MES_LARGO: Record<string, string> = { ene: "enero", feb: "febrero", mar: "marzo", abr: "abril", may: "mayo", jun: "junio", jul: "julio", ago: "agosto", sep: "septiembre", oct: "octubre", nov: "noviembre", dic: "diciembre" };
-/** «ago/2026» → «agosto de 2026»; «2025» → «2025». */
-export const periodoLargo = (p: string) => {
-  const [m, a] = p.split("/");
-  return a ? `${MES_LARGO[m] ?? m} de ${a}` : p;
-};
 // Etiqueta corta del eje: «ago ’26» o «2025».
 const eje = (p: string) => {
   const [m, a] = p.split("/");
@@ -87,6 +81,16 @@ export function ObservatorioSerie({ ind, ancha = false }: { ind: IndicadorGenera
   const v0 = series[principal]?.valores[idx];
   const delta = series[principal] ? variacion(series[principal].valores, idx) : null;
 
+  // Mínimo, promedio y máximo de la serie principal en el rango que se está viendo.
+  const estadistica = (() => {
+    const v = series[principal]?.valores ?? [];
+    const con = v.map((x, i) => ({ x, i })).filter((e): e is { x: number; i: number } => e.x !== null);
+    if (con.length < 2) return null;
+    const min = con.reduce((a, b) => (b.x < a.x ? b : a));
+    const max = con.reduce((a, b) => (b.x > a.x ? b : a));
+    return { min: { v: min.x, p: periodos[min.i] }, max: { v: max.x, p: periodos[max.i] }, prom: { v: con.reduce((t, e) => t + e.x, 0) / con.length } };
+  })();
+
   const exportar = () => {
     const filas = [["Fecha", ...ind.series.map((s) => s.nombre)].join(";")];
     ind.periodos.forEach((p, i) => filas.push([p, ...ind.series.map((s) => s.valores[i] ?? "")].join(";")));
@@ -96,7 +100,7 @@ export function ObservatorioSerie({ ind, ancha = false }: { ind: IndicadorGenera
   };
 
   return (
-    <article className={`flex min-w-0 flex-col rounded-[var(--radius-lg)] border border-[var(--border)] bg-gradient-to-b from-[var(--surface-2)] to-[var(--surface)] p-4 sm:p-5 ${ancha ? "md:col-span-2" : ""}`}>
+    <article className={`flex min-w-0 flex-col rounded-[var(--radius-lg)] border border-[var(--border)] bg-gradient-to-b from-[var(--surface-2)] to-[var(--surface)] p-4 transition duration-300 hover:border-[var(--border-strong)] hover:shadow-[0_24px_60px_-34px_rgba(0,0,0,0.8)] sm:p-5 ${ancha ? "md:col-span-2" : ""}`}>
       <header className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="lx-display text-lg font-semibold leading-snug sm:text-xl">{ind.titulo}</h3>
@@ -193,6 +197,18 @@ export function ObservatorioSerie({ ind, ancha = false }: { ind: IndicadorGenera
           </div>
         )}
       </div>
+
+      {estadistica && (
+        <dl className="mt-3 grid grid-cols-3 gap-2 border-t border-[var(--border)] pt-3 text-center">
+          {([["Mínimo", estadistica.min], ["Promedio", estadistica.prom], ["Máximo", estadistica.max]] as const).map(([t, e]) => (
+            <div key={t} className="min-w-0">
+              <dt className="text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-[var(--fg-muted)]">{t}</dt>
+              <dd className="mt-0.5 truncate text-sm font-bold tabular-nums">{ver(e.v)}</dd>
+              {"p" in e && <dd className="truncate text-[0.65rem] text-[var(--fg-muted)]">{eje(e.p)}</dd>}
+            </div>
+          ))}
+        </dl>
+      )}
 
       <table className="sr-only">
         <caption>{`${ind.titulo} (${ind.unidad})`}</caption>

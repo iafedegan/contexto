@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { numeroDelCsv, parsearCsvGeneral, parsearCsvIndicador, rangoDeMeses } from "@/lib/indicadores-csv";
+import { numeroDelCsv, parsearBibliotecas, parsearCsvGeneral, parsearCsvIndicador, rangoDeMeses } from "@/lib/indicadores-csv";
 
 // Lo que devuelve el origen (la cabecera llega con la «ó» rota por el ISO-8859-1).
 const CSV = `064-Precio ganado flaco Kilo en pie - Machos
@@ -74,4 +74,17 @@ test("el lector general ignora el rótulo inicial de la forma ancha con rótulo"
 test("el lector general descarta listados de documentos y cuerpos que no son indicadores", () => {
   assert.equal(parsearCsvGeneral("083-Precios relativos\nFecha;Presentaciones;\ndic/2025;Precios_relativos.pdf;\n"), null);
   assert.equal(parsearCsvGeneral("<html>error</html>"), null);
+});
+
+test("las bibliotecas de documentos se leen de las filas que arma la página «General»", () => {
+  const html = `<td colspan="100%" class="title" onclick="statShow(29)">036-Coyuntura Ganadera</td>
+    <script>tr = document.createElement("tr");td=document.createElement("td");td.className='list';text=document.createTextNode("sep/2021");td.appendChild(text);tr.appendChild(td);td=document.createElement("td");td.className='list';var a=document.createElement("a");a.setAttribute("href","../DOC/download.jsp?pRealName=Coyuntura_Ganadera_Primer_Semestre_2021.pdf&iIdFiles=1003");text=document.createTextNode("x");</script>
+    <td class="title">037-Un gráfico sin archivos</td>
+    <td colspan="100%" class="title">090-Costos de producción</td>
+    <script>td.className='list';text=document.createTextNode("Archivo - 2024");td.appendChild(text);tr.appendChild(td);td=document.createElement("td");td.className='list';var a=document.createElement("a");a.setAttribute("href","../DOC/download.jsp?pRealName=El_Alto_Costo.pdf&iIdFiles=1");</script>`;
+  const b = parsearBibliotecas(html, "https://estadisticas.fedegan.org.co/Indicadores/66");
+  assert.deepEqual(b.map((x) => [x.codigo, x.titulo, x.documentos.length]), [["036", "Coyuntura Ganadera", 1], ["090", "Costos de producción", 1]]);
+  assert.equal(b[0].documentos[0].url, "https://estadisticas.fedegan.org.co/DOC/download.jsp?pRealName=Coyuntura_Ganadera_Primer_Semestre_2021.pdf&iIdFiles=1003");
+  assert.equal(b[0].documentos[0].fecha, "sep/2021");
+  assert.equal(b[1].documentos[0].fecha, "2024", "«Archivo - 2024» queda en «2024»");
 });

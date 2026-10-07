@@ -1,7 +1,7 @@
 import "server-only";
 import { cachear } from "@/lib/data-cache";
 import { descargarSeguro } from "@/lib/safe-fetch";
-import { parsearCsvGeneral, rangoDeMeses, type SerieCsv } from "@/lib/indicadores-csv";
+import { parsearBibliotecas, parsearCsvGeneral, rangoDeMeses, type BibliotecaFuente, type SerieCsv } from "@/lib/indicadores-csv";
 import type { Formato } from "@/lib/graficas";
 
 /**
@@ -62,7 +62,7 @@ export type Departamental = { clave: "bovinos" | "predios"; titulo: string; unid
 /** Reparto de predios o animales por orientación del hato, en un año. */
 export type Hato = { clave: "predios" | "animales"; titulo: string; periodo: string; partes: { nombre: string; valor: number }[] };
 /** Todo lo que lee el Observatorio. */
-export type Observatorio = { generales: IndicadorGeneral[]; departamental: Departamental[]; hato: Hato[] };
+export type Observatorio = { generales: IndicadorGeneral[]; departamental: Departamental[]; hato: Hato[]; documentos: BibliotecaFuente[] };
 
 // Descarga un indicador del sistema (CSV en ISO-8859-1) y lo interpreta; `null` si no responde o no es un indicador.
 async function bajar(pId: number, columnas: number[], filas: number[], desde: string, hasta: string) {
@@ -134,8 +134,13 @@ const leer = cachear(
       )
     ).filter((x): x is Hato => x !== null);
 
-    if (!generales.length && !departamental.length) throw new Error("El origen del Observatorio no respondió");
-    return { generales, departamental, hato };
+    // Las bibliotecas de documentos (informes, balances, coyuntura…) vienen en la propia página «General» del sistema.
+    const pagina = new URL("https://estadisticas.fedegan.org.co/Indicadores/66");
+    const respuesta = await descargarSeguro(pagina, { maxBytes: 2_500_000, codificacion: "latin1", cabeceras: { accept: "text/html", "user-agent": "CONtextoGanadero/1.0 (observatorio)" } }).catch(() => null);
+    const documentos = respuesta ? parsearBibliotecas(respuesta.cuerpo, pagina.toString()) : [];
+
+    if (!generales.length && !departamental.length && !documentos.length) throw new Error("El origen del Observatorio no respondió");
+    return { generales, departamental, hato, documentos };
   },
   { tags: ["indicadores"], segundos: SEGUNDOS },
 );
@@ -145,6 +150,6 @@ export async function getObservatorio(): Promise<Observatorio> {
   try {
     return await leer(rangoDeMeses(new Date(), MESES_VENTANA).desde);
   } catch {
-    return { generales: [], departamental: [], hato: [] };
+    return { generales: [], departamental: [], hato: [], documentos: [] };
   }
 }

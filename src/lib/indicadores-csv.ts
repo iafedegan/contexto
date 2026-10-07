@@ -102,3 +102,40 @@ export function parsearCsvGeneral(texto: string): TablaGeneral | null {
   const series = [...porSerie].map(([nombre, m]) => ({ nombre, valores: orden.map((p) => m.get(p) ?? null) }));
   return { titulo, periodos: orden, series: series.filter((s) => s.valores.some((v) => v !== null)) };
 }
+
+/** Un documento publicado por FEDEGÁN (informe, presentación, ficha…). */
+export type DocumentoFuente = { archivo: string; fecha: string; url: string };
+// Una serie de publicaciones (coyuntura, balance y perspectivas, cifras de referencia…), con sus documentos.
+export type BibliotecaFuente = { codigo: string; titulo: string; documentos: DocumentoFuente[] };
+
+// Texto de una celda o título: sin etiquetas ni espacios de más.
+const texto = (h: string) => h.replace(/<[^>]*>/g, "").replace(/&amp;/g, "&").replace(/&nbsp;/g, " ").replace(/\s+/g, " ").trim();
+
+/**
+ * Lee la página «General» del sistema de estadísticas (`/Indicadores/66`) y devuelve sus bibliotecas de documentos. Cada
+ * bloque lleva un título `NNN-Nombre` y, en su script, una fila por documento que la propia página arma con
+ * `createTextNode("Archivo - 2020")` y un enlace `../DOC/download.jsp?pRealName=…&iIdFiles=…` (relativo: se resuelve contra
+ * `base`). Solo cuenta lo que realmente trae enlaces de descarga; las gráficas no.
+ */
+export function parsearBibliotecas(html: string, base: string): BibliotecaFuente[] {
+  const titulos = [...html.matchAll(/class="title"[^>]*>\s*(\d{3}(?:-\d+)?)-([^<]+?)\s*<\/td>/g)];
+  const salida: BibliotecaFuente[] = [];
+  titulos.forEach((m, i) => {
+    const bloque = html.slice(m.index, titulos[i + 1]?.index ?? html.length);
+    const documentos: DocumentoFuente[] = [];
+    const fila = /createTextNode\("([^"]*)"\);\s*td\.appendChild\(text\);\s*tr\.appendChild\(td\);\s*td=document\.createElement\("td"\);\s*td\.className='list';\s*var a=document\.createElement\("a"\);\s*a\.setAttribute\("href","([^"]*download\.jsp[^"]*)"\)/g;
+    for (const f of bloque.matchAll(fila)) {
+      let url: URL;
+      try {
+        url = new URL(f[2], base);
+      } catch {
+        continue;
+      }
+      const archivo = url.searchParams.get("pRealName");
+      if (!archivo) continue;
+      documentos.push({ archivo, fecha: texto(f[1]).replace(/^Archivo\s*-\s*/i, ""), url: url.toString() });
+    }
+    if (documentos.length) salida.push({ codigo: m[1], titulo: texto(m[2]), documentos });
+  });
+  return salida;
+}
