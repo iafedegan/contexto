@@ -111,9 +111,9 @@ todos los temas, con los tokens de la plantilla activa).
   (`globals.css`). El aviso de ubicación sale a los 9 s en el celular (a 1,5 s en escritorio).
 - El menú de pantalla completa marca `html[data-cg-overlay]`, y con eso la barra se oculta mientras está abierto.
 
-### Indicadores ganaderos (portada)
+### Indicadores ganaderos (Observatorio)
 
-La sección «Indicadores ganaderos» del inicio dibuja las cifras oficiales de FEDEGÁN: ganado gordo (nacional) y ganado
+La sección «Indicadores ganaderos» del Observatorio (ya no va en la portada) dibuja las cifras oficiales de FEDEGÁN: ganado gordo (nacional) y ganado
 flaco de machos y hembras por región, mes a mes. Se leen del CSV público de su sistema de estadísticas
 (`estadisticas.fedegan.org.co/DOC/export.jsp`, el mismo que alimenta las gráficas de contextoganadero.com) desde
 `src/lib/indicadores-fedegan.ts`, con la descarga segura y la caché de datos (6 h); nunca se escribe al origen. Si el
@@ -121,7 +121,7 @@ origen no responde, la sección no se pinta. Para añadir un indicador basta una
 columnas). Trae cinco años de historia y los filtros del widget original están: regiones (tarjetas), rango de fechas (atajos y meses), tipo de gráfica (líneas, área, barras), vista (gráfica, tabla o ambas) y exportar a CSV. Junto a la gráfica va un mapa de Colombia con las regiones coloreadas y su valor (`src/components/mapa-regiones.tsx`; los trazos salen del Marco Geoestadístico del DANE con `node scripts/generar-mapa.mjs`; las regiones se aproximan por departamentos). La gráfica es propia, en SVG (`src/components/indicadores-ganaderos.tsx`), y toma los colores de la plantilla.
 
 **Observatorio.** El menú tiene una opción fija «Observatorio» (`/observatorio` y `/en/observatorio`, `_pages/observatorio.tsx`) con el
-mismo tablero a pantalla completa y una nota de cómo leer las cifras; la portada enlaza a ella. No es una sección: no cuenta
+mismo tablero a pantalla completa y una nota de cómo leer las cifras. No es una sección: no cuenta
 para el límite de ocho del menú y no sale en el árbol de secciones del panel. En el celular, los filtros avanzados van
 plegados («Filtros»), las regiones en carrusel y la gráfica y el mapa se alternan.
 
