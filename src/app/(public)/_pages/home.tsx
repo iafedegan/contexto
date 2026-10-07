@@ -18,6 +18,8 @@ import { DEFAULT_HOME_LAYOUT, splitHomeSlots } from "@/lib/home-layout";
 import { getSiteTheme } from "@/lib/site-theme";
 import { getSiteIdentity } from "@/lib/site-identity";
 import { formatMarketValue, getMarketTicker } from "@/lib/market-data";
+import { getIndicadores } from "@/lib/indicadores-fedegan";
+import { IndicadoresGanaderos } from "@/components/indicadores-ganaderos";
 
 /**
  * Portada — generación estática con ISR.
@@ -67,7 +69,8 @@ async function HomePage({ locale }: { locale: Locale }) {
     { label: t(locale, "home.featuredColumn"), article: opinion ?? articles[3] ?? articles[0] },
   ].filter((x) => x.article);
 
-  const market = await getMarketTicker().catch(() => []);
+  // Dólar y novillo para el cintillo, e indicadores oficiales de FEDEGÁN para la sección de gráficas (ambos de caché).
+  const [market, indicadores] = await Promise.all([getMarketTicker().catch(() => []), getIndicadores()]);
   // Gremial es "use client" y market-data.ts es server-only: se le pasan los
   // valores ya formateados en vez del tipo/formateador del módulo.
   const marketFormatted = market
@@ -160,6 +163,19 @@ async function HomePage({ locale }: { locale: Locale }) {
         <SiteSidebar locale={locale} />
       </div>
       </CardSlugsProvider>
+
+      {/* Gráficas de los indicadores ganaderos (FEDEGÁN). Sin datos del origen, la sección no se pinta. */}
+      {indicadores.length > 0 && (
+        <div className="mt-14 sm:mt-20">
+          <IndicadoresGanaderos
+            indicadores={indicadores}
+            kicker={t(locale, "ind.kicker")}
+            titulo={t(locale, "ind.title")}
+            fuenteEtiqueta={t(locale, "ind.source")}
+            actualizadoEtiqueta={t(locale, "ind.updated")}
+          />
+        </div>
+      )}
 
       <AdsBanner zone="home_bottom" className="mx-auto mt-14" />
 

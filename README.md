@@ -111,6 +111,15 @@ todos los temas, con los tokens de la plantilla activa).
   (`globals.css`). El aviso de ubicación sale a los 9 s en el celular (a 1,5 s en escritorio).
 - El menú de pantalla completa marca `html[data-cg-overlay]`, y con eso la barra se oculta mientras está abierto.
 
+### Indicadores ganaderos (portada)
+
+La sección «Indicadores ganaderos» del inicio dibuja las cifras oficiales de FEDEGÁN: ganado gordo (nacional) y ganado
+flaco de machos y hembras por región, mes a mes. Se leen del CSV público de su sistema de estadísticas
+(`estadisticas.fedegan.org.co/DOC/export.jsp`, el mismo que alimenta las gráficas de contextoganadero.com) desde
+`src/lib/indicadores-fedegan.ts`, con la descarga segura y la caché de datos (6 h); nunca se escribe al origen. Si el
+origen no responde, la sección no se pinta. Para añadir un indicador basta una fila en `CATALOGO` (número `pId` y
+columnas). La gráfica es propia, en SVG (`src/components/indicadores-ganaderos.tsx`), y toma los colores de la plantilla.
+
 ### Logo
 
 El logo («Cg» dorado y crema sobre baldosa esmeralda) se dibuja en código: `src/lib/logo.ts` es la única fuente. De ahí
