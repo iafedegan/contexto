@@ -113,7 +113,7 @@ function Kicker({
       <span className={`inline-flex items-center gap-2 ${className}`}>
         <LiveBadge locale={locale} />
         {a.categorySlug && (
-          <Link href={localePath(locale, `/categoria/${a.categorySlug}`)} className="lx-kicker relative z-[4] pointer-coarse:before:absolute pointer-coarse:before:inset-x-0 pointer-coarse:before:-inset-y-3.5 pointer-coarse:before:content-['']">
+          <Link href={localePath(locale, `/categoria/${a.categorySlug}`)} className="lx-kicker relative z-[4] -my-[5.5px] inline-flex min-h-6 items-center pointer-coarse:before:absolute pointer-coarse:before:inset-x-0 pointer-coarse:before:-inset-y-3.5 pointer-coarse:before:content-['']">
             {categoryLabel(locale, a.categorySlug, a.categoryName ?? "")}
           </Link>
         )}
@@ -124,7 +124,7 @@ function Kicker({
   return (
     <Link
       href={localePath(locale, `/categoria/${a.categorySlug}`)}
-      className={`lx-kicker relative z-[4] pointer-coarse:before:absolute pointer-coarse:before:inset-x-0 pointer-coarse:before:-inset-y-3.5 pointer-coarse:before:content-[''] ${className}`}
+      className={`lx-kicker relative z-[4] -my-[5.5px] inline-flex min-h-6 items-center pointer-coarse:before:absolute pointer-coarse:before:inset-x-0 pointer-coarse:before:-inset-y-3.5 pointer-coarse:before:content-[''] ${className}`}
     >
       {categoryLabel(locale, a.categorySlug, a.categoryName ?? "")}
     </Link>
