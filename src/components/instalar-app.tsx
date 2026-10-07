@@ -1,7 +1,7 @@
 "use client";
 
-import { useRef, useSyncExternalStore } from "react";
-import { Download, Plus, Share, Smartphone, X } from "lucide-react";
+import { useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { ArrowDown, ArrowUp, Check, Compass, Copy, Download, Ellipsis, Share, Smartphone, SquarePlus, X } from "lucide-react";
 import { t, type Locale } from "@/lib/i18n";
 
 /**
@@ -9,8 +9,11 @@ import { t, type Locale } from "@/lib/i18n";
  *
  * - Android, y Chrome/Edge en el computador: el navegador avisa con `beforeinstallprompt` cuando la app se puede instalar.
  *   Se guarda ese aviso (y se silencia el cartelito automático) y, al pulsar, se abre el cuadro de instalación del sistema.
- * - iPhone y iPad: Safari NO deja instalar desde un botón; la única vía es «Compartir → Agregar a pantalla de inicio».
- *   Aquí el botón abre una guía de tres pasos.
+ * - iPhone y iPad: Safari NO deja instalar desde un botón; la única vía es «Compartir → Agregar a pantalla de inicio». Aquí el
+ *   botón abre una guía con los pasos EXACTOS de su versión de Safari (en iOS 26 el botón Compartir quedó detrás de «•••»), con un
+ *   dibujo de cada botón y una flecha hacia la barra de Safari, que en el iPhone está abajo y en el iPad arriba.
+ * - iPhone dentro de WhatsApp, Facebook, Instagram…: ese navegador interno NO puede instalar nada; la guía pide copiar el enlace
+ *   y abrirlo en Safari (ahí se perdía la mayoría).
  * - Ya instalada (abierta como app) o navegador sin soporte (Firefox de escritorio…): no se muestra nada.
  *
  * El aviso del navegador llega una sola vez y puede llegar antes de que el botón se pinte; por eso se captura al cargar
@@ -43,10 +46,31 @@ function yaInstalada(): boolean {
   return window.matchMedia("(display-mode: standalone)").matches || window.matchMedia("(display-mode: window-controls-overlay)").matches || nav.standalone === true;
 }
 
+// Qué aparato es, para dar la guía correcta. Se lee solo en el navegador, al abrir la guía.
+type InfoIos = {
+  /** iPad: la barra de Safari está arriba y Compartir a la derecha. */
+  ipad: boolean;
+  /** Navegador interno de otra app (WhatsApp, Facebook…): no tiene «Safari/» en su identificación y no puede instalar. */
+  interno: boolean;
+  /** Versión mayor de Safari (26 o más: «•••» esconde Compartir); `null` si no se sabe (Chrome, Firefox…). */
+  safari: number | null;
+};
+
 // iPhone, iPod y iPad (el iPad moderno se presenta como un Mac con pantalla táctil).
 function esIos(): boolean {
   const ua = navigator.userAgent;
   return /iphone|ipad|ipod/i.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+}
+
+function leerIos(): InfoIos {
+  const ua = navigator.userAgent;
+  const otroNavegador = /CriOS|FxiOS|EdgiOS|OPiOS|DuckDuckGo/i.test(ua);
+  const version = ua.match(/Version\/(\d+)/);
+  return {
+    ipad: /ipad/i.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1),
+    interno: !otroNavegador && !/Safari\//.test(ua),
+    safari: version && /Safari\//.test(ua) && !otroNavegador ? Number(version[1]) : null,
+  };
 }
 
 // Qué ofrecer en este aparato ahora mismo.
@@ -62,12 +86,35 @@ function suscribir(f: () => void) {
   return () => void oyentes.delete(f);
 }
 
+// Un paso de la guía: el dibujo del botón que se toca y la frase corta.
+type Paso = { icono: ReactNode; texto: string; aparte?: string };
+
+// Los pasos de Safari, según la versión y el aparato.
+function pasosSafari(info: InfoIos, locale: Locale): Paso[] {
+  const marca = (n: ReactNode) => <span className="grid size-9 place-items-center rounded-full bg-[var(--surface-2)] text-[var(--accent)]">{n}</span>;
+  const compartir = marca(<Share size={18} aria-hidden />);
+  const pasos: Paso[] = [];
+  if (info.ipad) {
+    pasos.push({ icono: compartir, texto: t(locale, "pwa.sShareTop") });
+  } else if (info.safari !== null && info.safari >= 26) {
+    // iOS 26: en la disposición por defecto («Compacta») Compartir está dentro de «•••».
+    pasos.push({ icono: marca(<Ellipsis size={18} aria-hidden />), texto: t(locale, "pwa.s26Dots"), aparte: t(locale, "pwa.sIfShare") });
+    pasos.push({ icono: compartir, texto: t(locale, "pwa.sShareMenu") });
+  } else {
+    pasos.push({ icono: compartir, texto: t(locale, "pwa.sShareBottom") });
+  }
+  pasos.push({ icono: marca(<SquarePlus size={18} aria-hidden />), texto: t(locale, "pwa.sScroll") });
+  pasos.push({ icono: <span className="grid h-9 place-items-center rounded-full bg-[#0a84ff] px-3 text-xs font-bold text-white">{locale === "en" ? "Add" : "Agregar"}</span>, texto: t(locale, "pwa.sAdd") });
+  return pasos;
+}
+
 export function InstalarApp({ locale, variante = "pildora" }: { locale: Locale; variante?: "pildora" | "banda" }) {
   const actual = useSyncExternalStore(suscribir, estado, () => "no" as Estado);
   const guia = useRef<HTMLDialogElement>(null);
+  const [copiado, setCopiado] = useState(false);
   if (actual === "no") return null;
 
-  // Abre el cuadro del sistema (Android, Chrome, Edge) o la guía de tres pasos (iPhone y iPad).
+  // Abre el cuadro del sistema (Android, Chrome, Edge) o la guía paso a paso (iPhone y iPad).
   async function instalar() {
     if (aviso) {
       const a = aviso;
@@ -82,6 +129,17 @@ export function InstalarApp({ locale, variante = "pildora" }: { locale: Locale; 
       return;
     }
     guia.current?.showModal();
+  }
+
+  // Copia la dirección del sitio para pegarla en Safari.
+  async function copiar() {
+    try {
+      await navigator.clipboard.writeText(`${location.origin}/`);
+      setCopiado(true);
+      setTimeout(() => setCopiado(false), 3000);
+    } catch {
+      /* sin portapapeles: la dirección queda a la vista para copiarla a mano */
+    }
   }
 
   const texto = variante === "pildora" ? t(locale, "pwa.install") : t(locale, "pwa.installFull");
@@ -104,6 +162,9 @@ export function InstalarApp({ locale, variante = "pildora" }: { locale: Locale; 
       </button>
     );
 
+  // La guía de iPhone/iPad solo se arma (y lee el navegador) cuando ese es el caso.
+  const info = actual === "ios" ? leerIos() : null;
+
   return (
     <>
       {variante === "banda" ? (
@@ -125,43 +186,83 @@ export function InstalarApp({ locale, variante = "pildora" }: { locale: Locale; 
         boton
       )}
 
-      {actual === "ios" && (
+      {info && (
         <dialog
           ref={guia}
           aria-labelledby="pwa-ios-titulo"
           onClick={(e) => {
             if (e.target === e.currentTarget) e.currentTarget.close();
           }}
-          className="m-auto w-[min(92vw,26rem)] rounded-[var(--radius-lg)] border border-[var(--border-strong)] bg-[var(--bg)] p-0 text-[var(--fg)] shadow-2xl backdrop:bg-black/60"
+          // En el celular sube desde abajo, junto a la barra de Safari que hay que tocar; en pantallas grandes va centrada.
+          className="m-0 mt-auto w-full max-w-none rounded-b-none rounded-t-[var(--radius-lg)] border border-[var(--border-strong)] bg-[var(--bg)] p-0 text-[var(--fg)] shadow-2xl backdrop:bg-black/60 sm:m-auto sm:w-[min(92vw,28rem)] sm:rounded-[var(--radius-lg)]"
         >
-          <div className="flex flex-col gap-4 p-5">
+          <div className="flex flex-col gap-4 p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
             <div className="flex items-start justify-between gap-3">
               <h2 id="pwa-ios-titulo" className="lx-display text-xl font-semibold leading-snug">
-                {t(locale, "pwa.iosTitle")}
+                {info.interno ? t(locale, "pwa.wvTitle") : t(locale, "pwa.iosTitle")}
               </h2>
               <button type="button" onClick={() => guia.current?.close()} aria-label={t(locale, "pwa.close")} className="grid size-11 shrink-0 place-items-center rounded-full border border-[var(--border)]">
                 <X size={18} aria-hidden />
               </button>
             </div>
-            <ol className="flex flex-col gap-3 text-sm leading-relaxed">
-              {([
-                [<Share key="s" size={16} aria-hidden />, "pwa.iosStep1"],
-                [<Plus key="p" size={16} aria-hidden />, "pwa.iosStep2"],
-                [<Download key="d" size={16} aria-hidden />, "pwa.iosStep3"],
-              ] as const).map(([icono, clave], i) => (
-                <li key={clave} className="flex items-start gap-3">
-                  <span className="grid size-8 shrink-0 place-items-center rounded-full bg-[var(--surface-2)] text-[var(--accent)]">{icono}</span>
-                  <span className="pt-1">
-                    <strong className="mr-1 tabular-nums">{i + 1}.</strong>
-                    {t(locale, clave)}
-                  </span>
-                </li>
-              ))}
-            </ol>
-            <p className="text-xs text-[var(--fg-muted)]">{t(locale, "pwa.iosNote")}</p>
+
+            {info.interno ? (
+              <>
+                <p className="text-sm text-[var(--fg-muted)]">{t(locale, "pwa.wvWhy")}</p>
+                <ol className="flex flex-col gap-3 text-sm leading-relaxed">
+                  <Numerado n={1} icono={<Copy size={18} aria-hidden />}>
+                    {t(locale, "pwa.wv1")}
+                  </Numerado>
+                  <Numerado n={2} icono={<Compass size={18} aria-hidden />}>
+                    {t(locale, "pwa.wv2")}
+                  </Numerado>
+                  <Numerado n={3} icono={<Ellipsis size={18} aria-hidden />}>
+                    {t(locale, "pwa.wv3")}
+                  </Numerado>
+                  <Numerado n={4} icono={<Download size={18} aria-hidden />}>
+                    {t(locale, "pwa.wv4")}
+                  </Numerado>
+                </ol>
+                <button type="button" onClick={copiar} className="inline-flex min-h-12 items-center justify-center gap-2.5 rounded-full bg-[var(--accent)] px-6 text-sm font-semibold text-[var(--accent-fg)]">
+                  {copiado ? <Check size={17} aria-hidden /> : <Copy size={17} aria-hidden />} {copiado ? t(locale, "pwa.copied") : t(locale, "pwa.copy")}
+                </button>
+                <input readOnly aria-label={t(locale, "pwa.copy")} value={typeof location === "undefined" ? "" : `${location.origin}/`} onFocus={(e) => e.currentTarget.select()} className="min-h-11 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] px-3 text-sm text-[var(--fg-muted)]" />
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-[var(--fg-muted)]">{t(locale, "pwa.iosIntro")}</p>
+                <ol className="flex flex-col gap-3 text-sm leading-relaxed">
+                  {pasosSafari(info, locale).map((p, i) => (
+                    <Numerado key={p.texto} n={i + 1} icono={p.icono} aparte={p.aparte} crudo>
+                      {p.texto}
+                    </Numerado>
+                  ))}
+                </ol>
+                <p className="rounded-[var(--radius)] bg-[var(--surface-2)] px-3 py-2.5 text-sm">{t(locale, "pwa.sOpen")}</p>
+                {/* La barra de Safari está abajo en el iPhone y arriba (a la derecha) en el iPad: la flecha apunta hacia donde hay que tocar. */}
+                <p className="flex items-center justify-center gap-2 text-xs font-semibold text-[var(--accent)]">
+                  {info.ipad ? <ArrowUp size={16} className="motion-safe:animate-bounce" aria-hidden /> : <ArrowDown size={16} className="motion-safe:animate-bounce" aria-hidden />}
+                  {info.ipad ? t(locale, "pwa.barTop") : t(locale, "pwa.barBottom")}
+                </p>
+              </>
+            )}
           </div>
         </dialog>
       )}
     </>
+  );
+}
+
+// Un paso numerado con el dibujo del botón a la izquierda.
+function Numerado({ n, icono, children, aparte, crudo = false }: { n: number; icono: ReactNode; children: ReactNode; aparte?: string; crudo?: boolean }) {
+  return (
+    <li className="flex items-start gap-3">
+      {crudo ? icono : <span className="grid size-9 shrink-0 place-items-center rounded-full bg-[var(--surface-2)] text-[var(--accent)]">{icono}</span>}
+      <span className="min-w-0 flex-1 pt-1.5">
+        <strong className="mr-1 tabular-nums">{n}.</strong>
+        {children}
+        {aparte && <span className="mt-1 block text-xs text-[var(--fg-muted)]">{aparte}</span>}
+      </span>
+    </li>
   );
 }
