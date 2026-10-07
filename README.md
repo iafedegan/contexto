@@ -126,7 +126,8 @@ La medición es anónima y con permiso (cookie `cg_med` / `cg_vid`): ver `docs/s
 
 ### Botón «Instalar app» (PWA)
 
-`src/components/instalar-app.tsx` ofrece instalar la PWA desde la cabecera (escritorio), el menú del celular y una banda encima del pie.
+`src/components/instalar-app.tsx` ofrece instalar la PWA desde la cabecera (escritorio), el menú del celular, una banda encima del pie y, solo en el celular,
+un aviso flotante que sale tras leer un rato y DESPUÉS de los avisos de medición y ubicación (un aviso a la vez; «Ahora no» se respeta 21 días).
 Se adapta al aparato: en Android y en Chrome/Edge de escritorio guarda el aviso `beforeinstallprompt` y al pulsar abre el cuadro de instalación
 del sistema; en iPhone y iPad (donde Safari no permite instalar desde un botón) abre una guía de tres pasos («Compartir → Agregar a pantalla de
 inicio»); si la app ya está instalada o el navegador no puede (p. ej. Firefox de escritorio) no pinta nada. Los textos están en `src/lib/i18n.ts` (`pwa.*`).

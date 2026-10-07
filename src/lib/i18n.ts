@@ -136,6 +136,10 @@ const es: Dict = {
   "pwa.copy": "Copiar enlace",
   "pwa.copied": "¡Enlace copiado!",
   "pwa.close": "Cerrar",
+  "pwa.avisoTitle": "Instala la app",
+  "pwa.avisoText": "Abre más rápido, funciona sin conexión y te avisa de lo último.",
+  "pwa.installShort": "Instalar",
+  "pwa.notNow": "Ahora no",
   "footer.editorialPolicy": "Política editorial",
   "footer.panel": "Panel editorial",
   "footer.archiveNote":
@@ -360,6 +364,10 @@ const en: Dict = {
   "pwa.copy": "Copy link",
   "pwa.copied": "Link copied!",
   "pwa.close": "Close",
+  "pwa.avisoTitle": "Install the app",
+  "pwa.avisoText": "It opens faster, works offline and alerts you to breaking news.",
+  "pwa.installShort": "Install",
+  "pwa.notNow": "Not now",
   "footer.editorialPolicy": "Editorial policy",
   "footer.panel": "Newsroom panel",
   "footer.archiveNote":

@@ -7,6 +7,7 @@
 import { ToroFlotante } from "@/components/toro-flotante";
 import { LocationConsent } from "@/components/location-consent";
 import { MedicionConsent } from "@/components/medicion-consent";
+import { InstalarApp } from "@/components/instalar-app";
 import { Ga4, Gtm } from "@/components/analytics-ga4";
 import { getGa4Id, getGtmId } from "@/lib/analytics-server";
 
@@ -33,6 +34,7 @@ export default async function PublicLayout({ children }: { children: React.React
       <ToroFlotante />
       <MedicionConsent />
       <LocationConsent />
+      <InstalarApp locale="es" variante="aviso" />
     </>
   );
 }

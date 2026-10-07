@@ -1,6 +1,7 @@
 "use client";
 
-import { useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { usePathname } from "next/navigation";
 import { ArrowDown, ArrowUp, Check, Compass, Copy, Download, Ellipsis, Share, Smartphone, SquarePlus, X } from "lucide-react";
 import { t, type Locale } from "@/lib/i18n";
 
@@ -86,6 +87,23 @@ function suscribir(f: () => void) {
   return () => void oyentes.delete(f);
 }
 
+// Cuánto se respeta un «Ahora no» del aviso: tres semanas.
+const CLAVE_NO = "cg:instalar-no";
+const ESPERA_NO_MS = 21 * 24 * 3600_000;
+
+function descartado(): boolean {
+  try {
+    return Date.now() - Number(localStorage.getItem(CLAVE_NO) ?? 0) < ESPERA_NO_MS;
+  } catch {
+    return false;
+  }
+}
+
+// El aviso de instalación va DESPUÉS de los de medición y ubicación (un aviso a la vez): espera a que la persona haya decidido ambos.
+function avisosPrevios(): boolean {
+  return /(?:^|;\s*)cg_med=/.test(document.cookie) && /(?:^|;\s*)cg_loc=/.test(document.cookie);
+}
+
 // Un paso de la guía: el dibujo del botón que se toca y la frase corta.
 type Paso = { icono: ReactNode; texto: string; aparte?: string };
 
@@ -108,11 +126,31 @@ function pasosSafari(info: InfoIos, locale: Locale): Paso[] {
   return pasos;
 }
 
-export function InstalarApp({ locale, variante = "pildora" }: { locale: Locale; variante?: "pildora" | "banda" }) {
+export function InstalarApp({ locale: localeProp, variante = "pildora" }: { locale: Locale; variante?: "pildora" | "banda" | "aviso" }) {
   const actual = useSyncExternalStore(suscribir, estado, () => "no" as Estado);
   const guia = useRef<HTMLDialogElement>(null);
   const [copiado, setCopiado] = useState(false);
-  if (actual === "no") return null;
+  const [avisoVisible, setAvisoVisible] = useState(false);
+  const ruta = usePathname();
+  // El aviso se monta una sola vez para todo el portal, así que el idioma lo da la dirección.
+  const locale: Locale = variante === "aviso" && (ruta === "/en" || ruta.startsWith("/en/")) ? "en" : localeProp;
+
+  // Aviso flotante (solo en el celular, donde la cabecera no tiene sitio para el botón): aparece tras leer un rato y después
+  // de los avisos de medición y de ubicación, y no vuelve a salir durante tres semanas si se descarta.
+  useEffect(() => {
+    if (variante !== "aviso" || actual === "no") return;
+    if (!window.matchMedia("(max-width: 767px)").matches || descartado()) return;
+    let id: ReturnType<typeof setTimeout>;
+    let intentos = 0;
+    const probar = () => {
+      if (avisosPrevios()) id = setTimeout(() => setAvisoVisible(true), 5000);
+      else if (++intentos < 100) id = setTimeout(probar, 2500);
+    };
+    id = setTimeout(probar, 8000);
+    return () => clearTimeout(id);
+  }, [variante, actual]);
+
+  if (actual === "no" || (variante === "aviso" && !avisoVisible)) return null;
 
   // Abre el cuadro del sistema (Android, Chrome, Edge) o la guía paso a paso (iPhone y iPad).
   async function instalar() {
@@ -129,6 +167,16 @@ export function InstalarApp({ locale, variante = "pildora" }: { locale: Locale; 
       return;
     }
     guia.current?.showModal();
+  }
+
+  // «Ahora no» del aviso: se recuerda para no insistir.
+  function noAhora() {
+    try {
+      localStorage.setItem(CLAVE_NO, String(Date.now()));
+    } catch {
+      /* sin almacenamiento: vuelve a salir en la próxima visita */
+    }
+    setAvisoVisible(false);
   }
 
   // Copia la dirección del sitio para pegarla en Safari.
@@ -165,31 +213,58 @@ export function InstalarApp({ locale, variante = "pildora" }: { locale: Locale; 
   // La guía de iPhone/iPad solo se arma (y lee el navegador) cuando ese es el caso.
   const info = actual === "ios" ? leerIos() : null;
 
+  const contenido =
+    variante === "banda" ? (
+      <section aria-label={t(locale, "pwa.bandTitle")} className="border-t border-[var(--border)] bg-[var(--bg)] text-[var(--fg)]">
+        <div className="mx-auto flex max-w-7xl flex-col items-start gap-4 px-4 py-6 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+          <div className="flex items-start gap-4">
+            <span className="grid size-12 shrink-0 place-items-center rounded-full border border-[var(--border-strong)] text-[var(--accent)]">
+              <Smartphone size={22} aria-hidden />
+            </span>
+            <div>
+              <p className="lx-display text-lg font-semibold leading-snug">{t(locale, "pwa.bandTitle")}</p>
+              <p className="mt-1 max-w-xl text-sm leading-relaxed text-[var(--fg-muted)]">{t(locale, "pwa.bandText")}</p>
+            </div>
+          </div>
+          {boton}
+        </div>
+      </section>
+    ) : variante === "aviso" ? (
+      // `cg-consent`: igual que los avisos de medición y ubicación, se oculta bajo un popup o el menú, y el toro se aparta para no taparlo.
+      <div
+        role="region"
+        aria-label={t(locale, "pwa.avisoTitle")}
+        className="cg-consent fixed inset-x-3 bottom-[calc(var(--cg-barra,0px)+0.5rem)] z-[89] mx-auto flex max-w-xl items-center gap-3 rounded-2xl border border-[#4a4234] bg-[#141210]/95 p-3 text-[#f7f4ee] shadow-2xl backdrop-blur"
+      >
+        <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-[#a85a28]/25 text-[#d9a05b]">
+          <Download size={20} aria-hidden />
+        </span>
+        <p className="min-w-0 flex-1 text-xs leading-snug text-[#d9d2c4]">
+          <strong className="block text-sm text-[#f7f4ee]">{t(locale, "pwa.avisoTitle")}</strong>
+          {t(locale, "pwa.avisoText")}
+        </p>
+        <div className="flex shrink-0 flex-col gap-1.5">
+          <button type="button" onClick={() => void instalar()} className="min-h-10 rounded-full bg-[#a85a28] px-4 text-xs font-semibold text-white">
+            {t(locale, "pwa.installShort")}
+          </button>
+          <button type="button" onClick={noAhora} className="min-h-9 rounded-full px-4 text-xs font-semibold text-[#d9d2c4]">
+            {t(locale, "pwa.notNow")}
+          </button>
+        </div>
+      </div>
+    ) : (
+      boton
+    );
+
   return (
     <>
-      {variante === "banda" ? (
-        <section aria-label={t(locale, "pwa.bandTitle")} className="border-t border-[var(--border)] bg-[var(--bg)] text-[var(--fg)]">
-          <div className="mx-auto flex max-w-7xl flex-col items-start gap-4 px-4 py-6 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-            <div className="flex items-start gap-4">
-              <span className="grid size-12 shrink-0 place-items-center rounded-full border border-[var(--border-strong)] text-[var(--accent)]">
-                <Smartphone size={22} aria-hidden />
-              </span>
-              <div>
-                <p className="lx-display text-lg font-semibold leading-snug">{t(locale, "pwa.bandTitle")}</p>
-                <p className="mt-1 max-w-xl text-sm leading-relaxed text-[var(--fg-muted)]">{t(locale, "pwa.bandText")}</p>
-              </div>
-            </div>
-            {boton}
-          </div>
-        </section>
-      ) : (
-        boton
-      )}
+      {contenido}
 
       {info && (
         <dialog
           ref={guia}
           aria-labelledby="pwa-ios-titulo"
+          onClose={() => variante === "aviso" && setAvisoVisible(false)}
           onClick={(e) => {
             if (e.target === e.currentTarget) e.currentTarget.close();
           }}
