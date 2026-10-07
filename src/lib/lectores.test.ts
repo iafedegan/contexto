@@ -259,3 +259,23 @@ test("el detalle de lectura: un renglón por lector, con ciudad y filtros, y el 
   assert.equal(pc[0].nombre, null);
   assert.equal((await det.registroLecturas(todo, true, V1)).length, 2, "el historial de un solo lector");
 });
+
+test("el editor puede unir un navegador con un suscriptor: autoriza, vincula y atribuye las lecturas anteriores", async () => {
+  const sus = await import("@/lib/lectores-suscriptor");
+  const ident = await import("@/lib/lectores-identificados");
+  await bd.db.delete(schema.newsletterSubscribers);
+  await bd.db.delete(schema.readerSessions);
+  const [nota] = await bd.db.select({ id: schema.articles.id }).from(schema.articles).limit(1);
+  await bd.db.insert(schema.newsletterSubscribers).values({ email: "Edgar@Example.com", confirmed: true, firstName: "Edgar" });
+  const hace = (min: number) => new Date(Date.now() - min * 60_000);
+  await bd.db.insert(schema.readerSessions).values([
+    { visitorId: V1, articleId: nota.id, createdAt: hace(600), maxScroll: 90, seconds: 80 },
+    { visitorId: V1, articleId: nota.id, createdAt: hace(20), maxScroll: 50, seconds: 40 },
+  ]);
+  assert.equal(await sus.vincularDesdePanel("nadie@example.com", V1, false), false);
+  assert.equal(await sus.vincularDesdePanel("edgar@example.com", V1, false), true, "el correo no distingue mayúsculas");
+  const rango = fil.leerFiltros({ desde: fil.hoyColombia(new Date(Date.now() - 2 * 86_400_000)), hasta: fil.hoyColombia() });
+  const filas = await ident.identificados(rango);
+  assert.equal(filas.length, 1);
+  assert.equal(filas[0].notas, 2, "cuentan las lecturas que ese navegador ya había hecho");
+});

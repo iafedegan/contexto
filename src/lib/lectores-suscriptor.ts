@@ -48,6 +48,21 @@ export async function vincularVisitante(subscriberId: string, visitorId: string,
   return true;
 }
 
+/**
+ * Vínculo hecho por un editor desde el navegador de la propia persona (que está presente y lo autoriza): además de vincular,
+ * atribuye las lecturas que ese navegador ya había hecho (el vínculo empieza en su primera lectura). Devuelve false si no
+ * existe un suscriptor activo con ese correo.
+ */
+export async function vincularDesdePanel(email: string, visitorId: string, verificado: boolean): Promise<boolean> {
+  const [s] = await db.select({ id: n.id }).from(n).where(and(sql`lower(${n.email}) = ${email.toLowerCase()}`, isNull(n.unsubscribedAt))).limit(1);
+  if (!s) return false;
+  await autorizarLectura(s.id);
+  if (!(await vincularVisitante(s.id, visitorId, verificado))) return false;
+  await db.execute(sql`update subscriber_visitors sv set linked_at = least(sv.linked_at, coalesce((select min(r.created_at) from reader_sessions r where r.visitor_id = sv.visitor_id), sv.linked_at))
+    where sv.subscriber_id = ${s.id}::uuid and sv.visitor_id = ${visitorId}::uuid`);
+  return true;
+}
+
 /** Borra los vínculos de quien ya se dio de baja (el mantenimiento diario). Devuelve cuántos. */
 export async function purgarVinculosDeBajas(): Promise<number> {
   const r = await db.execute(sql`delete from subscriber_visitors sv using newsletter_subscribers s where s.id = sv.subscriber_id and s.unsubscribed_at is not null returning 1`);
