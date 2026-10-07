@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { redirect } from "next/navigation";
 import NextAuth, { type DefaultSession } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
@@ -49,7 +50,7 @@ export const SESSION_COOKIE = `${COOKIE_PREFIX}.session-token`;
 export const SESSION_COOKIE_SECURE = `__Secure-${COOKIE_PREFIX}.session-token`;
 
 // Configuración de Auth.js: sesión JWT de 8 h, cookies propias, acceso por correo y contraseña (+ 2FA o passkey) y datos de sesión leídos de la base en cada petición.
-export const { handlers, signIn, signOut, auth } = NextAuth({
+export const { handlers, signIn, signOut, auth: authSinCache } = NextAuth({
   secret,
   trustHost: true,
   cookies: {
@@ -169,11 +170,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     async session({ session, token }) {
       session.user.id = token.uid as string;
       session.user.role = token.role as UserRole;
-      const [row] = await db
-        .select({ name: users.name, email: users.email, role: users.role, active: users.active })
-        .from(users)
-        .where(eq(users.id, token.uid as string))
-        .limit(1);
+      const row = await cuentaPorId(token.uid as string);
       // Una cuenta desactivada pierde la sesión al instante: el JWT dura 8 h y, sin esta
       // comprobación, seguiría entrando hasta que caducara. Sin `user`, todo el código que
       // pregunta `session?.user` lo trata como «sin sesión» y manda al login.
@@ -190,6 +187,25 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   },
 });
 
+// --- Rendimiento: una sola consulta por petición ---------------------------
+
+/**
+ * La sesión y la cuenta se piden varias veces en una misma petición (el layout del panel, la pantalla, `requireRole`, la
+ * devolución de la sesión…). Con `cache` de React cada una se resuelve UNA vez por petición: antes eran 5 o 6 viajes a la
+ * base de datos en serie antes de empezar a pintar cualquier sección del panel.
+ */
+export const auth = cache(() => authSinCache());
+
+// La cuenta por id, una vez por petición.
+export const cuentaPorId = cache(async (id: string) => {
+  const [row] = await db
+    .select({ id: users.id, name: users.name, email: users.email, role: users.role, active: users.active, totpEnabled: users.totpEnabled })
+    .from(users)
+    .where(eq(users.id, id))
+    .limit(1);
+  return row;
+});
+
 // --- Autorización por rol ------------------------------------------------
 
 // Exige sesión vigente y un rol mínimo; cierra el paso a cuentas desactivadas o inexistentes y devuelve los datos de la persona.
@@ -204,11 +220,7 @@ export async function requireRole(min: UserRole) {
   // arranque y los ids cambian, aunque el correo siga siendo el mismo. Se
   // valida por id y, si no aparece, se reconcilia por correo (estable) para
   // no echar al editor de una sesión que sigue siendo legítima.
-  const [byId] = await db
-    .select({ id: users.id, active: users.active })
-    .from(users)
-    .where(eq(users.id, session.user.id))
-    .limit(1);
+  const byId = await cuentaPorId(session.user.id);
   // La cuenta existe pero está desactivada: no se reconcilia por correo, se corta aquí.
   if (byId && !byId.active) redirect("/panel/login?motivo=cuenta");
   if (byId) return session.user;

@@ -89,7 +89,7 @@ const ultimo = (v: (number | null)[]) => { for (let i = v.length - 1; i >= 0; i-
 function Seccion({ id, n, titulo, texto, children }: { id: string; n: number; titulo: string; texto: string; children: React.ReactNode }) {
   const Icono = ICONOS[id];
   return (
-    <section id={id} aria-labelledby={`${id}-t`} className="scroll-mt-32 pt-14 sm:pt-20 first:pt-8">
+    <section id={id} aria-labelledby={`${id}-t`} className="scroll-mt-32 pt-14 [contain-intrinsic-size:auto_900px] [content-visibility:auto] sm:pt-20 first:pt-8">
       <header className="flex items-start gap-4">
         <span aria-hidden className="grid size-12 shrink-0 place-items-center rounded-2xl border border-[var(--border-strong)] bg-[var(--accent)]/10 text-[var(--accent)] sm:size-14">
           <Icono size={22} />

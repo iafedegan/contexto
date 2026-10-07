@@ -6,7 +6,7 @@ import { ShieldAlert } from "lucide-react";
 import { db } from "@/db";
 import { LogoMark } from "@/components/logo-mark";
 import { users } from "@/db/schema";
-import { auth, signOut } from "@/lib/auth";
+import { auth, cuentaPorId, signOut } from "@/lib/auth";
 import { PanelNav, PanelSidebarNav } from "@/components/panel/panel-nav";
 import { HeaderHeightVar } from "@/components/panel/header-height";
 import { IrASeguridad } from "@/components/panel/ir-a-seguridad";
@@ -33,18 +33,17 @@ export default async function PanelLayout({ children }: { children: React.ReactN
    */
   // Por id y, si el id de la sesión no aparece, por correo (como requireRole):
   // sin esto una sesión con id desfasado se saltaba la exigencia de 2FA.
-  let [yo] = await db
-    .select({ totpEnabled: users.totpEnabled })
-    .from(users)
-    .where(eq(users.id, session.user.id));
+  // La cuenta y los ajustes de permisos se piden a la vez (y la cuenta ya viene resuelta de la sesión: no es otro viaje).
+  const [yoPorId, ajustes, cabeceras] = await Promise.all([cuentaPorId(session.user.id), getAjustes(), headers()]);
+  let yo: { totpEnabled: boolean } | undefined = yoPorId;
   if (!yo && session.user.email) {
     [yo] = await db
       .select({ totpEnabled: users.totpEnabled })
       .from(users)
       .where(eq(users.email, session.user.email.toLowerCase().trim()));
   }
-  const pathname = (await headers()).get("x-pathname") ?? "";
-  const ajustesYo = (await getAjustes())[session.user.id];
+  const pathname = cabeceras.get("x-pathname") ?? "";
+  const ajustesYo = ajustes[session.user.id];
   const debeActivar2fa = yo != null && !yo.totpEnabled && exige2fa(session.user.role, ajustesYo);
   // Sin `redirect()`: ver IrASeguridad. Mientras la cuenta no tenga 2FA, fuera
   // de Configuración no se renderiza el contenido (solo la ida a Seguridad) y
