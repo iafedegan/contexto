@@ -12,8 +12,9 @@ export default function manifest(): MetadataRoute.Manifest {
     scope: "/",
     display: "standalone",
     orientation: "portrait-primary",
-    background_color: "#ffffff",
-    theme_color: "#1f6d3a",
+    // El verde profundo de la baldosa del logo: la pantalla de arranque y la barra de la app no desentonan con el ícono.
+    background_color: "#05100b",
+    theme_color: "#05100b",
     lang: "es-CO",
     categories: ["news", "agriculture"],
     icons: [

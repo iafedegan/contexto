@@ -41,11 +41,11 @@ export async function generateMetadata(): Promise<Metadata> {
     type: "website",
     siteName: identity.name,
     locale: "es_CO",
-    images: [{ url: siteUrl("/logo/contexto-ganadero-logo.jpg"), width: 447, height: 447, alt: identity.name }],
+    images: [{ url: siteUrl("/logo/contexto-ganadero-og.png"), width: 1200, height: 630, alt: identity.name }],
   },
   twitter: {
-    card: "summary",
-    images: [siteUrl("/logo/contexto-ganadero-logo.jpg")],
+    card: "summary_large_image",
+    images: [siteUrl("/logo/contexto-ganadero-og.png")],
   },
   robots: { index: true, follow: true, "max-image-preview": "large" },
   // Verificación de propiedad en Search Console, si está configurada.

@@ -10,8 +10,9 @@ import { SITE_NAME } from "./theme";
 
 // El logo del NewsArticle/Organization apuntaba a /logo-512.png, un archivo
 // que nunca existió en public/ (404): Google Rich Results marcaba el schema
-// como inválido en cada nota. Es el logo real que ya usa el resto del sitio.
-const ORG_LOGO = siteUrl("/logo/contexto-ganadero-logo.jpg");
+// como inválido en cada nota. Es el mismo logo que usa el resto del sitio, en PNG
+// de 512 px (el JSON-LD pide un raster de al menos 112 px; se genera con scripts/generar-logo.ts).
+const ORG_LOGO = siteUrl("/logo/contexto-ganadero-logo-512.png");
 
 // Campos de una nota que necesitan los metadatos.
 type ArticleLike = {

@@ -7,7 +7,6 @@ import { ReadingProgress } from "@/components/reading-progress";
 import { BreakingBar } from "@/components/breaking-bar";
 import { AdsBanner } from "@/components/ads-banner";
 import { SiteHeader, type NavItem } from "@/components/site-header";
-import { SeccionesChips } from "@/components/secciones-chips";
 import { MobileTabBar } from "@/components/mobile-tab-bar";
 import { SiteFooter } from "@/components/site-footer";
 import type { Theme } from "@/lib/theme";
@@ -103,8 +102,6 @@ export async function SiteShell({
       {/* Última hora por encima de todo: si hay urgencia, es lo primero. */}
       <BreakingBar locale={locale} />
       <SiteHeader theme={theme} nav={nav} extraNav={extraNav} locale={locale} identity={identity} variant={site.parts.navbar} />
-      {/* Celular y tablet: las secciones a un toque, sin abrir el menú (solo en la portada). */}
-      {variant === "portada" && nav.length > 0 && <SeccionesChips items={nav} locale={locale} />}
       {aboveMain}
       <main id="contenido" data-region="body" className={mainClassName ?? shell.main}>
         {/* Honestidad con el lector: la interfaz cambia de idioma, las notas no. */}

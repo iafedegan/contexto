@@ -19,6 +19,11 @@ import { EVENTO_ABRIR_MENU } from "@/lib/pestanas";
  * disposición de la barra (centrada como un diario, con filete como una
  * revista, contundente, píldora flotante o con sello) y los colores y
  * tipografías salen de los tokens de la plantilla activa.
+ *
+ * En el celular (< 768 px) el menú y la búsqueda ya están en la barra de pestañas de abajo
+ * (src/components/mobile-tab-bar.tsx): arriba solo queda el nombre del sitio —que se va con la página, como la
+ * franja alta de la web: lo único fijo es la barra de abajo— y «Secciones» abre este mismo menú de pantalla
+ * completa. Desde 768 px, sin esa barra, la cabecera conserva ambos botones y se queda pegada arriba.
  */
 export type MobileLook = "masthead" | "couture" | "bold" | "glass" | "crest";
 
@@ -39,6 +44,7 @@ export function MobileNav({
   extra,
   locale,
   radioStreamUrl,
+  tagline,
 }: {
   look: MobileLook;
   name: string;
@@ -46,6 +52,8 @@ export function MobileNav({
   extra: Item[];
   locale: Locale;
   radioStreamUrl?: string | null;
+  /** Lema bajo el nombre. Si viene (cabecera «masthead»), el nombre se pinta como en la web: dorado con brillo, con filetes y lema. */
+  tagline?: string;
 }) {
   const [open, setOpen] = useState(false);
   const closeRef = useRef<HTMLButtonElement>(null);
@@ -80,12 +88,12 @@ export function MobileNav({
     "grid size-11 shrink-0 place-items-center rounded-full text-[var(--fg)] transition active:scale-95 hover:text-[var(--accent)]";
 
   const menuButton = (
-    <button type="button" onClick={() => setOpen(true)} aria-label={label.open} aria-expanded={open} aria-controls="mobile-menu" className={btn}>
+    <button type="button" onClick={() => setOpen(true)} aria-label={label.open} aria-expanded={open} aria-controls="mobile-menu" className={`${btn} max-md:hidden`}>
       <Menu size={22} />
     </button>
   );
   const searchLink = (
-    <Link href={localePath(locale, "/buscar")} aria-label={t(locale, "nav.search")} className={btn}>
+    <Link href={localePath(locale, "/buscar")} aria-label={t(locale, "nav.search")} className={`${btn} max-md:hidden`}>
       <Search size={20} />
     </Link>
   );
@@ -96,15 +104,28 @@ export function MobileNav({
     </Link>
   );
 
+  // El nombre como en la web (MastheadHeader de site-header.tsx): dorado con el brillo que lo recorre, filetes que se
+  // desvanecen a los lados y el lema debajo. `lx-kicker` no sirve aquí: su tamaño sin capa le gana a las utilidades.
+  const escaparate = tagline ? (
+    <div className="flex min-w-0 items-center justify-center gap-4 px-2 py-2.5">
+      <span aria-hidden className="h-px flex-1 bg-gradient-to-r from-transparent to-[var(--border-strong)]" />
+      <Link href={localePath(locale, "/")} className="block min-w-0 text-center">
+        <span className="lx-display lx-foil block whitespace-nowrap text-[clamp(1.4rem,7.2vw,1.9rem)] font-semibold leading-tight tracking-tight">{name}</span>
+        <span className="lx-ui mt-1.5 block whitespace-nowrap text-[clamp(0.55rem,2.6vw,0.7rem)] font-semibold uppercase leading-none tracking-[0.16em] text-[var(--fg-muted)]">{tagline}</span>
+      </Link>
+      <span aria-hidden className="h-px flex-1 bg-gradient-to-l from-transparent to-[var(--border-strong)]" />
+    </div>
+  ) : null;
+
   // Cada plantilla, su barra.
   let bar: React.ReactNode;
   switch (look) {
     case "masthead":
       // Diario: menú a la izquierda, cabecera centrada, buscar a la derecha.
       bar = (
-        <div className="grid grid-cols-[2.75rem_1fr_2.75rem] items-center border-b border-[var(--border)] px-2 py-1">
+        <div className="grid grid-cols-[2.75rem_1fr_2.75rem] items-center border-b border-[var(--border)] px-2 py-1 max-md:grid-cols-1">
           {menuButton}
-          {logo("lx-display text-center text-[1.35rem] font-semibold leading-none tracking-tight")}
+          {escaparate ?? logo("lx-display text-center text-[1.35rem] font-semibold leading-none tracking-tight")}
           {searchLink}
         </div>
       );
@@ -113,7 +134,7 @@ export function MobileNav({
       // Revista: nombre espaciado y un filete de acento bajo la barra.
       bar = (
         <div className="border-b border-[var(--border-strong)]/50">
-          <div className="grid grid-cols-[2.75rem_1fr_2.75rem] items-center px-2 py-1">
+          <div className="grid grid-cols-[2.75rem_1fr_2.75rem] items-center px-2 py-1 max-md:grid-cols-1">
             {menuButton}
             {logo("lx-display text-center text-[0.95rem] font-light uppercase tracking-[0.32em]")}
             {searchLink}
@@ -129,7 +150,7 @@ export function MobileNav({
           <Link
             href={localePath(locale, "/buscar")}
             aria-label={t(locale, "nav.search")}
-            className="grid size-10 place-items-center rounded-full bg-gradient-to-br from-[var(--accent)] to-[var(--accent-2)] text-[var(--accent-fg)]"
+            className="grid size-10 place-items-center rounded-full bg-gradient-to-br from-[var(--accent)] to-[var(--accent-2)] text-[var(--accent-fg)] max-md:hidden"
           >
             <Search size={18} />
           </Link>
@@ -141,8 +162,8 @@ export function MobileNav({
       // Vanguardia: píldora flotante con el fondo difuminado.
       bar = (
         <div className="px-3 py-2">
-          <div className="flex items-center gap-1 rounded-full border border-[var(--border)] bg-[var(--nav-bg)] py-1 pl-5 pr-1 shadow-[0_18px_40px_-24px_rgba(0,0,0,0.9)]">
-            {logo("lx-display mr-auto text-sm font-semibold tracking-tight")}
+          <div className="flex items-center gap-1 rounded-full border border-[var(--border)] bg-[var(--nav-bg)] py-1 pl-5 pr-1 shadow-[0_18px_40px_-24px_rgba(0,0,0,0.9)] max-md:justify-center max-md:pr-5">
+            {logo("lx-display mr-auto text-sm font-semibold tracking-tight max-md:mr-0")}
             {searchLink}
             {menuButton}
           </div>
@@ -153,7 +174,7 @@ export function MobileNav({
       // Institucional: sello y nombre centrados, con filete de acento.
       bar = (
         <div className="border-b-2 border-[var(--accent)]">
-          <div className="grid grid-cols-[2.75rem_1fr_2.75rem] items-center px-2 py-2">
+          <div className="grid grid-cols-[2.75rem_1fr_2.75rem] items-center px-2 py-2 max-md:grid-cols-1">
             {menuButton}
             <Link href={localePath(locale, "/")} className="flex min-w-0 items-center justify-center gap-2">
               <LogoMark size={32} />
@@ -167,7 +188,7 @@ export function MobileNav({
   }
 
   return (
-    <header data-region="navbar" className="sticky top-0 z-40 bg-[var(--nav-bg)] pt-[env(safe-area-inset-top)] text-[var(--fg)] lg:hidden">
+    <header data-region="navbar" className="relative z-40 bg-[var(--nav-bg)] pt-[env(safe-area-inset-top)] text-[var(--fg)] md:sticky md:top-0 lg:hidden">
       {bar}
 
       {open && (

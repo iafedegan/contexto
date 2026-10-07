@@ -98,8 +98,11 @@ todos los temas, con los tokens de la plantilla activa).
   completa), el **asistente** —el toro, en un círculo elevado al centro—, Buscar y Boletín. Se esconde al bajar por la
   página y vuelve al subir; con el teclado enfocado dentro, siempre se ve. La pestaña activa sale de la ruta
   (`src/lib/pestanas.ts`, con prueba). El toro flotante de escritorio no se pinta aquí: ya vive en la barra.
-- **Chips de secciones** (`src/components/secciones-chips.tsx`) bajo la cabecera de la portada: las secciones a un toque,
-  con desplazamiento horizontal.
+- **Cabecera**: en el celular solo queda el nombre del sitio, porque el menú y la búsqueda ya están en la barra de
+  abajo (`mobile-nav.tsx`); desde 768 px, donde no hay barra, vuelven el botón de menú y la lupa.
+- **Nombre del sitio**: en las plantillas con cabecera «masthead» (Esmeralda, Clásico) el celular repite la de la web: nombre
+  dorado con el brillo que lo recorre, filetes a los lados y el lema debajo. Se va con la página (solo la barra de abajo
+  queda fija).
 - **Portada**: apertura vertical (4:5) con el titular sobre la foto, «Lo último» con miniaturas y el río de notas en dos
   columnas (la primera nota y, si queda una impar al final, la última ocupan el ancho: `anchaEnCelular` en
   `src/lib/home-layout.ts`, con prueba). El pie reparte sus columnas de enlaces de a dos.
@@ -107,6 +110,13 @@ todos los temas, con los tokens de la plantilla activa).
   esconde; `--cg-barra-alto` (constante) reserva el pie de la página para que esconderla no mueva el documento
   (`globals.css`). El aviso de ubicación sale a los 9 s en el celular (a 1,5 s en escritorio).
 - El menú de pantalla completa marca `html[data-cg-overlay]`, y con eso la barra se oculta mientras está abierto.
+
+### Logo
+
+El logo («Cg» dorado y crema sobre baldosa esmeralda) se dibuja en código: `src/lib/logo.ts` es la única fuente. De ahí
+salen el SVG de `public/logo/`, la pestaña (`icon.tsx`), iOS (`apple-icon.tsx`) y la PWA (`/api/pwa-icon`). Tras editarlo:
+`npx tsx scripts/generar-logo.ts --png` (los PNG piden `npm i -D puppeteer-core` y Chrome); una prueba avisa si el SVG
+queda desfasado.
 
 Efectos compartidos (`lx-*` en `globals.css`): grano, aurora animada, viñeta,
 barrido de luz en tarjetas, marco interior metálico, texto con lámina de oro,

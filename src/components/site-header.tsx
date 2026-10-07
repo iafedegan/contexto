@@ -62,6 +62,9 @@ function mobileLook(theme: Theme, variant?: NavbarId): MobileLook {
  */
 export function SiteHeader(props: Props & { variant?: NavbarId }) {
   const { theme, nav, extraNav = [], locale = DEFAULT_LOCALE, identity = DEFAULT_IDENTITY, variant } = props;
+  // La cabecera de escritorio «masthead» (nombre dorado con brillo, filetes y lema) también se ve en el celular: se
+  // pasa el lema solo cuando esa es la cabecera que le toca a la plantilla (mismo criterio que `DesktopHeader`).
+  const conMasthead = variant ? variant === "masthead" : theme === "home" || theme === "esmeralda" || theme === "clasico";
   return (
     <>
       <MobileNav
@@ -71,6 +74,7 @@ export function SiteHeader(props: Props & { variant?: NavbarId }) {
         extra={extraNav}
         locale={locale}
         radioStreamUrl={identity.radioStreamUrl}
+        tagline={conMasthead ? identity.tagline || t(locale, "nav.tagline") : undefined}
       />
       {/* `contents`: la cabecera de escritorio sigue siendo `sticky` respecto a la página. */}
       <div className="hidden lg:contents">
