@@ -134,10 +134,12 @@ con `src/components/observatorio-*.tsx`. Para añadir otro indicador basta una f
 
 ### Logo
 
-El logo («Cg» dorado y crema sobre baldosa esmeralda) se dibuja en código: `src/lib/logo.ts` es la única fuente. De ahí
-salen el SVG de `public/logo/`, la pestaña (`icon.tsx`), iOS (`apple-icon.tsx`) y la PWA (`/api/pwa-icon`). Tras editarlo:
-`npx tsx scripts/generar-logo.ts --png` (los PNG piden `npm i -D puppeteer-core` y Chrome); una prueba avisa si el SVG
-queda desfasado.
+El logo es el emblema del diseño de marca (el toro, los anillos y la «Cg» en dorado y crema) sobre una baldosa del verde de
+la página. `npx tsx scripts/generar-logo.ts ruta/al/diseño.jpg` extrae el emblema (le quita el fondo) a
+`public/logo/contexto-ganadero-emblema.png` y deriva de él el logo del sitio (`logo-512`), el ícono de iOS (`icon-bleed`), el
+de la PWA (`maskable`) y, con `--og`, la tarjeta de redes (pide `npm i -D puppeteer-core` y Chrome). Sin la ruta regenera las
+piezas desde el emblema ya guardado. `LogoMark` (`src/components/logo-mark.tsx`) lo pinta en todo el sitio; el favicon,
+`apple-icon` y `/api/pwa-icon` leen las mismas piezas (`src/lib/logo-archivos.ts`).
 
 Efectos compartidos (`lx-*` en `globals.css`): grano, aurora animada, viñeta,
 barrido de luz en tarjetas, marco interior metálico, texto con lámina de oro,

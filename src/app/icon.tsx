@@ -1,5 +1,5 @@
 import { ImageResponse } from "next/og";
-import { logoDataUri } from "@/lib/logo";
+import { logoDataUri } from "@/lib/logo-archivos";
 
 // Tamaño de la imagen generada: 64 px, que el navegador reduce nítida a los 16 o 32 de la pestaña.
 export const size = { width: 64, height: 64 };
@@ -12,7 +12,7 @@ export default function Icon() {
     (
       <div style={{ width: "100%", height: "100%", display: "flex" }}>
         {/* next/og no admite next/image: aquí va una <img> a propósito */}
-        <img src={logoDataUri()} width={size.width} height={size.height} alt="" />
+        <img src={logoDataUri("redondeado")} width={size.width} height={size.height} alt="" />
       </div>
     ),
     { ...size },
