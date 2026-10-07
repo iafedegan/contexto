@@ -10,10 +10,10 @@ import { LECTURA_COMPLETA } from "@/lib/lectores-entrada";
  * visitante individual (el código aleatorio solo sirve para contar personas distintas).
  */
 const TZ = "America/Bogota";
-const DESDE = sql`from reader_sessions s join articles a on a.id = s.article_id left join categories c on c.id = a.category_id`;
+export const DESDE = sql`from reader_sessions s join articles a on a.id = s.article_id left join categories c on c.id = a.category_id`;
 
 // Condiciones comunes. `sin` deja fuera un filtro (para las listas de opciones, que no deben encogerse al elegir).
-function donde(f: Filtros, rango = { desde: f.desde, hasta: f.hasta }, sin: (keyof Filtros)[] = []): SQL {
+export function donde(f: Filtros, rango = { desde: f.desde, hasta: f.hasta }, sin: (keyof Filtros)[] = []): SQL {
   const p: SQL[] = [
     sql`s.created_at >= (${rango.desde}::date)::timestamp at time zone ${TZ}`,
     sql`s.created_at < ((${rango.hasta}::date + 1)::timestamp at time zone ${TZ})`,

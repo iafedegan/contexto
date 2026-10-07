@@ -1,3 +1,4 @@
+import { lectorToken } from "@/lib/lectores-suscriptor";
 import "server-only";
 import { and, desc, eq, inArray, lte, sql } from "drizzle-orm";
 import { db } from "@/db";
@@ -80,7 +81,7 @@ export async function prepareRender(content: EditionContent, issue: number | nul
 export type Prepared = Awaited<ReturnType<typeof prepareRender>>;
 
 /** El correo de UN lector (enlace de baja propio) o una prueba/vista previa (`subscriberId` null). */
-export function buildMessage(p: Prepared, to: string, subscriberId: string | null, isTest = false): Outgoing {
+export function buildMessage(p: Prepared, to: string, subscriberId: string | null, isTest = false, autorizoLectura = false): Outgoing {
   const unsub = subscriberId
     ? siteUrl(`/boletin/baja?s=${subscriberId}&t=${unsubscribeToken(subscriberId)}`)
     : siteUrl("/boletin/baja");
@@ -94,6 +95,8 @@ export function buildMessage(p: Prepared, to: string, subscriberId: string | nul
     articles: p.list,
     issue: p.issue,
     unsubscribeUrl: unsub,
+    // Solo quien autorizó expresamente que se relacione su lectura recibe enlaces con su firma.
+    ...(autorizoLectura && subscriberId ? { lector: { id: subscriberId, token: lectorToken(subscriberId) } } : {}),
     isTest,
   };
   return {

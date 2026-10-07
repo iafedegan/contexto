@@ -37,7 +37,9 @@ test("con otra clave, o con el dato alterado, no se descifra", () => {
   process.env.SECRETS_ENCRYPTION_KEY = "otra-clave-solo-para-cifrado";
   assert.equal(decryptSecret(c), null);
   delete process.env.SECRETS_ENCRYPTION_KEY;
-  assert.equal(decryptSecret(c.slice(0, -2) + "AA"), null);
+  // Se cambia un carácter del medio, que siempre altera los bytes (los últimos pueden ser relleno y quedar iguales por azar).
+  const m = Math.floor(c.length / 2);
+  assert.equal(decryptSecret(`${c.slice(0, m)}${c[m] === "A" ? "B" : "A"}${c.slice(m + 1)}`), null);
   assert.equal(decryptSecret("basura"), null);
 });
 

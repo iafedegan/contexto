@@ -85,6 +85,13 @@
       "when": 1791340907570,
       "tag": "0011_lecturas_de_lectores",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1791344788387,
+      "tag": "0012_lectura_de_suscriptores",
+      "breakpoints": true
     }
   ]
 }

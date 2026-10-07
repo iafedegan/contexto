@@ -9,8 +9,12 @@ const entero = (v: unknown, min: number, max: number) => {
   return Number.isFinite(n) ? Math.min(max, Math.max(min, Math.round(n))) : min;
 };
 
+/** ¿Tiene forma de UUID? (los códigos del visitante y del suscriptor lo son). */
+export const esUuid = (v: unknown): v is string => typeof v === "string" && UUID.test(v);
+
 export type EntradaInicio = { visitante: string; slug: string; recurrente: boolean; utm: { utmSource: string; utmMedium: string; utmCampaign: string; referrer: string } };
 export type EntradaProgreso = { visitante: string; lectura: string; scroll: number; segundos: number };
+export type EntradaVinculo = { visitante: string; suscriptor: string; firma: string };
 
 /** Inicio de una lectura: `null` si falta el código del visitante o la nota. */
 export function validarInicio(b: unknown): EntradaInicio | null {
@@ -32,3 +36,13 @@ export function validarProgreso(b: unknown): EntradaProgreso | null {
 
 /** Una lectura cuenta como «completa» cuando la persona llegó casi al final de la nota. */
 export const LECTURA_COMPLETA = 85;
+
+/** Vínculo de un navegador con un suscriptor, por el enlace del correo (`cgs` = suscriptor, `cgt` = firma). */
+export function validarVinculo(b: unknown): EntradaVinculo | null {
+  const o = (b && typeof b === "object" ? b : {}) as Record<string, unknown>;
+  const visitante = t(o.vid, 40);
+  const suscriptor = t(o.s, 40);
+  const firma = t(o.t, 64);
+  if (!UUID.test(visitante) || !UUID.test(suscriptor) || firma.length < 16) return null;
+  return { visitante: visitante.toLowerCase(), suscriptor: suscriptor.toLowerCase(), firma };
+}

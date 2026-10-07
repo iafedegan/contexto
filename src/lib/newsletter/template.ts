@@ -30,6 +30,8 @@ export type NewsletterRender = {
   issue: number | null;
   /** Enlace de baja de ESTE lector. */
   unsubscribeUrl: string;
+  /** Solo si ESTE lector autorizó que se relacione su lectura: sus enlaces a notas llevan su firma (`cgs`, `cgt`). */
+  lector?: { id: string; token: string };
   date?: Date;
   /** Marca «prueba» arriba, para no confundirla con un envío real. */
   isTest?: boolean;
@@ -39,11 +41,15 @@ export type NewsletterRender = {
 const absolute = (u: string) => (/^https?:\/\//i.test(u) ? u : siteUrl(u.startsWith("/") ? u : `/${u}`));
 
 /** Enlace a una nota, con parámetros para medir en analítica cuánto trae el boletín. */
-function articleLink(slug: string, issue: number | null): string {
+function articleLink(slug: string, issue: number | null, lector?: { id: string; token: string }): string {
   const url = new URL(siteUrl(`/articulo/${slug}`));
   url.searchParams.set("utm_source", "boletin");
   url.searchParams.set("utm_medium", "email");
   url.searchParams.set("utm_campaign", issue ? `edicion-${issue}` : "prueba");
+  if (lector) {
+    url.searchParams.set("cgs", lector.id);
+    url.searchParams.set("cgt", lector.token);
+  }
   return url.toString();
 }
 
@@ -77,7 +83,7 @@ export function renderNewsletterHtml(r: NewsletterRender): string {
       <tr><td class="px" style="padding:8px 32px 0 32px">
         ${
           lead.coverImageUrl
-            ? `<a href="${articleLink(lead.slug, r.issue)}" style="text-decoration:none"><img src="${esc(absolute(lead.coverImageUrl))}" width="536" alt="${esc(lead.title)}" style="display:block;width:100%;max-width:536px;height:auto;border:0;border-radius:6px"></a>`
+            ? `<a href="${articleLink(lead.slug, r.issue, r.lector)}" style="text-decoration:none"><img src="${esc(absolute(lead.coverImageUrl))}" width="536" alt="${esc(lead.title)}" style="display:block;width:100%;max-width:536px;height:auto;border:0;border-radius:6px"></a>`
             : ""
         }
         ${
@@ -85,10 +91,10 @@ export function renderNewsletterHtml(r: NewsletterRender): string {
             ? `<p style="margin:22px 0 6px 0;font:700 11px/1 ${SANS};letter-spacing:.16em;text-transform:uppercase;color:${accent}">${esc(lead.categoryName)}</p>`
             : `<div style="height:22px"></div>`
         }
-        <h2 class="t-main" style="margin:0 0 12px 0;font:700 28px/1.2 ${SERIF};color:#1c1712"><a href="${articleLink(lead.slug, r.issue)}" style="color:inherit;text-decoration:none">${esc(lead.title)}</a></h2>
+        <h2 class="t-main" style="margin:0 0 12px 0;font:700 28px/1.2 ${SERIF};color:#1c1712"><a href="${articleLink(lead.slug, r.issue, r.lector)}" style="color:inherit;text-decoration:none">${esc(lead.title)}</a></h2>
         <p class="t-muted" style="margin:0 0 20px 0;font:400 16px/1.6 ${SANS};color:#57504a">${esc(lead.excerpt)}</p>
         <table role="presentation" cellpadding="0" cellspacing="0"><tr><td style="background:${accent};border-radius:999px">
-          <a href="${articleLink(lead.slug, r.issue)}" style="display:inline-block;padding:12px 26px;font:700 14px/1 ${SANS};color:#ffffff;text-decoration:none">Leer la nota completa &rarr;</a>
+          <a href="${articleLink(lead.slug, r.issue, r.lector)}" style="display:inline-block;padding:12px 26px;font:700 14px/1 ${SANS};color:#ffffff;text-decoration:none">Leer la nota completa &rarr;</a>
         </td></tr></table>
       </td></tr>`
     : "";
@@ -106,12 +112,12 @@ export function renderNewsletterHtml(r: NewsletterRender): string {
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
           ${
             a.coverImageUrl
-              ? `<td class="thumb" width="132" valign="top" style="padding:0 18px 0 0"><a href="${articleLink(a.slug, r.issue)}"><img src="${esc(absolute(a.coverImageUrl))}" width="132" height="96" alt="" style="display:block;width:132px;height:96px;object-fit:cover;border:0;border-radius:4px"></a></td>`
+              ? `<td class="thumb" width="132" valign="top" style="padding:0 18px 0 0"><a href="${articleLink(a.slug, r.issue, r.lector)}"><img src="${esc(absolute(a.coverImageUrl))}" width="132" height="96" alt="" style="display:block;width:132px;height:96px;object-fit:cover;border:0;border-radius:4px"></a></td>`
               : ""
           }
           <td class="thumb" valign="top">
             ${a.categoryName ? `<p style="margin:0 0 4px 0;font:700 10px/1 ${SANS};letter-spacing:.14em;text-transform:uppercase;color:${accent}">${esc(a.categoryName)}</p>` : ""}
-            <h3 class="t-main" style="margin:0 0 6px 0;font:700 19px/1.25 ${SERIF};color:#1c1712"><a href="${articleLink(a.slug, r.issue)}" style="color:inherit;text-decoration:none">${esc(a.title)}</a></h3>
+            <h3 class="t-main" style="margin:0 0 6px 0;font:700 19px/1.25 ${SERIF};color:#1c1712"><a href="${articleLink(a.slug, r.issue, r.lector)}" style="color:inherit;text-decoration:none">${esc(a.title)}</a></h3>
             <p class="t-muted" style="margin:0;font:400 14px/1.55 ${SANS};color:#57504a">${esc(a.excerpt.length > 150 ? `${a.excerpt.slice(0, 147).trimEnd()}…` : a.excerpt)}</p>
           </td>
         </tr></table>
@@ -203,7 +209,7 @@ export function renderNewsletterText(r: NewsletterRender): string {
     parts.push(
       `${i === 0 ? "DESTACADA · " : ""}${a.categoryName ? a.categoryName.toUpperCase() + " · " : ""}${a.title}`,
       a.excerpt,
-      articleLink(a.slug, r.issue),
+      articleLink(a.slug, r.issue, r.lector),
       "",
     );
   });

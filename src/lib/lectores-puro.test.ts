@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { perfilDeUa } from "@/lib/lectores-ua";
 import { departamentoDeRegion, nombreDeDepartamento } from "@/lib/lectores-geo";
 import { aParametros, filtrosActivos, hoyColombia, leerFiltros, periodoAnterior } from "@/lib/lectores-filtros";
-import { validarInicio, validarProgreso } from "@/lib/lectores-entrada";
+import { validarInicio, validarProgreso, validarVinculo } from "@/lib/lectores-entrada";
 
 const AHORA = new Date("2026-10-07T03:00:00Z"); // 6 de octubre, 22:00 en Colombia
 
@@ -87,4 +87,13 @@ test("el avance se acota: scroll de 0 a 100 y hasta una hora de lectura", () => 
   assert.deepEqual(validarProgreso({ vid: VID, id, sc: 250, s: 99999 }), { visitante: VID, lectura: id, scroll: 100, segundos: 3600 });
   assert.deepEqual(validarProgreso({ vid: VID, id, sc: -5, s: "abc" }), { visitante: VID, lectura: id, scroll: 0, segundos: 0 });
   assert.equal(validarProgreso({ vid: VID, id: "x", sc: 10, s: 10 }), null);
+});
+
+test("el vínculo por el enlace del boletín exige visitante, suscriptor y una firma de largo razonable", () => {
+  const SUB = "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d";
+  assert.deepEqual(validarVinculo({ vid: VID, s: SUB, t: "a".repeat(32) }), { visitante: VID, suscriptor: SUB, firma: "a".repeat(32) });
+  assert.equal(validarVinculo({ vid: VID, s: SUB, t: "corta" }), null);
+  assert.equal(validarVinculo({ vid: VID, s: "no-uuid", t: "a".repeat(32) }), null);
+  assert.equal(validarVinculo({ vid: "x", s: SUB, t: "a".repeat(32) }), null);
+  assert.equal(validarVinculo(null), null);
 });

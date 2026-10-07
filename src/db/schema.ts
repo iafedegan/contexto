@@ -309,6 +309,22 @@ export const readerSessions = pgTable(
   ],
 );
 
+// Navegadores (códigos de visitante de la medición) que una persona suscrita AUTORIZÓ relacionar con su suscripción. Solo existe
+// para quien marcó la casilla de autorización; se borra al darse de baja o al eliminar la suscripción. `verified` es verdadero
+// cuando el vínculo se probó con un enlace del correo (la persona controla esa dirección) y falso si salió del formulario.
+export const subscriberVisitors = pgTable(
+  "subscriber_visitors",
+  {
+    subscriberId: uuid("subscriber_id")
+      .notNull()
+      .references(() => newsletterSubscribers.id, { onDelete: "cascade" }),
+    visitorId: uuid("visitor_id").notNull(),
+    linkedAt: timestamp("linked_at", { withTimezone: true }).notNull().defaultNow(),
+    verified: boolean("verified").notNull().default(false),
+  },
+  (t) => [primaryKey({ columns: [t.subscriberId, t.visitorId] }), index("subscriber_visitors_visitor_idx").on(t.visitorId)],
+);
+
 // Límite de intentos (login, formularios públicos). Una fila por clave
 // ("login:ip:1.2.3.4", "contacto:ip:…"); se comparte entre instancias
 // serverless, a diferencia de un contador en memoria.
@@ -383,6 +399,8 @@ export const newsletterSubscribers = pgTable("newsletter_subscribers", {
   signupLat: numeric("signup_lat"),
   signupLon: numeric("signup_lon"),
   confirmed: boolean("confirmed").notNull().default(false),
+  /** Cuándo la persona autorizó expresamente que se relacione lo que lee con su suscripción (casilla del formulario). null = no autorizó. */
+  readingAuthorizedAt: timestamp("reading_authorized_at", { withTimezone: true }),
   confirmToken: text("confirm_token"),
   unsubscribedAt: timestamp("unsubscribed_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

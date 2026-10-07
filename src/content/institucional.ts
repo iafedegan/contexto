@@ -709,7 +709,7 @@ export const DOCUMENTOS: DocumentoInstitucional[] = [
             {
               tipo: "parrafo",
               texto:
-                "Si lo aceptas en el aviso que ves al entrar, medimos cómo se lee el sitio para mejorar el contenido: qué notas se leen, hasta dónde se baja, cuánto tiempo se queda la persona, a qué hora y desde qué dispositivo, ciudad y origen llega. Es una medición anónima y solo la hacemos si la aceptas: sin tu permiso no medimos nada.",
+                "Si lo aceptas en el aviso que ves al entrar, medimos cómo se lee el sitio para mejorar el contenido: qué notas se leen, hasta dónde se baja, cuánto tiempo se queda la persona, a qué hora y desde qué dispositivo, ciudad y origen llega. Es una medición anónima por defecto y solo la hacemos si la aceptas: sin tu permiso no medimos nada.",
             },
             {
               tipo: "lista",
@@ -718,7 +718,9 @@ export const DOCUMENTOS: DocumentoInstitucional[] = [
                 "Cookie «cg_vid»: un código aleatorio que solo sirve para contar personas distintas y saber si ya habías leído antes. No contiene tu nombre, tu correo ni tu IP. Dura hasta 400 días y se borra en cuanto retiras el permiso.",
                 "No guardamos tu IP ni el identificador de tu navegador: la ciudad y el departamento se deducen de la conexión de forma aproximada y el dispositivo se clasifica en celular, tableta o computador.",
                 "Las lecturas medidas se conservan 400 días y se borran solas. El análisis se hace de forma agregada: no vemos a una persona sola.",
-                "No unimos esta medición con tu suscripción al boletín ni con ningún dato que te identifique.",
+                "Por defecto la medición NO se une con tu suscripción al boletín ni con ningún dato que te identifique.",
+                "Solo si al suscribirte marcas la casilla «Autorizo que se relacione lo que leo en el sitio con mi suscripción», relacionamos las notas que lees, el tiempo y el dispositivo con tu suscripción, para entender qué te interesa y enviarte contenido más útil. Los enlaces de tu boletín llevan entonces una firma que identifica tu navegador; el vínculo lo ve únicamente el equipo editorial.",
+                "Puedes retirar esa autorización cuando quieras: al darte de baja del boletín se borra el vínculo y esa lectura deja de asociarse contigo, o escribe a habeasdata@fedegan.org.co.",
               ],
             },
             { tipo: "parrafo", texto: "Puedes cambiar de opinión cuando quieras con los botones de abajo." },
@@ -817,7 +819,9 @@ export const DOCUMENTOS: DocumentoInstitucional[] = [
                 "Cookie “cg_vid”: a random code used only to count distinct people and to know whether you have read before. It contains no name, email or IP address. It lasts up to 400 days and is deleted as soon as you withdraw permission.",
                 "We do not store your IP address or your browser identifier: city and region are approximated from the connection, and the device is only classified as phone, tablet or computer.",
                 "Measured readings are kept for 400 days and deleted automatically. Analysis is aggregated: we never look at a single person.",
-                "This measurement is not linked to your newsletter subscription or to any data that identifies you.",
+                "By default this measurement is NOT linked to your newsletter subscription or to any data that identifies you.",
+                "Only if, when subscribing, you tick the box “I authorise relating what I read on this site to my subscription”, we relate the stories you read, the time and the device to your subscription, to understand what interests you and send you more useful content. Your newsletter links then carry a signature that identifies your browser; only the editorial team can see the link.",
+                "You can withdraw that authorisation at any time: unsubscribing from the newsletter deletes the link and that reading stops being associated with you, or write to habeasdata@fedegan.org.co.",
               ],
             },
             { tipo: "parrafo", texto: "You can change your mind at any time with the buttons below." },

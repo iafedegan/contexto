@@ -162,3 +162,65 @@ test("el análisis de suscriptores cuenta altas, bajas, confirmación y rangos d
   // Nada de lo devuelto lleva direcciones de correo ni fechas de nacimiento.
   assert.doesNotMatch(JSON.stringify(p), /@gmail|@hotmail|@yahoo|@empresa|19\d\d-\d\d-\d\d/);
 });
+
+test("la lectura por suscriptor: solo con autorización, solo desde el vínculo, con verificación y sin dejar rastro tras la baja", async () => {
+  const sus = await import("@/lib/lectores-suscriptor");
+  const ident = await import("@/lib/lectores-identificados");
+  const { eq } = await import("drizzle-orm");
+  await bd.db.delete(schema.newsletterSubscribers);
+  await bd.db.delete(schema.readerSessions);
+  const [nota] = await bd.db.select({ id: schema.articles.id }).from(schema.articles).limit(1);
+  const crear = async (email: string) => (await bd.db.insert(schema.newsletterSubscribers).values({ email, confirmed: true, firstName: "Ana", lastName: email[0].toUpperCase() }).returning({ id: schema.newsletterSubscribers.id }))[0].id;
+  const ana = await crear("ana@example.com");
+  const beto = await crear("beto@example.com");
+  const hace = (min: number) => new Date(Date.now() - min * 60_000);
+  const rango = fil.leerFiltros({ desde: fil.hoyColombia(new Date(Date.now() - 2 * 86_400_000)), hasta: fil.hoyColombia() });
+
+  // Sin autorización no se vincula nada.
+  assert.equal(await sus.vincularVisitante(ana, V1, false), false);
+  await sus.autorizarLectura(ana);
+  assert.equal(await sus.vincularVisitante(ana, V1, false), true);
+  const [antes] = await bd.db.select().from(schema.subscriberVisitors).where(eq(schema.subscriberVisitors.subscriberId, ana));
+  assert.equal(antes.verified, false, "desde el formulario queda sin verificar");
+
+  // Lecturas: una ANTERIOR al vínculo (no cuenta) y dos posteriores; otra persona sin autorizar no aparece.
+  await bd.db.update(schema.subscriberVisitors).set({ linkedAt: hace(60) });
+  await bd.db.insert(schema.readerSessions).values([
+    { visitorId: V1, articleId: nota.id, createdAt: hace(120), maxScroll: 100, seconds: 300 },
+    { visitorId: V1, articleId: nota.id, createdAt: hace(30), maxScroll: 90, seconds: 100, device: "mobile", source: "Directo" },
+    { visitorId: V1, articleId: nota.id, createdAt: hace(10), maxScroll: 20, seconds: 20, device: "mobile", source: "Directo" },
+    { visitorId: V2, articleId: nota.id, createdAt: hace(5), maxScroll: 80, seconds: 50 },
+  ]);
+  assert.equal(await sus.vincularVisitante(beto, V2, true), false, "Beto no autorizó: su lectura no se asocia");
+  let filas = await ident.identificados(rango);
+  assert.equal(filas.length, 1, "solo quien autorizó");
+  assert.equal(filas[0].correo, "ana@example.com");
+  assert.equal(filas[0].notas, 2, "la lectura anterior al vínculo no cuenta");
+  assert.equal(filas[0].segundos, 120);
+  assert.equal(filas[0].completas, 1);
+  assert.equal(filas[0].verificado, false);
+  assert.equal((await ident.lecturasDe(ana, rango)).length, 2);
+  assert.deepEqual(await ident.lecturasDe(beto, rango), [], "quien no autorizó no tiene historial");
+
+  // Verificar sube el vínculo; repetir sin verificar no lo baja.
+  await sus.vincularVisitante(ana, V1, true);
+  await sus.vincularVisitante(ana, V1, false);
+  filas = await ident.identificados(rango);
+  assert.equal(filas[0].verificado, true);
+  assert.deepEqual(await ident.adopcion(), { autorizados: 1, vinculados: 1, suscritos: 2 });
+
+  // La firma del enlace del correo es de ese suscriptor y no se puede falsificar ni cambiar de persona.
+  process.env.AUTH_SECRET = "secreto-solo-para-las-pruebas-de-lectores";
+  const firma = sus.lectorToken(ana);
+  assert.equal(sus.lectorTokenValido(ana, firma), true);
+  assert.equal(sus.lectorTokenValido(beto, firma), false);
+  assert.equal(sus.lectorTokenValido(ana, firma.slice(0, -1) + (firma.endsWith("A") ? "B" : "A")), false);
+  assert.equal(sus.lectorTokenValido(ana, ""), false);
+
+  // Baja: desaparece del análisis y el mantenimiento borra el vínculo.
+  await bd.db.update(schema.newsletterSubscribers).set({ unsubscribedAt: new Date() }).where(eq(schema.newsletterSubscribers.id, ana));
+  assert.equal((await ident.identificados(rango)).length, 0);
+  assert.equal(await sus.vincularVisitante(ana, V3, true), false, "tras la baja no se vincula nada");
+  assert.equal(await sus.purgarVinculosDeBajas(), 1);
+  assert.equal((await bd.db.select().from(schema.subscriberVisitors)).length, 0);
+});

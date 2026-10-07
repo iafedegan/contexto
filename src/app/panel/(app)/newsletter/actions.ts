@@ -190,7 +190,7 @@ export async function sendEditionChunk(id: string): Promise<SendProgress> {
 
   while (Date.now() - t0 < TIME_BUDGET_MS) {
     const batch = await db
-      .select({ id: newsletterSubscribers.id, email: newsletterSubscribers.email })
+      .select({ id: newsletterSubscribers.id, email: newsletterSubscribers.email, autorizo: sql<boolean>`${newsletterSubscribers.readingAuthorizedAt} is not null` })
       .from(newsletterSubscribers)
       .where(and(recipientsWhere(edition.startedAt), ...(cursor ? [gt(newsletterSubscribers.id, cursor)] : [])))
       .orderBy(asc(newsletterSubscribers.id))
@@ -206,7 +206,7 @@ export async function sendEditionChunk(id: string): Promise<SendProgress> {
     }
 
     const res = await sendMany(
-      batch.map((s) => buildMessage(prepared, s.email, s.id)),
+      batch.map((s) => buildMessage(prepared, s.email, s.id, false, s.autorizo)),
       { fromName: settings.fromName, fromEmail: settings.fromEmail, replyTo: settings.replyTo || undefined },
     );
 

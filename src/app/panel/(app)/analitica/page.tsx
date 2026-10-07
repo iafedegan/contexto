@@ -1,5 +1,9 @@
 import { Clock, Eye, Flame, Repeat, ScrollText, ShieldCheck, TriangleAlert, Users } from "lucide-react";
 import { requirePermiso } from "@/lib/auth";
+import { tienePermiso } from "@/lib/permisos-server";
+import { adopcion, identificados, lecturasDe } from "@/lib/lectores-identificados";
+import { esUuid } from "@/lib/lectores-entrada";
+import { AdopcionLectura, FichaPersona, TablaPersonas } from "@/components/panel/bi-personas";
 import { TabsResumen } from "@/components/panel/tabs-resumen";
 import { Card } from "@/components/ui";
 import { BiFiltros } from "@/components/panel/bi-filtros";
@@ -80,8 +84,11 @@ function Barras({ items, total }: { items: { clave: string; n: number }[]; total
 }
 
 export default async function AnaliticaPage({ searchParams }: { searchParams: Promise<Q> }) {
-  await requirePermiso("analitica");
+  const user = await requirePermiso("analitica");
   const q = await searchParams;
+  // Las personas (con su correo) solo las ve quien también administra el boletín.
+  const verPersonas = await tienePermiso(user.id, user.role, "newsletter");
+  const sel = typeof q.suscriptor === "string" && esUuid(q.suscriptor) ? q.suscriptor.toLowerCase() : undefined;
   const f = leerFiltros(q);
   const vista = q.vista === "suscriptores" ? "suscriptores" : "audiencia";
   const hoy = hoyColombia();
@@ -97,7 +104,7 @@ export default async function AnaliticaPage({ searchParams }: { searchParams: Pr
         </div>
       </header>
 
-      {vista === "audiencia" ? <Audiencia f={f} hoy={hoy} /> : <Suscriptores f={f} hoy={hoy} />}
+      {vista === "audiencia" ? <Audiencia f={f} hoy={hoy} /> : <Suscriptores f={f} hoy={hoy} verPersonas={verPersonas} sel={sel} />}
     </div>
   );
 }
@@ -198,8 +205,13 @@ async function Audiencia({ f, hoy }: { f: ReturnType<typeof leerFiltros>; hoy: s
   );
 }
 
-async function Suscriptores({ f, hoy }: { f: ReturnType<typeof leerFiltros>; hoy: string }) {
-  const [s, puntos] = await Promise.all([panoramaSuscriptores(f), subscriberPoints()]);
+async function Suscriptores({ f, hoy, verPersonas, sel }: { f: ReturnType<typeof leerFiltros>; hoy: string; verPersonas: boolean; sel?: string }) {
+  // Esta pestaña solo usa el periodo: los filtros de audiencia (dispositivo, ciudad…) no aplican a la lista de personas.
+  const fp = { desde: f.desde, hasta: f.hasta };
+  const [s, puntos, ad, filas] = await Promise.all([panoramaSuscriptores(fp), subscriberPoints(), verPersonas ? adopcion() : null, verPersonas ? identificados(fp) : []]);
+  const persona = sel ? filas.find((x) => x.id === sel) : undefined;
+  const lecturas = persona ? await lecturasDe(persona.id, fp) : [];
+  const base = aParametros(fp).toString();
   const r = s.resumen;
   const c = s.completitud;
   return (
@@ -230,6 +242,18 @@ async function Suscriptores({ f, hoy }: { f: ReturnType<typeof leerFiltros>; hoy
 
       <Panel kicker="Dónde están" titulo="Mapa de suscriptores"><SubscriberMap points={puntos} /></Panel>
 
+      {verPersonas && ad && (
+        <section aria-label="Lectores identificados" className="flex flex-col gap-4">
+          <div>
+            <p className="lx-kicker text-[var(--accent)]">Qué leen y cuánto se demoran</p>
+            <h2 className="lx-display mt-1 text-2xl font-semibold">Suscriptores que autorizaron su lectura</h2>
+          </div>
+          <AdopcionLectura a={ad} />
+          {persona && <FichaPersona persona={persona} lecturas={lecturas} cerrar={`?${base}${base ? "&" : ""}vista=suscriptores`} />}
+          <Card className="p-5 sm:p-6"><TablaPersonas filas={filas} base={base} seleccionado={persona?.id} /></Card>
+        </section>
+      )}
+
       <Card className="p-5 text-sm">
         <h2 className="lx-display text-lg font-semibold">Qué tan completa está la base</h2>
         <ul className="mt-3 grid gap-3 sm:grid-cols-3">
@@ -240,7 +264,7 @@ async function Suscriptores({ f, hoy }: { f: ReturnType<typeof leerFiltros>; hoy
             </li>
           ))}
         </ul>
-        <p className="mt-4 text-xs leading-relaxed text-[var(--fg-muted)]">Todo aquí es agregado: ninguna persona aparece sola ni se muestra su correo. Saber qué lee cada suscriptor exige su autorización expresa y todavía no está activado.</p>
+        <p className="mt-4 text-xs leading-relaxed text-[var(--fg-muted)]">Todo aquí es agregado: ninguna persona aparece sola ni se muestra su correo. Qué lee cada persona solo se analiza si ella lo autorizó (casilla del formulario de suscripción).</p>
       </Card>
     </>
   );

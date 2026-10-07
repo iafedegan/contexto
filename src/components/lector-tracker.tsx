@@ -23,6 +23,17 @@ export function LectorTracker({ slug }: { slug: string }) {
       let activo = true;
       const q = new URLSearchParams(location.search);
 
+      // Si llegó por el enlace de SU boletín (y ese suscriptor autorizó), se vincula este navegador con su suscripción.
+      const cgs = q.get("cgs");
+      const cgt = q.get("cgt");
+      if (cgs && cgt) {
+        void fetch("/api/lectura", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ a: "v", vid: v.id, s: cgs, t: cgt }), keepalive: true }).catch(() => {});
+        // La dirección queda limpia: así no se comparte por accidente un enlace que identifica a una persona.
+        q.delete("cgs");
+        q.delete("cgt");
+        history.replaceState(null, "", `${location.pathname}${q.toString() ? `?${q}` : ""}${location.hash}`);
+      }
+
       const avance = () => {
         const alto = document.documentElement.scrollHeight - innerHeight;
         const p = alto <= 0 ? 100 : Math.round(((scrollY + innerHeight) / document.documentElement.scrollHeight) * 100);

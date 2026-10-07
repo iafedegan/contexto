@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { clientIp, hit } from "@/lib/rate-limit";
-import { validarInicio, validarProgreso } from "@/lib/lectores-entrada";
+import { validarInicio, validarProgreso, validarVinculo } from "@/lib/lectores-entrada";
+import { lectorTokenValido, vincularVisitante } from "@/lib/lectores-suscriptor";
 import { iniciarLectura, registrarProgreso } from "@/lib/lectores-registro";
 
 /**
@@ -43,6 +44,12 @@ export async function POST(req: Request) {
       const e = validarProgreso(cuerpo);
       if (!e) return NextResponse.json({ ok: false }, { status: 400 });
       return NextResponse.json({ ok: await registrarProgreso(e) });
+    }
+    if (accion === "v") {
+      // Enlace del boletín: la firma solo la tiene quien recibió ESE correo, así que el vínculo queda verificado.
+      const e = validarVinculo(cuerpo);
+      if (!e || !lectorTokenValido(e.suscriptor, e.firma)) return NextResponse.json({ ok: false }, { status: 400 });
+      return NextResponse.json({ ok: await vincularVisitante(e.suscriptor, e.visitante, true) });
     }
   } catch {
     // Un fallo de la medición nunca debe afectar la lectura.

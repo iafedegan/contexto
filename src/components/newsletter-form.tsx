@@ -6,6 +6,7 @@ import { Check, Loader2, Mail, TriangleAlert } from "lucide-react";
 import { suscribirBoletin, type BoletinState } from "@/app/acciones/boletin";
 import { t, type Locale } from "@/lib/i18n";
 import { GEO_EVENT, readGeo } from "@/lib/geo-consent";
+import { decidirMedicion, decisionMedicion, visitante } from "@/lib/medicion-cliente";
 
 // Se suscribe a los cambios de la ubicación compartida.
 const subscribeGeo = (cb: () => void) => {
@@ -35,7 +36,19 @@ export function NewsletterForm({ locale, compacto = false }: { locale: Locale; c
   })();
 
   return (
-    <form action={action} className={compacto ? "" : "lx-card p-6"}>
+    <form
+      action={action}
+      className={compacto ? "" : "lx-card p-6"}
+      // Marcar la casilla de autorización es también aceptar la medición: se activa (y se crea el código del navegador) ANTES de enviar,
+      // para que el servidor reciba la cookie en la misma petición del alta.
+      onSubmit={(e) => {
+        const caja = e.currentTarget.elements.namedItem("lectura") as HTMLInputElement | null;
+        if (caja?.checked) {
+          if (decisionMedicion() !== "si") decidirMedicion(true);
+          visitante();
+        }
+      }}
+    >
       <p className="lx-kicker flex items-center gap-2 text-[var(--accent)]">
         <Mail size={13} /> {t(locale, "newsletter.title")}
       </p>
@@ -107,6 +120,14 @@ export function NewsletterForm({ locale, compacto = false }: { locale: Locale; c
           placeholder={t(locale, "newsletter.email")}
           className="w-full rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] px-3.5 py-2.5 text-[0.95rem] outline-none transition focus:border-[var(--accent)]"
         />
+        <label className="flex items-start gap-2.5 text-xs leading-snug text-[var(--fg-muted)]">
+          <input type="checkbox" name="lectura" className="mt-0.5 size-4 shrink-0 accent-[var(--accent)]" />
+          <span>
+            {locale === "en"
+              ? "I authorise relating what I read on this site (stories, time and device) to my subscription, to receive more useful content. I can withdraw it any time."
+              : "Autorizo que se relacione lo que leo en el sitio (notas, tiempo y dispositivo) con mi suscripción, para recibir contenido más útil. Puedo retirarlo cuando quiera."}
+          </span>
+        </label>
         <Turnstile />
         <button
           type="submit"

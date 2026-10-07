@@ -12,8 +12,8 @@
  * trazable el consentimiento.
  */
 
-import { eq } from "drizzle-orm";
-import { headers } from "next/headers";
+import { eq, sql } from "drizzle-orm";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { newsletterSubscribers } from "@/db/schema";
@@ -23,6 +23,8 @@ import { sendConfirmationEmail } from "@/lib/newsletter/confirm";
 import { solicitarAlta } from "@/lib/newsletter/alta";
 import { reverseGeocode, sourceFromAccuracy, validAccuracy, validCoords } from "@/lib/geo-reverse";
 import { EMAIL_RE, fechaNacimientoValida } from "@/lib/validate";
+import { esUuid } from "@/lib/lectores-entrada";
+import { autorizarLectura, vincularVisitante } from "@/lib/lectores-suscriptor";
 
 // Estado que se devuelve al formulario: si salió bien y el mensaje.
 export type BoletinState = { ok: boolean; message: string } | null;
@@ -110,6 +112,22 @@ export async function suscribirBoletin(
     // El correo de confirmación sale en cuanto hay proveedor configurado. Un fallo al enviarlo no debe romper el alta:
     // queda pendiente y trazable. La respuesta es la misma de siempre, para no revelar nada.
     if (alta.estado === "pendiente" && alta.enviar) await sendConfirmationEmail(email, alta.token).catch(() => false);
+    // Autorización expresa de relacionar su lectura con su suscripción (casilla). Solo en un alta nueva o pendiente: con una
+    // dirección que YA está suscrita no se toca nada (ni se revela que existe). Si además aceptó la medición, este navegador
+    // queda vinculado, «sin verificar» hasta que confirme la suscripción o abra un enlace de su boletín.
+    if (formData.get("lectura") === "on" && alta.estado === "pendiente") {
+      try {
+        const [s] = await db.select({ id: newsletterSubscribers.id }).from(newsletterSubscribers).where(eq(newsletterSubscribers.email, email)).limit(1);
+        if (s) {
+          await autorizarLectura(s.id);
+          const c = await cookies();
+          const vid = c.get("cg_vid")?.value;
+          if (c.get("cg_med")?.value === "si" && esUuid(vid)) await vincularVisitante(s.id, vid.toLowerCase(), false);
+        }
+      } catch {
+        /* la autorización nunca debe romper el alta */
+      }
+    }
   } catch {
     return {
       ok: false,
@@ -133,10 +151,21 @@ export async function confirmarSuscripcion(formData: FormData): Promise<void> {
   if (token.length < 16 || token.length > 80) redirect("/boletin/confirmar");
   const ip = clientIp(await headers());
   if ((await hit(`boletin:confirmar:${ip}`, 20, 60 * 60)).allowed) {
-    await db
+    const [c] = await db
       .update(newsletterSubscribers)
       .set({ confirmed: true, unsubscribedAt: null, signupIp: null })
-      .where(eq(newsletterSubscribers.confirmToken, token));
+      .where(eq(newsletterSubscribers.confirmToken, token))
+      .returning({ id: newsletterSubscribers.id, autorizo: sql<boolean>`${newsletterSubscribers.readingAuthorizedAt} is not null` });
+    // Quien confirma controla ese correo: si autorizó su lectura y este navegador ya la mide, el vínculo queda VERIFICADO.
+    if (c?.autorizo) {
+      try {
+        const ck = await cookies();
+        const vid = ck.get("cg_vid")?.value;
+        if (ck.get("cg_med")?.value === "si" && esUuid(vid)) await vincularVisitante(c.id, vid.toLowerCase(), true);
+      } catch {
+        /* sin vínculo: la suscripción ya quedó confirmada */
+      }
+    }
   }
   redirect(`/boletin/confirmar?t=${encodeURIComponent(token)}`);
 }
