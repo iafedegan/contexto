@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Mic, Square, Volume2, VolumeX } from "lucide-react";
 import { LogoMark } from "@/components/logo-mark";
+import { useVoz } from "@/components/voz-asistente";
 
 // Fuente que respalda una respuesta.
 type Source = { n: number; title: string; url: string; kind: "articulo" | "archivo"; summary: string };
@@ -27,6 +29,10 @@ export function AssistantChat({ compact = false }: { compact?: boolean }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(false);
   const finRef = useRef<HTMLDivElement>(null);
+  const voz = useVoz();
+  // Si la pregunta se dictó, la respuesta se lee en voz alta (se puede apagar con el altavoz).
+  const [leerRespuestas, setLeerRespuestas] = useState(true);
+  const preguntaPorVoz = useRef(false);
   useEffect(() => {
     if (compact) finRef.current?.scrollIntoView({ block: "end", behavior: "smooth" });
   }, [compact, messages, busy]);
@@ -48,6 +54,8 @@ export function AssistantChat({ compact = false }: { compact?: boolean }) {
         ...m,
         { role: "assistant", text: data.answer, mode: data.mode, sources: data.sources },
       ]);
+      if (preguntaPorVoz.current && leerRespuestas) voz.leer(data.answer);
+      preguntaPorVoz.current = false;
     } catch {
       setError(true);
     } finally {
@@ -154,6 +162,22 @@ export function AssistantChat({ compact = false }: { compact?: boolean }) {
         }}
         className={compact ? "lx-card lx-glass flex shrink-0 items-center gap-2 p-2" : "lx-card lx-glass sticky bottom-[max(1rem,env(safe-area-inset-bottom))] flex items-center gap-2 p-2"}
       >
+        {voz.soportaDictado && (
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => {
+              if (voz.escuchando) return voz.parar();
+              voz.escuchar(setInput, (texto) => { preguntaPorVoz.current = true; setInput(""); void send(texto); });
+            }}
+            aria-pressed={voz.escuchando}
+            aria-label={voz.escuchando ? "Dejar de escuchar" : "Preguntar con la voz"}
+            title={voz.escuchando ? "Escuchando… pulsa para terminar" : "Habla y el asistente te responde"}
+            className={`grid size-11 shrink-0 place-items-center rounded-full border transition ${voz.escuchando ? "animate-pulse border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-fg)]" : "border-[var(--border-strong)] hover:border-[var(--accent)]"}`}
+          >
+            {voz.escuchando ? <Square size={16} aria-hidden /> : <Mic size={18} aria-hidden />}
+          </button>
+        )}
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
@@ -162,10 +186,22 @@ export function AssistantChat({ compact = false }: { compact?: boolean }) {
           aria-label="Pregunta para el asistente"
           className="lx-input flex-1 border-0 bg-transparent focus:shadow-none"
         />
+        {voz.soportaLectura && (voz.leyendo || voz.soportaDictado) && (
+          <button
+            type="button"
+            onClick={() => { if (voz.leyendo) voz.callar(); else setLeerRespuestas((v) => !v); }}
+            aria-label={voz.leyendo ? "Callar al asistente" : leerRespuestas ? "No leer las respuestas en voz alta" : "Leer las respuestas en voz alta"}
+            title={voz.leyendo ? "Callar" : leerRespuestas ? "Respuestas en voz alta: activadas" : "Respuestas en voz alta: apagadas"}
+            className="grid size-11 shrink-0 place-items-center rounded-full border border-[var(--border-strong)] hover:border-[var(--accent)]"
+          >
+            {voz.leyendo || leerRespuestas ? <Volume2 size={18} aria-hidden /> : <VolumeX size={18} aria-hidden />}
+          </button>
+        )}
         <button type="submit" className="lx-btn" disabled={busy || !input.trim()}>
           Enviar
         </button>
       </form>
+      {voz.aviso && <p role="status" className="text-xs text-[var(--danger)]">{voz.aviso}</p>}
     </div>
   );
 }

@@ -68,7 +68,8 @@
         "^lib/ai/",
         "^lib/(ai-[a-z-]+|ai/[a-z-]+|audio-extract|material-types)\\.tsx?$",
         "^app/panel/\\(app\\)/articulos/(ai-actions|fuentes-actions)\\.ts$",
-        "^components/(assistant-chat|toro-flotante)\\.tsx$"
+        "^components/(assistant-chat|toro-flotante)\\.tsx$",
+        "^components/voz-asistente\\.ts$"
       ],
       "puedeUsar": [
         "infra",
