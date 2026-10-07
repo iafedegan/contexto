@@ -5,8 +5,6 @@ import { adopcion, identificados, lecturasDe } from "@/lib/lectores-identificado
 import { esUuid } from "@/lib/lectores-entrada";
 import { AdopcionLectura, FichaPersona, TablaPersonas } from "@/components/panel/bi-personas";
 import { lectoresDetalle, registroLecturas } from "@/lib/lectores-detalle";
-import { cookies } from "next/headers";
-import { VincularNavegador } from "@/components/panel/vincular-navegador";
 import { EncabezadoLector, TablaLectores, TablaRegistro } from "@/components/panel/bi-lectores";
 import { TabsResumen } from "@/components/panel/tabs-resumen";
 import { Card } from "@/components/ui";
@@ -215,11 +213,8 @@ async function Lectores({ f, hoy, verPersonas, lector }: { f: ReturnType<typeof 
   const base = aParametros(f).toString();
   const con = (extra: string) => `?${[base, extra].filter(Boolean).join("&")}`;
   const uno = lector ? registro[0] : undefined;
-  const vid = (await cookies()).get("cg_vid")?.value;
-  const codigo = esUuid(vid) ? vid.replace(/-/g, "").slice(-6).toUpperCase() : null;
   return (
     <>
-      {verPersonas && !lector && <VincularNavegador codigo={codigo} />}
       <BiFiltros filtros={f} opciones={p.opciones} hoy={hoy} />
       {lector ? (
         <>
