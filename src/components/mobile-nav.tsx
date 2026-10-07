@@ -7,6 +7,7 @@ import { LocaleSwitch } from "@/components/locale-switch";
 import { LogoMark } from "@/components/logo-mark";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { RadioPlayer } from "@/components/radio-player";
+import { InstalarApp } from "@/components/instalar-app";
 import { localePath, t, type Locale } from "@/lib/i18n";
 import { EVENTO_ABRIR_MENU } from "@/lib/pestanas";
 
@@ -237,6 +238,7 @@ export function MobileNav({
             <LocaleSwitch locale={locale} />
             <ThemeToggle locale={locale} />
             {radioStreamUrl && <RadioPlayer src={radioStreamUrl} locale={locale} />}
+            <span className="ml-auto"><InstalarApp locale={locale} /></span>
           </div>
         </div>
       )}

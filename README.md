@@ -124,6 +124,13 @@ confirmación, edad por rangos, ciudades, proveedor de correo y qué tan complet
 La medición es anónima y con permiso (cookie `cg_med` / `cg_vid`): ver `docs/seguridad.md` §14. Datos de prueba locales:
 `npx tsx scripts/seed-lectores.ts` (y `--limpiar`). En producción hay que correr `drizzle/0011_lecturas_de_lectores.sql` en el SQL Editor.
 
+### Botón «Instalar app» (PWA)
+
+`src/components/instalar-app.tsx` ofrece instalar la PWA desde la cabecera (escritorio), el menú del celular y una banda encima del pie.
+Se adapta al aparato: en Android y en Chrome/Edge de escritorio guarda el aviso `beforeinstallprompt` y al pulsar abre el cuadro de instalación
+del sistema; en iPhone y iPad (donde Safari no permite instalar desde un botón) abre una guía de tres pasos («Compartir → Agregar a pantalla de
+inicio»); si la app ya está instalada o el navegador no puede (p. ej. Firefox de escritorio) no pinta nada. Los textos están en `src/lib/i18n.ts` (`pwa.*`).
+
 ### Indicadores ganaderos (Observatorio)
 
 La sección «Indicadores ganaderos» del Observatorio (ya no va en la portada) dibuja las cifras oficiales de FEDEGÁN: ganado gordo (nacional) y ganado

@@ -7,6 +7,7 @@ import { DEFAULT_IDENTITY, type SiteIdentity } from "@/lib/site-identity";
 import { DEFAULT_LOCALE, localePath, t, type Locale } from "@/lib/i18n";
 import { MENU_SECUNDARIO } from "@/content/institucional";
 import { LogoMark } from "@/components/logo-mark";
+import { InstalarApp } from "@/components/instalar-app";
 
 /**
  * Menú secundario completo del §2.2: institucional, legal y comercial. Vive en
@@ -39,7 +40,25 @@ const YEAR = new Date().getFullYear();
 
 
 /** Un footer por plantilla: mismo contenido legal, puesta en escena distinta. */
-export function SiteFooter({
+export function SiteFooter(props: {
+  theme: Theme;
+  nav: NavItem[];
+  locale?: Locale;
+  identity?: SiteIdentity;
+  /** Footer elegido al componer la plantilla: manda sobre el de la paleta. */
+  variant?: FooterId;
+}) {
+  // La banda para instalar la app va encima del pie, sea cual sea la plantilla; no pinta nada si ya está instalada o el aparato no puede.
+  return (
+    <>
+      <InstalarApp locale={props.locale ?? DEFAULT_LOCALE} variante="banda" />
+      <PieSegunPlantilla {...props} />
+    </>
+  );
+}
+
+// El pie propio de cada plantilla.
+function PieSegunPlantilla({
   theme,
   nav,
   locale = DEFAULT_LOCALE,
@@ -50,7 +69,6 @@ export function SiteFooter({
   nav: NavItem[];
   locale?: Locale;
   identity?: SiteIdentity;
-  /** Footer elegido al componer la plantilla: manda sobre el de la paleta. */
   variant?: FooterId;
 }) {
   const LEGAL = legalLinks(locale);

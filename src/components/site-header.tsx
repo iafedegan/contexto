@@ -9,6 +9,7 @@ import { DEFAULT_LOCALE, INTL_LOCALE, localePath, t, type Locale } from "@/lib/i
 import { MoreMenu } from "@/components/more-menu";
 import { MobileNav, type MobileLook } from "@/components/mobile-nav";
 import { RadioPlayer } from "@/components/radio-player";
+import { InstalarApp } from "@/components/instalar-app";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { InicioEnSeccion } from "@/components/inicio-en-seccion";
 import { StickyRail } from "@/components/sticky-rail";
@@ -163,6 +164,7 @@ function MastheadHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extr
             <LocaleSwitch locale={locale} />
         <ThemeToggle locale={locale} />
         {identity.radioStreamUrl && <RadioPlayer src={identity.radioStreamUrl} locale={locale} />}
+        <InstalarApp locale={locale} />
           </span>
         </div>
       </div>
@@ -228,6 +230,7 @@ function ReadingHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extra
           <LocaleSwitch locale={locale} />
         <ThemeToggle locale={locale} />
         {identity.radioStreamUrl && <RadioPlayer src={identity.radioStreamUrl} locale={locale} />}
+        <InstalarApp locale={locale} />
           <Link
             href={localePath(locale, "/buscar")}
             className="lx-ui text-[0.72rem] uppercase tracking-[0.18em] text-[var(--fg-muted)] hover:text-[var(--accent)] pointer-coarse:py-3.5"
@@ -296,6 +299,7 @@ function GremialHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extra
           <LocaleSwitch locale={locale} className="shrink-0" />
           <ThemeToggle locale={locale} />
           {identity.radioStreamUrl && <RadioPlayer src={identity.radioStreamUrl} locale={locale} />}
+        <InstalarApp locale={locale} />
           <Link
             href={localePath(locale, "/panel/login")}
             className="lx-ui rounded-full border border-[var(--border-strong)] px-4 py-1.5 text-xs font-semibold transition hover:border-[var(--accent)] hover:text-[var(--accent)] pointer-coarse:py-[0.8125rem]"
@@ -342,6 +346,7 @@ function BoldHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extra: N
         <LocaleSwitch locale={locale} className="shrink-0" />
         <ThemeToggle locale={locale} />
         {identity.radioStreamUrl && <RadioPlayer src={identity.radioStreamUrl} locale={locale} />}
+        <InstalarApp locale={locale} />
         <Link
           href={localePath(locale, "/buscar")}
           aria-label={t(locale, "nav.search")}
@@ -373,6 +378,7 @@ function CoutureHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extra
           <LocaleSwitch locale={locale} />
         <ThemeToggle locale={locale} />
         {identity.radioStreamUrl && <RadioPlayer src={identity.radioStreamUrl} locale={locale} />}
+        <InstalarApp locale={locale} />
         </div>
         <nav
           aria-label={t(locale, "nav.sections")}
@@ -420,6 +426,7 @@ function CommandHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extra
           <LocaleSwitch locale={locale} />
         <ThemeToggle locale={locale} />
         {identity.radioStreamUrl && <RadioPlayer src={identity.radioStreamUrl} locale={locale} />}
+        <InstalarApp locale={locale} />
           <span className="lx-chip lx-mono border-[var(--border-strong)] text-[var(--accent)]">
             {t(locale, "search.kicker").toLowerCase()}
           </span>
@@ -447,6 +454,7 @@ function GlassHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extra: 
         <LocaleSwitch locale={locale} className="ml-auto shrink-0" />
         <ThemeToggle locale={locale} />
         {identity.radioStreamUrl && <RadioPlayer src={identity.radioStreamUrl} locale={locale} />}
+        <InstalarApp locale={locale} />
         {/* Tablet y móvil: todas las secciones dentro de «Más» (no caben en la píldora). */}
         <div className="text-xs text-[var(--fg-muted)] lg:hidden">
           <MoreMenu locale={locale} extra={[...nav, ...extra]} />
@@ -483,6 +491,7 @@ function CrestHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extra: 
           <LocaleSwitch locale={locale} />
         <ThemeToggle locale={locale} />
         {identity.radioStreamUrl && <RadioPlayer src={identity.radioStreamUrl} locale={locale} />}
+        <InstalarApp locale={locale} />
         </div>
       </div>
       <nav
@@ -515,6 +524,7 @@ function ArchiveHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extra
         <LocaleSwitch locale={locale} className="ml-auto" />
         <ThemeToggle locale={locale} />
         {identity.radioStreamUrl && <RadioPlayer src={identity.radioStreamUrl} locale={locale} />}
+        <InstalarApp locale={locale} />
         <nav aria-label={t(locale, "nav.sections")} className="flex gap-5 text-xs tracking-wide text-[var(--fg-muted)]">
           {nav.slice(0, 3).map((n) => (
             <Link key={n.href} href={localePath(locale, n.href)} className="lx-link">
