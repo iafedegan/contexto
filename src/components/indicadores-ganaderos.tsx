@@ -40,7 +40,7 @@ type Vista = "grafica" | "tabla" | "ambas";
 /** Textos de la sección (los traduce el servidor con `t()`), para que los controles también salgan en inglés. */
 export type EtiquetasIndicadores = Record<
   | "kicker" | "title" | "source" | "updated" | "period" | "from" | "to" | "last6" | "last12" | "last36" | "all"
-  | "chart" | "lines" | "area" | "bars" | "view" | "viewChart" | "viewTable" | "viewBoth" | "regions" | "month" | "export" | "noData",
+  | "chart" | "lines" | "area" | "bars" | "view" | "viewChart" | "viewTable" | "viewBoth" | "regions" | "month" | "export" | "noData" | "moreFilters" | "show" | "map",
   string
 >;
 
@@ -140,10 +140,10 @@ function Tendencia({ valores, color }: { valores: (number | null)[]; color: stri
 }
 
 // Botonera de opciones excluyentes (tipo «segmented control»).
-function Opciones<T extends string>({ etiqueta, valor, opciones, onChange }: { etiqueta: string; valor: T; opciones: { id: T; texto: string }[]; onChange: (v: T) => void }) {
+function Opciones<T extends string>({ etiqueta, valor, opciones, onChange, sinRotulo = false }: { etiqueta: string; valor: T; opciones: { id: T; texto: string }[]; onChange: (v: T) => void; sinRotulo?: boolean }) {
   return (
     <div role="group" aria-label={etiqueta} className="flex flex-col gap-1.5">
-      <span className="text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-[var(--fg-muted)]">{etiqueta}</span>
+      <span className={sinRotulo ? "sr-only" : "text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-[var(--fg-muted)]"}>{etiqueta}</span>
       <div className="inline-flex max-w-full overflow-x-auto rounded-full border border-[var(--border-strong)] p-0.5">
         {opciones.map((o) => (
           <button
@@ -151,7 +151,7 @@ function Opciones<T extends string>({ etiqueta, valor, opciones, onChange }: { e
             type="button"
             aria-pressed={o.id === valor}
             onClick={() => onChange(o.id)}
-            className={`min-h-9 whitespace-nowrap rounded-full px-3 text-[0.85rem] font-semibold transition sm:px-3.5 sm:text-sm ${
+            className={`min-h-9 whitespace-nowrap rounded-full px-2.5 text-[0.82rem] font-semibold transition sm:px-3.5 sm:text-sm ${
               o.id === valor ? "bg-[var(--accent)] text-[var(--accent-fg)]" : "text-[var(--fg-muted)] hover:text-[var(--fg)]"
             }`}
           >
@@ -188,6 +188,9 @@ export function IndicadoresGanaderos({ indicadores, etiquetas: L }: { indicadore
   const [forma, setForma] = useState<Forma>("lineas");
   const [vista, setVista] = useState<Vista>("grafica");
   const [hover, setHover] = useState<number | null>(null);
+  // En el celular los filtros avanzados van plegados y la gráfica y el mapa se alternan (en escritorio van juntos).
+  const [masFiltros, setMasFiltros] = useState(false);
+  const [panel, setPanel] = useState<"grafica" | "mapa">("grafica");
   const caja = useRef<HTMLDivElement>(null);
   const [ancho, setAncho] = useState(680);
 
@@ -347,9 +350,9 @@ export function IndicadoresGanaderos({ indicadores, etiquetas: L }: { indicadore
           </p>
         </div>
 
-        {/* Filtros: periodo (atajos y dos meses), forma de la gráfica y vista. */}
-        <div className="mt-4 grid grid-cols-2 items-end gap-x-4 gap-y-4 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)]/60 p-3 sm:flex sm:flex-wrap sm:p-4">
-          <div className="col-span-2 sm:col-span-1">
+        {/* Filtros. En el celular: periodo y forma a la vista, y lo demás (meses y vista) tras «Más filtros». */}
+        <div className="mt-4 grid grid-cols-[minmax(0,1fr)_auto] items-end gap-x-4 gap-y-3 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)]/60 p-3 sm:flex sm:flex-wrap sm:gap-y-4 sm:p-4">
+          <div className="col-span-2 min-w-0 sm:col-span-1">
             <Opciones
               etiqueta={L.period}
               valor={String(atajoActivo ?? "")}
@@ -357,15 +360,30 @@ export function IndicadoresGanaderos({ indicadores, etiquetas: L }: { indicadore
               onChange={(v) => atajo(Number(v))}
             />
           </div>
-          <Mes etiqueta={L.from} valor={ini} periodos={completo.periodos} desde={0} hasta={fin} onChange={(i) => fijarRango(i, fin)} />
-          <Mes etiqueta={L.to} valor={fin} periodos={completo.periodos} desde={ini} hasta={total - 1} onChange={(i) => fijarRango(ini, i)} />
-          <div className="col-span-2 flex flex-wrap items-end gap-x-4 gap-y-4 sm:ml-auto sm:col-span-1">
+          <div className="max-sm:order-2 sm:order-4">
             <Opciones<Forma>
               etiqueta={L.chart}
               valor={forma}
               opciones={[{ id: "lineas", texto: L.lines }, { id: "area", texto: L.area }, { id: "barras", texto: L.bars }]}
               onChange={setForma}
             />
+          </div>
+          <button
+            type="button"
+            aria-expanded={masFiltros}
+            onClick={() => setMasFiltros((v) => !v)}
+            className="order-3 inline-flex min-h-11 items-center gap-1.5 justify-self-end rounded-full border border-[var(--border-strong)] px-3 text-sm font-semibold text-[var(--accent)] sm:hidden"
+          >
+            {L.moreFilters}
+            <span aria-hidden className={`transition-transform ${masFiltros ? "rotate-180" : ""}`}>▾</span>
+          </button>
+          <div className={`max-sm:order-4 sm:order-2 ${masFiltros ? "" : "max-sm:hidden"}`}>
+            <Mes etiqueta={L.from} valor={ini} periodos={completo.periodos} desde={0} hasta={fin} onChange={(i) => fijarRango(i, fin)} />
+          </div>
+          <div className={`max-sm:order-5 sm:order-3 ${masFiltros ? "" : "max-sm:hidden"}`}>
+            <Mes etiqueta={L.to} valor={fin} periodos={completo.periodos} desde={ini} hasta={total - 1} onChange={(i) => fijarRango(ini, i)} />
+          </div>
+          <div className={`col-span-2 max-sm:order-6 sm:order-5 sm:col-span-1 ${masFiltros ? "" : "max-sm:hidden"}`}>
             <Opciones<Vista>
               etiqueta={L.view}
               valor={vista}
@@ -377,7 +395,7 @@ export function IndicadoresGanaderos({ indicadores, etiquetas: L }: { indicadore
 
         {/* Una tarjeta por serie: el valor del mes que se está mirando, su variación y su tendencia; también enciende y apaga la línea. */}
         <p className="mt-4 text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-[var(--fg-muted)]">{L.regions}</p>
-        <div className={`mt-1.5 grid gap-3 ${ind.series.length > 1 ? "grid-cols-1 sm:grid-cols-3" : "grid-cols-1"}`}>
+        <div className={`-mx-1 mt-1.5 flex snap-x snap-mandatory gap-2.5 overflow-x-auto px-1 pb-1 sm:mx-0 sm:grid sm:gap-3 sm:overflow-visible sm:px-0 sm:pb-0 ${ind.series.length > 1 ? "sm:grid-cols-3" : "sm:grid-cols-1"}`}>
           {ind.series.map((s, i) => {
             const encendida = !off.includes(i);
             const valor = s.valores[idx];
@@ -387,9 +405,10 @@ export function IndicadoresGanaderos({ indicadores, etiquetas: L }: { indicadore
                 key={s.nombre}
                 type="button"
                 aria-pressed={encendida}
+                data-unica={ind.series.length === 1}
                 onClick={() => alternar(i)}
                 disabled={ind.series.length === 1}
-                className={`flex min-h-11 flex-col gap-1 rounded-[var(--radius)] border p-2.5 text-left transition sm:p-3 ${
+                className={`flex min-h-11 shrink-0 snap-start flex-col gap-1 rounded-[var(--radius)] border p-2.5 text-left transition max-sm:w-[11.5rem] max-sm:data-[unica=true]:w-full sm:p-3 ${
                   encendida ? "border-[var(--border-strong)] bg-[var(--surface)]" : "border-[var(--border)] opacity-50"
                 } disabled:cursor-default`}
               >
@@ -414,8 +433,21 @@ export function IndicadoresGanaderos({ indicadores, etiquetas: L }: { indicadore
         </div>
 
         {verGrafica && (
-          <div className="mt-5 grid grid-cols-[minmax(0,1fr)] items-center gap-5 lg:grid-cols-[minmax(0,1fr)_14.5rem]">
-          <div ref={caja} className="relative min-w-0 select-none">
+          <div className="mt-5 grid grid-cols-[minmax(0,1fr)] items-center gap-4 lg:grid-cols-[minmax(0,1fr)_14.5rem] lg:gap-5">
+          <div className="lg:hidden">
+            <Opciones<"grafica" | "mapa">
+              etiqueta={L.show}
+              sinRotulo
+              valor={panel}
+              opciones={[{ id: "grafica", texto: L.viewChart }, { id: "mapa", texto: L.map }]}
+              onChange={setPanel}
+            />
+          </div>
+          <div ref={caja} className={`relative min-w-0 select-none ${panel === "mapa" ? "max-lg:hidden" : ""}`}>
+            {/* En el celular el mes que se mira se lee arriba (el globo se tapa con el dedo). */}
+            <p className="mb-1 text-xs font-semibold text-[var(--fg-muted)] sm:hidden" aria-hidden>
+              {mesLargo(ind.periodos[idx])}
+            </p>
             <svg
               key={`${ind.clave}-${forma}`}
               width={ancho}
@@ -520,7 +552,7 @@ export function IndicadoresGanaderos({ indicadores, etiquetas: L }: { indicadore
             )}
           </div>
           <MapaRegiones
-            className="mx-auto w-full max-w-[15rem] lg:max-w-none"
+            className={`mx-auto w-full max-w-[15rem] lg:max-w-none ${panel === "grafica" ? "max-lg:hidden" : ""}`}
             series={ind.series.map((sr, i) => ({
               nombre: sr.nombre,
               valor: sr.valores[idx] === null || sr.valores[idx] === undefined ? "—" : pesos(sr.valores[idx] as number),

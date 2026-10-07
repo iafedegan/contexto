@@ -147,10 +147,14 @@ export async function navItems(locale: Locale = DEFAULT_LOCALE): Promise<NavItem
     // Solo las de primer nivel, y como mucho ocho (N-04): más opciones
     // visibles sobrecargan la navegación. El resto está en el menú «Más».
     const categories = await getTopLevelCategories();
-    return categories.slice(0, NAV_VISIBLE).map((c) => ({
-      href: `/categoria/${c.slug}`,
-      label: categoryLabel(locale, c.slug, c.name),
-    }));
+    return [
+      ...categories.slice(0, NAV_VISIBLE).map((c) => ({
+        href: `/categoria/${c.slug}`,
+        label: categoryLabel(locale, c.slug, c.name),
+      })),
+      // El Observatorio (indicadores y mapa) es una página fija del sitio, no una sección: va aparte del límite N-04.
+      { href: "/observatorio", label: t(locale, "nav.observatory") },
+    ];
   } catch {
     // Build sin base de datos: el navbar se degrada a su forma mínima.
     return [];
