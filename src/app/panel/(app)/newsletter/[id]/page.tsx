@@ -31,7 +31,7 @@ export default async function EditionPage({ params }: { params: Promise<{ id: st
       recipients={n}
       progress={{ delivered: edition.delivered, total: edition.total, failed: edition.failed }}
       initial={{ subject: edition.subject, preheader: edition.preheader, intro: edition.intro, articleSlugs: (edition.articleSlugs as string[]) ?? [] }}
-      articles={articles.map((a) => ({ slug: a.slug, title: a.title, categoryName: a.categoryName }))}
+      articles={articles.map((a) => ({ slug: a.slug, title: a.title, categoryName: a.categoryName, parentName: a.parentName, cover: a.coverImageUrl, publishedAt: a.publishedAt ? a.publishedAt.toISOString() : null }))}
     />
   );
 }

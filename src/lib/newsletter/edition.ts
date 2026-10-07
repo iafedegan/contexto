@@ -1,6 +1,7 @@
 import { lectorToken } from "@/lib/lectores-suscriptor";
 import "server-only";
 import { and, desc, eq, inArray, lte, sql } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { db } from "@/db";
 import { articles, authors, categories, newsletterEditions } from "@/db/schema";
 import { getSiteIdentity } from "@/lib/site-identity";
@@ -18,6 +19,7 @@ const published = and(eq(articles.status, "publicado"), lte(articles.publishedAt
 
 /** Notas publicadas para el selector del editor: las 40 más recientes. */
 export async function getSelectableArticles() {
+  const padre = alias(categories, "categoria_padre");
   return db
     .select({
       slug: articles.slug,
@@ -25,13 +27,15 @@ export async function getSelectableArticles() {
       excerpt: articles.excerpt,
       coverImageUrl: articles.coverImageUrl,
       categoryName: categories.name,
+      parentName: padre.name,
       publishedAt: articles.publishedAt,
     })
     .from(articles)
     .leftJoin(categories, eq(articles.categoryId, categories.id))
+    .leftJoin(padre, eq(categories.parentId, padre.id))
     .where(published)
     .orderBy(desc(articles.publishedAt))
-    .limit(40);
+    .limit(300);
 }
 
 /** Las notas elegidas, en el orden elegido (la primera es la destacada). */
