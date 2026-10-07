@@ -12,6 +12,7 @@ import { DEPARTAMENTOS, MAPA_ALTO, MAPA_ANCHO } from "@/lib/colombia-mapa";
 const REGIONES: Record<string, string[]> = {
   "Región Caribe": ["ATLANTICO", "BOLIVAR", "CESAR", "CORDOBA", "LA GUAJIRA", "MAGDALENA", "SUCRE"],
   "Magdalena Medio y Santanderes": ["SANTANDER", "NORTE DE SANTANDER"],
+  "Magdalena Medio": ["SANTANDER", "NORTE DE SANTANDER"],
   "Llanos Orientales": ["META", "CASANARE", "ARAUCA", "VICHADA"],
   // Series nacionales: el país entero.
   Colombia: DEPARTAMENTOS.map((d) => d.nombre),

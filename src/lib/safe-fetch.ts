@@ -79,7 +79,7 @@ export type RespuestaSegura = { status: number; tipo: string; cuerpo: string; ur
 type Salto = { status: number; tipo: string; location: string | null; cuerpo: string };
 
 /** Una sola petición GET, sin seguir redirecciones. */
-function pedir(url: URL, maxBytes: number, cabeceras: Record<string, string>): Promise<Salto> {
+function pedir(url: URL, maxBytes: number, cabeceras: Record<string, string>, codificacion: "utf8" | "latin1"): Promise<Salto> {
   return new Promise((resolve, reject) => {
     // Una IP escrita directamente en la URL no pasa por `lookup`: se comprueba aquí.
     const host = url.hostname.replace(/^\[|\]$/g, "");
@@ -104,7 +104,7 @@ function pedir(url: URL, maxBytes: number, cabeceras: Record<string, string>): P
         const fin = () => {
           if (cerrado) return;
           cerrado = true;
-          resolve({ status, tipo, location, cuerpo: Buffer.concat(partes).toString("utf8") });
+          resolve({ status, tipo, location, cuerpo: Buffer.concat(partes).toString(codificacion) });
         };
         res.on("data", (trozo: Buffer) => {
           total += trozo.length;
@@ -132,7 +132,7 @@ function pedir(url: URL, maxBytes: number, cabeceras: Record<string, string>): P
  */
 export async function descargarSeguro(
   inicial: URL,
-  opciones: { maxBytes?: number; cabeceras?: Record<string, string> } = {},
+  opciones: { maxBytes?: number; cabeceras?: Record<string, string>; codificacion?: "utf8" | "latin1" } = {},
 ): Promise<RespuestaSegura | null> {
   const maxBytes = opciones.maxBytes ?? 2_000_000;
   let url = inicial;
@@ -140,7 +140,7 @@ export async function descargarSeguro(
     if (!/^https?:$/.test(url.protocol)) return null;
     let r: Salto;
     try {
-      r = await pedir(url, maxBytes, opciones.cabeceras ?? {});
+      r = await pedir(url, maxBytes, opciones.cabeceras ?? {}, opciones.codificacion ?? "utf8");
     } catch {
       // Destino no permitido, DNS que no resuelve, conexión rechazada o tiempo agotado.
       return null;

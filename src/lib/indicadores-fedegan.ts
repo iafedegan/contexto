@@ -29,6 +29,14 @@ const CATALOGO: Entrada[] = [
     series: ["Colombia"],
   },
   {
+    clave: "gordo-ceba",
+    pId: 81,
+    columnas: [1, 2, 3],
+    titulo: "Gordo · macho ceba",
+    descripcion: "Precio promedio por región, kilo en pie",
+    series: ["Región Caribe", "Magdalena Medio", "Llanos Orientales"],
+  },
+  {
     clave: "flaco-machos",
     pId: 74,
     columnas: [1, 2, 3],

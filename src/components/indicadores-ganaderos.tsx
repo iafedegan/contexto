@@ -3,6 +3,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import type { Indicador } from "@/lib/indicadores-fedegan";
 import { nfCO } from "@/lib/format";
+import { marcasEje, pct, tramos, trazoSuave, ultimoConDato, variacion } from "@/lib/graficas";
 import { MapaRegiones } from "@/components/mapa-regiones";
 
 /**
@@ -31,9 +32,7 @@ const mesCorto = (p: string) => {
   return `${m} ’${a.slice(2)}`;
 };
 const pesos = (v: number) => `$${nfCO.format(Math.round(v))}`;
-const pct = (n: number) => `${n >= 0 ? "+" : "−"}${new Intl.NumberFormat("es-CO", { maximumFractionDigits: 1 }).format(Math.abs(n))} %`;
 
-type Punto = { x: number; y: number };
 type Forma = "lineas" | "area" | "barras";
 type Vista = "grafica" | "tabla" | "ambas";
 
@@ -43,82 +42,6 @@ export type EtiquetasIndicadores = Record<
   | "chart" | "lines" | "area" | "bars" | "view" | "viewChart" | "viewTable" | "viewBoth" | "regions" | "month" | "export" | "noData" | "moreFilters" | "show" | "map",
   string
 >;
-
-/** Curva suave que no se pasa de los datos (interpolación monótona de Fritsch–Carlson): sin «olas» que inventen picos. */
-function trazoSuave(p: Punto[]): string {
-  const n = p.length;
-  if (n === 0) return "";
-  if (n === 1) return `M${p[0].x} ${p[0].y}`;
-  const dx = Array.from({ length: n - 1 }, (_, i) => p[i + 1].x - p[i].x);
-  const m = Array.from({ length: n - 1 }, (_, i) => (p[i + 1].y - p[i].y) / dx[i]);
-  const t = new Array<number>(n);
-  t[0] = m[0];
-  t[n - 1] = m[n - 2];
-  for (let i = 1; i < n - 1; i++) t[i] = m[i - 1] * m[i] <= 0 ? 0 : (m[i - 1] + m[i]) / 2;
-  for (let i = 0; i < n - 1; i++) {
-    if (m[i] === 0) {
-      t[i] = 0;
-      t[i + 1] = 0;
-      continue;
-    }
-    const a = t[i] / m[i];
-    const b = t[i + 1] / m[i];
-    const s = a * a + b * b;
-    if (s > 9) {
-      const k = 3 / Math.sqrt(s);
-      t[i] = k * a * m[i];
-      t[i + 1] = k * b * m[i];
-    }
-  }
-  let d = `M${p[0].x.toFixed(1)} ${p[0].y.toFixed(1)}`;
-  for (let i = 0; i < n - 1; i++) {
-    const h = dx[i] / 3;
-    d += `C${(p[i].x + h).toFixed(1)} ${(p[i].y + t[i] * h).toFixed(1)} ${(p[i + 1].x - h).toFixed(1)} ${(p[i + 1].y - t[i + 1] * h).toFixed(1)} ${p[i + 1].x.toFixed(1)} ${p[i + 1].y.toFixed(1)}`;
-  }
-  return d;
-}
-
-/** Trozos de puntos consecutivos con dato: un mes sin dato corta la línea en vez de inventar un valor. */
-function tramos(valores: (number | null)[], x: (i: number) => number, y: (v: number) => number): Punto[][] {
-  const salida: Punto[][] = [];
-  let actual: Punto[] = [];
-  valores.forEach((v, i) => {
-    if (v === null) {
-      if (actual.length) salida.push(actual);
-      actual = [];
-    } else actual.push({ x: x(i), y: y(v) });
-  });
-  if (actual.length) salida.push(actual);
-  return salida;
-}
-
-/** Marcas «redondas» del eje vertical: 4 o 5 valores con pasos de 1, 2 o 5 por una potencia de diez. */
-function marcasEje(min: number, max: number): number[] {
-  const bruto = (max - min || Math.abs(max) * 0.1 || 1) / 4;
-  const pot = 10 ** Math.floor(Math.log10(bruto));
-  const paso = [1, 2, 2.5, 5, 10].map((f) => f * pot).find((p) => p >= bruto) ?? 10 * pot;
-  const marcas: number[] = [];
-  for (let v = Math.floor(min / paso) * paso; v <= Math.ceil(max / paso) * paso + 1e-9; v += paso) marcas.push(v);
-  return marcas;
-}
-
-/** Variación del mes `i` frente al anterior con dato; `null` si no hay con qué comparar. */
-function variacion(valores: (number | null)[], i: number): number | null {
-  const actual = valores[i];
-  if (actual === null || actual === undefined) return null;
-  for (let j = i - 1; j >= 0; j--) {
-    const previo = valores[j];
-    if (previo !== null && previo !== 0) return ((actual - previo) / previo) * 100;
-  }
-  return null;
-}
-
-// Último mes con dato en alguna de las series visibles.
-const ultimoConDato = (series: Indicador["series"]) => {
-  const n = series[0]?.valores.length ?? 0;
-  for (let i = n - 1; i >= 0; i--) if (series.some((s) => s.valores[i] !== null)) return i;
-  return n - 1;
-};
 
 // Línea pequeña de tendencia de una tarjeta.
 function Tendencia({ valores, color }: { valores: (number | null)[]; color: string }) {

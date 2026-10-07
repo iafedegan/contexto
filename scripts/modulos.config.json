@@ -128,7 +128,7 @@
     "analitica": {
       "titulo": "Analítica y mercado",
       "rutas": [
-        "^lib/(analytics[a-z-]*|view-sources|fuente-lectura|psi|psi-types|geo-reverse|subscriber-map|market-data|sync-market-data|indicadores-csv|indicadores-fedegan|indicadores-etiquetas)\\.ts$",
+        "^lib/(analytics[a-z-]*|view-sources|fuente-lectura|psi|psi-types|geo-reverse|subscriber-map|market-data|sync-market-data|indicadores-csv|indicadores-fedegan|observatorio-fedegan|indicadores-etiquetas|graficas)\\.ts$",
         "^components/analytics-ga4\\.tsx$",
         "^app/api/(vista|cron/sync-market-data)/",
         "^app/acciones/analitica"

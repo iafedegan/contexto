@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { numeroDelCsv, parsearCsvIndicador, rangoDeMeses } from "@/lib/indicadores-csv";
+import { numeroDelCsv, parsearCsvGeneral, parsearCsvIndicador, rangoDeMeses } from "@/lib/indicadores-csv";
 
 // Lo que devuelve el origen (la cabecera llega con la «ó» rota por el ISO-8859-1).
 const CSV = `064-Precio ganado flaco Kilo en pie - Machos
@@ -45,4 +45,33 @@ test("el rango son los doce meses que terminan en el mes actual de Colombia", ()
   assert.deepEqual(rangoDeMeses(new Date("2026-02-15T12:00:00Z")), { desde: "01-03-2025", hasta: "28-02-2026" });
   // 1 de enero 02:00 UTC todavía es 31 de diciembre en Colombia (UTC−5).
   assert.deepEqual(rangoDeMeses(new Date("2027-01-01T02:00:00Z")), { desde: "01-01-2026", hasta: "31-12-2026" });
+});
+
+test("el lector general entiende la forma ancha de los CSV anuales", () => {
+  const t = parsearCsvGeneral("001-Inventario total\nFecha;Antioquia;Córdoba;Nacional;\n2001;2.196.342;2.178.988;20.204.979;\n2002;2.262.625;2.263.832;20.477.125;\n");
+  assert.ok(t);
+  assert.equal(t.titulo, "Inventario total");
+  assert.deepEqual(t.periodos, ["2001", "2002"]);
+  assert.deepEqual(t.series.map((s) => s.nombre), ["Antioquia", "Córdoba", "Nacional"]);
+  assert.deepEqual(t.series[2].valores, [20204979, 20477125]);
+});
+
+test("el lector general entiende la forma larga (una serie por fila) y ordena los meses", () => {
+  const t = parsearCsvGeneral("014-Precio\n;Fecha;Precio;\nArgentina;feb/2001;0,9;\nBrasil;ene/2001;0,756;\nArgentina;ene/2001;0,833;\nBrasil;feb/2001;0,8;\n");
+  assert.ok(t);
+  assert.deepEqual(t.periodos, ["ene/2001", "feb/2001"]);
+  assert.deepEqual(t.series.find((s) => s.nombre === "Argentina")?.valores, [0.833, 0.9]);
+  assert.deepEqual(t.series.find((s) => s.nombre === "Brasil")?.valores, [0.756, 0.8]);
+});
+
+test("el lector general ignora el rótulo inicial de la forma ancha con rótulo", () => {
+  const t = parsearCsvGeneral("007-Producción mundial\n;Fecha;Argentina;Brasil;\nProducción (1000 Ton);2001;2.640;6.895;\nProducción (1000 Ton);2002;2.700;7.240;\n");
+  assert.ok(t);
+  assert.deepEqual(t.series.map((s) => s.nombre), ["Argentina", "Brasil"]);
+  assert.deepEqual(t.series[1].valores, [6895, 7240]);
+});
+
+test("el lector general descarta listados de documentos y cuerpos que no son indicadores", () => {
+  assert.equal(parsearCsvGeneral("083-Precios relativos\nFecha;Presentaciones;\ndic/2025;Precios_relativos.pdf;\n"), null);
+  assert.equal(parsearCsvGeneral("<html>error</html>"), null);
 });

@@ -54,3 +54,51 @@ export function rangoDeMeses(ahora: Date, meses = 12): { desde: string; hasta: s
     hasta: `${dos(fin.getUTCDate())}-${dos(fin.getUTCMonth() + 1)}-${fin.getUTCFullYear()}`,
   };
 }
+
+/** Tabla leída de un CSV cualquiera del sistema de estadísticas, con título y nombres de serie tal como los publica. */
+export type TablaGeneral = { titulo: string; periodos: string[]; series: SerieCsv[] };
+
+const MES_NUM: Record<string, number> = { ene: 0, feb: 1, mar: 2, abr: 3, may: 4, jun: 5, jul: 6, ago: 7, sep: 8, oct: 9, nov: 10, dic: 11 };
+const PERIODO = /^(?:[a-z]{3}\/\d{4}|\d{4})$/i;
+/** Orden cronológico de «ene/2001» y «2001» (el año solo cuenta como enero). */
+const claveDePeriodo = (p: string) => {
+  const [a, b] = p.split("/");
+  return b ? Number(b) * 12 + (MES_NUM[a.toLowerCase()] ?? 0) : Number(a) * 12;
+};
+
+/**
+ * Lee cualquiera de las tres formas en que el sistema entrega un indicador:
+ *  - ancho:         `Fecha;Serie 1;Serie 2;` y una fila por periodo;
+ *  - ancho con rótulo: `;Fecha;Serie 1;Serie 2;` y filas `Rótulo;periodo;v1;v2;`;
+ *  - largo:         `;Fecha;Valor;` y filas `Serie;periodo;valor` (una serie por país, índice, región…).
+ * Los periodos son «ene/2001» (mensual) o «2001» (anual). Devuelve `null` si no hay al menos dos periodos con dato.
+ */
+export function parsearCsvGeneral(texto: string): TablaGeneral | null {
+  const lineas = texto.split(/\r?\n/).map((l) => l.replace(/;+$/, "")).filter((l) => l.trim() !== "");
+  const h = lineas.findIndex((l) => /(^|;)Fecha(;|$)/.test(l));
+  if (h < 1) return null;
+  const titulo = lineas[0].replace(/^\d+(?:-\d+)?-/, "").trim();
+  const cab = lineas[h].split(";").map((c) => c.trim());
+  const fi = cab.indexOf("Fecha");
+  const largo = fi === 1 && cab.length === 3;
+  if (!largo && fi > 1) return null;
+
+  const porSerie = new Map<string, Map<string, number | null>>();
+  const periodos = new Set<string>();
+  const poner = (serie: string, periodo: string, v: number | null) => {
+    const nombre = serie.replace(/\s+/g, " ").trim();
+    if (!nombre || !PERIODO.test(periodo)) return;
+    periodos.add(periodo.toLowerCase());
+    if (!porSerie.has(nombre)) porSerie.set(nombre, new Map());
+    porSerie.get(nombre)!.set(periodo.toLowerCase(), v);
+  };
+  for (const linea of lineas.slice(h + 1)) {
+    const c = linea.split(";");
+    if (largo) poner(c[0] ?? "", (c[1] ?? "").trim(), numeroDelCsv(c[2] ?? ""));
+    else cab.slice(fi + 1).forEach((n, i) => poner(n, (c[fi] ?? "").trim(), numeroDelCsv(c[fi + 1 + i] ?? "")));
+  }
+  const orden = [...periodos].sort((a, b) => claveDePeriodo(a) - claveDePeriodo(b));
+  if (orden.length < 2 || !porSerie.size) return null;
+  const series = [...porSerie].map(([nombre, m]) => ({ nombre, valores: orden.map((p) => m.get(p) ?? null) }));
+  return { titulo, periodos: orden, series: series.filter((s) => s.valores.some((v) => v !== null)) };
+}

@@ -125,6 +125,13 @@ mismo tablero a pantalla completa y una nota de cómo leer las cifras; la portad
 para el límite de ocho del menú y no sale en el árbol de secciones del panel. En el celular, los filtros avanzados van
 plegados («Filtros»), las regiones en carrusel y la gráfica y el mapa se alternan.
 
+**Observatorio completo.** `/observatorio` reúne los 14 indicadores de la página «General» de FEDEGÁN: precios (con mapa), inventario
+y predios por departamento (mapa de calor con barra de años, reproducción y ranking), orientación del hato (donas),
+sacrificio, producción mundial de carne, consumo de carnes, leche y carne de res, precios internacionales de novillo,
+leche cruda, leche en polvo y carne deshuesada, y el índice de costos. Todo sale del CSV del sistema de estadísticas
+(`src/lib/observatorio-fedegan.ts`, un catálogo con el número de indicador, columnas y filas; caché de 6 h) y se dibuja
+con `src/components/observatorio-*.tsx`. Para añadir otro indicador basta una fila del catálogo.
+
 ### Logo
 
 El logo («Cg» dorado y crema sobre baldosa esmeralda) se dibuja en código: `src/lib/logo.ts` es la única fuente. De ahí
