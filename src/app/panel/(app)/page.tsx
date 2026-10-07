@@ -18,6 +18,8 @@ import {
   Users,
 } from "lucide-react";
 import { auth } from "@/lib/auth";
+import { tienePermiso } from "@/lib/permisos-server";
+import { TabsResumen } from "@/components/panel/tabs-resumen";
 import { db } from "@/db";
 import { agentDrafts, articles, assistantQueries } from "@/db/schema";
 import { Card } from "@/components/ui";
@@ -71,6 +73,8 @@ export default async function PanelHome() {
   const hora = Number(new Intl.DateTimeFormat("en-US", { hour: "numeric", hour12: false, timeZone: "America/Bogota" }).format(new Date())) % 24;
   const saludo = hora < 12 ? "Buenos días" : hora < 19 ? "Buenas tardes" : "Buenas noches";
   const nombre = session?.user?.name?.split(" ")[0] ?? "";
+  // El análisis (audiencia y suscriptores) comparte esta opción del menú y se ve solo con su permiso.
+  const verAnalitica = session?.user ? await tienePermiso(session.user.id, session.user.role, "analitica") : false;
   const fecha = new Intl.DateTimeFormat("es-CO", { weekday: "long", day: "numeric", month: "long", timeZone: "America/Bogota" }).format(new Date());
   const enRevision = st["en_revision"] ?? 0;
   const borradoresIA = pendingDrafts[0]?.n ?? 0;
@@ -82,6 +86,7 @@ export default async function PanelHome() {
 
   return (
     <div className="flex flex-col gap-5 sm:gap-6">
+      <TabsResumen activa="resumen" analitica={verAnalitica} />
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="lx-kicker text-[var(--accent)] first-letter:uppercase">{fecha}</p>

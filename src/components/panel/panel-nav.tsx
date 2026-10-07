@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, Inbox, KeyRound, LayoutDashboard, LayoutTemplate, Mail, Newspaper, Settings, Users, Circle } from "lucide-react";
+import { Inbox, KeyRound, LayoutDashboard, LayoutTemplate, Mail, Newspaper, Settings, Users, Circle } from "lucide-react";
 import type { PermisoId } from "@/lib/permisos";
 import { PanelMobileMenu } from "@/components/panel/panel-mobile-menu";
 
@@ -41,10 +41,9 @@ const GROUPS: Group[] = [
     id: "redactor",
     label: "Redactor",
     items: [
-      { href: "/panel", label: "Resumen", hint: "Estado editorial de un vistazo" },
+      { href: "/panel", label: "Resumen", hint: "Estado editorial, audiencia y suscriptores" },
       { href: "/panel/articulos", label: "Artículos", hint: "Crear, editar y programar", permiso: "articulos" },
       { href: "/panel/newsletter", label: "Newsletter", hint: "Configurar y enviar el boletín", permiso: "newsletter" },
-      { href: "/panel/analitica", label: "Centro de análisis", hint: "Audiencia, horarios, ciudades y suscriptores", permiso: "analitica" },
     ],
   },
   {
@@ -100,7 +99,6 @@ const ICONOS: Record<string, typeof Circle> = {
   "/panel/portada": LayoutTemplate,
   "/panel/articulos": Newspaper,
   "/panel/newsletter": Mail,
-  "/panel/analitica": BarChart3,
   "/panel/configuracion": Settings,
   "/panel/newsletter?tab=suscriptores": Users,
   "/panel/mensajes": Inbox,
@@ -119,7 +117,7 @@ export function PanelSidebarNav({ role, permisos }: { role: string; permisos: st
           <ul className="mt-2 flex flex-col gap-1">
             {g.items.map((i) => {
               const base = i.href.split(/[#?]/)[0];
-              const current = i.href.includes("?") ? false : pathname === base || (base !== "/panel" && pathname.startsWith(`${base}/`));
+              const current = i.href.includes("?") ? false : pathname === base || (base !== "/panel" && pathname.startsWith(`${base}/`)) || (base === "/panel" && pathname.startsWith("/panel/analitica"));
               const Icon = ICONOS[i.href] ?? Circle;
               return (
                 <li key={i.href}>

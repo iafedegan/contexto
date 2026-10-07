@@ -113,7 +113,7 @@ todos los temas, con los tokens de la plantilla activa).
 
 ### Centro de análisis (panel)
 
-`/panel/analitica` (permiso «analitica», editor o superior) es el tablero de audiencia y suscriptores. **Audiencia**: lecturas y lectores
+La opción **Resumen** del panel tiene tres pestañas (`tabs-resumen.tsx`): **Resumen** (`/panel`, el estado editorial) y, para quien tenga el permiso «analitica» (editor o superior), **Audiencia** y **Suscriptores** (`/panel/analitica`), el centro de análisis; las dos últimas conservan el periodo y los filtros al cambiar de una a otra. **Audiencia**: lecturas y lectores
 únicos con variación frente al periodo anterior, tiempo y porcentaje leído, quienes terminan la nota, quienes vuelven y el rebote;
 la evolución diaria; un mapa de calor de día de la semana × hora; el embudo de lectura; el mapa de Colombia por departamento y las
 ciudades; dispositivo, navegador, sistema, origen y sección; las notas con más lectura y cuánto se terminan; y frases que se arman solas

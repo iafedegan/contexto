@@ -1,6 +1,6 @@
-import Link from "next/link";
-import { BarChart3, Clock, Eye, Flame, Repeat, ScrollText, ShieldCheck, TriangleAlert, Users } from "lucide-react";
+import { Clock, Eye, Flame, Repeat, ScrollText, ShieldCheck, TriangleAlert, Users } from "lucide-react";
 import { requirePermiso } from "@/lib/auth";
+import { TabsResumen } from "@/components/panel/tabs-resumen";
 import { Card } from "@/components/ui";
 import { BiFiltros } from "@/components/panel/bi-filtros";
 import { EmbudoLectura, GraficaTiempo, ListaBarras, MapaCalorHoras, MapaLectura, SerieDiaria } from "@/components/panel/bi-graficas";
@@ -85,23 +85,16 @@ export default async function AnaliticaPage({ searchParams }: { searchParams: Pr
   const f = leerFiltros(q);
   const vista = q.vista === "suscriptores" ? "suscriptores" : "audiencia";
   const hoy = hoyColombia();
-  const enlace = (v: string) => `?${new URLSearchParams({ ...Object.fromEntries(aParametros(f)), vista: v }).toString()}`;
 
   return (
     <div className="flex flex-col gap-5 sm:gap-6">
+      <TabsResumen activa={vista} analitica parametros={aParametros(f).toString()} />
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="lx-kicker text-[var(--accent)]">Centro de análisis</p>
-          <h1 className="lx-display mt-1 text-3xl font-semibold tracking-tight sm:text-4xl">Audiencia y suscriptores</h1>
+          <p className="lx-kicker text-[var(--accent)]">Análisis</p>
+          <h1 className="lx-display mt-1 text-3xl font-semibold tracking-tight sm:text-4xl">{vista === "audiencia" ? "Audiencia" : "Suscriptores"}</h1>
           <p className="mt-1 max-w-2xl text-sm text-[var(--fg-muted)]">Qué se lee, a qué hora, desde dónde y con quién. Cruza los filtros para llegar al detalle; cada vista queda en la dirección y se puede compartir.</p>
         </div>
-        <nav aria-label="Vista" className="inline-flex rounded-full border border-[var(--border-strong)] bg-[var(--surface)] p-0.5">
-          {([["audiencia", "Audiencia", BarChart3], ["suscriptores", "Suscriptores", Users]] as const).map(([k, t, Icono]) => (
-            <Link key={k} href={enlace(k)} aria-current={vista === k ? "page" : undefined} className={`inline-flex min-h-10 items-center gap-2 rounded-full px-4 text-sm font-semibold transition ${vista === k ? "bg-[var(--accent)] text-[var(--accent-fg)]" : "text-[var(--fg-muted)] hover:text-[var(--fg)]"}`}>
-              <Icono size={15} aria-hidden /> {t}
-            </Link>
-          ))}
-        </nav>
       </header>
 
       {vista === "audiencia" ? <Audiencia f={f} hoy={hoy} /> : <Suscriptores f={f} hoy={hoy} />}

@@ -83,7 +83,7 @@ export function PanelMobileMenu({ groups, children }: { groups: MenuGroup[]; chi
                 <ul>
                   {g.items.map((item) => {
                     const base = item.href.split(/[#?]/)[0];
-                    const current = pathname === base || (base !== "/panel" && pathname.startsWith(`${base}/`));
+                    const current = pathname === base || (base !== "/panel" && pathname.startsWith(`${base}/`)) || (base === "/panel" && pathname.startsWith("/panel/analitica"));
                     return (
                       <li key={item.href}>
                         <Link
