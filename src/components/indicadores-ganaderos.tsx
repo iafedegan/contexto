@@ -3,6 +3,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import type { Indicador } from "@/lib/indicadores-fedegan";
 import { nfCO } from "@/lib/format";
+import { MapaRegiones } from "@/components/mapa-regiones";
 
 /**
  * Indicadores ganaderos de FEDEGÁN en la portada: precio del ganado gordo y del flaco por región, mes a mes.
@@ -223,7 +224,7 @@ export function IndicadoresGanaderos({ indicadores, etiquetas: L }: { indicadore
   const barras = forma === "barras";
 
   // Geometría de la gráfica: se recalcula en cada render (son pocos puntos) en vez de memorizarla con dependencias frágiles.
-  const alto = ancho < 520 ? 230 : 290;
+  const alto = ancho < 520 ? 190 : 235;
   const m = { l: ancho < 520 ? 40 : 48, r: 14, t: 16, b: 30 };
   const interior = ancho - m.l - m.r;
   const valoresVisibles = visibles.flatMap((i) => ind.series[i].valores).filter((v): v is number => v !== null);
@@ -388,7 +389,7 @@ export function IndicadoresGanaderos({ indicadores, etiquetas: L }: { indicadore
                 aria-pressed={encendida}
                 onClick={() => alternar(i)}
                 disabled={ind.series.length === 1}
-                className={`flex min-h-11 flex-col gap-1 rounded-[var(--radius)] border p-3 text-left transition ${
+                className={`flex min-h-11 flex-col gap-1 rounded-[var(--radius)] border p-2.5 text-left transition sm:p-3 ${
                   encendida ? "border-[var(--border-strong)] bg-[var(--surface)]" : "border-[var(--border)] opacity-50"
                 } disabled:cursor-default`}
               >
@@ -397,7 +398,7 @@ export function IndicadoresGanaderos({ indicadores, etiquetas: L }: { indicadore
                   <span className="truncate">{s.nombre}</span>
                 </span>
                 <span className="flex items-baseline justify-between gap-2">
-                  <span className="lx-display text-2xl font-semibold tabular-nums sm:text-[1.7rem]">{valor === null || valor === undefined ? "—" : pesos(valor)}</span>
+                  <span className="lx-display text-xl font-semibold tabular-nums sm:text-2xl">{valor === null || valor === undefined ? "—" : pesos(valor)}</span>
                   {v !== null && (
                     <span className={`whitespace-nowrap text-xs font-bold tabular-nums ${v >= 0 ? "text-[var(--accent-2)]" : "text-[#f87171]"}`}>
                       {v >= 0 ? "▲" : "▼"} {pct(v)}
@@ -413,7 +414,8 @@ export function IndicadoresGanaderos({ indicadores, etiquetas: L }: { indicadore
         </div>
 
         {verGrafica && (
-          <div ref={caja} className="relative mt-5 select-none">
+          <div className="mt-5 grid grid-cols-[minmax(0,1fr)] items-center gap-5 lg:grid-cols-[minmax(0,1fr)_14.5rem]">
+          <div ref={caja} className="relative min-w-0 select-none">
             <svg
               key={`${ind.clave}-${forma}`}
               width={ancho}
@@ -516,6 +518,17 @@ export function IndicadoresGanaderos({ indicadores, etiquetas: L }: { indicadore
                 })}
               </div>
             )}
+          </div>
+          <MapaRegiones
+            className="mx-auto w-full max-w-[15rem] lg:max-w-none"
+            series={ind.series.map((sr, i) => ({
+              nombre: sr.nombre,
+              valor: sr.valores[idx] === null || sr.valores[idx] === undefined ? "—" : pesos(sr.valores[idx] as number),
+              color: COLORES[i % COLORES.length],
+              encendida: !off.includes(i),
+            }))}
+            alternar={alternar}
+          />
           </div>
         )}
 
