@@ -224,3 +224,38 @@ test("la lectura por suscriptor: solo con autorización, solo desde el vínculo,
   assert.equal(await sus.purgarVinculosDeBajas(), 1);
   assert.equal((await bd.db.select().from(schema.subscriberVisitors)).length, 0);
 });
+
+test("el detalle de lectura: un renglón por lector, con ciudad y filtros, y el nombre solo de quien autorizó y solo con permiso", async () => {
+  const sus = await import("@/lib/lectores-suscriptor");
+  const det = await import("@/lib/lectores-detalle");
+  await bd.db.delete(schema.newsletterSubscribers);
+  await bd.db.delete(schema.readerSessions);
+  const [nota] = await bd.db.select({ id: schema.articles.id }).from(schema.articles).limit(1);
+  const [{ id: lola }] = await bd.db.insert(schema.newsletterSubscribers).values({ email: "lola@example.com", confirmed: true, firstName: "Lola", lastName: "Pérez" }).returning({ id: schema.newsletterSubscribers.id });
+  await sus.autorizarLectura(lola);
+  await sus.vincularVisitante(lola, V1, true);
+  const hace = (min: number) => new Date(Date.now() - min * 60_000);
+  await bd.db.insert(schema.readerSessions).values([
+    { visitorId: V1, articleId: nota.id, createdAt: hace(20), maxScroll: 95, seconds: 200, device: "mobile", city: "Bogotá", source: "Directo" },
+    { visitorId: V1, articleId: nota.id, createdAt: hace(10), maxScroll: 40, seconds: 30, device: "mobile", city: "Bogotá", source: "Directo" },
+    { visitorId: V2, articleId: nota.id, createdAt: hace(5), maxScroll: 70, seconds: 60, device: "desktop", city: "Medellín", source: "Google" },
+  ]);
+  const hoy = fil.hoyColombia();
+  const todo = fil.leerFiltros({ desde: hoy, hasta: hoy });
+  const con_ = await det.lectoresDetalle(todo, true);
+  assert.equal(con_.total, 2);
+  assert.equal(con_.filas[0].notas, 2, "el que más leyó va primero");
+  assert.equal(con_.filas[0].nombre, "Lola Pérez");
+  assert.equal(con_.filas[0].ciudad, "Bogotá");
+  assert.equal(con_.filas[1].nombre, null, "el anónimo no tiene nombre");
+  const sin = await det.lectoresDetalle(todo, false);
+  assert.equal(sin.filas[0].nombre, null, "sin el permiso del boletín no se ve quién es");
+  assert.equal(sin.filas[0].correo, null);
+  // Filtrar por ciudad y por dispositivo recorta el registro.
+  const bogota = await det.registroLecturas(fil.leerFiltros({ desde: hoy, hasta: hoy, ciudad: "Bogotá" }), true);
+  assert.equal(bogota.length, 2);
+  const pc = await det.registroLecturas(fil.leerFiltros({ desde: hoy, hasta: hoy, dispositivo: "desktop" }), true);
+  assert.equal(pc.length, 1);
+  assert.equal(pc[0].nombre, null);
+  assert.equal((await det.registroLecturas(todo, true, V1)).length, 2, "el historial de un solo lector");
+});

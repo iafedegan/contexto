@@ -15,7 +15,6 @@ import {
   ScanSearch,
   Sparkles,
   ChevronRight,
-  Users,
 } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { tienePermiso } from "@/lib/permisos-server";
@@ -25,8 +24,6 @@ import { agentDrafts, articles, assistantQueries } from "@/db/schema";
 import { Card } from "@/components/ui";
 import { pctChange, siteDailySeries, siteWeekTotals } from "@/lib/article-stats";
 import { AreaChart, Donut } from "@/components/panel/dash-charts";
-import { SubscriberMap } from "@/components/panel/subscriber-map";
-import { subscriberPoints as loadSubscriberPoints } from "@/lib/subscriber-map";
 import { nfCO as nf } from "@/lib/format";
 
 // Estado de la lista de artículos al que lleva cada indicador.
@@ -37,14 +34,13 @@ export const dynamic = "force-dynamic";
 
 // Resumen del panel: notas por estado, borradores pendientes, consultas del asistente, tendencia de lecturas, suscriptores y notas más leídas.
 export default async function PanelHome() {
-  const [session, byStatus, pendingDrafts, queries7d, week, trend, subscriberPoints, top] = await Promise.all([
+  const [session, byStatus, pendingDrafts, queries7d, week, trend, top] = await Promise.all([
     auth(),
     db.select({ status: articles.status, n: sql<number>`count(*)::int` }).from(articles).groupBy(articles.status),
     db.select({ n: sql<number>`count(*)::int` }).from(agentDrafts).where(sql`${agentDrafts.status} = 'pendiente'`),
     db.select({ n: sql<number>`count(*)::int` }).from(assistantQueries).where(sql`${assistantQueries.createdAt} > now() - interval '7 days'`),
     siteWeekTotals(),
     siteDailySeries(7),
-    loadSubscriberPoints(),
     db
       .select({ id: articles.id, slug: articles.slug, title: articles.title, views: articles.views })
       .from(articles)
@@ -221,17 +217,6 @@ export default async function PanelHome() {
           <Highlight label="Preguntas al asistente (7 días)" value={queries7d[0]?.n ?? 0} href="/panel/demanda" cta="Ver demanda" icon={<MessagesSquare size={20} />} />
         </div>
       </div>
-
-      <Card className="lx-shine p-5 sm:p-6">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <p className="lx-kicker text-[var(--fg-muted)]">Boletín</p>
-            <h2 className="lx-display mt-1 text-xl font-semibold">Dónde están tus suscriptores</h2>
-          </div>
-          <Link href="/panel/newsletter?tab=suscriptores" className="lx-btn lx-btn-ghost !px-3.5 !py-2 text-xs"><Users size={14} aria-hidden /> Ver suscriptores</Link>
-        </div>
-        <div className="mt-4"><SubscriberMap points={subscriberPoints} /></div>
-      </Card>
     </div>
   );
 }

@@ -4,6 +4,8 @@ import { tienePermiso } from "@/lib/permisos-server";
 import { adopcion, identificados, lecturasDe } from "@/lib/lectores-identificados";
 import { esUuid } from "@/lib/lectores-entrada";
 import { AdopcionLectura, FichaPersona, TablaPersonas } from "@/components/panel/bi-personas";
+import { lectoresDetalle, registroLecturas } from "@/lib/lectores-detalle";
+import { EncabezadoLector, TablaLectores, TablaRegistro } from "@/components/panel/bi-lectores";
 import { TabsResumen } from "@/components/panel/tabs-resumen";
 import { Card } from "@/components/ui";
 import { BiFiltros } from "@/components/panel/bi-filtros";
@@ -90,7 +92,8 @@ export default async function AnaliticaPage({ searchParams }: { searchParams: Pr
   const verPersonas = await tienePermiso(user.id, user.role, "newsletter");
   const sel = typeof q.suscriptor === "string" && esUuid(q.suscriptor) ? q.suscriptor.toLowerCase() : undefined;
   const f = leerFiltros(q);
-  const vista = q.vista === "suscriptores" ? "suscriptores" : "audiencia";
+  const vista = q.vista === "suscriptores" ? "suscriptores" : q.vista === "lectores" ? "lectores" : "audiencia";
+  const lector = typeof q.lector === "string" && esUuid(q.lector) ? q.lector.toLowerCase() : undefined;
   const hoy = hoyColombia();
 
   return (
@@ -99,12 +102,12 @@ export default async function AnaliticaPage({ searchParams }: { searchParams: Pr
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="lx-kicker text-[var(--accent)]">Análisis</p>
-          <h1 className="lx-display mt-1 text-3xl font-semibold tracking-tight sm:text-4xl">{vista === "audiencia" ? "Audiencia" : "Suscriptores"}</h1>
+          <h1 className="lx-display mt-1 text-3xl font-semibold tracking-tight sm:text-4xl">{vista === "audiencia" ? "Audiencia" : vista === "lectores" ? "Lectores" : "Suscriptores"}</h1>
           <p className="mt-1 max-w-2xl text-sm text-[var(--fg-muted)]">Qué se lee, a qué hora, desde dónde y con quién. Cruza los filtros para llegar al detalle; cada vista queda en la dirección y se puede compartir.</p>
         </div>
       </header>
 
-      {vista === "audiencia" ? <Audiencia f={f} hoy={hoy} /> : <Suscriptores f={f} hoy={hoy} verPersonas={verPersonas} sel={sel} />}
+      {vista === "audiencia" ? <Audiencia f={f} hoy={hoy} /> : vista === "lectores" ? <Lectores f={f} hoy={hoy} verPersonas={verPersonas} lector={lector} /> : <Suscriptores f={f} hoy={hoy} verPersonas={verPersonas} sel={sel} />}
     </div>
   );
 }
@@ -201,6 +204,32 @@ async function Audiencia({ f, hoy }: { f: ReturnType<typeof leerFiltros>; hoy: s
           </p>
         </>
       )}
+    </>
+  );
+}
+
+async function Lectores({ f, hoy, verPersonas, lector }: { f: ReturnType<typeof leerFiltros>; hoy: string; verPersonas: boolean; lector?: string }) {
+  const [p, det, registro] = await Promise.all([panorama(f), lector ? null : lectoresDetalle(f, verPersonas), registroLecturas(f, verPersonas, lector)]);
+  const base = aParametros(f).toString();
+  const con = (extra: string) => `?${[base, extra].filter(Boolean).join("&")}`;
+  const uno = lector ? registro[0] : undefined;
+  return (
+    <>
+      <BiFiltros filtros={f} opciones={p.opciones} hoy={hoy} />
+      {lector ? (
+        <>
+          <EncabezadoLector codigo={uno?.codigo ?? lector.replace(/-/g, "").slice(-6).toUpperCase()} nombre={uno?.nombre} cerrar={con("vista=lectores")} />
+          <Panel kicker="Qué leyó" titulo="Cada nota, con la hora, el tiempo y el dispositivo"><TablaRegistro registros={registro} /></Panel>
+        </>
+      ) : (
+        <>
+          <Panel kicker="Quién lee" titulo="Lectores"><TablaLectores lectores={det?.filas ?? []} total={det?.total ?? 0} enlace={(id) => con(`vista=lectores&lector=${id}`)} /></Panel>
+          <Panel kicker="Qué se leyó" titulo="Últimas lecturas, una por una"><TablaRegistro registros={registro} /></Panel>
+        </>
+      )}
+      <p className="text-xs leading-relaxed text-[var(--fg-muted)]">
+        Un «lector» es un navegador que aceptó la medición (código aleatorio, sin IP ni datos personales). Solo aparece un nombre o correo cuando esa persona se suscribió y autorizó que su lectura se relacione con su suscripción{verPersonas ? "" : " (y quien mira tiene el permiso del boletín)"}. Las horas son de Colombia; la ciudad es aproximada.
+      </p>
     </>
   );
 }
