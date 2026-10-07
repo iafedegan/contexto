@@ -13,8 +13,8 @@ const ORIGEN = "https://estadisticas.fedegan.org.co/DOC/export.jsp";
 const FUENTE = "FEDEGÁN · Sistema de información estadística";
 // El origen cambia una vez al mes: seis horas bastan y no lo molestamos en cada visita.
 const SEGUNDOS = 6 * 3600;
-// El origen publica con uno o dos meses de retraso: se piden catorce para que siempre queden unos doce con dato.
-const MESES = 14;
+// Cinco años de historia, para que el rango de fechas de la gráfica tenga de dónde elegir (el origen guarda aún más).
+const MESES = 60;
 
 type Entrada = { clave: string; pId: number; columnas: number[]; titulo: string; descripcion: string; series: string[] };
 

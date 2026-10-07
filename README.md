@@ -118,7 +118,7 @@ flaco de machos y hembras por región, mes a mes. Se leen del CSV público de su
 (`estadisticas.fedegan.org.co/DOC/export.jsp`, el mismo que alimenta las gráficas de contextoganadero.com) desde
 `src/lib/indicadores-fedegan.ts`, con la descarga segura y la caché de datos (6 h); nunca se escribe al origen. Si el
 origen no responde, la sección no se pinta. Para añadir un indicador basta una fila en `CATALOGO` (número `pId` y
-columnas). La gráfica es propia, en SVG (`src/components/indicadores-ganaderos.tsx`), y toma los colores de la plantilla.
+columnas). Trae cinco años de historia y los filtros del widget original están: regiones (tarjetas), rango de fechas (atajos y meses), tipo de gráfica (líneas, área, barras), vista (gráfica, tabla o ambas) y exportar a CSV. La gráfica es propia, en SVG (`src/components/indicadores-ganaderos.tsx`), y toma los colores de la plantilla.
 
 ### Logo
 

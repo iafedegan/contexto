@@ -19,7 +19,7 @@ import { getSiteTheme } from "@/lib/site-theme";
 import { getSiteIdentity } from "@/lib/site-identity";
 import { formatMarketValue, getMarketTicker } from "@/lib/market-data";
 import { getIndicadores } from "@/lib/indicadores-fedegan";
-import { IndicadoresGanaderos } from "@/components/indicadores-ganaderos";
+import { IndicadoresGanaderos, type EtiquetasIndicadores } from "@/components/indicadores-ganaderos";
 
 /**
  * Portada — generación estática con ISR.
@@ -169,10 +169,9 @@ async function HomePage({ locale }: { locale: Locale }) {
         <div className="mt-14 sm:mt-20">
           <IndicadoresGanaderos
             indicadores={indicadores}
-            kicker={t(locale, "ind.kicker")}
-            titulo={t(locale, "ind.title")}
-            fuenteEtiqueta={t(locale, "ind.source")}
-            actualizadoEtiqueta={t(locale, "ind.updated")}
+            etiquetas={Object.fromEntries(
+              (["kicker", "title", "source", "updated", "period", "from", "to", "last6", "last12", "last36", "all", "chart", "lines", "area", "bars", "view", "viewChart", "viewTable", "viewBoth", "regions", "month", "export", "noData"] as const).map((k) => [k, t(locale, `ind.${k}`)]),
+            ) as EtiquetasIndicadores}
           />
         </div>
       )}
