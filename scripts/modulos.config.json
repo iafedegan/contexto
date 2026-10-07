@@ -21,7 +21,7 @@
         "^components/ui/",
         "^content/",
         "^components/(logo-mark|social-icons|turnstile|radio-player|interactive-chart|toro-bot)\\.tsx$",
-        "^lib/(data-cache|safe-fetch|rate-limit|claves|env|escape|validate|format|utils|cron-auth|i18n|budget|bots|csp|citas|pestanas|logo-archivos|media-mime|media-upload|media-firma|media-storage|media-limpieza|nav-limits|home-fonts|home-regions|template-parts|home-style|ads-types|home-layout|home-layout-normalize|home-background|section-els|popup-types|site-identity|turnstile|eventos|zones|theme|geo-reverse|embeddings|chart-svg|chart-png)\\.tsx?$",
+        "^lib/(data-cache|safe-fetch|rate-limit|claves|env|escape|validate|format|utils|cron-auth|i18n|budget|bots|csp|citas|pestanas|logo-archivos|lectores-ua|lectores-geo|lectores-filtros|lectores-entrada|medicion-cliente|media-mime|media-upload|media-firma|media-storage|media-limpieza|nav-limits|home-fonts|home-regions|template-parts|home-style|ads-types|home-layout|home-layout-normalize|home-background|section-els|popup-types|site-identity|turnstile|eventos|zones|theme|geo-reverse|embeddings|chart-svg|chart-png)\\.tsx?$",
         "^lib/api/"
       ],
       "puedeUsar": []
@@ -128,9 +128,9 @@
     "analitica": {
       "titulo": "Analítica y mercado",
       "rutas": [
-        "^lib/(analytics[a-z-]*|view-sources|fuente-lectura|psi|psi-types|geo-reverse|subscriber-map|market-data|sync-market-data|indicadores-csv|indicadores-fedegan|observatorio-fedegan|indicadores-etiquetas|graficas)\\.ts$",
+        "^lib/(analytics[a-z-]*|view-sources|fuente-lectura|psi|psi-types|geo-reverse|subscriber-map|market-data|sync-market-data|indicadores-csv|indicadores-fedegan|observatorio-fedegan|indicadores-etiquetas|graficas|lectores-registro|lectores-consulta|suscriptores-consulta)\\.ts$",
         "^components/analytics-ga4\\.tsx$",
-        "^app/api/(vista|cron/sync-market-data)/",
+        "^app/api/(vista|lectura|cron/sync-market-data)/",
         "^app/acciones/analitica"
       ],
       "puedeUsar": [

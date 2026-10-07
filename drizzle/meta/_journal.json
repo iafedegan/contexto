@@ -78,6 +78,13 @@
       "when": 1791295987780,
       "tag": "0010_passkeys_y_datos_de_suscriptores",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1791340907570,
+      "tag": "0011_lecturas_de_lectores",
+      "breakpoints": true
     }
   ]
 }

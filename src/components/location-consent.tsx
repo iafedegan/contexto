@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { LocateFixed } from "lucide-react";
 import { captureGeo, LOC_COOKIE, readCookie, readGeo, writeCookie } from "@/lib/geo-consent";
+import { MED_EVENT, decisionMedicion } from "@/lib/medicion-cliente";
 
 /**
  * Aviso de ubicación, al estilo del de cookies: la decisión (permitir / ahora
@@ -19,8 +20,18 @@ export function LocationConsent() {
     if (!decision) {
       // En el celular espera más: a los 1,5 s tapaba la primera pantalla, justo cuando la persona la está mirando.
       const espera = window.matchMedia("(max-width: 767px)").matches ? 9000 : 1500;
-      const id = setTimeout(() => setOpen(true), espera);
-      return () => clearTimeout(id);
+      let id: ReturnType<typeof setTimeout> | undefined;
+      // Un aviso a la vez: si todavía no decidió la medición, este espera a que lo haga.
+      const programar = () => {
+        window.removeEventListener(MED_EVENT, programar);
+        id = setTimeout(() => setOpen(true), espera);
+      };
+      if (decisionMedicion()) programar();
+      else window.addEventListener(MED_EVENT, programar);
+      return () => {
+        window.removeEventListener(MED_EVENT, programar);
+        if (id) clearTimeout(id);
+      };
     }
     // Ya permitió antes: se refresca la posición solo si el navegador no volvería a preguntar.
     if (decision === "granted") {

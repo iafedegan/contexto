@@ -25,6 +25,7 @@ export const PERMISOS = [
   { id: "mensajes", label: "Mensajes recibidos", hint: "Leer contacto y solicitudes de pauta", min: "editor" },
   { id: "portada", label: "Portada, plantillas y secciones", hint: "Diseño del sitio, orden y menú de secciones", min: "editor" },
   { id: "newsletter", label: "Newsletter", hint: "Ediciones, envíos y suscriptores", min: "editor" },
+  { id: "analitica", label: "Centro de análisis", hint: "Qué leen, cuándo, desde dónde, y cómo crece la base de suscriptores", min: "editor" },
   { id: "api", label: "API pública", hint: "Claves para terceros", min: "administrador" },
 ] as const satisfies readonly { id: string; label: string; hint: string; min: UserRole }[];
 

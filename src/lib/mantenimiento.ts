@@ -2,6 +2,7 @@ import "server-only";
 import { purgarLimitesVencidos } from "@/lib/rate-limit";
 import { aplicarRetencion, type ResultadoRetencion } from "@/lib/newsletter/retencion";
 import { limpiarMediaHuerfana, type ResultadoLimpieza } from "@/lib/media-limpieza";
+import { purgarLecturas } from "@/lib/lectores-registro";
 
 /**
  * Mantenimiento diario de datos: lo que debe borrarse porque venció. Lo ejecuta el cron de `publish-scheduled` (el plan
@@ -10,12 +11,14 @@ import { limpiarMediaHuerfana, type ResultadoLimpieza } from "@/lib/media-limpie
  *
  *  - `rate_limits` (H-25): contadores de intentos, de un solo uso y de límites, vencidos hace más de una hora.
  *  - Retención de datos personales del boletín (H-21): ver `src/lib/newsletter/retencion.ts`.
+ *  - Lecturas por visitante: se conservan 400 días (`RETENCION_LECTORES`, en días, o `off` para no borrar nada).
  *  - Medios huérfanos (H-22): archivos del bucket sin uso desde hace más de 7 días; ver `src/lib/media-limpieza.ts`.
  */
 export type ResultadoMantenimiento = {
   limitesBorrados: number;
   boletin: ResultadoRetencion | { error: string };
   medios: ResultadoLimpieza | { error: string };
+  lecturas: number | "off" | { error: string };
 };
 
 export async function purgarVencidos(): Promise<ResultadoMantenimiento> {
@@ -25,10 +28,15 @@ export async function purgarVencidos(): Promise<ResultadoMantenimiento> {
       console.error(`mantenimiento: falló ${nombre}`, e);
       return { error: String((e as Error)?.message ?? e).slice(0, 200) };
     });
-  const [limitesBorrados, boletin, medios] = await Promise.all([
+  // Retención de las lecturas medidas: por defecto 400 días; un valor ausente o ilegible usa el predeterminado, no borra de más.
+  const cfg = (process.env.RETENCION_LECTORES ?? "").trim().toLowerCase();
+  const diasLecturas = Number(cfg);
+  const lecturasTarea: Promise<number | "off"> = cfg === "off" ? Promise.resolve("off" as const) : purgarLecturas(Number.isFinite(diasLecturas) && diasLecturas >= 30 ? Math.floor(diasLecturas) : 400);
+  const [limitesBorrados, boletin, medios, lecturas] = await Promise.all([
     purgarLimitesVencidos(),
     aislar("la retención de datos del boletín", aplicarRetencion()),
     aislar("la limpieza de medios", limpiarMediaHuerfana()),
+    aislar("la retención de lecturas", lecturasTarea),
   ]);
-  return { limitesBorrados, boletin, medios };
+  return { limitesBorrados, boletin, medios, lecturas };
 }

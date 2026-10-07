@@ -112,3 +112,6 @@ export const periodoLargo = (p: string) => {
   const [m, a] = p.split("/");
   return a ? `${MESES_LARGOS[m] ?? m} de ${a}` : p;
 };
+
+/** Colores de las series del panel: azul de la marca, naranja, verde azulado y ciruela (se leen sobre el fondo claro). Vive aquí y no en un componente de cliente porque la página del servidor también los necesita. */
+export const BI_COLORES = ["var(--accent)", "var(--accent-2)", "#0f9b8e", "#9b3fa0"];

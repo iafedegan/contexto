@@ -173,3 +173,15 @@ Pruebas: `budget.test.ts`, `citas.test.ts`; y `npm run smoke` comprueba que sin 
 - Publicar, programar, archivar, borrar y los distintivos exigen permiso «publicar» y rol de editor o superior; editar una nota
   ya publicada solo lo hace quien puede publicar; enviar a revisión no saca del sitio una nota publicada. El panel y Telegram
   usan los mismos núcleos de `src/lib/article-ops.ts` (una sola máquina de estados). Pruebas: `article-ops.test.ts`.
+
+## 14. Medición de lectura y centro de análisis
+
+El panel (`/panel/analitica`, permiso «analitica») muestra cómo se lee el sitio: qué notas, a qué hora, desde qué ciudad y departamento, con qué dispositivo, desde qué origen y cuánto de cada nota. Es una medición **anónima y con permiso**:
+
+- **Permiso previo.** El aviso (`src/components/medicion-consent.tsx`) guarda la decisión en la cookie `cg_med`. Sin «sí» no se crea ningún código ni se manda nada a `/api/lectura`. «No» borra el código y no vuelve a preguntar en 90 días; en la política de privacidad (sección «Medición de lectura») se puede aceptar o retirar en cualquier momento (`preferencias-medicion.tsx`).
+- **Qué se guarda** (`reader_sessions`, una fila por nota leída): un código aleatorio de visitante (cookie `cg_vid`, 400 días), la nota, el dispositivo / navegador / sistema ya clasificados, país, departamento y ciudad aproximados (cabeceras de Vercel), el origen, si ya había leído antes, hasta dónde bajó (0–100) y los segundos con la pestaña a la vista (tope de una hora).
+- **Qué NO se guarda:** nombre, correo, IP (solo vive como clave de los límites de `rate_limits`, que se purga a diario) ni el `User-Agent` (solo se clasifica). La medición **no se une** con la lista de suscriptores: saber qué lee cada suscriptor exigiría autorización expresa y un aviso específico (Ley 1581 de 2012) y no está activado.
+- **Retención.** `purgarVencidos` borra las lecturas de más de 400 días (`RETENCION_LECTORES`, mínimo 30; `off` detiene el borrado). Borrar una nota borra sus lecturas (`ON DELETE CASCADE`).
+- **Validación y límites** (`lectores-entrada.ts`, `api/lectura`): códigos con forma de UUID, números acotados, una lectura por visitante y nota cada 30 minutos, 900 llamadas por IP y hora; el avance solo sube y solo lo actualiza quien empezó la lectura. Los robots no entran.
+- **Análisis agregado.** Las consultas (`lectores-consulta.ts`, `suscriptores-consulta.ts`) devuelven conteos y promedios, nunca filas ni visitantes individuales; las pruebas comprueban que el análisis de suscriptores no deja salir correos ni fechas de nacimiento.
+- **Tabla en Supabase.** Se crea con `drizzle/0011_lecturas_de_lectores.sql` (idempotente) y se activa su seguridad por filas, para que la API pública de Supabase no pueda leerla.

@@ -111,6 +111,19 @@ todos los temas, con los tokens de la plantilla activa).
   (`globals.css`). El aviso de ubicación sale a los 9 s en el celular (a 1,5 s en escritorio).
 - El menú de pantalla completa marca `html[data-cg-overlay]`, y con eso la barra se oculta mientras está abierto.
 
+### Centro de análisis (panel)
+
+`/panel/analitica` (permiso «analitica», editor o superior) es el tablero de audiencia y suscriptores. **Audiencia**: lecturas y lectores
+únicos con variación frente al periodo anterior, tiempo y porcentaje leído, quienes terminan la nota, quienes vuelven y el rebote;
+la evolución diaria; un mapa de calor de día de la semana × hora; el embudo de lectura; el mapa de Colombia por departamento y las
+ciudades; dispositivo, navegador, sistema, origen y sección; las notas con más lectura y cuánto se terminan; y frases que se arman solas
+(`lectores-resumen.ts`). Todo responde a los mismos **filtros** (periodo, dispositivo, ciudad, origen, sección, visitante nuevo o
+recurrente), que viven en la dirección, y pulsar una barra aplica ese filtro. **Suscriptores**: altas y bajas, base acumulada,
+confirmación, edad por rangos, ciudades, proveedor de correo y qué tan completa está la base.
+
+La medición es anónima y con permiso (cookie `cg_med` / `cg_vid`): ver `docs/seguridad.md` §14. Datos de prueba locales:
+`npx tsx scripts/seed-lectores.ts` (y `--limpiar`). En producción hay que correr `drizzle/0011_lecturas_de_lectores.sql` en el SQL Editor.
+
 ### Indicadores ganaderos (Observatorio)
 
 La sección «Indicadores ganaderos» del Observatorio (ya no va en la portada) dibuja las cifras oficiales de FEDEGÁN: ganado gordo (nacional) y ganado

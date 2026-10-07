@@ -8,6 +8,7 @@ import Image from "next/image";
 import type { Metadata } from "next";
 import { AdsBanner } from "@/components/ads-banner";
 import { ViewCounter } from "@/components/view-counter";
+import { LectorTracker } from "@/components/lector-tracker";
 import { LiveBadge } from "@/components/live-badge";
 import { ShareButtons } from "@/components/share-buttons";
 import { ReaderMode } from "@/components/reader-mode";
@@ -97,6 +98,7 @@ export function ArticleDocument({
       <article>
         {/* El contador solo corre en la página pública, no en la vista previa. */}
         {!preview && <ViewCounter slug={a.slug} />}
+        {!preview && <LectorTracker slug={a.slug} />}
         {!preview && <JsonLd data={newsArticleJsonLd(seo)} />}
         {!preview && (
         <JsonLd

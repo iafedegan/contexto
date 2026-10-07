@@ -14,6 +14,7 @@ import { siteUrl } from "@/lib/utils";
 import { documento, type Bloque } from "@/content/institucional";
 import { localePath, type Locale } from "@/lib/i18n";
 import Link from "next/link";
+import { PreferenciasMedicion } from "@/components/preferencias-medicion";
 
 // Crea la función de metadatos de una página institucional según su documento e idioma.
 export function makeMetadata(slug: string, locale: Locale) {
@@ -90,6 +91,7 @@ export function makePage(slug: string, locale: Locale) {
                   {s.bloques.map((b, i) => (
                     <BloqueVista key={i} bloque={b} />
                   ))}
+                  {s.id === "medicion" && <PreferenciasMedicion locale={locale} />}
                 </div>
               </section>
             ))}

@@ -21,6 +21,7 @@ import {
   pgEnum,
   pgTable,
   primaryKey,
+  smallint,
   text,
   timestamp,
   uniqueIndex,
@@ -266,6 +267,45 @@ export const articleViewsDaily = pgTable(
   (t) => [
     primaryKey({ columns: [t.articleId, t.day] }),
     index("article_views_daily_day_idx").on(t.day),
+  ],
+);
+
+// Lecturas por visitante (centro de análisis del panel). Una fila por nota leída por alguien que ACEPTÓ la medición: el
+// visitante es un código aleatorio de una cookie propia (sin nombre, correo ni IP) y nada más que el comportamiento de
+// lectura. La ciudad y la región salen de la cabecera de geolocalización de Vercel (aproximadas). Se purga por antigüedad
+// (`RETENCION_LECTORES`, 400 días por defecto) y se borra con la nota.
+export const readerSessions = pgTable(
+  "reader_sessions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    visitorId: uuid("visitor_id").notNull(),
+    articleId: uuid("article_id")
+      .notNull()
+      .references(() => articles.id, { onDelete: "cascade" }),
+    /** mobile | tablet | desktop | otro */
+    device: text("device").notNull().default("otro"),
+    browser: text("browser"),
+    os: text("os"),
+    country: text("country"),
+    /** Código de la región (departamento) según la geolocalización de Vercel, p. ej. «ANT». */
+    region: text("region"),
+    city: text("city"),
+    /** Etiqueta del origen (Google, Facebook, Directo, boletín…), la misma que usa «¿Desde dónde los leen?». */
+    source: text("source"),
+    campaign: text("campaign"),
+    /** Si el navegador ya había leído antes en este sitio. */
+    returning: boolean("returning").notNull().default(false),
+    /** Hasta dónde bajó la persona por la nota, de 0 a 100. */
+    maxScroll: smallint("max_scroll").notNull().default(0),
+    /** Segundos con la pestaña a la vista (tope de una hora). */
+    seconds: integer("seconds").notNull().default(0),
+  },
+  (t) => [
+    index("reader_sessions_created_idx").on(t.createdAt),
+    index("reader_sessions_article_idx").on(t.articleId, t.createdAt),
+    index("reader_sessions_visitor_idx").on(t.visitorId),
   ],
 );
 

@@ -703,6 +703,28 @@ export const DOCUMENTOS: DocumentoInstitucional[] = [
           ],
         },
         {
+          id: "medicion",
+          titulo: "Medición de lectura (cookies)",
+          bloques: [
+            {
+              tipo: "parrafo",
+              texto:
+                "Si lo aceptas en el aviso que ves al entrar, medimos cómo se lee el sitio para mejorar el contenido: qué notas se leen, hasta dónde se baja, cuánto tiempo se queda la persona, a qué hora y desde qué dispositivo, ciudad y origen llega. Es una medición anónima y solo la hacemos si la aceptas: sin tu permiso no medimos nada.",
+            },
+            {
+              tipo: "lista",
+              items: [
+                "Cookie «cg_med»: recuerda tu decisión (sí o no). Dura hasta un año si aceptas y 90 días si rechazas.",
+                "Cookie «cg_vid»: un código aleatorio que solo sirve para contar personas distintas y saber si ya habías leído antes. No contiene tu nombre, tu correo ni tu IP. Dura hasta 400 días y se borra en cuanto retiras el permiso.",
+                "No guardamos tu IP ni el identificador de tu navegador: la ciudad y el departamento se deducen de la conexión de forma aproximada y el dispositivo se clasifica en celular, tableta o computador.",
+                "Las lecturas medidas se conservan 400 días y se borran solas. El análisis se hace de forma agregada: no vemos a una persona sola.",
+                "No unimos esta medición con tu suscripción al boletín ni con ningún dato que te identifique.",
+              ],
+            },
+            { tipo: "parrafo", texto: "Puedes cambiar de opinión cuando quieras con los botones de abajo." },
+          ],
+        },
+        {
           id: "derechos",
           titulo: "4. Tus derechos",
           bloques: [
@@ -777,6 +799,28 @@ export const DOCUMENTOS: DocumentoInstitucional[] = [
                 "You can ask us at any time to delete everything, including your email, by writing to habeasdata@fedegan.org.co.",
               ],
             },
+          ],
+        },
+        {
+          id: "medicion",
+          titulo: "Reading measurement (cookies)",
+          bloques: [
+            {
+              tipo: "parrafo",
+              texto:
+                "If you accept in the notice you see when you arrive, we measure how the site is read in order to improve our content: which stories are read, how far down the page you go, how long you stay, at what time and from which device, city and source you arrive. The measurement is anonymous and only happens with your permission.",
+            },
+            {
+              tipo: "lista",
+              items: [
+                "Cookie “cg_med”: remembers your decision (yes or no). It lasts up to a year if you accept and 90 days if you decline.",
+                "Cookie “cg_vid”: a random code used only to count distinct people and to know whether you have read before. It contains no name, email or IP address. It lasts up to 400 days and is deleted as soon as you withdraw permission.",
+                "We do not store your IP address or your browser identifier: city and region are approximated from the connection, and the device is only classified as phone, tablet or computer.",
+                "Measured readings are kept for 400 days and deleted automatically. Analysis is aggregated: we never look at a single person.",
+                "This measurement is not linked to your newsletter subscription or to any data that identifies you.",
+              ],
+            },
+            { tipo: "parrafo", texto: "You can change your mind at any time with the buttons below." },
           ],
         },
         {
