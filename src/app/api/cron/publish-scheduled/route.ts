@@ -3,6 +3,7 @@ import { cronAutorizado } from "@/lib/cron-auth";
 import { procesarProgramadas } from "@/lib/scheduled";
 import { syncMarketData } from "@/lib/sync-market-data";
 import { purgarVencidos } from "@/lib/mantenimiento";
+import { getObservatorio } from "@/lib/observatorio-fedegan";
 
 /**
  * Publica las notas «programado» cuya hora ya llegó y refresca el sitio. Toda la lógica vive en
@@ -13,8 +14,11 @@ import { purgarVencidos } from "@/lib/mantenimiento";
  * Corre a diario desde vercel.json. Aprovecha para refrescar TRM/petróleo (franja económica, H-06) y para el
  * mantenimiento de datos (límites vencidos, retención de datos de suscriptores): el plan Hobby solo permite 2 cron jobs
  * y ya están ocupados, así que se suben aquí una vez al día. Cada tarea va aislada en su propio try/catch: ninguna debe
- * bloquear la publicación programada.
+ * bloquear la publicación programada. También calienta la caché del Observatorio (15 lecturas al origen de FEDEGÁN), para que
+ * la primera visita del día no espere esa descarga.
  */
+export const maxDuration = 60;
+
 export async function GET(req: Request) {
   if (!cronAutorizado(req)) {
     return NextResponse.json({ error: "no autorizado" }, { status: 401 });
@@ -36,5 +40,6 @@ export async function GET(req: Request) {
       return null;
     }),
   ]);
+  await getObservatorio().catch((e) => console.error("publish-scheduled: falló el calentamiento del Observatorio", e));
   return NextResponse.json({ published: pasada.slugs, marketData, mantenimiento });
 }

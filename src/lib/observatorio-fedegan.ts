@@ -17,7 +17,7 @@ const SEGUNDOS = 6 * 3600;
 const MESES_VENTANA = 60;
 // El origen se atasca a ratos y no tolera bien las ráfagas: pocas descargas a la vez, un plazo para cada una y un presupuesto para
 // el conjunto, de modo que ni siquiera con el origen caído se retiene a un visitante más de unos segundos.
-const SIMULTANEAS = 4;
+const SIMULTANEAS = 6;
 const PLAZO_DESCARGA_MS = 8_000;
 const PRESUPUESTO_MS = 15_000;
 // Tras una lectura incompleta no se vuelve a tocar el origen durante este tiempo (cada visita repetiría el mismo intento).
