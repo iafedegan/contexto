@@ -22,8 +22,8 @@ const CARPETA = join(process.cwd(), "public/logo");
 const EMBLEMA = join(CARPETA, "contexto-ganadero-emblema.png");
 const CHROME = process.env.CHROME_PATH ?? "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 // El verde de la página (plantilla Esmeralda Real): de `--bg-2` a `--bg`.
-const VERDE_CLARO = "#0b2a1c";
-const VERDE = "#05100b";
+const VERDE_CLARO = "#35a047";
+const VERDE = "#1f7a33";
 
 const clamp = (v: number) => Math.max(0, Math.min(1, v));
 
@@ -99,16 +99,16 @@ async function tarjeta() {
     const pagina = await navegador.newPage();
     await pagina.setViewport({ width: 1200, height: 630, deviceScaleFactor: 1 });
     await pagina.setContent(
-      `<!doctype html><meta charset="utf-8"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@600&family=Playfair+Display:wght@600&display=swap" rel="stylesheet">
+      `<!doctype html><meta charset="utf-8"><link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800&display=swap" rel="stylesheet">
 <style>html,body{margin:0;width:1200px;height:630px;overflow:hidden}
-body{display:flex;align-items:center;gap:56px;padding:0 110px;box-sizing:border-box;color:#f4f2e9;background:radial-gradient(ellipse 70% 90% at 22% 45%,${VERDE_CLARO} 0%,${VERDE} 62%,#030b07 100%);position:relative}
-body::after{content:"";position:absolute;inset:26px;border:1px solid rgba(216,181,88,.32);border-radius:6px}
+body{display:flex;align-items:center;gap:56px;padding:0 110px;box-sizing:border-box;color:#ffffff;background:radial-gradient(ellipse 70% 90% at 22% 45%,${VERDE_CLARO} 0%,${VERDE} 62%,#165c26 100%);position:relative}
+body::after{content:"";position:absolute;inset:26px;border:1px solid rgba(255,255,255,.35);border-radius:6px}
 img{width:380px;height:380px;filter:drop-shadow(0 30px 40px rgba(0,0,0,.5))}
-h1{margin:0;font:600 108px/1.02 "Playfair Display",Georgia,serif;letter-spacing:-.01em}
-h1 span{display:block;background:linear-gradient(100deg,#f4d98a,#c8982a 70%);-webkit-background-clip:text;background-clip:text;color:transparent}
-hr{width:96px;height:2px;border:0;margin:28px 0 20px;background:linear-gradient(90deg,#c8982a,transparent)}
-p{margin:0;font:600 22px "Inter",system-ui,sans-serif;letter-spacing:.24em;text-transform:uppercase;color:#9fb7a8;white-space:nowrap}</style>
-<img src="${emblema}" alt=""><div><h1><span>CONtexto</span>Ganadero</h1><hr><p>Periodismo del sector ganadero</p></div>`,
+h1{margin:0;font:800 96px/1.04 "Montserrat",system-ui,sans-serif;letter-spacing:-.01em}
+h1 span{display:block;color:#fff}
+hr{width:96px;height:2px;border:0;margin:28px 0 20px;background:linear-gradient(90deg,#ffffff,transparent)}
+p{margin:0;font:600 22px "Montserrat",system-ui,sans-serif;letter-spacing:.24em;text-transform:uppercase;color:#e6f4e8;white-space:nowrap}</style>
+<img src="${emblema}" alt=""><div><h1><span>CONTEXTO</span>GANADERO</h1><hr><p>Análisis ganadero</p></div>`,
       { waitUntil: "networkidle0" },
     );
     await pagina.evaluate(() => document.fonts.ready);
