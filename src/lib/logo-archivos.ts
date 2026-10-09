@@ -9,7 +9,7 @@ import { join } from "node:path";
  *  - `maskable`: cuadrado a sangre con el emblema dentro de la zona segura de los íconos «maskable».
  */
 const ARCHIVOS = {
-  redondeado: "contexto-ganadero-logo-v2-512.png",
+  redondeado: "contexto-ganadero-logo-v3-512.png",
   ios: "contexto-ganadero-icon-bleed.png",
   maskable: "contexto-ganadero-maskable.png",
 } as const;

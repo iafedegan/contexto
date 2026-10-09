@@ -8,7 +8,7 @@
  *
  * Salidas en `public/logo/`:
  *   - contexto-ganadero-emblema.png     el emblema solo, con fondo transparente (fuente de las demás piezas)
- *   - contexto-ganadero-logo-v2-512.png    el emblema sobre una baldosa del verde de la página, con esquinas redondas (el sitio,
+ *   - contexto-ganadero-logo-v3-512.png    el emblema sobre una baldosa del verde de la página, con esquinas redondas (el sitio,
  *                                       la pestaña y el JSON-LD)
  *   - contexto-ganadero-icon-bleed.png  cuadrado a sangre, para iOS (que le pone su propia máscara)
  *   - contexto-ganadero-maskable.png    cuadrado a sangre con el emblema dentro de la zona segura de los íconos «maskable»
@@ -22,8 +22,8 @@ const CARPETA = join(process.cwd(), "public/logo");
 const EMBLEMA = join(CARPETA, "contexto-ganadero-emblema.png");
 const CHROME = process.env.CHROME_PATH ?? "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 // El verde de la página (plantilla Esmeralda Real): de `--bg-2` a `--bg`.
-const VERDE_CLARO = "#35a047";
-const VERDE = "#1f7a33";
+const VERDE_CLARO = "#ffffff";
+const VERDE = "#eaf1e4";
 
 const clamp = (v: number) => Math.max(0, Math.min(1, v));
 
@@ -101,13 +101,13 @@ async function tarjeta() {
     await pagina.setContent(
       `<!doctype html><meta charset="utf-8"><link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800&display=swap" rel="stylesheet">
 <style>html,body{margin:0;width:1200px;height:630px;overflow:hidden}
-body{display:flex;align-items:center;gap:56px;padding:0 110px;box-sizing:border-box;color:#ffffff;background:radial-gradient(ellipse 70% 90% at 22% 45%,${VERDE_CLARO} 0%,${VERDE} 62%,#165c26 100%);position:relative}
-body::after{content:"";position:absolute;inset:26px;border:1px solid rgba(255,255,255,.35);border-radius:6px}
-img{width:380px;height:380px;filter:drop-shadow(0 30px 40px rgba(0,0,0,.5))}
+body{display:flex;align-items:center;gap:56px;padding:0 110px;box-sizing:border-box;color:#4f9a2a;background:radial-gradient(ellipse 70% 90% at 22% 45%,${VERDE_CLARO} 0%,${VERDE} 62%,#e3ecdb 100%);position:relative}
+body::after{content:"";position:absolute;inset:26px;border:1px solid rgba(79,154,42,.35);border-radius:6px}
+img{width:380px;height:380px;filter:drop-shadow(0 30px 40px rgba(0,0,0,.18))}
 h1{margin:0;font:800 96px/1.04 "Montserrat",system-ui,sans-serif;letter-spacing:-.01em}
-h1 span{display:block;color:#fff}
-hr{width:96px;height:2px;border:0;margin:28px 0 20px;background:linear-gradient(90deg,#ffffff,transparent)}
-p{margin:0;font:600 22px "Montserrat",system-ui,sans-serif;letter-spacing:.24em;text-transform:uppercase;color:#e6f4e8;white-space:nowrap}</style>
+h1 span{display:block;color:#4f9a2a}
+hr{width:96px;height:2px;border:0;margin:28px 0 20px;background:linear-gradient(90deg,#4f9a2a,transparent)}
+p{margin:0;font:600 22px "Montserrat",system-ui,sans-serif;letter-spacing:.24em;text-transform:uppercase;color:#5d6b55;white-space:nowrap}</style>
 <img src="${emblema}" alt=""><div><h1><span>CONTEXTO</span>GANADERO</h1><hr><p>Análisis ganadero</p></div>`,
       { waitUntil: "networkidle0" },
     );
@@ -123,7 +123,7 @@ async function main() {
   mkdirSync(CARPETA, { recursive: true });
   const origen = process.argv.find((a, i) => i > 1 && !a.startsWith("--"));
   if (origen) await extraerEmblema(origen);
-  await pieza("contexto-ganadero-logo-v2-512.png", 512, 112, 0.9);
+  await pieza("contexto-ganadero-logo-v3-512.png", 512, 112, 0.9);
   await pieza("contexto-ganadero-icon-bleed.png", 1024, 0, 0.84);
   await pieza("contexto-ganadero-maskable.png", 1024, 0, 0.62);
   if (process.argv.includes("--og")) await tarjeta();
