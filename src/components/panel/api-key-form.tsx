@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { KeyRound, Trash2, TriangleAlert } from "lucide-react";
-import { AI_PROVIDERS, type KeyStatus } from "@/lib/ai-providers";
+import { AI_PROVIDERS, DEFAULT_IMAGE_MODEL, esModeloDeImagen, type KeyStatus } from "@/lib/ai-providers";
 import { deleteApiKey, saveAiSettings } from "@/app/panel/(app)/configuracion/actions";
 
 /**
@@ -22,6 +22,9 @@ export function ApiKeyForm({ status, canManage }: { status: KeyStatus; canManage
   const meta = AI_PROVIDERS.find((p) => p.id === provider) ?? AI_PROVIDERS[0];
   const fromEnv = status.source === "entorno";
   const catalogo = provider === status.provider ? status.models : [];
+  // Solo los modelos que generan imágenes; si el elegido antes ya no está en el catálogo, se conserva para no perderlo en silencio.
+  const imagenes = catalogo.filter(esModeloDeImagen);
+  if (status.imageModel && !imagenes.includes(status.imageModel)) imagenes.unshift(status.imageModel);
   const sameProvider = provider === status.provider;
 
   return (
@@ -134,6 +137,32 @@ export function ApiKeyForm({ status, canManage }: { status: KeyStatus; canManage
                 >
                   <option value="">Igual que el modelo principal</option>
                   {catalogo.map((m) => (
+                    <option key={m} value={m}>
+                      {m}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+
+            {provider === "google" && (
+              <label className="block sm:col-span-2">
+                <span className="mb-1.5 flex items-baseline gap-2">
+                  <span className="text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-[var(--fg-muted)]">
+                    Modelo para imágenes
+                  </span>
+                  <span className="text-xs text-[var(--fg-muted)]/75">
+                    genera las fotos de portada en 2K; solo se listan los modelos de imagen de tu cuenta
+                  </span>
+                </span>
+                <select
+                  name="imageModel"
+                  defaultValue={status.imageModel}
+                  key={`image-${provider}`}
+                  className="lx-input lx-mono text-xs"
+                >
+                  <option value="">Predeterminado ({DEFAULT_IMAGE_MODEL})</option>
+                  {imagenes.map((m) => (
                     <option key={m} value={m}>
                       {m}
                     </option>

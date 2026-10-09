@@ -35,6 +35,8 @@ export type AiSettings = {
   model: string;
   /** Modelo de Gemini para las gráficas con búsqueda en Google; vacío = el principal. */
   chartModel?: string;
+  /** Modelo de Gemini que genera las imágenes de portada; vacío = `DEFAULT_IMAGE_MODEL`. */
+  imageModel?: string;
   /** Claves cifradas, una por proveedor. */
   keys: Partial<Record<AiProviderId, string>>;
   /**
@@ -50,6 +52,7 @@ export type KeyStatus = {
   provider: AiProviderId;
   model: string;
   chartModel: string;
+  imageModel: string;
   /** Catálogo real de la cuenta; vacío si aún no se ha validado la clave. */
   models: string[];
   present: boolean;
@@ -57,6 +60,14 @@ export type KeyStatus = {
   /** Máscara para reconocerla: nunca la clave completa. */
   masked: string | null;
 };
+
+/** Modelo de imagen que se usa mientras no se elija otro en Configuración (Gemini «nano banana», admite 2K). */
+export const DEFAULT_IMAGE_MODEL = "gemini-3.1-flash-image-preview";
+
+/** ¿Es un modelo que genera imágenes? Se reconoce por el nombre del catálogo («…-image…», «nano-banana…»). */
+export function esModeloDeImagen(nombre: string): boolean {
+  return /image|banana/i.test(nombre);
+}
 
 // Ajustes iniciales: Anthropic con su modelo por defecto y ninguna clave.
 export const DEFAULT_AI_SETTINGS: AiSettings = {

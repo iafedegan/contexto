@@ -300,6 +300,7 @@ export async function saveAiSettings(formData: FormData) {
   const meta = providerMeta(provider);
   const model = String(formData.get("model") ?? "").trim();
   const chartModel = String(formData.get("chartModel") ?? "").trim();
+  const imageModel = String(formData.get("imageModel") ?? "").trim();
   const raw = String(formData.get("apiKey") ?? "").trim();
 
   const [row] = await db
@@ -340,10 +341,14 @@ export async function saveAiSettings(formData: FormData) {
   if (chartModel && catalogo.length > 0 && !catalogo.includes(chartModel)) {
     throw new Error(`${meta.label} no ofrece «${chartModel}» para las gráficas.`);
   }
+  if (imageModel && catalogo.length > 0 && !catalogo.includes(imageModel)) {
+    throw new Error(`${meta.label} no ofrece «${imageModel}» para las imágenes.`);
+  }
   const value: AiSettings = {
     provider,
     model: modeloFinal,
     ...(provider === "google" && chartModel ? { chartModel } : {}),
+    ...(provider === "google" && imageModel ? { imageModel } : {}),
     keys,
     models,
   };
@@ -372,6 +377,7 @@ export async function deleteApiKey(provider: AiProviderId) {
     provider: current.provider ?? "anthropic",
     model: current.model ?? providerMeta(provider).defaultModel,
     ...(current.chartModel ? { chartModel: current.chartModel } : {}),
+    ...(current.imageModel ? { imageModel: current.imageModel } : {}),
     keys,
   };
   await db
