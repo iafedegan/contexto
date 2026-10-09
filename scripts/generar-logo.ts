@@ -8,7 +8,7 @@
  *
  * Salidas en `public/logo/`:
  *   - contexto-ganadero-emblema.png     el emblema solo, con fondo transparente (fuente de las demás piezas)
- *   - contexto-ganadero-logo-512.png    el emblema sobre una baldosa del verde de la página, con esquinas redondas (el sitio,
+ *   - contexto-ganadero-logo-v2-512.png    el emblema sobre una baldosa del verde de la página, con esquinas redondas (el sitio,
  *                                       la pestaña y el JSON-LD)
  *   - contexto-ganadero-icon-bleed.png  cuadrado a sangre, para iOS (que le pone su propia máscara)
  *   - contexto-ganadero-maskable.png    cuadrado a sangre con el emblema dentro de la zona segura de los íconos «maskable»
@@ -123,7 +123,7 @@ async function main() {
   mkdirSync(CARPETA, { recursive: true });
   const origen = process.argv.find((a, i) => i > 1 && !a.startsWith("--"));
   if (origen) await extraerEmblema(origen);
-  await pieza("contexto-ganadero-logo-512.png", 512, 112, 0.9);
+  await pieza("contexto-ganadero-logo-v2-512.png", 512, 112, 0.9);
   await pieza("contexto-ganadero-icon-bleed.png", 1024, 0, 0.84);
   await pieza("contexto-ganadero-maskable.png", 1024, 0, 0.62);
   if (process.argv.includes("--og")) await tarjeta();

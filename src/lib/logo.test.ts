@@ -15,7 +15,7 @@ function cabecera(archivo: string) {
 
 test("las piezas del logo existen con la medida que piden cada sitio y cada plataforma", () => {
   assert.deepEqual(cabecera("contexto-ganadero-emblema.png"), { ancho: 1024, alto: 1024, color: 6 }, "el emblema va solo y con fondo transparente");
-  assert.deepEqual(cabecera("contexto-ganadero-logo-512.png"), { ancho: 512, alto: 512, color: 6 }, "esquinas redondas: necesita transparencia");
+  assert.deepEqual(cabecera("contexto-ganadero-logo-v2-512.png"), { ancho: 512, alto: 512, color: 6 }, "esquinas redondas: necesita transparencia");
   assert.equal(cabecera("contexto-ganadero-icon-bleed.png").ancho, 1024);
   assert.equal(cabecera("contexto-ganadero-maskable.png").ancho, 1024);
   assert.deepEqual({ ...cabecera("contexto-ganadero-og.png"), color: 0 }, { ancho: 1200, alto: 630, color: 0 }, "tarjeta de redes de 1200 × 630");

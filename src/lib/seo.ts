@@ -12,7 +12,7 @@ import { SITE_NAME } from "./theme";
 // que nunca existió en public/ (404): Google Rich Results marcaba el schema
 // como inválido en cada nota. Es el mismo logo que usa el resto del sitio, en PNG
 // de 512 px (el JSON-LD pide un raster de al menos 112 px; se genera con scripts/generar-logo.ts).
-const ORG_LOGO = siteUrl("/logo/contexto-ganadero-logo-512.png");
+const ORG_LOGO = siteUrl("/logo/contexto-ganadero-logo-v2-512.png");
 
 // Campos de una nota que necesitan los metadatos.
 type ArticleLike = {
