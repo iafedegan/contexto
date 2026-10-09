@@ -216,7 +216,7 @@ async function CategoryPage({ params, searchParams, locale }: PageProps & { loca
             <span className="lx-chip border-[var(--border-strong)] text-[var(--accent)]">
               {total} {t(locale, "section.count")}
             </span>
-            <span className="lx-chip">{t(locale, "section.live")}</span>
+            <span className="lx-chip max-sm:hidden">{t(locale, "section.live")}</span>
             {(pos === "cabecera" || pos === "barra") && filters}
           </>
         }

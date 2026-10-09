@@ -105,48 +105,48 @@ export function SectionHeader({ theme, kicker, title, description, chips, breadc
       );
     case "esmeralda":
     case "home":
-      // Esmeralda: frontispicio centrado, rombos y filetes de pan de oro.
+      // Esmeralda: título y descripción a la izquierda y las etiquetas (n publicaciones, filtros) a la derecha, en UN bloque bajo
+      // el menú. Antes eran cinco filas centradas (rombos, título, descripción, etiquetas y filete) y la lista empezaba a media pantalla.
       return (
-        <header data-region="encabezado" className="relative mb-14 pt-2 text-center">
+        <header data-region="encabezado" className="relative mb-6 pt-1 sm:mb-8">
           <div className="flex justify-center">{breadcrumb}</div>
-          <div className="flex items-center justify-center gap-4 text-[var(--accent)]">
-            <span className="h-px w-16 bg-gradient-to-r from-transparent to-[var(--accent)] md:w-40" />
-            <span aria-hidden>◆</span>
-            <p data-el="kicker" className="lx-kicker">{kicker}</p>
-            <span aria-hidden>◆</span>
-            <span className="h-px w-16 bg-gradient-to-l from-transparent to-[var(--accent)] md:w-40" />
+          <div className="flex flex-col gap-4 border-b border-[var(--border)] pb-4 lg:flex-row lg:items-end lg:justify-between lg:gap-8">
+            <div className="min-w-0">
+              <p data-el="kicker" className="lx-kicker flex items-center gap-2 text-[var(--accent)]">
+                <span aria-hidden>◆</span>
+                {kicker}
+              </p>
+              <h1 data-el="title" className="lx-display mt-1 bg-gradient-to-b from-[var(--fg)] to-[var(--accent)] bg-clip-text break-words text-[clamp(2rem,10vw,2.4rem)] font-semibold leading-[1.05] tracking-tight text-transparent md:text-5xl">
+                {title}
+              </h1>
+              {description && (
+                <p data-el="description" className="mt-2 max-w-2xl text-base leading-snug text-[var(--fg-muted)]">{description}</p>
+              )}
+            </div>
+            <div className="flex flex-wrap items-center gap-2 lg:shrink-0 lg:justify-end">
+              <div data-el="chips" className="flex flex-wrap items-center gap-2">{chips}</div>
+              {filters && <div className="text-left lg:text-right">{filters}</div>}
+            </div>
           </div>
-          <div className="mt-5 lg:grid lg:grid-cols-[1fr_auto_1fr] lg:items-end lg:gap-6">
-            <span className="hidden lg:block" />
-            <h1 data-el="title" className="lx-display bg-gradient-to-b from-[var(--fg)] to-[var(--accent)] bg-clip-text break-words text-[clamp(2rem,11vw,2.6rem)] font-semibold leading-[1] tracking-tight text-transparent sm:text-6xl md:text-8xl">
-              {title}
-            </h1>
-            <div className="mt-6 text-left lg:mt-0 lg:justify-self-end lg:text-right">{filters}</div>
-          </div>
-          {description && (
-            <p data-el="description" className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-[var(--fg-muted)]">{description}</p>
-          )}
-          <div data-el="chips" className="mt-8 flex flex-wrap justify-center gap-3">{chips}</div>
-          <div aria-hidden className="mx-auto mt-10 h-px max-w-3xl bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent" />
         </header>
       );
     default:
       // Resto: lámina con filete.
       return (
-        <header data-region="encabezado" className="relative mb-14 pt-3">
+        <header data-region="encabezado" className="relative mb-8 pt-2">
           {breadcrumb}
-          <div className="mt-6 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+          <div className="mt-4 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div className="min-w-0">
               <p data-el="kicker" className="lx-kicker text-[var(--accent)]">{kicker}</p>
-              <h1 data-el="title" className="lx-display mt-3 break-words text-[clamp(2rem,11vw,2.6rem)] font-extrabold leading-[0.95] tracking-tight sm:text-5xl md:text-7xl">
+              <h1 data-el="title" className="lx-display mt-2 break-words text-[clamp(2rem,11vw,2.6rem)] font-extrabold leading-[0.95] tracking-tight sm:text-5xl md:text-7xl">
                 {title}
               </h1>
             </div>
             <div className="lg:max-w-[46%] lg:shrink-0">{filters}</div>
           </div>
-          {description && <p data-el="description" className="mt-6 max-w-2xl text-lg leading-relaxed text-[var(--fg-muted)]">{description}</p>}
-          <div data-el="chips" className="mt-8 flex flex-wrap items-center gap-3">{chips}</div>
-          <hr className="lx-rule-strong mt-10" />
+          {description && <p data-el="description" className="mt-3 max-w-2xl text-base leading-snug text-[var(--fg-muted)]">{description}</p>}
+          <div data-el="chips" className="mt-4 flex flex-wrap items-center gap-2">{chips}</div>
+          <hr className="lx-rule-strong mt-5" />
         </header>
       );
   }

@@ -154,18 +154,18 @@ function MastheadHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extr
     <header data-region="navbar" className="sticky top-[var(--stick-top,0px)] z-40 bg-[var(--nav-bg)]">
       {/* Solo la fila de secciones queda pegada al desplazarse (ver StickyRail). */}
       <StickyRail />
-      <div className="mx-auto max-w-7xl px-6 pb-6 pt-10 text-center">
+      <div className="mx-auto max-w-7xl px-6 pb-4 pt-6 text-center md:pt-7">
         <div className="flex items-center justify-center gap-6">
           <span className="hidden h-px flex-1 bg-gradient-to-r from-transparent to-[var(--border-strong)] md:block" />
           <Link href={localePath(locale, "/")} className="block">
-            <span className="lx-display lx-foil block text-4xl font-semibold leading-none tracking-tight md:text-6xl">
+            <span className="lx-display lx-foil block text-4xl font-semibold leading-none tracking-tight md:text-5xl">
               {identity.name}
             </span>
-            <span className="lx-kicker mt-3 block text-[var(--fg-muted)]">
-              {identity.tagline || t(locale, "nav.tagline")}
-            </span>
-            <span className="lx-ui mt-1.5 block text-[0.62rem] font-medium uppercase tracking-[0.18em] text-[var(--fg-muted)]/80">
-              {today}
+            {/* Lema y fecha en una sola línea: antes eran dos filas y la cabecera se comía la pantalla. */}
+            <span className="mt-2 flex flex-wrap items-center justify-center gap-x-3 gap-y-0.5">
+              <span className="lx-kicker text-[var(--fg-muted)]">{identity.tagline || t(locale, "nav.tagline")}</span>
+              <span aria-hidden className="hidden text-[var(--accent)] sm:inline">◆</span>
+              <span className="lx-ui text-[0.62rem] font-medium uppercase tracking-[0.18em] text-[var(--fg-muted)]/80">{today}</span>
             </span>
           </Link>
           <span className="hidden h-px flex-1 bg-gradient-to-l from-transparent to-[var(--border-strong)] md:block" />
@@ -176,7 +176,7 @@ function MastheadHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extr
         aria-label={t(locale, "nav.sections")}
         className="sticky top-0 z-40 border-y border-[var(--border)] bg-[var(--nav-bg)] sm:static"
       >
-        <div className="lx-navrail mx-auto max-w-[88rem] items-center justify-start gap-x-7 gap-y-2 px-6 py-3 text-[0.72rem] uppercase tracking-[0.2em] sm:justify-center">
+        <div className="lx-navrail mx-auto max-w-[96rem] items-center justify-start gap-x-5 gap-y-2 px-6 py-2.5 text-[0.72rem] uppercase tracking-[0.16em] sm:justify-center xl:gap-x-6">
           {nav.map((n) => (
             <Link key={n.href} href={localePath(locale, n.href)} className="lx-link lx-ui">
               {n.label}
