@@ -139,6 +139,14 @@ producción, consumo, mercado internacional, costos) y cada biblioteca de docume
 Lee la misma caché de datos que la página, así que no repite las descargas ni difiere de lo que ve el lector. Los pasa `src/lib/ai-observatorio.ts` a la ruta
 `/api/assistant`, que mantiene la regla de siempre: sin fuente citable, no responde.
 
+### «Más leídas» de verdad
+
+La lista «Más leídas» (barra lateral de la portada y de las secciones, y `ubicacion.masLeidas` de la API) ordena por las **lecturas reales de los últimos 7 días**, de
+cualquier fecha de publicación, con el contador diario que alimenta el beacon de `/api/vista` (`article_views_daily`, días en hora de Colombia). Solo entran notas con
+al menos una lectura: no se rellena con notas que nadie leyó, así que puede haber menos de cinco, o ninguna y entonces el bloque no se pinta. Empata por el total
+histórico y luego por la más reciente; el bloque dice «Por lecturas de los últimos 7 días». Una lectura cuenta tras 5 s en la nota, una vez por sesión, una vez por IP y
+nota cada 6 h y hasta 120 por IP y hora. La consulta es `leerMasLeidas` en `src/lib/content.ts` (con pruebas contra una base real en memoria) y se guarda 5 minutos.
+
 ### Color del panel y editor flotante de la vista previa
 
 La barra lateral del panel (y la barra del celular) toma el color principal de la plantilla que usa el sitio: verde esmeralda con pan de oro en Esmeralda Real,

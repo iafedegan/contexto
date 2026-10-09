@@ -1,9 +1,10 @@
 import "server-only";
 import { cache } from "react";
-import { and, desc, eq, gte, inArray, isNull, lte, sql } from "drizzle-orm";
+import { and, desc, eq, gt, gte, inArray, isNull, lte, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
   articles,
+  articleViewsDaily,
   authors,
   categories,
   siteSettings,
@@ -397,24 +398,53 @@ export async function getPosicionesPortada(): Promise<Map<string, PosicionPortad
   return posicionesDePortada(await leerOrdenPortada());
 }
 
+/** Días que cuenta «Más leídas»: las lecturas de la última semana (la de hoy incluida). */
+export const DIAS_MAS_LEIDAS = 7;
+
 /**
- * Más leídas (H-04). Se ordena por el contador de `views`, que alimenta el
- * beacon del cliente; se limita a los últimos 30 días para que la lista refleje
- * la actualidad y no un éxito de hace dos años.
+ * Más leídas (H-04), de verdad: las notas con más lecturas REALES en los últimos 7 días, de cualquier fecha de publicación (una
+ * nota vieja que la gente vuelve a leer cuenta). Las lecturas salen del contador diario que alimenta el beacon del cliente
+ * (`article_views_daily`, días en hora de Colombia). Solo entran notas con al menos una lectura: no se rellena con notas que
+ * nadie ha leído, así que puede haber menos de `limit` (o ninguna, y el bloque no se pinta). Empata por el total histórico y
+ * luego por la más reciente. Sin la tabla diaria (migración 0006 sin aplicar) usa el contador total de los últimos 30 días,
+ * también solo con lecturas.
+ *
+ * Es la lectura sin caché: `getMostReadArticles` la guarda 5 minutos.
  */
-export const getMostReadArticles = cachear(
-  "mas-leidas",
-  (limit: number = 5): Promise<ArticleListItem[]> =>
-    db
+export async function leerMasLeidas(limit: number = 5): Promise<ArticleListItem[]> {
+  try {
+    const semana = db
+      .select({
+        articleId: articleViewsDaily.articleId,
+        lecturas: sql<number>`sum(${articleViewsDaily.views})::int`.as("lecturas"),
+      })
+      .from(articleViewsDaily)
+      .where(sql`${articleViewsDaily.day} > (now() at time zone 'America/Bogota')::date - ${DIAS_MAS_LEIDAS}::int`)
+      .groupBy(articleViewsDaily.articleId)
+      .as("semana");
+    return await db
+      .select(listSelection)
+      .from(articles)
+      .innerJoin(semana, eq(semana.articleId, articles.id))
+      .leftJoin(categories, eq(articles.categoryId, categories.id))
+      .leftJoin(authors, eq(articles.authorId, authors.id))
+      .where(and(publishedCondition, gt(semana.lecturas, 0)))
+      .orderBy(desc(semana.lecturas), desc(articles.views), desc(articles.publishedAt))
+      .limit(limit);
+  } catch {
+    // Todavía no existe la tabla diaria: el total histórico de los últimos 30 días, solo con lecturas.
+    return db
       .select(listSelection)
       .from(articles)
       .leftJoin(categories, eq(articles.categoryId, categories.id))
       .leftJoin(authors, eq(articles.authorId, authors.id))
-      .where(and(publishedCondition, gte(articles.publishedAt, sql`now() - interval '30 days'`)))
+      .where(and(publishedCondition, gt(articles.views, 0), gte(articles.publishedAt, sql`now() - interval '30 days'`)))
       .orderBy(desc(articles.views), desc(articles.publishedAt))
-      .limit(limit),
-  { tags: [TAG_CONTENIDO], segundos: 300 },
-);
+      .limit(limit);
+  }
+}
+
+export const getMostReadArticles = cachear("mas-leidas-v2", leerMasLeidas, { tags: [TAG_CONTENIDO], segundos: 300 });
 
 /** Slugs para generateStaticParams (pre-render en build) y sitemap. */
 export async function getAllPublishedSlugs(): Promise<{ slug: string; updatedAt: Date }[]> {

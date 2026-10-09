@@ -62,7 +62,7 @@ export async function buildOpenApiSpec(origin: string) {
       enVivo: { type: "boolean", description: "Lleva la etiqueta «En vivo»." },
       masLeidas: {
         type: "object",
-        properties: { esta: { type: "boolean" }, posicion: { type: "integer", nullable: true, description: "1 = la más leída." } },
+        properties: { esta: { type: "boolean" }, posicion: { type: "integer", nullable: true, description: "1 = la más leída. Se cuenta por lecturas reales de los últimos 7 días; una nota sin lecturas esa semana no está." } },
       },
     },
   };

@@ -27,7 +27,8 @@ export async function SiteSidebar({ locale }: { locale: Locale }) {
           <h2 className="lx-kicker border-b border-[var(--border)] pb-2 text-[var(--accent)]">
             {t(locale, "sidebar.mostRead")}
           </h2>
-          <ol className="mt-4 flex flex-col">
+          <p className="mt-2 text-[0.7rem] uppercase tracking-[0.14em] text-[var(--fg-muted)]">{t(locale, "sidebar.mostReadHint")}</p>
+          <ol className="mt-2 flex flex-col">
             {masLeidas.map((a, i) => (
               <li key={a.slug} className="border-b border-[var(--border)] last:border-0">
                 <Link
