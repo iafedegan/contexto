@@ -156,17 +156,6 @@ function MastheadHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extr
     <header data-region="navbar" className="sticky top-[var(--stick-top,0px)] z-40 bg-[var(--nav-bg)]">
       {/* Solo la fila de secciones queda pegada al desplazarse (ver StickyRail). */}
       <StickyRail />
-      <div className="border-b border-[var(--border)]/60">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-2 text-[0.72rem] uppercase tracking-[0.16em] text-[var(--fg-muted)] sm:px-6 sm:text-[0.72rem] sm:tracking-[0.22em]">
-          <span className="ml-auto flex shrink-0 items-center gap-3">
-            <LocaleSwitch locale={locale} />
-        <ThemeToggle locale={locale} />
-        {identity.radioStreamUrl && <RadioPlayer src={identity.radioStreamUrl} locale={locale} />}
-        <InstalarApp locale={locale} />
-          </span>
-        </div>
-      </div>
-
       <AutoHideBand>
       <div className="mx-auto max-w-7xl px-6 pb-6 pt-10 text-center">
         <div className="flex items-center justify-center gap-6">
@@ -191,7 +180,7 @@ function MastheadHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extr
         aria-label={t(locale, "nav.sections")}
         className="sticky top-0 z-40 border-y border-[var(--border)] bg-[var(--nav-bg)] sm:static"
       >
-        <div className="lx-navrail mx-auto max-w-7xl items-center justify-start gap-x-7 gap-y-2 px-6 py-3 text-[0.72rem] uppercase tracking-[0.2em] sm:justify-center">
+        <div className="lx-navrail mx-auto max-w-[88rem] items-center justify-start gap-x-7 gap-y-2 px-6 py-3 text-[0.72rem] uppercase tracking-[0.2em] sm:justify-center">
           <InicioEnSeccion locale={locale} className={"lx-link lx-ui"} />
           {nav.map((n) => (
             <Link key={n.href} href={localePath(locale, n.href)} className="lx-link lx-ui">
@@ -205,6 +194,13 @@ function MastheadHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extr
             {t(locale, "nav.search")}
           </Link>
           <MoreMenu locale={locale} extra={extra} />
+          {/* Idioma, modo, radio e instalar: pequeños y discretos, al final de la barra y no en una franja propia. */}
+          <span className="flex items-center gap-0.5 border-l border-[var(--border)] pl-3 text-[var(--fg-muted)] opacity-80 transition-opacity hover:opacity-100 focus-within:opacity-100">
+            <LocaleSwitch locale={locale} compacto />
+            <ThemeToggle locale={locale} className="!size-8 pointer-coarse:!size-11" />
+            {identity.radioStreamUrl && <RadioPlayer src={identity.radioStreamUrl} locale={locale} />}
+            <InstalarApp locale={locale} variante="mini" />
+          </span>
         </div>
       </nav>
     </header>

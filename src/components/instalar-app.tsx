@@ -126,7 +126,7 @@ function pasosSafari(info: InfoIos, locale: Locale): Paso[] {
   return pasos;
 }
 
-export function InstalarApp({ locale: localeProp, variante = "pildora" }: { locale: Locale; variante?: "pildora" | "banda" | "aviso" }) {
+export function InstalarApp({ locale: localeProp, variante = "pildora" }: { locale: Locale; variante?: "pildora" | "mini" | "banda" | "aviso" }) {
   const actual = useSyncExternalStore(suscribir, estado, () => "no" as Estado);
   const guia = useRef<HTMLDialogElement>(null);
   const [copiado, setCopiado] = useState(false);
@@ -192,7 +192,17 @@ export function InstalarApp({ locale: localeProp, variante = "pildora" }: { loca
 
   const texto = variante === "pildora" ? t(locale, "pwa.install") : t(locale, "pwa.installFull");
   const boton =
-    variante === "pildora" ? (
+    variante === "mini" ? (
+      <button
+        type="button"
+        onClick={instalar}
+        aria-label={t(locale, "pwa.install")}
+        title={t(locale, "pwa.install")}
+        className="grid size-8 place-items-center rounded-full text-inherit transition hover:text-[var(--accent)] pointer-coarse:size-11"
+      >
+        <Download size={15} aria-hidden />
+      </button>
+    ) : variante === "pildora" ? (
       <button
         type="button"
         onClick={instalar}
