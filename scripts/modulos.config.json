@@ -52,7 +52,7 @@
         "^components/home/tile-card\\.tsx$",
         "^components/section/",
         "^lib/(article-ops|article-stats|content|seo|seo-audit|sanitize|scheduled|redirects|rss|search|estados|embeds|embeddings|preview-token|preview-draft|ubicacion-nota)\\.ts$",
-        "^components/(article-card|article-body|cover-art|json-ld|share-buttons|reading-progress|reader-mode|listen-article|live-badge|breaking-bar|view-counter|programadas-tick)\\.tsx$",
+        "^components/(article-card|article-body|cover-art|json-ld|share-buttons|reading-progress|reader-mode|listen-article|live-badge|view-counter|programadas-tick)\\.tsx$",
         "^app/api/programadas/",
         "^components/home/(home-card|bento-tile|broadsheet-card)\\.tsx$"
       ],

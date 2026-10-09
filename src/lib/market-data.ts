@@ -34,7 +34,7 @@ export type MarketTickerEntry = {
  * Último valor de cada serie de la franja, con el punto anterior para poder
  * pintar la flecha de variación. Se degrada a lista vacía si la serie no
  * existe todavía o si la consulta falla — la franja nunca debe romper la
- * página (mismo criterio que `BreakingBar`).
+ * página.
  */
 const leerFranja = cachear("franja-indicadores", async (): Promise<MarketTickerEntry[]> => {
   // Sin try/catch: un fallo pasajero de la base NO debe quedar guardado 10 minutos como «lista vacía».

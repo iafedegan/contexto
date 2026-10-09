@@ -69,7 +69,7 @@ async function ArticlePage({ params, locale }: Params & { locale: Locale }) {
   const ultimaHora = enBarra?.slug === a.slug;
 
   return (
-    <SiteShell theme={site.theme} style={site.style} locale={locale} variant="articulo" sinBarraUltimaHora={ultimaHora}>
+    <SiteShell theme={site.theme} style={site.style} locale={locale} variant="articulo">
       <ArticleDocument a={a} related={related} locale={locale} theme={site.parts.body} ultimaHora={ultimaHora} />
     </SiteShell>
   );
@@ -123,14 +123,7 @@ export function ArticleDocument({
           kicker={a.categorySlug ? categoryLabel(locale, a.categorySlug, a.categoryName ?? "") : undefined}
           title={a.title}
           excerpt={a.excerpt}
-          live={
-            ultimaHora || a.isLive ? (
-              <span className="flex flex-wrap items-center gap-2">
-                {ultimaHora && <BreakingBadge locale={locale} />}
-                {a.isLive && <LiveBadge locale={locale} />}
-              </span>
-            ) : undefined
-          }
+          live={a.isLive ? <LiveBadge locale={locale} /> : undefined}
           breadcrumb={
         <nav className="lx-ui flex flex-wrap items-center gap-2 text-[0.72rem] uppercase tracking-[0.2em] text-[var(--fg-muted)]">
           <Link href={localePath(locale, "/")} className="lx-link">
@@ -190,6 +183,8 @@ export function ArticleDocument({
           }
           cover={
         <figure className="lx-media lx-card mt-10 aspect-[16/9] w-full">
+          {/* «Última hora»: la insignia va en la esquina de la imagen, no en una franja. */}
+          {ultimaHora && <BreakingBadge locale={locale} className="absolute left-3 top-3 z-[5] shadow-lg" />}
           {a.coverImageUrl ? (
             <Image
               src={a.coverImageUrl}

@@ -1,10 +1,9 @@
-import { getTopLevelCategories } from "@/lib/content";
+import { getBreakingArticle, getTopLevelCategories } from "@/lib/content";
 import { getSiteIdentity } from "@/lib/site-identity";
 import { getSiteTheme } from "@/lib/site-theme";
 import { getSitePopup } from "@/lib/popup";
 import { SitePopup } from "@/components/site-popup";
 import { ReadingProgress } from "@/components/reading-progress";
-import { BreakingBar } from "@/components/breaking-bar";
 import { AdsBanner } from "@/components/ads-banner";
 import { SiteHeader, type NavItem } from "@/components/site-header";
 import { MobileTabBar } from "@/components/mobile-tab-bar";
@@ -47,6 +46,15 @@ const SHELL: Record<ShellVariant, { main: string; fx: string }> = {
 };
 
 /**
+ * Insignia «Última hora» en la esquina de la imagen de la tarjeta de la nota marcada (la más reciente). Es CSS y no un componente
+ * porque las tarjetas se pintan también desde componentes de cliente; cada tarjeta lleva su `data-bs-root` con el slug.
+ */
+function estiloUltimaHora(slug: string, etiqueta: string): string {
+  const texto = `⚡ ${etiqueta}`.toUpperCase().replace(/["\\\n]/g, "");
+  return `[data-bs-root="${slug}"] .lx-media{position:relative;container-type:inline-size}[data-bs-root="${slug}"] .lx-media::after{content:"${texto}";position:absolute;top:.6rem;left:.6rem;z-index:5;pointer-events:none;background:var(--danger,#c0392b);color:#fff;font:700 .66rem/1 var(--font-ui,system-ui,sans-serif);letter-spacing:.14em;padding:.4rem .65rem;border-radius:999px;box-shadow:0 2px 10px rgba(0,0,0,.4);white-space:nowrap}@container (max-width:150px){[data-bs-root="${slug}"] .lx-media::after{content:"⚡";top:.35rem;left:.35rem;padding:.3rem .42rem;font-size:.75rem}}`;
+}
+
+/**
  * Envoltorio de plantilla: fija el tema (`data-theme`), las capas de textura y
  * la pareja navbar/footer. Las categorías se consultan una sola vez por página.
  */
@@ -58,7 +66,6 @@ export async function SiteShell({
   style,
   locale = DEFAULT_LOCALE,
   aboveMain,
-  sinBarraUltimaHora = false,
 }: {
   /** Plantilla activa: paleta, tipografías, cabecera y pie. */
   theme: Theme;
@@ -80,15 +87,14 @@ export async function SiteShell({
    * ventana real del navegador y no el recuadro del mockup).
    */
   aboveMain?: React.ReactNode;
-  /** En la propia nota de última hora la barra sobra (repetiría su titular): la nota lleva la insignia. */
-  sinBarraUltimaHora?: boolean;
 }) {
-  const [nav, extraNav, identity, site, popup] = await Promise.all([
+  const [nav, extraNav, identity, site, popup, ultimaHora] = await Promise.all([
     navItems(locale),
     navOverflow(locale),
     getSiteIdentity(),
     getSiteTheme(),
     getSitePopup(),
+    getBreakingArticle().catch(() => null),
   ]);
   const shell = SHELL[variant];
 
@@ -102,8 +108,8 @@ export async function SiteShell({
           <ReadingProgress />
         </div>
       )}
-      {/* Última hora por encima de todo, salvo en la portada (la nota lleva su propia insignia). */}
-      {!sinBarraUltimaHora && variant !== "portada" && <BreakingBar locale={locale} />}
+      {/* «Última hora» ya no es una franja roja: la nota marcada lleva una insignia en la esquina de su imagen (ver `estiloUltimaHora`). */}
+      {ultimaHora && /^[a-z0-9-]+$/.test(ultimaHora.slug) && <style dangerouslySetInnerHTML={{ __html: estiloUltimaHora(ultimaHora.slug, t(locale, "breaking.label")) }} />}
       <SiteHeader theme={theme} nav={nav} extraNav={extraNav} locale={locale} identity={identity} variant={site.parts.navbar} />
       {aboveMain}
       <main id="contenido" data-region="body" className={mainClassName ?? shell.main}>
