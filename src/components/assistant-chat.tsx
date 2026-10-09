@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Mic, Square, Volume2, VolumeX } from "lucide-react";
+import { ChevronDown, Mic, Square, Volume2, VolumeX } from "lucide-react";
 import { LogoMark } from "@/components/logo-mark";
 import { useVoz } from "@/components/voz-asistente";
 
@@ -152,12 +152,20 @@ export function AssistantChat({ compact = false }: { compact?: boolean }) {
                 </div>
                 <p className="whitespace-pre-wrap text-[15px] leading-[1.75]">{m.text}</p>
 
+                {/* Las fuentes van en una lista cerrada: pueden ser muchas y la respuesta es lo primero que se lee. */}
                 {m.sources && m.sources.length > 0 && (
-                  <div className="lx-card lx-glass p-5 text-sm">
-                    <p className="lx-kicker text-[var(--accent)]">
-                      Fuentes{m.mode === "degraded" ? " (búsqueda semántica)" : ""}
-                    </p>
-                    <ol className="mt-3 flex flex-col gap-2">
+                  <details
+                    className="lx-card lx-glass group/f text-sm"
+                    // En el cuadro flotante, al abrirla se baja hasta el final para que la lista se vea entera.
+                    onToggle={(e) => { if (compact && e.currentTarget.open) finRef.current?.scrollIntoView({ block: "end", behavior: "smooth" }); }}
+                  >
+                    <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-4 py-2.5 marker:hidden [&::-webkit-details-marker]:hidden">
+                      <span className="lx-kicker text-[var(--accent)]">
+                        Fuentes ({m.sources.length}){m.mode === "degraded" ? " · búsqueda semántica" : ""}
+                      </span>
+                      <ChevronDown size={16} aria-hidden className="shrink-0 text-[var(--fg-muted)] transition group-open/f:rotate-180" />
+                    </summary>
+                    <ol className="flex flex-col gap-2 px-4 pb-4">
                       {m.sources.map((s) => (
                         <li key={s.n} className="flex gap-3">
                           <span className="lx-mono text-xs text-[var(--accent)]">
@@ -180,7 +188,7 @@ export function AssistantChat({ compact = false }: { compact?: boolean }) {
                         </li>
                       ))}
                     </ol>
-                  </div>
+                  </details>
                 )}
               </>
             )}
