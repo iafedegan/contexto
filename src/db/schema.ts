@@ -11,6 +11,7 @@ import { relations, sql } from "drizzle-orm";
 import type { HomeTitleFont } from "@/lib/home-fonts";
 import type { RegionStyles } from "@/lib/home-regions";
 import type { TemplateParts } from "@/lib/template-parts";
+import type { TickerConfig } from "@/lib/cintillo";
 import {
   boolean,
   date,
@@ -659,6 +660,8 @@ export type HomeLayoutConfig = {
   regions?: RegionStyles;
   /** Plantilla compuesta: navbar, cuerpo y footer elegidos por separado. */
   parts?: TemplateParts;
+  /** Cintillo de titulares: qué lleva y a qué velocidad (ver src/lib/cintillo.ts). */
+  ticker?: TickerConfig;
 };
 
 // --- Relaciones ---------------------------------------------------

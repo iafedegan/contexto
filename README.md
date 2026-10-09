@@ -124,6 +124,14 @@ confirmación, edad por rangos, ciudades, proveedor de correo y qué tan complet
 La medición es anónima y con permiso (cookie `cg_med` / `cg_vid`): ver `docs/seguridad.md` §14. Datos de prueba locales:
 `npx tsx scripts/seed-lectores.ts` (y `--limpiar`). En producción hay que correr `drizzle/0011_lecturas_de_lectores.sql` en el SQL Editor.
 
+### Cintillo de titulares (editable)
+
+La franja que corre bajo la cabecera de la portada se configura en `/panel/portada` → «Cintillo de titulares»: apagarla, elegir de dónde salen los
+titulares (el orden de la portada, las más recientes o una sección) y cuántos, qué indicadores del mercado lleva (dólar, petróleo, novillo gordo),
+mensajes propios (salen primero) y la velocidad (1 lenta – 10 rápida; la vuelta dura más con más texto, así que «velocidad» significa lo mismo con 3
+titulares que con 20). Vive en `HomeLayoutConfig.ticker` (sin migración), se ve en el lienzo, se publica y se deshace con el resto del diseño. La lógica
+pura y sus pruebas están en `src/lib/cintillo.ts`. Elegir una plantilla no borra la configuración del cintillo.
+
 ### API pública: dónde está cada nota (`ubicacion`)
 
 `/api/v1/articulos` y `/api/v1/articulos/{slug}` (con clave; especificación en `/api-docs`) devuelven en cada nota un objeto `ubicacion`:

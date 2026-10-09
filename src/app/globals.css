@@ -1014,7 +1014,8 @@ a {
   display: flex;
   gap: 3rem;
   width: max-content;
-  animation: lx-scroll 38s linear infinite;
+  /* La duración la fija el cintillo de la portada (--lx-marquee-s) según su velocidad y el largo de sus textos. */
+  animation: lx-scroll var(--lx-marquee-s, 38s) linear infinite;
 }
 
 @keyframes lx-scroll {

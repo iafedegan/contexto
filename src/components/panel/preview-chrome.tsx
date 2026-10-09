@@ -531,7 +531,7 @@ export function PreviewChrome({
                   <details className="rounded-[var(--radius)] border border-[var(--border)]">
                     <summary className="cursor-pointer px-3 py-2.5 text-sm font-semibold">Plantilla</summary>
                     <div className="border-t border-[var(--border)] p-3">
-                      <TemplatePicker layout={layout} onPick={(config) => editLayout({ ...config, parts: {}, sectionFilters: layout.sectionFilters })} compacto />
+                      <TemplatePicker layout={layout} onPick={(config) => editLayout({ ...layout, ...config, parts: {}, sectionFilters: layout.sectionFilters })} compacto />
                     </div>
                   </details>
                   <details className="rounded-[var(--radius)] border border-[var(--border)]">

@@ -158,8 +158,7 @@ function MastheadHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extr
       <StickyRail />
       <div className="border-b border-[var(--border)]/60">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-2 text-[0.72rem] uppercase tracking-[0.16em] text-[var(--fg-muted)] sm:px-6 sm:text-[0.72rem] sm:tracking-[0.22em]">
-          <span className="hidden sm:block">{today}</span>
-          <span className="flex shrink-0 items-center gap-3">
+          <span className="ml-auto flex shrink-0 items-center gap-3">
             <LocaleSwitch locale={locale} />
         <ThemeToggle locale={locale} />
         {identity.radioStreamUrl && <RadioPlayer src={identity.radioStreamUrl} locale={locale} />}
@@ -180,7 +179,7 @@ function MastheadHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extr
               {identity.tagline || t(locale, "nav.tagline")}
             </span>
             <span className="lx-ui mt-1.5 block text-[0.62rem] font-medium uppercase tracking-[0.18em] text-[var(--fg-muted)]/80">
-              {t(locale, "nav.digitalEdition")}
+              {today}
             </span>
           </Link>
           <span className="hidden h-px flex-1 bg-gradient-to-l from-transparent to-[var(--border-strong)] md:block" />

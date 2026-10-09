@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronDown, LayoutGrid, Layers, ListOrdered, ListTree, Megaphone, MessageSquare, SlidersHorizontal } from "lucide-react";
+import { ChevronDown, LayoutGrid, Layers, ListOrdered, ListTree, Megaphone, MessageSquare, SlidersHorizontal, TextCursorInput } from "lucide-react";
 import type { AdDraft } from "@/components/panel/ads-zone-form";
 import type { AdsZoneRow } from "@/lib/ads";
 import { publishHomeDraft, restoreHomeSnapshot, saveHomeDraft } from "@/app/panel/(app)/portada/actions";
@@ -20,6 +20,7 @@ import { SeccionForm } from "@/components/panel/seccion-form";
 import { SectionTree, type SectionNode } from "@/components/panel/section-tree";
 import { PartsEditor } from "@/components/panel/parts-editor";
 import { PopupEditor } from "@/components/panel/popup-editor";
+import { CintilloEditor } from "@/components/panel/cintillo-editor";
 import { PreviewFrame, type Zoom } from "@/components/panel/preview-frame";
 import { PortadaToolbar, type Viewport } from "@/components/panel/portada-toolbar";
 import { PortadaToast, type ToastData } from "@/components/panel/portada-toast";
@@ -32,6 +33,7 @@ import type { PopupConfig } from "@/lib/popup-types";
 import { ACCEPTED_KEY, DRAFT_PING_KEY, ADS_EDIT_KEY, ITEMS_EDIT_KEY, LAYOUT_EDIT_KEY, SECCIONES_KEY, type PortadaDraft } from "@/lib/portada-draft";
 import type { Anterior, Item, Layout } from "@/components/panel/portada-types";
 import { recortar } from "@/lib/format";
+import { sanitizeTicker } from "@/lib/cintillo";
 
 // Clave donde se recuerda que ya se mostró la guía.
 const GUIA_KEY = "cg:portada-guia-v1";
@@ -484,7 +486,7 @@ export function HomeBuilder({
   }
 
   // Elige una plantilla.
-  function pickTemplate(config: Layout) {
+  function pickTemplate(config: Omit<Layout, "ticker">) {
     const teniaComposicion = Object.values(layout.parts ?? {}).some(Boolean);
     patchLayout({ ...config, parts: {}, sectionFilters: layout.sectionFilters });
     if (teniaComposicion) {
@@ -995,6 +997,17 @@ export function HomeBuilder({
             </Bloque>
 
             <Bloque
+              id="cintillo"
+              titulo="Cintillo de titulares"
+              resumen={layout.ticker?.activo === false ? "Apagado" : `Activado · ${resumenCintillo(layout.ticker)}`}
+              icono={<TextCursorInput size={13} />}
+              abierto={!!openBlocks.cintillo}
+              onToggle={toggle("cintillo")}
+            >
+              <CintilloEditor value={layout.ticker} onChange={(ticker) => patchLayout({ ticker })} secciones={sections.map((n) => ({ slug: n.slug, name: n.name }))} />
+            </Bloque>
+
+            <Bloque
               id="publicidad"
               titulo="Publicidad"
               resumen={anunciosActivos ? `${anunciosActivos} ${anunciosActivos === 1 ? "anuncio activo" : "anuncios activos"}` : "Sin anuncios activos"}
@@ -1049,6 +1062,13 @@ export function HomeBuilder({
 }
 
 /** Bloque plegable de la barra lateral. Arranca cerrado salvo que se pida; su estado lo lleva quien lo usa. */
+// Una línea con lo que lleva el cintillo, para verla aunque el bloque esté cerrado.
+function resumenCintillo(t: Layout["ticker"] | undefined): string {
+  const v = sanitizeTicker(t);
+  const titulares = v.cantidad === 0 ? "sin titulares" : `${v.cantidad} titulares`;
+  return `${titulares} · ${v.mercado.length} indicadores${v.textos.length ? ` · ${v.textos.length} mensajes` : ""}`;
+}
+
 function Bloque({
   id,
   titulo,

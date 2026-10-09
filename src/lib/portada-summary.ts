@@ -98,6 +98,9 @@ export function summarizeChanges(
   if (stable(bl.sectionEls) !== stable(cl.sectionEls) || bl.sectionFilters !== cl.sectionFilters) {
     out.push({ id: "secciones", text: "Encabezado de las secciones" });
   }
+  if (stable(bl.ticker) !== stable(cl.ticker)) {
+    out.push({ id: "cintillo", text: "Cintillo de titulares (contenido o velocidad)" });
+  }
   if (stable(bl.zones) !== stable(cl.zones)) {
     out.push({ id: "zonas", text: "Zonas de la cuadrícula (columnas, filas, espacio)" });
   }

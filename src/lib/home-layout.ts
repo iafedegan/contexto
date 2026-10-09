@@ -1,3 +1,4 @@
+import { DEFAULT_TICKER } from "@/lib/cintillo";
 import type { HomeLayoutConfig } from "@/db/schema";
 
 /**
@@ -16,6 +17,7 @@ export const DEFAULT_HOME_LAYOUT: Required<HomeLayoutConfig> = {
   sectionFilters: "cabecera",
   sectionEls: {},
   zones: {},
+  ticker: DEFAULT_TICKER,
 };
 
 // Identificador de una plantilla de portada.
@@ -26,7 +28,8 @@ export type HomeTemplate = {
   id: HomeTemplateId;
   name: string;
   description: string;
-  config: Required<HomeLayoutConfig>;
+  /** Sin `ticker`: elegir una plantilla no debe borrar el cintillo que el editor configuró. */
+  config: Omit<Required<HomeLayoutConfig>, "ticker">;
 };
 
 /**

@@ -13,7 +13,8 @@ import { CardSlugsProvider } from "@/components/home/card-styles";
 import { blockStylesCss } from "@/lib/home-style";
 import { SiteSidebar } from "@/components/site-sidebar";
 import { SiteShell } from "@/components/site-shell";
-import { getHomeLayoutConfig, getHomepageArticles, PORTADA_NOTAS } from "@/lib/content";
+import { getArticlesByCategory, getHomeLayoutConfig, getHomepageArticles, getRecentArticles, PORTADA_NOTAS } from "@/lib/content";
+import { duracionDelCintillo, piezasDelCintillo, sanitizeTicker } from "@/lib/cintillo";
 import { DEFAULT_HOME_LAYOUT, splitHomeSlots } from "@/lib/home-layout";
 import { getSiteTheme } from "@/lib/site-theme";
 import { getSiteIdentity } from "@/lib/site-identity";
@@ -75,28 +76,44 @@ async function HomePage({ locale }: { locale: Locale }) {
     .map((m) => ({ key: m.key as "trm" | "cattle", label: t(locale, `market.${m.key}`), value: formatMarketValue(m) }));
   const props = { lead, second, rail, river, layout, locale, market: marketFormatted };
 
-  const cintillo = (
-    <div className="mb-4 overflow-hidden border-b border-[var(--border)] py-2.5 sm:mb-10 sm:border-y">
-      <div className="lx-marquee text-[0.72rem] uppercase tracking-[0.14em] text-[var(--fg-muted)] sm:tracking-[0.25em]">
-        {[...market, ...articles, ...market, ...articles].map((item, i) =>
-          "value" in item ? (
-            <span
-              key={`market-${item.key}-${i}`}
-              className="flex items-center gap-1.5 whitespace-nowrap font-semibold text-[var(--fg)]"
-            >
-              <span className="text-[var(--accent)]">◆</span>
-              {t(locale, `market.${item.key}`)} {formatMarketValue(item)}
-            </span>
-          ) : (
-            <span key={`${item.slug}-${i}`} className="flex items-center gap-3 whitespace-nowrap">
-              <span className="text-[var(--accent)]">◆</span>
-              {item.title}
-            </span>
-          ),
-        )}
+  // Cintillo configurable desde /panel/portada: qué lleva (titulares, indicadores, mensajes propios) y a qué velocidad.
+  const ticker = sanitizeTicker(layout.ticker);
+  const notasCintillo =
+    ticker.fuente === "recientes"
+      ? await getRecentArticles(Math.max(1, ticker.cantidad)).catch(() => [])
+      : ticker.fuente === "seccion" && ticker.seccion
+        ? await getArticlesByCategory(ticker.seccion, { limit: Math.max(1, ticker.cantidad) }).then((r) => r.items).catch(() => [])
+        : articles;
+  const piezas = ticker.activo
+    ? piezasDelCintillo(ticker, {
+        mercado: market.map((m) => ({ key: m.key, texto: `${t(locale, `market.${m.key}`)} ${formatMarketValue(m)}` })),
+        notas: notasCintillo,
+      })
+    : [];
+  const cintillo =
+    piezas.length > 0 ? (
+      <div className="mb-4 overflow-hidden border-b border-[var(--border)] py-2.5 sm:mb-10 sm:border-y">
+        <div
+          className="lx-marquee text-[0.72rem] uppercase tracking-[0.14em] text-[var(--fg-muted)] sm:tracking-[0.25em]"
+          style={{ "--lx-marquee-s": `${duracionDelCintillo(piezas, ticker.velocidad)}s` } as React.CSSProperties}
+        >
+          {/* Dos copias seguidas: la animación avanza media tira y reinicia sin que se note el salto. */}
+          {[...piezas, ...piezas].map((p, i) =>
+            p.tipo === "nota" ? (
+              <span key={`${p.clave}-${i}`} className="flex items-center gap-3 whitespace-nowrap">
+                <span className="text-[var(--accent)]">◆</span>
+                {p.texto}
+              </span>
+            ) : (
+              <span key={`${p.clave}-${i}`} className="flex items-center gap-1.5 whitespace-nowrap font-semibold text-[var(--fg)]">
+                <span className="text-[var(--accent)]">◆</span>
+                {p.texto}
+              </span>
+            ),
+          )}
+        </div>
       </div>
-    </div>
-  );
+    ) : undefined;
 
   return (
     <SiteShell
