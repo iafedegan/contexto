@@ -102,8 +102,8 @@ export async function SiteShell({
           <ReadingProgress />
         </div>
       )}
-      {/* Última hora por encima de todo: si hay urgencia, es lo primero. */}
-      {!sinBarraUltimaHora && <BreakingBar locale={locale} />}
+      {/* Última hora por encima de todo, salvo en la portada (la nota lleva su propia insignia). */}
+      {!sinBarraUltimaHora && variant !== "portada" && <BreakingBar locale={locale} />}
       <SiteHeader theme={theme} nav={nav} extraNav={extraNav} locale={locale} identity={identity} variant={site.parts.navbar} />
       {aboveMain}
       <main id="contenido" data-region="body" className={mainClassName ?? shell.main}>
