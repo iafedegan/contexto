@@ -84,7 +84,7 @@
       "rutas": [
         "^lib/(site-[a-z-]+|theme|zones|ads|ads-positions|ads-validate|ads-frame|popup|canvas-hints|portada-[a-z-]+|preview-chrome|block-tools)\\.tsx?$",
         "^components/home/(?!templates)",
-        "^components/(site-header|site-footer|site-shell|site-popup|sticky-rail|more-menu|mobile-nav|theme-toggle|locale-switch|ads-banner|feature-strip|inicio-en-seccion|auto-hide-band|mobile-tab-bar|instalar-app)\\.tsx$"
+        "^components/(site-header|site-footer|site-shell|site-popup|sticky-rail|more-menu|mobile-nav|theme-toggle|locale-switch|ads-banner|feature-strip|mobile-tab-bar|instalar-app)\\.tsx$"
       ],
       "puedeUsar": [
         "infra",

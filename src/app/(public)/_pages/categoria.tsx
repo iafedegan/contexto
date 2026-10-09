@@ -110,7 +110,7 @@ async function CategoryPage({ params, searchParams, locale }: PageProps & { loca
         <form
           action={localePath(locale, `/categoria/${slug}`)}
           method="get"
-          className="absolute right-0 top-[calc(100%+0.5rem)] z-30 flex w-[min(30rem,calc(100vw-2rem))] flex-wrap items-end gap-3 rounded-[var(--radius-lg)] border border-[var(--border-strong,var(--border))] bg-[var(--bg-2)] p-4 text-left shadow-2xl"
+          className="absolute right-0 top-[calc(100%+0.5rem)] z-40 flex w-[min(30rem,calc(100vw-2rem))] flex-wrap items-end gap-3 rounded-[var(--radius-lg)] border border-[var(--border-strong,var(--border))] bg-[var(--bg-2)] p-4 text-left shadow-2xl"
         >
           <label className="flex min-w-[8.5rem] flex-col gap-1">
             <span className="lx-kicker !text-[0.72rem] text-[var(--fg-muted)]">{t(locale, "section.subcategory")}</span>

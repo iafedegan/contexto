@@ -740,6 +740,12 @@ a {
   to { background-position: -250% 0; }
 }
 
+/* En el celular el nombre dorado va fijo: el brillo que lo recorre se rasteriza en una capa aparte y en iOS (sobre todo en la app
+   instalada) se veía borroso. Mismo degradado dorado, sin movimiento. */
+@media (max-width: 767px) {
+  .lx-foil { animation: none; background-size: 100% 100%; }
+}
+
 /* Las líneas de los indicadores de la portada se dibujan al aparecer (con «reducir movimiento» salen ya dibujadas). */
 .ind-trazo { stroke-dasharray: 1; stroke-dashoffset: 1; animation: ind-dibujar 1.1s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
 @keyframes ind-dibujar { to { stroke-dashoffset: 0; } }
@@ -1661,3 +1667,19 @@ main > div:has([data-asistente]) { max-width: none; }
 /* Ancho del menú lateral del panel (cerrado o desplegado): lo usan las pantallas que ocupan todo el ancho, como el editor de portada. */
 .lx-shell { --sb-w: 4rem; }
 .lx-shell:has(> aside:hover), .lx-shell:has(> aside:focus-within) { --sb-w: 16rem; }
+
+
+/* ============ Transición entre páginas (React <ViewTransition> en SiteShell) ============ */
+/* La página que sale se desvanece rápido; la que entra sube unos píxeles mientras aparece. Sin soporte del navegador no hay animación y todo
+   funciona igual. La barra de pestañas del celular tiene nombre propio: no parpadea, se queda quieta mientras cambia el contenido. */
+::view-transition-old(.page-out) { animation: 160ms ease-in both pt-out; }
+::view-transition-new(.page-in) { animation: 280ms ease-out 100ms both pt-in; }
+@keyframes pt-out { to { opacity: 0; } }
+@keyframes pt-in { from { opacity: 0; transform: translateY(10px); } }
+.cg-tabbar { view-transition-name: cg-tabbar; }
+::view-transition-group(cg-tabbar) { animation-duration: 0s; }
+/* Mientras dura la transición, los toques pasan a la página de verdad. */
+::view-transition { pointer-events: none; }
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
+}

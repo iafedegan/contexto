@@ -11,9 +11,7 @@ import { MobileNav, type MobileLook } from "@/components/mobile-nav";
 import { RadioPlayer } from "@/components/radio-player";
 import { InstalarApp } from "@/components/instalar-app";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { InicioEnSeccion } from "@/components/inicio-en-seccion";
 import { StickyRail } from "@/components/sticky-rail";
-import { AutoHideBand } from "@/components/auto-hide-band";
 import { cn } from "@/lib/utils";
 
 // Elemento de la navegación: dirección y etiqueta.
@@ -156,7 +154,6 @@ function MastheadHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extr
     <header data-region="navbar" className="sticky top-[var(--stick-top,0px)] z-40 bg-[var(--nav-bg)]">
       {/* Solo la fila de secciones queda pegada al desplazarse (ver StickyRail). */}
       <StickyRail />
-      <AutoHideBand>
       <div className="mx-auto max-w-7xl px-6 pb-6 pt-10 text-center">
         <div className="flex items-center justify-center gap-6">
           <span className="hidden h-px flex-1 bg-gradient-to-r from-transparent to-[var(--border-strong)] md:block" />
@@ -174,14 +171,12 @@ function MastheadHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extr
           <span className="hidden h-px flex-1 bg-gradient-to-l from-transparent to-[var(--border-strong)] md:block" />
         </div>
       </div>
-      </AutoHideBand>
 
       <nav
         aria-label={t(locale, "nav.sections")}
         className="sticky top-0 z-40 border-y border-[var(--border)] bg-[var(--nav-bg)] sm:static"
       >
         <div className="lx-navrail mx-auto max-w-[88rem] items-center justify-start gap-x-7 gap-y-2 px-6 py-3 text-[0.72rem] uppercase tracking-[0.2em] sm:justify-center">
-          <InicioEnSeccion locale={locale} className={"lx-link lx-ui"} />
           {nav.map((n) => (
             <Link key={n.href} href={localePath(locale, n.href)} className="lx-link lx-ui">
               {n.label}
@@ -270,7 +265,6 @@ function GremialHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extra
         </div>
 
         <nav aria-label={t(locale, "nav.sections")} className="hidden items-center gap-x-5 gap-y-1 text-sm font-semibold lg:flex">
-          <InicioEnSeccion locale={locale} className={"lx-ui transition hover:text-[var(--accent)]"} />
           {nav.map((n, i) => (
             <Link key={n.href} href={localePath(locale, n.href)} className={cn("lx-ui transition hover:text-[var(--accent)]", i >= 4 ? "hidden" : "pointer-coarse:py-3")}>
               {n.label}
@@ -325,7 +319,6 @@ function BoldHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extra: N
             1280 px, así que más no caben en una fila); las demás van al menú «Más», que oculta cada una
             justo cuando ya cabe en la barra. */}
         <nav aria-label={t(locale, "nav.sections")} className="hidden flex-wrap items-center gap-2 lg:flex">
-          <InicioEnSeccion locale={locale} className={"lx-ui"} />
           {nav.map((n, i) => (
             <Link
               key={n.href}
@@ -381,7 +374,6 @@ function CoutureHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extra
           aria-label={t(locale, "nav.sections")}
           className="lx-navrail sticky top-0 z-40 mt-4 items-center justify-start gap-x-5 gap-y-2 bg-[var(--nav-bg)] px-6 py-3 text-[0.78rem] font-light tracking-[0.1em] text-[var(--fg-muted)] sm:static sm:justify-center sm:bg-transparent sm:py-3"
         >
-          <InicioEnSeccion locale={locale} className={"lx-link"} />
           {nav.map((n, i) => (
             <span key={n.href} className="flex items-center gap-5">
               {i > 0 && <span aria-hidden className="text-[var(--accent)]">·</span>}
@@ -496,7 +488,6 @@ function CrestHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extra: 
         className="sticky top-0 z-40 border-t border-[var(--border)] bg-[var(--nav-bg)] sm:static"
       >
         <div className="lx-navrail mx-auto max-w-5xl justify-start gap-x-8 gap-y-2 px-6 py-3 text-[0.72rem] uppercase tracking-[0.2em] text-[var(--fg-muted)] sm:justify-center">
-          <InicioEnSeccion locale={locale} className={"lx-link lx-ui"} />
           {nav.map((n) => (
             <Link key={n.href} href={localePath(locale, n.href)} className="lx-link lx-ui">
               {n.label}

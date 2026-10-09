@@ -1,3 +1,4 @@
+import { ViewTransition } from "react";
 import { getBreakingArticle, getTopLevelCategories } from "@/lib/content";
 import { getSiteIdentity } from "@/lib/site-identity";
 import { getSiteTheme } from "@/lib/site-theme";
@@ -98,7 +99,10 @@ export async function SiteShell({
   ]);
   const shell = SHELL[variant];
 
+  // Transición entre páginas: al navegar, la página que sale se desvanece y la que entra aparece con un leve ascenso (CSS en globals.css,
+  // «page-in» / «page-out»). Va aquí y no en el layout: cada página monta su SiteShell, y es lo que React necesita para animar la entrada y la salida.
   return (
+    <ViewTransition enter="page-in" exit="page-out" default="none">
     <div data-theme={theme} data-site-root className={cn("lx-shell", shell.fx)} style={style}>
       {/* Estilo por componente elegido en /panel/portada (ya validado). */}
       {site.css && <style dangerouslySetInnerHTML={{ __html: site.css }} />}
@@ -134,6 +138,7 @@ export async function SiteShell({
       {/* Barra de pestañas del celular: DENTRO del contenedor con `data-theme`, para heredar la paleta de la plantilla. */}
       <MobileTabBar />
     </div>
+    </ViewTransition>
   );
 }
 

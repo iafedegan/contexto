@@ -38,3 +38,14 @@ test("un solo modo con color propio no toca al otro", () => {
   assert.match(css, /html\[data-dark="1"\]/);
   assert.doesNotMatch(css, /html\[data-dark="0"\]/);
 });
+
+test("el radio de esquinas recorta (overflow) las partes con imágenes, pero no la cabecera ni el encabezado, donde viven los menús y filtros", () => {
+  const css = regionsCss({ navbar: { radius: 24 }, encabezado: { radius: 24 }, hero: { radius: 24 }, cards: { radius: 24 } });
+  const regla = (id: string) => css.split("\n").find((l) => l.startsWith(`[data-site-root] [data-region="${id}"]{`)) ?? "";
+  assert.match(regla("hero"), /overflow:hidden/);
+  assert.match(regla("cards"), /overflow:hidden/);
+  assert.match(regla("navbar"), /border-radius:24px/);
+  assert.doesNotMatch(regla("navbar"), /overflow/);
+  assert.match(regla("encabezado"), /border-radius:24px/);
+  assert.doesNotMatch(regla("encabezado"), /overflow/);
+});

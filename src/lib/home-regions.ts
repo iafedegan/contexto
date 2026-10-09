@@ -251,7 +251,10 @@ export function regionsCss(input: RegionStyles | undefined, scope = "[data-site-
     }
     if (s.padX !== undefined) decl.push(`padding-left:${s.padX}px!important`, `padding-right:${s.padX}px!important`);
     if (s.radius !== undefined) {
-      decl.push(`--radius:${s.radius}px`, `--radius-lg:${s.radius}px`, `border-radius:${s.radius}px`, "overflow:hidden");
+      decl.push(`--radius:${s.radius}px`, `--radius-lg:${s.radius}px`, `border-radius:${s.radius}px`);
+      // El recorte (para que fotos y fondos sigan la esquina) NO va en la cabecera ni en el encabezado de sección: ahí viven los menús
+      // desplegables y el panel de filtros, y `overflow:hidden` los cortaba en el borde del componente.
+      if (id !== "navbar" && id !== "encabezado") decl.push("overflow:hidden");
       rules.push(`${sel} > *{border-radius:${s.radius}px}`);
     }
     if (s.maxWidth) {
