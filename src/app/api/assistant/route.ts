@@ -9,7 +9,7 @@ import { hybridSearch } from "@/lib/search";
 import { COSTO_EMBEDDING_USD, SESION_ASISTENTE_COOKIE, estimateCostUsd, liquidarGeneracion, reservarGeneracion, sesionAsistente } from "@/lib/budget";
 import { ASSISTANT_SYSTEM } from "@/agents/prompts";
 import { clientIp, hit } from "@/lib/rate-limit";
-import { analizarCitas } from "@/lib/citas";
+import { analizarCitas, normalizarCitas } from "@/lib/citas";
 import { buscarEnObservatorio } from "@/lib/ai-observatorio";
 
 // Se ejecuta en Node.js.
@@ -138,7 +138,7 @@ export async function POST(req: Request) {
     .join("\n\n");
 
   try {
-    const { text, usage } = await generateText({
+    const { text: crudo, usage } = await generateText({
       model,
       // Los fragmentos son DATOS tomados del archivo, no instrucciones: se delimitan y se avisa al modelo.
       system:
@@ -147,9 +147,12 @@ export async function POST(req: Request) {
       prompt: q,
       temperature: 0.2,
       // Una respuesta citada cabe de sobra en esto, y acota el peor caso de espera.
-      maxOutputTokens: 600,
+      // Los modelos Gemini descuentan su «razonamiento» de este tope: con 600 la respuesta podía quedar vacía. Se da margen y se limita lo que piensan.
+      maxOutputTokens: 2000,
+      providerOptions: { google: { thinkingConfig: { thinkingBudget: 256 } } },
       abortSignal: AbortSignal.timeout(PLAZO_GENERACION_MS),
     });
+    const text = normalizarCitas(crudo);
     const entrada = usage.inputTokens ?? 0;
     const salida = usage.outputTokens ?? 0;
     // Una respuesta solo es válida si cita al menos un fragmento y todos los marcadores [n] existen.
