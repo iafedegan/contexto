@@ -38,3 +38,10 @@ test("ancho y alto se acotan al guardar y lo que no es número se descarta", () 
   assert.equal(sanitizeHomeStyle({ imageWidth: "600", imageHeight: null }), null);
   assert.deepEqual(sanitizeHomeStyle({ imageWidth: 640.4 }), { imageWidth: 640 });
 });
+
+test("la posición del texto sobre la foto solo admite las esquinas de arriba; lo demás se descarta", () => {
+  assert.deepEqual(sanitizeHomeStyle({ textPos: "arriba-izq" }), { textPos: "arriba-izq" });
+  assert.deepEqual(sanitizeHomeStyle({ textPos: "arriba-der" }), { textPos: "arriba-der" });
+  assert.equal(sanitizeHomeStyle({ textPos: "abajo" }), null);
+  assert.equal(sanitizeHomeStyle({ textPos: "<script>" }), null);
+});

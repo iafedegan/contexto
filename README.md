@@ -148,6 +148,12 @@ del ancho de su tarjeta y el titular, el resumen y las notas vecinas siguen el f
 último» (cuadradas) cada medida vale como lado. Viven en `HomeStyle.imageWidth` / `imageHeight` (JSON, sin migración); la lógica está en
 `homeStyleImageBox` (`src/lib/home-style.ts`, con pruebas).
 
+### Texto sobre la foto de la nota principal
+
+En la plantilla Esmeralda Real, la nota principal lleva su titular, resumen y firma sobre la foto. En `/panel/portada`, al elegir esa nota, «Texto sobre la
+foto» permite dejarlo **abajo** (como siempre, a lo ancho) o **arriba a la izquierda / arriba a la derecha** (un bloque de hasta el 62 % del ancho, alineado a
+su esquina, con el degradado de lectura pasado arriba). Vive en `HomeStyle.textPos` (JSON, sin migración) y solo afecta a esa tarjeta.
+
 ### Cintillo de titulares (editable)
 
 La franja que corre bajo la cabecera de la portada se configura en `/panel/portada` → «Cintillo de titulares»: apagarla, elegir de dónde salen los

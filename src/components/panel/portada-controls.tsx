@@ -436,11 +436,14 @@ const resumenImagen = (s: HomeStyle) => (s.imageWidth || s.imageHeight ? `${s.im
 export function Inspector({
   style,
   showSpan,
+  showTextPos = false,
   onChange,
   onClear,
 }: {
   style: HomeStyle;
   showSpan: boolean;
+  /** La nota se pinta con el texto sobre la foto (la principal de Esmeralda): se puede elegir dónde va. */
+  showTextPos?: boolean;
   onChange: (p: Partial<HomeStyle>) => void;
   onClear: () => void;
 }) {
@@ -457,6 +460,16 @@ export function Inspector({
           <SegButton active={s.size === "lg"} onClick={() => onChange({ size: "lg" })} title="Grande">L</SegButton>
         </div>
       </Fila>
+
+      {showTextPos && (
+        <Fila icono={<Type size={13} />} titulo="Texto sobre la foto" resumen={{ "arriba-izq": "Arriba a la izquierda", "arriba-der": "Arriba a la derecha" }[s.textPos ?? "" as "arriba-izq"] ?? "Abajo"}>
+          <div className="flex flex-wrap gap-1.5">
+            <SegButton active={!s.textPos} onClick={() => onChange({ textPos: undefined })} title="Abajo, a lo ancho de la foto (como siempre)">Abajo</SegButton>
+            <SegButton active={s.textPos === "arriba-izq"} onClick={() => onChange({ textPos: "arriba-izq" })} title="Arriba, en la esquina izquierda">Arriba izquierda</SegButton>
+            <SegButton active={s.textPos === "arriba-der"} onClick={() => onChange({ textPos: "arriba-der" })} title="Arriba, en la esquina derecha">Arriba derecha</SegButton>
+          </div>
+        </Fila>
+      )}
 
       {showSpan && (
         <Fila icono={<Columns2 size={13} />} titulo="Ancho en la cuadrícula" resumen={s.span === 2 ? "2 columnas" : "1 columna"}>

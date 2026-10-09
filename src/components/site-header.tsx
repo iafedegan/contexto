@@ -161,10 +161,9 @@ function MastheadHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extr
             <span className="lx-display lx-foil block text-4xl font-semibold leading-none tracking-tight md:text-5xl">
               {identity.name}
             </span>
-            {/* Lema y fecha en una sola línea: antes eran dos filas y la cabecera se comía la pantalla. */}
-            <span className="mt-2 flex flex-wrap items-center justify-center gap-x-3 gap-y-0.5">
+            {/* El lema y, debajo, la fecha. */}
+            <span className="mt-2 flex flex-col items-center gap-y-1">
               <span className="lx-kicker text-[var(--fg-muted)]">{identity.tagline || t(locale, "nav.tagline")}</span>
-              <span aria-hidden className="hidden text-[var(--accent)] sm:inline">◆</span>
               <span className="lx-ui text-[0.62rem] font-medium uppercase tracking-[0.18em] text-[var(--fg-muted)]/80">{today}</span>
             </span>
           </Link>

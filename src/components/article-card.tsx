@@ -28,6 +28,9 @@ function cardStyle(a: ArticleListItem, variant: CardVariant) {
   return {
     title: homeStyleTitleCss(a.homeStyle, TITLE_PX[variant], variant === "lead" ? 1.08 : 1.2),
     // Caja de la imagen elegida en el panel (porcentaje o medidas exactas) y si trae alto fijo.
+    // Dónde va el texto sobre la foto (solo la nota principal): abajo a lo ancho, o arriba en una esquina.
+    textArriba: a.homeStyle?.textPos === "arriba-izq" || a.homeStyle?.textPos === "arriba-der",
+    textDerecha: a.homeStyle?.textPos === "arriba-der",
     imageBox: homeStyleImageBox(a.homeStyle).css,
     imageAlto: homeStyleImageBox(a.homeStyle).alto,
     // "S" comprime el bloque (sin imagen ni resumen); "L" lo abre.
@@ -161,8 +164,9 @@ function LeadCard({ a, priority, locale }: { a: ArticleListItem; priority?: bool
           sizes="(min-width: 1280px) 900px, (min-width: 768px) 60vw, 100vw"
         />
       </Link>
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[66%] bg-gradient-to-t from-[var(--bg)] via-[var(--bg)]/75 to-transparent md:h-3/4 md:via-[var(--bg)]/80" />
-      <div className="relative z-[4] p-5 md:self-end md:p-9 max-md:self-end">
+      {/* El degradado que da lectura al texto va del lado donde está el texto. */}
+      <div className={`pointer-events-none absolute inset-x-0 h-[66%] from-[var(--bg)] via-[var(--bg)]/75 to-transparent md:h-3/4 md:via-[var(--bg)]/80 ${st.textArriba ? "top-0 bg-gradient-to-b" : "bottom-0 bg-gradient-to-t"}`} />
+      <div className={`relative z-[4] p-5 md:p-9 ${st.textArriba ? "self-start md:max-w-[62%]" : "self-end"} ${st.textDerecha ? "justify-self-end text-right" : ""}`}>
         <Kicker a={a} locale={locale} className="text-[var(--accent)]" />
         <h2
           className="lx-display mt-2.5 text-2xl font-semibold leading-[1.12] tracking-tight sm:text-3xl md:mt-3 md:text-[2.75rem]"
@@ -174,7 +178,7 @@ function LeadCard({ a, priority, locale }: { a: ArticleListItem; priority?: bool
         </h2>
         {!st.hideExcerpt && (
           <p
-            className={`mt-3 hidden max-w-xl text-sm leading-relaxed text-[var(--fg-muted)] sm:block md:text-base ${st.excerptClamp}`}
+            className={`mt-3 hidden max-w-xl text-sm leading-relaxed text-[var(--fg-muted)] sm:block md:text-base ${st.excerptClamp} ${st.textDerecha ? "ml-auto" : ""}`}
           >
             {a.excerpt}
           </p>

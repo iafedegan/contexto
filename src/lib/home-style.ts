@@ -96,6 +96,7 @@ export function sanitizeHomeStyle(input: unknown): HomeStyle | null {
     imageWidth: num(r.imageWidth, 40, 2000),
     imageHeight: num(r.imageHeight, 40, 1600),
     color: hex(r.color),
+    textPos: r.textPos === "arriba-izq" || r.textPos === "arriba-der" ? r.textPos : undefined,
     colSpan: num(r.colSpan, 1, 6),
     height: num(r.height, 60, 1200),
     colStart: num(r.colStart, 1, 6),

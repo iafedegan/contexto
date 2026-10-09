@@ -55,6 +55,8 @@ export type HomeStyle = {
   imageHeight?: number;
   /** Color del titular (#rrggbb). Sin valor = el del tema de la plantilla. */
   color?: string;
+  /** Dónde va el texto sobre la foto en la nota principal de Esmeralda: arriba en una esquina. Sin valor = abajo, a lo ancho. */
+  textPos?: "arriba-izq" | "arriba-der";
 
   // --- Bloque libre: tamaño, fondo y texto de cada tarjeta ---
   /** Columnas que ocupa en una cuadrícula (1-6). */

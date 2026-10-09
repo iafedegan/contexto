@@ -194,7 +194,7 @@ function NotaPanel({
 
       {alcance === "nota" ? (
         <>
-          <Inspector style={style} showSpan={index >= 6} onChange={onChange} onClear={onClear} />
+          <Inspector style={style} showSpan={index >= 6} showTextPos={index === 0 && layout.templateId === "esmeralda"} onChange={onChange} onClear={onClear} />
           <details className="group rounded-[var(--radius)] border border-[var(--border)]">
             <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2.5 text-sm font-semibold">
               Más ajustes de esta nota
