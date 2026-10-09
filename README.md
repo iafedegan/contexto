@@ -131,6 +131,14 @@ En «Propiedades» de `/panel/portada`, los colores de cada parte (fondo, degrad
 CSS, las reglas de modo pesan más que la base y respetan la plantilla: sin preferencia del lector, las plantillas oscuras de fábrica toman el oscuro y las
 demás el claro. Los grupos de ajustes (Colores, Tipografía, Dimensiones…) arrancan cerrados y se despliegan al pulsarlos.
 
+### El asistente responde con el Observatorio
+
+Además de las notas y el archivo, el asistente busca en lo que muestra el Observatorio: cada indicador (precios, inventario por departamento, reparto del hato,
+producción, consumo, mercado internacional, costos) y cada biblioteca de documentos se vuelve un fragmento de texto con sus cifras más recientes
+(`src/lib/observatorio-fragmentos.ts`, puro y probado), se elige por coincidencia de palabras y se cita como «(datos del Observatorio)» con enlace a su sección.
+Lee la misma caché de datos que la página, así que no repite las descargas ni difiere de lo que ve el lector. Los pasa `src/lib/ai-observatorio.ts` a la ruta
+`/api/assistant`, que mantiene la regla de siempre: sin fuente citable, no responde.
+
 ### Cintillo de titulares (editable)
 
 La franja que corre bajo la cabecera de la portada se configura en `/panel/portada` → «Cintillo de titulares»: apagarla, elegir de dónde salen los

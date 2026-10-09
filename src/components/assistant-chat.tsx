@@ -6,7 +6,7 @@ import { LogoMark } from "@/components/logo-mark";
 import { useVoz } from "@/components/voz-asistente";
 
 // Fuente que respalda una respuesta.
-type Source = { n: number; title: string; url: string; kind: "articulo" | "archivo"; summary: string };
+type Source = { n: number; title: string; url: string; kind: "articulo" | "archivo" | "observatorio"; summary: string };
 // Mensaje de la conversación: de la persona o del asistente, con su modo y fuentes.
 type Msg = {
   role: "user" | "assistant";
@@ -127,6 +127,9 @@ export function AssistantChat({ compact = false }: { compact?: boolean }) {
                             {s.title}
                             {s.kind === "archivo" && (
                               <span className="ml-2 text-xs text-[var(--fg-muted)]">(archivo)</span>
+                            )}
+                            {s.kind === "observatorio" && (
+                              <span className="ml-2 text-xs text-[var(--fg-muted)]">(datos del Observatorio)</span>
                             )}
                           </a>
                         </li>

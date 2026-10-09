@@ -8,6 +8,7 @@ import { COSTO_EMBEDDING_USD, SESION_ASISTENTE_COOKIE, estimateCostUsd, liquidar
 import { ASSISTANT_SYSTEM } from "@/agents/prompts";
 import { clientIp, hit } from "@/lib/rate-limit";
 import { analizarCitas } from "@/lib/citas";
+import { buscarEnObservatorio } from "@/lib/ai-observatorio";
 
 // Se ejecuta en Node.js.
 export const runtime = "nodejs";
@@ -16,7 +17,7 @@ export const maxDuration = 30;
 
 
 // Fuente citada en una respuesta.
-type CitedSource = { title: string; url: string; kind: "articulo" | "archivo" };
+type CitedSource = { title: string; url: string; kind: "articulo" | "archivo" | "observatorio" };
 // Cuerpo esperado de la petición.
 type Body = { question: string };
 
@@ -55,8 +56,9 @@ export async function POST(req: Request) {
     return responder({ error: "demasiadas consultas" }, { status: 429, headers: { "Retry-After": String(limite.retryAfter) } });
   }
 
-  const hits = await hybridSearch(q, 8).catch(() => []);
-  const sources = hits.map((h, i) => ({
+  // Notas y archivo, y además lo que hay en el Observatorio (cifras y documentos): el asistente responde a todo lo que el lector ve allí.
+  const [hits, delObservatorio] = await Promise.all([hybridSearch(q, 8).catch(() => []), buscarEnObservatorio(q, 4).catch(() => [])]);
+  const sources = [...hits, ...delObservatorio].map((h, i) => ({
     n: i + 1,
     title: h.title,
     url: h.url,
@@ -151,7 +153,7 @@ export async function POST(req: Request) {
 const registrarFallo = (e: unknown) => console.error("no se pudo liquidar la consulta al asistente", e);
 
 // Reduce las fuentes a los campos que se registran.
-function toCited(s: Array<{ title: string; url: string; kind: "articulo" | "archivo" }>): CitedSource[] {
+function toCited(s: Array<{ title: string; url: string; kind: "articulo" | "archivo" | "observatorio" }>): CitedSource[] {
   return s.map((x) => ({ title: x.title, url: x.url, kind: x.kind }));
 }
 

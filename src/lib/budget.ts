@@ -125,7 +125,7 @@ export async function reservarGeneracion(sessionId: string, question: string): P
 /** Cierra una reserva: deja en la fila lo que de verdad ocurrió (modo, fuentes citadas, tokens y coste real). */
 export async function liquidarGeneracion(
   id: string,
-  r: { mode: "generativo" | "semantico_degradado"; cited: Array<{ title: string; url: string; kind: "articulo" | "archivo" }>; answered: boolean; inputTokens: number; outputTokens: number },
+  r: { mode: "generativo" | "semantico_degradado"; cited: Array<{ title: string; url: string; kind: "articulo" | "archivo" | "observatorio" }>; answered: boolean; inputTokens: number; outputTokens: number },
 ): Promise<void> {
   await db
     .update(assistantQueries)

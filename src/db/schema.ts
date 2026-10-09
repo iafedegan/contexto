@@ -488,7 +488,7 @@ export const assistantQueries = pgTable(
     mode: assistantMode("mode").notNull(),
     // Fuentes recuperadas y citadas (obligatorio si mode = generativo).
     citedSources: jsonb("cited_sources")
-      .$type<Array<{ title: string; url: string; kind: "articulo" | "archivo" }>>()
+      .$type<Array<{ title: string; url: string; kind: "articulo" | "archivo" | "observatorio" }>>()
       .notNull()
       .default(sql`'[]'::jsonb`),
     answered: boolean("answered").notNull().default(false), // false = declinó por falta de fuentes
