@@ -405,40 +405,41 @@ export function Inspector({
   onClear: () => void;
 }) {
   const s = style;
+  const tamano = { sm: "S", md: "M", lg: "L" }[s.size ?? "" as "sm"] ?? "Automático";
   return (
-    <div className="flex flex-col gap-4">
-      <div>
-        <p className="meta mb-1.5 flex items-center gap-1"><Type size={12} /> Tamaño de la tarjeta</p>
+    <div className="flex flex-col">
+      {/* Una lista de ajustes cerrados: cada fila muestra su valor actual y se despliega al pulsarla. */}
+      <Fila icono={<Type size={13} />} titulo="Tamaño de la tarjeta" resumen={tamano}>
         <div className="flex gap-1.5">
           <SegButton active={!s.size} onClick={() => onChange({ size: undefined })} title="Lo decide la plantilla">Automático</SegButton>
           <SegButton active={s.size === "sm"} onClick={() => onChange({ size: "sm" })} title="Pequeña">S</SegButton>
           <SegButton active={s.size === "md"} onClick={() => onChange({ size: "md" })} title="Mediana">M</SegButton>
           <SegButton active={s.size === "lg"} onClick={() => onChange({ size: "lg" })} title="Grande">L</SegButton>
         </div>
-      </div>
+      </Fila>
 
       {showSpan && (
-        <div>
-          <p className="meta mb-1.5 flex items-center gap-1"><Columns2 size={12} /> Ancho en la cuadrícula</p>
+        <Fila icono={<Columns2 size={13} />} titulo="Ancho en la cuadrícula" resumen={s.span === 2 ? "2 columnas" : "1 columna"}>
           <div className="flex gap-1.5">
             <SegButton active={s.span !== 2} onClick={() => onChange({ span: undefined })}>1 columna</SegButton>
             <SegButton active={s.span === 2} onClick={() => onChange({ span: 2 })}>2 columnas</SegButton>
           </div>
-        </div>
+        </Fila>
       )}
 
-      <div>
-        <p className="meta mb-1.5">Tipo de letra del titular</p>
+      <Fila titulo="Tipo de letra del titular" resumen={s.font ? "Personalizado" : "Automático"}>
         <FontPicker value={s.font} onChange={(font) => onChange({ font })} />
-      </div>
+      </Fila>
 
-      <div>
-        <p className="meta mb-1.5 flex items-center gap-1"><Palette size={12} /> Color del titular</p>
+      <Fila
+        icono={<Palette size={13} />}
+        titulo="Color del titular"
+        resumen={s.color ? <span aria-label={s.color} className="inline-block size-3.5 rounded-full border border-[var(--border-strong)]" style={{ background: s.color }} /> : "Automático"}
+      >
         <ColorPicker value={s.color} onChange={(color) => onChange({ color })} />
-      </div>
+      </Fila>
 
-      <div>
-        <p className="meta mb-1.5">Negrilla y cursiva del titular</p>
+      <Fila titulo="Negrilla y cursiva del titular" resumen={[s.bold && "Negrilla", s.italic && "Cursiva"].filter(Boolean).join(" · ") || "Ninguna"}>
         <div className="flex gap-1.5">
           <SegButton active={!!s.bold} onClick={() => onChange({ bold: !s.bold || undefined })} title="Negrilla">
             <Bold size={13} /> Negrilla
@@ -447,30 +448,38 @@ export function Inspector({
             <Italic size={13} /> Cursiva
           </SegButton>
         </div>
-      </div>
+      </Fila>
 
-      <SliderRow
-        label="Tamaño del titular"
-        value={s.titleScale ?? 100}
-        min={70}
-        max={160}
-        step={5}
-        onChange={(v) => onChange({ titleScale: v === 100 ? undefined : v })}
-      />
+      <Fila titulo="Tamaño del titular" resumen={`${s.titleScale ?? 100} %`}>
+        <SliderRow label="Tamaño" value={s.titleScale ?? 100} min={70} max={160} step={5} onChange={(v) => onChange({ titleScale: v === 100 ? undefined : v })} />
+      </Fila>
 
-      <SliderRow
-        label="Tamaño de la imagen"
-        icon={<ImageIcon size={12} />}
-        value={s.imageScale ?? 100}
-        min={40}
-        max={100}
-        step={5}
-        onChange={(v) => onChange({ imageScale: v === 100 ? undefined : v })}
-      />
+      <Fila icono={<ImageIcon size={13} />} titulo="Tamaño de la imagen" resumen={`${s.imageScale ?? 100} %`}>
+        <SliderRow label="Tamaño" value={s.imageScale ?? 100} min={40} max={100} step={5} onChange={(v) => onChange({ imageScale: v === 100 ? undefined : v })} />
+      </Fila>
 
-      <button type="button" onClick={onClear} className="self-start text-xs font-medium text-[var(--fg-muted)] underline-offset-2 hover:text-[var(--danger)] hover:underline">
+      <button type="button" onClick={onClear} className="mt-3 self-start text-xs font-medium text-[var(--fg-muted)] underline-offset-2 hover:text-[var(--danger)] hover:underline">
         Quitar todo el estilo de esta nota
       </button>
     </div>
+  );
+}
+
+// Una fila de la lista de ajustes: título y valor actual a la vista, y el control debajo cuando se pulsa. Arranca cerrada.
+function Fila({ titulo, resumen, icono, children }: { titulo: string; resumen: React.ReactNode; icono?: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <details className="group/f border-b border-[var(--border)]">
+      <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 py-2 marker:hidden [&::-webkit-details-marker]:hidden">
+        <span className="flex min-w-0 items-center gap-2 text-sm font-bold">
+          {icono}
+          {titulo}
+        </span>
+        <span className="flex shrink-0 items-center gap-2 text-xs text-[var(--fg-muted)]">
+          {resumen}
+          <ChevronDown size={15} aria-hidden className="transition group-open/f:rotate-180" />
+        </span>
+      </summary>
+      <div className="pb-3 pt-1">{children}</div>
+    </details>
   );
 }
