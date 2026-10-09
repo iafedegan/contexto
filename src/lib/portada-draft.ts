@@ -18,6 +18,8 @@ export const SECCIONES_KEY = "cg-secciones-editadas";
 export const ITEMS_EDIT_KEY = "cg-portada-bloques-editados";
 /** La vista previa cambió anuncios: el editor debe aplicarlos. */
 export const ADS_EDIT_KEY = "cg-portada-anuncios-editados";
+/** La vista previa cambió la ventana emergente: el editor debe aplicarla. */
+export const POPUP_EDIT_KEY = "cg-portada-popup-editado";
 // Clave del navegador que avisa de que el borrador se aceptó y publicó.
 export const ACCEPTED_KEY = "cg-portada-aceptado";
 

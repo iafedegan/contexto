@@ -97,3 +97,10 @@ export function duracionDelCintillo(piezas: PiezaCintillo[], velocidad: number):
   const segundos = (caracteres * 0.285) / Math.min(10, Math.max(1, velocidad));
   return Math.round(Math.min(400, Math.max(12, segundos)));
 }
+
+/** Una línea con lo que lleva el cintillo, para verla aunque su bloque del panel esté cerrado. */
+export function resumenCintillo(t: TickerConfig | undefined): string {
+  const v = sanitizeTicker(t);
+  const titulares = v.cantidad === 0 ? "sin titulares" : `${v.cantidad} titulares`;
+  return `${titulares} · ${v.mercado.length} indicadores${v.textos.length ? ` · ${v.textos.length} mensajes` : ""}`;
+}

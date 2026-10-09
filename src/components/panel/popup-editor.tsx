@@ -19,8 +19,9 @@ export function PopupEditor({
 }: {
   value: PopupConfig;
   onChange: (next: PopupConfig) => void;
-  previewing: boolean;
-  onPreview: (on: boolean) => void;
+  previewing?: boolean;
+  /** Muestra u oculta la ventana en el lienzo sin activarla. Sin esto no hay botón: en la vista previa real la ventana se ve sola cuando está activada. */
+  onPreview?: (on: boolean) => void;
 }) {
   const [uploading, setUploading] = useState(false);
   const [msg, setMsg] = useState("");
@@ -172,13 +173,15 @@ export function PopupEditor({
       </Group>
 
       <div className="flex flex-wrap items-center gap-2">
-        <button
-          type="button"
-          onClick={() => onPreview(!previewing)}
-          className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border-strong)] px-3.5 py-2 text-xs font-semibold transition hover:border-[var(--accent)]"
-        >
-          {previewing ? <EyeOff size={13} /> : <Eye size={13} />} {previewing ? "Ocultar del lienzo" : "Ver en el lienzo"}
-        </button>
+        {onPreview && (
+          <button
+            type="button"
+            onClick={() => onPreview(!previewing)}
+            className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border-strong)] px-3.5 py-2 text-xs font-semibold transition hover:border-[var(--accent)]"
+          >
+            {previewing ? <EyeOff size={13} /> : <Eye size={13} />} {previewing ? "Ocultar del lienzo" : "Ver en el lienzo"}
+          </button>
+        )}
         {msg && <span className="text-xs text-[var(--fg-muted)]">{msg}</span>}
         {!embedOk && <span role="alert" className="basis-full text-xs font-semibold text-[#b4442e]">La dirección del vídeo no es de YouTube ni Vimeo: así no se mostrará.</span>}
         <span className="basis-full text-xs text-[var(--fg-muted)]">Los cambios quedan en el borrador y se publican con «Publicar cambios».</span>

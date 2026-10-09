@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { adsZones, articles, categories, siteSettings } from "@/db/schema";
 import { auth, requirePermiso } from "@/lib/auth";
@@ -10,6 +10,7 @@ import { DEFAULT_POPUP, sanitizePopup } from "@/lib/popup-types";
 import { POPUP_KEY } from "@/lib/popup";
 import { makePage } from "@/app/(public)/_pages/home";
 import { PreviewChrome } from "@/components/panel/preview-chrome";
+import type { SectionNode } from "@/components/panel/section-tree";
 import { AD_ZONE_SPECS, positionOf } from "@/lib/ads-positions";
 import { countChanges, summarizeChanges, type ChangeLine, type PortadaState } from "@/lib/portada-summary";
 import type { Anterior } from "@/components/panel/portada-types";
@@ -119,10 +120,39 @@ export async function HomeRealPreview({ seccion }: { seccion?: string } = {}) {
       .groupBy(categories.id);
     row = r ?? null;
   }
-  // Zonas de publicidad para el formulario flotante (se leen DESPUÉS de fijar el borrador).
-  const [adsZones, session] = await Promise.all([getAdsZoneRows().catch(() => []), auth()]);
+  // Zonas de publicidad, árbol de secciones y títulos de las notas para el formulario flotante (se leen DESPUÉS de fijar el borrador).
+  const [adsZones, session, secciones, notas] = await Promise.all([
+    getAdsZoneRows().catch(() => []),
+    auth(),
+    db
+      .select({
+        id: categories.id,
+        slug: categories.slug,
+        name: categories.name,
+        description: categories.description,
+        sortOrder: categories.sortOrder,
+        parentId: categories.parentId,
+        articleCount: sql<number>`count(${articles.id})::int`,
+      })
+      .from(categories)
+      .leftJoin(articles, eq(articles.categoryId, categories.id))
+      .groupBy(categories.id)
+      .orderBy(asc(categories.sortOrder), asc(categories.name)) as Promise<SectionNode[]>,
+    db.select({ slug: articles.slug, title: articles.title }).from(articles).where(eq(articles.status, "publicado")),
+  ]);
   return (
-    <PreviewChrome changed={changed} changes={lines} anterior={anterior} hasDraft={!!draft} draft={draft} seccion={row} adsZones={adsZones} canManagePauta={session?.user.role === "administrador"}>
+    <PreviewChrome
+      changed={changed}
+      changes={lines}
+      anterior={anterior}
+      hasDraft={!!draft}
+      draft={draft}
+      seccion={row}
+      adsZones={adsZones}
+      sections={secciones}
+      titles={Object.fromEntries(notas.map((n) => [n.slug, n.title]))}
+      canManagePauta={session?.user.role === "administrador"}
+    >
       {row ? <Categoria params={Promise.resolve({ slug: row.slug })} searchParams={Promise.resolve({})} locale="es" /> : <Home locale="es" />}
     </PreviewChrome>
   );

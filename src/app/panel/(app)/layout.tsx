@@ -12,6 +12,8 @@ import { HeaderHeightVar } from "@/components/panel/header-height";
 import { IrASeguridad } from "@/components/panel/ir-a-seguridad";
 import { efectivos, exige2fa } from "@/lib/permisos";
 import { getAjustes } from "@/lib/permisos-server";
+import { getSiteTheme } from "@/lib/site-theme";
+import { colorPanel } from "@/lib/panel-tema";
 
 /** Panel editorial — plantilla «Grafito & Jade». */
 export const dynamic = "force-dynamic";
@@ -34,7 +36,15 @@ export default async function PanelLayout({ children }: { children: React.ReactN
   // Por id y, si el id de la sesión no aparece, por correo (como requireRole):
   // sin esto una sesión con id desfasado se saltaba la exigencia de 2FA.
   // La cuenta y los ajustes de permisos se piden a la vez (y la cuenta ya viene resuelta de la sesión: no es otro viaje).
-  const [yoPorId, ajustes, cabeceras] = await Promise.all([cuentaPorId(session.user.id), getAjustes(), headers()]);
+  const [yoPorId, ajustes, cabeceras, sitio] = await Promise.all([cuentaPorId(session.user.id), getAjustes(), headers(), getSiteTheme()]);
+  // La barra lleva el color principal de la plantilla que usa el sitio (se cambia en Portada y plantillas).
+  const marca = colorPanel(sitio.theme);
+  const estiloMarca = { "--accent": marca.acento, "--accent-2": marca.acento, "--border-strong": marca.acento, "--link": marca.acento, "--accent-fg": "#101611",
+    // Los textos claros y atenuados toman un leve tono del color de la barra (sin esto serían azulados sobre un fondo verde o rojo).
+    "--fg": `color-mix(in srgb, #ffffff 94%, ${marca.desde})`,
+    "--fg-muted": `color-mix(in srgb, #ffffff 68%, ${marca.desde})`,
+    "--ink-faint": `color-mix(in srgb, #ffffff 52%, ${marca.desde})`,
+  } as React.CSSProperties;
   let yo: { totpEnabled: boolean } | undefined = yoPorId;
   if (!yo && session.user.email) {
     [yo] = await db
@@ -79,8 +89,8 @@ export default async function PanelLayout({ children }: { children: React.ReactN
   const inicial = (session.user.name ?? "?").trim().charAt(0).toUpperCase();
   return (
     <div data-theme="panel" className="lx-shell">
-      {/* Barra lateral (escritorio): azul marino con la navegación agrupada y la cuenta al pie. */}
-      <aside data-theme="panel-header" className="peer/sb group/sb fixed inset-y-0 left-0 z-50 hidden w-16 flex-col gap-6 overflow-y-auto overflow-x-hidden bg-[linear-gradient(180deg,#16315c,#0f2347)] px-3 py-6 text-[var(--fg)] shadow-[8px_0_30px_-18px_rgba(10,25,60,0.6)] transition-[width] duration-200 ease-out hover:w-64 focus-within:w-64 lg:flex">
+      {/* Barra lateral (escritorio): con el color de la plantilla activa, la navegación agrupada y la cuenta al pie. */}
+      <aside data-theme="panel-header" style={{ ...estiloMarca, backgroundImage: `linear-gradient(180deg, ${marca.desde}, ${marca.hasta})` }} className="peer/sb group/sb fixed inset-y-0 left-0 z-50 hidden w-16 flex-col gap-6 overflow-y-auto overflow-x-hidden px-3 py-6 text-[var(--fg)] shadow-[8px_0_30px_-18px_rgba(0,0,0,0.6)] transition-[width] duration-200 ease-out hover:w-64 focus-within:w-64 lg:flex">
         <Link href="/panel" className="flex items-center gap-3 rounded-xl px-1">
           <span className="shrink-0"><LogoMark size={36} /></span>
           <span className="lx-display whitespace-nowrap text-base font-semibold leading-tight opacity-0 transition-opacity duration-150 group-hover/sb:opacity-100 group-focus-within/sb:opacity-100">Panel editorial</span>
@@ -109,6 +119,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
       <header
         data-panel-header
         data-theme="panel-header"
+        style={{ ...estiloMarca, "--bg": marca.desde, "--bg-2": marca.hasta, "--surface": marca.hasta } as React.CSSProperties}
         className="sticky top-0 z-40 border-b border-[var(--border)] bg-[var(--bg)] text-[var(--fg)] shadow-[var(--shadow)] lg:hidden"
       >
         <div

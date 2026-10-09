@@ -139,6 +139,16 @@ producción, consumo, mercado internacional, costos) y cada biblioteca de docume
 Lee la misma caché de datos que la página, así que no repite las descargas ni difiere de lo que ve el lector. Los pasa `src/lib/ai-observatorio.ts` a la ruta
 `/api/assistant`, que mantiene la regla de siempre: sin fuente citable, no responde.
 
+### Color del panel y editor flotante de la vista previa
+
+La barra lateral del panel (y la barra del celular) toma el color principal de la plantilla que usa el sitio: verde esmeralda con pan de oro en Esmeralda Real,
+borgoña en Clásico, negro cálido y dorado en Revista, azul zafiro en Compacto, violeta con coral en Vanguardia y rojo en Gremial. Los colores viven en
+`src/lib/panel-tema.ts` (con pruebas de contraste WCAG del texto sobre la barra) y se leen de `getSiteTheme()`; sin plantilla conocida vuelve al azul marino.
+
+El formulario flotante «Editar» de la vista previa (`/panel/portada?vista=1`) trae los mismos bloques que el editor completo, cada uno con su estado a la vista:
+Plantilla (con «Crear una plantilla desde cero»), Notas de la portada (elegir y subir o bajar), Menú y secciones, Cintillo de titulares, Publicidad y Ventana
+emergente. Todo va al mismo borrador; la ventana emergente se sincroniza con el editor de otra pestaña por `POPUP_EDIT_KEY`.
+
 ### Medidas exactas de la foto de cada nota
 
 En `/panel/portada`, al elegir una nota, «Tamaño de la imagen» admite además del porcentaje un **ancho y un alto en píxeles** (vacío = automático) y

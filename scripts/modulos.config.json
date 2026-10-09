@@ -21,7 +21,7 @@
         "^components/ui/",
         "^content/",
         "^components/(logo-mark|social-icons|turnstile|radio-player|interactive-chart|toro-bot)\\.tsx$",
-        "^lib/(cintillo|data-cache|safe-fetch|en-paralelo|toro-posicion|rate-limit|claves|env|escape|validate|format|utils|cron-auth|i18n|budget|bots|csp|citas|pestanas|logo-archivos|lectores-ua|lectores-geo|lectores-suscriptor|lectores-filtros|lectores-entrada|medicion-cliente|media-mime|media-upload|media-firma|media-storage|media-limpieza|nav-limits|home-fonts|home-regions|template-parts|home-style|ads-types|home-layout|home-layout-normalize|home-background|section-els|popup-types|site-identity|turnstile|eventos|zones|theme|geo-reverse|embeddings|chart-svg|chart-png)\\.tsx?$",
+        "^lib/(cintillo|data-cache|safe-fetch|en-paralelo|toro-posicion|panel-tema|rate-limit|claves|env|escape|validate|format|utils|cron-auth|i18n|budget|bots|csp|citas|pestanas|logo-archivos|lectores-ua|lectores-geo|lectores-suscriptor|lectores-filtros|lectores-entrada|medicion-cliente|media-mime|media-upload|media-firma|media-storage|media-limpieza|nav-limits|home-fonts|home-regions|template-parts|home-style|ads-types|home-layout|home-layout-normalize|home-background|section-els|popup-types|site-identity|turnstile|eventos|zones|theme|geo-reverse|embeddings|chart-svg|chart-png)\\.tsx?$",
         "^lib/api/"
       ],
       "puedeUsar": []

@@ -2,15 +2,16 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, GripHorizontal, Paintbrush, X } from "lucide-react";
+import { Check, ChevronDown, GripHorizontal, Paintbrush, X } from "lucide-react";
 import { publishHomeDraft, restoreHomeSnapshot, saveHomeDraft } from "@/app/panel/(app)/portada/actions";
-import { ACCEPTED_KEY, ADS_EDIT_KEY, DRAFT_PING_KEY, ITEMS_EDIT_KEY, LAYOUT_EDIT_KEY, SECCIONES_KEY, type PortadaDraft } from "@/lib/portada-draft";
+import { ACCEPTED_KEY, ADS_EDIT_KEY, DRAFT_PING_KEY, ITEMS_EDIT_KEY, LAYOUT_EDIT_KEY, POPUP_EDIT_KEY, SECCIONES_KEY, type PortadaDraft } from "@/lib/portada-draft";
 import { SeccionForm } from "@/components/panel/seccion-form";
 import { TemplatePicker } from "@/components/panel/portada-controls";
 import { PropiedadesCard, type Foco } from "@/components/panel/propiedades-card";
 import { PublicarControles } from "@/components/panel/portada-publicar";
 import type { Anterior } from "@/components/panel/portada-types";
 import { REGIONS, type RegionId } from "@/lib/home-regions";
+import { HOME_TEMPLATES } from "@/lib/home-layout";
 import { SECTION_ELS } from "@/lib/section-els";
 import type { HomeStyle, SectionElId } from "@/db/schema";
 import { cleanupBlocks, enhanceBlocks, measureZone, type ZoneMapData } from "@/lib/block-tools";
@@ -20,6 +21,13 @@ import type { ZoneStyle } from "@/db/schema";
 import type { ZoneBundle } from "@/components/panel/block-style-editor";
 import { SectionPanel } from "@/components/panel/section-panel";
 import { AdsPanel } from "@/components/panel/ads-panel";
+import { NotasLista } from "@/components/panel/notas-lista";
+import { SectionTree, type SectionNode } from "@/components/panel/section-tree";
+import { CintilloEditor } from "@/components/panel/cintillo-editor";
+import { PopupEditor } from "@/components/panel/popup-editor";
+import { PartsEditor } from "@/components/panel/parts-editor";
+import { resumenCintillo } from "@/lib/cintillo";
+import type { PopupConfig } from "@/lib/popup-types";
 import type { AdDraft, AdsZoneRow } from "@/components/panel/ads-zone-form";
 import { recortar } from "@/lib/format";
 
@@ -38,6 +46,8 @@ export function PreviewChrome({
   draft,
   seccion = null,
   adsZones = [],
+  sections = [],
+  titles = {},
   canManagePauta = false,
   children,
 }: {
@@ -54,6 +64,10 @@ export function PreviewChrome({
   /** Zonas de publicidad (para la pestaña Publicidad del formulario flotante). */
   adsZones?: AdsZoneRow[];
   canManagePauta?: boolean;
+  /** Secciones del sitio (para «Menú y secciones» y para elegir una en el cintillo). */
+  sections?: SectionNode[];
+  /** Títulos de las notas por slug (para «Notas de la portada»). */
+  titles?: Record<string, string>;
   children: React.ReactNode;
 }) {
   const router = useRouter();
@@ -66,6 +80,8 @@ export function PreviewChrome({
   const [items, setItems] = useState<PortadaDraft["items"]>(draft?.items ?? []);
   const [adDrafts, setAdDrafts] = useState<Record<string, AdDraft>>(draft?.adDrafts ?? {});
   const adDraftsRef = useRef(adDrafts);
+  const [popup, setPopup] = useState<PopupConfig | null>(draft?.popup ?? null);
+  const popupRef = useRef(popup);
   const [selSlug, setSelSlug] = useState<string | null>(null);
   const [selTitle, setSelTitle] = useState("");
   const contentRef = useRef<HTMLDivElement>(null);
@@ -134,11 +150,12 @@ export function PreviewChrome({
       const base = draftRef.current;
       if (!base) return setSaveState("error");
       try {
-        const res = await saveHomeDraft({ ...base, layout: layoutRef.current ?? base.layout, items: itemsRef.current, adDrafts: adDraftsRef.current });
+        const res = await saveHomeDraft({ ...base, layout: layoutRef.current ?? base.layout, items: itemsRef.current, adDrafts: adDraftsRef.current, popup: popupRef.current ?? base.popup });
         if (!res.ok) return setSaveState("error");
         localStorage.setItem(LAYOUT_EDIT_KEY, JSON.stringify(layoutRef.current));
         localStorage.setItem(ITEMS_EDIT_KEY, JSON.stringify(itemsRef.current));
         localStorage.setItem(ADS_EDIT_KEY, JSON.stringify(adDraftsRef.current));
+        localStorage.setItem(POPUP_EDIT_KEY, JSON.stringify(popupRef.current ?? base.popup));
         setSaveState("saved");
         router.refresh();
       } catch {
@@ -156,6 +173,12 @@ export function PreviewChrome({
   function editAd(key: string, d: AdDraft) {
     adDraftsRef.current = { ...adDraftsRef.current, [key]: d };
     setAdDrafts(adDraftsRef.current);
+    persist();
+  }
+  // Aplica un cambio de la ventana emergente hecho en la vista previa (se ve en la página si está activada).
+  function editPopup(next: PopupConfig) {
+    popupRef.current = next;
+    setPopup(next);
     persist();
   }
   /** Cambia el estilo de un bloque (nota); `null` lo restablece. */
@@ -192,9 +215,11 @@ export function PreviewChrome({
       layoutRef.current = draft.layout;
       itemsRef.current = draft.items;
       adDraftsRef.current = draft.adDrafts;
+      popupRef.current = draft.popup;
       setLayout(draft.layout);
       setItems(draft.items);
       setAdDrafts(draft.adDrafts);
+      setPopup(draft.popup);
     }
   }, [draft]);
 
@@ -346,6 +371,19 @@ export function PreviewChrome({
     setFlash((n) => n + 1);
     setPanel(true);
   }
+
+  // Elige una nota desde la lista del panel: se marca en la página y se lleva a la vista.
+  function elegirNota(i: number) {
+    const it = items[i];
+    if (!it) return;
+    setSelSlug(it.slug);
+    setSelTitle(titles[it.slug] ?? it.slug);
+    setRegion("body");
+    elegir("nota");
+    if (/^[\w-]+$/.test(it.slug)) contentRef.current?.querySelector(`[data-bs-root="${it.slug}"]`)?.scrollIntoView({ block: "center", behavior: "smooth" });
+  }
+  const estiladas = items.filter((i) => i.homeStyle).length;
+  const anunciosActivos = Object.values(adDrafts).filter((d) => d.active).length;
 
   const nota =
     selSlug !== null
@@ -528,18 +566,52 @@ export function PreviewChrome({
                     }}
                     flash={flash}
                   />
-                  <details className="rounded-[var(--radius)] border border-[var(--border)]">
-                    <summary className="cursor-pointer px-3 py-2.5 text-sm font-semibold">Plantilla</summary>
-                    <div className="border-t border-[var(--border)] p-3">
-                      <TemplatePicker layout={layout} onPick={(config) => editLayout({ ...layout, ...config, parts: {}, sectionFilters: layout.sectionFilters })} compacto />
-                    </div>
-                  </details>
-                  <details className="rounded-[var(--radius)] border border-[var(--border)]">
-                    <summary className="cursor-pointer px-3 py-2.5 text-sm font-semibold">Publicidad</summary>
-                    <div className="border-t border-[var(--border)] p-3">
-                      <AdsPanel layout={layout} zones={adsZones} canManage={canManagePauta} drafts={adDrafts} onDraft={editAd} />
-                    </div>
-                  </details>
+                  <Bloque titulo="Plantilla" resumen={plantillaActiva(layout)}>
+                    <TemplatePicker layout={layout} onPick={(config) => editLayout({ ...layout, ...config, parts: {}, sectionFilters: layout.sectionFilters })} compacto />
+                    {/* Crear plantilla desde cero, dentro del mismo bloque. */}
+                    <details className="mt-3 rounded-[var(--radius)] border border-[var(--border)]">
+                      <summary className="cursor-pointer px-3 py-2.5 text-sm font-semibold">Crear una plantilla desde cero</summary>
+                      <div className="border-t border-[var(--border)] p-3">
+                        <PartsEditor layout={layout} onChange={(partial) => editLayout({ ...layout, ...partial })} />
+                      </div>
+                    </details>
+                  </Bloque>
+                  <Bloque titulo="Notas de la portada" resumen={`${items.length} notas · ${estiladas} con estilo propio`}>
+                    <NotasLista
+                      items={items.map((i) => ({ ...i, title: titles[i.slug] ?? i.slug }))}
+                      selected={selSlug ? items.findIndex((i) => i.slug === selSlug) : null}
+                      onSelect={elegirNota}
+                      onMove={moveBlock}
+                    />
+                  </Bloque>
+                  <Bloque titulo="Menú y secciones" resumen={`${sections.length} secciones en el sitio`}>
+                    <p className="mb-3 text-xs leading-relaxed text-[var(--fg-muted)]">
+                      Así cuelga cada sección del menú. Pulsa una para ver de cuál depende y editar su nombre, descripción y orden. Estos cambios se guardan al momento, no pasan por el borrador.
+                    </p>
+                    <SectionTree
+                      sections={sections}
+                      onSaved={() => {
+                        try {
+                          localStorage.setItem(SECCIONES_KEY, String(Date.now()));
+                        } catch {
+                          /* sin almacenamiento */
+                        }
+                        router.refresh();
+                      }}
+                    />
+                  </Bloque>
+                  <Bloque titulo="Cintillo de titulares" resumen={layout.ticker?.activo === false ? "Apagado" : `Activado · ${resumenCintillo(layout.ticker)}`}>
+                    <CintilloEditor value={layout.ticker} onChange={(ticker) => editLayout({ ...layout, ticker })} secciones={sections.map((n) => ({ slug: n.slug, name: n.name }))} />
+                  </Bloque>
+                  <Bloque titulo="Publicidad" resumen={anunciosActivos ? `${anunciosActivos} ${anunciosActivos === 1 ? "anuncio activo" : "anuncios activos"}` : "Sin anuncios activos"}>
+                    <AdsPanel layout={layout} zones={adsZones} canManage={canManagePauta} drafts={adDrafts} onDraft={editAd} />
+                  </Bloque>
+                  {popup && (
+                    <Bloque titulo="Ventana emergente" resumen={popup.enabled ? `Activada · ${popup.layout === "modal" ? "ventana centrada" : popup.layout === "banner" ? "franja inferior" : "esquina"}` : "Apagada"}>
+                      {/* En la vista previa la ventana se ve sola en la página cuando está activada. */}
+                      <PopupEditor value={popup} onChange={editPopup} />
+                    </Bloque>
+                  )}
                 </>
               )}
 
@@ -561,5 +633,27 @@ export function PreviewChrome({
         </div>
       )}
     </div>
+  );
+}
+
+// Nombre de la plantilla elegida, para verlo con el bloque cerrado.
+function plantillaActiva(layout: NonNullable<PortadaDraft["layout"]>): string {
+  const t = HOME_TEMPLATES.find((x) => x.id === layout.templateId);
+  return t ? `${t.name} · activa` : "Disposición personalizada";
+}
+
+/** Bloque plegable del editor flotante: título, una línea con el estado actual y, al pulsarlo, sus controles. Arranca cerrado. */
+function Bloque({ titulo, resumen, children }: { titulo: string; resumen?: string; children: React.ReactNode }) {
+  return (
+    <details className="group rounded-[var(--radius)] border border-[var(--border)]">
+      <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2.5">
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-semibold">{titulo}</span>
+          {resumen && <span className="mt-0.5 block truncate text-xs font-normal text-[var(--fg-muted)]">{resumen}</span>}
+        </span>
+        <ChevronDown size={14} aria-hidden className="shrink-0 text-[var(--fg-muted)] transition-transform group-open:rotate-180" />
+      </summary>
+      <div className="border-t border-[var(--border)] p-3">{children}</div>
+    </details>
   );
 }

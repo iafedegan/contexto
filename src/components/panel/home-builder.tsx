@@ -30,10 +30,10 @@ import { PortadaGuia } from "@/components/panel/portada-guia";
 import { TemplatePicker } from "@/components/panel/portada-controls";
 import { usePortadaHistory, type EditorSnap } from "@/components/panel/use-portada-history";
 import type { PopupConfig } from "@/lib/popup-types";
-import { ACCEPTED_KEY, DRAFT_PING_KEY, ADS_EDIT_KEY, ITEMS_EDIT_KEY, LAYOUT_EDIT_KEY, SECCIONES_KEY, type PortadaDraft } from "@/lib/portada-draft";
+import { ACCEPTED_KEY, DRAFT_PING_KEY, ADS_EDIT_KEY, ITEMS_EDIT_KEY, LAYOUT_EDIT_KEY, POPUP_EDIT_KEY, SECCIONES_KEY, type PortadaDraft } from "@/lib/portada-draft";
 import type { Anterior, Item, Layout } from "@/components/panel/portada-types";
 import { recortar } from "@/lib/format";
-import { sanitizeTicker } from "@/lib/cintillo";
+import { resumenCintillo } from "@/lib/cintillo";
 
 // Clave donde se recuerda que ya se mostró la guía.
 const GUIA_KEY = "cg:portada-guia-v1";
@@ -390,6 +390,14 @@ export function HomeBuilder({
             return [...ordered, ...prev.filter((i) => !seen.has(i.slug))];
           });
           setAuto(false);
+        } catch {
+          /* ignorado */
+        }
+      }
+      // La vista previa cambió la ventana emergente: se aplica aquí.
+      if (e.key === POPUP_EDIT_KEY && e.newValue) {
+        try {
+          setPopup(JSON.parse(e.newValue) as PopupConfig);
         } catch {
           /* ignorado */
         }
@@ -1062,13 +1070,6 @@ export function HomeBuilder({
 }
 
 /** Bloque plegable de la barra lateral. Arranca cerrado salvo que se pida; su estado lo lleva quien lo usa. */
-// Una línea con lo que lleva el cintillo, para verla aunque el bloque esté cerrado.
-function resumenCintillo(t: Layout["ticker"] | undefined): string {
-  const v = sanitizeTicker(t);
-  const titulares = v.cantidad === 0 ? "sin titulares" : `${v.cantidad} titulares`;
-  return `${titulares} · ${v.mercado.length} indicadores${v.textos.length ? ` · ${v.textos.length} mensajes` : ""}`;
-}
-
 function Bloque({
   id,
   titulo,

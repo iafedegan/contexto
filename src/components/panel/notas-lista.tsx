@@ -14,7 +14,7 @@ export function NotasLista({
   onSelect,
   onMove,
 }: {
-  items: Item[];
+  items: Array<Pick<Item, "slug" | "title" | "homeStyle">>;
   selected: number | null;
   onSelect: (index: number) => void;
   onMove: (from: number, to: number) => void;
