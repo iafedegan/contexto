@@ -55,6 +55,32 @@ export function homeStyleImageScale(style: HomeStyle | null | undefined): number
   return style?.imageScale ?? 100;
 }
 
+/**
+ * Caja de la imagen de una tarjeta. El porcentaje de siempre, o medidas exactas en px que mandan sobre él: solo el ancho
+ * conserva la proporción de la foto; solo el alto la recorta a esa altura con el ancho de la tarjeta; con las dos, la foto se
+ * recorta a esa caja. La imagen nunca pasa del ancho de la tarjeta y el resto (titular, resumen, notas vecinas) sigue el flujo,
+ * así que se acomoda solo. `alto` avisa a la tarjeta de que la altura es fija (la imagen debe llenarla, no usar su proporción).
+ */
+export function homeStyleImageBox(style: HomeStyle | null | undefined): { css: React.CSSProperties | undefined; alto: boolean } {
+  const ancho = style?.imageWidth;
+  const alto = style?.imageHeight;
+  const pct = style?.imageScale ?? 100;
+  const css: React.CSSProperties = {};
+  if (ancho) {
+    css.width = `${ancho}px`;
+    css.maxWidth = "100%";
+    css.marginInline = "auto";
+  } else if (pct !== 100) {
+    css.width = `${pct}%`;
+    css.marginInline = "auto";
+  }
+  if (alto) {
+    css.height = `${alto}px`;
+    css.aspectRatio = "auto";
+  }
+  return { css: Object.keys(css).length ? css : undefined, alto: !!alto };
+}
+
 /** Valida el estilo de una tarjeta antes de guardarlo o de convertirlo en CSS. */
 export function sanitizeHomeStyle(input: unknown): HomeStyle | null {
   if (!input || typeof input !== "object") return null;
@@ -67,6 +93,8 @@ export function sanitizeHomeStyle(input: unknown): HomeStyle | null {
     italic: r.italic === true ? true : undefined,
     titleScale: num(r.titleScale, 70, 160),
     imageScale: num(r.imageScale, 40, 100),
+    imageWidth: num(r.imageWidth, 40, 2000),
+    imageHeight: num(r.imageHeight, 40, 1600),
     color: hex(r.color),
     colSpan: num(r.colSpan, 1, 6),
     height: num(r.height, 60, 1200),

@@ -388,6 +388,46 @@ function SliderRow({
   );
 }
 
+/** Campo numérico en píxeles: vacío = automático. Acepta lo que se va escribiendo y ajusta al rango al salir del campo. */
+function CampoPx({ label, value, min, max, onChange }: { label: string; value: number | undefined; min: number; max: number; onChange: (v: number | undefined) => void }) {
+  const [borrador, setBorrador] = useState<string | null>(null);
+  const mostrado = borrador ?? (value === undefined ? "" : String(value));
+  // Fija el valor definitivo: vacío es automático, y lo escrito se ajusta al rango.
+  const confirmar = (texto: string) => {
+    const n = Number(texto);
+    onChange(texto.trim() === "" || !Number.isFinite(n) ? undefined : Math.min(max, Math.max(min, Math.round(n))));
+    setBorrador(null);
+  };
+  return (
+    <label className="flex min-w-0 flex-col gap-1 text-xs">
+      <span className="meta">{label}</span>
+      <input
+        type="number"
+        inputMode="numeric"
+        min={min}
+        max={max}
+        value={mostrado}
+        placeholder="Automático"
+        onChange={(e) => {
+          setBorrador(e.target.value);
+          const n = Number(e.target.value);
+          // Mientras se escribe solo se aplica un valor ya válido: «6» camino a «600» no se corrige a 40 a medio escribir.
+          if (e.target.value !== "" && Number.isFinite(n) && n >= min && n <= max) onChange(Math.round(n));
+        }}
+        onBlur={(e) => confirmar(e.target.value)}
+        onKeyDown={(e) => { if (e.key === "Enter") confirmar(e.currentTarget.value); }}
+        className="w-full rounded-lg border border-[var(--border-strong)] bg-white px-2 py-1.5 text-sm tabular-nums"
+      />
+    </label>
+  );
+}
+
+// Proporciones para calcular el alto a partir del ancho escrito.
+const PROPORCIONES = [["16:9", 9 / 16], ["3:2", 2 / 3], ["4:3", 3 / 4], ["1:1", 1], ["4:5", 5 / 4]] as const;
+
+// Lo que se ve de la fila «Tamaño de la imagen» con la fila cerrada.
+const resumenImagen = (s: HomeStyle) => (s.imageWidth || s.imageHeight ? `${s.imageWidth ?? "auto"} × ${s.imageHeight ?? "auto"} px` : `${s.imageScale ?? 100} %`);
+
 /**
  * Lo esencial de UNA nota de la portada: tamaño de la tarjeta, cómo se ve el
  * titular y la imagen. Los ajustes finos (posición en la cuadrícula, fondo,
@@ -454,8 +494,37 @@ export function Inspector({
         <SliderRow label="Tamaño" value={s.titleScale ?? 100} min={70} max={160} step={5} onChange={(v) => onChange({ titleScale: v === 100 ? undefined : v })} />
       </Fila>
 
-      <Fila icono={<ImageIcon size={13} />} titulo="Tamaño de la imagen" resumen={`${s.imageScale ?? 100} %`}>
-        <SliderRow label="Tamaño" value={s.imageScale ?? 100} min={40} max={100} step={5} onChange={(v) => onChange({ imageScale: v === 100 ? undefined : v })} />
+      <Fila icono={<ImageIcon size={13} />} titulo="Tamaño de la imagen" resumen={resumenImagen(s)}>
+        <SliderRow label="Tamaño (porcentaje)" value={s.imageScale ?? 100} min={40} max={100} step={5} onChange={(v) => onChange({ imageScale: v === 100 ? undefined : v })} />
+        <p className="mt-3 text-xs font-semibold">O con medidas exactas</p>
+        <div className="mt-1.5 grid grid-cols-2 gap-2">
+          <CampoPx label="Ancho (px)" value={s.imageWidth} min={40} max={2000} onChange={(imageWidth) => onChange({ imageWidth })} />
+          <CampoPx label="Alto (px)" value={s.imageHeight} min={40} max={1600} onChange={(imageHeight) => onChange({ imageHeight })} />
+        </div>
+        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          <span className="meta text-xs">Alto según proporción:</span>
+          {PROPORCIONES.map(([nombre, factor]) => (
+            <button
+              key={nombre}
+              type="button"
+              disabled={!s.imageWidth}
+              title={s.imageWidth ? `Alto = ancho × ${nombre}` : "Escribe primero el ancho"}
+              onClick={() => onChange({ imageHeight: Math.min(1600, Math.max(40, Math.round((s.imageWidth ?? 0) * factor))) })}
+              className="rounded-md border border-[var(--border)] px-2 py-1 text-xs tabular-nums transition enabled:hover:border-[var(--brand)] disabled:opacity-40"
+            >
+              {nombre}
+            </button>
+          ))}
+        </div>
+        <p className="mt-2 text-xs leading-snug text-[var(--fg-muted)]">
+          Solo el ancho: la foto conserva su proporción. Solo el alto: ocupa el ancho de la tarjeta y se recorta a esa altura. Las dos: se recorta a esa caja.
+          El titular, el resumen y las notas vecinas se acomodan solos, y la foto nunca pasa del ancho de su tarjeta. Las medidas mandan sobre el porcentaje.
+        </p>
+        {(s.imageWidth || s.imageHeight) && (
+          <button type="button" onClick={() => onChange({ imageWidth: undefined, imageHeight: undefined })} className="mt-2 text-xs font-medium text-[var(--fg-muted)] underline-offset-2 hover:text-[var(--brand)] hover:underline">
+            Quitar las medidas exactas
+          </button>
+        )}
       </Fila>
 
       <button type="button" onClick={onClear} className="mt-3 self-start text-xs font-medium text-[var(--fg-muted)] underline-offset-2 hover:text-[var(--danger)] hover:underline">

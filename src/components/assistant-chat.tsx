@@ -22,33 +22,78 @@ const EJEMPLOS = [
   "¿Qué cambia en el ciclo de vacunación?",
 ];
 
+// La función se calienta una sola vez por carga de página (ver `GET` en la ruta del asistente).
+let calentado = false;
+
+// Mensajes de espera según cuánto lleva la consulta: la persona ve que avanza y no una pantalla quieta.
+const ESPERAS = [
+  { desde: 0, texto: "Buscando en el archivo…" },
+  { desde: 3500, texto: "Armando la respuesta con las fuentes…" },
+  { desde: 10000, texto: "Sigue trabajando; esto está tardando más de lo normal…" },
+] as const;
+
 /** `compact`: versión para el cuadro flotante (altura propia con desplazamiento y el campo fijo abajo). */
 export function AssistantChat({ compact = false }: { compact?: boolean }) {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Msg[]>([]);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [espera, setEspera] = useState(0);
   const finRef = useRef<HTMLDivElement>(null);
   const voz = useVoz();
   // Si la pregunta se dictó, la respuesta se lee en voz alta (se puede apagar con el altavoz).
   const [leerRespuestas, setLeerRespuestas] = useState(true);
   const preguntaPorVoz = useRef(false);
+  // Al abrir el chat se calienta la función del servidor: mientras la persona escribe, ya está lista para la primera pregunta.
+  useEffect(() => {
+    if (calentado) return;
+    calentado = true;
+    void fetch("/api/assistant", { cache: "no-store" }).catch(() => {});
+  }, []);
+  // Cambia el mensaje de espera según pasa el tiempo.
+  useEffect(() => {
+    if (!busy) return;
+    const relojes = ESPERAS.slice(1).map((e, i) => setTimeout(() => setEspera(i + 1), e.desde));
+    return () => relojes.forEach(clearTimeout);
+  }, [busy]);
   useEffect(() => {
     if (compact) finRef.current?.scrollIntoView({ block: "end", behavior: "smooth" });
   }, [compact, messages, busy]);
 
-  // Envía la pregunta al asistente y agrega su respuesta a la conversación.
-  async function send(question: string) {
-    setBusy(true);
-    setError(false);
-    setMessages((m) => [...m, { role: "user", text: question }]);
+  // Una consulta con tope de 40 s; la respuesta se lee solo si el servidor contestó bien.
+  async function consultar(question: string) {
+    const control = new AbortController();
+    const reloj = setTimeout(() => control.abort(), 40_000);
     try {
-      const res = await fetch("/api/assistant", {
+      return await fetch("/api/assistant", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ question }),
+        signal: control.signal,
       });
-      if (!res.ok) throw new Error(String(res.status));
+    } finally {
+      clearTimeout(reloj);
+    }
+  }
+
+  // Envía la pregunta al asistente y agrega su respuesta a la conversación. Si la red o el servidor fallan, lo intenta una vez más.
+  async function send(question: string) {
+    setBusy(true);
+    setEspera(0);
+    setError(null);
+    setMessages((m) => [...m, { role: "user", text: question }]);
+    try {
+      let res: Response | null = null;
+      for (let intento = 0; intento < 2 && !res?.ok; intento++) {
+        try {
+          res = await consultar(question);
+        } catch {
+          res = null;
+        }
+        // Un 4xx (pregunta vacía o larga, demasiadas consultas) no mejora repitiéndolo.
+        if (res && res.status >= 400 && res.status < 500) break;
+      }
+      if (!res?.ok) throw new Error(String(res?.status ?? "red"));
       const data = (await res.json()) as { mode: Msg["mode"]; answer: string; sources: Source[] };
       setMessages((m) => [
         ...m,
@@ -56,8 +101,8 @@ export function AssistantChat({ compact = false }: { compact?: boolean }) {
       ]);
       if (preguntaPorVoz.current && leerRespuestas) voz.leer(data.answer);
       preguntaPorVoz.current = false;
-    } catch {
-      setError(true);
+    } catch (e) {
+      setError(e instanceof Error && e.message === "429" ? "Hiciste muchas preguntas seguidas. Espera un rato e intenta de nuevo." : "No pude responder esta vez. Intenta de nuevo.");
     } finally {
       setBusy(false);
     }
@@ -143,14 +188,12 @@ export function AssistantChat({ compact = false }: { compact?: boolean }) {
         ))}
 
         {busy && (
-          <p className="flex items-center gap-3 text-sm text-[var(--fg-muted)]">
+          <p role="status" className="flex items-center gap-3 text-sm text-[var(--fg-muted)]">
             <span className="lx-pulse size-2 rounded-full bg-[var(--accent)]" />
-            Buscando en el archivo…
+            {ESPERAS[espera].texto}
           </p>
         )}
-        {error && (
-          <p className="text-sm text-[var(--danger)]">Ocurrió un error. Intenta de nuevo.</p>
-        )}
+        {error && <p className="text-sm text-[var(--danger)]">{error}</p>}
         <div ref={finRef} />
       </div>
       </div>

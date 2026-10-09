@@ -1,6 +1,7 @@
 import "server-only";
 import { cachear } from "@/lib/data-cache";
 import { descargarSeguro } from "@/lib/safe-fetch";
+import { limitador } from "@/lib/en-paralelo";
 import { parsearBibliotecas, parsearCsvGeneral, rangoDeMeses, type BibliotecaFuente, type SerieCsv } from "@/lib/indicadores-csv";
 import type { Formato } from "@/lib/graficas";
 
@@ -14,6 +15,13 @@ const ORIGEN = "https://estadisticas.fedegan.org.co/DOC/export.jsp";
 const FUENTE = "FEDEGÁN · Sistema de información estadística";
 const SEGUNDOS = 6 * 3600;
 const MESES_VENTANA = 60;
+// El origen se atasca a ratos y no tolera bien las ráfagas: pocas descargas a la vez, un plazo para cada una y un presupuesto para
+// el conjunto, de modo que ni siquiera con el origen caído se retiene a un visitante más de unos segundos.
+const SIMULTANEAS = 4;
+const PLAZO_DESCARGA_MS = 8_000;
+const PRESUPUESTO_MS = 15_000;
+// Tras una lectura incompleta no se vuelve a tocar el origen durante este tiempo (cada visita repetiría el mismo intento).
+const ESPERA_TRAS_FALLO_MS = 90_000;
 
 /** Grupos temáticos del Observatorio, en el orden en que se muestran. */
 export type Grupo = "produccion" | "consumo" | "internacional" | "costos";
@@ -64,85 +72,133 @@ export type Hato = { clave: "predios" | "animales"; titulo: string; periodo: str
 /** Todo lo que lee el Observatorio. */
 export type Observatorio = { generales: IndicadorGeneral[]; departamental: Departamental[]; hato: Hato[]; documentos: BibliotecaFuente[] };
 
+// Cupo de descargas y tiempo que queda para una lectura completa del origen.
+type Lectura = { cupo: ReturnType<typeof limitador>; limite: number; agotado: boolean };
+
 // Descarga un indicador del sistema (CSV en ISO-8859-1) y lo interpreta; `null` si no responde o no es un indicador.
-async function bajar(pId: number, columnas: number[], filas: number[], desde: string, hasta: string) {
+async function bajar(l: Lectura, pId: number, columnas: number[], filas: number[], desde: string, hasta: string) {
   const url = new URL(ORIGEN);
   url.search = `pId=${pId}&pSd=${desde}&pEd=${hasta}&pCol=${["-1", ...columnas].join(",")}&pRow=${["-1", ...filas].join(",")}`;
-  const r = await descargarSeguro(url, { maxBytes: 600_000, codificacion: "latin1", cabeceras: { accept: "text/csv", "user-agent": "CONtextoGanadero/1.0 (observatorio)" } });
+  const r = await descargar(l, url, 600_000, "text/csv");
   if (!r || !/csv|text\/plain/i.test(r.tipo)) return null;
   return parsearCsvGeneral(r.cuerpo);
+}
+
+// Una descarga dentro del cupo y del presupuesto; marca la lectura como incompleta si se quedó sin tiempo.
+async function descargar(l: Lectura, url: URL, maxBytes: number, accept: string) {
+  return l.cupo(async () => {
+    const plazo = Math.min(PLAZO_DESCARGA_MS, l.limite - Date.now());
+    if (plazo <= 0) {
+      l.agotado = true;
+      return null;
+    }
+    const inicio = Date.now();
+    const r = await descargarSeguro(url, { maxBytes, codificacion: "latin1", plazoMs: plazo, cabeceras: { accept, "user-agent": "CONtextoGanadero/1.0 (observatorio)" } });
+    if (!r && Date.now() - inicio >= plazo - 50) l.agotado = true;
+    return r;
+  });
 }
 
 // Departamentos tal como los numera el sistema (1 a 34; el 33 es el total nacional).
 const COLUMNAS_DEPARTAMENTOS = Array.from({ length: 34 }, (_, i) => i + 1);
 
+/** Una lectura que no llegó a completarse (origen caído o lento): lleva lo que sí se pudo leer, y no se guarda en la caché. */
+export class ObservatorioIncompleto extends Error {
+  constructor(readonly parcial: Observatorio) {
+    super("El origen del Observatorio no respondió a tiempo");
+  }
+}
+
+// Lee todo el Observatorio del origen, con el cupo y el presupuesto de tiempo de `Lectura`.
+async function leerDelOrigen(): Promise<{ valor: Observatorio; incompleto: boolean }> {
+  const ahora = new Date();
+  const anio = ahora.getFullYear();
+  const ventana = rangoDeMeses(ahora, MESES_VENTANA);
+  const historia = { desde: "01-01-2001", hasta: `31-12-${anio + 1}` };
+  const l: Lectura = { cupo: limitador(SIMULTANEAS), limite: Date.now() + PRESUPUESTO_MS, agotado: false };
+
+  const [generales, departamental, hato, documentos] = await Promise.all([
+    Promise.all(
+      CATALOGO.map(async (e): Promise<IndicadorGeneral | null> => {
+        const r = e.frecuencia === "mensual" ? ventana : historia;
+        const t = await bajar(l, e.pId, e.columnas, e.filas, r.desde, r.hasta).catch(() => null);
+        if (!t) return null;
+        const { pId: _p, columnas: _c, filas: _f, frecuencia, ...resto } = e;
+        void _p; void _c; void _f;
+        return { ...resto, periodos: t.periodos, series: t.series, fuente: FUENTE, mensual: frecuencia === "mensual" };
+      }),
+    ),
+    Promise.all(
+      (
+        [
+          { clave: "bovinos", pId: 2, titulo: "Inventario de bovinos y bufalinos", unidad: "cabezas" },
+          { clave: "predios", pId: 87, titulo: "Predios ganaderos", unidad: "predios" },
+        ] as const
+      ).map(async (d): Promise<Departamental | null> => {
+        const t = await bajar(l, d.pId, COLUMNAS_DEPARTAMENTOS, [1], historia.desde, historia.hasta).catch(() => null);
+        if (!t) return null;
+        const nacional = t.series.find((s) => /nacional/i.test(s.nombre));
+        return { clave: d.clave, titulo: d.titulo, unidad: d.unidad, periodos: t.periodos, departamentos: t.series.filter((s) => !/nacional/i.test(s.nombre)), nacional: nacional?.valores ?? [] };
+      }),
+    ),
+    Promise.all(
+      (
+        [
+          { clave: "predios", pId: 98, titulo: "Predios por orientación del hato" },
+          { clave: "animales", pId: 99, titulo: "Animales por orientación del hato" },
+        ] as const
+      ).map(async (h): Promise<Hato | null> => {
+        const t = await bajar(l, h.pId, [1], [1, 2, 3, 4, 5, 6, 7], "01-01-2020", `31-12-${anio + 1}`).catch(() => null);
+        if (!t) return null;
+        const periodo = t.periodos[t.periodos.length - 1];
+        const partes = t.series
+          .map((s) => ({ nombre: s.nombre, valor: s.valores[t.periodos.length - 1] ?? 0 }))
+          .filter((p) => p.valor > 0)
+          .sort((a, b) => b.valor - a.valor);
+        return partes.length ? { clave: h.clave, titulo: h.titulo, periodo, partes } : null;
+      }),
+    ),
+    // Las bibliotecas de documentos (informes, balances, coyuntura…) vienen en la propia página «General» del sistema.
+    (async () => {
+      const pagina = new URL("https://estadisticas.fedegan.org.co/Indicadores/66");
+      const respuesta = await descargar(l, pagina, 2_500_000, "text/html").catch(() => null);
+      return respuesta ? parsearBibliotecas(respuesta.cuerpo, pagina.toString()) : [];
+    })(),
+  ]);
+
+  return {
+    valor: {
+      generales: generales.filter((x): x is IndicadorGeneral => x !== null),
+      departamental: departamental.filter((x): x is Departamental => x !== null),
+      hato: hato.filter((x): x is Hato => x !== null),
+      documentos,
+    },
+    incompleto: l.agotado,
+  };
+}
+
+const vacio = (o: Observatorio) => !o.generales.length && !o.departamental.length && !o.documentos.length;
+
+// Último intento incompleto de ESTA instancia y cuándo fue: durante `ESPERA_TRAS_FALLO_MS` se devuelve tal cual, sin volver al origen.
+let intentoFallido: { en: number; parcial: Observatorio } | null = null;
+
 // La caché de datos sobrevive entre despliegues: si cambia la forma de lo guardado se sube la versión del nombre (v2: se añadieron
 // los documentos), y además `normalizar` rellena lo que falte, para que un valor viejo nunca rompa la página.
+// Sin argumentos: la ventana de meses se calcula dentro. Con el mes como argumento, el día 1 de cada mes la clave cambiaba y la primera
+// visita se quedaba esperando una lectura completa del origen; así, el dato vencido se sirve al instante y se renueva por detrás.
+// Si la lectura queda incompleta se lanza `ObservatorioIncompleto`: no se guarda (ni seis horas de gráficas ausentes ni una lista vacía)
+// y quien tenía un dato vencido sigue sirviéndolo.
 const leer = cachear(
   "observatorio-fedegan-v2",
-  async (desde: string): Promise<Observatorio> => {
-    const ahora = new Date();
-    const anio = ahora.getFullYear();
-    // El argumento de la caché es el primer mes de la ventana: así se renueva sola al cambiar de mes.
-    const ventana = { desde, hasta: rangoDeMeses(ahora, MESES_VENTANA).hasta };
-    const historia = { desde: "01-01-2001", hasta: `31-12-${anio + 1}` };
-
-    const generales = (
-      await Promise.all(
-        CATALOGO.map(async (e): Promise<IndicadorGeneral | null> => {
-          const r = e.frecuencia === "mensual" ? ventana : historia;
-          const t = await bajar(e.pId, e.columnas, e.filas, r.desde, r.hasta).catch(() => null);
-          if (!t) return null;
-          const { pId: _p, columnas: _c, filas: _f, frecuencia, ...resto } = e;
-          void _p; void _c; void _f;
-          return { ...resto, periodos: t.periodos, series: t.series, fuente: FUENTE, mensual: frecuencia === "mensual" };
-        }),
-      )
-    ).filter((x): x is IndicadorGeneral => x !== null);
-
-    const departamental = (
-      await Promise.all(
-        (
-          [
-            { clave: "bovinos", pId: 2, titulo: "Inventario de bovinos y bufalinos", unidad: "cabezas" },
-            { clave: "predios", pId: 87, titulo: "Predios ganaderos", unidad: "predios" },
-          ] as const
-        ).map(async (d): Promise<Departamental | null> => {
-          const t = await bajar(d.pId, COLUMNAS_DEPARTAMENTOS, [1], historia.desde, historia.hasta).catch(() => null);
-          if (!t) return null;
-          const nacional = t.series.find((s) => /nacional/i.test(s.nombre));
-          return { clave: d.clave, titulo: d.titulo, unidad: d.unidad, periodos: t.periodos, departamentos: t.series.filter((s) => !/nacional/i.test(s.nombre)), nacional: nacional?.valores ?? [] };
-        }),
-      )
-    ).filter((x): x is Departamental => x !== null);
-
-    const hato = (
-      await Promise.all(
-        (
-          [
-            { clave: "predios", pId: 98, titulo: "Predios por orientación del hato" },
-            { clave: "animales", pId: 99, titulo: "Animales por orientación del hato" },
-          ] as const
-        ).map(async (h): Promise<Hato | null> => {
-          const t = await bajar(h.pId, [1], [1, 2, 3, 4, 5, 6, 7], "01-01-2020", `31-12-${anio + 1}`).catch(() => null);
-          if (!t) return null;
-          const periodo = t.periodos[t.periodos.length - 1];
-          const partes = t.series
-            .map((s) => ({ nombre: s.nombre, valor: s.valores[t.periodos.length - 1] ?? 0 }))
-            .filter((p) => p.valor > 0)
-            .sort((a, b) => b.valor - a.valor);
-          return partes.length ? { clave: h.clave, titulo: h.titulo, periodo, partes } : null;
-        }),
-      )
-    ).filter((x): x is Hato => x !== null);
-
-    // Las bibliotecas de documentos (informes, balances, coyuntura…) vienen en la propia página «General» del sistema.
-    const pagina = new URL("https://estadisticas.fedegan.org.co/Indicadores/66");
-    const respuesta = await descargarSeguro(pagina, { maxBytes: 2_500_000, codificacion: "latin1", cabeceras: { accept: "text/html", "user-agent": "CONtextoGanadero/1.0 (observatorio)" } }).catch(() => null);
-    const documentos = respuesta ? parsearBibliotecas(respuesta.cuerpo, pagina.toString()) : [];
-
-    if (!generales.length && !departamental.length && !documentos.length) throw new Error("El origen del Observatorio no respondió");
-    return { generales, departamental, hato, documentos };
+  async (): Promise<Observatorio> => {
+    if (intentoFallido && Date.now() - intentoFallido.en < ESPERA_TRAS_FALLO_MS) throw new ObservatorioIncompleto(intentoFallido.parcial);
+    const { valor, incompleto } = await leerDelOrigen();
+    if (incompleto || vacio(valor)) {
+      intentoFallido = { en: Date.now(), parcial: valor };
+      throw new ObservatorioIncompleto(valor);
+    }
+    intentoFallido = null;
+    return valor;
   },
   { tags: ["indicadores"], segundos: SEGUNDOS },
 );
@@ -155,8 +211,9 @@ export function normalizar(o: Partial<Observatorio> | null | undefined): Observa
 /** Todo el Observatorio; vacío (y la página lo dice) si el origen no está disponible. */
 export async function getObservatorio(): Promise<Observatorio> {
   try {
-    return normalizar(await leer(rangoDeMeses(new Date(), MESES_VENTANA).desde));
-  } catch {
-    return { generales: [], departamental: [], hato: [], documentos: [] };
+    return normalizar(await leer());
+  } catch (e) {
+    // Una lectura incompleta enseña lo que sí llegó (esta visita; la siguiente lo intenta de nuevo pasada la espera).
+    return normalizar(e instanceof ObservatorioIncompleto ? e.parcial : null);
   }
 }

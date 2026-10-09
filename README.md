@@ -139,6 +139,15 @@ producción, consumo, mercado internacional, costos) y cada biblioteca de docume
 Lee la misma caché de datos que la página, así que no repite las descargas ni difiere de lo que ve el lector. Los pasa `src/lib/ai-observatorio.ts` a la ruta
 `/api/assistant`, que mantiene la regla de siempre: sin fuente citable, no responde.
 
+### Medidas exactas de la foto de cada nota
+
+En `/panel/portada`, al elegir una nota, «Tamaño de la imagen» admite además del porcentaje un **ancho y un alto en píxeles** (vacío = automático) y
+atajos de proporción (16:9, 3:2, 4:3, 1:1, 4:5) que calculan el alto a partir del ancho. Solo el ancho conserva la proporción de la foto; solo el alto
+ocupa el ancho de la tarjeta y la recorta a esa altura; con las dos se recorta a esa caja. Las medidas mandan sobre el porcentaje, la foto nunca pasa
+del ancho de su tarjeta y el titular, el resumen y las notas vecinas siguen el flujo, así que se acomodan solos. En las miniaturas de «En breve» y «Lo
+último» (cuadradas) cada medida vale como lado. Viven en `HomeStyle.imageWidth` / `imageHeight` (JSON, sin migración); la lógica está en
+`homeStyleImageBox` (`src/lib/home-style.ts`, con pruebas).
+
 ### Cintillo de titulares (editable)
 
 La franja que corre bajo la cabecera de la portada se configura en `/panel/portada` → «Cintillo de titulares»: apagarla, elegir de dónde salen los
@@ -189,6 +198,14 @@ con `src/components/observatorio-*.tsx`. Para añadir otro indicador basta una f
 **Documentos.** La sección «Documentos» del Observatorio enlaza las 11 bibliotecas de la página «General» de FEDEGÁN (coyuntura,
 balance y perspectivas, cifras de referencia, PIB, costos, empleo…). Se leen de esa misma página (`parsearBibliotecas`) y los
 archivos los sirve FEDEGÁN: aquí solo se enlazan (pestaña nueva). Buscador por título, año o nombre.
+
+**Origen lento o caído.** El sistema de estadísticas de FEDEGÁN se atasca a ratos y no tolera bien las ráfagas, así que la lectura se hace con cuatro
+descargas a la vez como máximo (`src/lib/en-paralelo.ts`), un plazo de 8 s para cada una y un presupuesto de 15 s para el conjunto
+(`descargarSeguro` acepta `plazoMs`: el plazo total de una descarga, que además descarta una respuesta cortada a medias). La página entrega
+de inmediato su cabecera y un esqueleto y las cifras llegan después (`Suspense`), de modo que nunca se queda en blanco esperando al origen. Una
+lectura incompleta no se guarda en la caché (ni seis horas con gráficas ausentes ni una lista vacía): se enseña lo que llegó y no se vuelve a pedir
+al origen durante 90 s. La clave de la caché no lleva el mes: el día 1 la primera visita ya no espera una lectura completa, porque el dato vencido se
+sirve al instante y se renueva por detrás.
 
 **Diseño del Observatorio.** Portada con las cifras clave que cuentan hacia arriba, «Lo que dicen los datos» (frases que se arman
 solas con las cifras: `observatorio-resumen.ts`, con pruebas) y el mapa de fondo; índice lateral que sigue la lectura (barra de
@@ -243,6 +260,12 @@ paleta curada + monograma.
 - Citación: solo se registran como citadas las fuentes referenciadas con `[n]` en la respuesta.
 - Guardrails y límite de dominio en el prompt de sistema — `src/agents/prompts.ts`.
 - Presupuesto: tope por sesión + tope mensual USD; al superarlo **degrada a búsqueda semántica** sin generación — `src/lib/budget.ts`.
+- Rapidez: el chat pide `GET /api/assistant` al abrirse (204, solo lee) para calentar la función mientras la persona escribe; el modelo se pide a la vez que la búsqueda;
+  las cifras del Observatorio esperan 3 s como máximo; la generación tiene tope de 20 s (pasado ese tiempo responde en modo búsqueda, sin dejar que la plataforma corte
+  a los 30 s) y 600 tokens de salida. El cliente reintenta una vez si la red o el servidor fallan y muestra en qué paso va.
+- **El toro y el cuadro del chat se pueden mover a cualquier parte de la pantalla** (escritorio): se arrastra el toro o la cabecera del cuadro, queda donde se soltó
+  (`localStorage`, también la próxima visita), nunca se sale de la ventana y el cuadro se coloca encima, debajo o a un costado según el sitio que haya; con el foco en el
+  toro, Alt + flechas lo mueve y el botón ↺ lo devuelve a la esquina. La geometría es pura y está probada en `src/lib/toro-posicion.ts`.
 - Log en `assistant_queries` → tablero de demanda informativa (`/panel/demanda`).
 
 ## Agentes de producción editorial

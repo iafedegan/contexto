@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { sql } from "drizzle-orm";
+import { getObservatorio } from "@/lib/observatorio-fedegan";
 import { getAiModel } from "@/lib/ai-provider";
 import { generateText } from "ai";
 import { db } from "@/db";
@@ -15,6 +17,29 @@ export const runtime = "nodejs";
 // Tiempo máximo de la función: 30 segundos.
 export const maxDuration = 30;
 
+
+/** Lo que se espera a las cifras del Observatorio: si la caché está fría y el origen es lento, el asistente sigue con las notas. */
+const PLAZO_OBSERVATORIO_MS = 3_000;
+/** Tope de la generación: pasado esto se responde en modo búsqueda en vez de dejar que la plataforma corte la función a los 30 s. */
+const PLAZO_GENERACION_MS = 20_000;
+
+// Espera `promesa` como mucho `ms`; si tarda más (o falla) devuelve `alternativa`.
+function conPlazo<T>(promesa: Promise<T>, ms: number, alternativa: T): Promise<T> {
+  let reloj: ReturnType<typeof setTimeout>;
+  const limite = new Promise<T>((ok) => {
+    reloj = setTimeout(() => ok(alternativa), ms);
+  });
+  return Promise.race([promesa.catch(() => alternativa), limite]).finally(() => clearTimeout(reloj));
+}
+
+/**
+ * Calienta la función: el chat lo pide al abrirse, mientras la persona escribe, y así la primera pregunta no paga el arranque en frío
+ * (conexión a la base, ajustes del modelo y cifras del Observatorio). Solo lee; no cuesta nada de IA.
+ */
+export async function GET() {
+  await Promise.allSettled([db.execute(sql`select 1`), getAiModel(), conPlazo(getObservatorio(), 2_500, null)]);
+  return new NextResponse(null, { status: 204, headers: { "Cache-Control": "no-store" } });
+}
 
 // Fuente citada en una respuesta.
 type CitedSource = { title: string; url: string; kind: "articulo" | "archivo" | "observatorio" };
@@ -57,7 +82,12 @@ export async function POST(req: Request) {
   }
 
   // Notas y archivo, y además lo que hay en el Observatorio (cifras y documentos): el asistente responde a todo lo que el lector ve allí.
-  const [hits, delObservatorio] = await Promise.all([hybridSearch(q, 8).catch(() => []), buscarEnObservatorio(q, 4).catch(() => [])]);
+  // El modelo se pide a la vez (sus ajustes están en la base): así no suma otra espera después de la búsqueda.
+  const [hits, delObservatorio, model] = await Promise.all([
+    hybridSearch(q, 8).catch(() => []),
+    conPlazo(buscarEnObservatorio(q, 4), PLAZO_OBSERVATORIO_MS, []),
+    getAiModel(),
+  ]);
   const sources = [...hits, ...delObservatorio].map((h, i) => ({
     n: i + 1,
     title: h.title,
@@ -77,8 +107,6 @@ export async function POST(req: Request) {
       sources: [],
     });
   }
-
-  const model = await getAiModel();
 
   // 2. Sin proveedor de IA -> búsqueda semántica sin generación.
   if (!model) {
@@ -118,6 +146,9 @@ export async function POST(req: Request) {
         `<fragmentos>\n${context}\n</fragmentos>`,
       prompt: q,
       temperature: 0.2,
+      // Una respuesta citada cabe de sobra en esto, y acota el peor caso de espera.
+      maxOutputTokens: 600,
+      abortSignal: AbortSignal.timeout(PLAZO_GENERACION_MS),
     });
     const entrada = usage.inputTokens ?? 0;
     const salida = usage.outputTokens ?? 0;

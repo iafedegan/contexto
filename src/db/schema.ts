@@ -49,6 +49,10 @@ export type HomeStyle = {
   titleScale?: number;
   /** Escala de la imagen en % (40-100): la encoge dentro de la tarjeta. */
   imageScale?: number;
+  /** Ancho exacto de la imagen en px (40-2000); manda sobre `imageScale`. Sin alto, conserva la proporción. */
+  imageWidth?: number;
+  /** Alto exacto de la imagen en px (40-1600). Sin ancho, la imagen ocupa el de la tarjeta y se recorta a esta altura. */
+  imageHeight?: number;
   /** Color del titular (#rrggbb). Sin valor = el del tema de la plantilla. */
   color?: string;
 

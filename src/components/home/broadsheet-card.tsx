@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import type { ArticleListItem } from "@/lib/content";
-import { homeStyleImageScale, homeStyleTitleCss } from "@/lib/home-style";
+import { homeStyleImageBox, homeStyleTitleCss } from "@/lib/home-style";
 import { cn, formatDate } from "@/lib/utils";
 import { CoverArt } from "@/components/cover-art";
 import { DEFAULT_LOCALE, INTL_LOCALE, categoryLabel, localePath, t, type Locale } from "@/lib/i18n";
@@ -46,7 +46,7 @@ export function BroadsheetCard({
   const Wrapper: React.ElementType = interactive ? Link : "div";
   const wrapperProps = interactive ? { href: localePath(locale, `/articulo/${a.slug}`) } : {};
   const titleStyle = homeStyleTitleCss(a.homeStyle, BASE_PX[variant], variant === "lead" ? 1.02 : 1.14);
-  const imageScale = homeStyleImageScale(a.homeStyle);
+  const imageBox = homeStyleImageBox(a.homeStyle).css;
   const num = String(index + 1).padStart(2, "0");
 
   if (variant === "compact") {
@@ -103,7 +103,7 @@ export function BroadsheetCard({
         {(
           <div
             className={cn("media-frame mt-4", variant === "lead" ? "aspect-[16/8]" : "aspect-[16/10]")}
-            style={imageScale !== 100 ? { width: `${imageScale}%`, marginInline: "auto" } : undefined}
+            style={imageBox}
           >
             {!a.coverImageUrl ? (
               <CoverArt seed={a.slug} label={a.categoryName ?? a.title} className="text-[5rem]" />

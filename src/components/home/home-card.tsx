@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import type { ArticleListItem } from "@/lib/content";
-import { homeStyleImageScale, homeStyleTitleCss } from "@/lib/home-style";
+import { homeStyleImageBox, homeStyleTitleCss } from "@/lib/home-style";
 import { cn, formatDate } from "@/lib/utils";
 import { CoverArt } from "@/components/cover-art";
 import { DEFAULT_LOCALE, INTL_LOCALE, categoryLabel, localePath, type Locale } from "@/lib/i18n";
@@ -71,7 +71,7 @@ export function HomeCard({
 
   const basePx = TITLE_SIZE_PX[variant][size ?? DEFAULT_SIZE[variant]];
   const titleStyle = homeStyleTitleCss(style, basePx, variant === "lead" ? 1.08 : 1.2);
-  const imageScale = homeStyleImageScale(style);
+  const imageBox = homeStyleImageBox(style).css;
 
   const Wrapper: React.ElementType = interactive ? Link : "div";
   const wrapperProps = interactive ? { href: localePath(locale, `/articulo/${a.slug}`) } : {};
@@ -82,7 +82,7 @@ export function HomeCard({
         {showImage && (
           <div
             className={cn("media-frame mb-3", aspect)}
-            style={imageScale !== 100 ? { width: `${imageScale}%`, marginInline: imageScale < 100 ? "auto" : undefined } : undefined}
+            style={imageBox}
           >
             {!a.coverImageUrl ? (
               <CoverArt seed={a.slug} label={a.categoryName ?? a.title} className="text-[4rem]" />

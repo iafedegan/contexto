@@ -79,12 +79,15 @@ export type RespuestaSegura = { status: number; tipo: string; cuerpo: string; ur
 type Salto = { status: number; tipo: string; location: string | null; cuerpo: string };
 
 /** Una sola petición GET, sin seguir redirecciones. */
-function pedir(url: URL, maxBytes: number, cabeceras: Record<string, string>, codificacion: "utf8" | "latin1"): Promise<Salto> {
+function pedir(url: URL, maxBytes: number, cabeceras: Record<string, string>, codificacion: "utf8" | "latin1", plazoMs: number): Promise<Salto> {
   return new Promise((resolve, reject) => {
     // Una IP escrita directamente en la URL no pasa por `lookup`: se comprueba aquí.
     const host = url.hostname.replace(/^\[|\]$/g, "");
     if (isIP(host) && ipPrivada(host)) return reject(new Error("Destino no permitido."));
 
+    // Si vence un plazo con la respuesta a medias, el cuerpo recibido está cortado: se descarta, no se entrega como bueno.
+    let vencido = false;
+    let reloj: ReturnType<typeof setTimeout> | undefined;
     const pedido = (url.protocol === "https:" ? httpsRequest : httpRequest)(
       url,
       // `lookup` propio: ver arriba. El tipo de Node espera la firma completa, de ahí la conversión.
@@ -104,6 +107,7 @@ function pedir(url: URL, maxBytes: number, cabeceras: Record<string, string>, co
         const fin = () => {
           if (cerrado) return;
           cerrado = true;
+          if (vencido) return reject(new Error("Tiempo agotado."));
           resolve({ status, tipo, location, cuerpo: Buffer.concat(partes).toString(codificacion) });
         };
         res.on("data", (trozo: Buffer) => {
@@ -120,7 +124,14 @@ function pedir(url: URL, maxBytes: number, cabeceras: Record<string, string>, co
         res.on("error", fin);
       },
     );
-    pedido.setTimeout(10_000, () => pedido.destroy(new Error("Tiempo agotado.")));
+    const vencer = () => {
+      vencido = true;
+      pedido.destroy(new Error("Tiempo agotado."));
+    };
+    // Sin actividad durante 10 s; y, si se pidió, un plazo absoluto para toda la descarga (una respuesta que gotea no lo evita).
+    pedido.setTimeout(10_000, vencer);
+    if (Number.isFinite(plazoMs)) reloj = setTimeout(vencer, Math.max(1, plazoMs));
+    pedido.on("close", () => clearTimeout(reloj));
     pedido.on("error", reject);
     pedido.end();
   });
@@ -129,18 +140,24 @@ function pedir(url: URL, maxBytes: number, cabeceras: Record<string, string>, co
 /**
  * Descarga una página pública. Devuelve `null` si el destino no es público o no responde, si hay más
  * de 4 redirecciones, si el esquema no es http(s) o si la respuesta no es 2xx.
+ *
+ * `plazoMs` es el tiempo máximo de TODA la descarga (redirecciones incluidas); sin él solo rige el corte por
+ * inactividad de 10 s. Quien lee de un origen lento mientras un visitante espera debe pasarlo.
  */
 export async function descargarSeguro(
   inicial: URL,
-  opciones: { maxBytes?: number; cabeceras?: Record<string, string>; codificacion?: "utf8" | "latin1" } = {},
+  opciones: { maxBytes?: number; cabeceras?: Record<string, string>; codificacion?: "utf8" | "latin1"; plazoMs?: number } = {},
 ): Promise<RespuestaSegura | null> {
   const maxBytes = opciones.maxBytes ?? 2_000_000;
+  const limite = Date.now() + (opciones.plazoMs ?? Infinity);
   let url = inicial;
   for (let salto = 0; salto <= 4; salto++) {
     if (!/^https?:$/.test(url.protocol)) return null;
+    const restante = limite - Date.now();
+    if (restante <= 0) return null;
     let r: Salto;
     try {
-      r = await pedir(url, maxBytes, opciones.cabeceras ?? {}, opciones.codificacion ?? "utf8");
+      r = await pedir(url, maxBytes, opciones.cabeceras ?? {}, opciones.codificacion ?? "utf8", restante);
     } catch {
       // Destino no permitido, DNS que no resuelve, conexión rechazada o tiempo agotado.
       return null;

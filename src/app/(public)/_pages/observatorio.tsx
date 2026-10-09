@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { Beef, CircleDollarSign, Factory, FileText, Globe, MapPinned, Wallet, type LucideIcon } from "lucide-react";
 import { SiteShell } from "@/components/site-shell";
 import { ObservatorioHero, type KpiHero } from "@/components/observatorio-hero";
@@ -29,6 +30,7 @@ const TEXTOS = {
     indice: "En esta página",
     intro: "Las cifras del sector en un solo lugar: precios, inventario por departamento, producción, consumo, mercado internacional y costos. Datos oficiales de FEDEGÁN, siempre al día.",
     vacio: "Los indicadores no están disponibles en este momento. Intenta de nuevo en unos minutos.",
+    cargando: "Cargando las cifras del Observatorio…",
     clave: "Cifras clave",
     secciones: { precios: "Precios", inventario: "Inventario", produccion: "Producción", consumo: "Consumo", internacional: "Internacional", costos: "Costos", documentos: "Documentos" },
     descripciones: {
@@ -57,6 +59,7 @@ const TEXTOS = {
     indice: "On this page",
     intro: "The sector's figures in one place: prices, inventory by department, production, consumption, the international market and costs. Official FEDEGÁN data, always up to date.",
     vacio: "The indicators are not available right now. Please try again in a few minutes.",
+    cargando: "Loading the Observatory figures…",
     clave: "Key figures",
     secciones: { precios: "Prices", inventario: "Inventory", produccion: "Production", consumo: "Consumption", internacional: "International", costos: "Costs", documentos: "Documents" },
     descripciones: {
@@ -105,110 +108,155 @@ function Seccion({ id, n, titulo, texto, children }: { id: string; n: number; ti
   );
 }
 
+// Lo que se ve mientras llegan las cifras del origen: el nombre y la presentación (que no dependen de él) y bloques en el lugar de las
+// cifras. Así la página aparece al instante aunque el sistema de FEDEGÁN esté lento.
+function Esqueleto({ locale }: { locale: Locale }) {
+  const tx = TEXTOS[locale];
+  return (
+    <div role="status" aria-label={tx.cargando}>
+      <div className="relative isolate overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border)] bg-gradient-to-br from-[var(--surface-2)] via-[var(--surface)] to-transparent px-5 pb-6 pt-8 sm:px-10 sm:pb-9 sm:pt-12">
+        <div className="max-w-3xl">
+          <p className="inline-flex items-center gap-2 rounded-full border border-[var(--border-strong)] bg-[var(--bg)]/50 px-3.5 py-1.5 text-xs font-semibold text-[var(--fg-muted)]">
+            <span aria-hidden className="size-2 rounded-full bg-[var(--accent-2)]" />
+            {tx.kicker}
+          </p>
+          <p aria-hidden className="lx-display mt-5 text-[2.9rem] font-semibold leading-[1.02] tracking-tight sm:text-7xl">
+            {tx.titulo[0]} <span className="lx-foil">{tx.titulo[1]}</span>
+          </p>
+          <p className="mt-5 max-w-2xl text-base leading-relaxed text-[var(--fg-muted)] sm:text-lg">{tx.intro}</p>
+        </div>
+        <div aria-hidden className="mt-8 grid animate-pulse grid-cols-1 gap-3 min-[460px]:grid-cols-2 lg:grid-cols-4">
+          {[0, 1, 2, 3].map((i) => <div key={i} className="h-36 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--bg)]/55" />)}
+        </div>
+      </div>
+      <div aria-hidden className="mt-6 flex animate-pulse flex-col gap-5 lg:mt-10">
+        <div className="h-8 w-56 rounded-full bg-[var(--surface-2)]" />
+        <div className="grid gap-5 md:grid-cols-2">
+          {[0, 1].map((i) => <div key={i} className="h-72 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)]" />)}
+        </div>
+      </div>
+      <span className="sr-only">{tx.cargando}</span>
+    </div>
+  );
+}
+
+// El cuerpo de la página: lee las cifras (caché de datos; si está vacía, del origen) y las pinta. Va dentro de `Suspense` para que lo de
+// arriba no tenga que esperarlas.
+async function Cifras({ locale }: { locale: Locale }) {
+  const [precios, obs] = await Promise.all([getIndicadores(), getObservatorio()]);
+  const tx = TEXTOS[locale];
+  const hayDatos = precios.length > 0 || obs.generales.length > 0 || obs.departamental.length > 0 || obs.documentos.length > 0;
+  const grupo = (g: Grupo) => obs.generales.filter((x) => x.grupo === g);
+  const por = (clave: string) => obs.generales.find((x) => x.clave === clave);
+
+  // Cifras clave: lo más mirado, con su variación y tendencia.
+  const kpis: KpiHero[] = [];
+  const inv = obs.departamental.find((d) => d.clave === "bovinos");
+  if (inv?.nacional.length) {
+    const i = ultimo(inv.nacional);
+    if (i >= 0) kpis.push({ etiqueta: `${tx.kpis.inventario} · ${inv.periodos[i]}`, valor: inv.nacional[i] as number, formato: "entero", unidad: tx.kpis.cabezas, delta: variacion(inv.nacional, i), tendencia: inv.nacional });
+  }
+  const gordo = precios.find((p) => p.clave === "gordo");
+  if (gordo) {
+    const v = gordo.series[0].valores, i = ultimo(v);
+    if (i >= 0) kpis.push({ etiqueta: `${tx.kpis.gordo} · ${gordo.periodos[i]}`, valor: v[i] as number, formato: "pesos", unidad: tx.kpis.porKilo, delta: variacion(v, i), tendencia: v });
+  }
+  const sac = por("sacrificio");
+  if (sac) {
+    const v = sac.series[0].valores, i = ultimo(v);
+    if (i >= 0) kpis.push({ etiqueta: `${tx.kpis.sacrificio} · ${sac.periodos[i]}`, valor: v[i] as number, formato: "entero", unidad: tx.kpis.milCabezas, delta: variacion(v, i), tendencia: v });
+  }
+  const res = por("consumo-res");
+  if (res) {
+    const v = (res.series.find((s) => /total/i.test(s.nombre)) ?? res.series[res.series.length - 1]).valores, i = ultimo(v);
+    if (i >= 0) kpis.push({ etiqueta: `${tx.kpis.consumo} · ${res.periodos[i]}`, valor: v[i] as number, formato: "decimal1", unidad: tx.kpis.kgHab, delta: variacion(v, i), tendencia: v });
+  }
+
+  // Mapa de fondo de la portada: inventario del último año por departamento.
+  let mapa: { valores: Record<string, number>; max: number } | null = null;
+  if (inv) {
+    const i = inv.nacional.length - 1;
+    const valores = Object.fromEntries(inv.departamentos.filter((s) => s.valores[i] !== null).map((s) => [normaDepartamento(s.nombre), s.valores[i] as number]));
+    const max = Math.max(1, ...Object.values(valores));
+    mapa = Object.keys(valores).length ? { valores, max } : null;
+  }
+  const ultimaFecha = gordo ? periodoLargo(gordo.periodos[gordo.periodos.length - 1]) : null;
+
+  // Una sección de tarjetas: las que traen muchas series ocupan el ancho.
+  const tarjetas = (lista: IndicadorGeneral[]) => (
+    <div className="grid gap-5 md:grid-cols-2">
+      {lista.map((x) => <ObservatorioSerie key={x.clave} ind={x} ancha={x.series.length > 5 || (lista.length % 2 === 1 && x === lista[lista.length - 1])} />)}
+    </div>
+  );
+  const presentes = [
+    precios.length ? "precios" : null, obs.departamental.length ? "inventario" : null,
+    grupo("produccion").length ? "produccion" : null, grupo("consumo").length ? "consumo" : null,
+    grupo("internacional").length ? "internacional" : null, grupo("costos").length ? "costos" : null,
+    obs.documentos.length ? "documentos" : null,
+  ].filter((x): x is keyof typeof tx.secciones => x !== null);
+  const n = (k: string) => presentes.indexOf(k as never) + 1;
+
+  return (
+    <>
+      <ObservatorioHero kicker={tx.kicker} titulo={[...tx.titulo] as [string, string]} intro={tx.intro} actualizado={ultimaFecha} kpis={kpis} hallazgos={armarHallazgos(precios, obs, locale)} tituloHallazgos={tx.hallazgos} mapa={mapa} />
+
+      {!hayDatos ? (
+        <p className="mt-8 rounded-[var(--radius-lg)] border border-[var(--border)] p-8 text-center text-[var(--fg-muted)]">{tx.vacio}</p>
+      ) : (
+        <div className="mt-6 lg:mt-10 lg:grid lg:grid-cols-[11.5rem_minmax(0,1fr)] lg:gap-10">
+          <ObservatorioIndice titulo={tx.indice} items={presentes.map((k) => ({ id: k, etiqueta: tx.secciones[k] }))} />
+          <div className="min-w-0">
+            {precios.length > 0 && (
+              <Seccion id="precios" n={n("precios")} titulo={tx.secciones.precios} texto={tx.descripciones.precios}>
+                <IndicadoresGanaderos indicadores={precios} etiquetas={etiquetasIndicadores(locale)} />
+              </Seccion>
+            )}
+            {obs.departamental.length > 0 && (
+              <Seccion id="inventario" n={n("inventario")} titulo={tx.secciones.inventario} texto={tx.descripciones.inventario}>
+                <div className="flex flex-col gap-5">
+                  <ObservatorioMapa datos={obs.departamental} etiquetas={tx.mapa} />
+                  {obs.hato.length > 0 && <ObservatorioHato hato={obs.hato} />}
+                </div>
+              </Seccion>
+            )}
+            {grupo("produccion").length > 0 && <Seccion id="produccion" n={n("produccion")} titulo={tx.secciones.produccion} texto={tx.descripciones.produccion}>{tarjetas(grupo("produccion"))}</Seccion>}
+            {grupo("consumo").length > 0 && <Seccion id="consumo" n={n("consumo")} titulo={tx.secciones.consumo} texto={tx.descripciones.consumo}>{tarjetas(grupo("consumo"))}</Seccion>}
+            {grupo("internacional").length > 0 && <Seccion id="internacional" n={n("internacional")} titulo={tx.secciones.internacional} texto={tx.descripciones.internacional}>{tarjetas(grupo("internacional"))}</Seccion>}
+            {grupo("costos").length > 0 && <Seccion id="costos" n={n("costos")} titulo={tx.secciones.costos} texto={tx.descripciones.costos}>{tarjetas(grupo("costos"))}</Seccion>}
+            {obs.documentos.length > 0 && (
+              <Seccion id="documentos" n={n("documentos")} titulo={tx.secciones.documentos} texto={tx.descripciones.documentos}>
+                <ObservatorioDocumentos bibliotecas={obs.documentos} etiquetas={tx.docs} />
+              </Seccion>
+            )}
+
+            <section aria-labelledby="como-leer" className="mt-16 pb-6">
+              <h2 id="como-leer" className="lx-display text-2xl font-semibold">{tx.comoLeer}</h2>
+              <dl className="mt-5 grid gap-4 sm:grid-cols-3">
+                {tx.notas.map(([t, d]) => (
+                  <div key={t} className="rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] p-4">
+                    <dt className="font-semibold text-[var(--accent)]">{t}</dt>
+                    <dd className="mt-1.5 text-sm leading-relaxed text-[var(--fg-muted)]">{d}</dd>
+                  </div>
+                ))}
+              </dl>
+            </section>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
 /** Fábrica: la misma página en cualquier idioma de interfaz (el contenido sigue en español). */
 export function makePage(locale: Locale) {
   return async function Page() {
-    const [site, precios, obs] = await Promise.all([getSiteTheme(), getIndicadores(), getObservatorio()]);
-    const tx = TEXTOS[locale];
-    const hayDatos = precios.length > 0 || obs.generales.length > 0 || obs.departamental.length > 0 || obs.documentos.length > 0;
-    const grupo = (g: Grupo) => obs.generales.filter((x) => x.grupo === g);
-    const por = (clave: string) => obs.generales.find((x) => x.clave === clave);
-
-    // Cifras clave: lo más mirado, con su variación y tendencia.
-    const kpis: KpiHero[] = [];
-    const inv = obs.departamental.find((d) => d.clave === "bovinos");
-    if (inv?.nacional.length) {
-      const i = ultimo(inv.nacional);
-      if (i >= 0) kpis.push({ etiqueta: `${tx.kpis.inventario} · ${inv.periodos[i]}`, valor: inv.nacional[i] as number, formato: "entero", unidad: tx.kpis.cabezas, delta: variacion(inv.nacional, i), tendencia: inv.nacional });
-    }
-    const gordo = precios.find((p) => p.clave === "gordo");
-    if (gordo) {
-      const v = gordo.series[0].valores, i = ultimo(v);
-      if (i >= 0) kpis.push({ etiqueta: `${tx.kpis.gordo} · ${gordo.periodos[i]}`, valor: v[i] as number, formato: "pesos", unidad: tx.kpis.porKilo, delta: variacion(v, i), tendencia: v });
-    }
-    const sac = por("sacrificio");
-    if (sac) {
-      const v = sac.series[0].valores, i = ultimo(v);
-      if (i >= 0) kpis.push({ etiqueta: `${tx.kpis.sacrificio} · ${sac.periodos[i]}`, valor: v[i] as number, formato: "entero", unidad: tx.kpis.milCabezas, delta: variacion(v, i), tendencia: v });
-    }
-    const res = por("consumo-res");
-    if (res) {
-      const v = (res.series.find((s) => /total/i.test(s.nombre)) ?? res.series[res.series.length - 1]).valores, i = ultimo(v);
-      if (i >= 0) kpis.push({ etiqueta: `${tx.kpis.consumo} · ${res.periodos[i]}`, valor: v[i] as number, formato: "decimal1", unidad: tx.kpis.kgHab, delta: variacion(v, i), tendencia: v });
-    }
-
-    // Mapa de fondo de la portada: inventario del último año por departamento.
-    let mapa: { valores: Record<string, number>; max: number } | null = null;
-    if (inv) {
-      const i = inv.nacional.length - 1;
-      const valores = Object.fromEntries(inv.departamentos.filter((s) => s.valores[i] !== null).map((s) => [normaDepartamento(s.nombre), s.valores[i] as number]));
-      const max = Math.max(1, ...Object.values(valores));
-      mapa = Object.keys(valores).length ? { valores, max } : null;
-    }
-    const ultimaFecha = gordo ? periodoLargo(gordo.periodos[gordo.periodos.length - 1]) : null;
-
-    // Una sección de tarjetas: las que traen muchas series ocupan el ancho.
-    const tarjetas = (lista: IndicadorGeneral[]) => (
-      <div className="grid gap-5 md:grid-cols-2">
-        {lista.map((x) => <ObservatorioSerie key={x.clave} ind={x} ancha={x.series.length > 5 || (lista.length % 2 === 1 && x === lista[lista.length - 1])} />)}
-      </div>
-    );
-    const presentes = [
-      precios.length ? "precios" : null, obs.departamental.length ? "inventario" : null,
-      grupo("produccion").length ? "produccion" : null, grupo("consumo").length ? "consumo" : null,
-      grupo("internacional").length ? "internacional" : null, grupo("costos").length ? "costos" : null,
-      obs.documentos.length ? "documentos" : null,
-    ].filter((x): x is keyof typeof tx.secciones => x !== null);
-    const n = (k: string) => presentes.indexOf(k as never) + 1;
-
+    const site = await getSiteTheme();
     return (
       <SiteShell theme={site.theme} style={site.style} locale={locale} variant="seccion">
         <div className="mx-auto max-w-7xl">
-          <ObservatorioHero kicker={tx.kicker} titulo={[...tx.titulo] as [string, string]} intro={tx.intro} actualizado={ultimaFecha} kpis={kpis} hallazgos={armarHallazgos(precios, obs, locale)} tituloHallazgos={tx.hallazgos} mapa={mapa} />
-
-          {!hayDatos ? (
-            <p className="mt-8 rounded-[var(--radius-lg)] border border-[var(--border)] p-8 text-center text-[var(--fg-muted)]">{tx.vacio}</p>
-          ) : (
-            <div className="mt-6 lg:mt-10 lg:grid lg:grid-cols-[11.5rem_minmax(0,1fr)] lg:gap-10">
-              <ObservatorioIndice titulo={tx.indice} items={presentes.map((k) => ({ id: k, etiqueta: tx.secciones[k] }))} />
-              <div className="min-w-0">
-                {precios.length > 0 && (
-                  <Seccion id="precios" n={n("precios")} titulo={tx.secciones.precios} texto={tx.descripciones.precios}>
-                    <IndicadoresGanaderos indicadores={precios} etiquetas={etiquetasIndicadores(locale)} />
-                  </Seccion>
-                )}
-                {obs.departamental.length > 0 && (
-                  <Seccion id="inventario" n={n("inventario")} titulo={tx.secciones.inventario} texto={tx.descripciones.inventario}>
-                    <div className="flex flex-col gap-5">
-                      <ObservatorioMapa datos={obs.departamental} etiquetas={tx.mapa} />
-                      {obs.hato.length > 0 && <ObservatorioHato hato={obs.hato} />}
-                    </div>
-                  </Seccion>
-                )}
-                {grupo("produccion").length > 0 && <Seccion id="produccion" n={n("produccion")} titulo={tx.secciones.produccion} texto={tx.descripciones.produccion}>{tarjetas(grupo("produccion"))}</Seccion>}
-                {grupo("consumo").length > 0 && <Seccion id="consumo" n={n("consumo")} titulo={tx.secciones.consumo} texto={tx.descripciones.consumo}>{tarjetas(grupo("consumo"))}</Seccion>}
-                {grupo("internacional").length > 0 && <Seccion id="internacional" n={n("internacional")} titulo={tx.secciones.internacional} texto={tx.descripciones.internacional}>{tarjetas(grupo("internacional"))}</Seccion>}
-                {grupo("costos").length > 0 && <Seccion id="costos" n={n("costos")} titulo={tx.secciones.costos} texto={tx.descripciones.costos}>{tarjetas(grupo("costos"))}</Seccion>}
-                {obs.documentos.length > 0 && (
-                  <Seccion id="documentos" n={n("documentos")} titulo={tx.secciones.documentos} texto={tx.descripciones.documentos}>
-                    <ObservatorioDocumentos bibliotecas={obs.documentos} etiquetas={tx.docs} />
-                  </Seccion>
-                )}
-
-                <section aria-labelledby="como-leer" className="mt-16 pb-6">
-                  <h2 id="como-leer" className="lx-display text-2xl font-semibold">{tx.comoLeer}</h2>
-                  <dl className="mt-5 grid gap-4 sm:grid-cols-3">
-                    {tx.notas.map(([t, d]) => (
-                      <div key={t} className="rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] p-4">
-                        <dt className="font-semibold text-[var(--accent)]">{t}</dt>
-                        <dd className="mt-1.5 text-sm leading-relaxed text-[var(--fg-muted)]">{d}</dd>
-                      </div>
-                    ))}
-                  </dl>
-                </section>
-              </div>
-            </div>
-          )}
+          <Suspense fallback={<Esqueleto locale={locale} />}>
+            <Cifras locale={locale} />
+          </Suspense>
         </div>
       </SiteShell>
     );

@@ -77,22 +77,32 @@ async function leerUno(e: Entrada, desde: string, hasta: string): Promise<Indica
   })
     .toString()
     .replace(/%2C/g, ",");
-  const r = await descargarSeguro(url, { maxBytes: 200_000, cabeceras: { accept: "text/csv", "user-agent": "CONtextoGanadero/1.0 (indicadores)" } });
+  // Plazo total de 8 s: con el origen atascado la portada no debe quedarse esperándolo.
+  const r = await descargarSeguro(url, { maxBytes: 200_000, plazoMs: 8_000, cabeceras: { accept: "text/csv", "user-agent": "CONtextoGanadero/1.0 (indicadores)" } });
   if (!r || !/csv|text\/plain/i.test(r.tipo)) return null;
   const tabla = parsearCsvIndicador(r.cuerpo, e.series);
   if (!tabla) return null;
   return { clave: e.clave, titulo: e.titulo, descripcion: e.descripcion, unidad: "$ por kilo en pie", fuente: FUENTE, ...tabla };
 }
 
+// Cuándo falló por última vez la lectura en ESTA instancia: durante `ESPERA_TRAS_FALLO_MS` no se vuelve a pedir al origen (si no, cada
+// visita esperaba de nuevo los segundos de plazo de un origen caído).
+const ESPERA_TRAS_FALLO_MS = 90_000;
+let falloEn = 0;
+
 // Lee todo el catálogo. Sin try/catch por fuera: si el origen falla del todo se lanza, y así NO se guarda en la caché
 // una lista vacía durante seis horas. El argumento (el primer mes del rango) renueva la caché sola al cambiar de mes.
 const leer = cachear(
   "indicadores-fedegan",
   async (desde: string): Promise<Indicador[]> => {
+    if (Date.now() - falloEn < ESPERA_TRAS_FALLO_MS) throw new Error("El origen de indicadores falló hace poco");
     const { hasta } = rangoDeMeses(new Date(), MESES);
     const todos = await Promise.all(CATALOGO.map((e) => leerUno(e, desde, hasta).catch(() => null)));
     const ok = todos.filter((x): x is Indicador => x !== null);
-    if (!ok.length) throw new Error("El origen de indicadores no respondió");
+    if (!ok.length) {
+      falloEn = Date.now();
+      throw new Error("El origen de indicadores no respondió");
+    }
     return ok;
   },
   { tags: ["indicadores"], segundos: SEGUNDOS },

@@ -3,7 +3,7 @@ import type { ArticleListItem } from "@/lib/content";
 import { CardMedia } from "@/components/cover-art";
 import { LiveBadge } from "@/components/live-badge";
 import { formatDate } from "@/lib/utils";
-import { homeStyleImageScale, homeStyleTitleCss } from "@/lib/home-style";
+import { homeStyleImageBox, homeStyleTitleCss } from "@/lib/home-style";
 import { DEFAULT_LOCALE, INTL_LOCALE, categoryLabel, localePath, type Locale } from "@/lib/i18n";
 
 // Variantes visuales de la tarjeta de nota.
@@ -27,17 +27,14 @@ function cardStyle(a: ArticleListItem, variant: CardVariant) {
   const size = a.homeStyle?.size ?? null;
   return {
     title: homeStyleTitleCss(a.homeStyle, TITLE_PX[variant], variant === "lead" ? 1.08 : 1.2),
-    imageScale: homeStyleImageScale(a.homeStyle),
+    // Caja de la imagen elegida en el panel (porcentaje o medidas exactas) y si trae alto fijo.
+    imageBox: homeStyleImageBox(a.homeStyle).css,
+    imageAlto: homeStyleImageBox(a.homeStyle).alto,
     // "S" comprime el bloque (sin imagen ni resumen); "L" lo abre.
     hideMedia: size === "sm",
     hideExcerpt: size === "sm",
     excerptClamp: size === "lg" ? "line-clamp-4" : "line-clamp-2",
   };
-}
-
-/** Envoltura que aplica la escala de imagen elegida en el panel. */
-function mediaScaleStyle(scale: number): React.CSSProperties | undefined {
-  return scale === 100 ? undefined : { width: `${scale}%`, marginInline: "auto" };
 }
 
 // Propiedades de la tarjeta: nota, variante, tamaño y estilo manual.
@@ -152,7 +149,7 @@ function LeadCard({ a, priority, locale }: { a: ArticleListItem; priority?: bool
         className="block"
         aria-label={a.title}
         tabIndex={-1}
-        style={mediaScaleStyle(st.imageScale)}
+        style={st.imageBox}
       >
         <CardMedia
           src={a.coverImageUrl}
@@ -198,7 +195,7 @@ function GoldCard({ a, priority, locale, compact = false }: { a: ArticleListItem
         <Link
           href={localePath(locale, `/articulo/${a.slug}`)}
           className="relative block"
-          style={mediaScaleStyle(st.imageScale)}
+          style={st.imageBox}
         >
           <CardMedia
             src={a.coverImageUrl}
@@ -206,6 +203,7 @@ function GoldCard({ a, priority, locale, compact = false }: { a: ArticleListItem
             seed={a.slug}
             label={a.categoryName ?? a.title}
             priority={priority}
+            ratio={st.imageAlto ? "h-full" : undefined}
             // De a dos por fila en el celular la imagen mide la mitad de la pantalla, no toda.
             sizes={compact ? "(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 48vw" : undefined}
           />
@@ -233,6 +231,8 @@ function GoldCard({ a, priority, locale, compact = false }: { a: ArticleListItem
 /* ------------------------------------------------- Portada: columna lateral */
 function RailCard({ a, index, locale }: { a: ArticleListItem; index?: number; locale: Locale }) {
   const st = cardStyle(a, "rail");
+  const lado = { w: a.homeStyle?.imageWidth ?? a.homeStyle?.imageHeight, h: a.homeStyle?.imageHeight ?? a.homeStyle?.imageWidth };
+  const medidasMiniatura: React.CSSProperties | undefined = lado.w && lado.h ? { width: `${lado.w}px`, height: `${lado.h}px` } : undefined;
   return (
     <article data-bs-root={a.slug} className="lx-reveal group flex gap-3 border-b border-[var(--border)] pb-4 last:border-0 sm:gap-4">
       {typeof index === "number" && (
@@ -251,14 +251,15 @@ function RailCard({ a, index, locale }: { a: ArticleListItem; index?: number; lo
       </div>
       {/* La miniatura también va en el celular: sin ella «Lo último» era una lista de texto plano. */}
       {!st.hideMedia && (
-      <Link href={localePath(locale, `/articulo/${a.slug}`)} className="block shrink-0" aria-hidden tabIndex={-1}>
-        <span className="lx-media block size-[5.25rem] overflow-hidden rounded-[var(--radius)] sm:size-20">
+      <Link href={localePath(locale, `/articulo/${a.slug}`)} className="block max-w-[45%] shrink-0" aria-hidden tabIndex={-1}>
+        {/* La miniatura es cuadrada; con medidas exactas en el panel toma esas (si solo hay una, es el lado del cuadrado) y el texto, al lado, se acomoda. */}
+        <span className={`lx-media block overflow-hidden rounded-[var(--radius)] ${medidasMiniatura ? "max-w-full" : "size-[5.25rem] sm:size-20"}`} style={medidasMiniatura}>
           <CardMedia
             src={a.coverImageUrl}
             alt=""
             seed={a.slug}
             label={a.categoryName ?? a.title}
-            ratio="aspect-square"
+            ratio={medidasMiniatura ? "h-full" : "aspect-square"}
             sizes="84px"
           />
         </span>
@@ -277,14 +278,14 @@ function CopperCard({ a, index, locale }: { a: ArticleListItem; index?: number; 
       <Link
         href={localePath(locale, `/articulo/${a.slug}`)}
         className="relative block"
-        style={mediaScaleStyle(st.imageScale)}
+        style={st.imageBox}
       >
         <CardMedia
           src={a.coverImageUrl}
           alt={a.coverImageAlt ?? a.title}
           seed={a.slug}
           label={a.categoryName ?? a.title}
-          ratio="aspect-[4/3]"
+          ratio={st.imageAlto ? "h-full" : "aspect-[4/3]"}
         />
         {typeof index === "number" && (
           <span className="lx-display absolute left-4 top-4 z-[4] grid size-10 place-items-center rounded-full bg-[var(--bg)]/70 text-sm font-bold text-[var(--accent)] backdrop-blur-md">
