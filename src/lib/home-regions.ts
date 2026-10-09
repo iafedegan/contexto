@@ -18,8 +18,15 @@ import { acotar, colorHex as color } from "@/lib/validate";
 
 export type RegionId = "navbar" | "hero" | "body" | "cards" | "footer" | "encabezado";
 
+/** Colores de un componente: los que pueden ser distintos en modo claro y en modo oscuro. */
+export type RegionColors = { bg?: string; bgGradient?: Gradient; fg?: string; accent?: string };
+
 // Estilos editables de un componente de la portada (fondo, colores, escalas…).
 export type RegionStyle = {
+  /** Colores solo para el modo claro: mandan sobre los de arriba (que valen para los dos modos) cuando el sitio se ve claro. */
+  claro?: RegionColors;
+  /** Colores solo para el modo oscuro: mandan sobre los de arriba cuando el sitio se ve oscuro. */
+  oscuro?: RegionColors;
   /** Fondo del componente. */
   bg?: string;
   /** Degradado de fondo (si está, manda sobre `bg`). */
@@ -115,6 +122,15 @@ export const RANGES = {
 // Valida un número y lo acota al rango de su ajuste.
 const num = (v: unknown, key: keyof typeof RANGES) => acotar(v, RANGES[key].min, RANGES[key].max);
 
+// Valida los colores de un modo (claro u oscuro); `undefined` si no queda ninguno.
+function sanitizeColors(raw: unknown): RegionColors | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const r = raw as Record<string, unknown>;
+  const c: RegionColors = { bg: color(r.bg), bgGradient: sanitizeGradient(r.bgGradient), fg: color(r.fg), accent: color(r.accent) };
+  const clean = Object.fromEntries(Object.entries(c).filter(([, v]) => v !== undefined)) as RegionColors;
+  return Object.keys(clean).length ? clean : undefined;
+}
+
 /** Normaliza un valor de la BD a un `RegionStyles` seguro. */
 export function sanitizeRegions(input: unknown): RegionStyles {
   if (!input || typeof input !== "object") return {};
@@ -124,6 +140,8 @@ export function sanitizeRegions(input: unknown): RegionStyles {
     if (!raw || typeof raw !== "object") continue;
     const r = raw as Record<string, unknown>;
     const s: RegionStyle = {
+      claro: sanitizeColors(r.claro),
+      oscuro: sanitizeColors(r.oscuro),
       bg: color(r.bg),
       bgGradient: sanitizeGradient(r.bgGradient),
       fg: color(r.fg),
@@ -151,6 +169,49 @@ const TITLES = ":is(h1,h2,h3,h4,.lx-display)";
 // Selector CSS del texto corrido.
 const TEXT = ":is(p,li,time,small,dd,dt,figcaption,nav a)";
 
+// Las declaraciones CSS de los colores de un componente (fondo, degradado, texto, acento).
+function coloresDecl(s: RegionColors): string[] {
+  const decl: string[] = [];
+  if (s.bgGradient && !s.bg) {
+    // Degradado de fondo: el texto se deriva del primer color y el fondo se pinta aparte.
+    const p = derivePalette(s.bgGradient.from);
+    for (const [k, v] of Object.entries(p)) decl.push(`${k}:${v}`);
+    decl.push(`--paper:${s.bgGradient.from}`, `--ink:${p["--fg"]}`, `color:${p["--fg"]}`);
+  }
+  if (s.bgGradient) decl.push(`background:${gradientCss(s.bgGradient)}!important`);
+  if (s.bg) {
+    const p = derivePalette(s.bg);
+    for (const [k, v] of Object.entries(p)) decl.push(`${k}:${v}`);
+    decl.push(`--paper:${s.bg}`, `--paper-2:${p["--bg-2"]}`, `--rule:${p["--border"]}`);
+    decl.push(`--ink:${p["--fg"]}`, `--ink-soft:${p["--fg-muted"]}`, `--ink-faint:${p["--fg-muted"]}`);
+    if (!s.bgGradient) decl.push(`background:${s.bg}!important`);
+    decl.push(`color:${p["--fg"]}`);
+  }
+  if (s.fg) {
+    const muted = mutedOf(s.fg);
+    decl.push(`--fg:${s.fg}`, `--ink:${s.fg}`, `--fg-muted:${muted}`, `--ink-soft:${muted}`, `--ink-faint:${muted}`, `color:${s.fg}`);
+  }
+  if (s.accent) {
+    decl.push(`--accent:${s.accent}`, `--brand:${s.accent}`, `--brand-ink:${s.accent}`, `--rule-strong:${s.accent}`, `--link:${s.accent}`);
+  }
+  return decl;
+}
+
+// Plantillas que, sin preferencia del lector, se ven oscuras (las mismas que el interruptor de modo del sitio).
+const PLANTILLAS_OSCURAS = ["home", "esmeralda", "revista", "vanguardia"];
+
+/**
+ * Selectores de un componente cuando el sitio se VE en un modo: el elegido por el lector (`html[data-dark]`) o, si no eligió,
+ * el propio de la plantilla. Llevan más peso que la regla base, así que mandan sobre los colores «de los dos modos».
+ */
+function selectoresDeModo(modo: "claro" | "oscuro", scope: string, id: string): string {
+  const comp = ` [data-region="${id}"]`;
+  const nativas = PLANTILLAS_OSCURAS.map((t) => `[data-theme="${t}"]`).join(",");
+  return modo === "oscuro"
+    ? `html[data-dark="1"] ${scope}${comp},html:not([data-dark]) ${scope}:is(${nativas})${comp}`
+    : `html[data-dark="0"] ${scope}${comp},html:not([data-dark]) ${scope}:not(:is(${nativas}))${comp}`;
+}
+
 /** Hoja CSS con los estilos de cada componente. Cadena vacía si no hay nada. */
 export function regionsCss(input: RegionStyles | undefined, scope = "[data-site-root]"): string {
   const regions = sanitizeRegions(input);
@@ -166,28 +227,7 @@ export function regionsCss(input: RegionStyles | undefined, scope = "[data-site-
       rules.push(`${sel}{display:none!important}`);
       continue;
     }
-    if (s.bgGradient && !s.bg) {
-      // Degradado de fondo: el texto se deriva del primer color y el fondo se pinta aparte.
-      const p = derivePalette(s.bgGradient.from);
-      for (const [k, v] of Object.entries(p)) decl.push(`${k}:${v}`);
-      decl.push(`--paper:${s.bgGradient.from}`, `--ink:${p["--fg"]}`, `color:${p["--fg"]}`);
-    }
-    if (s.bgGradient) decl.push(`background:${gradientCss(s.bgGradient)}!important`);
-    if (s.bg) {
-      const p = derivePalette(s.bg);
-      for (const [k, v] of Object.entries(p)) decl.push(`${k}:${v}`);
-      decl.push(`--paper:${s.bg}`, `--paper-2:${p["--bg-2"]}`, `--rule:${p["--border"]}`);
-      decl.push(`--ink:${p["--fg"]}`, `--ink-soft:${p["--fg-muted"]}`, `--ink-faint:${p["--fg-muted"]}`);
-      if (!s.bgGradient) decl.push(`background:${s.bg}!important`);
-      decl.push(`color:${p["--fg"]}`);
-    }
-    if (s.fg) {
-      const muted = mutedOf(s.fg);
-      decl.push(`--fg:${s.fg}`, `--ink:${s.fg}`, `--fg-muted:${muted}`, `--ink-soft:${muted}`, `--ink-faint:${muted}`, `color:${s.fg}`);
-    }
-    if (s.accent) {
-      decl.push(`--accent:${s.accent}`, `--brand:${s.accent}`, `--brand-ink:${s.accent}`, `--rule-strong:${s.accent}`, `--link:${s.accent}`);
-    }
+    decl.push(...coloresDecl(s));
     if (s.textFont) {
       const f = homeFontFamily(s.textFont)!;
       decl.push(`--font-body:${f}`, `--font-ui:${f}`, `--font-sans:${f}`, `--font-serif:${f}`, `font-family:${f}`);
@@ -241,6 +281,12 @@ export function regionsCss(input: RegionStyles | undefined, scope = "[data-site-
     }
 
     if (decl.length) rules.unshift(`${sel}{${decl.join(";")}}`);
+    // Colores distintos según el modo con el que se ve el sitio: pisan a los de «los dos modos».
+    for (const modo of ["claro", "oscuro"] as const) {
+      const c = s[modo];
+      const d = c ? coloresDecl(c) : [];
+      if (d.length) rules.push(`${selectoresDeModo(modo, scope, id)}{${d.join(";")}}`);
+    }
   }
   return rules.join("\n");
 }

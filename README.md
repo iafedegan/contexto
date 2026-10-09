@@ -124,6 +124,13 @@ confirmación, edad por rangos, ciudades, proveedor de correo y qué tan complet
 La medición es anónima y con permiso (cookie `cg_med` / `cg_vid`): ver `docs/seguridad.md` §14. Datos de prueba locales:
 `npx tsx scripts/seed-lectores.ts` (y `--limpiar`). En producción hay que correr `drizzle/0011_lecturas_de_lectores.sql` en el SQL Editor.
 
+### Colores por modo (claro y oscuro) y grupos plegables
+
+En «Propiedades» de `/panel/portada`, los colores de cada parte (fondo, degradado, texto, acento) se pueden fijar para **los dos modos**, solo para el
+**claro** o solo para el **oscuro** (`RegionStyle.claro` / `.oscuro` en `src/lib/home-regions.ts`). Cambiar el fondo en un modo ya no cambia el otro. En el
+CSS, las reglas de modo pesan más que la base y respetan la plantilla: sin preferencia del lector, las plantillas oscuras de fábrica toman el oscuro y las
+demás el claro. Los grupos de ajustes (Colores, Tipografía, Dimensiones…) arrancan cerrados y se despliegan al pulsarlos.
+
 ### Cintillo de titulares (editable)
 
 La franja que corre bajo la cabecera de la portada se configura en `/panel/portada` → «Cintillo de titulares»: apagarla, elegir de dónde salen los

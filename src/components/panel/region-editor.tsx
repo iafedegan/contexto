@@ -1,11 +1,13 @@
 "use client";
 
-import { AlignCenter, AlignLeft, AlignRight, EyeOff, RotateCcw } from "lucide-react";
+import { useState } from "react";
+import { AlignCenter, AlignLeft, AlignRight, ChevronDown, EyeOff, RotateCcw } from "lucide-react";
 import { GradientEditor } from "@/components/panel/gradient-editor";
 import { HOME_FONT_GROUPS, HOME_FONTS, type HomeTitleFont } from "@/lib/home-fonts";
 import {
   RANGES,
   REGIONS,
+  type RegionColors,
   type RegionId,
   type RegionStyle,
   type RegionStyles,
@@ -41,6 +43,17 @@ export function RegionEditor({
   const s: RegionStyle = value[active] ?? {};
   // Indica si la región admite un ajuste.
   const has = (k: keyof RegionStyle) => meta.controls.includes(k);
+
+  // Para qué modo del sitio se editan los colores: los dos, solo el claro o solo el oscuro.
+  const [modo, setModo] = useState<"ambos" | "claro" | "oscuro">("ambos");
+  const colores: RegionColors = modo === "ambos" ? s : (s[modo] ?? {});
+  // Cambia un color: en «los dos modos» va al estilo base; en un modo concreto, solo a ese modo.
+  function patchColor(p: Partial<RegionColors>) {
+    if (modo === "ambos") return patch(p);
+    const merged: RegionColors = { ...(s[modo] ?? {}), ...p };
+    for (const k of Object.keys(merged) as (keyof RegionColors)[]) if (merged[k] === undefined) delete merged[k];
+    patch({ [modo]: Object.keys(merged).length ? merged : undefined });
+  }
 
   // Cambia el estilo de la región.
   function patch(p: Partial<RegionStyle>) {
@@ -89,10 +102,36 @@ export function RegionEditor({
       {!s.hidden && (
         <>
           <Group title="Colores">
-            {has("bg") && <ColorRow label="Fondo" value={s.bg} onChange={(bg) => patch({ bg })} />}
-            {has("bgGradient") && <GradientEditor label="Degradado de fondo" value={s.bgGradient} onChange={(bgGradient) => patch({ bgGradient })} />}
-            {has("fg") && <ColorRow label="Texto" value={s.fg} onChange={(fg) => patch({ fg })} />}
-            {has("accent") && <ColorRow label="Acento" value={s.accent} onChange={(accent) => patch({ accent })} />}
+            {/* El sitio tiene modo claro y modo oscuro: los colores pueden ser los mismos en ambos o distintos en cada uno. */}
+            <div role="group" aria-label="Modo al que se aplican los colores" className="grid grid-cols-3 gap-1 rounded-lg border border-[var(--border)] p-1">
+              {(
+                [
+                  ["ambos", "Los dos"],
+                  ["claro", "Claro"],
+                  ["oscuro", "Oscuro"],
+                ] as const
+              ).map(([id, etiqueta]) => (
+                <button
+                  key={id}
+                  type="button"
+                  aria-pressed={modo === id}
+                  onClick={() => setModo(id)}
+                  className={`relative rounded-md px-1 py-1.5 text-[0.72rem] font-semibold transition ${modo === id ? "bg-[var(--accent)] text-[var(--accent-fg)]" : "text-[var(--fg-muted)] hover:bg-[var(--surface-2)]"}`}
+                >
+                  {etiqueta}
+                  {id !== "ambos" && s[id] && <span className="absolute right-1 top-1 size-1.5 rounded-full bg-current" aria-label="con colores propios" />}
+                </button>
+              ))}
+            </div>
+            <p className="-mt-1 text-[11px] leading-snug text-[var(--fg-muted)]">
+              {modo === "ambos"
+                ? "Estos colores valen para el modo claro y el oscuro (salvo donde elijas colores propios de un modo)."
+                : `Solo para quien ve el sitio en modo ${modo}: el otro modo no cambia. Para verlo en el lienzo, cambia de modo con el botón ☀ de la cabecera.`}
+            </p>
+            {has("bg") && <ColorRow label="Fondo" value={colores.bg} onChange={(bg) => patchColor({ bg })} />}
+            {has("bgGradient") && <GradientEditor label="Degradado de fondo" value={colores.bgGradient} onChange={(bgGradient) => patchColor({ bgGradient })} />}
+            {has("fg") && <ColorRow label="Texto" value={colores.fg} onChange={(fg) => patchColor({ fg })} />}
+            {has("accent") && <ColorRow label="Acento" value={colores.accent} onChange={(accent) => patchColor({ accent })} />}
           </Group>
 
           <Group title="Tipografía">
@@ -170,13 +209,16 @@ export function RegionEditor({
   );
 }
 
-// Grupo de ajustes con título.
-export function Group({ title, children }: { title: string; children: React.ReactNode }) {
+// Grupo de ajustes con título: se despliega al pulsarlo y arranca cerrado, para que el panel no sea una lista interminable.
+export function Group({ title, children, abierto = false }: { title: string; children: React.ReactNode; abierto?: boolean }) {
   return (
-    <fieldset className="flex flex-col gap-2.5 border-t border-[var(--border)] pt-3">
-      <legend className="pr-2 text-[0.95rem] font-extrabold tracking-normal text-[#0b0b0b]">{title}</legend>
-      {children}
-    </fieldset>
+    <details open={abierto} className="group/g border-t border-[var(--border)] pt-2">
+      <summary className="flex min-h-9 cursor-pointer list-none items-center justify-between gap-2 rounded-md py-1 text-[0.95rem] font-extrabold tracking-normal text-[#0b0b0b] marker:hidden [&::-webkit-details-marker]:hidden">
+        {title}
+        <ChevronDown size={16} aria-hidden className="shrink-0 text-[var(--fg-muted)] transition group-open/g:rotate-180" />
+      </summary>
+      <div className="flex flex-col gap-2.5 pb-1 pt-2.5">{children}</div>
+    </details>
   );
 }
 
