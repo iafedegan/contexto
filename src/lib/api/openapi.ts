@@ -19,6 +19,51 @@ export async function buildOpenApiSpec(origin: string) {
       autor: { type: "string", nullable: true },
       publicadoEn: { type: "string", format: "date-time", nullable: true },
       actualizadoEn: { type: "string", format: "date-time" },
+      ubicacion: { $ref: "#/components/schemas/Ubicacion" },
+    },
+  };
+
+  // Dónde está la nota ahora mismo (ver src/lib/ubicacion-nota.ts).
+  const ubicacion = {
+    type: "object",
+    description: "Dónde está la nota ahora mismo: portada, sección, última hora, en vivo y más leídas.",
+    properties: {
+      portada: {
+        type: "object",
+        properties: {
+          esta: { type: "boolean", description: "La nota sale hoy en la portada." },
+          zona: {
+            type: "string",
+            nullable: true,
+            enum: ["principal", "secundaria", "en_breve", "rio", null],
+            description: "Hueco de la portada: principal (1), secundaria (1), en_breve (4) o rio (el resto). `null` si no está en la portada.",
+          },
+          posicion: { type: "integer", nullable: true, description: "1 = la primera de la portada. `null` si no está." },
+          fijadaPorEditor: { type: "boolean", description: "`true` si un editor la fijó en el panel; `false` si entró por ser de las más recientes." },
+        },
+      },
+      seccion: {
+        type: "object",
+        nullable: true,
+        description: "Sección (categoría) de la nota; si es una subsección, `padre` es la sección de la que cuelga.",
+        properties: {
+          slug: { type: "string" },
+          nombre: { type: "string" },
+          padre: { type: "object", nullable: true, properties: { slug: { type: "string" }, nombre: { type: "string" } } },
+        },
+      },
+      ultimaHora: {
+        type: "object",
+        properties: {
+          marcada: { type: "boolean", description: "El editor la marcó como «Última hora»." },
+          enBarra: { type: "boolean", description: "Es la que muestra hoy la barra roja (solo se muestra la marcada más reciente)." },
+        },
+      },
+      enVivo: { type: "boolean", description: "Lleva la etiqueta «En vivo»." },
+      masLeidas: {
+        type: "object",
+        properties: { esta: { type: "boolean" }, posicion: { type: "integer", nullable: true, description: "1 = la más leída." } },
+      },
     },
   };
 
@@ -28,7 +73,7 @@ export async function buildOpenApiSpec(origin: string) {
       title: `API de ${identity.name}`,
       version: "1.0.0",
       description:
-        "API pública de solo lectura para artículos y categorías, y de alta al boletín. Todas las peticiones requieren una clave de API.",
+        "API pública de solo lectura para artículos y categorías, y de alta al boletín. Cada artículo trae `ubicacion` (portada, sección, última hora, en vivo, más leídas). Todas las peticiones requieren una clave de API.",
       contact: { url: `${origin}/panel` },
     },
     servers: [{ url: `${origin}/api/v1`, description: "Producción" }],
@@ -42,6 +87,7 @@ export async function buildOpenApiSpec(origin: string) {
         },
       },
       schemas: {
+        Ubicacion: ubicacion,
         Articulo: articulo,
         ArticuloDetalle: {
           type: "object",
@@ -74,6 +120,7 @@ export async function buildOpenApiSpec(origin: string) {
           parameters: [
             { name: "limite", in: "query", schema: { type: "integer", default: 20, maximum: 50 } },
             { name: "categoria", in: "query", schema: { type: "string" }, description: "Filtra por slug de categoría." },
+            { name: "portada", in: "query", schema: { type: "string", enum: ["1"] }, description: "Con `1`, devuelve solo las notas que están hoy en la portada, en el orden de la portada (ignora `limite` y `cursor`)." },
             { name: "cursor", in: "query", schema: { type: "string", format: "date-time" }, description: "Fecha de publicación del último artículo recibido, para pedir la página siguiente." },
           ],
           responses: {

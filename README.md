@@ -124,6 +124,16 @@ confirmación, edad por rangos, ciudades, proveedor de correo y qué tan complet
 La medición es anónima y con permiso (cookie `cg_med` / `cg_vid`): ver `docs/seguridad.md` §14. Datos de prueba locales:
 `npx tsx scripts/seed-lectores.ts` (y `--limpiar`). En producción hay que correr `drizzle/0011_lecturas_de_lectores.sql` en el SQL Editor.
 
+### API pública: dónde está cada nota (`ubicacion`)
+
+`/api/v1/articulos` y `/api/v1/articulos/{slug}` (con clave; especificación en `/api-docs`) devuelven en cada nota un objeto `ubicacion`:
+`portada` (`esta`, `zona` = principal / secundaria / en_breve / rio, `posicion` 1-13 y `fijadaPorEditor`), `seccion` (`slug`, `nombre` y `padre` si es
+subsección), `ultimaHora` (`marcada` y `enBarra`: solo la marcada más reciente sale en la barra roja), `enVivo` y `masLeidas` (`esta`, `posicion`).
+`GET /api/v1/articulos?portada=1` devuelve las notas que están hoy en la portada, en el orden de la portada. La lógica pura vive en
+`src/lib/ubicacion-nota.ts` (con pruebas) y los huecos son los mismos cortes de `splitHomeSlots`, que es lo que pinta la portada.
+
+La nota que destaca la barra roja de «Última hora» lleva además la misma insignia sobre su titular (y la barra, que repetiría el titular, se omite en esa página).
+
 ### Botón «Instalar app» (PWA)
 
 `src/components/instalar-app.tsx` ofrece instalar la PWA desde la cabecera (escritorio), el menú del celular, una banda encima del pie y, solo en el celular,

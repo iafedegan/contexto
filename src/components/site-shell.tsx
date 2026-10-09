@@ -58,6 +58,7 @@ export async function SiteShell({
   style,
   locale = DEFAULT_LOCALE,
   aboveMain,
+  sinBarraUltimaHora = false,
 }: {
   /** Plantilla activa: paleta, tipografías, cabecera y pie. */
   theme: Theme;
@@ -79,6 +80,8 @@ export async function SiteShell({
    * ventana real del navegador y no el recuadro del mockup).
    */
   aboveMain?: React.ReactNode;
+  /** En la propia nota de última hora la barra sobra (repetiría su titular): la nota lleva la insignia. */
+  sinBarraUltimaHora?: boolean;
 }) {
   const [nav, extraNav, identity, site, popup] = await Promise.all([
     navItems(locale),
@@ -100,7 +103,7 @@ export async function SiteShell({
         </div>
       )}
       {/* Última hora por encima de todo: si hay urgencia, es lo primero. */}
-      <BreakingBar locale={locale} />
+      {!sinBarraUltimaHora && <BreakingBar locale={locale} />}
       <SiteHeader theme={theme} nav={nav} extraNav={extraNav} locale={locale} identity={identity} variant={site.parts.navbar} />
       {aboveMain}
       <main id="contenido" data-region="body" className={mainClassName ?? shell.main}>

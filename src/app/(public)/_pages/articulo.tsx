@@ -9,7 +9,7 @@ import type { Metadata } from "next";
 import { AdsBanner } from "@/components/ads-banner";
 import { ViewCounter } from "@/components/view-counter";
 import { LectorTracker } from "@/components/lector-tracker";
-import { LiveBadge } from "@/components/live-badge";
+import { BreakingBadge, LiveBadge } from "@/components/live-badge";
 import { ShareButtons } from "@/components/share-buttons";
 import { ReaderMode } from "@/components/reader-mode";
 import { ArticleHero, ARTICLE_BODY_CLASS } from "@/components/article/article-hero";
@@ -17,7 +17,7 @@ import { JsonLd } from "@/components/json-ld";
 import { SiteShell } from "@/components/site-shell";
 import { getSiteTheme } from "@/lib/site-theme";
 import { CoverArt } from "@/components/cover-art";
-import { getPublishedArticleBySlug, type FullArticle } from "@/lib/content";
+import { getBreakingArticle, getPublishedArticleBySlug, type FullArticle } from "@/lib/content";
 import { relatedContent } from "@/lib/search";
 import { articleMetadata, breadcrumbJsonLd, newsArticleJsonLd } from "@/lib/seo";
 import { formatDate } from "@/lib/utils";
@@ -60,14 +60,17 @@ async function ArticlePage({ params, locale }: Params & { locale: Locale }) {
   const a = await getPublishedArticleBySlug(slug).catch(() => null);
   if (!a) notFound();
 
-  const [related, site] = await Promise.all([
+  const [related, site, enBarra] = await Promise.all([
     relatedContent(a.title, a.id, 4, a.categorySlug).catch(() => []),
     getSiteTheme(),
+    getBreakingArticle().catch(() => null),
   ]);
+  // La nota que destaca hoy la barra roja lleva la misma insignia en la propia nota (y la barra, que repetiría su titular, se omite).
+  const ultimaHora = enBarra?.slug === a.slug;
 
   return (
-    <SiteShell theme={site.theme} style={site.style} locale={locale} variant="articulo">
-      <ArticleDocument a={a} related={related} locale={locale} theme={site.parts.body} />
+    <SiteShell theme={site.theme} style={site.style} locale={locale} variant="articulo" sinBarraUltimaHora={ultimaHora}>
+      <ArticleDocument a={a} related={related} locale={locale} theme={site.parts.body} ultimaHora={ultimaHora} />
     </SiteShell>
   );
 }
@@ -83,6 +86,7 @@ export function ArticleDocument({
   locale,
   preview = false,
   theme = "esmeralda",
+  ultimaHora = false,
 }: {
   /** Plantilla activa: decide la estructura de la apertura. */
   theme?: string;
@@ -90,6 +94,8 @@ export function ArticleDocument({
   related: Awaited<ReturnType<typeof relatedContent>>;
   locale: Locale;
   preview?: boolean;
+  /** La nota es la «Última hora» de la barra roja: lleva la insignia roja sobre el titular. */
+  ultimaHora?: boolean;
 }) {
   const seo = { ...a, authorName: a.authorName, categoryName: a.categoryName };
   const readingMinutes = Math.max(1, Math.round(a.body.replace(/<[^>]+>/g, " ").split(/\s+/).length / 220));
@@ -117,7 +123,14 @@ export function ArticleDocument({
           kicker={a.categorySlug ? categoryLabel(locale, a.categorySlug, a.categoryName ?? "") : undefined}
           title={a.title}
           excerpt={a.excerpt}
-          live={a.isLive ? <LiveBadge locale={locale} /> : undefined}
+          live={
+            ultimaHora || a.isLive ? (
+              <span className="flex flex-wrap items-center gap-2">
+                {ultimaHora && <BreakingBadge locale={locale} />}
+                {a.isLive && <LiveBadge locale={locale} />}
+              </span>
+            ) : undefined
+          }
           breadcrumb={
         <nav className="lx-ui flex flex-wrap items-center gap-2 text-[0.72rem] uppercase tracking-[0.2em] text-[var(--fg-muted)]">
           <Link href={localePath(locale, "/")} className="lx-link">

@@ -13,7 +13,7 @@ import { CardSlugsProvider } from "@/components/home/card-styles";
 import { blockStylesCss } from "@/lib/home-style";
 import { SiteSidebar } from "@/components/site-sidebar";
 import { SiteShell } from "@/components/site-shell";
-import { getHomeLayoutConfig, getHomepageArticles } from "@/lib/content";
+import { getHomeLayoutConfig, getHomepageArticles, PORTADA_NOTAS } from "@/lib/content";
 import { DEFAULT_HOME_LAYOUT, splitHomeSlots } from "@/lib/home-layout";
 import { getSiteTheme } from "@/lib/site-theme";
 import { getSiteIdentity } from "@/lib/site-identity";
@@ -36,7 +36,7 @@ async function HomePage({ locale }: { locale: Locale }) {
   let articles: Awaited<ReturnType<typeof getHomepageArticles>> = [];
   let layout = DEFAULT_HOME_LAYOUT;
   try {
-    [articles, layout] = await Promise.all([getHomepageArticles(13), getHomeLayoutConfig()]);
+    [articles, layout] = await Promise.all([getHomepageArticles(PORTADA_NOTAS), getHomeLayoutConfig()]);
   } catch {
     articles = [];
   }

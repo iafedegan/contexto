@@ -11,6 +11,7 @@ import {
   type HomeStyle,
 } from "@/db/schema";
 import { DEFAULT_HOME_LAYOUT } from "@/lib/home-layout";
+import { posicionesDePortada, type PosicionPortada } from "@/lib/ubicacion-nota";
 import { getPreviewDraft } from "@/lib/preview-draft";
 import { cachear, TAG_AJUSTES, TAG_CONTENIDO } from "@/lib/data-cache";
 
@@ -369,6 +370,32 @@ export const getBreakingArticle = cachear(
   },
   { tags: [TAG_CONTENIDO], segundos: 60 },
 );
+
+/** Cuántas notas muestra la portada: 1 principal, 1 secundaria, 4 «en breve» y el resto en el río (los cortes de `splitHomeSlots`). */
+export const PORTADA_NOTAS = 13;
+
+// El orden de la portada (primero lo fijado a mano, luego por fecha), solo con lo necesario para saber dónde queda cada nota.
+const leerOrdenPortada = cachear(
+  "portada-orden",
+  async (): Promise<{ slug: string; fijada: boolean }[]> => {
+    const filas = await db
+      .select({ slug: articles.slug, pos: articles.homePosition })
+      .from(articles)
+      .where(publishedCondition)
+      .orderBy(sql`(${articles.homePosition} is null)`, articles.homePosition, desc(articles.publishedAt))
+      .limit(PORTADA_NOTAS);
+    return filas.map((f) => ({ slug: f.slug, fijada: f.pos !== null }));
+  },
+  { tags: [TAG_CONTENIDO], segundos: 60 },
+);
+
+/**
+ * Dónde está cada nota en la portada AHORA MISMO: slug → hueco, posición y si la fijó un editor. Las notas que no salen en la
+ * portada no aparecen en el mapa. El orden del mapa es el de la portada. Lo usa la API pública (`ubicacion`).
+ */
+export async function getPosicionesPortada(): Promise<Map<string, PosicionPortada>> {
+  return posicionesDePortada(await leerOrdenPortada());
+}
 
 /**
  * Más leídas (H-04). Se ordena por el contador de `views`, que alimenta el
