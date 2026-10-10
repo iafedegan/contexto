@@ -92,7 +92,7 @@ async function HomePage({ locale }: { locale: Locale }) {
     : [];
   const cintillo =
     piezas.length > 0 ? (
-      <div className="mb-4 overflow-hidden border-b border-[var(--border)] py-2.5 sm:mb-10 sm:border-y">
+      <div className="mb-2 overflow-hidden border-b border-[var(--border)] py-2.5 sm:mb-3 sm:border-y">
         <div
           className="lx-marquee text-[0.72rem] uppercase tracking-[0.14em] text-[var(--fg-muted)] sm:tracking-[0.25em]"
           style={{ "--lx-marquee-s": `${duracionDelCintillo(piezas, ticker.velocidad)}s` } as React.CSSProperties}
