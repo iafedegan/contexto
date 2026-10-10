@@ -49,9 +49,18 @@ function connectionString(): string | null {
   ];
   for (const c of candidatas) {
     const v = c?.trim();
-    if (v) return v;
+    if (v) return modoSesion(v);
   }
   return null;
+}
+
+/**
+ * El pooler de Supabase en modo «transacción» (puerto 6543) dejaba sesiones colgadas en el servidor cuando una función de Vercel
+ * cortaba la conexión a mitad de una consulta; las páginas siguientes se quedaban esperando cupo. El modo «sesión» (5432, mismo
+ * servidor, usuario y contraseña) libera la conexión en cuanto el cliente se va. Se aplica solo a los poolers de Supabase.
+ */
+function modoSesion(url: string): string {
+  return /\.pooler\.supabase\.com:6543\//.test(url) ? url.replace(":6543/", ":5432/") : url;
 }
 
 // Indica si se usa la base embebida (no hay cadena de conexión).
