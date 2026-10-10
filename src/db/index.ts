@@ -78,13 +78,16 @@ function init(): DB {
   if (url) {
     const local = /localhost|127\.0\.0\.1/.test(url);
     const client = postgresClient(url, {
-      // Pool de conexiones para serverless: permite atender múltiples consultas
-      // concurrentes de React Server Components sin encolarse ni agotar el tiempo.
-      max: 10,
+      // Pocas conexiones por instancia: con el pooler en modo transacción de Supabase el cupo total es pequeño, y muchas
+      // instancias con 10 conexiones cada una lo agotaban; además una función de Vercel que se congela a mitad de consulta
+      // deja la conexión «activa» en el servidor durante minutos y las páginas siguientes se quedan esperando cupo.
+      max: 3,
       // El pooler en modo transacción no conserva sentencias preparadas.
       prepare: false,
-      connect_timeout: 5,
-      idle_timeout: 10,
+      connect_timeout: 8,
+      // Se devuelven rápido las conexiones ociosas y se renuevan las viejas, para no arrastrar una que quedó muerta.
+      idle_timeout: 5,
+      max_lifetime: 60,
       // Supabase exige TLS; en local (PGlite o Postgres de desarrollo) no.
       ssl: local ? false : "require",
       onnotice: () => {},
