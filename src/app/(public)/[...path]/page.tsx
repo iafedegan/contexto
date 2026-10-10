@@ -3,6 +3,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { articles, redirects } from "@/db/schema";
 import { slugDeNotaAntigua } from "@/lib/nota-antigua";
+import { resolveLegacyTaxonomy } from "@/lib/redirects";
 
 /**
  * Catch-all de baja prioridad. Resuelve las redirecciones 301 uno-a-uno de la
@@ -47,6 +48,9 @@ export default async function CatchAll({ params }: { params: Promise<{ path: str
       }
       if (nota) permanentRedirect(`/articulo/${nota.slug}`);
     }
+    // Sin nota con ese título: la sección antigua sigue llevando a su categoría nueva, como antes.
+    const categoria = resolveLegacyTaxonomy(fromPath);
+    if (categoria) permanentRedirect(categoria);
     notFound();
   }
 
