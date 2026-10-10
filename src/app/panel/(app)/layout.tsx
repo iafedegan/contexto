@@ -17,6 +17,9 @@ import { colorPanel } from "@/lib/panel-tema";
 
 /** Panel editorial — plantilla «Grafito & Jade». */
 export const dynamic = "force-dynamic";
+// Tiempo máximo de cada pantalla del panel. Sin esto las que no lo declaran (Resumen, Portada, Configuración…) heredan el límite corto por
+// defecto y se cortan mientras cargan, quedando en blanco; Newsletter y el editor de notas ya lo declaraban y por eso sí abrían.
+export const maxDuration = 300;
 
 // Pantalla a la que se envía a quien debe activar su segundo factor.
 const RUTA_SEGURIDAD = "/panel/configuracion";
