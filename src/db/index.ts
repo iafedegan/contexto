@@ -85,9 +85,12 @@ function init(): DB {
       // El pooler en modo transacción no conserva sentencias preparadas.
       prepare: false,
       connect_timeout: 8,
-      // Se devuelven rápido las conexiones ociosas y se renuevan las viejas, para no arrastrar una que quedó muerta.
-      idle_timeout: 5,
-      max_lifetime: 60,
+      // En una función de Vercel el proceso se congela entre peticiones: una conexión que sobrevive a ese sueño vuelve «viva» en
+      // el pool pero muerta en el pooler, y la primera consulta que la usa se queda esperando minutos. Por eso las conexiones
+      // ociosas se cierran casi de inmediato (cada petición abre las suyas) y ninguna vive más de 30 s.
+      idle_timeout: 0.3,
+      max_lifetime: 30,
+      keep_alive: 5,
       // Supabase exige TLS; en local (PGlite o Postgres de desarrollo) no.
       ssl: local ? false : "require",
       onnotice: () => {},
