@@ -3,7 +3,7 @@ import { cronAutorizado } from "@/lib/cron-auth";
 import { procesarProgramadas } from "@/lib/scheduled";
 import { syncMarketData } from "@/lib/sync-market-data";
 import { purgarVencidos } from "@/lib/mantenimiento";
-import { getObservatorio } from "@/lib/observatorio-fedegan";
+import { refrescarObservatorio } from "@/lib/observatorio-fedegan";
 
 /**
  * Publica las notas «programado» cuya hora ya llegó y refresca el sitio. Toda la lógica vive en
@@ -40,6 +40,6 @@ export async function GET(req: Request) {
       return null;
     }),
   ]);
-  await getObservatorio().catch((e) => console.error("publish-scheduled: falló el calentamiento del Observatorio", e));
+  await refrescarObservatorio().catch((e) => console.error("publish-scheduled: falló la copia del Observatorio", e));
   return NextResponse.json({ published: pasada.slugs, marketData, mantenimiento });
 }

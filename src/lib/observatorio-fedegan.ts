@@ -1,4 +1,7 @@
 import "server-only";
+import { eq, sql } from "drizzle-orm";
+import { db } from "@/db";
+import { siteSettings } from "@/db/schema";
 import { cachear } from "@/lib/data-cache";
 import { descargarSeguro } from "@/lib/safe-fetch";
 import { limitador } from "@/lib/en-paralelo";
@@ -188,16 +191,59 @@ let intentoFallido: { en: number; parcial: Observatorio } | null = null;
 // visita se quedaba esperando una lectura completa del origen; así, el dato vencido se sirve al instante y se renueva por detrás.
 // Si la lectura queda incompleta se lanza `ObservatorioIncompleto`: no se guarda (ni seis horas de gráficas ausentes ni una lista vacía)
 // y quien tenía un dato vencido sigue sirviéndolo.
+/** Dónde se guarda la última lectura completa del origen: así ninguna visita espera las 15 descargas, solo una consulta a la base. */
+const SNAPSHOT_KEY = "observatorio_snapshot";
+/** Pasado este tiempo la copia guardada se considera demasiado vieja y se vuelve a leer del origen en la propia visita. */
+const SNAPSHOT_MAX_MS = 36 * 3600 * 1000;
+
+// Lee la copia guardada (con su fecha); `null` si no hay, está vacía o no se puede leer.
+async function leerSnapshot(): Promise<{ valor: Observatorio; en: number } | null> {
+  try {
+    const [row] = await db.select({ value: siteSettings.value, updatedAt: siteSettings.updatedAt }).from(siteSettings).where(eq(siteSettings.key, SNAPSHOT_KEY)).limit(1);
+    if (!row) return null;
+    const valor = normalizar(row.value as Partial<Observatorio>);
+    return vacio(valor) ? null : { valor, en: row.updatedAt.getTime() };
+  } catch {
+    return null;
+  }
+}
+
+// Guarda la lectura completa del origen como copia en la base.
+async function guardarSnapshot(valor: Observatorio) {
+  await db.insert(siteSettings).values({ key: SNAPSHOT_KEY, value: valor }).onConflictDoUpdate({ target: siteSettings.key, set: { value: valor, updatedAt: sql`now()` } });
+}
+
+/**
+ * Vuelve a leer TODO del origen y deja la copia en la base. La llama el cron diario; si la lectura queda incompleta no pisa la
+ * copia buena que ya hay. Devuelve si se guardó.
+ */
+export async function refrescarObservatorio(): Promise<boolean> {
+  const { valor, incompleto } = await leerDelOrigen();
+  if (incompleto || vacio(valor)) return false;
+  await guardarSnapshot(valor).catch((e) => console.error("observatorio: no se pudo guardar la copia", e));
+  return true;
+}
+
+// La caché de datos sobrevive entre despliegues: si cambia la forma de lo guardado se sube la versión del nombre (v3: ahora sale de
+// la copia en la base), y además `normalizar` rellena lo que falte, para que un valor viejo nunca rompa la página.
+// Orden: copia en la base (una consulta, instantánea) -> si no hay o es muy vieja, el origen (lento) y se guarda la copia.
+// Si la lectura del origen queda incompleta se lanza `ObservatorioIncompleto`: no se guarda en la caché y quien tenía un dato
+// vencido sigue sirviéndolo.
 const leer = cachear(
-  "observatorio-fedegan-v2",
+  "observatorio-fedegan-v3",
   async (): Promise<Observatorio> => {
-    if (intentoFallido && Date.now() - intentoFallido.en < ESPERA_TRAS_FALLO_MS) throw new ObservatorioIncompleto(intentoFallido.parcial);
+    const copia = await leerSnapshot();
+    if (copia && Date.now() - copia.en < SNAPSHOT_MAX_MS) return copia.valor;
+    if (intentoFallido && Date.now() - intentoFallido.en < ESPERA_TRAS_FALLO_MS) throw new ObservatorioIncompleto(copia?.valor ?? intentoFallido.parcial);
     const { valor, incompleto } = await leerDelOrigen();
     if (incompleto || vacio(valor)) {
       intentoFallido = { en: Date.now(), parcial: valor };
+      // Con el origen caído es mejor una copia vieja que una página vacía.
+      if (copia) return copia.valor;
       throw new ObservatorioIncompleto(valor);
     }
     intentoFallido = null;
+    await guardarSnapshot(valor).catch((e) => console.error("observatorio: no se pudo guardar la copia", e));
     return valor;
   },
   { tags: ["indicadores"], segundos: SEGUNDOS },
