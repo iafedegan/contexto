@@ -47,6 +47,10 @@ export default async function CatchAll({ params }: { params: Promise<{ path: str
         nota = undefined;
       }
       if (nota) permanentRedirect(`/articulo/${nota.slug}`);
+      // Nota que no se migró: si el sitio anterior sigue vivo en otra dirección (variable SITIO_ANTIGUO_URL, p. ej.
+      // https://antiguo.contextoganadero.com), se manda allí con una redirección temporal (302: mañana puede estar migrada).
+      const antiguo = (process.env.SITIO_ANTIGUO_URL ?? "").trim().replace(/\/+$/, "");
+      if (antiguo && /^https:\/\//.test(antiguo)) redirect(`${antiguo}${fromPath}`);
     }
     // Sin nota con ese título: la sección antigua sigue llevando a su categoría nueva, como antes.
     const categoria = resolveLegacyTaxonomy(fromPath);
