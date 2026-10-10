@@ -119,7 +119,7 @@ export default async function PanelHome() {
 
       {/* Fila de indicadores: tarjeta oscura destacada + 3 claras (como un cuadro de mando) */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <div className="relative overflow-hidden rounded-[var(--radius-lg)] bg-[linear-gradient(135deg,#14284b,#1f3f78_65%,#2d5aa3)] p-5 text-white shadow-[var(--shadow)] sm:col-span-2 xl:col-span-1">
+        <div className="relative overflow-hidden rounded-[var(--radius-lg)] bg-[linear-gradient(135deg,color-mix(in_srgb,var(--accent)_70%,#000),var(--accent)_65%,color-mix(in_srgb,var(--accent)_75%,#fff))] p-5 text-white shadow-[var(--shadow)] sm:col-span-2 xl:col-span-1">
           <span aria-hidden className="absolute -right-8 -top-10 size-36 rounded-full bg-white/10 blur-2xl" />
           <div className="flex items-center justify-between">
             <p className="lx-kicker text-white/70">Lecturas · 7 días</p>

@@ -58,7 +58,7 @@ export function SparklineZoom({ values, title, articleId }: { values: number[]; 
       </button>
       {open && createPortal(
         <div
-          className="fixed inset-0 z-[100] grid place-items-center bg-[#0b1630]/60 p-4 backdrop-blur-sm"
+          className="fixed inset-0 z-[100] grid place-items-center bg-black/60 p-4 backdrop-blur-sm"
           onClick={() => setOpen(false)}
         >
           <div
