@@ -1,19 +1,19 @@
 import "server-only";
-import postgresClient from "postgres";
-import { drizzle as drizzlePg } from "drizzle-orm/postgres-js";
+import { Pool } from "pg";
+import { attachDatabasePool } from "@vercel/functions";
+import { drizzle as drizzlePg, type NodePgDatabase } from "drizzle-orm/node-postgres";
 import { drizzle as drizzlePglite, type PgliteDatabase } from "drizzle-orm/pglite";
-import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import * as schema from "./schema";
 
 /**
  * Selección de driver:
- *  - Con DATABASE_URL / DATABASE_URL_POOLED -> Postgres gestionado (postgres-js). Producción.
+ *  - Con DATABASE_URL / DATABASE_URL_POOLED -> Postgres gestionado (node-postgres). Producción.
  *  - Sin variable de conexión               -> PGlite (Postgres embebido en `.pglite/`).
  *    Cero infraestructura: `npm run dev` funciona sin instalar nada. Solo dev/demo.
  *
  * Conexión perezosa y singleton (sobrevive al HMR de Next).
  */
-type DB = PostgresJsDatabase<typeof schema> & PgliteDatabase<typeof schema>;
+type DB = NodePgDatabase<typeof schema> & PgliteDatabase<typeof schema>;
 
 // Carpeta de la base embebida: /tmp en Vercel, o la configurada.
 export const PGLITE_DIR = process.env.VERCEL
@@ -49,18 +49,9 @@ function connectionString(): string | null {
   ];
   for (const c of candidatas) {
     const v = c?.trim();
-    if (v) return modoSesion(v);
+    if (v) return v;
   }
   return null;
-}
-
-/**
- * El pooler de Supabase en modo «transacción» (puerto 6543) dejaba sesiones colgadas en el servidor cuando una función de Vercel
- * cortaba la conexión a mitad de una consulta; las páginas siguientes se quedaban esperando cupo. El modo «sesión» (5432, mismo
- * servidor, usuario y contraseña) libera la conexión en cuanto el cliente se va. Se aplica solo a los poolers de Supabase.
- */
-function modoSesion(url: string): string {
-  return /\.pooler\.supabase\.com:6543\//.test(url) ? url.replace(":6543/", ":5432/") : url;
 }
 
 // Indica si se usa la base embebida (no hay cadena de conexión).
@@ -86,24 +77,29 @@ function init(): DB {
   const url = connectionString();
   if (url) {
     const local = /localhost|127\.0\.0\.1/.test(url);
-    const client = postgresClient(url, {
-      // Pocas conexiones por instancia: con el pooler en modo transacción de Supabase el cupo total es pequeño, y muchas
-      // instancias con 10 conexiones cada una lo agotaban; además una función de Vercel que se congela a mitad de consulta
-      // deja la conexión «activa» en el servidor durante minutos y las páginas siguientes se quedan esperando cupo.
-      max: 3,
-      // El pooler en modo transacción no conserva sentencias preparadas.
-      prepare: false,
-      connect_timeout: 8,
-      // En una función de Vercel el proceso se congela entre peticiones: una conexión que sobrevive a ese sueño vuelve «viva» en
-      // el pool pero muerta en el pooler, y la primera consulta que la usa se queda esperando minutos. Por eso las conexiones
-      // ociosas se cierran casi de inmediato (cada petición abre las suyas) y ninguna vive más de 30 s.
-      idle_timeout: 0.3,
-      max_lifetime: 30,
-      keep_alive: 5,
-      // Supabase exige TLS; en local (PGlite o Postgres de desarrollo) no.
-      ssl: local ? false : "require",
-      onnotice: () => {},
+    /**
+     * node-postgres y no postgres-js: postgres-js «encadena» varias consultas por la misma conexión sin esperar la respuesta de la
+     * anterior, y el pooler de Supabase en modo transacción (Supavisor) pierde respuestas y deja la conexión esperando para siempre
+     * (síntoma: sesiones «activas / ClientRead» durante minutos y páginas en blanco). node-postgres manda una consulta por conexión y
+     * espera su respuesta, que es lo que el pooler soporta bien. Ver supabase/supavisor#1061 y la guía de Supabase sobre postgres.js.
+     */
+    const pool = new Pool({
+      connectionString: url,
+      // Pocas conexiones por instancia: el cupo del pooler del plan gratuito es pequeño.
+      max: 5,
+      // Se devuelven rápido las ociosas (una función de Vercel puede congelarse entre peticiones y dejarlas muertas).
+      idleTimeoutMillis: 5_000,
+      // Nada espera «para siempre»: si no hay conexión o la consulta no responde, falla y la página sigue.
+      connectionTimeoutMillis: 8_000,
+      query_timeout: 25_000,
+      keepAlive: true,
+      // Supabase exige TLS; en local (PGlite o Postgres de desarrollo) no. Su certificado del pooler no está en el almacén de Node.
+      ssl: local ? false : { rejectUnauthorized: false },
     });
+    pool.on("error", () => {});
+    // En Vercel, avisa a la plataforma para cerrar las conexiones ociosas antes de congelar la función.
+    if (process.env.VERCEL) attachDatabasePool(pool);
+    const client = pool;
     return drizzlePg(client, { schema }) as unknown as DB;
   }
   return drizzlePglite(getPglite(), { schema }) as unknown as DB;
