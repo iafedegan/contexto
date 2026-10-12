@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { LEGACY_SYSTEM_REDIRECTS, resolveLegacyTaxonomy } from "@/lib/redirects";
 import { isBlockedBot } from "@/lib/bots";
+import { slugDeNotaAntigua } from "@/lib/nota-antigua";
 
 /**
  * Proxy de borde (en Next.js 16 el antiguo «middleware» se llama `proxy.ts`).
@@ -109,7 +110,8 @@ export async function proxy(req: NextRequest) {
   }
 
   const legacyTarget = resolveLegacyTaxonomy(pathname);
-  if (legacyTarget) {
+  // `/seccion/titulo-de-una-nota` no se manda a la categoría aquí: la ruta comodín busca la nota (y, si no existe, entonces sí va a la categoría).
+  if (legacyTarget && !slugDeNotaAntigua(clean.split("/").filter(Boolean))) {
     return applyHeaders(NextResponse.redirect(new URL(legacyTarget + search, req.url), 301));
   }
 

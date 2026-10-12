@@ -17,6 +17,9 @@ import { colorPanel } from "@/lib/panel-tema";
 
 /** Panel editorial — plantilla «Grafito & Jade». */
 export const dynamic = "force-dynamic";
+// Tiempo máximo de cada pantalla del panel. Sin esto las que no lo declaran (Resumen, Portada, Configuración…) heredan el límite corto por
+// defecto y se cortan mientras cargan, quedando en blanco; Newsletter y el editor de notas ya lo declaraban y por eso sí abrían.
+export const maxDuration = 300;
 
 // Pantalla a la que se envía a quien debe activar su segundo factor.
 const RUTA_SEGURIDAD = "/panel/configuracion";
@@ -44,6 +47,24 @@ export default async function PanelLayout({ children }: { children: React.ReactN
     "--fg": `color-mix(in srgb, #ffffff 94%, ${marca.desde})`,
     "--fg-muted": `color-mix(in srgb, #ffffff 68%, ${marca.desde})`,
     "--ink-faint": `color-mix(in srgb, #ffffff 52%, ${marca.desde})`,
+  } as React.CSSProperties;
+  // El contenido (fondo claro) toma el mismo color de la plantilla: acento, tintas, bordes y lienzo salen de `marca.desde`, así los
+  // gráficos y tarjetas del panel hacen juego con la barra en vez de quedarse en el azul de siempre.
+  const mezcla = (color: string, pct: number, con: string) => `color-mix(in srgb, ${color} ${pct}%, ${con})`;
+  const estiloContenido = {
+    "--accent": marca.desde,
+    "--link": marca.desde,
+    "--accent-2": mezcla(marca.acento, 80, "#7a4a00"),
+    "--fg": mezcla(marca.hasta, 80, "#000000"),
+    "--fg-muted": mezcla(marca.desde, 55, "#5f6b64"),
+    "--ink-faint": mezcla(marca.desde, 35, "#79847d"),
+    "--bg": mezcla(marca.desde, 6, "#ffffff"),
+    "--surface-2": mezcla(marca.desde, 10, "#ffffff"),
+    "--border": mezcla(marca.desde, 16, "#ffffff"),
+    "--border-strong": mezcla(marca.desde, 45, "#ffffff"),
+    "--canvas-1": mezcla(marca.desde, 4, "#ffffff"),
+    "--canvas-2": mezcla(marca.desde, 9, "#ffffff"),
+    "--canvas-3": mezcla(marca.desde, 16, "#ffffff"),
   } as React.CSSProperties;
   let yo: { totpEnabled: boolean } | undefined = yoPorId;
   if (!yo && session.user.email) {
@@ -148,7 +169,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
       {/* Lienzo ámbar para TODAS las pantallas del panel (Resumen, Artículos,
           Diseño…): la barra queda como cromo claro y el contenido comparte un
           mismo fondo, en vez de mezclar pantallas claras y oscuras. */}
-      <main data-theme="panel-amber" className="lx-pearl-canvas flex-1 text-[var(--fg)]">
+      <main data-theme="panel-amber" style={estiloContenido} className="lx-pearl-canvas flex-1 text-[var(--fg)]">
         <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:px-10">
           {debeActivar2fa && (
             <p className="mb-6 flex items-start gap-2 rounded-[var(--radius)] border border-[var(--accent)]/40 bg-[var(--surface-2)] p-4 text-sm leading-relaxed">

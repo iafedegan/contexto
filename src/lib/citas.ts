@@ -9,3 +9,14 @@ export function analizarCitas(texto: string, totalFuentes: number): { usadas: nu
   const invalidas = marcadores.some((n) => n < 1 || n > totalFuentes);
   return { usadas, invalidas, valida: usadas.length > 0 && !invalidas };
 }
+
+/**
+ * Los modelos a veces agrupan las citas («[1, 2]», «[1,3]», «[1-2]») en vez de separarlas («[1][2]»): el significado es el
+ * mismo, pero el validador y la pantalla solo entienden marcadores sueltos. Se normaliza antes de validar y de mostrar.
+ */
+export function normalizarCitas(texto: string): string {
+  return texto.replace(/\[(\d+(?:\s*(?:[,;]|y)\s*\d+)+)\]/g, (_m, lista: string) => (lista.match(/\d+/g) ?? []).map((n) => `[${n}]`).join("")).replace(/\[(\d+)\s*[-–]\s*(\d+)\]/g, (m, a: string, b: string) => {
+    const [x, y] = [Number(a), Number(b)];
+    return y > x && y - x < 6 ? Array.from({ length: y - x + 1 }, (_, i) => `[${x + i}]`).join("") : m;
+  });
+}

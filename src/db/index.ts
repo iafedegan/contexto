@@ -1,19 +1,19 @@
 import "server-only";
-import postgresClient from "postgres";
-import { drizzle as drizzlePg } from "drizzle-orm/postgres-js";
+import { Pool } from "pg";
+import { attachDatabasePool } from "@vercel/functions";
+import { drizzle as drizzlePg, type NodePgDatabase } from "drizzle-orm/node-postgres";
 import { drizzle as drizzlePglite, type PgliteDatabase } from "drizzle-orm/pglite";
-import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import * as schema from "./schema";
 
 /**
  * Selección de driver:
- *  - Con DATABASE_URL / DATABASE_URL_POOLED -> Postgres gestionado (postgres-js). Producción.
+ *  - Con DATABASE_URL / DATABASE_URL_POOLED -> Postgres gestionado (node-postgres). Producción.
  *  - Sin variable de conexión               -> PGlite (Postgres embebido en `.pglite/`).
  *    Cero infraestructura: `npm run dev` funciona sin instalar nada. Solo dev/demo.
  *
  * Conexión perezosa y singleton (sobrevive al HMR de Next).
  */
-type DB = PostgresJsDatabase<typeof schema> & PgliteDatabase<typeof schema>;
+type DB = NodePgDatabase<typeof schema> & PgliteDatabase<typeof schema>;
 
 // Carpeta de la base embebida: /tmp en Vercel, o la configurada.
 export const PGLITE_DIR = process.env.VERCEL
@@ -77,18 +77,29 @@ function init(): DB {
   const url = connectionString();
   if (url) {
     const local = /localhost|127\.0\.0\.1/.test(url);
-    const client = postgresClient(url, {
-      // Pool de conexiones para serverless: permite atender múltiples consultas
-      // concurrentes de React Server Components sin encolarse ni agotar el tiempo.
-      max: 10,
-      // El pooler en modo transacción no conserva sentencias preparadas.
-      prepare: false,
-      connect_timeout: 5,
-      idle_timeout: 10,
-      // Supabase exige TLS; en local (PGlite o Postgres de desarrollo) no.
-      ssl: local ? false : "require",
-      onnotice: () => {},
+    /**
+     * node-postgres y no postgres-js: postgres-js «encadena» varias consultas por la misma conexión sin esperar la respuesta de la
+     * anterior, y el pooler de Supabase en modo transacción (Supavisor) pierde respuestas y deja la conexión esperando para siempre
+     * (síntoma: sesiones «activas / ClientRead» durante minutos y páginas en blanco). node-postgres manda una consulta por conexión y
+     * espera su respuesta, que es lo que el pooler soporta bien. Ver supabase/supavisor#1061 y la guía de Supabase sobre postgres.js.
+     */
+    const pool = new Pool({
+      connectionString: url,
+      // Pocas conexiones por instancia: el cupo del pooler del plan gratuito es pequeño.
+      max: 5,
+      // Se devuelven rápido las ociosas (una función de Vercel puede congelarse entre peticiones y dejarlas muertas).
+      idleTimeoutMillis: 5_000,
+      // Nada espera «para siempre»: si no hay conexión o la consulta no responde, falla y la página sigue.
+      connectionTimeoutMillis: 8_000,
+      query_timeout: 25_000,
+      keepAlive: true,
+      // Supabase exige TLS; en local (PGlite o Postgres de desarrollo) no. Su certificado del pooler no está en el almacén de Node.
+      ssl: local ? false : { rejectUnauthorized: false },
     });
+    pool.on("error", () => {});
+    // En Vercel, avisa a la plataforma para cerrar las conexiones ociosas antes de congelar la función.
+    if (process.env.VERCEL) attachDatabasePool(pool);
+    const client = pool;
     return drizzlePg(client, { schema }) as unknown as DB;
   }
   return drizzlePglite(getPglite(), { schema }) as unknown as DB;

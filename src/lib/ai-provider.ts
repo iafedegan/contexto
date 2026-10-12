@@ -8,6 +8,7 @@ import { siteSettings } from "@/db/schema";
 import { decryptSecret, maskSecret } from "@/lib/secrets";
 import {
   DEFAULT_AI_SETTINGS,
+  DEFAULT_IMAGE_MODEL,
   providerMeta,
   type AiSettings,
   type KeyStatus,
@@ -65,6 +66,7 @@ export async function getKeyStatus(): Promise<KeyStatus> {
     provider: settings.provider,
     model: settings.model,
     chartModel: settings.chartModel ?? "",
+    imageModel: settings.imageModel ?? "",
     models: settings.models?.[settings.provider] ?? [],
     present: Boolean(key),
     source,
@@ -103,12 +105,14 @@ export async function getGroundedAi() {
 
 /**
  * Modelo de imagen (Gemini «nano banana»). Solo con el proveedor Google: Anthropic no genera imágenes.
+ * Sin `modelo` explícito usa el elegido en Configuración y, si no hay, `DEFAULT_IMAGE_MODEL`; el respaldo que pide
+ * `generateCoverImage` pasa su propio nombre y no se ve afectado por la elección.
  * `null` = no hay clave; `"otro-proveedor"` = hay clave pero de otro proveedor.
  */
-export async function getImageAi(modelo = "gemini-3.1-flash-image-preview") {
+export async function getImageAi(modelo?: string) {
   const settings = await readSettings();
   const { key } = await resolveKey(settings);
   if (!key) return null;
   if (settings.provider !== "google") return "otro-proveedor" as const;
-  return createGoogleGenerativeAI({ apiKey: key }).image(modelo);
+  return createGoogleGenerativeAI({ apiKey: key }).image(modelo || settings.imageModel || DEFAULT_IMAGE_MODEL);
 }

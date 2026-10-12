@@ -1,7 +1,9 @@
 import { notFound, permanentRedirect, redirect } from "next/navigation";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { redirects } from "@/db/schema";
+import { articles, redirects } from "@/db/schema";
+import { slugDeNotaAntigua } from "@/lib/nota-antigua";
+import { resolveLegacyTaxonomy } from "@/lib/redirects";
 
 /**
  * Catch-all de baja prioridad. Resuelve las redirecciones 301 uno-a-uno de la
@@ -29,7 +31,32 @@ export default async function CatchAll({ params }: { params: Promise<{ path: str
     row = undefined;
   }
 
-  if (!row) notFound();
+  if (!row) {
+    // Direcciones del sitio anterior (`/seccion/titulo`): el título final se conservó al migrar, así que se busca la nota por él
+    // y se manda con un 301 permanente a su dirección nueva. Solo notas publicadas; si no existe, 404 como siempre.
+    const slug = slugDeNotaAntigua(path);
+    if (slug) {
+      let nota: { slug: string } | undefined;
+      try {
+        [nota] = await db
+          .select({ slug: articles.slug })
+          .from(articles)
+          .where(and(eq(articles.slug, slug), eq(articles.status, "publicado")))
+          .limit(1);
+      } catch {
+        nota = undefined;
+      }
+      if (nota) permanentRedirect(`/articulo/${nota.slug}`);
+      // Nota que no se migró: si el sitio anterior sigue vivo en otra dirección (variable SITIO_ANTIGUO_URL, p. ej.
+      // https://antiguo.contextoganadero.com), se manda allí con una redirección temporal (302: mañana puede estar migrada).
+      const antiguo = (process.env.SITIO_ANTIGUO_URL ?? "").trim().replace(/\/+$/, "");
+      if (antiguo && /^https:\/\//.test(antiguo)) redirect(`${antiguo}${fromPath}`);
+    }
+    // Sin nota con ese título: la sección antigua sigue llevando a su categoría nueva, como antes.
+    const categoria = resolveLegacyTaxonomy(fromPath);
+    if (categoria) permanentRedirect(categoria);
+    notFound();
+  }
 
   // Métrica de seguimiento para Search Console / analítica interna.
   db.update(redirects)

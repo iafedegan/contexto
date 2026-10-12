@@ -553,7 +553,7 @@
   background-color: #eef1f6;
   background-image:
     radial-gradient(1000px 420px at 10% -10%, rgba(255, 255, 255, 0.9), transparent 62%),
-    linear-gradient(170deg, #f4f6fa 0%, #e9edf4 55%, #dfe5ef 100%);
+    linear-gradient(170deg, var(--canvas-1, #f4f6fa) 0%, var(--canvas-2, #e9edf4) 55%, var(--canvas-3, #dfe5ef) 100%);
   background-attachment: fixed;
 }
 
