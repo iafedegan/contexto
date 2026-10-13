@@ -11,8 +11,8 @@ import { hit } from "@/lib/rate-limit";
 import { buildMessage, nextIssueNumber, prepareRender, type EditionContent } from "@/lib/newsletter/edition";
 import { sendMany } from "@/lib/newsletter/send";
 import { NEWSLETTER_KEY, NEWSLETTER_SECRET_KEY, getNewsletterSettings, getProviderStatus } from "@/lib/newsletter/settings";
-import { sanitizeNewsletterSettings, type NewsletterSettings } from "@/lib/newsletter/types";
-import { EMAIL_RE } from "@/lib/validate";
+import { sanitizeNewsletterDesign, sanitizeNewsletterSettings, type NewsletterSettings } from "@/lib/newsletter/types";
+import { EMAIL_RE, HEX6 } from "@/lib/validate";
 
 // Refresca la pantalla del boletín.
 const REVALIDATE = () => revalidatePath("/panel/newsletter");
@@ -65,12 +65,29 @@ export async function deleteEdition(id: string): Promise<void> {
 }
 
 /** El correo tal como lo verá el lector, para la vista previa del editor. */
-export async function previewEdition(input: Partial<EditionContent>): Promise<{ ok: boolean; html?: string; message?: string }> {
+export async function previewEdition(input: Partial<EditionContent>, diseno?: { design: unknown; acento: string }): Promise<{ ok: boolean; html?: string; message?: string }> {
   await requirePermiso("newsletter");
   const c = cleanContent({ ...input, subject: input.subject?.trim() ? input.subject : "Asunto del boletín" });
   if (!c.ok) return { ok: false, message: c.message };
   const p = await prepareRender(c.content, await nextIssueNumber());
-  return { ok: true, html: buildMessage(p, "lector@ejemplo.com", null, false).html };
+  // Con un diseño aún sin guardar, la vista previa lo aplica al vuelo (validado igual que al guardar).
+  const q = diseno
+    ? { ...p, settings: { ...p.settings, accentColor: HEX6.test(diseno.acento) ? diseno.acento : p.settings.accentColor, design: sanitizeNewsletterDesign(diseno.design) } }
+    : p;
+  return { ok: true, html: buildMessage(q, "lector@ejemplo.com", null, false).html };
+}
+
+/** Guarda el diseño del correo (para todas las ediciones). Lo puede hacer quien tenga el permiso «newsletter». */
+export async function guardarDisenoBoletin(input: { design: unknown; acento: string }): Promise<{ ok: boolean; message: string }> {
+  await requirePermiso("newsletter");
+  const actual = await getNewsletterSettings();
+  const settings = sanitizeNewsletterSettings({ ...actual, accentColor: input.acento, design: sanitizeNewsletterDesign(input.design) });
+  await db
+    .insert(siteSettings)
+    .values({ key: NEWSLETTER_KEY, value: settings })
+    .onConflictDoUpdate({ target: siteSettings.key, set: { value: settings, updatedAt: sql`now()` } });
+  REVALIDATE();
+  return { ok: true, message: "Diseño guardado para todas las ediciones." };
 }
 
 /** Envía UN correo de prueba, marcado como tal, a la dirección indicada. */

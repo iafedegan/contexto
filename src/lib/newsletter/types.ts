@@ -1,5 +1,56 @@
 import { EMAIL_RE } from "@/lib/validate";
 import { HEX6 as HEX } from "@/lib/validate";
+/** Opciones de diseño del correo. Todas con valores seguros: lo inválido se sustituye por el valor por defecto. */
+export type NewsletterDesign = {
+  /** Maquetación de las notas: clásica (destacada + lista), revista (todas con foto grande), compacta (miniaturas chicas) o mínima (solo titulares). */
+  plantilla: "clasica" | "revista" | "compacta" | "minima";
+  /** Tipografía de los titulares (siempre de las que traen todos los clientes de correo). */
+  tipografia: "serif" | "sans" | "moderna";
+  colorPagina: string;
+  colorTarjeta: string;
+  colorTitulos: string;
+  colorTexto: string;
+  /** Grosor en píxeles de la franja de color sobre el cuerpo (0 = sin franja). */
+  franja: 0 | 4 | 8 | 12;
+  esquinas: "rectas" | "suaves" | "redondas";
+  boton: "pildora" | "redondo" | "recto";
+  /** Texto del botón de cada nota destacada. */
+  botonTexto: string;
+  cabecera: "centrada" | "izquierda";
+  mostrarLogo: boolean;
+  mostrarFecha: boolean;
+  mostrarAutor: boolean;
+  mostrarSeccion: boolean;
+  imagenDestacada: boolean;
+  miniaturas: boolean;
+  separador: "linea" | "punteada" | "ninguno";
+  /** Mensaje de cierre, antes del pie (opcional). */
+  cierre: string;
+};
+
+/** Diseño actual del boletín: el que ya tenía antes de poder cambiarlo. */
+export const DEFAULT_NEWSLETTER_DESIGN: NewsletterDesign = {
+  plantilla: "clasica",
+  tipografia: "serif",
+  colorPagina: "#f3efe7",
+  colorTarjeta: "#ffffff",
+  colorTitulos: "#1c1712",
+  colorTexto: "#3a342e",
+  franja: 4,
+  esquinas: "suaves",
+  boton: "pildora",
+  botonTexto: "Leer la nota completa",
+  cabecera: "centrada",
+  mostrarLogo: false,
+  mostrarFecha: false,
+  mostrarAutor: false,
+  mostrarSeccion: true,
+  imagenDestacada: true,
+  miniaturas: true,
+  separador: "linea",
+  cierre: "",
+};
+
 /**
  * Ajustes del boletín (sin "server-only": los usa también el formulario del
  * panel). Se guardan en `site_settings` con la clave `newsletter_settings`;
@@ -22,6 +73,8 @@ export type NewsletterSettings = {
   address: string;
   /** Prefijo del asunto, p. ej. «[CONtexto Ganadero]». Vacío = ninguno. */
   subjectPrefix: string;
+  /** Diseño del correo. */
+  design: NewsletterDesign;
 };
 
 // Ajustes por defecto del boletín.
@@ -35,10 +88,45 @@ export const DEFAULT_NEWSLETTER_SETTINGS: NewsletterSettings = {
     "Recibes este correo porque te suscribiste al boletín y confirmaste tu dirección. Tratamos tus datos conforme a la Ley 1581 de 2012 (habeas data) y solo los usamos para enviarte este boletín. Puedes darte de baja cuando quieras con el enlace de abajo.",
   address: "Bogotá, Colombia",
   subjectPrefix: "",
+  design: DEFAULT_NEWSLETTER_DESIGN,
 };
 
 // Texto limpio y recortado al máximo; vacío si el valor no es texto.
 const str = (v: unknown, max: number) => (typeof v === "string" ? v.trim().slice(0, max) : "");
+
+// Elige un valor de una lista permitida, o el de por defecto.
+const opcion = <T extends string | number>(v: unknown, permitidos: readonly T[], def: T): T => (permitidos.includes(v as T) ? (v as T) : def);
+// Color #rrggbb válido, o el de por defecto.
+const color = (v: unknown, def: string) => (typeof v === "string" && HEX.test(v) ? v.toLowerCase() : def);
+// Booleano, o el de por defecto.
+const bool = (v: unknown, def: boolean) => (typeof v === "boolean" ? v : def);
+
+/** Valida y limpia el diseño recibido: lo desconocido o inválido vuelve a su valor por defecto. */
+export function sanitizeNewsletterDesign(input: unknown): NewsletterDesign {
+  const r = (input && typeof input === "object" ? input : {}) as Record<string, unknown>;
+  const d = DEFAULT_NEWSLETTER_DESIGN;
+  return {
+    plantilla: opcion(r.plantilla, ["clasica", "revista", "compacta", "minima"] as const, d.plantilla),
+    tipografia: opcion(r.tipografia, ["serif", "sans", "moderna"] as const, d.tipografia),
+    colorPagina: color(r.colorPagina, d.colorPagina),
+    colorTarjeta: color(r.colorTarjeta, d.colorTarjeta),
+    colorTitulos: color(r.colorTitulos, d.colorTitulos),
+    colorTexto: color(r.colorTexto, d.colorTexto),
+    franja: opcion(r.franja, [0, 4, 8, 12] as const, d.franja),
+    esquinas: opcion(r.esquinas, ["rectas", "suaves", "redondas"] as const, d.esquinas),
+    boton: opcion(r.boton, ["pildora", "redondo", "recto"] as const, d.boton),
+    botonTexto: str(r.botonTexto, 40) || d.botonTexto,
+    cabecera: opcion(r.cabecera, ["centrada", "izquierda"] as const, d.cabecera),
+    mostrarLogo: bool(r.mostrarLogo, d.mostrarLogo),
+    mostrarFecha: bool(r.mostrarFecha, d.mostrarFecha),
+    mostrarAutor: bool(r.mostrarAutor, d.mostrarAutor),
+    mostrarSeccion: bool(r.mostrarSeccion, d.mostrarSeccion),
+    imagenDestacada: bool(r.imagenDestacada, d.imagenDestacada),
+    miniaturas: bool(r.miniaturas, d.miniaturas),
+    separador: opcion(r.separador, ["linea", "punteada", "ninguno"] as const, d.separador),
+    cierre: str(r.cierre, 400),
+  };
+}
 
 // Valida y limpia los ajustes recibidos: cada campo se recorta y lo inválido se sustituye por el valor por defecto.
 export function sanitizeNewsletterSettings(input: unknown): NewsletterSettings {
@@ -55,5 +143,6 @@ export function sanitizeNewsletterSettings(input: unknown): NewsletterSettings {
     legalText: str(r.legalText, 900) || d.legalText,
     address: str(r.address, 160),
     subjectPrefix: str(r.subjectPrefix, 40),
+    design: sanitizeNewsletterDesign(r.design),
   };
 }

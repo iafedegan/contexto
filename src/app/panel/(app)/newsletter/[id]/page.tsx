@@ -6,6 +6,7 @@ import { sql } from "drizzle-orm";
 import { requirePermiso } from "@/lib/auth";
 import { getSelectableArticles } from "@/lib/newsletter/edition";
 import { EditionEditor } from "./edition-editor";
+import { getNewsletterSettings } from "@/lib/newsletter/settings";
 
 // Se calcula en cada petición, nunca durante la compilación.
 export const dynamic = "force-dynamic";
@@ -24,8 +25,11 @@ export default async function EditionPage({ params }: { params: Promise<{ id: st
     .from(newsletterSubscribers)
     .where(sql`confirmed and unsubscribed_at is null`);
   const articles = await getSelectableArticles();
+  const ajustes = await getNewsletterSettings();
   return (
     <EditionEditor
+      diseno={{ ...ajustes.design, acento: ajustes.accentColor }}
+      puedeDisenar
       id={edition.id}
       status={edition.status}
       recipients={n}

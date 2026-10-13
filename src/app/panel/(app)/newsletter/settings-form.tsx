@@ -14,9 +14,9 @@ export function SettingsForm({ settings, provider, canManage }: { settings: News
   const [msg, setMsg] = useState("");
   const [pending, start] = useTransition();
   // Actualiza un campo del formulario al escribir.
-  const set = (k: keyof NewsletterSettings) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setS({ ...s, [k]: e.target.value });
+  const set = (k: Exclude<keyof NewsletterSettings, "design">) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setS({ ...s, [k]: e.target.value });
   // Campo de texto del formulario.
-  const field = (label: string, k: keyof NewsletterSettings, type = "text") => (
+  const field = (label: string, k: Exclude<keyof NewsletterSettings, "design">, type = "text") => (
     <label className="flex flex-col gap-1 text-sm">{label}
       <input type={type} className="lx-input" value={s[k]} onChange={set(k)} disabled={!canManage} />
     </label>

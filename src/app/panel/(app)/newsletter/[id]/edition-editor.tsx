@@ -3,21 +3,27 @@
 import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { GripVertical, Inbox, X, ArrowUp, ArrowDown } from "lucide-react";
+import { GripVertical, Inbox, X, ArrowUp, ArrowDown, ChevronLeft, FileText, Palette } from "lucide-react";
 import { BibliotecaNotas, MIME_NOTA, type Nota } from "./biblioteca-notas";
 import { deleteEdition, previewEdition, saveEdition, sendEditionChunk, sendTestEmail } from "../actions";
+import { DisenoBoletin, type DisenoEditable } from "./diseno-boletin";
 
 // Contenido editable de la edición.
 type Content = { subject: string; preheader: string; intro: string; articleSlugs: string[] };
 
 // Editor de una edición del boletín: asunto, textos, notas elegidas y envío.
-export function EditionEditor({ id, status, recipients, progress, initial, articles }: {
+export function EditionEditor({ id, status, recipients, progress, initial, articles, diseno, puedeDisenar }: {
   id: string; status: string; recipients: number; progress: { delivered: number; total: number; failed: number };
   initial: Content; articles: Nota[];
+  /** Diseño guardado del correo y si esta persona puede cambiarlo. */
+  diseno: DisenoEditable; puedeDisenar: boolean;
 }) {
   const router = useRouter();
   const [c, setC] = useState(initial);
   const [html, setHtml] = useState("");
+  // Diseño del correo (se previsualiza al instante; se guarda aparte) y pestaña activa del panel central.
+  const [d, setD] = useState(diseno);
+  const [panel, setPanel] = useState<"contenido" | "diseno">("contenido");
   const [mobile, setMobile] = useState(false);
   const [msg, setMsg] = useState("");
   const [to, setTo] = useState("");
@@ -32,11 +38,11 @@ export function EditionEditor({ id, status, recipients, progress, initial, artic
 
   useEffect(() => {
     const t = setTimeout(async () => {
-      const r = await previewEdition(c);
+      const r = await previewEdition(c, { design: d, acento: d.acento });
       if (r.ok && r.html) setHtml(r.html);
-    }, 500);
+    }, 400);
     return () => clearTimeout(t);
-  }, [c]);
+  }, [c, d]);
 
   // Marca o desmarca una nota de la edición.
   const toggle = (slug: string) =>
@@ -84,10 +90,31 @@ export function EditionEditor({ id, status, recipients, progress, initial, artic
   const label = (t: string) => <span className="text-sm font-medium">{t}</span>;
   return (
     <div className="flex flex-col gap-4">
-      <Link href="/panel/newsletter" className="text-sm text-[var(--fg-muted)] underline">← Newsletter</Link>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <Link href="/panel/newsletter" aria-label="Volver al Newsletter" className="grid size-9 shrink-0 place-items-center rounded-full border border-[var(--border)] text-[var(--fg-muted)] transition hover:border-[var(--accent)] hover:text-[var(--accent)]"><ChevronLeft size={18} /></Link>
+          <div className="min-w-0">
+            <p className="lx-kicker text-[var(--accent)]">Newsletter · edición</p>
+            <h1 className="lx-display truncate text-xl font-semibold tracking-tight">{c.subject.trim() || "Edición sin asunto"}</h1>
+          </div>
+        </div>
+        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${status === "enviada" ? "bg-[#16a34a]/12 text-[#15803d]" : status === "enviando" ? "bg-amber-500/15 text-amber-700" : "bg-[var(--surface-2)] text-[var(--fg-muted)]"}`}>
+          {status === "enviada" ? "Enviada" : status === "enviando" ? "Enviando…" : "Borrador"} · {recipients} {recipients === 1 ? "destinatario" : "destinatarios"}
+        </span>
+      </div>
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,21rem)_minmax(0,1fr)] xl:grid-cols-[minmax(0,21rem)_minmax(0,1fr)_minmax(0,1fr)]">
         <BibliotecaNotas notas={articles} usadas={usadas} onAgregar={(sl) => toggle(sl)} bloqueada={locked} />
         <div className="flex flex-col gap-4">
+          <div role="tablist" aria-label="Qué editar" className="flex gap-1 rounded-full bg-[var(--surface-2)] p-1 text-sm font-semibold">
+            {([["contenido", "Contenido", FileText], ["diseno", "Diseño", Palette]] as const).map(([k, t, Icono]) => (
+              <button key={k} type="button" role="tab" aria-selected={panel === k} onClick={() => setPanel(k)}
+                className={`flex flex-1 items-center justify-center gap-1.5 rounded-full px-3 py-1.5 transition ${panel === k ? "bg-[var(--surface)] text-[var(--accent)] shadow-sm" : "text-[var(--fg-muted)] hover:text-[var(--fg)]"}`}>
+                <Icono size={14} aria-hidden /> {t}
+              </button>
+            ))}
+          </div>
+          {panel === "diseno" && <DisenoBoletin valor={d} alCambiar={setD} puedeEditar={puedeDisenar} />}
+          <div className={panel === "contenido" ? "flex flex-col gap-4" : "hidden"}>
           <label className="flex flex-col gap-1">{label("Asunto")}<input className="lx-input" value={c.subject} disabled={locked} onChange={(e) => setC({ ...c, subject: e.target.value })} maxLength={150} /></label>
           <label className="flex flex-col gap-1">{label("Texto de vista previa (preheader)")}<input className="lx-input" value={c.preheader} disabled={locked} onChange={(e) => setC({ ...c, preheader: e.target.value })} maxLength={200} /></label>
           <label className="flex flex-col gap-1">{label("Mensaje de la redacción")}<textarea rows={5} className="lx-input" value={c.intro} disabled={locked} onChange={(e) => setC({ ...c, intro: e.target.value })} /></label>
@@ -151,6 +178,7 @@ export function EditionEditor({ id, status, recipients, progress, initial, artic
             </div>
           )}
           {msg && <p className="text-sm text-[var(--accent)]" role="status">{msg}</p>}
+          </div>
         </div>
 
         <div className="flex flex-col gap-2 lg:col-span-2 xl:col-span-1">

@@ -1,5 +1,5 @@
 import { siteUrl } from "@/lib/utils";
-import type { NewsletterSettings } from "@/lib/newsletter/types";
+import { DEFAULT_NEWSLETTER_DESIGN, type NewsletterSettings } from "@/lib/newsletter/types";
 import { escapeHtml as esc } from "@/lib/escape";
 
 /**
@@ -70,60 +70,111 @@ const fmtDate = (d: Date) =>
 const SERIF = "Georgia, 'Times New Roman', Times, serif";
 // Tipografía sin serifa para el texto del correo.
 const SANS = "-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+// Tipografía «moderna»: sin serifa y más ancha, disponible en todos los clientes.
+const MODERNA = "'Trebuchet MS', 'Lucida Grande', Verdana, Geneva, sans-serif";
 
-// Genera el HTML completo del boletín, compatible con clientes de correo (tablas y estilos en línea).
+// Genera el HTML completo del boletín, compatible con clientes de correo (tablas y estilos en línea). El aspecto sale de `settings.design`.
 export function renderNewsletterHtml(r: NewsletterRender): string {
   const accent = r.settings.accentColor;
-  const [lead, ...rest] = r.articles;
+  // Ajustes guardados antes de existir el diseño no lo traen: se usa el de siempre.
+  const d = r.settings.design ?? DEFAULT_NEWSLETTER_DESIGN;
+  const TIT = { serif: SERIF, sans: SANS, moderna: MODERNA }[d.tipografia];
+  const radio = { rectas: 0, suaves: 10, redondas: 20 }[d.esquinas];
+  const radioBoton = { pildora: "999px", redondo: "8px", recto: "0" }[d.boton];
   const date = fmtDate(r.date ?? new Date());
   const homeUrl = siteUrl("/");
+  const link = (a: EmailArticle) => articleLink(a.slug, r.issue, r.lector);
+  const centrada = d.cabecera === "centrada";
+  const alinear = centrada ? "center" : "left";
 
-  const leadBlock = lead
-    ? `
-      <tr><td class="px" style="padding:8px 32px 0 32px">
+  // Línea que separa bloques (o nada).
+  const separador =
+    d.separador === "linea"
+      ? `<div style="height:1px;background:${accent};opacity:.35;margin:10px 0 4px 0"></div>`
+      : d.separador === "punteada"
+        ? `<div style="border-top:1px dashed ${accent};opacity:.55;margin:10px 0 4px 0;height:0"></div>`
+        : `<div style="height:6px"></div>`;
+
+  // Sección y datos de la nota (sección, autor, fecha), según lo que se haya elegido mostrar.
+  const seccion = (a: EmailArticle, margen: string, tam = 11) =>
+    d.mostrarSeccion && a.categoryName
+      ? `<p style="margin:${margen};font:700 ${tam}px/1 ${SANS};letter-spacing:.16em;text-transform:uppercase;color:${accent}">${esc(a.categoryName)}</p>`
+      : "";
+  const firma = (a: EmailArticle) => {
+    const partes = [
+      d.mostrarAutor && a.authorName ? `Por ${esc(a.authorName)}` : "",
+      d.mostrarFecha && a.publishedAt ? esc(new Intl.DateTimeFormat("es-CO", { day: "numeric", month: "short", year: "numeric", timeZone: "America/Bogota" }).format(a.publishedAt)) : "",
+    ].filter(Boolean);
+    return partes.length ? `<p class="t-muted" style="margin:0 0 8px 0;font:400 12px/1.4 ${SANS};color:#7d746a">${partes.join(" &nbsp;·&nbsp; ")}</p>` : "";
+  };
+  const boton = (a: EmailArticle) =>
+    `<table role="presentation" cellpadding="0" cellspacing="0"><tr><td style="background:${accent};border-radius:${radioBoton}"><a href="${link(a)}" style="display:inline-block;padding:12px 26px;font:700 14px/1 ${SANS};color:#ffffff;text-decoration:none">${esc(d.botonTexto)} &rarr;</a></td></tr></table>`;
+  const recortar = (t: string, n: number) => (t.length > n ? `${t.slice(0, n - 3).trimEnd()}…` : t);
+
+  // Nota con foto grande (destacada o, en «revista», todas).
+  const bloqueGrande = (a: EmailArticle, titulo: number, conFoto: boolean, relleno: string) => `
+      <tr><td class="px" style="padding:${relleno}">
         ${
-          lead.coverImageUrl
-            ? `<a href="${articleLink(lead.slug, r.issue, r.lector)}" style="text-decoration:none"><img src="${esc(absolute(lead.coverImageUrl))}" width="536" alt="${esc(lead.title)}" style="display:block;width:100%;max-width:536px;height:auto;border:0;border-radius:6px"></a>`
+          conFoto && a.coverImageUrl
+            ? `<a href="${link(a)}" style="text-decoration:none"><img src="${esc(absolute(a.coverImageUrl))}" width="536" alt="${esc(a.title)}" style="display:block;width:100%;max-width:536px;height:auto;border:0;border-radius:${Math.min(radio, 12)}px"></a>`
             : ""
         }
-        ${
-          lead.categoryName
-            ? `<p style="margin:22px 0 6px 0;font:700 11px/1 ${SANS};letter-spacing:.16em;text-transform:uppercase;color:${accent}">${esc(lead.categoryName)}</p>`
-            : `<div style="height:22px"></div>`
-        }
-        <h2 class="t-main" style="margin:0 0 12px 0;font:700 28px/1.2 ${SERIF};color:#1c1712"><a href="${articleLink(lead.slug, r.issue, r.lector)}" style="color:inherit;text-decoration:none">${esc(lead.title)}</a></h2>
-        <p class="t-muted" style="margin:0 0 20px 0;font:400 16px/1.6 ${SANS};color:#57504a">${esc(lead.excerpt)}</p>
-        <table role="presentation" cellpadding="0" cellspacing="0"><tr><td style="background:${accent};border-radius:999px">
-          <a href="${articleLink(lead.slug, r.issue, r.lector)}" style="display:inline-block;padding:12px 26px;font:700 14px/1 ${SANS};color:#ffffff;text-decoration:none">Leer la nota completa &rarr;</a>
-        </td></tr></table>
-      </td></tr>`
-    : "";
+        ${seccion(a, "20px 0 6px 0") || `<div style="height:20px"></div>`}
+        <h2 class="t-main" style="margin:0 0 10px 0;font:700 ${titulo}px/1.2 ${TIT};color:${d.colorTitulos}"><a href="${link(a)}" style="color:inherit;text-decoration:none">${esc(a.title)}</a></h2>
+        ${firma(a)}
+        <p class="t-muted" style="margin:0 0 18px 0;font:400 16px/1.6 ${SANS};color:${d.colorTexto}">${esc(a.excerpt)}</p>
+        ${boton(a)}
+      </td></tr>`;
 
-  const restBlock = rest.length
-    ? `
-      <tr><td class="px" style="padding:36px 32px 0 32px">
-        <p style="margin:0 0 4px 0;font:700 11px/1 ${SANS};letter-spacing:.16em;text-transform:uppercase;color:${accent}">También en esta edición</p>
-        <div style="height:1px;background:${accent};opacity:.35;margin:10px 0 4px 0"></div>
-      </td></tr>
-      ${rest
-        .map(
-          (a) => `
+  // Nota en fila con miniatura a la izquierda.
+  const bloqueFila = (a: EmailArticle, ancho: number, largoResumen: number) => `
       <tr><td class="px" style="padding:18px 32px 0 32px">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
           ${
-            a.coverImageUrl
-              ? `<td class="thumb" width="132" valign="top" style="padding:0 18px 0 0"><a href="${articleLink(a.slug, r.issue, r.lector)}"><img src="${esc(absolute(a.coverImageUrl))}" width="132" height="96" alt="" style="display:block;width:132px;height:96px;object-fit:cover;border:0;border-radius:4px"></a></td>`
+            d.miniaturas && a.coverImageUrl
+              ? `<td class="thumb" width="${ancho}" valign="top" style="padding:0 18px 0 0"><a href="${link(a)}"><img src="${esc(absolute(a.coverImageUrl))}" width="${ancho}" height="${Math.round(ancho * 0.68)}" alt="${esc(a.title)}" style="display:block;width:${ancho}px;height:auto;border:0;border-radius:${Math.min(radio, 8)}px"></a></td>`
               : ""
           }
           <td class="thumb" valign="top">
-            ${a.categoryName ? `<p style="margin:0 0 4px 0;font:700 10px/1 ${SANS};letter-spacing:.14em;text-transform:uppercase;color:${accent}">${esc(a.categoryName)}</p>` : ""}
-            <h3 class="t-main" style="margin:0 0 6px 0;font:700 19px/1.25 ${SERIF};color:#1c1712"><a href="${articleLink(a.slug, r.issue, r.lector)}" style="color:inherit;text-decoration:none">${esc(a.title)}</a></h3>
-            <p class="t-muted" style="margin:0;font:400 14px/1.55 ${SANS};color:#57504a">${esc(a.excerpt.length > 150 ? `${a.excerpt.slice(0, 147).trimEnd()}…` : a.excerpt)}</p>
+            ${seccion(a, "0 0 4px 0", 10)}
+            <h3 class="t-main" style="margin:0 0 6px 0;font:700 19px/1.25 ${TIT};color:${d.colorTitulos}"><a href="${link(a)}" style="color:inherit;text-decoration:none">${esc(a.title)}</a></h3>
+            ${firma(a)}
+            <p class="t-muted" style="margin:0;font:400 14px/1.55 ${SANS};color:${d.colorTexto}">${esc(recortar(a.excerpt, largoResumen))}</p>
           </td>
         </tr></table>
-      </td></tr>`,
-        )
-        .join("")}`
+      </td></tr>`;
+
+  // Solo el titular (plantilla mínima).
+  const bloqueTitular = (a: EmailArticle) => `
+      <tr><td class="px" style="padding:14px 32px 0 32px">
+        ${seccion(a, "0 0 3px 0", 10)}
+        <h3 class="t-main" style="margin:0;font:700 18px/1.3 ${TIT};color:${d.colorTitulos}"><a href="${link(a)}" style="color:inherit;text-decoration:none">${esc(a.title)}</a></h3>
+        ${firma(a)}
+      </td></tr>`;
+
+  const rotulo = (texto: string) => `
+      <tr><td class="px" style="padding:36px 32px 0 32px">
+        <p style="margin:0 0 4px 0;font:700 11px/1 ${SANS};letter-spacing:.16em;text-transform:uppercase;color:${accent}">${texto}</p>
+        ${separador}
+      </td></tr>`;
+
+  const [lead, ...rest] = r.articles;
+  let cuerpoNotas = "";
+  if (d.plantilla === "revista") {
+    cuerpoNotas = r.articles
+      .map((a, i) => bloqueGrande(a, i === 0 ? 30 : 24, i === 0 ? d.imagenDestacada : d.miniaturas, i === 0 ? "8px 32px 0 32px" : "34px 32px 0 32px"))
+      .join("");
+  } else if (d.plantilla === "compacta") {
+    cuerpoNotas = (lead ? bloqueGrande(lead, 24, d.imagenDestacada, "8px 32px 0 32px") : "") + (rest.length ? rotulo("También en esta edición") + rest.map((a) => bloqueFila(a, 92, 110)).join("") : "");
+  } else if (d.plantilla === "minima") {
+    cuerpoNotas = (lead ? bloqueGrande(lead, 26, d.imagenDestacada, "8px 32px 0 32px") : "") + (rest.length ? rotulo("También en esta edición") + rest.map(bloqueTitular).join("") : "");
+  } else {
+    cuerpoNotas = (lead ? bloqueGrande(lead, 28, d.imagenDestacada, "8px 32px 0 32px") : "") + (rest.length ? rotulo("También en esta edición") + rest.map((a) => bloqueFila(a, 132, 150)).join("") : "");
+  }
+
+  // Mensaje de cierre, antes del botón final.
+  const cierre = d.cierre.trim()
+    ? `<tr><td class="px" style="padding:30px 32px 0 32px">${paragraphs(d.cierre, `margin:0 0 12px 0;font:italic 400 15px/1.7 ${TIT};color:${d.colorTexto}`)}</td></tr>`
     : "";
 
   return `<!doctype html>
@@ -156,30 +207,31 @@ export function renderNewsletterHtml(r: NewsletterRender): string {
   }
 </style>
 </head>
-<body style="margin:0;padding:0;background:#f3efe7">
+<body style="margin:0;padding:0;background:${d.colorPagina}">
 <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;font-size:1px;line-height:1px">${esc(r.preheader)}${"&zwnj;&nbsp;".repeat(60)}</div>
-<table role="presentation" class="bg-page" width="100%" cellpadding="0" cellspacing="0" style="background:#f3efe7"><tr><td align="center" style="padding:24px 12px">
+<table role="presentation" class="bg-page" width="100%" cellpadding="0" cellspacing="0" style="background:${d.colorPagina}"><tr><td align="center" style="padding:24px 12px">
   ${
     r.isTest
-      ? `<table role="presentation" class="container" width="600" cellpadding="0" cellspacing="0" style="width:600px;max-width:100%"><tr><td style="padding:0 0 12px 0;text-align:center;font:700 12px/1.4 ${SANS};color:#b45309;letter-spacing:.06em">CORREO DE PRUEBA · no se ha enviado a los suscriptores</td></tr></table>`
+      ? `<table role="presentation" class="container" width="600" cellpadding="0" cellspacing="0" style="width:600px;max-width:100%"><tr><td style="padding:0 0 12px 0;text-align:center;font:700 12px/1.4 ${SANS};letter-spacing:.12em;text-transform:uppercase;color:#b45309">Correo de prueba · no es un envío real</td></tr></table>`
       : ""
   }
   <table role="presentation" class="container" width="600" cellpadding="0" cellspacing="0" style="width:600px;max-width:100%">
-    <tr><td align="center" style="padding:8px 0 22px 0">
+    <tr><td align="${alinear}" style="padding:8px ${centrada ? "0" : "6px"} 22px ${centrada ? "0" : "6px"}">
+      ${d.mostrarLogo ? `<a href="${homeUrl}"><img src="${esc(siteUrl("/logo/contexto-ganadero-logo-v3-512.png"))}" width="56" height="56" alt="${esc(r.siteName)}" style="display:${centrada ? "inline-block" : "block"};border:0;border-radius:12px;margin:0 0 12px 0"></a><br>` : ""}
       <p style="margin:0 0 10px 0;font:400 12px/1 ${SANS};letter-spacing:.08em;text-transform:uppercase;color:#7d746a">${esc(date)}${r.issue ? ` &nbsp;·&nbsp; Edición N.º ${r.issue}` : ""}</p>
-      <a href="${homeUrl}" class="brand t-main" style="font:700 32px/1.1 ${SERIF};color:#1c1712;text-decoration:none;letter-spacing:.01em">${esc(r.siteName)}</a>
+      <a href="${homeUrl}" class="brand t-main" style="font:700 32px/1.1 ${TIT};color:${d.colorTitulos};text-decoration:none;letter-spacing:.01em">${esc(r.siteName)}</a>
       ${r.settings.headerTagline ? `<p style="margin:8px 0 0 0;font:italic 400 14px/1.3 ${SERIF};color:#7d746a">${esc(r.settings.headerTagline)}</p>` : ""}
     </td></tr>
-    <tr><td class="card" style="background:#ffffff;border-radius:10px;border-top:4px solid ${accent}">
+    <tr><td class="card" style="background:${d.colorTarjeta};border-radius:${radio}px;${d.franja ? `border-top:${d.franja}px solid ${accent}` : ""}">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
         <tr><td class="px" style="padding:30px 32px 6px 32px">
           <h1 class="t-main" style="margin:0 0 14px 0;font:700 13px/1.4 ${SANS};letter-spacing:.14em;text-transform:uppercase;color:${accent}">${esc(r.subject)}</h1>
-          ${r.intro.trim() ? paragraphs(r.intro, `margin:0 0 14px 0;font:400 16px/1.7 ${SANS};color:#3a342e`).replace(/color:#3a342e/g, "color:#3a342e") : ""}
+          ${r.intro.trim() ? paragraphs(r.intro, `margin:0 0 14px 0;font:400 16px/1.7 ${SANS};color:${d.colorTexto}`) : ""}
         </td></tr>
-        ${leadBlock}
-        ${restBlock}
+        ${cuerpoNotas}
+        ${cierre}
         <tr><td class="px" style="padding:36px 32px 34px 32px" align="center">
-          <table role="presentation" cellpadding="0" cellspacing="0"><tr><td style="border:2px solid ${accent};border-radius:999px">
+          <table role="presentation" cellpadding="0" cellspacing="0"><tr><td style="border:2px solid ${accent};border-radius:${radioBoton}">
             <a href="${homeUrl}?utm_source=boletin&amp;utm_medium=email" style="display:inline-block;padding:11px 24px;font:700 13px/1 ${SANS};color:${accent};text-decoration:none">Ver todas las noticias en ${esc(r.siteName)}</a>
           </td></tr></table>
         </td></tr>
