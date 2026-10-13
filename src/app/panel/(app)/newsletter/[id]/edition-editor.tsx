@@ -209,10 +209,11 @@ export function EditionEditor({ id, status, recipients, progress, initial, artic
                 className={`rounded-full px-3 py-1 transition ${mobile === m ? "bg-[var(--surface)] text-[var(--accent)] shadow-sm" : "text-[var(--fg-muted)]"}`}>{t}</button>
             ))}
           </div>
-          <button type="button" onClick={descargarPdf} disabled={creandoPdf || !html} className="lx-btn-ghost !px-3 !py-1.5 text-xs" title="Descarga el boletín tal como se ve aquí, con el diseño actual">
-            {creandoPdf ? <Loader2 size={14} className="animate-spin" aria-hidden /> : <Download size={14} aria-hidden />} {creandoPdf ? "Creando PDF…" : "Descargar PDF"}
+          <button type="button" onClick={descargarPdf} disabled={creandoPdf || !html} className="lx-btn-ghost !px-3 !py-1.5 text-xs" title="Abre el cuadro de impresión con el boletín tal como se ve aquí: elige «Guardar como PDF» como destino. El PDF sale con texto y enlaces que se pueden pulsar.">
+            {creandoPdf ? <Loader2 size={14} className="animate-spin" aria-hidden /> : <Download size={14} aria-hidden />} {creandoPdf ? "Preparando…" : "Descargar PDF"}
           </button>
           </div>
+          <p className="-mt-1 text-right text-[0.7rem] text-[var(--fg-muted)]">Se abre el cuadro de impresión: en «Destino» elige «Guardar como PDF».</p>
           {errorPdf && <p role="alert" className="text-xs text-[var(--danger)]">{errorPdf}</p>}
           <VistaPrevia html={html} ancho={mobile ? 390 : 680} />
         </div>

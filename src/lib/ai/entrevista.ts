@@ -152,10 +152,10 @@ async function transcribirPorIntervenciones(
 // Transcribe audio o video con Gemini (solo cuenta lo que se oye), comprueba la cuota y registra el gasto.
 async function transcribir(userId: string, bytes: Uint8Array, mime: string, nombre: string, contexto?: ContextoEntrevista | null): Promise<MaterialResult> {
   const model = await getAiModel();
-  if (!model) return { ok: false, error: "Falta la clave del modelo (Configuración → Asistente)." };
+  if (!model) return { ok: false, error: "Falta la clave del modelo (la conecta un administrador en Configuración → Asistente)." };
   const settingsOk = await getImageAi(); // solo para distinguir proveedor: «otro-proveedor» = no es Google
   if (settingsOk === "otro-proveedor") {
-    return { ok: false, error: "Transcribir audio o video usa Gemini: elige Google (Gemini) en Configuración → Asistente." };
+    return { ok: false, error: "Transcribir audio o video usa Gemini: pídele a un administrador que elija Google (Gemini) en Configuración → Asistente." };
   }
   const cuota = await verificarCuotaIA(userId);
   if (!cuota.ok) return { ok: false, error: cuota.message };

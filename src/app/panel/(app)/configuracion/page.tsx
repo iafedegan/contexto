@@ -38,8 +38,9 @@ export default async function ConfiguracionPage() {
 
   const [identity, keyStatus, analytics, people, misPasskeys, miEstilo] = await Promise.all([
     getSiteIdentity(),
-    getKeyStatus(),
-    getAnalyticsStatus(),
+    // La clave y la analítica del portal son solo de administradores: a las demás personas ni se les consulta ni se les muestra.
+    isAdmin ? getKeyStatus() : null,
+    isAdmin ? getAnalyticsStatus() : null,
     db
       .select({
         id: users.id,
@@ -90,8 +91,12 @@ export default async function ConfiguracionPage() {
           { id: "usuarios", label: isAdmin ? "Personas y roles" : "Mis datos", icon: <Users size={13} /> },
           { id: "estilo", label: "Mi estilo de escritura", icon: <PenLine size={13} /> },
           { id: "seguridad", label: "Seguridad de mi cuenta", icon: <ShieldCheck size={13} /> },
-          { id: "analitica", label: "Analítica y SEO", icon: <BarChart3 size={13} /> },
-          { id: "asistente", label: "Asistente y agentes de IA", icon: <Sparkles size={13} /> },
+          ...(isAdmin
+            ? [
+                { id: "analitica", label: "Analítica y SEO", icon: <BarChart3 size={13} /> },
+                { id: "asistente", label: "Asistente y agentes de IA", icon: <Sparkles size={13} /> },
+              ]
+            : []),
           { id: "telegram", label: "Telegram", icon: <Send size={13} /> },
         ]}
       >
@@ -274,7 +279,8 @@ export default async function ConfiguracionPage() {
         <PasskeyForm passkeys={misPasskeys} />
       </Section>
 
-      {/* ---------------------------------------------- Analítica y SEO */}
+      {/* ---------------------------------------------- Analítica y SEO (solo administradores) */}
+      {isAdmin && analytics && (
       <Section
         id="analitica"
         icon={<BarChart3 size={14} />}
@@ -385,13 +391,15 @@ export default async function ConfiguracionPage() {
           solo funciona a través de un túnel.
         </p>
       </Section>
+      )}
 
       {/* ------------------------------------------------ Telegram */}
       <Section id="telegram" icon={<Send size={14} />} title="Telegram" hint="Redacta notas desde el celular, paso a paso">
         <TelegramPanel esAdmin={isAdmin} />
       </Section>
 
-      {/* ------------------------------------------------ Asistente / agentes */}
+      {/* ------------------------------------------------ Asistente / agentes (solo administradores) */}
+      {isAdmin && keyStatus && (
       <Section
         id="asistente"
         icon={<Sparkles size={14} />}
@@ -419,6 +427,7 @@ export default async function ConfiguracionPage() {
           IA se publica sin la aprobación de un editor.
         </p>
       </Section>
+      )}
       </ConfigTabs>
     </div>
   );

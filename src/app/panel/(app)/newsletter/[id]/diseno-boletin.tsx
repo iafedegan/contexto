@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { Check, Loader2, RotateCcw } from "lucide-react";
+import { createContext, useContext, useEffect, useState, useTransition } from "react";
+import { Check, ChevronDown, Loader2, RotateCcw } from "lucide-react";
 import { guardarDisenoBoletin } from "../actions";
 import { DEFAULT_NEWSLETTER_DESIGN, DEFAULT_NEWSLETTER_SETTINGS, type NewsletterDesign } from "@/lib/newsletter/types";
 
@@ -84,15 +84,37 @@ function Interruptor({ activo, alCambiar, texto }: { activo: boolean; alCambiar:
   );
 }
 
-const Grupo = ({ titulo, ayuda, children }: { titulo: string; ayuda?: string; children: React.ReactNode }) => (
-  <section className="flex flex-col gap-2.5 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-3.5">
-    <div>
-      <h3 className="text-sm font-semibold">{titulo}</h3>
-      {ayuda && <p className="text-xs text-[var(--fg-muted)]">{ayuda}</p>}
-    </div>
-    {children}
-  </section>
-);
+// Qué secciones están recogidas: cada una se abre y se cierra para dejar ver las demás y la vista previa.
+const Plegado = createContext<{ cerradas: Set<string>; alternar: (id: string) => void }>({ cerradas: new Set(), alternar: () => {} });
+const PLEGADO_KEY = "cg:newsletter:diseno:plegado";
+const SECCIONES = ["maquetacion", "colores", "cabecera", "tipografia", "mostrar", "textos"];
+
+const Grupo = ({ id, titulo, ayuda, children }: { id: string; titulo: string; ayuda?: string; children: React.ReactNode }) => {
+  const { cerradas, alternar } = useContext(Plegado);
+  const abierto = !cerradas.has(id);
+  return (
+    <section className="flex flex-col rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)]">
+      <button
+        type="button"
+        onClick={() => alternar(id)}
+        aria-expanded={abierto}
+        aria-controls={`diseno-${id}`}
+        className="pointer-events-auto flex w-full items-center justify-between gap-3 rounded-[var(--radius-lg)] p-3.5 text-left transition hover:bg-[var(--surface-2)]"
+      >
+        <span>
+          <span className="block text-sm font-semibold">{titulo}</span>
+          {ayuda && <span className="block text-xs text-[var(--fg-muted)]">{ayuda}</span>}
+        </span>
+        <ChevronDown size={16} aria-hidden className={`shrink-0 text-[var(--fg-muted)] transition-transform ${abierto ? "" : "-rotate-90"}`} />
+      </button>
+      {abierto && (
+        <div id={`diseno-${id}`} className="flex flex-col gap-2.5 px-3.5 pb-3.5">
+          {children}
+        </div>
+      )}
+    </section>
+  );
+};
 
 /**
  * Panel de diseño del boletín: maquetación, paletas y colores, tipografía, formas, qué se muestra y textos. Cada cambio se ve al
@@ -101,6 +123,32 @@ const Grupo = ({ titulo, ayuda, children }: { titulo: string; ayuda?: string; ch
 export function DisenoBoletin({ valor, alCambiar, puedeEditar }: { valor: DisenoEditable; alCambiar: (v: DisenoEditable) => void; puedeEditar: boolean }) {
   const [pendiente, empezar] = useTransition();
   const [aviso, setAviso] = useState("");
+  const [cerradas, setCerradas] = useState<Set<string>>(new Set());
+  // Se recuerda en este navegador qué secciones se dejaron recogidas.
+  useEffect(() => {
+    try {
+      const guardado = JSON.parse(localStorage.getItem(PLEGADO_KEY) ?? "[]") as unknown;
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- solo existe en el cliente
+      if (Array.isArray(guardado)) setCerradas(new Set(guardado.filter((x): x is string => typeof x === "string" && SECCIONES.includes(x))));
+    } catch {
+      /* sin almacenamiento: todo abierto */
+    }
+  }, []);
+  const cambiarPlegado = (siguiente: Set<string>) => {
+    setCerradas(siguiente);
+    try {
+      localStorage.setItem(PLEGADO_KEY, JSON.stringify([...siguiente]));
+    } catch {
+      /* ignorar */
+    }
+  };
+  const alternar = (id: string) => {
+    const x = new Set(cerradas);
+    if (x.has(id)) x.delete(id);
+    else x.add(id);
+    cambiarPlegado(x);
+  };
+  const todoCerrado = SECCIONES.every((id) => cerradas.has(id));
   const poner = <K extends keyof DisenoEditable>(k: K, v: DisenoEditable[K]) => alCambiar({ ...valor, [k]: v });
   const color = (k: "colorPagina" | "colorTarjeta" | "colorTitulos" | "colorTexto" | "acento", etiqueta: string) => (
     <label className="flex items-center justify-between gap-3 rounded-[var(--radius)] border border-[var(--border)] px-3 py-1.5 text-sm">
@@ -119,8 +167,14 @@ export function DisenoBoletin({ valor, alCambiar, puedeEditar }: { valor: Diseno
     });
 
   return (
+    <Plegado.Provider value={{ cerradas, alternar }}>
     <div className={`flex flex-col gap-3 ${puedeEditar ? "" : "pointer-events-none opacity-60"}`}>
-      <Grupo titulo="Maquetación de las notas" ayuda="Cómo se ordenan las notas dentro del correo.">
+      <div className="flex justify-end">
+        <button type="button" className="lx-link text-xs font-semibold" onClick={() => cambiarPlegado(todoCerrado ? new Set() : new Set(SECCIONES))}>
+          {todoCerrado ? "Abrir todas las secciones" : "Recoger todas las secciones"}
+        </button>
+      </div>
+      <Grupo id="maquetacion" titulo="Maquetación de las notas" ayuda="Cómo se ordenan las notas dentro del correo.">
         <div className="grid grid-cols-2 gap-2">
           {MAQUETAS.map((m) => (
             <button
@@ -140,7 +194,7 @@ export function DisenoBoletin({ valor, alCambiar, puedeEditar }: { valor: Diseno
         </div>
       </Grupo>
 
-      <Grupo titulo="Colores" ayuda="Elige una paleta o ajusta cada color.">
+      <Grupo id="colores" titulo="Colores" ayuda="Elige una paleta o ajusta cada color.">
         <div className="flex flex-wrap gap-1.5">
           {PALETAS.map((p) => (
             <button key={p.nombre} type="button" onClick={() => alCambiar({ ...valor, ...p.v })} className="flex items-center gap-1.5 rounded-full border border-[var(--border)] px-2.5 py-1 text-xs font-semibold transition hover:border-[var(--accent)]">
@@ -160,7 +214,7 @@ export function DisenoBoletin({ valor, alCambiar, puedeEditar }: { valor: Diseno
         </div>
       </Grupo>
 
-      <Grupo titulo="Cabecera y destacada" ayuda="La portada del correo: tamaño del nombre, número de edición y color de la nota principal.">
+      <Grupo id="cabecera" titulo="Cabecera y destacada" ayuda="La portada del correo: tamaño del nombre, número de edición y color de la nota principal.">
         <div className="flex flex-col gap-2.5 text-sm">
           <div className="flex flex-wrap items-center justify-between gap-2"><span>Cabecera</span><Opciones etiqueta="Estilo de la cabecera" valor={valor.masthead} alElegir={(v) => poner("masthead", v)} opciones={[{ v: "sencillo", t: "Sencilla" }, { v: "banda", t: "Banda de color" }, { v: "gigante", t: "Gigante" }]} /></div>
           <Interruptor texto="Insignia con el número de edición" activo={valor.insignia} alCambiar={(v) => poner("insignia", v)} />
@@ -168,7 +222,7 @@ export function DisenoBoletin({ valor, alCambiar, puedeEditar }: { valor: Diseno
         </div>
       </Grupo>
 
-      <Grupo titulo="Tipografía y formas">
+      <Grupo id="tipografia" titulo="Tipografía y formas">
         <div className="flex flex-col gap-2.5 text-sm">
           <div className="flex flex-wrap items-center justify-between gap-2"><span>Titulares</span><Opciones etiqueta="Tipografía" valor={valor.tipografia} alElegir={(v) => poner("tipografia", v)} opciones={[{ v: "serif", t: "Con serifa" }, { v: "sans", t: "Sin serifa" }, { v: "moderna", t: "Moderna" }, { v: "impacto", t: "Impacto" }]} /></div>
           <div className="flex flex-wrap items-center justify-between gap-2"><span>Esquinas</span><Opciones etiqueta="Esquinas" valor={valor.esquinas} alElegir={(v) => poner("esquinas", v)} opciones={[{ v: "rectas", t: "Rectas" }, { v: "suaves", t: "Suaves" }, { v: "redondas", t: "Redondas" }]} /></div>
@@ -179,7 +233,7 @@ export function DisenoBoletin({ valor, alCambiar, puedeEditar }: { valor: Diseno
         </div>
       </Grupo>
 
-      <Grupo titulo="Qué se muestra">
+      <Grupo id="mostrar" titulo="Qué se muestra">
         <div className="grid gap-1.5 sm:grid-cols-2">
           <Interruptor texto="Logo en la cabecera" activo={valor.mostrarLogo} alCambiar={(v) => poner("mostrarLogo", v)} />
           <Interruptor texto="Foto de la destacada" activo={valor.imagenDestacada} alCambiar={(v) => poner("imagenDestacada", v)} />
@@ -190,7 +244,7 @@ export function DisenoBoletin({ valor, alCambiar, puedeEditar }: { valor: Diseno
         </div>
       </Grupo>
 
-      <Grupo titulo="Textos del diseño">
+      <Grupo id="textos" titulo="Textos del diseño">
         <label className="flex flex-col gap-1 text-sm">Texto del botón de la destacada
           <input className="lx-input" value={valor.botonTexto} maxLength={40} onChange={(e) => poner("botonTexto", e.target.value)} />
         </label>
@@ -209,5 +263,6 @@ export function DisenoBoletin({ valor, alCambiar, puedeEditar }: { valor: Diseno
         <span className="text-xs text-[var(--fg-muted)]">{aviso || "Se aplica a todas las ediciones. La vista previa cambia al instante."}</span>
       </div>
     </div>
+    </Plegado.Provider>
   );
 }

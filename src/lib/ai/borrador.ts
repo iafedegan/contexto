@@ -79,7 +79,7 @@ export async function generateArticleDraftCore(userId: string, input: {
       mode: "esquema",
       note:
         "Sin clave del modelo: no se redacta la noticia (sería inventar hechos). " +
-        "Puedes añadirla en Configuración → Asistente. " +
+        "Un administrador puede añadirla en Configuración → Asistente. " +
         "Este es el esqueleto con su ficha de posicionamiento para que escribas encima.",
       draft: scaffold(tema, encargo, input.section),
     };
@@ -293,7 +293,7 @@ export async function regenerateDraftPartCore(userId: string, input: {
 }): Promise<RegenerateResult> {
   const model = await getAiModel();
   if (!model) {
-    return { ok: false, error: "Para regenerar hace falta la clave del modelo (Configuración → Asistente)." };
+    return { ok: false, error: "Para regenerar hace falta la clave del modelo (la conecta un administrador en Configuración → Asistente)." };
   }
   try {
     const cuotaIA = await verificarCuotaIA(userId);

@@ -36,9 +36,9 @@ export type TopicIdeasResult =
  */
 export async function suggestTopicIdeasCore(userId: string, input: { section?: string; focus?: string }): Promise<TopicIdeasResult> {
   const ai = await getGroundedAi();
-  if (!ai) return { ok: false, error: "Falta la clave del modelo (Configuración → Asistente)." };
+  if (!ai) return { ok: false, error: "Falta la clave del modelo (la conecta un administrador en Configuración → Asistente)." };
   if (ai === "otro-proveedor") {
-    return { ok: false, error: "Buscar tendencias en internet usa Gemini: elige Google (Gemini) en Configuración → Asistente." };
+    return { ok: false, error: "Buscar tendencias en internet usa Gemini: pídele a un administrador que elija Google (Gemini) en Configuración → Asistente." };
   }
   try {
     const cuota = await verificarCuotaIA(userId);
@@ -130,9 +130,9 @@ export async function searchNewsAboutCore(userId: string, input: { query: string
   const query = input.query.trim().slice(0, 200);
   if (query.length < 3) return { ok: false, error: "Escribe a quién o qué buscar (mínimo 3 caracteres)." };
   const ai = await getGroundedAi();
-  if (!ai) return { ok: false, error: "Falta la clave del modelo (Configuración → Asistente)." };
+  if (!ai) return { ok: false, error: "Falta la clave del modelo (la conecta un administrador en Configuración → Asistente)." };
   if (ai === "otro-proveedor") {
-    return { ok: false, error: "Buscar noticias usa Gemini: elige Google (Gemini) en Configuración → Asistente." };
+    return { ok: false, error: "Buscar noticias usa Gemini: pídele a un administrador que elija Google (Gemini) en Configuración → Asistente." };
   }
   try {
     const cuota = await verificarCuotaIA(userId);

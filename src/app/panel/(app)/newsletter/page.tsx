@@ -7,6 +7,7 @@ import { requirePermiso } from "@/lib/auth";
 import { getNewsletterSettings, getProviderStatus } from "@/lib/newsletter/settings";
 import { createEdition, deleteSubscriber, unsubscribeSubscriber } from "./actions";
 import { SettingsForm } from "./settings-form";
+import { BorrarEdicion } from "./borrar-edicion";
 
 // Se calcula en cada petición, nunca durante la compilación.
 export const dynamic = "force-dynamic";
@@ -136,7 +137,7 @@ async function Ediciones() {
         const est = estado[e.status as keyof typeof estado] ?? estado.borrador;
         const notas = Array.isArray(e.articleSlugs) ? (e.articleSlugs as string[]).length : 0;
         return (
-          <li key={e.id}>
+          <li key={e.id} className="relative">
             <Link href={`/panel/newsletter/${e.id}`} className="group flex h-full flex-col gap-3 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow)] transition hover:border-[var(--accent)] hover:shadow-[var(--shadow-hover)]">
               <div className="flex items-start justify-between gap-3">
                 <span className="text-base font-semibold leading-snug">{e.subject}</span>
@@ -152,9 +153,13 @@ async function Ediciones() {
               <div className="mt-auto flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-[var(--border)] pt-3 text-xs text-[var(--fg-muted)]">
                 <span className="inline-flex items-center gap-1"><Newspaper size={13} aria-hidden /> {notas} {notas === 1 ? "nota" : "notas"}</span>
                 {e.status !== "borrador" && <span className="inline-flex items-center gap-1"><CheckCircle2 size={13} aria-hidden /> {e.delivered} entregados{e.failed ? ` · ${e.failed} fallidos` : ""}</span>}
-                <span className="ml-auto inline-flex items-center gap-1 font-semibold text-[var(--accent)] opacity-0 transition group-hover:opacity-100">Abrir <ArrowRight size={13} aria-hidden /></span>
+                <span className={`ml-auto inline-flex items-center gap-1 font-semibold text-[var(--accent)] opacity-0 transition group-hover:opacity-100 ${e.status === "borrador" ? "mr-10" : ""}`}>Abrir <ArrowRight size={13} aria-hidden /></span>
               </div>
             </Link>
+            {/* Fuera del enlace (un botón no puede ir dentro de un <a>); solo los borradores se pueden eliminar. */}
+            {e.status === "borrador" && (
+              <div className="absolute bottom-2.5 right-3"><BorrarEdicion id={e.id} asunto={e.subject} /></div>
+            )}
           </li>
         );
       })}

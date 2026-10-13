@@ -43,7 +43,7 @@ export async function suggestTitlesAndContextsCore(userId: string, input: {
 
   const model = await getAiModel();
   if (!model) {
-    return { ok: false, error: "Para proponer opciones hace falta la clave del modelo (Configuración → Asistente)." };
+    return { ok: false, error: "Para proponer opciones hace falta la clave del modelo (la conecta un administrador en Configuración → Asistente)." };
   }
   try {
     const cuotaIA = await verificarCuotaIA(userId);
