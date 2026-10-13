@@ -31,11 +31,14 @@ export default async function NewsletterPage({ searchParams }: { searchParams: P
   const provider = await getProviderStatus();
   const [{ n: totalEdiciones }] = await db.select({ n: sql<number>`count(*)::int` }).from(newsletterEditions);
   const esAdmin = user.role === "administrador";
+  // «Ajustes» (remitente y clave del correo) es solo de administradores: a los demás ni se les muestra.
   const tabs = [
     ["ediciones", "Ediciones", Newspaper, totalEdiciones],
     ["suscriptores", "Suscriptores", Users, counts.activos + counts.pendientes],
-    ["ajustes", "Ajustes", Settings2, null],
+    ...(esAdmin ? ([["ajustes", "Ajustes", Settings2, null]] as const) : []),
   ] as const;
+  // Quien no es administrador y abre ?tab=ajustes a mano vuelve a las ediciones.
+  const pestana = tab === "ajustes" && !esAdmin ? "ediciones" : tab;
   // Cada indicador con su ícono y su tono, para leerlos de un vistazo.
   const indicadores = [
     { l: "Activos", v: counts.activos, ayuda: "reciben el boletín", Icono: CheckCircle2, tono: "text-[#15803d] bg-[#16a34a]/12" },
@@ -91,19 +94,19 @@ export default async function NewsletterPage({ searchParams }: { searchParams: P
           <Link
             key={id}
             href={`?tab=${id}`}
-            aria-current={tab === id ? "page" : undefined}
-            className={`inline-flex min-h-10 items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-semibold transition ${tab === id ? "bg-[var(--accent)] text-[var(--accent-fg)]" : "text-[var(--fg-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)]"}`}
+            aria-current={pestana === id ? "page" : undefined}
+            className={`inline-flex min-h-10 items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-semibold transition ${pestana === id ? "bg-[var(--accent)] !text-[var(--accent-fg)]" : "text-[var(--fg-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)]"}`}
           >
             <Icono size={15} aria-hidden /> {label}
-            {n !== null && <span className={`rounded-full px-1.5 text-xs tabular-nums ${tab === id ? "bg-white/20" : "bg-[var(--surface-2)]"}`}>{n}</span>}
+            {n !== null && <span className={`rounded-full px-1.5 text-xs tabular-nums ${pestana === id ? "bg-white/20" : "bg-[var(--surface-2)]"}`}>{n}</span>}
           </Link>
         ))}
       </nav>
 
-      {tab === "ediciones" && <Ediciones />}
-      {tab === "suscriptores" && <Suscriptores admin={user.role === "administrador"} />}
-      {tab === "ajustes" && (
-        <SettingsForm settings={await getNewsletterSettings()} provider={provider} canManage={user.role === "administrador"} />
+      {pestana === "ediciones" && <Ediciones />}
+      {pestana === "suscriptores" && <Suscriptores admin={esAdmin} />}
+      {pestana === "ajustes" && esAdmin && (
+        <SettingsForm settings={await getNewsletterSettings()} provider={provider} canManage />
       )}
     </div>
   );
