@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, useTransition } from "react";
+import { createContext, useContext, useState, useTransition } from "react";
 import { Check, ChevronDown, Loader2, RotateCcw } from "lucide-react";
 import { guardarDisenoBoletin } from "../actions";
 import { DEFAULT_NEWSLETTER_DESIGN, DEFAULT_NEWSLETTER_SETTINGS, type NewsletterDesign } from "@/lib/newsletter/types";
@@ -86,7 +86,6 @@ function Interruptor({ activo, alCambiar, texto }: { activo: boolean; alCambiar:
 
 // Qué secciones están recogidas: cada una se abre y se cierra para dejar ver las demás y la vista previa.
 const Plegado = createContext<{ cerradas: Set<string>; alternar: (id: string) => void }>({ cerradas: new Set(), alternar: () => {} });
-const PLEGADO_KEY = "cg:newsletter:diseno:plegado";
 const SECCIONES = ["maquetacion", "colores", "cabecera", "tipografia", "mostrar", "textos"];
 
 const Grupo = ({ id, titulo, ayuda, children }: { id: string; titulo: string; ayuda?: string; children: React.ReactNode }) => {
@@ -123,25 +122,9 @@ const Grupo = ({ id, titulo, ayuda, children }: { id: string; titulo: string; ay
 export function DisenoBoletin({ valor, alCambiar, puedeEditar }: { valor: DisenoEditable; alCambiar: (v: DisenoEditable) => void; puedeEditar: boolean }) {
   const [pendiente, empezar] = useTransition();
   const [aviso, setAviso] = useState("");
-  const [cerradas, setCerradas] = useState<Set<string>>(new Set());
-  // Se recuerda en este navegador qué secciones se dejaron recogidas.
-  useEffect(() => {
-    try {
-      const guardado = JSON.parse(localStorage.getItem(PLEGADO_KEY) ?? "[]") as unknown;
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- solo existe en el cliente
-      if (Array.isArray(guardado)) setCerradas(new Set(guardado.filter((x): x is string => typeof x === "string" && SECCIONES.includes(x))));
-    } catch {
-      /* sin almacenamiento: todo abierto */
-    }
-  }, []);
-  const cambiarPlegado = (siguiente: Set<string>) => {
-    setCerradas(siguiente);
-    try {
-      localStorage.setItem(PLEGADO_KEY, JSON.stringify([...siguiente]));
-    } catch {
-      /* ignorar */
-    }
-  };
+  // Las secciones empiezan siempre recogidas (cada vez que se abre el diseño): así se ve la vista previa sin bajar.
+  const [cerradas, setCerradas] = useState<Set<string>>(() => new Set(SECCIONES));
+  const cambiarPlegado = (siguiente: Set<string>) => setCerradas(siguiente);
   const alternar = (id: string) => {
     const x = new Set(cerradas);
     if (x.has(id)) x.delete(id);
