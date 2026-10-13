@@ -17,6 +17,7 @@ import {
   crearSubidaAudioCore,
   transcribirEntrevistaSubidaCore,
   leerEnlacesCore,
+  buscarRelacionadasCore,
 } from "@/lib/ai-core";
 export type {
   GeneratedDraft,
@@ -33,7 +34,9 @@ export type {
   CoverImageResult,
   MaterialResult,
   EnlacesResult,
+  RelacionadasResult,
 } from "@/lib/ai-core";
+export type { NotaRelacionada } from "@/lib/ai/relacionadas-html";
 
 // Redacta un borrador con IA. Exige el permiso «articulos» y delega en la función núcleo, que descuenta la cuota de IA.
 export async function generateArticleDraft(...args: Parameters<typeof generateArticleDraftCore> extends [string, ...infer R] ? R : never) {
@@ -101,3 +104,8 @@ export async function leerEnlaces(...args: Parameters<typeof leerEnlacesCore> ex
   return leerEnlacesCore(user.id, ...args);
 }
 
+// Busca, solo entre las notas de CONtexto Ganadero, las que tratan lo mismo que la nota que se escribe. Exige el permiso «articulos».
+export async function buscarRelacionadas(...args: Parameters<typeof buscarRelacionadasCore> extends [string, ...infer R] ? R : never) {
+  const user = await requirePermiso("articulos");
+  return buscarRelacionadasCore(user.id, ...args);
+}

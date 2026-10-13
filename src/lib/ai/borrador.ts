@@ -11,6 +11,8 @@ import { escapeHtml as esc } from "@/lib/escape";
 import { investigarTema } from "@/lib/ai/investigacion";
 import { sistemaConEstilo } from "@/lib/ai/estilo";
 import { cifrasSinRespaldo, citasSinRespaldo, sinCifrasInventadas, sinCitasInventadas } from "@/lib/ai/verificacion";
+import { buscarRelacionadasCore } from "@/lib/ai/relacionadas";
+import { aplicarRelacionadas, limpiarRemisiones } from "@/lib/ai/relacionadas-html";
 
 
 // Forma que debe tener el borrador que devuelve el modelo: título, resumen, cuerpo, ficha SEO, etiquetas, palabras clave y variantes de ficha.
@@ -45,6 +47,7 @@ export type GenerateResult =
 /** Cómo mantener la nota sobre su tema y cómo citar a las fuentes: va en la generación completa y en la reescritura del cuerpo. */
 const REGLAS_ENFOQUE_Y_CITAS = [
   "ENFOQUE (obligatorio): la nota desarrolla EXACTAMENTE el hecho del título y del encargo. Abre con ese hecho; cada párrafo siguiente debe explicarlo, ampliarlo o dar su contexto directo, y enlazarse con el anterior con una frase puente. Las cifras y el contexto del sector entran solo si ayudan a entender ESE hecho; no cambies de tema, no abras secciones sobre asuntos distintos y no rellenes con estadísticas generales.",
+  "ENLACES (prohibido inventarlos): no escribas remisiones como «Lea en CONtexto ganadero: …», ni enlaces a otras notas, ni enlaces «#» o vacíos. Las notas relacionadas reales del sitio las añade el sistema al final; tú solo enlazas a las fuentes que consten en el material o el dossier.",
   "CITAS (obligatorio cuando existan): incluye de 2 a 4 citas textuales de las declaraciones literales que consten en el material o en el dossier (o en el texto de las noticias de referencia). Cada una va entre comillas angulares «…», copiada EXACTAMENTE, atribuida a quien la dijo con su cargo («dijo …», «según …») y con la frase clave dentro de <strong>…</strong>. Una cita larga puede ir en un <blockquote><p>…</p></blockquote>. Si no hay declaraciones literales, NO inventes ninguna: parafrasea y atribuye.",
 ].join("\n");
 
@@ -151,7 +154,15 @@ export async function generateArticleDraftCore(userId: string, input: {
       object.body = sinCitasInventadas(object.body, citasMalas);
     }
     const draft = stripMarkers(object);
+    // Si el modelo imitó el estilo con remisiones sin destino, se quitan; las notas relacionadas salen de la base, nunca del modelo.
+    draft.body = limpiarRemisiones(draft.body);
     if (fuentes.length) draft.body = `${draft.body}${fuentesHtml(fuentes)}`;
+    try {
+      const rel = await buscarRelacionadasCore(userId, { title: draft.title, excerpt: draft.excerpt, body: draft.body, limite: 3 });
+      if (rel.ok && rel.notas.length) draft.body = aplicarRelacionadas(draft.body, rel.notas);
+    } catch (e) {
+      console.error("generateArticleDraft (relacionadas):", e);
+    }
     return { ok: true, mode: "ia", draft };
   } catch (err) {
     console.error("generateArticleDraft:", err);
@@ -308,6 +319,7 @@ export async function regenerateDraftPartCore(userId: string, input: {
     const { object, usage: uso1 } = await generateObject({ model, schema: PART_SCHEMAS[input.part], system: sistema, prompt });
     await registrarUsoIA(userId, uso1);
     const value: Partial<GeneratedDraft> = stripMarkers(object);
+    if (value.body) value.body = limpiarRemisiones(value.body);
     // El cuerpo reescrito también pasa por la verificación: sin cifras ni citas que no consten en lo que se le dio.
     if (value.body) {
       const respaldo = [input.title, input.prompt, mat, input.current].join("\n");

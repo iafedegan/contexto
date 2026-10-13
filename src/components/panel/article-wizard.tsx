@@ -55,6 +55,7 @@ import { SiteArticlePreview, type SitePreviewChrome } from "@/components/panel/s
 import { FuenteCards, PantallaEnlaces, PantallaEntrevista, PantallaIdeas, PantallaNoticias, type Fuente } from "@/components/panel/wizard-fuentes";
 import { WizardStepper } from "@/components/panel/wizard-stepper";
 import { BotonVoz } from "@/components/panel/boton-voz";
+import { PanelRelacionadas } from "@/components/panel/panel-relacionadas";
 import { TarjetaEstilo, type EstadoEstilo } from "@/components/panel/tarjeta-estilo";
 import { duracionWav, esVideo, ExtraerAudioError, extraerAudioDeVideo, partirWav } from "@/lib/audio-extract";
 import { aplicarTipo, encodeSpec, renderChartSvg, TIPOS_GRAFICA, type ChartSpec, type TipoGrafica } from "@/lib/chart-svg";
@@ -1315,6 +1316,7 @@ export function ArticleWizard({
                 </button>
               </div>
             )}
+            <PanelRelacionadas title={title} excerpt={excerpt} body={body} excluirId={savedId || undefined} alCambiar={setBody} />
             <div className="flex shrink-0 items-center gap-3">
               <div className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-[var(--border)]" role="meter" aria-valuenow={words} aria-valuemin={0} aria-valuemax={400} aria-label="Palabras">
                 <span className="absolute inset-y-0 left-0 rounded-full transition-all duration-300" style={{ width: `${Math.min(100, (words / 400) * 100)}%`, background: words >= 250 ? "#16a34a" : "#d97706" }} />

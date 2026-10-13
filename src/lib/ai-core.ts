@@ -10,4 +10,5 @@ export * from "@/lib/ai/ideas-noticias";
 export * from "@/lib/ai/investigacion";
 export * from "@/lib/ai/opciones";
 export * from "@/lib/ai/portada";
+export * from "@/lib/ai/relacionadas";
 export * from "@/lib/ai/verificacion";
