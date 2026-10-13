@@ -99,6 +99,7 @@ export default async function ArticleEditorPage({
           canPublish={canPublish(session!.user.role)}
           canPortada={await tienePermiso(session!.user.id, session!.user.role, "portada")}
           estilo={estilo}
+          estiloInfo={est.diagnostico ? { generadoEn: est.diagnostico.generadoEn, muestras: est.diagnostico.muestras, palabras: est.diagnostico.palabras } : null}
         />
       );
     }
@@ -148,6 +149,7 @@ export default async function ArticleEditorPage({
           canPublish={canPublish(session!.user.role)}
           canPortada={await tienePermiso(session!.user.id, session!.user.role, "portada")}
           estilo={estilo}
+          estiloInfo={est.diagnostico ? { generadoEn: est.diagnostico.generadoEn, muestras: est.diagnostico.muestras, palabras: est.diagnostico.palabras } : null}
           savedAs={guardado}
           initial={{
             id: row.id,

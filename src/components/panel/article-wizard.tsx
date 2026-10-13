@@ -55,6 +55,7 @@ import { SiteArticlePreview, type SitePreviewChrome } from "@/components/panel/s
 import { FuenteCards, PantallaEnlaces, PantallaEntrevista, PantallaIdeas, PantallaNoticias, type Fuente } from "@/components/panel/wizard-fuentes";
 import { WizardStepper } from "@/components/panel/wizard-stepper";
 import { BotonVoz } from "@/components/panel/boton-voz";
+import { TarjetaEstilo, type EstadoEstilo } from "@/components/panel/tarjeta-estilo";
 import { duracionWav, esVideo, ExtraerAudioError, extraerAudioDeVideo, partirWav } from "@/lib/audio-extract";
 import { aplicarTipo, encodeSpec, renderChartSvg, TIPOS_GRAFICA, type ChartSpec, type TipoGrafica } from "@/lib/chart-svg";
 import { InteractiveChart } from "@/components/interactive-chart";
@@ -119,6 +120,7 @@ export function ArticleWizard({
   canPublish = false,
   canPortada = false,
   estilo = "sin",
+  estiloInfo = null,
   savedAs,
 }: {
   categories: (Option & { parentId?: string | null })[];
@@ -139,7 +141,9 @@ export function ArticleWizard({
   /** Puede ubicar notas en la portada del sitio (permiso «portada»). */
   canPortada?: boolean;
   /** Estilo de escritura de la persona: «activo» (la IA lo usa), «apagado» (lo tiene pero lo desactivó) o «sin» (aún no lo carga). */
-  estilo?: "activo" | "apagado" | "sin";
+  estilo?: EstadoEstilo;
+  /** Datos del diagnóstico de estilo (fecha, notas, palabras) para el aviso del paso 1. */
+  estiloInfo?: { generadoEn: string; muestras: number; palabras: number } | null;
   /** Resultado del último guardado (?guardado=…), para confirmarlo. */
   savedAs?: string;
 }) {
@@ -147,6 +151,8 @@ export function ArticleWizard({
   const STEPS: readonly { key: StepKey; label: string }[] = mode === "ia" ? STEPS_IA : STEPS_MANUAL;
   const [step, setStep] = useState(() => Math.max(0, STEPS.findIndex((x) => x.key === startStep)));
   const [context, setContext] = useState("");
+  // Estado del estilo propio: arranca como lo guardó la persona y cambia aquí mismo si lo apaga o lo vuelve a encender.
+  const [estiloAhora, setEstiloAhora] = useState<EstadoEstilo>(estilo);
   // Tema -> la IA propone títulos y contextos -> el redactor elige y genera.
   const [topic, setTopic] = useState("");
   const [options, setOptions] = useState<TitleContextOptions | null>(null);
@@ -776,13 +782,13 @@ export function ArticleWizard({
             {mode === "ia" && (
               <Link
                 href="/panel/configuracion#estilo"
-                title={estilo === "activo" ? "La IA redacta con el diagnóstico de tu estilo. Pulsa para verlo o cambiarlo." : "Carga notas tuyas y la IA aprenderá cómo escribes."}
+                title={estiloAhora === "activo" ? "La IA redacta con el diagnóstico de tu estilo. Pulsa para verlo o cambiarlo." : "Carga notas tuyas y la IA aprenderá cómo escribes."}
                 className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-semibold transition ${
-                  estilo === "activo" ? "bg-[var(--accent)]/12 text-[var(--accent)]" : "border border-[var(--border-strong)] text-[var(--fg-muted)] hover:text-[var(--accent)]"
+                  estiloAhora === "activo" ? "bg-[var(--accent)]/12 text-[var(--accent)]" : "border border-[var(--border-strong)] text-[var(--fg-muted)] hover:text-[var(--accent)]"
                 }`}
               >
                 <PenLine size={12} aria-hidden />
-                {estilo === "activo" ? "Escribiendo con tu estilo" : estilo === "apagado" ? "Tu estilo está apagado" : "Enseña a la IA cómo escribes"}
+                {estiloAhora === "activo" ? "Escribiendo con tu estilo" : estiloAhora === "apagado" ? "Tu estilo está apagado" : "Enseña a la IA cómo escribes"}
               </Link>
             )}
             <span role="status" aria-live="polite" className="text-[var(--fg-muted)]">
@@ -1014,6 +1020,7 @@ export function ArticleWizard({
                     />
                   )}
                 </div>
+                <div className="flex min-h-0 min-w-0 flex-col gap-3">
                 <FuenteCards
                   onElegir={setFuente}
                   notas={{
@@ -1023,6 +1030,8 @@ export function ArticleWizard({
                     enlaces: material.some((m) => m.kind === "enlace") ? `${material.filter((m) => m.kind === "enlace").length} cargados` : undefined,
                   }}
                 />
+                {mode === "ia" && <TarjetaEstilo estado={estiloAhora} info={estiloInfo} alCambiar={setEstiloAhora} />}
+                </div>
               </div>
             )}
 
