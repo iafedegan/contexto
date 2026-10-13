@@ -5,7 +5,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { GripVertical, Inbox, X, ArrowUp, ArrowDown, ChevronLeft, Download, FileText, Loader2, Palette } from "lucide-react";
 import { BibliotecaNotas, MIME_NOTA, type Nota } from "./biblioteca-notas";
-import { deleteEdition, previewEdition, saveEdition, sendEditionChunk, sendTestEmail } from "../actions";
+import { deleteEdition, guardarAudiencia, previewEdition, saveEdition, sendEditionChunk, sendTestEmail } from "../actions";
+import { Destinatarios, nombrePais } from "./destinatarios";
+import { describirAudiencia, type Audiencia } from "@/lib/newsletter/audiencia-tipos";
+import type { OpcionesAudiencia } from "@/lib/newsletter/audiencia";
 import { DisenoBoletin, type DisenoEditable } from "./diseno-boletin";
 import { descargarPdfBoletin } from "./pdf-boletin";
 
@@ -13,8 +16,10 @@ import { descargarPdfBoletin } from "./pdf-boletin";
 type Content = { subject: string; preheader: string; intro: string; articleSlugs: string[] };
 
 // Editor de una edición del boletín: asunto, textos, notas elegidas y envío.
-export function EditionEditor({ id, status, recipients, progress, initial, articles, diseno, puedeDisenar }: {
-  id: string; status: string; recipients: number; progress: { delivered: number; total: number; failed: number };
+export function EditionEditor({ id, status, recipients: recipientsInicial, audiencia, opciones, progress, initial, articles, diseno, puedeDisenar }: {
+  id: string; status: string; recipients: number;
+  /** A quién va y qué filtros se pueden elegir. */
+  audiencia: Audiencia; opciones: OpcionesAudiencia; progress: { delivered: number; total: number; failed: number };
   initial: Content; articles: Nota[];
   /** Diseño guardado del correo y si esta persona puede cambiarlo. */
   diseno: DisenoEditable; puedeDisenar: boolean;
@@ -32,6 +37,20 @@ export function EditionEditor({ id, status, recipients, progress, initial, artic
   const [msg, setMsg] = useState("");
   const [to, setTo] = useState("");
   const [sending, setSending] = useState(false);
+  // Público de la edición: cada cambio se guarda (con una pausa) y devuelve cuántas personas la recibirían.
+  const [aud, setAud] = useState(audiencia);
+  const [cuantos, setCuantos] = useState(recipientsInicial);
+  const primeraAud = useRef(true);
+  useEffect(() => {
+    if (primeraAud.current) { primeraAud.current = false; return; }
+    const t = setTimeout(async () => {
+      const r = await guardarAudiencia(id, aud);
+      setCuantos(r.n);
+      if (!r.ok) setMsg(r.message);
+    }, 500);
+    return () => clearTimeout(t);
+  }, [aud, id]);
+  const recipients = cuantos;
   const [prog, setProg] = useState(progress);
   const [pending, start] = useTransition();
   const locked = status === "enviada";
@@ -77,7 +96,8 @@ export function EditionEditor({ id, status, recipients, progress, initial, artic
 
   // Envía la edición a los suscriptores por tandas, tras pedir confirmación.
   async function send() {
-    if (!confirm(`¿Enviar «${c.subject}» a ${recipients} suscriptores? No se puede deshacer.`)) return;
+    const quien = describirAudiencia(aud, (k) => opciones.ciudades.find((x) => x.clave === k)?.nombre ?? k, nombrePais);
+    if (!confirm(`¿Enviar «${c.subject}» a ${recipients} ${recipients === 1 ? "suscriptor" : "suscriptores"} (${quien})? No se puede deshacer.`)) return;
     setSending(true);
     const s = await saveEdition(id, c);
     if (!s.ok) { setMsg(s.message); setSending(false); return; }
@@ -180,6 +200,8 @@ export function EditionEditor({ id, status, recipients, progress, initial, artic
             </ol>
           </div>
 
+          <Destinatarios valor={aud} alCambiar={setAud} opciones={opciones} cuantos={recipients} bloqueada={status !== "borrador"} />
+
           {locked ? (
             <p className="text-sm">Enviada: {prog.delivered} entregados{prog.failed ? `, ${prog.failed} fallidos` : ""}.</p>
           ) : (
@@ -193,7 +215,7 @@ export function EditionEditor({ id, status, recipients, progress, initial, artic
                 <button className="lx-btn-ghost" disabled={pending || sending} onClick={() => start(async () => setMsg((await sendTestEmail(c, to)).message))}>Enviar prueba</button>
               </div>
               <button className="lx-btn" disabled={sending || recipients === 0} onClick={send}>
-                {sending ? `Enviando… ${prog.delivered}/${prog.total || recipients}` : status === "enviando" ? "Reanudar envío" : `Enviar a ${recipients} suscriptores`}
+                {sending ? `Enviando… ${prog.delivered}/${prog.total || recipients}` : status === "enviando" ? "Reanudar envío" : `Enviar a ${recipients} ${recipients === 1 ? "suscriptor" : "suscriptores"}`}
               </button>
             </div>
           )}

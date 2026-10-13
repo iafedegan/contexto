@@ -403,6 +403,10 @@ export const newsletterSubscribers = pgTable("newsletter_subscribers", {
   /** Precisión de la ubicación compartida, en metros (GPS: pocos; Wi-Fi/antenas: cientos). */
   signupGeoAccuracy: numeric("signup_geo_accuracy"),
   signupCountry: text("signup_country"),
+  /** Ciudad o municipio que la persona escribió al suscribirse (la de `signup_city` sale de la IP y puede no ser la suya). */
+  city: text("city"),
+  /** Temas que la persona eligió al suscribirse (identificadores de `TEMAS_INTERES`); sirve para enviar una edición solo a quien le interesa. */
+  interests: jsonb("interests").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
   signupLat: numeric("signup_lat"),
   signupLon: numeric("signup_lon"),
   confirmed: boolean("confirmed").notNull().default(false),
@@ -544,6 +548,8 @@ export const newsletterEditions = pgTable(
     // Número de la edición, asignado al empezar el envío.
     issue: integer("issue"),
     cursor: text("cursor"),
+    // A quién va: `{}` = todos los suscriptores confirmados; si no, los filtros (ciudades, países, temas, antigüedad). Ver `src/lib/newsletter/audiencia-tipos.ts`.
+    audience: jsonb("audience").$type<Record<string, unknown>>().notNull().default(sql`'{}'::jsonb`),
     total: integer("total").notNull().default(0),
     delivered: integer("delivered").notNull().default(0),
     failed: integer("failed").notNull().default(0),

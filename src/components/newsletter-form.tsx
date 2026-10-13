@@ -7,6 +7,7 @@ import { suscribirBoletin, type BoletinState } from "@/app/acciones/boletin";
 import { t, type Locale } from "@/lib/i18n";
 import { GEO_EVENT, readGeo } from "@/lib/geo-consent";
 import { decidirMedicion, decisionMedicion, visitante } from "@/lib/medicion-cliente";
+import { TEMAS_INTERES } from "@/lib/newsletter/audiencia-tipos";
 
 // Se suscribe a los cambios de la ubicación compartida.
 const subscribeGeo = (cb: () => void) => {
@@ -98,6 +99,28 @@ export function NewsletterForm({ locale, compacto = false }: { locale: Locale; c
               placeholder={locale === "en" ? "Mobile" : "Celular"}
               className="w-full rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] px-3.5 py-2.5 text-[0.95rem] outline-none transition focus:border-[var(--accent)]"
             />
+            <input
+              name="city"
+              autoComplete="address-level2"
+              maxLength={80}
+              placeholder={locale === "en" ? "City or town (optional)" : "Ciudad o municipio (opcional)"}
+              className="w-full rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] px-3.5 py-2.5 text-[0.95rem] outline-none transition focus:border-[var(--accent)]"
+            />
+            <fieldset className="flex flex-col gap-1.5">
+              <legend className="mb-1 text-xs text-[var(--fg-muted)]">
+                {locale === "en" ? "Topics you care about (optional) — so we send you what is useful" : "Temas que te interesan (opcional): así te enviamos lo que te sirve"}
+              </legend>
+              <div className="flex flex-wrap gap-1.5">
+                {TEMAS_INTERES.map((tema) => (
+                  <label key={tema.id} className="cursor-pointer">
+                    <input type="checkbox" name="temas" value={tema.id} className="peer sr-only" />
+                    <span className="inline-block rounded-full border border-[var(--border)] px-2.5 py-1 text-xs text-[var(--fg-muted)] transition peer-checked:border-[var(--accent)] peer-checked:bg-[var(--accent)] peer-checked:text-[var(--accent-fg)] peer-focus-visible:ring-2 peer-focus-visible:ring-[var(--accent)]">
+                      {locale === "en" ? tema.en : tema.es}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
             {geo && (
               <>
                 <input type="hidden" name="geoLat" value={geo.lat} />

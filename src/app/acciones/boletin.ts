@@ -21,6 +21,7 @@ import { clientIp, hit } from "@/lib/rate-limit";
 import { verifyHuman } from "@/lib/turnstile";
 import { sendConfirmationEmail } from "@/lib/newsletter/confirm";
 import { solicitarAlta } from "@/lib/newsletter/alta";
+import { sanitizarAudiencia } from "@/lib/newsletter/audiencia-tipos";
 import { reverseGeocode, sourceFromAccuracy, validAccuracy, validCoords } from "@/lib/geo-reverse";
 import { EMAIL_RE, fechaNacimientoValida } from "@/lib/validate";
 import { esUuid } from "@/lib/lectores-entrada";
@@ -60,6 +61,9 @@ export async function suscribirBoletin(
   const lastName = String(formData.get("lastName") ?? "").trim().slice(0, 120) || null;
   const birthDate = fechaNacimientoValida(String(formData.get("birthDate") ?? "").trim());
   const mobile = String(formData.get("mobile") ?? "").trim().slice(0, 40) || null;
+  // Opcionales: la ciudad que escribe la persona y los temas que le interesan (solo los de la lista, para poder enviarle lo que le sirve).
+  const city = String(formData.get("city") ?? "").replace(/\s+/g, " ").trim().slice(0, 80) || null;
+  const interests = sanitizarAudiencia({ temas: formData.getAll("temas") }).temas;
 
   // Trazabilidad interna (nunca se le muestra al suscriptor): Vercel ya
   // resuelve la ciudad a partir de la IP en el borde, sin llamar a un
@@ -108,6 +112,8 @@ export async function suscribirBoletin(
       signupCountry,
       signupLat,
       signupLon,
+      city,
+      interests,
     });
     // El correo de confirmación sale en cuanto hay proveedor configurado. Un fallo al enviarlo no debe romper el alta:
     // queda pendiente y trazable. La respuesta es la misma de siempre, para no revelar nada.

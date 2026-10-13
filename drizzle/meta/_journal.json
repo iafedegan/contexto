@@ -92,6 +92,13 @@
       "when": 1791344788387,
       "tag": "0012_lectura_de_suscriptores",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1791916713118,
+      "tag": "0013_segmentos_del_boletin",
+      "breakpoints": true
     }
   ]
 }

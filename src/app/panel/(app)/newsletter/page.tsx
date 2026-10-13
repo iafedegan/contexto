@@ -8,6 +8,7 @@ import { getNewsletterSettings, getProviderStatus } from "@/lib/newsletter/setti
 import { createEdition, deleteSubscriber, unsubscribeSubscriber } from "./actions";
 import { SettingsForm } from "./settings-form";
 import { BorrarEdicion } from "./borrar-edicion";
+import { TEMAS_INTERES } from "@/lib/newsletter/audiencia-tipos";
 
 // Se calcula en cada petición, nunca durante la compilación.
 export const dynamic = "force-dynamic";
@@ -183,8 +184,11 @@ async function Suscriptores({ admin }: { admin: boolean }) {
             <span>
               {r.firstName || r.lastName ? `${r.firstName ?? ""} ${r.lastName ?? ""}`.trim() + " · " : ""}
               {r.email}
-              {r.signupCity && (
-                <span className="ml-2 text-xs text-[var(--fg-muted)]">· {r.signupCity}</span>
+              {(r.city || r.signupCity) && (
+                <span className="ml-2 text-xs text-[var(--fg-muted)]">· {r.city || r.signupCity}</span>
+              )}
+              {Array.isArray(r.interests) && r.interests.length > 0 && (
+                <span className="ml-2 text-xs text-[var(--fg-muted)]">· {(r.interests as string[]).map((t) => TEMAS_INTERES.find((x) => x.id === t)?.es ?? t).join(", ")}</span>
               )}
               {r.signupPostal && (
                 <span className="ml-2 text-xs text-[var(--fg-muted)]">· C.P. {r.signupPostal}</span>

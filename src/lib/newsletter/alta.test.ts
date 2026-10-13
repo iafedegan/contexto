@@ -73,3 +73,24 @@ test("las solicitudes simultáneas de la misma dirección no fallan ni duplican"
   const filas = await bd.db.select().from(t).where(eq(t.email, "carrera@example.com"));
   assert.equal(filas.length, 1);
 });
+
+test("la ciudad y los temas elegidos se guardan en el alta; en una alta pendiente solo se completan si estaban vacíos", async () => {
+  await alta.solicitarAlta("temas@example.com", { city: "Medellín", interests: ["precios", "leche"] });
+  let f = await fila("temas@example.com");
+  assert.equal(f.city, "Medellín");
+  assert.deepEqual(f.interests, ["precios", "leche"]);
+  // Una segunda solicitud (otra persona con la misma dirección pendiente) no pisa lo ya elegido.
+  await alta.solicitarAlta("temas@example.com", { city: "Cali", interests: ["sanidad"] });
+  f = await fila("temas@example.com");
+  assert.equal(f.city, "Medellín");
+  assert.deepEqual(f.interests, ["precios", "leche"]);
+  // Sin temas elegidos antes, sí se completan.
+  await alta.solicitarAlta("sintemas@example.com");
+  await alta.solicitarAlta("sintemas@example.com", { interests: ["genetica"] });
+  assert.deepEqual((await fila("sintemas@example.com")).interests, ["genetica"]);
+  // Sin temas ni ciudad, los valores por defecto.
+  await alta.solicitarAlta("nada@example.com", { interests: [] });
+  const n = await fila("nada@example.com");
+  assert.deepEqual(n.interests, []);
+  assert.equal(n.city, null);
+});

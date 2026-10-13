@@ -2,13 +2,15 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { and, asc, eq, gt, isNull, lte, sql } from "drizzle-orm";
+import { and, asc, eq, gt, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { newsletterEditions, newsletterSubscribers, siteSettings } from "@/db/schema";
 import { requirePermiso, requireRole } from "@/lib/auth";
 import { encryptSecret } from "@/lib/secrets";
 import { hit } from "@/lib/rate-limit";
 import { buildMessage, nextIssueNumber, prepareRender, type EditionContent } from "@/lib/newsletter/edition";
+import { contarAudiencia, destinatariosWhere } from "@/lib/newsletter/audiencia";
+import { esSegmento, sanitizarAudiencia } from "@/lib/newsletter/audiencia-tipos";
 import { sendMany } from "@/lib/newsletter/send";
 import { NEWSLETTER_KEY, NEWSLETTER_SECRET_KEY, getNewsletterSettings, getProviderStatus } from "@/lib/newsletter/settings";
 import { sanitizeNewsletterDesign, sanitizeNewsletterSettings, type NewsletterSettings } from "@/lib/newsletter/types";
@@ -134,16 +136,32 @@ export type SendProgress = {
 // Tiempo máximo de cada tanda de envío (40 s), para no pasar el límite de la función.
 const TIME_BUDGET_MS = 40_000;
 
-/** Suscriptores que deben recibir el boletín: confirmados y sin baja. */
-const recipientsWhere = (startedAt: Date | null) =>
-  and(
-    eq(newsletterSubscribers.confirmed, true),
-    isNull(newsletterSubscribers.unsubscribedAt),
-    ...(startedAt ? [lte(newsletterSubscribers.createdAt, startedAt)] : []),
-  );
+/**
+ * A quién va una edición: los suscriptores confirmados y sin baja que cumplen sus filtros (sin filtros, todos). Se guarda en la
+ * edición y se fija al empezar el envío.
+ */
+export async function guardarAudiencia(id: string, audiencia: unknown): Promise<{ ok: boolean; message: string; n: number }> {
+  await requirePermiso("newsletter");
+  const a = sanitizarAudiencia(audiencia);
+  const res = await db
+    .update(newsletterEditions)
+    .set({ audience: a, updatedAt: sql`now()` })
+    .where(and(eq(newsletterEditions.id, id), eq(newsletterEditions.status, "borrador")))
+    .returning({ id: newsletterEditions.id });
+  const n = await contarAudiencia(a);
+  if (res.length === 0) return { ok: false, message: "Esta edición ya se envió y no se puede cambiar su público.", n };
+  REVALIDATE();
+  return { ok: true, message: "Público guardado", n };
+}
+
+/** Cuántas personas recibirían una edición con estos filtros (para mostrarlo mientras se eligen). */
+export async function contarDestinatarios(audiencia: unknown): Promise<number> {
+  await requirePermiso("newsletter");
+  return contarAudiencia(sanitizarAudiencia(audiencia));
+}
 
 /**
- * Envía la edición a los suscriptores confirmados, por tandas de 100. Es
+ * Envía la edición a su público (los suscriptores confirmados que cumplan sus filtros), por tandas de 100. Es
  * REANUDABLE: guarda el último suscriptor procesado, así que si una llamada
  * agota su tiempo (o el proveedor falla) se continúa desde ahí, sin repetir
  * correos. El cliente la vuelve a llamar hasta que devuelve `done`.
@@ -174,12 +192,13 @@ export async function sendEditionChunk(id: string): Promise<SendProgress> {
       return { ok: false, done: false, total: 0, delivered: 0, message: "Elige al menos una nota antes de enviar." };
     }
     const startedAt = new Date();
+    const audiencia = sanitizarAudiencia(edition.audience);
     const [{ n }] = await db
       .select({ n: sql<number>`count(*)::int` })
       .from(newsletterSubscribers)
-      .where(recipientsWhere(startedAt));
+      .where(destinatariosWhere(audiencia, startedAt));
     if (n === 0) {
-      return { ok: false, done: false, total: 0, delivered: 0, message: "Todavía no hay suscriptores confirmados." };
+      return { ok: false, done: false, total: 0, delivered: 0, message: esSegmento(audiencia) ? "Nadie cumple esos filtros: cambia el público de la edición." : "Todavía no hay suscriptores confirmados." };
     }
     const issue = await nextIssueNumber();
     // Atómico: si dos personas pulsan a la vez, solo una arranca el envío.
@@ -204,12 +223,14 @@ export async function sendEditionChunk(id: string): Promise<SendProgress> {
 
   let cursor = edition.cursor;
   let delivered = edition.delivered;
+  // El público quedó fijado al empezar el envío: reanudar sigue sobre el mismo.
+  const audiencia = sanitizarAudiencia(edition.audience);
 
   while (Date.now() - t0 < TIME_BUDGET_MS) {
     const batch = await db
       .select({ id: newsletterSubscribers.id, email: newsletterSubscribers.email, autorizo: sql<boolean>`${newsletterSubscribers.readingAuthorizedAt} is not null` })
       .from(newsletterSubscribers)
-      .where(and(recipientsWhere(edition.startedAt), ...(cursor ? [gt(newsletterSubscribers.id, cursor)] : [])))
+      .where(and(destinatariosWhere(audiencia, edition.startedAt), ...(cursor ? [gt(newsletterSubscribers.id, cursor)] : [])))
       .orderBy(asc(newsletterSubscribers.id))
       .limit(100);
 

@@ -12,6 +12,6 @@ export async function GET() {
   const rows = await db.select().from(newsletterSubscribers).orderBy(desc(newsletterSubscribers.createdAt));
   // Celda CSV entre comillas; si parece una fórmula, antepone un apóstrofo.
   const cell = (v: string) => `"${(/^[=+\-@]/.test(v) ? `'${v}` : v).replace(/"/g, '""')}"`;
-  const csv = ["correo,estado,alta", ...rows.map((r) => [cell(r.email), r.unsubscribedAt ? "baja" : r.confirmed ? "activo" : "pendiente", r.createdAt.toISOString()].join(","))].join("\n");
+  const csv = ["correo,estado,alta,ciudad,pais,temas", ...rows.map((r) => [cell(r.email), r.unsubscribedAt ? "baja" : r.confirmed ? "activo" : "pendiente", r.createdAt.toISOString(), cell(r.city || r.signupCity || ""), cell(r.signupCountry ?? ""), cell(Array.isArray(r.interests) ? (r.interests as string[]).join(" ") : "")].join(","))].join("\n");
   return new Response(csv, { headers: { "content-type": "text/csv; charset=utf-8", "content-disposition": 'attachment; filename="suscriptores.csv"', "cache-control": "no-store" } });
 }

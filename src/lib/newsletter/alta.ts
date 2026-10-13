@@ -33,6 +33,10 @@ export type DatosAlta = Partial<{
   signupCountry: string | null;
   signupLat: string | null;
   signupLon: string | null;
+  /** Ciudad o municipio que escribió la persona. */
+  city: string | null;
+  /** Temas de interés elegidos (identificadores de `TEMAS_INTERES`, ya validados por quien llama). */
+  interests: string[];
 }>;
 
 /** Qué hacer tras recibir una dirección: nada (ya suscrita) o enviar el correo de confirmación con este token. */
@@ -42,7 +46,7 @@ export type ResultadoAlta = { estado: "ya_suscrito" } | { estado: "pendiente"; t
 const CORREOS_POR_HORA = 3;
 
 // Columnas que se completan con `coalesce` (solo si están vacías) y el tipo con que se compara cada una.
-const COMPLETABLES: Record<keyof DatosAlta, { columna: SQL; tipo: "text" | "date" | "numeric" }> = {
+const COMPLETABLES: Record<Exclude<keyof DatosAlta, "interests">, { columna: SQL; tipo: "text" | "date" | "numeric" }> = {
   firstName: { columna: sql`${t.firstName}`, tipo: "text" },
   lastName: { columna: sql`${t.lastName}`, tipo: "text" },
   birthDate: { columna: sql`${t.birthDate}`, tipo: "date" },
@@ -56,13 +60,14 @@ const COMPLETABLES: Record<keyof DatosAlta, { columna: SQL; tipo: "text" | "date
   signupCountry: { columna: sql`${t.signupCountry}`, tipo: "text" },
   signupLat: { columna: sql`${t.signupLat}`, tipo: "numeric" },
   signupLon: { columna: sql`${t.signupLon}`, tipo: "numeric" },
+  city: { columna: sql`${t.city}`, tipo: "text" },
 };
 
 // Valores `coalesce(columna, nuevo)` solo para los datos que llegaron: lo ya guardado nunca se pisa.
 function soloVacios(datos: DatosAlta): Record<string, SQL> {
   const set: Record<string, SQL> = {};
-  for (const [clave, valor] of Object.entries(datos) as [keyof DatosAlta, string | null | undefined][]) {
-    if (valor === null || valor === undefined || valor === "") continue;
+  for (const [clave, valor] of Object.entries(datos) as [Exclude<keyof DatosAlta, "interests">, string | null | undefined][]) {
+    if (clave === ("interests" as string) || valor === null || valor === undefined || valor === "") continue;
     const { columna, tipo } = COMPLETABLES[clave];
     const nuevo = tipo === "text" ? sql`${valor}` : tipo === "date" ? sql`${valor}::date` : sql`${valor}::numeric`;
     set[clave] = sql`coalesce(${columna}, ${nuevo})`;
@@ -72,7 +77,7 @@ function soloVacios(datos: DatosAlta): Record<string, SQL> {
 
 // Valores limpios para un alta nueva: sin nulos ni vacíos.
 function limpios(datos: DatosAlta): DatosAlta {
-  return Object.fromEntries(Object.entries(datos).filter(([, v]) => v !== null && v !== undefined && v !== "")) as DatosAlta;
+  return Object.fromEntries(Object.entries(datos).filter(([, v]) => v !== null && v !== undefined && v !== "" && !(Array.isArray(v) && v.length === 0))) as DatosAlta;
 }
 
 /** Registra la solicitud de alta y dice qué hacer a continuación. No envía el correo: eso lo hace quien llama. */
@@ -109,6 +114,8 @@ export async function solicitarAlta(email: string, datos: DatosAlta = {}): Promi
   const token = pendiente ? existente.confirmToken! : randomUUID();
   if (enviar) {
     const cambios: Record<string, SQL | string | boolean | null> = { ...soloVacios(datos) };
+    // Los temas solo se completan si la persona aún no había elegido ninguno: nunca se pisan los de un alta anterior.
+    if (datos.interests?.length) cambios.interests = sql`case when ${t.interests} = '[]'::jsonb then ${JSON.stringify(datos.interests)}::jsonb else ${t.interests} end`;
     if (!pendiente) Object.assign(cambios, { confirmToken: token, confirmed: false, unsubscribedAt: null });
     if (Object.keys(cambios).length) await db.update(t).set(cambios).where(eq(t.id, existente.id));
   }
