@@ -59,7 +59,7 @@ const paragraphs = (text: string, style: string) =>
     .split(/\n\s*\n/)
     .map((p) => p.trim())
     .filter(Boolean)
-    .map((p) => `<p style="${style}">${esc(p).replace(/\n/g, "<br>")}</p>`)
+    .map((p) => `<p class="t-muted" style="${style}">${esc(p).replace(/\n/g, "<br>")}</p>`)
     .join("");
 
 // Fecha larga en español de Colombia, en hora de Bogotá.
@@ -158,18 +158,72 @@ export function renderNewsletterHtml(r: NewsletterRender): string {
         ${separador}
       </td></tr>`;
 
+  // Tarjeta de una rejilla de dos columnas: foto arriba, sección, titular y resumen corto.
+  const tarjeta = (a: EmailArticle, conBorde: boolean) => `
+          <td class="col" width="50%" valign="top" style="padding:0 8px 16px 8px">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="${conBorde ? `border:1px solid ${accent}33;` : ""}border-radius:${Math.min(radio, 14)}px;overflow:hidden"><tr><td style="padding:0">
+              ${d.miniaturas && a.coverImageUrl ? `<a href="${link(a)}"><img src="${esc(absolute(a.coverImageUrl))}" width="260" alt="${esc(a.title)}" style="display:block;width:100%;height:auto;border:0"></a>` : ""}
+              <div style="padding:${conBorde ? "14px 14px 16px 14px" : "12px 0 0 0"}">
+                ${seccion(a, "0 0 6px 0", 10)}
+                <h3 class="t-main" style="margin:0 0 6px 0;font:700 17px/1.25 ${TIT};color:${d.colorTitulos}"><a href="${link(a)}" style="color:inherit;text-decoration:none">${esc(a.title)}</a></h3>
+                ${firma(a)}
+                <p class="t-muted" style="margin:0;font:400 13px/1.55 ${SANS};color:${d.colorTexto}">${esc(recortar(a.excerpt, 110))}</p>
+              </div>
+            </td></tr></table>
+          </td>`;
+  const rejilla = (lista: EmailArticle[], conBorde: boolean) => {
+    const filas: string[] = [];
+    for (let i = 0; i < lista.length; i += 2) {
+      const par = lista.slice(i, i + 2);
+      filas.push(`<tr>${par.map((a) => tarjeta(a, conBorde)).join("")}${par.length === 1 ? `<td class="col" width="50%" style="padding:0 8px"></td>` : ""}</tr>`);
+    }
+    return `
+      <tr><td class="px" style="padding:20px 24px 0 24px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0">${filas.join("")}</table></td></tr>`;
+  };
+
+  // Destacada «editorial»: foto a todo el ancho del correo y un titular grande debajo.
+  const heroEditorial = (a: EmailArticle) => `
+      ${a.coverImageUrl && d.imagenDestacada ? `<tr><td style="padding:8px 0 0 0"><a href="${link(a)}"><img src="${esc(absolute(a.coverImageUrl))}" width="600" alt="${esc(a.title)}" style="display:block;width:100%;height:auto;border:0"></a></td></tr>` : ""}
+      <tr><td class="px" style="padding:26px 32px 0 32px">
+        ${seccion(a, "0 0 10px 0", 11)}
+        <h2 class="t-main" style="margin:0 0 12px 0;font:800 34px/1.1 ${TIT};letter-spacing:-.01em;color:${d.colorTitulos}"><a href="${link(a)}" style="color:inherit;text-decoration:none">${esc(a.title)}</a></h2>
+        ${firma(a)}
+        <p class="t-muted" style="margin:0 0 20px 0;font:400 17px/1.6 ${SANS};color:${d.colorTexto}">${esc(a.excerpt)}</p>
+        ${boton(a)}
+      </td></tr>`;
+
+  // Lista numerada: número grande, sección, titular y, si se quiere, miniatura.
+  const filaNumerada = (a: EmailArticle, n: number) => `
+      <tr><td class="px" style="padding:18px 32px 0 32px">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+          <td width="54" valign="top" style="padding:0 12px 0 0;font:800 34px/1 ${TIT};color:${accent}">${String(n).padStart(2, "0")}</td>
+          <td valign="top">
+            ${seccion(a, "0 0 4px 0", 10)}
+            <h3 class="t-main" style="margin:0 0 4px 0;font:700 18px/1.28 ${TIT};color:${d.colorTitulos}"><a href="${link(a)}" style="color:inherit;text-decoration:none">${esc(a.title)}</a></h3>
+            ${firma(a)}
+            <p class="t-muted" style="margin:0;font:400 13px/1.5 ${SANS};color:${d.colorTexto}">${esc(recortar(a.excerpt, 100))}</p>
+          </td>
+          ${d.miniaturas && a.coverImageUrl ? `<td class="thumb" width="96" valign="top" style="padding:0 0 0 14px"><a href="${link(a)}"><img src="${esc(absolute(a.coverImageUrl))}" width="96" height="96" alt="${esc(a.title)}" style="display:block;width:96px;height:96px;object-fit:cover;border:0;border-radius:${Math.min(radio, 10)}px"></a></td>` : ""}
+        </tr></table>
+      </td></tr>`;
+
   const [lead, ...rest] = r.articles;
+  const mas = rest.length ? rotulo("También en esta edición") : "";
   let cuerpoNotas = "";
   if (d.plantilla === "revista") {
     cuerpoNotas = r.articles
       .map((a, i) => bloqueGrande(a, i === 0 ? 30 : 24, i === 0 ? d.imagenDestacada : d.miniaturas, i === 0 ? "8px 32px 0 32px" : "34px 32px 0 32px"))
       .join("");
-  } else if (d.plantilla === "compacta") {
-    cuerpoNotas = (lead ? bloqueGrande(lead, 24, d.imagenDestacada, "8px 32px 0 32px") : "") + (rest.length ? rotulo("También en esta edición") + rest.map((a) => bloqueFila(a, 92, 110)).join("") : "");
+  } else if (d.plantilla === "editorial") {
+    cuerpoNotas = (lead ? heroEditorial(lead) : "") + (rest.length ? mas + rejilla(rest, false) : "");
+  } else if (d.plantilla === "tarjetas") {
+    cuerpoNotas = r.articles.length ? rejilla(r.articles, true) : "";
+  } else if (d.plantilla === "numerada") {
+    cuerpoNotas = (lead ? bloqueGrande(lead, 28, d.imagenDestacada, "8px 32px 0 32px") : "") + (rest.length ? rotulo("Lo que más debes leer") + rest.map((a, i) => filaNumerada(a, i + 2)).join("") : "");
   } else if (d.plantilla === "minima") {
-    cuerpoNotas = (lead ? bloqueGrande(lead, 26, d.imagenDestacada, "8px 32px 0 32px") : "") + (rest.length ? rotulo("También en esta edición") + rest.map(bloqueTitular).join("") : "");
+    cuerpoNotas = (lead ? bloqueGrande(lead, 26, d.imagenDestacada, "8px 32px 0 32px") : "") + (rest.length ? mas + rest.map(bloqueTitular).join("") : "");
   } else {
-    cuerpoNotas = (lead ? bloqueGrande(lead, 28, d.imagenDestacada, "8px 32px 0 32px") : "") + (rest.length ? rotulo("También en esta edición") + rest.map((a) => bloqueFila(a, 132, 150)).join("") : "");
+    cuerpoNotas = (lead ? bloqueGrande(lead, 28, d.imagenDestacada, "8px 32px 0 32px") : "") + (rest.length ? mas + rest.map((a) => bloqueFila(a, 132, 150)).join("") : "");
   }
 
   // Mensaje de cierre, antes del botón final.
@@ -196,6 +250,7 @@ export function renderNewsletterHtml(r: NewsletterRender): string {
     .px { padding-left:20px !important; padding-right:20px !important; }
     .thumb { display:block !important; width:100% !important; padding:0 0 12px 0 !important; }
     .thumb img { width:100% !important; height:auto !important; }
+    .col { display:block !important; width:100% !important; padding:0 0 16px 0 !important; }
     .brand { font-size:26px !important; }
   }
   @media (prefers-color-scheme: dark) {

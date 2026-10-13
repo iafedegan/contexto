@@ -2,8 +2,11 @@ import { EMAIL_RE } from "@/lib/validate";
 import { HEX6 as HEX } from "@/lib/validate";
 /** Opciones de diseño del correo. Todas con valores seguros: lo inválido se sustituye por el valor por defecto. */
 export type NewsletterDesign = {
-  /** Maquetación de las notas: clásica (destacada + lista), revista (todas con foto grande), compacta (miniaturas chicas) o mínima (solo titulares). */
-  plantilla: "clasica" | "revista" | "compacta" | "minima";
+  /**
+   * Maquetación de las notas: clásica (destacada + lista), editorial (foto a todo el ancho y rejilla de dos columnas), tarjetas
+   * (todas en tarjetas de dos columnas), numerada (destacada + lista numerada), revista (todas con foto grande) o mínima (solo titulares).
+   */
+  plantilla: "clasica" | "editorial" | "tarjetas" | "numerada" | "revista" | "minima";
   /** Tipografía de los titulares (siempre de las que traen todos los clientes de correo). */
   tipografia: "serif" | "sans" | "moderna";
   colorPagina: string;
@@ -28,9 +31,9 @@ export type NewsletterDesign = {
   cierre: string;
 };
 
-/** Diseño actual del boletín: el que ya tenía antes de poder cambiarlo. */
+/** Diseño por defecto del boletín: editorial (foto a todo el ancho y rejilla), con los colores de siempre. */
 export const DEFAULT_NEWSLETTER_DESIGN: NewsletterDesign = {
-  plantilla: "clasica",
+  plantilla: "editorial",
   tipografia: "serif",
   colorPagina: "#f3efe7",
   colorTarjeta: "#ffffff",
@@ -106,7 +109,7 @@ export function sanitizeNewsletterDesign(input: unknown): NewsletterDesign {
   const r = (input && typeof input === "object" ? input : {}) as Record<string, unknown>;
   const d = DEFAULT_NEWSLETTER_DESIGN;
   return {
-    plantilla: opcion(r.plantilla, ["clasica", "revista", "compacta", "minima"] as const, d.plantilla),
+    plantilla: opcion(r.plantilla, ["clasica", "editorial", "tarjetas", "numerada", "revista", "minima"] as const, d.plantilla),
     tipografia: opcion(r.tipografia, ["serif", "sans", "moderna"] as const, d.tipografia),
     colorPagina: color(r.colorPagina, d.colorPagina),
     colorTarjeta: color(r.colorTarjeta, d.colorTarjeta),

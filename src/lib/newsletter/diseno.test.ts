@@ -17,7 +17,7 @@ const render = (design: unknown): string =>
 test("el diseño inválido o ausente vuelve al diseño de siempre", () => {
   assert.deepEqual(sanitizeNewsletterDesign(undefined), DEFAULT_NEWSLETTER_DESIGN);
   const d = sanitizeNewsletterDesign({ plantilla: "otra", colorPagina: "rojo", franja: 99, boton: "x", botonTexto: "  ", mostrarLogo: "sí" });
-  assert.equal(d.plantilla, "clasica");
+  assert.equal(d.plantilla, DEFAULT_NEWSLETTER_DESIGN.plantilla);
   assert.equal(d.colorPagina, DEFAULT_NEWSLETTER_DESIGN.colorPagina);
   assert.equal(d.franja, 4);
   assert.equal(d.boton, "pildora");
@@ -25,16 +25,24 @@ test("el diseño inválido o ausente vuelve al diseño de siempre", () => {
   assert.equal(d.mostrarLogo, false);
 });
 
-test("las cuatro maquetaciones se dibujan con sus notas", () => {
-  for (const plantilla of ["clasica", "revista", "compacta", "minima"]) {
+test("las seis maquetaciones se dibujan con sus notas", () => {
+  for (const plantilla of ["clasica", "editorial", "tarjetas", "numerada", "revista", "minima"]) {
     const h = render({ plantilla });
     for (const n of [1, 2, 3]) assert.match(h, new RegExp(`Titular ${n}`), `${plantilla} no muestra la nota ${n}`);
   }
   // «Mínima»: las demás notas van solo como titular (sin foto ni resumen).
   const minima = render({ plantilla: "minima" });
   assert.doesNotMatch(minima, /Resumen de la nota 2/);
-  // «Revista»: todas con su resumen.
+  // «Revista» y «tarjetas»: todas con su resumen.
   assert.match(render({ plantilla: "revista" }), /Resumen de la nota 2/);
+  assert.match(render({ plantilla: "tarjetas" }), /Resumen de la nota 2/);
+  // «Numerada»: la lista lleva números grandes (02, 03…); «editorial» y «tarjetas» usan dos columnas que se apilan en móvil.
+  assert.match(render({ plantilla: "numerada" }), />02</);
+  assert.match(render({ plantilla: "editorial" }), /class="col"/);
+  assert.match(render({ plantilla: "tarjetas" }), /class="col"/);
+  // Las maquetaciones se distinguen de verdad entre sí.
+  const todas = new Set(["clasica", "editorial", "tarjetas", "numerada", "revista", "minima"].map((p) => render({ plantilla: p })));
+  assert.equal(todas.size, 6);
 });
 
 test("los colores, el botón y lo que se muestra siguen el diseño", () => {

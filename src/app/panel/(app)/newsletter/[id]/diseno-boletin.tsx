@@ -17,13 +17,17 @@ const PALETAS: { nombre: string; v: Pick<DisenoEditable, "colorPagina" | "colorT
   { nombre: "Verde campo", v: { colorPagina: "#eaf1e4", colorTarjeta: "#ffffff", colorTitulos: "#14301c", colorTexto: "#34423a", acento: "#2e8b3f" } },
   { nombre: "Tinta", v: { colorPagina: "#e9ecf1", colorTarjeta: "#ffffff", colorTitulos: "#101828", colorTexto: "#344054", acento: "#1f3f78" } },
   { nombre: "Cálido", v: { colorPagina: "#fbf3e4", colorTarjeta: "#fffdf8", colorTitulos: "#3b2412", colorTexto: "#5a4636", acento: "#c2410c" } },
+  { nombre: "Medianoche", v: { colorPagina: "#0b1210", colorTarjeta: "#141d1a", colorTitulos: "#f4f1ea", colorTexto: "#c3cdc7", acento: "#4ade80" } },
+  { nombre: "Moderno", v: { colorPagina: "#f4f5f7", colorTarjeta: "#ffffff", colorTitulos: "#0f172a", colorTexto: "#475569", acento: "#2563eb" } },
 ];
 
 // Maquetaciones: cómo se ven las notas. El dibujito es un esquema de bloques.
 const MAQUETAS: { id: DisenoEditable["plantilla"]; nombre: string; ayuda: string }[] = [
+  { id: "editorial", nombre: "Editorial", ayuda: "Foto a todo el ancho, titular grande y rejilla" },
+  { id: "tarjetas", nombre: "Tarjetas", ayuda: "Todas las notas en tarjetas de dos columnas" },
+  { id: "numerada", nombre: "Numerada", ayuda: "Una destacada y una lista con números grandes" },
   { id: "clasica", nombre: "Clásica", ayuda: "Una destacada y una lista con miniatura" },
-  { id: "revista", nombre: "Revista", ayuda: "Todas con foto grande" },
-  { id: "compacta", nombre: "Compacta", ayuda: "Miniaturas pequeñas, más notas a la vista" },
+  { id: "revista", nombre: "Revista", ayuda: "Todas con foto grande, una tras otra" },
   { id: "minima", nombre: "Mínima", ayuda: "Una destacada y solo titulares" },
 ];
 
@@ -31,10 +35,13 @@ const MAQUETAS: { id: DisenoEditable["plantilla"]; nombre: string; ayuda: string
 function Esquema({ id }: { id: DisenoEditable["plantilla"] }) {
   const b = "rounded-[2px] bg-current opacity-30";
   const t = "rounded-[2px] bg-current opacity-60";
-  if (id === "revista") return (<div className="flex w-full flex-col gap-1"><div className={`${b} h-5`} /><div className={`${t} h-1`} /><div className={`${b} h-5`} /><div className={`${t} h-1`} /></div>);
-  if (id === "compacta") return (<div className="flex w-full flex-col gap-1"><div className={`${b} h-4`} /><div className="flex gap-1"><div className={`${b} size-3`} /><div className={`${t} mt-1 h-1 flex-1`} /></div><div className="flex gap-1"><div className={`${b} size-3`} /><div className={`${t} mt-1 h-1 flex-1`} /></div></div>);
-  if (id === "minima") return (<div className="flex w-full flex-col gap-1"><div className={`${b} h-4`} /><div className={`${t} h-1`} /><div className={`${t} h-1 w-3/4`} /><div className={`${t} h-1 w-2/3`} /></div>);
-  return (<div className="flex w-full flex-col gap-1"><div className={`${b} h-4`} /><div className="flex gap-1"><div className={`${b} h-3 w-5`} /><div className={`${t} mt-1 h-1 flex-1`} /></div><div className="flex gap-1"><div className={`${b} h-3 w-5`} /><div className={`${t} mt-1 h-1 flex-1`} /></div></div>);
+  const marco = "flex w-full flex-col gap-1";
+  if (id === "editorial") return (<div className={marco}><div className={`${b} h-6`} /><div className={`${t} h-1.5 w-4/5`} /><div className="flex gap-1"><div className={`${b} h-4 flex-1`} /><div className={`${b} h-4 flex-1`} /></div></div>);
+  if (id === "tarjetas") return (<div className="grid w-full grid-cols-2 gap-1"><div className={`${b} h-8`} /><div className={`${b} h-8`} /><div className={`${b} h-8`} /><div className={`${b} h-8`} /></div>);
+  if (id === "numerada") return (<div className={marco}><div className={`${b} h-4`} />{[0, 1, 2].map((i) => (<div key={i} className="flex items-center gap-1"><div className={`${t} h-2 w-2.5`} /><div className={`${t} h-1 flex-1`} /><div className={`${b} size-2.5`} /></div>))}</div>);
+  if (id === "revista") return (<div className={marco}><div className={`${b} h-5`} /><div className={`${t} h-1`} /><div className={`${b} h-5`} /><div className={`${t} h-1`} /></div>);
+  if (id === "minima") return (<div className={marco}><div className={`${b} h-4`} /><div className={`${t} h-1`} /><div className={`${t} h-1 w-3/4`} /><div className={`${t} h-1 w-2/3`} /></div>);
+  return (<div className={marco}><div className={`${b} h-4`} /><div className="flex gap-1"><div className={`${b} h-3 w-5`} /><div className={`${t} mt-1 h-1 flex-1`} /></div><div className="flex gap-1"><div className={`${b} h-3 w-5`} /><div className={`${t} mt-1 h-1 flex-1`} /></div></div>);
 }
 
 // Grupo de botones excluyentes (un valor entre pocos).

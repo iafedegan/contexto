@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { GripVertical, Inbox, X, ArrowUp, ArrowDown, ChevronLeft, FileText, Palette } from "lucide-react";
@@ -182,12 +182,59 @@ export function EditionEditor({ id, status, recipients, progress, initial, artic
         </div>
 
         <div className="flex flex-col gap-2 lg:col-span-2 xl:col-span-1">
-          <div className="flex gap-2 text-sm">
-            <button className={mobile ? "text-[var(--fg-muted)]" : "font-semibold"} onClick={() => setMobile(false)}>Escritorio</button>
-            <button className={mobile ? "font-semibold" : "text-[var(--fg-muted)]"} onClick={() => setMobile(true)}>Móvil</button>
+          <div role="tablist" aria-label="Tamaño de la vista previa" className="flex w-fit gap-1 rounded-full bg-[var(--surface-2)] p-1 text-sm font-semibold">
+            {([[false, "Escritorio"], [true, "Móvil"]] as const).map(([m, t]) => (
+              <button key={t} type="button" role="tab" aria-selected={mobile === m} onClick={() => setMobile(m)}
+                className={`rounded-full px-3 py-1 transition ${mobile === m ? "bg-[var(--surface)] text-[var(--accent)] shadow-sm" : "text-[var(--fg-muted)]"}`}>{t}</button>
+            ))}
           </div>
-          <iframe title="Vista previa del correo" srcDoc={html} sandbox="" className="mx-auto h-[720px] rounded border border-[var(--border)] bg-white" style={{ width: mobile ? 390 : "100%" }} />
+          <VistaPrevia html={html} ancho={mobile ? 390 : 680} />
         </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Vista previa del correo a su tamaño real y reducida para que quepa: si se dibujara en el ancho de la columna (menos de 620 px) los
+ * clientes verían la versión de móvil también en «Escritorio» y todas las maquetaciones parecerían iguales. El alto sigue al contenido.
+ */
+function VistaPrevia({ html, ancho }: { html: string; ancho: number }) {
+  const caja = useRef<HTMLDivElement>(null);
+  const marco = useRef<HTMLIFrameElement>(null);
+  const [disponible, setDisponible] = useState(0);
+  const [alto, setAlto] = useState(900);
+
+  useEffect(() => {
+    const el = caja.current;
+    if (!el) return;
+    const medir = () => setDisponible(el.clientWidth);
+    medir();
+    const ro = new ResizeObserver(medir);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const escala = disponible ? Math.min(1, disponible / ancho) : 1;
+  // Al cargar el contenido se mide su alto real (el iframe es del mismo origen y sin scripts, así que se puede leer).
+  const medirAlto = () => {
+    const h = marco.current?.contentDocument?.documentElement?.scrollHeight;
+    if (h) setAlto(h);
+  };
+
+  return (
+    <div ref={caja} className="max-h-[78vh] overflow-y-auto rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface-2)]">
+      <div className="relative mx-auto" style={{ width: ancho * escala, height: alto * escala }}>
+        <iframe
+          ref={marco}
+          title="Vista previa del correo"
+          srcDoc={html}
+          sandbox="allow-same-origin"
+          onLoad={medirAlto}
+          scrolling="no"
+          className="absolute left-0 top-0 border-0 bg-white"
+          style={{ width: ancho, height: alto, transform: `scale(${escala})`, transformOrigin: "top left" }}
+        />
       </div>
     </div>
   );
