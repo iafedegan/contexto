@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { efectivo, efectivos, exige2fa, porDefecto, RANGO } from "@/lib/permisos";
+import { efectivo, efectivos, exige2fa, porDefecto, RANGO, enPlazoDosPasos } from "@/lib/permisos";
 
 test("los rangos van de redactor a administrador", () => {
   assert.ok(RANGO.redactor < RANGO.editor && RANGO.editor < RANGO.administrador);
@@ -31,4 +31,14 @@ test("el segundo factor es obligatorio salvo exención; al administrador nunca s
   assert.equal(exige2fa("redactor", undefined), true);
   assert.equal(exige2fa("redactor", { exigir_2fa: false }), false);
   assert.equal(exige2fa("administrador", { exigir_2fa: false }), true);
+});
+
+test("el plazo de gracia del segundo factor vence solo", () => {
+  const ahora = new Date("2026-10-13T12:00:00Z");
+  const plazos = { a: "2026-10-20T12:00:00Z", b: "2026-10-01T12:00:00Z", c: "no es fecha" };
+  assert.equal(enPlazoDosPasos(plazos, "a", ahora).activo, true);
+  assert.equal(enPlazoDosPasos(plazos, "b", ahora).activo, false);
+  assert.equal(enPlazoDosPasos(plazos, "c", ahora).activo, false);
+  assert.equal(enPlazoDosPasos(plazos, "z", ahora).activo, false);
+  assert.equal(enPlazoDosPasos(undefined, "a", ahora).activo, false);
 });

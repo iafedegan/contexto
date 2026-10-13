@@ -10,8 +10,8 @@ import { auth, cuentaPorId, signOut } from "@/lib/auth";
 import { PanelNav, PanelSidebarNav } from "@/components/panel/panel-nav";
 import { HeaderHeightVar } from "@/components/panel/header-height";
 import { IrASeguridad } from "@/components/panel/ir-a-seguridad";
-import { efectivos, exige2fa } from "@/lib/permisos";
-import { getAjustes } from "@/lib/permisos-server";
+import { efectivos, enPlazoDosPasos, exige2fa } from "@/lib/permisos";
+import { getAjustes, getPlazos2fa } from "@/lib/permisos-server";
 import { getSiteTheme } from "@/lib/site-theme";
 import { colorPanel } from "@/lib/panel-tema";
 
@@ -39,7 +39,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
   // Por id y, si el id de la sesión no aparece, por correo (como requireRole):
   // sin esto una sesión con id desfasado se saltaba la exigencia de 2FA.
   // La cuenta y los ajustes de permisos se piden a la vez (y la cuenta ya viene resuelta de la sesión: no es otro viaje).
-  const [yoPorId, ajustes, cabeceras, sitio] = await Promise.all([cuentaPorId(session.user.id), getAjustes(), headers(), getSiteTheme()]);
+  const [yoPorId, ajustes, cabeceras, sitio, plazos] = await Promise.all([cuentaPorId(session.user.id), getAjustes(), headers(), getSiteTheme(), getPlazos2fa()]);
   // La barra lleva el color principal de la plantilla que usa el sitio (se cambia en Portada y plantillas).
   const marca = colorPanel(sitio.theme);
   const estiloMarca = { "--accent": marca.acento, "--accent-2": marca.acento, "--border-strong": marca.acento, "--link": marca.acento, "--accent-fg": "#101611",
@@ -75,7 +75,10 @@ export default async function PanelLayout({ children }: { children: React.ReactN
   }
   const pathname = cabeceras.get("x-pathname") ?? "";
   const ajustesYo = ajustes[session.user.id];
-  const debeActivar2fa = yo != null && !yo.totpEnabled && exige2fa(session.user.role, ajustesYo);
+  // Plazo de gracia: una cuenta nueva puede entrar sin 2FA hasta la fecha que fijó un administrador; vencida, la exigencia vuelve sola.
+  const plazo = enPlazoDosPasos(plazos, session.user.id);
+  const sinDosPasos = yo != null && !yo.totpEnabled;
+  const debeActivar2fa = sinDosPasos && exige2fa(session.user.role, ajustesYo) && !plazo.activo;
   // Sin `redirect()`: ver IrASeguridad. Mientras la cuenta no tenga 2FA, fuera
   // de Configuración no se renderiza el contenido (solo la ida a Seguridad) y
   // dentro se oculta el menú para que no pueda salir de ahí.
@@ -176,6 +179,16 @@ export default async function PanelLayout({ children }: { children: React.ReactN
               <ShieldAlert size={16} className="mt-0.5 shrink-0 text-[var(--accent)]" />
               La verificación en dos pasos es obligatoria para todas las cuentas. Actívala aquí abajo
               para poder usar el resto del panel.
+            </p>
+          )}
+          {sinDosPasos && plazo.activo && plazo.hasta && (
+            <p className="mb-6 flex items-start gap-2 rounded-[var(--radius)] border border-[var(--accent)]/40 bg-[var(--surface-2)] p-3 text-sm leading-relaxed">
+              <ShieldAlert size={16} className="mt-0.5 shrink-0 text-[var(--accent)]" />
+              <span>
+                Tu cuenta aún no tiene la verificación en dos pasos. Podrás usar el panel sin ella hasta el{" "}
+                <strong>{new Intl.DateTimeFormat("es-CO", { day: "numeric", month: "long", timeZone: "America/Bogota" }).format(plazo.hasta)}</strong>;
+                después será obligatoria. Actívala cuando quieras en <Link href="/panel/configuracion#seguridad" className="lx-link font-semibold">Configuración → Seguridad</Link>.
+              </span>
             </p>
           )}
           {bloqueado ? <IrASeguridad href={`${RUTA_SEGURIDAD}#seguridad`} /> : children}

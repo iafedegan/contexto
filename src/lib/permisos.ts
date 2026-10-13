@@ -65,3 +65,15 @@ export function efectivo(role: UserRole, ajustes: Ajustes | undefined, id: Permi
 export function efectivos(role: UserRole, ajustes: Ajustes | undefined): PermisoId[] {
   return PERMISOS.filter((p) => efectivo(role, ajustes, p.id)).map((p) => p.id);
 }
+
+/**
+ * Plazo de gracia para el segundo factor: un administrador puede dejar entrar sin 2FA a una cuenta nueva hasta una fecha. Pasada
+ * esa fecha la exigencia vuelve sola, aunque nadie toque nada. `plazos` es `{ [userId]: fecha ISO }` (ver `getPlazos2fa`).
+ * Función pura para poder probarla.
+ */
+export function enPlazoDosPasos(plazos: Record<string, string> | undefined, userId: string, ahora: Date = new Date()): { activo: boolean; hasta: Date | null } {
+  const crudo = plazos?.[userId];
+  const hasta = crudo ? new Date(crudo) : null;
+  if (!hasta || Number.isNaN(hasta.getTime())) return { activo: false, hasta: null };
+  return { activo: hasta.getTime() > ahora.getTime(), hasta };
+}
