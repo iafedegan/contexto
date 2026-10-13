@@ -3,7 +3,7 @@ import { getBreakingArticle, getTopLevelCategories } from "@/lib/content";
 import { getSiteIdentity } from "@/lib/site-identity";
 import { getSiteTheme } from "@/lib/site-theme";
 import { getSitePopup } from "@/lib/popup";
-import { SitePopup } from "@/components/site-popup";
+import { SitePopupDiferido } from "@/components/site-popup-diferido";
 import { ReadingProgress } from "@/components/reading-progress";
 import { AdsBanner } from "@/components/ads-banner";
 import { SiteHeader, type NavItem } from "@/components/site-header";
@@ -133,7 +133,7 @@ export async function SiteShell({
         <AdsBanner zone="footer" className="mx-auto" />
       </div>
       {/* Popup diseñado en /panel/portada (si está activo). */}
-      {popup.enabled && <SitePopup config={popup} />}
+      {popup.enabled && <SitePopupDiferido config={popup} />}
       <SiteFooter theme={theme} nav={nav} locale={locale} identity={identity} variant={site.parts.footer} />
       {/* Barra de pestañas del celular: DENTRO del contenedor con `data-theme`, para heredar la paleta de la plantilla. */}
       <MobileTabBar />

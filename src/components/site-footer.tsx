@@ -5,7 +5,7 @@ import type { NavItem } from "@/components/site-header";
 import { THEME_LABEL, type Theme } from "@/lib/theme";
 import { DEFAULT_IDENTITY, type SiteIdentity } from "@/lib/site-identity";
 import { DEFAULT_LOCALE, localePath, t, type Locale } from "@/lib/i18n";
-import { MENU_SECUNDARIO } from "@/content/institucional";
+import { MENU_SECUNDARIO } from "@/content/menu-secundario";
 import { LogoMark } from "@/components/logo-mark";
 import { InstalarApp } from "@/components/instalar-app";
 

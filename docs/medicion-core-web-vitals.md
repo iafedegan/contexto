@@ -44,3 +44,31 @@ npx lighthouse https://contexto-olive.vercel.app/ --only-categories=performance
 npx lighthouse https://contexto-olive.vercel.app/ --throttling-method=devtools   # red limitada real
 ```
 Para el criterio de aceptación (HT-5) conviene además registrar datos de campo (Search Console / CrUX) cuando haya tráfico suficiente.
+
+## 6. Segunda revisión (13 de octubre de 2026)
+
+La portada volvió a medirse por encima de la meta en PageSpeed (LCP simulado de 2,7-3,0 s en 4 corridas seguidas) aunque el navegador real la pintaba a los 0,67 s. El modelo simulado de Lighthouse suma todo lo que se pide antes del primer pintado (tipografías, CSS y JavaScript) y las corridas varían mucho según el momento (1,8-3,0 s en el mismo sitio).
+
+**Causa en el camino real.** Con red y CPU limitadas de verdad (`--throttling-method=devtools`), el primer pintado (LCP = FCP = 2,07 s) llegaba justo cuando terminaban el CSS y las dos tipografías precargadas (84 KB): compartían el ancho de banda y el CSS, que es lo único que bloquea el pintado, terminaba junto con ellas.
+
+**Cambios.**
+1. Las tipografías web se piden después de que la página pintó y cargó (`fuentes-tras-la-carga` en `src/app/layout.tsx` y `html:not([data-fuentes])` en `globals.css`). Hasta entonces el texto usa la tipografía de respaldo de next/font, con las métricas ajustadas (CLS 0,001). Quien ya las tiene en caché las pide desde el principio (marca `cg-fuentes` en localStorage) y no ve ningún cambio.
+2. La mascota flotante, los avisos de consentimiento, los avisos de la app y la ventana emergente cargan su código después de la carga (`src/components/diferido.tsx`).
+3. `MENU_SECUNDARIO` salió de `institucional.ts` a `menu-secundario.ts`: un componente de cliente arrastraba al navegador los 47 KB de textos legales.
+
+**Resultado (compilación local contra la base de producción, móvil, 6 corridas).**
+
+| Medición | Antes | Después |
+|---|---|---|
+| LCP con red y CPU limitadas de verdad (mediana) | 2,07 s | **1,71 s** |
+| LCP simulado (el de PageSpeed), local | 3,62 s | 3,21 s |
+| CLS | 0 | 0,001 |
+
+El LCP simulado local es más alto que el de producción (no hay CDN ni HTTP/2) y sirve solo para comparar. Lo que queda en el modelo simulado es sobre todo el código de React y de Next (≈ 190 KB comprimidos), que no se puede reducir. El siguiente paso con más efecto sería servir la portada desde la caché de borde (ver sección 4).
+
+**Reproducir la medición realista.**
+```bash
+npx lighthouse http://localhost:3999/ --only-categories=performance --throttling-method=devtools \
+  --throttling.rttMs=150 --throttling.requestLatencyMs=562.5 --throttling.downloadThroughputKbps=1474.56 \
+  --throttling.uploadThroughputKbps=675 --throttling.cpuSlowdownMultiplier=4
+```

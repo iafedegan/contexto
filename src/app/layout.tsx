@@ -6,7 +6,7 @@ import { organizationJsonLd } from "@/lib/seo";
 import { siteUrl } from "@/lib/utils";
 import { getSiteIdentity } from "@/lib/site-identity";
 import { getSearchConsoleToken } from "@/lib/analytics-server";
-import { PwaAvisos } from "@/components/pwa-avisos";
+import { PwaAvisosDiferido } from "@/components/diferidos";
 import { PwaRegister } from "@/components/pwa-register";
 import { ProgramadasTick } from "@/components/programadas-tick";
 import "./globals.css";
@@ -88,6 +88,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             __html: `(function(){try{var m=localStorage.getItem('cg-modo');if(m){document.documentElement.dataset.dark=m==='oscuro'?'1':'0';}else if(window.matchMedia('(prefers-color-scheme: dark)').matches){document.documentElement.dataset.dark='1';}}catch(e){}})();`,
           }}
         />
+        {/*
+          Tipografías web: la primera vez se piden DESPUÉS de que la página pintó y cargó (hasta entonces el texto usa la tipografía de
+          respaldo, de métricas ajustadas, ver `html:not([data-fuentes])` en globals.css). Así los 84 KB de fuentes no compiten con el CSS,
+          que es lo que bloquea el primer pintado. Quien ya las tiene en caché (marca en localStorage) las pide desde el principio y no ve ningún cambio.
+        */}
+        <Script
+          id="fuentes-tras-la-carga"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `(function(){var d=document.documentElement;function ya(){d.dataset.fuentes='1';try{localStorage.setItem('cg-fuentes','1');}catch(e){}}try{if(localStorage.getItem('cg-fuentes')){d.dataset.fuentes='1';return;}}catch(e){}if(document.readyState==='complete'){setTimeout(ya,0);}else{window.addEventListener('load',function(){setTimeout(ya,0);},{once:true});}})();`,
+          }}
+        />
       </head>
       <body>
         <a
@@ -98,7 +110,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </a>
         <JsonLd data={organizationJsonLd()} />
         <PwaRegister />
-        <PwaAvisos />
+        <PwaAvisosDiferido />
         <ProgramadasTick />
         {children}
       </body>

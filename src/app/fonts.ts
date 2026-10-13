@@ -30,9 +30,9 @@ import {
 } from "next/font/google";
 
 /** Portada — titulares de alta moda editorial. También se precarga: es la tipografía de los titulares de la plantilla en producción (Esmeralda), y descubrirla recién al leer el CSS retrasaba el LCP. */
-export const playfair = Playfair_Display({ subsets: ["latin"], display: "swap", variable: "--f-playfair" });
+export const playfair = Playfair_Display({ subsets: ["latin"], display: "swap", preload: false, variable: "--f-playfair" });
 /** UI neutra de alta densidad (portada, buscador, panel). La única que se precarga: la usan casi todos los temas. */
-export const interTight = Inter_Tight({ subsets: ["latin"], display: "swap", variable: "--f-inter" });
+export const interTight = Inter_Tight({ subsets: ["latin"], display: "swap", preload: false, variable: "--f-inter" });
 /** Artículo — didona de contraste extremo. */
 export const bodoni = Bodoni_Moda({ subsets: ["latin"], display: "swap", preload: false, variable: "--f-bodoni" });
 /** Artículo — serif de lectura larga. */

@@ -4,9 +4,7 @@
  * Lo único común es la medición: GA4 se carga aquí, así que queda fuera del
  * panel y de las vistas previas.
  */
-import { ToroFlotante } from "@/components/toro-flotante";
-import { LocationConsent } from "@/components/location-consent";
-import { MedicionConsent } from "@/components/medicion-consent";
+import { LocationConsentDiferido, MedicionConsentDiferido, ToroFlotanteDiferido } from "@/components/diferidos";
 import { InstalarApp } from "@/components/instalar-app";
 import { Ga4, Gtm } from "@/components/analytics-ga4";
 import { getGa4Id, getGtmId } from "@/lib/analytics-server";
@@ -31,9 +29,10 @@ export default async function PublicLayout({ children }: { children: React.React
       {children}
       <Ga4 id={ga4} />
       <Gtm id={gtm} />
-      <ToroFlotante />
-      <MedicionConsent />
-      <LocationConsent />
+      {/* Sin efecto en la composición: su código se pide cuando la página ya cargó (ver diferidos.tsx). */}
+      <ToroFlotanteDiferido />
+      <MedicionConsentDiferido />
+      <LocationConsentDiferido />
       <InstalarApp locale="es" variante="aviso" />
     </>
   );

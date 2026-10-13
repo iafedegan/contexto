@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ChevronDown } from "lucide-react";
-import { MENU_SECUNDARIO } from "@/content/institucional";
+import { MENU_SECUNDARIO } from "@/content/menu-secundario";
 import { localePath, t, type Locale } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 

@@ -39,6 +39,13 @@
 
 }
 
+/* Tipografías web diferidas (ver `fuentes-tras-la-carga` en layout.tsx): hasta que la página cargó, las variables apuntan solo a la tipografía de
+   respaldo que next/font ajusta a las métricas de la real (sin saltos de diseño). Al cargar, `data-fuentes` quita esta regla y se piden las reales. */
+html:not([data-fuentes]) {
+  --f-playfair: "Playfair Display Fallback";
+  --f-inter: "Inter Tight Fallback";
+}
+
 @theme inline {
   --color-bg: var(--bg);
   --color-bg-2: var(--bg-2);
