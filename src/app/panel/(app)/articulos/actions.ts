@@ -12,6 +12,10 @@ import { autorDeUsuario } from "@/lib/user-authors";
 import { archivarCore, distintivosCore, enviarARevisionCore, fijarPortadaCore, guardarBorradorCore, programarCore, publicarCore, reindexarNota, revalidarNota, type BorradorInput } from "@/lib/article-ops";
 import { tienePermiso } from "@/lib/permisos-server";
 import { invalidarCache } from "@/lib/data-cache";
+import { esNotaPropia, exigirNotaPropia } from "@/lib/propiedad-notas";
+
+// Variante para las acciones que responden con un mensaje en vez de lanzar.
+const esNotaPropiaSegura = esNotaPropia;
 
 /**
  * Quién puede publicar: rol de editor o superior Y permiso «publicar». Es el mismo criterio para
@@ -65,6 +69,7 @@ export async function saveArticle(formData: FormData) {
 
   let articleId = id;
   if (id) {
+    await exigirNotaPropia(user, id);
     // Una nota publicada o programada ya está (o va a estar) a la vista de los lectores: solo quien
     // puede publicar la modifica. Un redactor trabaja sobre borradores y revisión.
     const [actual] = await db.select({ status: articles.status }).from(articles).where(eq(articles.id, id)).limit(1);
@@ -122,28 +127,32 @@ export async function saveArticle(formData: FormData) {
 
 // Pasa un borrador a revisión; sobre una nota publicada falla para no sacarla del sitio (la regla vive en `enviarARevisionCore`).
 export async function submitForReview(articleId: string) {
-  await requirePermiso("articulos");
+  const user = await requirePermiso("articulos");
+  await exigirNotaPropia(user, articleId);
   await enviarARevisionCore(articleId);
   revalidatePath(`/panel/articulos/${articleId}`);
 }
 
 // Publica una nota (exige permiso y rol de editor). Todo lo demás —estado, embedding, revalidación y el aviso push de «Última hora» por el evento nota.publicada— lo hace `publicarCore`, la misma máquina de estados que usa Telegram.
 export async function publishArticle(articleId: string) {
-  await requirePublicador();
+  const user = await requirePublicador();
+  await exigirNotaPropia(user, articleId);
   await publicarCore(articleId);
   revalidatePath(`/panel/articulos/${articleId}`);
 }
 
 // Programa la publicación de una nota para una fecha futura (la validación vive en `programarCore`).
 export async function scheduleArticle(articleId: string, isoDateTime: string) {
-  await requirePublicador();
+  const user = await requirePublicador();
+  await exigirNotaPropia(user, articleId);
   await programarCore(articleId, isoDateTime);
   revalidatePath(`/panel/articulos/${articleId}`);
 }
 
 // Archiva una nota para retirarla del sitio sin borrarla.
 export async function unpublishArticle(articleId: string) {
-  await requirePublicador();
+  const user = await requirePublicador();
+  await exigirNotaPropia(user, articleId);
   await archivarCore(articleId);
   revalidatePath(`/panel/articulos/${articleId}`);
 }
@@ -153,7 +162,8 @@ export async function unpublishArticle(articleId: string) {
  * No envía la notificación push de última hora: ese aviso solo sale al publicar la nota.
  */
 export async function setArticleFlag(articleId: string, flag: "isBreaking" | "isLive", value: boolean): Promise<{ ok: boolean; message?: string }> {
-  await requirePublicador();
+  const user = await requirePublicador();
+  if (!(await esNotaPropiaSegura(user, articleId))) return { ok: false, message: "Solo puedes modificar tus propias notas." };
   if (flag !== "isBreaking" && flag !== "isLive") return { ok: false, message: "Marca no válida." };
   if (!(await distintivosCore(articleId, { [flag]: value }))) return { ok: false, message: "Esa nota ya no existe." };
   revalidatePath("/panel/articulos");
@@ -166,7 +176,8 @@ export async function setArticleFlag(articleId: string, flag: "isBreaking" | "is
  * sin perderlo es «archivar» (unpublishArticle).
  */
 export async function deleteArticle(articleId: string): Promise<{ ok: boolean; message: string }> {
-  await requirePublicador();
+  const user = await requirePublicador();
+  if (!(await esNotaPropiaSegura(user, articleId))) return { ok: false, message: "Solo puedes borrar tus propias notas." };
   const [a] = await db.select({ id: articles.id }).from(articles).where(eq(articles.id, articleId)).limit(1);
   if (!a) return { ok: false, message: "Ese artículo ya no existe." };
 
@@ -189,5 +200,6 @@ export type AutosaveResult =
  */
 export async function autosaveDraft(input: BorradorInput): Promise<AutosaveResult> {
   const user = await requirePermiso("articulos");
+  if (input.id) await exigirNotaPropia(user, input.id);
   return guardarBorradorCore(user.id, input);
 }

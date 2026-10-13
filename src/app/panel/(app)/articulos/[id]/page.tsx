@@ -1,5 +1,5 @@
 import { autorDeUsuario, ensureUserAuthors } from "@/lib/user-authors";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { asc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { articles, authors, categories } from "@/db/schema";
@@ -10,6 +10,7 @@ import { ArrowLeft, PenLine, Sparkles } from "lucide-react";
 import { ArticleEditor } from "@/components/article-editor";
 import { ArticleWizard } from "@/components/panel/article-wizard";
 import { getEstilo } from "@/lib/ai/estilo";
+import { esNotaPropia } from "@/lib/propiedad-notas";
 import { siteChrome } from "@/components/panel/site-chrome";
 import { ViewsBarChart } from "@/components/panel/views-chart";
 import { articleSeries, bestDay, pctChange } from "@/lib/article-stats";
@@ -118,6 +119,8 @@ export default async function ArticleEditorPage({
   if (!isNew) {
     const [row] = await db.select().from(articles).where(eq(articles.id, id)).limit(1);
     if (!row) notFound();
+    // Quien no es administrador solo abre sus propias notas (escribir la dirección de otra no sirve).
+    if (!(await esNotaPropia({ id: session!.user.id, role: session!.user.role }, id))) redirect("/panel/articulos");
     initial = {
       id: row.id,
       title: row.title,

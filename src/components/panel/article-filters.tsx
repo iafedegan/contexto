@@ -61,7 +61,8 @@ export function ArticleFilters({
       </label>
       {select("estado", values.estado, "Estado", statuses, "Todos")}
       {select("categoria", values.categoria, "Categoría", categories, "Todas")}
-      {select("autor", values.autor, "Autor", authors, "Todos")}
+      {/* Sin lista de autores (quien solo ve sus notas) no hay nada que elegir. */}
+      {authors.length > 0 && select("autor", values.autor, "Autor", authors, "Todos")}
       {select("orden", values.orden, "Ordenar por", sorts)}
       <div className="col-span-2 flex items-end gap-2 sm:col-span-4 lg:col-span-1">
         <button type="submit" className="lx-btn flex-1 !py-2 lg:flex-none">

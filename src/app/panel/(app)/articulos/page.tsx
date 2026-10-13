@@ -5,6 +5,7 @@ import { db } from "@/db";
 import { articles, articleViewsDaily, authors, categories } from "@/db/schema";
 import { Badge, Button } from "@/components/ui";
 import { auth, requirePermiso } from "@/lib/auth";
+import { condicionMisNotas } from "@/lib/propiedad-notas";
 import { DeleteArticleButton } from "@/components/panel/delete-article-button";
 import { MarcasNota } from "@/components/panel/marcas-nota";
 import { ArticleFilters } from "@/components/panel/article-filters";
@@ -45,6 +46,9 @@ function param(sp: Record<string, string | string[] | undefined>, key: string): 
 export default async function ArticlesList({ searchParams }: { searchParams: SearchParams }) {
   await requirePermiso("articulos");
   const session = await auth();
+  // Administradores: todas las notas. Redactores y editores: solo las suyas (las que crearon o llevan su firma).
+  const soloMias = session?.user?.role !== "administrador";
+  const alcance = session?.user ? await condicionMisNotas({ id: session.user.id, role: session.user.role }) : undefined;
   const canDelete = session?.user?.role === "editor" || session?.user?.role === "administrador";
   const sp = await searchParams;
   const q = param(sp, "q").slice(0, 120);
@@ -67,6 +71,7 @@ export default async function ArticlesList({ searchParams }: { searchParams: Sea
 
   // --- Filtros ---
   const where: SQL[] = [];
+  if (alcance) where.push(alcance);
   if (q) {
     const like = `%${q}%`;
     where.push(or(ilike(articles.title, like), ilike(articles.excerpt, like), ilike(articles.slug, like))!);
@@ -125,7 +130,7 @@ export default async function ArticlesList({ searchParams }: { searchParams: Sea
     .$dynamic();
   if (week) base.leftJoin(week, eq(week.articleId, articles.id));
 
-  const [rows, summary, weekTotals] = await Promise.all([
+  const [rows, summary, weekTotalsSitio] = await Promise.all([
     base
       .where(where.length ? and(...where) : undefined)
       .orderBy(...order)
@@ -139,8 +144,9 @@ export default async function ArticlesList({ searchParams }: { searchParams: Sea
         lecturas: sql<number>`coalesce(sum(${articles.views}), 0)::int`,
       })
       .from(articles)
+      .where(alcance)
       .then((r) => r[0]),
-    siteWeekTotals(),
+    soloMias ? Promise.resolve(null) : siteWeekTotals(),
   ]);
 
   const { byArticle } = await dailySeries(
@@ -149,6 +155,8 @@ export default async function ArticlesList({ searchParams }: { searchParams: Sea
   );
 
   const filteredViews = rows.reduce((s, r) => s + Number(r.views), 0);
+  // Con el alcance propio no hay total del sitio: se suman las lecturas de la semana de sus propias notas (sin comparación).
+  const weekTotals = soloMias ? { last7: rows.reduce((t, r) => t + Number(r.weekViews), 0), prev7: 0 } : weekTotalsSitio;
   const trend = weekTotals ? pctChange(weekTotals.last7, weekTotals.prev7) : null;
   const top = [...rows].sort((a, b) => Number(b.weekViews) - Number(a.weekViews))[0];
 
@@ -217,7 +225,7 @@ export default async function ArticlesList({ searchParams }: { searchParams: Sea
         values={{ q, estado, categoria, autor, orden }}
         statuses={Object.entries(STATUS_LABEL).map(([value, label]) => ({ value, label }))}
         categories={categoryOptions}
-        authors={[...auths.map((a) => ({ value: a.id, label: a.name })), { value: "sin-autor", label: "Sin autor" }]}
+        authors={soloMias ? [] : [...auths.map((a) => ({ value: a.id, label: a.name })), { value: "sin-autor", label: "Sin autor" }]}
         sorts={SORTS}
       />
       </div>
