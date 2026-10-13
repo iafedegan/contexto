@@ -53,6 +53,7 @@ import { participantesListos, SegmentosEditor } from "@/components/panel/entrevi
 import { SiteArticlePreview, type SitePreviewChrome } from "@/components/panel/site-article-preview";
 import { FuenteCards, PantallaEnlaces, PantallaEntrevista, PantallaIdeas, PantallaNoticias, type Fuente } from "@/components/panel/wizard-fuentes";
 import { WizardStepper } from "@/components/panel/wizard-stepper";
+import { BotonVoz } from "@/components/panel/boton-voz";
 import { duracionWav, esVideo, ExtraerAudioError, extraerAudioDeVideo, partirWav } from "@/lib/audio-extract";
 import { aplicarTipo, encodeSpec, renderChartSvg, TIPOS_GRAFICA, type ChartSpec, type TipoGrafica } from "@/lib/chart-svg";
 import { InteractiveChart } from "@/components/interactive-chart";
@@ -956,14 +957,17 @@ export function ArticleWizard({
             {subpantalla === null && !enPantallaOpciones && (
               <div className="grid min-h-0 flex-1 gap-4 @2xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] @2xl:items-stretch">
                 <div className="flex min-h-0 min-w-0 flex-col gap-2.5">
+<div className="relative flex min-h-0 flex-1 flex-col">
                   <textarea
                     autoFocus
                     value={topic}
                     onChange={(e) => setTopic(e.target.value)}
                     aria-label="Tema de la nota"
                     placeholder="Cuéntale a la IA de qué trata la nota. Ej.: el precio del novillo gordo subió 4 % en Medellín en septiembre según la Central Ganadera; menor entrada de ganado del Magdalena Medio…"
-                    className={`${input} min-h-[7rem] flex-1 resize-none text-base leading-relaxed`}
+                    className={`${input} min-h-[7rem] flex-1 resize-none pb-12 text-base leading-relaxed`}
                   />
+                  <BotonVoz valor={topic} alCambiar={setTopic} etiqueta="Dictar el tema con la voz" className="absolute bottom-3 right-3" />
+                  </div>
                   <p className="flex shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-0.5 text-xs text-[var(--fg-muted)]">
                     <span>Cuanto más concreto (qué pasó, dónde, cuándo y según quién), mejores serán los títulos.</span>
                     <span className={`tabular-nums font-medium ${topic.trim().length >= 10 || material.length > 0 ? "text-[#16a34a]" : ""}`} aria-live="polite">
@@ -1241,6 +1245,7 @@ export function ArticleWizard({
             {mode === "ia" && generated && (
               // Si el borrador no convence, se le dice a la IA cómo reescribirlo (tono, enfoque, qué citar…).
               <div className="flex shrink-0 flex-wrap items-center gap-2">
+<div className="relative flex min-w-0 flex-1">
                 <input
                   value={instrucciones}
                   onChange={(e) => setInstrucciones(e.target.value)}
@@ -1252,8 +1257,10 @@ export function ArticleWizard({
                   }}
                   aria-label="Instrucciones para la IA"
                   placeholder="¿No te gusta? Dile a la IA cómo escribirlo: más corto, tono formal, cita más al ministro, enfócate en…"
-                  className={`${input} min-w-0 flex-1 !py-2 text-sm`}
+                  className={`${input} min-w-0 flex-1 !py-2 !pr-12 text-sm`}
                 />
+                <BotonVoz valor={instrucciones} alCambiar={setInstrucciones} etiqueta="Dictar instrucciones con la voz" className="absolute right-1 top-1/2 -translate-y-1/2 !size-8" />
+                </div>
                 <button type="button" onClick={() => regenerate("body")} disabled={generating} className="lx-btn">
                   {generating ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
                   {generating ? "Reescribiendo…" : "Reescribir con IA"}
@@ -1422,7 +1429,10 @@ export function ArticleWizard({
                   </details>
                   <details className="min-w-0">
                     <summary className="lx-link cursor-pointer text-xs font-medium">Describir la escena para la IA</summary>
-                    <input value={sceneTxt} onChange={(e) => setSceneTxt(e.target.value)} placeholder="Si lo dejas vacío, la IA propone la escena" className={`${input} mt-2 text-sm`} />
+                    <div className="relative mt-2">
+                      <input value={sceneTxt} onChange={(e) => setSceneTxt(e.target.value)} placeholder="Si lo dejas vacío, la IA propone la escena" className={`${input} text-sm !pr-12`} />
+                      <BotonVoz valor={sceneTxt} alCambiar={setSceneTxt} etiqueta="Dictar la escena con la voz" className="absolute right-1 top-1/2 -translate-y-1/2 !size-8" />
+                    </div>
                     <p className="mt-1.5 text-xs text-[var(--fg-muted)]">Imagen realista, estilo cine (16:9); no retrata personas reales y se publica rotulada «imagen generada con IA».</p>
                   </details>
                 </div>

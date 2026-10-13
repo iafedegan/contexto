@@ -34,7 +34,8 @@ export type Voz = {
   callar: () => void;
 };
 
-export function useVoz(idioma = "es-CO"): Voz {
+/** `continuo`: sigue escuchando entre pausas (dictado largo); sin él se detiene en cuanto haces silencio (preguntas cortas). */
+export function useVoz(idioma = "es-CO", continuo = false): Voz {
   // Qué admite el navegador: se lee en el cliente (en el servidor, falso) sin provocar un segundo pintado.
   const sinSuscripcion = () => () => {};
   const soportaDictado = useSyncExternalStore(sinSuscripcion, () => !!constructor(), () => false);
@@ -54,7 +55,7 @@ export function useVoz(idioma = "es-CO"): Voz {
     window.speechSynthesis?.cancel();
     setAviso("");
     const r = new C();
-    r.lang = idioma; r.interimResults = true; r.continuous = false; r.maxAlternatives = 1;
+    r.lang = idioma; r.interimResults = true; r.continuous = continuo; r.maxAlternatives = 1;
     let final = "";
     r.onresult = (e) => {
       let parcial = "";
@@ -72,7 +73,7 @@ export function useVoz(idioma = "es-CO"): Voz {
     r.onend = () => { setEscuchando(false); rec.current = null; if (final.trim()) alTerminar(final.trim()); };
     rec.current = r;
     try { r.start(); setEscuchando(true); } catch { setEscuchando(false); }
-  }, [idioma]);
+  }, [idioma, continuo]);
 
   const parar = useCallback(() => { rec.current?.stop(); }, []);
 
