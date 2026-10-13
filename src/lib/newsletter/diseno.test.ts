@@ -25,8 +25,8 @@ test("el diseño inválido o ausente vuelve al diseño de siempre", () => {
   assert.equal(d.mostrarLogo, false);
 });
 
-test("las seis maquetaciones se dibujan con sus notas", () => {
-  for (const plantilla of ["clasica", "editorial", "tarjetas", "numerada", "revista", "minima"]) {
+test("las nueve maquetaciones se dibujan con sus notas", () => {
+  for (const plantilla of ["clasica", "editorial", "tarjetas", "numerada", "revista", "minima", "bloques", "mosaico", "dossier"]) {
     const h = render({ plantilla });
     for (const n of [1, 2, 3]) assert.match(h, new RegExp(`Titular ${n}`), `${plantilla} no muestra la nota ${n}`);
   }
@@ -41,8 +41,26 @@ test("las seis maquetaciones se dibujan con sus notas", () => {
   assert.match(render({ plantilla: "editorial" }), /class="col"/);
   assert.match(render({ plantilla: "tarjetas" }), /class="col"/);
   // Las maquetaciones se distinguen de verdad entre sí.
-  const todas = new Set(["clasica", "editorial", "tarjetas", "numerada", "revista", "minima"].map((p) => render({ plantilla: p })));
-  assert.equal(todas.size, 6);
+  const todas = new Set(["clasica", "editorial", "tarjetas", "numerada", "revista", "minima", "bloques", "mosaico", "dossier"].map((p) => render({ plantilla: p })));
+  assert.equal(todas.size, 9);
+  // «Dossier»: recuadro «En breve» con las demás notas numeradas; «bloques» y «mosaico» se apilan en móvil igual que las rejillas.
+  assert.match(render({ plantilla: "dossier" }), /En breve/);
+  assert.match(render({ plantilla: "bloques" }), /class="col"/);
+  assert.match(render({ plantilla: "mosaico" }), /class="col"/);
+});
+
+test("la cabecera: sencilla, en banda o gigante, con insignia de la edición", () => {
+  assert.doesNotMatch(render({ masthead: "sencillo" }), /Edición N\.º 3<\/span>|border-radius:50%/);
+  const banda = render({ masthead: "banda" });
+  assert.match(banda, /Edición N\.º 3/);
+  assert.match(banda, /border-radius:50%/); // insignia con el número
+  const gigante = render({ masthead: "gigante", tipografia: "impacto" });
+  assert.match(gigante, /Impact/);
+  assert.match(gigante, /font:[^"]*60px/); // nombre del sitio en grande
+  assert.doesNotMatch(render({ masthead: "gigante", insignia: false }), /border-radius:50%/);
+  // La destacada sobre color usa el acento como fondo del panel.
+  assert.match(render({ plantilla: "numerada", destacadaColor: true }), /padding:28px 32px 30px 32px;background:#/);
+  assert.notEqual(render({ destacadaColor: true }), render({ destacadaColor: false }));
 });
 
 test("los colores, el botón y lo que se muestra siguen el diseño", () => {

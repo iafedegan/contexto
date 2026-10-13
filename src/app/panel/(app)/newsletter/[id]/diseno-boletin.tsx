@@ -19,10 +19,17 @@ const PALETAS: { nombre: string; v: Pick<DisenoEditable, "colorPagina" | "colorT
   { nombre: "Cálido", v: { colorPagina: "#fbf3e4", colorTarjeta: "#fffdf8", colorTitulos: "#3b2412", colorTexto: "#5a4636", acento: "#c2410c" } },
   { nombre: "Medianoche", v: { colorPagina: "#0b1210", colorTarjeta: "#141d1a", colorTitulos: "#f4f1ea", colorTexto: "#c3cdc7", acento: "#4ade80" } },
   { nombre: "Moderno", v: { colorPagina: "#f4f5f7", colorTarjeta: "#ffffff", colorTitulos: "#0f172a", colorTexto: "#475569", acento: "#2563eb" } },
+  { nombre: "Naranja vivo", v: { colorPagina: "#fff1e3", colorTarjeta: "#ffffff", colorTitulos: "#1b1209", colorTexto: "#4a3b2f", acento: "#e8590c" } },
+  { nombre: "Lima fresca", v: { colorPagina: "#f1f8dc", colorTarjeta: "#ffffff", colorTitulos: "#12230b", colorTexto: "#34452c", acento: "#5f9d00" } },
+  { nombre: "Marino real", v: { colorPagina: "#e8edf5", colorTarjeta: "#ffffff", colorTitulos: "#0b1f44", colorTexto: "#34425e", acento: "#12326b" } },
+  { nombre: "Violeta", v: { colorPagina: "#f1ecfa", colorTarjeta: "#ffffff", colorTitulos: "#1d1034", colorTexto: "#463a63", acento: "#6b2fc9" } },
 ];
 
 // Maquetaciones: cómo se ven las notas. El dibujito es un esquema de bloques.
 const MAQUETAS: { id: DisenoEditable["plantilla"]; nombre: string; ayuda: string }[] = [
+  { id: "bloques", nombre: "Bloques", ayuda: "Paneles de color alternos con la foto a un lado" },
+  { id: "mosaico", nombre: "Mosaico", ayuda: "Destacada y baldosas de color en cuadrícula" },
+  { id: "dossier", nombre: "Dossier", ayuda: "Nota principal y recuadro «En breve» al lado" },
   { id: "editorial", nombre: "Editorial", ayuda: "Foto a todo el ancho, titular grande y rejilla" },
   { id: "tarjetas", nombre: "Tarjetas", ayuda: "Todas las notas en tarjetas de dos columnas" },
   { id: "numerada", nombre: "Numerada", ayuda: "Una destacada y una lista con números grandes" },
@@ -36,6 +43,9 @@ function Esquema({ id }: { id: DisenoEditable["plantilla"] }) {
   const b = "rounded-[2px] bg-current opacity-30";
   const t = "rounded-[2px] bg-current opacity-60";
   const marco = "flex w-full flex-col gap-1";
+  if (id === "bloques") return (<div className={marco}><div className={`${t} h-4`} /><div className="flex gap-1"><div className={`${b} h-5 w-6`} /><div className={`${t} h-5 flex-1`} /></div><div className="flex gap-1"><div className={`${t} h-5 flex-1`} /><div className={`${b} h-5 w-6`} /></div></div>);
+  if (id === "mosaico") return (<div className={marco}><div className={`${t} h-4`} /><div className="grid grid-cols-2 gap-1"><div className={`${b} h-5`} /><div className={`${t} h-5`} /><div className={`${t} h-5`} /><div className={`${b} h-5`} /></div></div>);
+  if (id === "dossier") return (<div className="flex w-full gap-1"><div className="flex flex-1 flex-col gap-1"><div className={`${b} h-6`} /><div className={`${t} h-1.5 w-4/5`} /><div className={`${t} h-1 w-3/5`} /></div><div className={`${b} w-5`} /></div>);
   if (id === "editorial") return (<div className={marco}><div className={`${b} h-6`} /><div className={`${t} h-1.5 w-4/5`} /><div className="flex gap-1"><div className={`${b} h-4 flex-1`} /><div className={`${b} h-4 flex-1`} /></div></div>);
   if (id === "tarjetas") return (<div className="grid w-full grid-cols-2 gap-1"><div className={`${b} h-8`} /><div className={`${b} h-8`} /><div className={`${b} h-8`} /><div className={`${b} h-8`} /></div>);
   if (id === "numerada") return (<div className={marco}><div className={`${b} h-4`} />{[0, 1, 2].map((i) => (<div key={i} className="flex items-center gap-1"><div className={`${t} h-2 w-2.5`} /><div className={`${t} h-1 flex-1`} /><div className={`${b} size-2.5`} /></div>))}</div>);
@@ -150,14 +160,22 @@ export function DisenoBoletin({ valor, alCambiar, puedeEditar }: { valor: Diseno
         </div>
       </Grupo>
 
+      <Grupo titulo="Cabecera y destacada" ayuda="La portada del correo: tamaño del nombre, número de edición y color de la nota principal.">
+        <div className="flex flex-col gap-2.5 text-sm">
+          <div className="flex flex-wrap items-center justify-between gap-2"><span>Cabecera</span><Opciones etiqueta="Estilo de la cabecera" valor={valor.masthead} alElegir={(v) => poner("masthead", v)} opciones={[{ v: "sencillo", t: "Sencilla" }, { v: "banda", t: "Banda de color" }, { v: "gigante", t: "Gigante" }]} /></div>
+          <Interruptor texto="Insignia con el número de edición" activo={valor.insignia} alCambiar={(v) => poner("insignia", v)} />
+          <Interruptor texto="Destacada sobre un panel de color" activo={valor.destacadaColor} alCambiar={(v) => poner("destacadaColor", v)} />
+        </div>
+      </Grupo>
+
       <Grupo titulo="Tipografía y formas">
         <div className="flex flex-col gap-2.5 text-sm">
-          <div className="flex flex-wrap items-center justify-between gap-2"><span>Titulares</span><Opciones etiqueta="Tipografía" valor={valor.tipografia} alElegir={(v) => poner("tipografia", v)} opciones={[{ v: "serif", t: "Con serifa" }, { v: "sans", t: "Sin serifa" }, { v: "moderna", t: "Moderna" }]} /></div>
+          <div className="flex flex-wrap items-center justify-between gap-2"><span>Titulares</span><Opciones etiqueta="Tipografía" valor={valor.tipografia} alElegir={(v) => poner("tipografia", v)} opciones={[{ v: "serif", t: "Con serifa" }, { v: "sans", t: "Sin serifa" }, { v: "moderna", t: "Moderna" }, { v: "impacto", t: "Impacto" }]} /></div>
           <div className="flex flex-wrap items-center justify-between gap-2"><span>Esquinas</span><Opciones etiqueta="Esquinas" valor={valor.esquinas} alElegir={(v) => poner("esquinas", v)} opciones={[{ v: "rectas", t: "Rectas" }, { v: "suaves", t: "Suaves" }, { v: "redondas", t: "Redondas" }]} /></div>
           <div className="flex flex-wrap items-center justify-between gap-2"><span>Botones</span><Opciones etiqueta="Forma del botón" valor={valor.boton} alElegir={(v) => poner("boton", v)} opciones={[{ v: "pildora", t: "Píldora" }, { v: "redondo", t: "Redondo" }, { v: "recto", t: "Recto" }]} /></div>
           <div className="flex flex-wrap items-center justify-between gap-2"><span>Franja superior</span><Opciones etiqueta="Grosor de la franja" valor={valor.franja} alElegir={(v) => poner("franja", v)} opciones={[{ v: 0, t: "Sin" }, { v: 4, t: "Fina" }, { v: 8, t: "Media" }, { v: 12, t: "Gruesa" }]} /></div>
           <div className="flex flex-wrap items-center justify-between gap-2"><span>Separadores</span><Opciones etiqueta="Separador" valor={valor.separador} alElegir={(v) => poner("separador", v)} opciones={[{ v: "linea", t: "Línea" }, { v: "punteada", t: "Punteada" }, { v: "ninguno", t: "Ninguno" }]} /></div>
-          <div className="flex flex-wrap items-center justify-between gap-2"><span>Cabecera</span><Opciones etiqueta="Alineación de la cabecera" valor={valor.cabecera} alElegir={(v) => poner("cabecera", v)} opciones={[{ v: "centrada", t: "Centrada" }, { v: "izquierda", t: "A la izquierda" }]} /></div>
+          <div className="flex flex-wrap items-center justify-between gap-2"><span>Alineación (cabecera sencilla)</span><Opciones etiqueta="Alineación de la cabecera" valor={valor.cabecera} alElegir={(v) => poner("cabecera", v)} opciones={[{ v: "centrada", t: "Centrada" }, { v: "izquierda", t: "A la izquierda" }]} /></div>
         </div>
       </Grupo>
 

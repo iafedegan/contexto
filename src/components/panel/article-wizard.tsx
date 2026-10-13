@@ -690,10 +690,12 @@ export function ArticleWizard({
       seo: `${metaTitle}\n${metaDescription}`,
     }[part];
     setError("");
+    // En el modo manual no hay encargo ni contexto: la IA parte de lo que ya está escrito en la nota (título y cuerpo).
+    const encargo = prompt.trim() || (textoPlano ? `Texto de la nota escrito por el editor:\n${textoPlano.slice(0, 6000)}` : "");
     startGenerating(async () => {
       const res = await regenerateDraftPart({
         title: title.trim(),
-        prompt,
+        prompt: encargo,
         part,
         current,
         section: categories.find((c) => c.id === categoryId)?.name,
@@ -837,6 +839,27 @@ export function ArticleWizard({
             </button>
           </div>
         )}
+        {mode === "manual" && PART_OF[current.key] && current.key !== "cuerpo" && (() => {
+          const part = PART_OF[current.key]!;
+          const vacio = part === "excerpt" ? !excerpt.trim() : part === "tags" ? tags.length === 0 : !metaTitle.trim() && !metaDescription.trim();
+          const que = { excerpt: "el resumen", tags: "las palabras clave", body: "el cuerpo", seo: "la ficha de buscadores" }[part];
+          return (
+            <div className="mx-auto mb-3 flex max-w-2xl flex-wrap items-center gap-x-2 gap-y-1 text-xs text-[var(--fg-muted)]">
+              <Sparkles size={13} className="text-[var(--accent)]" />
+              <span>{vacio ? `¿Prefieres que la IA escriba ${que}?` : "Ayuda de la IA"}</span>
+              <button
+                type="button"
+                onClick={() => regenerate(part)}
+                disabled={generating || title.trim().length < 5}
+                className="lx-link inline-flex items-center gap-1 font-semibold disabled:opacity-60"
+              >
+                {generating ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                {generating ? "Generando…" : vacio ? "Generar con IA" : "Proponer otro"}
+              </button>
+              {title.trim().length < 5 && <span>(escribe antes el título)</span>}
+            </div>
+          );
+        })()}
         {current.key === "tema" && (generating || error) && (
           <div
             role="status"
