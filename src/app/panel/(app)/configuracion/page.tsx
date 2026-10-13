@@ -1,5 +1,5 @@
 import { asc, eq, or } from "drizzle-orm";
-import { BarChart3, Globe, Send, ShieldCheck, Sparkles, Users } from "lucide-react";
+import { BarChart3, Globe, PenLine, Send, ShieldCheck, Sparkles, Users } from "lucide-react";
 import { TelegramPanel } from "@/components/panel/telegram-panel";
 import { db } from "@/db";
 import { users } from "@/db/schema";
@@ -23,6 +23,8 @@ import { listarPasskeys } from "./passkey-actions";
 import { ConfigTabs } from "@/components/panel/config-tabs";
 import { getAnalyticsStatus } from "@/lib/analytics-server";
 import { saveAnalyticsSettings, saveSiteIdentity } from "./actions";
+import { estadoEstilo } from "./estilo-actions";
+import { EstiloEscritura } from "@/components/panel/estilo-escritura";
 
 // Se calcula en cada petición, nunca durante la compilación.
 export const dynamic = "force-dynamic";
@@ -34,7 +36,7 @@ export default async function ConfiguracionPage() {
   const isAdmin = session?.user?.role === "administrador";
   const limites = await getLimites();
 
-  const [identity, keyStatus, analytics, people, misPasskeys] = await Promise.all([
+  const [identity, keyStatus, analytics, people, misPasskeys, miEstilo] = await Promise.all([
     getSiteIdentity(),
     getKeyStatus(),
     getAnalyticsStatus(),
@@ -57,6 +59,7 @@ export default async function ConfiguracionPage() {
       )
       .orderBy(asc(users.name)),
     listarPasskeys(),
+    estadoEstilo(),
   ]);
 
   const accesos = isAdmin ? await getAccesos(100) : [];
@@ -82,81 +85,89 @@ export default async function ConfiguracionPage() {
 
       <ConfigTabs
         tabs={[
-          { id: "sitio", label: "Identidad del sitio", icon: <Globe size={13} /> },
+          // La identidad del sitio es solo de administradores: a las demás personas ni se les muestra.
+          ...(isAdmin ? [{ id: "sitio", label: "Identidad del sitio", icon: <Globe size={13} /> }] : []),
           { id: "usuarios", label: isAdmin ? "Personas y roles" : "Mis datos", icon: <Users size={13} /> },
+          { id: "estilo", label: "Mi estilo de escritura", icon: <PenLine size={13} /> },
           { id: "seguridad", label: "Seguridad de mi cuenta", icon: <ShieldCheck size={13} /> },
           { id: "analitica", label: "Analítica y SEO", icon: <BarChart3 size={13} /> },
           { id: "asistente", label: "Asistente y agentes de IA", icon: <Sparkles size={13} /> },
           { id: "telegram", label: "Telegram", icon: <Send size={13} /> },
         ]}
       >
-      {/* ------------------------------------------------ Identidad del sitio */}
-      <Section
-        id="sitio"
-        icon={<Globe size={14} />}
-        title="Identidad del sitio"
-        hint={isAdmin ? undefined : "Solo un administrador puede modificarla."}
-      >
-        <form action={saveSiteIdentity} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Field label="Nombre" hint="Cabecera, pie y plantilla de títulos">
-            <input
-              name="name"
-              defaultValue={identity.name}
-              required
-              disabled={!isAdmin}
-              className="lx-input"
-            />
-          </Field>
-          <Field label="Lema" hint="Bajo el logotipo de portada">
-            <input
-              name="tagline"
-              defaultValue={identity.tagline}
-              disabled={!isAdmin}
-              className="lx-input"
-            />
-          </Field>
-          <div className="sm:col-span-2">
-            <Field label="Descripción" hint="Meta description por defecto (70–155 car.)">
-              <textarea
-                name="description"
-                defaultValue={identity.description}
-                rows={2}
+      {/* ------------------------------------------------ Identidad del sitio (solo administradores) */}
+      {isAdmin && (
+        <Section
+          id="sitio"
+          icon={<Globe size={14} />}
+          title="Identidad del sitio"
+          hint={isAdmin ? undefined : "Solo un administrador puede modificarla."}
+        >
+          <form action={saveSiteIdentity} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Field label="Nombre" hint="Cabecera, pie y plantilla de títulos">
+              <input
+                name="name"
+                defaultValue={identity.name}
+                required
                 disabled={!isAdmin}
-                className="lx-input resize-y"
+                className="lx-input"
               />
             </Field>
-          </div>
-          <Field label="Dominio canónico" hint="Sin https:// · vacío = el del entorno">
-            <input
-              name="domain"
-              defaultValue={identity.domain}
-              placeholder="contextoganadero.com"
-              disabled={!isAdmin}
-              className="lx-input"
-            />
-          </Field>
-
-          <Field label="Emisora en directo" hint="URL del stream · vacío = sin botón de radio">
-            <input
-              name="radioStreamUrl"
-              defaultValue={identity.radioStreamUrl}
-              placeholder="https://stream.emisora.com/live"
-              disabled={!isAdmin}
-              className="lx-input"
-            />
-          </Field>
-
-          {isAdmin && (
-            <div className="flex items-end">
-              <button
-                type="submit"
-                className="rounded-full bg-[var(--accent)] px-5 py-2.5 text-sm font-semibold text-[var(--accent-fg)] transition hover:opacity-90"
-              >
-                Guardar cambios
-              </button>
+            <Field label="Lema" hint="Bajo el logotipo de portada">
+              <input
+                name="tagline"
+                defaultValue={identity.tagline}
+                disabled={!isAdmin}
+                className="lx-input"
+              />
+            </Field>
+            <div className="sm:col-span-2">
+              <Field label="Descripción" hint="Meta description por defecto (70–155 car.)">
+                <textarea
+                  name="description"
+                  defaultValue={identity.description}
+                  rows={2}
+                  disabled={!isAdmin}
+                  className="lx-input resize-y"
+                />
+              </Field>
             </div>
-          )}
-        </form>
+            <Field label="Dominio canónico" hint="Sin https:// · vacío = el del entorno">
+              <input
+                name="domain"
+                defaultValue={identity.domain}
+                placeholder="contextoganadero.com"
+                disabled={!isAdmin}
+                className="lx-input"
+              />
+            </Field>
+  
+            <Field label="Emisora en directo" hint="URL del stream · vacío = sin botón de radio">
+              <input
+                name="radioStreamUrl"
+                defaultValue={identity.radioStreamUrl}
+                placeholder="https://stream.emisora.com/live"
+                disabled={!isAdmin}
+                className="lx-input"
+              />
+            </Field>
+  
+            {isAdmin && (
+              <div className="flex items-end">
+                <button
+                  type="submit"
+                  className="rounded-full bg-[var(--accent)] px-5 py-2.5 text-sm font-semibold text-[var(--accent-fg)] transition hover:opacity-90"
+                >
+                  Guardar cambios
+                </button>
+              </div>
+            )}
+          </form>
+        </Section>
+      )}
+
+      <Section id="estilo" icon={<PenLine size={14} />} title="Mi estilo de escritura" hint="La IA aprende cómo escribes">
+        <EstiloEscritura inicial={miEstilo} />
       </Section>
 
       {/* ---------------------------------------------------------- Personas */}

@@ -9,6 +9,7 @@ import { materialParaPrompt, type Material } from "@/lib/material-types";
 import { registrarUsoIA, verificarCuotaIA } from "@/lib/ai-cuota";
 import { escapeHtml as esc } from "@/lib/escape";
 import { investigarTema } from "@/lib/ai/investigacion";
+import { sistemaConEstilo } from "@/lib/ai/estilo";
 import { cifrasSinRespaldo, citasSinRespaldo, sinCifrasInventadas, sinCitasInventadas } from "@/lib/ai/verificacion";
 
 
@@ -85,6 +86,8 @@ export async function generateArticleDraftCore(userId: string, input: {
     // 1) Respaldo: material del periodista y, si es escaso, una investigación web con fuentes. Sin respaldo no se escribe.
     const cuotaIA = await verificarCuotaIA(userId);
     if (!cuotaIA.ok) return { ok: false, error: cuotaIA.message };
+    // Estilo de escritura de la persona (si lo cargó y lo dejó activo): solo de forma, nunca cambia las reglas de veracidad.
+    const sistema = await sistemaConEstilo(EDITOR_ASSIST_SYSTEM, userId);
     const suficiente = mat.length >= 2500 || encargo.length >= 600;
     const inv = suficiente && refs.length ? null : await investigarTema(userId, tema, encargo, input.section);
     if (!suficiente && !refs.length && !mat && !(inv && inv.sources.length)) {
@@ -108,7 +111,7 @@ export async function generateArticleDraftCore(userId: string, input: {
     ]
       .filter(Boolean)
       .join("\n\n");
-    let { object, usage } = await generateObject({ model, schema: draftSchema, system: EDITOR_ASSIST_SYSTEM, prompt });
+    let { object, usage } = await generateObject({ model, schema: draftSchema, system: sistema, prompt });
     await registrarUsoIA(userId, usage);
     // Debe salir listo para publicar: si aun así trae marcadores {{…}}, un
     // segundo intento lo exige y, de persistir, se quitan.
@@ -116,7 +119,7 @@ export async function generateArticleDraftCore(userId: string, input: {
       ({ object, usage } = await generateObject({
         model,
         schema: draftSchema,
-        system: EDITOR_ASSIST_SYSTEM,
+        system: sistema,
         prompt: `${prompt}\n\nIMPORTANTE: tu borrador anterior traía marcadores entre llaves. Reescríbelo SIN ningún marcador: redacta solo con lo que sí consta en el encargo y omite lo que falte.`,
       }));
       await registrarUsoIA(userId, usage);
@@ -127,7 +130,7 @@ export async function generateArticleDraftCore(userId: string, input: {
       ({ object, usage } = await generateObject({
         model,
         schema: draftSchema,
-        system: EDITOR_ASSIST_SYSTEM,
+        system: sistema,
         prompt: `${prompt}\n\nCORRECCIÓN OBLIGATORIA: en tu borrador anterior estas cifras NO constan en el material ni en el dossier: ${malas.join(", ")}. Reescribe la nota sin ellas (o con las cifras que sí constan).`,
       }));
       await registrarUsoIA(userId, usage);
@@ -140,7 +143,7 @@ export async function generateArticleDraftCore(userId: string, input: {
       ({ object, usage } = await generateObject({
         model,
         schema: draftSchema,
-        system: EDITOR_ASSIST_SYSTEM,
+        system: sistema,
         prompt: `${prompt}\n\nCORRECCIÓN OBLIGATORIA: estas citas de tu borrador NO aparecen textualmente en el material ni en el dossier: ${citasMalas.map((c) => `«${c}»`).join(" | ")}. Cítalas exactamente como constan o parafrasea sin comillas.`,
       }));
       await registrarUsoIA(userId, usage);
@@ -284,6 +287,8 @@ export async function regenerateDraftPartCore(userId: string, input: {
   try {
     const cuotaIA = await verificarCuotaIA(userId);
     if (!cuotaIA.ok) return { ok: false, error: cuotaIA.message };
+    // Estilo de escritura de la persona (si lo cargó y lo dejó activo): solo de forma, nunca cambia las reglas de veracidad.
+    const sistema = await sistemaConEstilo(EDITOR_ASSIST_SYSTEM, userId);
     const mat = materialParaPrompt(input.material);
     const instr = input.instrucciones?.trim() ?? "";
     const prompt = [
@@ -300,7 +305,7 @@ export async function regenerateDraftPartCore(userId: string, input: {
     ]
       .filter(Boolean)
       .join("\n\n");
-    const { object, usage: uso1 } = await generateObject({ model, schema: PART_SCHEMAS[input.part], system: EDITOR_ASSIST_SYSTEM, prompt });
+    const { object, usage: uso1 } = await generateObject({ model, schema: PART_SCHEMAS[input.part], system: sistema, prompt });
     await registrarUsoIA(userId, uso1);
     const value: Partial<GeneratedDraft> = stripMarkers(object);
     // El cuerpo reescrito también pasa por la verificación: sin cifras ni citas que no consten en lo que se le dio.
