@@ -3,10 +3,11 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { GripVertical, Inbox, X, ArrowUp, ArrowDown, ChevronLeft, FileText, Palette } from "lucide-react";
+import { GripVertical, Inbox, X, ArrowUp, ArrowDown, ChevronLeft, Download, FileText, Loader2, Palette } from "lucide-react";
 import { BibliotecaNotas, MIME_NOTA, type Nota } from "./biblioteca-notas";
 import { deleteEdition, previewEdition, saveEdition, sendEditionChunk, sendTestEmail } from "../actions";
 import { DisenoBoletin, type DisenoEditable } from "./diseno-boletin";
+import { descargarPdfBoletin } from "./pdf-boletin";
 
 // Contenido editable de la edición.
 type Content = { subject: string; preheader: string; intro: string; articleSlugs: string[] };
@@ -24,6 +25,9 @@ export function EditionEditor({ id, status, recipients, progress, initial, artic
   // Diseño del correo (se previsualiza al instante; se guarda aparte) y pestaña activa del panel central.
   const [d, setD] = useState(diseno);
   const [panel, setPanel] = useState<"contenido" | "diseno">("contenido");
+  // Descarga del PDF: mientras se genera y, si falla, el aviso.
+  const [creandoPdf, setCreandoPdf] = useState(false);
+  const [errorPdf, setErrorPdf] = useState("");
   const [mobile, setMobile] = useState(false);
   const [msg, setMsg] = useState("");
   const [to, setTo] = useState("");
@@ -84,6 +88,22 @@ export function EditionEditor({ id, status, recipients, progress, initial, artic
       if (r.done) { setMsg("Edición enviada."); location.reload(); return; }
     }
     setSending(false);
+  }
+
+  // Descarga el boletín (tal como se ve en la vista previa, con el diseño actual) como PDF.
+  async function descargarPdf() {
+    if (!html) return;
+    setErrorPdf("");
+    setCreandoPdf(true);
+    try {
+      const nombre = (c.subject.trim() || "boletin").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60) || "boletin";
+      await descargarPdfBoletin(html, nombre);
+    } catch (e) {
+      console.error("PDF del boletín:", e);
+      setErrorPdf("No se pudo crear el PDF. Inténtalo de nuevo.");
+    } finally {
+      setCreandoPdf(false);
+    }
   }
 
   // Etiqueta de un campo del formulario.
@@ -182,12 +202,18 @@ export function EditionEditor({ id, status, recipients, progress, initial, artic
         </div>
 
         <div className="flex flex-col gap-2 lg:col-span-2 xl:col-span-1">
+          <div className="flex flex-wrap items-center justify-between gap-2">
           <div role="tablist" aria-label="Tamaño de la vista previa" className="flex w-fit gap-1 rounded-full bg-[var(--surface-2)] p-1 text-sm font-semibold">
             {([[false, "Escritorio"], [true, "Móvil"]] as const).map(([m, t]) => (
               <button key={t} type="button" role="tab" aria-selected={mobile === m} onClick={() => setMobile(m)}
                 className={`rounded-full px-3 py-1 transition ${mobile === m ? "bg-[var(--surface)] text-[var(--accent)] shadow-sm" : "text-[var(--fg-muted)]"}`}>{t}</button>
             ))}
           </div>
+          <button type="button" onClick={descargarPdf} disabled={creandoPdf || !html} className="lx-btn-ghost !px-3 !py-1.5 text-xs" title="Descarga el boletín tal como se ve aquí, con el diseño actual">
+            {creandoPdf ? <Loader2 size={14} className="animate-spin" aria-hidden /> : <Download size={14} aria-hidden />} {creandoPdf ? "Creando PDF…" : "Descargar PDF"}
+          </button>
+          </div>
+          {errorPdf && <p role="alert" className="text-xs text-[var(--danger)]">{errorPdf}</p>}
           <VistaPrevia html={html} ancho={mobile ? 390 : 680} />
         </div>
       </div>
