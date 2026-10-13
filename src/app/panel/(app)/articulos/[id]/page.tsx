@@ -9,6 +9,7 @@ import Link from "next/link";
 import { ArrowLeft, PenLine, Sparkles } from "lucide-react";
 import { ArticleEditor } from "@/components/article-editor";
 import { ArticleWizard } from "@/components/panel/article-wizard";
+import { getEstilo } from "@/lib/ai/estilo";
 import { siteChrome } from "@/components/panel/site-chrome";
 import { ViewsBarChart } from "@/components/panel/views-chart";
 import { articleSeries, bestDay, pctChange } from "@/lib/article-stats";
@@ -77,6 +78,9 @@ export default async function ArticleEditorPage({
 
   await ensureUserAuthors().catch(() => {});
   const miAutorId = await autorDeUsuario(session!.user.id);
+  // ¿La persona ya enseñó su estilo a la IA? Se avisa en el asistente para que se vea que la IA lo está usando.
+  const est = await getEstilo(session!.user.id);
+  const estilo: "activo" | "apagado" | "sin" = est.diagnostico ? (est.activo ? "activo" : "apagado") : "sin";
   const [cats, auths] = await Promise.all([
     db.select({ id: categories.id, name: categories.name, parentId: categories.parentId }).from(categories).orderBy(asc(categories.sortOrder), asc(categories.name)),
     db.select({ id: authors.id, name: authors.name }).from(authors).orderBy(asc(authors.name)),
@@ -94,6 +98,7 @@ export default async function ArticleEditorPage({
           site={await siteChrome()}
           canPublish={canPublish(session!.user.role)}
           canPortada={await tienePermiso(session!.user.id, session!.user.role, "portada")}
+          estilo={estilo}
         />
       );
     }
@@ -142,6 +147,7 @@ export default async function ArticleEditorPage({
           status={row.status}
           canPublish={canPublish(session!.user.role)}
           canPortada={await tienePermiso(session!.user.id, session!.user.role, "portada")}
+          estilo={estilo}
           savedAs={guardado}
           initial={{
             id: row.id,

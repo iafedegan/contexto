@@ -7,6 +7,7 @@ import "server-only";
 import { generateObject } from "ai";
 import { z } from "zod";
 import { EDITOR_ASSIST_SYSTEM } from "@/agents/prompts";
+import { sistemaConEstilo } from "@/lib/ai/estilo";
 import { getAiModel } from "@/lib/ai-provider";
 import { materialParaPrompt, type Material } from "@/lib/material-types";
 import { registrarUsoIA, verificarCuotaIA } from "@/lib/ai-cuota";
@@ -50,7 +51,8 @@ export async function suggestTitlesAndContextsCore(userId: string, input: {
     const { object, usage: uso2 } = await generateObject({
       model,
       schema: optionsSchema,
-      system: EDITOR_ASSIST_SYSTEM,
+      // Los títulos y enfoques que se proponen también salen con el estilo de la persona, si lo tiene activo.
+      system: await sistemaConEstilo(EDITOR_ASSIST_SYSTEM, userId),
       prompt: [
         input.section ? `SECCIÓN: ${input.section}` : "",
         topic ? `TEMA DEL PERIODISTA:\n${topic}` : "",

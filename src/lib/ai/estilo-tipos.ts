@@ -58,17 +58,35 @@ export function aVista(e: EstiloEscritura): EstiloVista {
   return { fuentes: e.fuentes.map(({ texto: _t, ...resto }) => { void _t; return resto; }), diagnostico: e.diagnostico, activo: e.activo };
 }
 
+/** Hasta 3 pasajes cortos de las muestras (de muestras distintas) para que la IA «oiga» la voz de la persona y la imite en la forma. */
+export function ejemplosDeVoz(fuentes: FuenteEstilo[], max = 3): string[] {
+  const out: string[] = [];
+  for (const f of fuentes) {
+    if (out.length >= max) break;
+    const parrafo = f.texto
+      .split(/\n{1,}/)
+      .map((x) => x.trim())
+      .find((x) => x.length >= 220 && x.length <= 650 && !/^https?:/i.test(x));
+    if (parrafo) out.push(parrafo);
+  }
+  return out;
+}
+
 /**
- * Bloque que se añade al `system` del modelo cuando la persona tiene un estilo activo. Es solo de FORMA: no cambia las reglas de
- * veracidad, cifras, citas ni fuentes. Devuelve "" si no hay diagnóstico o está apagado.
+ * Bloque que se añade al `system` del modelo cuando la persona tiene un estilo activo. El estilo de la persona PREVALECE sobre el
+ * estilo por defecto en todo lo que es forma (tono, voz, ritmo, vocabulario, aperturas, cierres, estructura); lo que no cambia es la
+ * veracidad, las fuentes, las cifras y citas, el formato HTML y los mínimos de la ficha SEO. Devuelve "" si no hay diagnóstico o
+ * está apagado.
  */
 export function bloqueEstilo(e: EstiloEscritura | null | undefined): string {
   const d = e?.diagnostico;
   if (!e || !e.activo || !d) return "";
   const lista = (t: string, xs: string[]) => (xs.length ? `${t}: ${xs.join("; ")}.` : "");
+  const ejemplos = ejemplosDeVoz(e.fuentes);
   return [
-    "ESTILO DE LA PERSONA QUE FIRMA (escribe como ella, solo en la FORMA; las reglas de veracidad, fuentes, cifras y citas de arriba mandan siempre):",
-    d.resumen,
+    "ESTILO DE LA PERSONA QUE FIRMA LA NOTA — es la parte MÁS IMPORTANTE de la forma. Escribe como ella: cada párrafo debe sonar a esta persona y no a un redactor genérico.",
+    "Estas pautas PREVALECEN sobre el estilo por defecto de arriba en tono, voz, ritmo de las frases, vocabulario, aperturas, cierres y estructura. NO cambian: la veracidad (solo hechos del material), las fuentes, las cifras y las citas, el formato HTML, ni el mínimo de palabras y de subtítulos de la ficha SEO.",
+    `Retrato: ${d.resumen}`,
     lista("Tono", d.tono),
     d.voz && `Voz: ${d.voz}`,
     d.estructura && `Estructura: ${d.estructura}`,
@@ -76,8 +94,11 @@ export function bloqueEstilo(e: EstiloEscritura | null | undefined): string {
     d.vocabulario && `Vocabulario: ${d.vocabulario}`,
     d.aperturas && `Cómo abre: ${d.aperturas}`,
     d.cierres && `Cómo cierra: ${d.cierres}`,
-    lista("Evita", d.evitar),
-    d.reglas.length ? `Reglas de estilo:\n${d.reglas.map((r) => `- ${r}`).join("\n")}` : "",
+    lista("Evita (no lo hace)", d.evitar),
+    d.reglas.length ? `Reglas de estilo (síguelas todas):\n${d.reglas.map((r) => `- ${r}`).join("\n")}` : "",
+    ejemplos.length
+      ? `PASAJES REALES DE SU ESCRITURA (solo para captar la forma: no copies frases ni uses sus hechos):\n${ejemplos.map((x, i) => `(${i + 1}) «${x}»`).join("\n")}`
+      : "",
   ]
     .filter(Boolean)
     .join("\n");

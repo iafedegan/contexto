@@ -21,6 +21,7 @@ import {
   RotateCcw,
   Save,
   Send,
+  PenLine,
   Sparkles,
   Trash2,
   X,
@@ -117,6 +118,7 @@ export function ArticleWizard({
   status,
   canPublish = false,
   canPortada = false,
+  estilo = "sin",
   savedAs,
 }: {
   categories: (Option & { parentId?: string | null })[];
@@ -136,6 +138,8 @@ export function ArticleWizard({
   canPublish?: boolean;
   /** Puede ubicar notas en la portada del sitio (permiso «portada»). */
   canPortada?: boolean;
+  /** Estilo de escritura de la persona: «activo» (la IA lo usa), «apagado» (lo tiene pero lo desactivó) o «sin» (aún no lo carga). */
+  estilo?: "activo" | "apagado" | "sin";
   /** Resultado del último guardado (?guardado=…), para confirmarlo. */
   savedAs?: string;
 }) {
@@ -769,6 +773,18 @@ export function ArticleWizard({
             )}
           </p>
           <span className="ml-auto flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+            {mode === "ia" && (
+              <Link
+                href="/panel/configuracion#estilo"
+                title={estilo === "activo" ? "La IA redacta con el diagnóstico de tu estilo. Pulsa para verlo o cambiarlo." : "Carga notas tuyas y la IA aprenderá cómo escribes."}
+                className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-semibold transition ${
+                  estilo === "activo" ? "bg-[var(--accent)]/12 text-[var(--accent)]" : "border border-[var(--border-strong)] text-[var(--fg-muted)] hover:text-[var(--accent)]"
+                }`}
+              >
+                <PenLine size={12} aria-hidden />
+                {estilo === "activo" ? "Escribiendo con tu estilo" : estilo === "apagado" ? "Tu estilo está apagado" : "Enseña a la IA cómo escribes"}
+              </Link>
+            )}
             <span role="status" aria-live="polite" className="text-[var(--fg-muted)]">
               {autoEstado === "guardando" && "Guardando…"}
               {autoEstado === "guardado" && `✓ Guardado · ${autoHora}`}
