@@ -69,6 +69,28 @@ export function EditionEditor({ id, status, programadaPara, recipients: recipien
   const elegibles: NotaElegible[] = articles.map((n) => ({ slug: n.slug, seccion: n.parentName ?? n.categoryName ?? "Sin sección", publishedAt: n.publishedAt, esUltimaHora: n.esUltimaHora }));
   const poner = (items: ItemEdicion[]) => setC((p) => ({ ...p, items }));
 
+  // El contenido se guarda solo, con una pausa, mientras se edita (antes solo el botón «Guardar borrador» lo guardaba y salir de la
+  // pantalla perdía el trabajo). Una edición ya programada o enviada no se toca.
+  const [guardado, setGuardado] = useState<"idle" | "guardando" | "ok" | "error">("idle");
+  const primera = useRef(true);
+  useEffect(() => {
+    if (primera.current) {
+      primera.current = false;
+      return;
+    }
+    if (locked) return;
+    const t = setTimeout(async () => {
+      setGuardado("guardando");
+      try {
+        const r = await saveEdition(id, c);
+        setGuardado(r.ok ? "ok" : "error");
+      } catch {
+        setGuardado("error");
+      }
+    }, 1200);
+    return () => clearTimeout(t);
+  }, [c, id, locked]);
+
   useEffect(() => {
     const t = setTimeout(async () => {
       const r = await previewEdition(c, { design: d, acento: d.acento });
@@ -190,6 +212,11 @@ export function EditionEditor({ id, status, programadaPara, recipients: recipien
             <div className="flex flex-col gap-3 border-t border-[var(--border)] pt-4">
               <div className="flex flex-wrap gap-2">
                 <button className="lx-btn-ghost" disabled={pending || sending} onClick={() => start(async () => setMsg((await saveEdition(id, c)).message))}>Guardar borrador</button>
+                <span role="status" aria-live="polite" className={`text-xs font-medium ${guardado === "error" ? "text-[var(--danger)]" : "text-[var(--fg-muted)]"}`}>
+                  {guardado === "guardando" && "Guardando…"}
+                  {guardado === "ok" && "Guardado automáticamente ✓"}
+                  {guardado === "error" && "No se pudo guardar: pulsa «Guardar borrador»"}
+                </span>
                 <button className="lx-btn-ghost text-red-600" disabled={sending} onClick={async () => { if (confirm("¿Eliminar este borrador?")) { await deleteEdition(id); router.push("/panel/newsletter"); } }}>Eliminar</button>
               </div>
               <div className="flex gap-2">
