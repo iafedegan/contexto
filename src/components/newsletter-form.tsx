@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useSyncExternalStore } from "react";
+import { useActionState, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Turnstile } from "@/components/turnstile";
 import { Check, Loader2, Mail, TriangleAlert } from "lucide-react";
 import { suscribirBoletin, type BoletinState } from "@/app/acciones/boletin";
@@ -44,6 +44,15 @@ const yaSuscrito = () => {
  */
 export function NewsletterForm({ locale, compacto = false }: { locale: Locale; compacto?: boolean }) {
   const [state, action, pending] = useActionState<BoletinState, FormData>(suscribirBoletin, null);
+  // «Todos»: marca o desmarca todos los temas de una vez (los chips son casillas sin estado propio).
+  const temas = useRef<HTMLDivElement>(null);
+  const [todosLosTemas, setTodosLosTemas] = useState(false);
+  const cajas = () => [...(temas.current?.querySelectorAll<HTMLInputElement>('input[name="temas"]') ?? [])];
+  const alternarTodos = () => {
+    const marcar = !cajas().every((c) => c.checked);
+    cajas().forEach((c) => (c.checked = marcar));
+    setTodosLosTemas(marcar);
+  };
   const suscrito = useSyncExternalStore(suscribirSuscrito, yaSuscrito, () => false);
   // Al darse de alta se recuerda en este navegador; el mensaje de «revisa tu correo» se ve esta vez y después el formulario ya no sale.
   useEffect(() => {
@@ -153,7 +162,15 @@ export function NewsletterForm({ locale, compacto = false }: { locale: Locale; c
               <legend className="mb-1 text-xs text-[var(--fg-muted)]">
                 {locale === "en" ? "Topics you care about (optional) — so we send you what is useful" : "Temas que te interesan (opcional): así te enviamos lo que te sirve"}
               </legend>
-              <div className="flex flex-wrap gap-1.5">
+              <div ref={temas} className="flex flex-wrap gap-1.5" onChange={() => setTodosLosTemas(cajas().length > 0 && cajas().every((c) => c.checked))}>
+                <button
+                  type="button"
+                  onClick={alternarTodos}
+                  aria-pressed={todosLosTemas}
+                  className={`inline-block rounded-full border px-2.5 py-1 text-xs font-semibold transition ${todosLosTemas ? "border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-fg)]" : "border-[var(--border-strong)] text-[var(--fg)] hover:border-[var(--accent)]"}`}
+                >
+                  {locale === "en" ? "All" : "Todos"}
+                </button>
                 {TEMAS_INTERES.map((tema) => (
                   <label key={tema.id} className="cursor-pointer">
                     <input type="checkbox" name="temas" value={tema.id} className="peer sr-only" />

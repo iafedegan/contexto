@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { newsletterEditions, newsletterSubscribers, siteSettings } from "@/db/schema";
 import { requirePermiso, requireRole } from "@/lib/auth";
@@ -246,6 +246,19 @@ export async function deleteResendKey(): Promise<void> {
 export async function unsubscribeSubscriber(id: string): Promise<void> {
   await requirePermiso("newsletter");
   await db.update(newsletterSubscribers).set({ unsubscribedAt: new Date() }).where(eq(newsletterSubscribers.id, id));
+  REVALIDATE();
+}
+
+/**
+ * Confirmación manual (solo administradores): para suscriptores que no pueden abrir el enlace del correo (envío sin conectar, correo
+ * perdido, prueba). Equivale a confirmar el correo: pasa a recibir el boletín. No toca a quien se dio de baja.
+ */
+export async function confirmarSuscriptor(id: string): Promise<void> {
+  await requireRole("administrador");
+  await db
+    .update(newsletterSubscribers)
+    .set({ confirmed: true })
+    .where(and(eq(newsletterSubscribers.id, id), isNull(newsletterSubscribers.unsubscribedAt)));
   REVALIDATE();
 }
 

@@ -5,7 +5,7 @@ import { db } from "@/db";
 import { newsletterEditions, newsletterSubscribers } from "@/db/schema";
 import { requirePermiso } from "@/lib/auth";
 import { getNewsletterSettings, getProviderStatus } from "@/lib/newsletter/settings";
-import { createEdition, deleteSubscriber, unsubscribeSubscriber } from "./actions";
+import { confirmarSuscriptor, createEdition, deleteSubscriber, unsubscribeSubscriber } from "./actions";
 import { SettingsForm } from "./settings-form";
 import { BorrarEdicion } from "./borrar-edicion";
 import { TEMAS_INTERES } from "@/lib/newsletter/audiencia-tipos";
@@ -206,6 +206,11 @@ async function Suscriptores({ admin }: { admin: boolean }) {
             </span>
             <span className="flex items-center gap-3 text-xs text-[var(--fg-muted)]">
               <span className={`rounded-full px-2 py-0.5 text-[0.7rem] font-semibold ${r.unsubscribedAt ? "bg-[var(--surface-2)] text-[var(--fg-muted)]" : r.confirmed ? "bg-[#16a34a]/12 text-[#15803d]" : "bg-amber-500/15 text-amber-700"}`}>{r.unsubscribedAt ? "Baja" : r.confirmed ? "Activo" : "Pendiente"}</span> {fmt(r.createdAt)}
+              {admin && !r.unsubscribedAt && !r.confirmed && (
+                <form action={confirmarSuscriptor.bind(null, r.id)}>
+                  <button className="font-semibold text-[var(--accent)] underline" title="Marca el correo como confirmado sin esperar el enlace">Confirmar manualmente</button>
+                </form>
+              )}
               {!r.unsubscribedAt && <form action={unsubscribeSubscriber.bind(null, r.id)}><button className="underline">Dar de baja</button></form>}
               {admin && <form action={deleteSubscriber.bind(null, r.id)}><button className="text-red-600 underline">Eliminar</button></form>}
             </span>
