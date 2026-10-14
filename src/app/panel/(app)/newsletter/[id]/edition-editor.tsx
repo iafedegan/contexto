@@ -3,8 +3,10 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { GripVertical, Inbox, X, ArrowUp, ArrowDown, ChevronLeft, Download, FileText, Loader2, Palette } from "lucide-react";
-import { BibliotecaNotas, MIME_NOTA, type Nota } from "./biblioteca-notas";
+import { ChevronLeft, Download, FileText, Loader2, Palette } from "lucide-react";
+import { BibliotecaNotas, type Nota } from "./biblioteca-notas";
+import { ArmadoBoletin } from "./armado-boletin";
+import { anadirNota, anadirSeccion, notasDeSeccion, slugsDeItems, type ItemEdicion, type NotaElegible } from "@/lib/newsletter/items";
 import { deleteEdition, guardarAudiencia, previewEdition, saveEdition, sendEditionChunk, sendTestEmail } from "../actions";
 import { Destinatarios, nombrePais } from "./destinatarios";
 import { describirAudiencia, type Audiencia } from "@/lib/newsletter/audiencia-tipos";
@@ -13,7 +15,7 @@ import { DisenoBoletin, type DisenoEditable } from "./diseno-boletin";
 import { descargarPdfBoletin } from "./pdf-boletin";
 
 // Contenido editable de la edición.
-type Content = { subject: string; preheader: string; intro: string; articleSlugs: string[] };
+type Content = { subject: string; preheader: string; intro: string; items: ItemEdicion[] };
 
 // Editor de una edición del boletín: asunto, textos, notas elegidas y envío.
 export function EditionEditor({ id, status, recipients: recipientsInicial, audiencia, opciones, progress, initial, articles, diseno, puedeDisenar }: {
@@ -54,10 +56,10 @@ export function EditionEditor({ id, status, recipients: recipientsInicial, audie
   const [prog, setProg] = useState(progress);
   const [pending, start] = useTransition();
   const locked = status === "enviada";
-  // Posición de la línea de inserción mientras se arrastra, y nota que se está moviendo dentro del boletín.
-  const [sobre, setSobre] = useState<number | null>(null);
-  const [moviendo, setMoviendo] = useState<string | null>(null);
-  const usadas = new Set(c.articleSlugs);
+  const usadas = new Set(slugsDeItems(c.items));
+  // Lo que hace falta de cada nota para traerla por sección o por «última hora».
+  const elegibles: NotaElegible[] = articles.map((n) => ({ slug: n.slug, seccion: n.parentName ?? n.categoryName ?? "Sin sección", publishedAt: n.publishedAt, esUltimaHora: n.esUltimaHora }));
+  const poner = (items: ItemEdicion[]) => setC((p) => ({ ...p, items }));
 
   useEffect(() => {
     const t = setTimeout(async () => {
@@ -66,33 +68,6 @@ export function EditionEditor({ id, status, recipients: recipientsInicial, audie
     }, 400);
     return () => clearTimeout(t);
   }, [c, d]);
-
-  // Marca o desmarca una nota de la edición.
-  const toggle = (slug: string) =>
-    setC((p) => ({ ...p, articleSlugs: p.articleSlugs.includes(slug) ? p.articleSlugs.filter((s) => s !== slug) : [...p.articleSlugs, slug].slice(0, 12) }));
-  // Sube o baja una nota en el orden de la edición.
-  const move = (i: number, d: number) =>
-    setC((p) => {
-      const a = [...p.articleSlugs]; const j = i + d;
-      if (j < 0 || j >= a.length) return p;
-      [a[i], a[j]] = [a[j], a[i]];
-      return { ...p, articleSlugs: a };
-    });
-
-  // Pone una nota en una posición (al soltar): si ya estaba, la mueve; si es nueva, la inserta.
-  const colocar = (slug: string, pos: number) =>
-    setC((p) => {
-      const sin = p.articleSlugs.filter((x) => x !== slug);
-      const antes = p.articleSlugs.indexOf(slug);
-      const i = Math.max(0, Math.min(sin.length, antes >= 0 && antes < pos ? pos - 1 : pos));
-      return { ...p, articleSlugs: [...sin.slice(0, i), slug, ...sin.slice(i)].slice(0, 12) };
-    });
-  const soltar = (e: React.DragEvent, pos: number) => {
-    e.preventDefault();
-    const slug = e.dataTransfer.getData(MIME_NOTA);
-    setSobre(null); setMoviendo(null);
-    if (slug && !locked) colocar(slug, pos);
-  };
 
   // Envía la edición a los suscriptores por tandas, tras pedir confirmación.
   async function send() {
@@ -143,7 +118,7 @@ export function EditionEditor({ id, status, recipients: recipientsInicial, audie
         </span>
       </div>
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,21rem)_minmax(0,1fr)] xl:grid-cols-[minmax(0,21rem)_minmax(0,1fr)_minmax(0,1fr)]">
-        <BibliotecaNotas notas={articles} usadas={usadas} onAgregar={(sl) => toggle(sl)} bloqueada={locked} />
+        <BibliotecaNotas notas={articles} usadas={usadas} onAgregar={(sl) => setC((p) => ({ ...p, items: anadirNota(p.items, sl) }))} onTraerSeccion={(nombre) => setC((p) => ({ ...p, items: anadirSeccion(p.items, nombre, notasDeSeccion(elegibles, nombre, p.items)) }))} bloqueada={locked} />
         <div className="flex flex-col gap-4">
           <div role="tablist" aria-label="Qué editar" className="flex gap-1 rounded-full bg-[var(--surface-2)] p-1 text-sm font-semibold">
             {([["contenido", "Contenido", FileText], ["diseno", "Diseño", Palette]] as const).map(([k, t, Icono]) => (
@@ -158,47 +133,7 @@ export function EditionEditor({ id, status, recipients: recipientsInicial, audie
           <label className="flex flex-col gap-1">{label("Asunto")}<input className="lx-input" value={c.subject} disabled={locked} onChange={(e) => setC({ ...c, subject: e.target.value })} maxLength={150} /></label>
           <label className="flex flex-col gap-1">{label("Texto de vista previa (preheader)")}<input className="lx-input" value={c.preheader} disabled={locked} onChange={(e) => setC({ ...c, preheader: e.target.value })} maxLength={200} /></label>
           <label className="flex flex-col gap-1">{label("Mensaje de la redacción")}<textarea rows={5} className="lx-input" value={c.intro} disabled={locked} onChange={(e) => setC({ ...c, intro: e.target.value })} /></label>
-          <div className="flex flex-col gap-2">
-            {label(`Armado del boletín (${c.articleSlugs.length}/12) — la primera es la destacada`)}
-            <ol
-              aria-label="Notas del boletín, en orden"
-              onDragOver={(e) => { if (!locked) { e.preventDefault(); setSobre((v) => v ?? c.articleSlugs.length); } }}
-              onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setSobre(null); }}
-              onDrop={(e) => soltar(e, sobre ?? c.articleSlugs.length)}
-              className={`flex min-h-40 flex-col gap-1.5 rounded-[var(--radius-lg)] border-2 border-dashed p-2 transition ${sobre !== null ? "border-[var(--accent)] bg-[var(--accent)]/5" : "border-[var(--border-strong)]"}`}
-            >
-              {c.articleSlugs.length === 0 && (
-                <li className="grid flex-1 place-items-center gap-1 py-8 text-center text-sm text-[var(--fg-muted)]"><Inbox size={22} aria-hidden /> Arrastra aquí las notas<span className="text-xs">o pulsa «+» en la lista de la izquierda</span></li>
-              )}
-              {c.articleSlugs.map((sl, k) => {
-                const a = articles.find((x) => x.slug === sl);
-                return (
-                  <li key={sl}
-                    onDragOver={(e) => { if (locked) return; e.preventDefault(); e.stopPropagation(); const r = e.currentTarget.getBoundingClientRect(); setSobre(e.clientY < r.top + r.height / 2 ? k : k + 1); }}
-                    onDrop={(e) => { e.stopPropagation(); soltar(e, sobre ?? k); }}
-                    className="relative">
-                    {sobre === k && <span aria-hidden className="absolute -top-1 left-0 right-0 h-0.5 rounded bg-[var(--accent)]" />}
-                    <div draggable={!locked}
-                      onDragStart={(e) => { e.dataTransfer.setData(MIME_NOTA, sl); e.dataTransfer.effectAllowed = "move"; setMoviendo(sl); }}
-                      onDragEnd={() => { setMoviendo(null); setSobre(null); }}
-                      className={`flex items-center gap-2 rounded-[var(--radius)] border bg-[var(--surface)] p-2 text-sm ${moviendo === sl ? "opacity-40" : ""} ${k === 0 ? "border-[var(--accent)]" : "border-[var(--border)]"} ${locked ? "" : "cursor-grab active:cursor-grabbing"}`}>
-                      {!locked && <GripVertical size={16} aria-hidden className="shrink-0 text-[var(--fg-muted)]" />}
-                      <span className="grid size-6 shrink-0 place-items-center rounded-full bg-[var(--surface-2)] text-xs font-bold tabular-nums">{k + 1}</span>
-                      <span className="min-w-0 flex-1"><span className="line-clamp-2 font-medium leading-snug">{a?.title ?? sl}</span><span className="text-xs text-[var(--fg-muted)]">{k === 0 ? "Destacada · " : ""}{a?.parentName ? `${a.parentName} › ` : ""}{a?.categoryName ?? ""}</span></span>
-                      {!locked && (
-                        <span className="flex shrink-0 items-center">
-                          <button type="button" aria-label="Subir" disabled={k === 0} onClick={() => move(k, -1)} className="grid size-8 place-items-center rounded-full hover:bg-[var(--surface-2)] disabled:opacity-30"><ArrowUp size={15} aria-hidden /></button>
-                          <button type="button" aria-label="Bajar" disabled={k === c.articleSlugs.length - 1} onClick={() => move(k, 1)} className="grid size-8 place-items-center rounded-full hover:bg-[var(--surface-2)] disabled:opacity-30"><ArrowDown size={15} aria-hidden /></button>
-                          <button type="button" aria-label="Quitar del boletín" onClick={() => toggle(sl)} className="grid size-8 place-items-center rounded-full hover:bg-[#b4232a]/10 hover:text-[#b4232a]"><X size={15} aria-hidden /></button>
-                        </span>
-                      )}
-                    </div>
-                    {sobre === k + 1 && k === c.articleSlugs.length - 1 && <span aria-hidden className="absolute -bottom-1 left-0 right-0 h-0.5 rounded bg-[var(--accent)]" />}
-                  </li>
-                );
-              })}
-            </ol>
-          </div>
+          <ArmadoBoletin items={c.items} alCambiar={poner} notas={articles} elegibles={elegibles} bloqueado={locked} />
 
           <Destinatarios valor={aud} alCambiar={setAud} opciones={opciones} cuantos={recipients} bloqueada={status !== "borrador"} />
 

@@ -27,6 +27,8 @@ export type NewsletterRender = {
   preheader: string;
   intro: string;
   articles: EmailArticle[];
+  /** Las mismas notas agrupadas por sección (con encabezados). Sin esto, el correo se dibuja como una sola lista. */
+  secciones?: { titulo: string | null; articulos: EmailArticle[] }[];
   /** Número de edición (null en una vista previa sin asignar). */
   issue: number | null;
   /** Enlace de baja de ESTE lector. */
@@ -308,39 +310,52 @@ export function renderNewsletterHtml(r: NewsletterRender): string {
       </tr></table></td></tr>${abajo.length ? rotulo("Más notas") + abajo.map((a) => bloqueFila(a, 110, 120)).join("") : ""}`;
   };
 
-  const [lead, ...rest] = r.articles;
-  const mas = rest.length ? rotulo("También en esta edición") : "";
-  let cuerpoNotas = "";
-  switch (d.plantilla) {
-    case "revista":
-      cuerpoNotas = r.articles
-        .map((a, i) => bloqueGrande(a, i === 0 ? 30 : 24, i === 0 ? d.imagenDestacada : d.miniaturas, i === 0 ? "8px 32px 0 32px" : "34px 32px 0 32px", i === 0 && d.destacadaColor))
-        .join("");
-      break;
-    case "editorial":
-      cuerpoNotas = (lead ? heroEditorial(lead) : "") + (rest.length ? mas + rejilla(rest, false) : "");
-      break;
-    case "tarjetas":
-      cuerpoNotas = r.articles.length ? rejilla(r.articles, true) : "";
-      break;
-    case "numerada":
-      cuerpoNotas = (lead ? bloqueGrande(lead, 28, d.imagenDestacada, "8px 32px 0 32px", d.destacadaColor) : "") + (rest.length ? rotulo("Lo que más debes leer") + rest.map((a, i) => filaNumerada(a, i + 2)).join("") : "");
-      break;
-    case "minima":
-      cuerpoNotas = (lead ? bloqueGrande(lead, 26, d.imagenDestacada, "8px 32px 0 32px", d.destacadaColor) : "") + (rest.length ? mas + rest.map(bloqueTitular).join("") : "");
-      break;
-    case "bloques":
-      cuerpoNotas = (lead ? bloqueGrande(lead, 30, d.imagenDestacada, "", true) : "") + `<tr><td style="padding:0;height:8px;line-height:8px;font-size:0">&nbsp;</td></tr>` + rest.map(panelBloque).join("");
-      break;
-    case "mosaico":
-      cuerpoNotas = (lead ? bloqueGrande(lead, 30, d.imagenDestacada, "", true) : "") + (rest.length ? baldosas(rest) : "");
-      break;
-    case "dossier":
-      cuerpoNotas = lead ? dossier(lead, rest) : "";
-      break;
-    default:
-      cuerpoNotas = (lead ? bloqueGrande(lead, 28, d.imagenDestacada, "8px 32px 0 32px", d.destacadaColor) : "") + (rest.length ? mas + rest.map((a) => bloqueFila(a, 132, 150)).join("") : "");
-  }
+  // Encabezado de una sección del armado («Última hora», «Colombia»…): más marcado que el rótulo «También en esta edición».
+  const rotuloSeccion = (titulo: string) => `
+      <tr><td class="px" style="padding:38px 32px 0 32px">
+        <div style="width:34px;height:4px;background:${accent};margin:0 0 10px 0;border-radius:2px"></div>
+        <h2 class="t-main" style="margin:0;font:800 ${tamTit(22)}px/1.15 ${TIT};${mayus}color:${d.colorTitulos}">${esc(titulo)}</h2>
+      </td></tr>`;
+
+  /**
+   * Las notas de UNA lista dibujadas con la maquetación elegida. `conDestacada`: la primera nota es la destacada (la de arriba del
+   * correo); si no, todas se dibujan como las «demás» (las secciones que siguen a la primera).
+   */
+  const cuerpoDe = (arts: EmailArticle[], conDestacada: boolean, conRotulos = true): string => {
+    const lead = conDestacada ? arts[0] : undefined;
+    const rest = conDestacada ? arts.slice(1) : arts;
+    // Los rótulos «También en esta edición» y «Lo que más debes leer» solo tienen sentido en una lista sin secciones: con secciones, el encabezado ya titula cada grupo.
+    const mas = conRotulos && conDestacada && rest.length ? rotulo("También en esta edición") : "";
+    switch (d.plantilla) {
+      case "revista":
+        return arts
+          .map((a, i) => {
+            const primera = conDestacada && i === 0;
+            return bloqueGrande(a, primera ? 30 : 24, primera ? d.imagenDestacada : d.miniaturas, primera ? "8px 32px 0 32px" : "34px 32px 0 32px", primera && d.destacadaColor);
+          })
+          .join("");
+      case "editorial":
+        return (lead ? heroEditorial(lead) : "") + (rest.length ? mas + rejilla(rest, false) : "");
+      case "tarjetas":
+        return arts.length ? rejilla(arts, true) : "";
+      case "numerada":
+        return (lead ? bloqueGrande(lead, 28, d.imagenDestacada, "8px 32px 0 32px", d.destacadaColor) : "") + (rest.length ? (conRotulos && conDestacada ? rotulo("Lo que más debes leer") : "") + rest.map((a, i) => filaNumerada(a, i + (conDestacada ? 2 : 1))).join("") : "");
+      case "minima":
+        return (lead ? bloqueGrande(lead, 26, d.imagenDestacada, "8px 32px 0 32px", d.destacadaColor) : "") + (rest.length ? mas + rest.map(bloqueTitular).join("") : "");
+      case "bloques":
+        return (lead ? bloqueGrande(lead, 30, d.imagenDestacada, "", true) + `<tr><td style="padding:0;height:8px;line-height:8px;font-size:0">&nbsp;</td></tr>` : "") + rest.map(panelBloque).join("");
+      case "mosaico":
+        return (lead ? bloqueGrande(lead, 30, d.imagenDestacada, "", true) : "") + (rest.length ? baldosas(rest) : "");
+      case "dossier":
+        return lead ? dossier(lead, rest) : rest.map((a) => bloqueFila(a, 110, 120)).join("");
+      default:
+        return (lead ? bloqueGrande(lead, 28, d.imagenDestacada, "8px 32px 0 32px", d.destacadaColor) : "") + (rest.length ? mas + rest.map((a) => bloqueFila(a, 132, 150)).join("") : "");
+    }
+  };
+
+  // Con encabezados de sección, cada sección lleva el suyo; la primera abre con la nota destacada y las demás solo listan sus notas.
+  const secs = (r.secciones ?? []).filter((x) => x.articulos.length > 0);
+  const cuerpoNotas = secs.some((x) => x.titulo) ? secs.map((x, i) => (x.titulo ? rotuloSeccion(x.titulo) : "") + cuerpoDe(x.articulos, i === 0, false)).join("") : cuerpoDe(r.articles, true);
 
   // Mensaje de cierre, antes del botón final.
   const cierre = d.cierre.trim()
@@ -468,14 +483,21 @@ export function renderNewsletterText(r: NewsletterRender): string {
     line,
   ];
   if (r.intro.trim()) parts.push(r.intro.trim(), line);
-  r.articles.forEach((a, i) => {
-    parts.push(
-      `${i === 0 ? "DESTACADA · " : ""}${a.categoryName ? a.categoryName.toUpperCase() + " · " : ""}${a.title}`,
-      a.excerpt,
-      articleLink(a.slug, r.issue, r.lector),
-      "",
-    );
-  });
+  const secs = (r.secciones ?? []).filter((x) => x.articulos.length > 0);
+  const grupos = secs.some((x) => x.titulo) ? secs : [{ titulo: null, articulos: r.articles }];
+  let n = 0;
+  for (const g of grupos) {
+    if (g.titulo) parts.push(g.titulo.toUpperCase(), "");
+    for (const a of g.articulos) {
+      parts.push(
+        `${n === 0 ? "DESTACADA · " : ""}${a.categoryName ? a.categoryName.toUpperCase() + " · " : ""}${a.title}`,
+        a.excerpt,
+        articleLink(a.slug, r.issue, r.lector),
+        "",
+      );
+      n++;
+    }
+  }
   parts.push(line, r.settings.legalText, `${r.siteName}${r.settings.address ? " · " + r.settings.address : ""}`, `Darme de baja: ${r.unsubscribeUrl}`);
   return parts.join("\n");
 }

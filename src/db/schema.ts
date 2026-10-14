@@ -543,7 +543,11 @@ export const newsletterEditions = pgTable(
     intro: text("intro").notNull().default(""),
     // Notas incluidas, en orden; la primera es la destacada.
     articleSlugs: jsonb("article_slugs").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
-    // borrador | enviando | enviada
+    // Armado con secciones: encabezados («Última hora», «Colombia»…) y notas en orden. `[]` = lista plana de `article_slugs`. Ver `src/lib/newsletter/items.ts`.
+    items: jsonb("items").$type<unknown[]>().notNull().default(sql`'[]'::jsonb`),
+    // Cuándo debe salir (hora absoluta); con estado «programada». `null` = sin programar.
+    scheduledFor: timestamp("scheduled_for", { withTimezone: true }),
+    // borrador | programada | enviando | enviada
     status: text("status").notNull().default("borrador"),
     // Número de la edición, asignado al empezar el envío.
     issue: integer("issue"),

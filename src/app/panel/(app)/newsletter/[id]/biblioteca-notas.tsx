@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { ChevronDown, GripVertical, Plus, Search, Check } from "lucide-react";
 
 /** Nota publicada que se puede arrastrar al boletín. */
-export type Nota = { slug: string; title: string; categoryName: string | null; parentName: string | null; cover: string | null; publishedAt: string | null };
+export type Nota = { slug: string; title: string; categoryName: string | null; parentName: string | null; cover: string | null; publishedAt: string | null; esUltimaHora: boolean };
 
 const MIME = "application/x-cg-nota";
 const fecha = (iso: string | null) => (iso ? new Intl.DateTimeFormat("es-CO", { day: "numeric", month: "short", timeZone: "America/Bogota" }).format(new Date(iso)) : "");
@@ -21,7 +21,7 @@ function Portada({ src }: { src: string | null }) {
  * Biblioteca de notas publicadas, agrupadas por sección y subsección en listas que se despliegan. Cada nota se arrastra al
  * boletín (o se añade con el «+», que sirve también en el celular y con teclado). Las que ya están en el boletín quedan marcadas.
  */
-export function BibliotecaNotas({ notas, usadas, onAgregar, bloqueada }: { notas: Nota[]; usadas: Set<string>; onAgregar: (slug: string) => void; bloqueada: boolean }) {
+export function BibliotecaNotas({ notas, usadas, onAgregar, onTraerSeccion, bloqueada }: { notas: Nota[]; usadas: Set<string>; onAgregar: (slug: string) => void; onTraerSeccion?: (seccion: string) => void; bloqueada: boolean }) {
   const [q, setQ] = useState("");
   const [abiertas, setAbiertas] = useState<Set<string>>(new Set());
   const grupos = useMemo(() => {
@@ -80,10 +80,17 @@ export function BibliotecaNotas({ notas, usadas, onAgregar, bloqueada }: { notas
           const abierta = buscando || abiertas.has(seccion);
           return (
             <div key={seccion} className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)]">
-              <button type="button" onClick={() => alternar(seccion)} aria-expanded={abierta} className="flex w-full items-center justify-between gap-2 px-3 py-2.5 text-left">
-                <span className="font-semibold">{seccion}</span>
-                <span className="flex items-center gap-2 text-xs text-[var(--fg-muted)]">{total}<ChevronDown size={16} aria-hidden className={`transition ${abierta ? "rotate-180" : ""}`} /></span>
-              </button>
+              <div className="flex items-center">
+                <button type="button" onClick={() => alternar(seccion)} aria-expanded={abierta} className="flex min-w-0 flex-1 items-center justify-between gap-2 px-3 py-2.5 text-left">
+                  <span className="font-semibold">{seccion}</span>
+                  <span className="flex items-center gap-2 text-xs text-[var(--fg-muted)]">{total}<ChevronDown size={16} aria-hidden className={`transition ${abierta ? "rotate-180" : ""}`} /></span>
+                </button>
+                {onTraerSeccion && !bloqueada && (
+                  <button type="button" onClick={() => onTraerSeccion(seccion)} title={`Añadir la sección «${seccion}» con sus 3 notas más recientes`} aria-label={`Añadir la sección ${seccion} al boletín`} className="mr-2 inline-flex shrink-0 items-center gap-1 rounded-full border border-[var(--border-strong)] px-2.5 py-1 text-xs font-semibold hover:bg-[var(--accent)] hover:text-[var(--accent-fg)]">
+                    <Plus size={12} aria-hidden /> Sección
+                  </button>
+                )}
+              </div>
               {abierta && (
                 <div className="flex flex-col gap-3 border-t border-[var(--border)] p-2">
                   {[...subs.entries()].sort((a, b) => a[0].localeCompare(b[0], "es")).map(([sub, lista]) => (

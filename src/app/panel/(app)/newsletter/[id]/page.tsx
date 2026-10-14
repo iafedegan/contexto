@@ -8,6 +8,7 @@ import { EditionEditor } from "./edition-editor";
 import { getNewsletterSettings } from "@/lib/newsletter/settings";
 import { contarAudiencia, opcionesAudiencia } from "@/lib/newsletter/audiencia";
 import { sanitizarAudiencia } from "@/lib/newsletter/audiencia-tipos";
+import { itemsDeSlugs, sanitizarItems } from "@/lib/newsletter/items";
 
 // Se calcula en cada petición, nunca durante la compilación.
 export const dynamic = "force-dynamic";
@@ -24,6 +25,9 @@ export default async function EditionPage({ params }: { params: Promise<{ id: st
   // A quién va: los filtros guardados en la edición y cuántas personas cumplen cada opción.
   const audiencia = sanitizarAudiencia(edition.audience);
   const [n, opciones, articles, ajustes] = await Promise.all([contarAudiencia(audiencia), opcionesAudiencia(), getSelectableArticles(), getNewsletterSettings()]);
+  // Una edición anterior a las secciones solo tiene la lista plana de notas.
+  const conSecciones = sanitizarItems(edition.items);
+  const itemsIniciales = conSecciones.length > 0 ? conSecciones : itemsDeSlugs(sanitizarItems(((edition.articleSlugs as string[]) ?? []).map((slug) => ({ t: "n", slug }))).flatMap((i) => (i.t === "n" ? [i.slug] : [])));
   return (
     <EditionEditor
       diseno={{ ...ajustes.design, acento: ajustes.accentColor }}
@@ -34,8 +38,8 @@ export default async function EditionPage({ params }: { params: Promise<{ id: st
       audiencia={audiencia}
       opciones={opciones}
       progress={{ delivered: edition.delivered, total: edition.total, failed: edition.failed }}
-      initial={{ subject: edition.subject, preheader: edition.preheader, intro: edition.intro, articleSlugs: (edition.articleSlugs as string[]) ?? [] }}
-      articles={articles.map((a) => ({ slug: a.slug, title: a.title, categoryName: a.categoryName, parentName: a.parentName, cover: a.coverImageUrl, publishedAt: a.publishedAt ? a.publishedAt.toISOString() : null }))}
+      initial={{ subject: edition.subject, preheader: edition.preheader, intro: edition.intro, items: itemsIniciales }}
+      articles={articles.map((a) => ({ slug: a.slug, title: a.title, categoryName: a.categoryName, parentName: a.parentName, cover: a.coverImageUrl, publishedAt: a.publishedAt ? a.publishedAt.toISOString() : null, esUltimaHora: a.esUltimaHora }))}
     />
   );
 }

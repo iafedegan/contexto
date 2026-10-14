@@ -10,9 +10,11 @@ import { renderNewsletterHtml, renderNewsletterText, type EmailArticle } from "@
 import { unsubscribeToken } from "@/lib/newsletter/token";
 import type { Outgoing } from "@/lib/newsletter/send";
 import { siteUrl } from "@/lib/utils";
+import { agruparEnSecciones, tieneSecciones, type ItemEdicion } from "@/lib/newsletter/items";
 
-// Contenido editable de una edición: asunto, texto previo, introducción y notas elegidas.
-export type EditionContent = { subject: string; preheader: string; intro: string; articleSlugs: string[] };
+// Contenido editable de una edición: asunto, texto previo, introducción y notas elegidas. `items` es el armado con secciones
+// (encabezados y notas en orden); `articleSlugs` son las mismas notas sin encabezados y se mantiene para todo lo que no usa secciones.
+export type EditionContent = { subject: string; preheader: string; intro: string; articleSlugs: string[]; items?: ItemEdicion[] };
 
 // Condición SQL: nota publicada y ya vigente.
 const published = and(eq(articles.status, "publicado"), lte(articles.publishedAt, sql`now()`));
@@ -29,6 +31,8 @@ export async function getSelectableArticles() {
       categoryName: categories.name,
       parentName: padre.name,
       publishedAt: articles.publishedAt,
+      // Marcada «Última hora» en el panel: sirve para traer esa sección al boletín.
+      esUltimaHora: articles.isBreaking,
     })
     .from(articles)
     .leftJoin(categories, eq(articles.categoryId, categories.id))
@@ -78,7 +82,10 @@ export async function prepareRender(content: EditionContent, issue: number | nul
     getSiteIdentity(),
     loadEmailArticles(content.articleSlugs),
   ]);
-  return { settings, identity, list, issue, content };
+  // Con encabezados de sección, las notas se agrupan; sin ellos el correo se dibuja como siempre (una lista).
+  const por = new Map(list.map((a) => [a.slug, a]));
+  const secciones = content.items && tieneSecciones(content.items) ? agruparEnSecciones(content.items, por) : undefined;
+  return { settings, identity, list, issue, content, secciones };
 }
 
 // Edición ya preparada para dibujar y enviar.
@@ -97,6 +104,7 @@ export function buildMessage(p: Prepared, to: string, subscriberId: string | nul
     preheader: p.content.preheader,
     intro: p.content.intro,
     articles: p.list,
+    secciones: p.secciones,
     issue: p.issue,
     unsubscribeUrl: unsub,
     // Solo quien autorizó expresamente que se relacione su lectura recibe enlaces con su firma.

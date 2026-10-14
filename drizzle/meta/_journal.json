@@ -99,6 +99,13 @@
       "when": 1791916713118,
       "tag": "0013_segmentos_del_boletin",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1791943916308,
+      "tag": "0014_programacion_y_secciones_del_boletin",
+      "breakpoints": true
     }
   ]
 }

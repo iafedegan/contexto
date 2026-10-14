@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { renderNewsletterHtml, type NewsletterRender } from "@/lib/newsletter/template";
+import { renderNewsletterHtml, renderNewsletterText, type NewsletterRender } from "@/lib/newsletter/template";
 import { DEFAULT_NEWSLETTER_DESIGN, DEFAULT_NEWSLETTER_SETTINGS, sanitizeNewsletterDesign, sanitizeNewsletterSettings } from "@/lib/newsletter/types";
 
 const nota = (n: number, foto: string | null) => ({
@@ -74,4 +74,37 @@ test("los colores, el botón y lo que se muestra siguen el diseño", () => {
   assert.match(h, /Hasta la próxima/);
   assert.doesNotMatch(h, /border-top:\d+px solid/);
   assert.doesNotMatch(render({}), /Por Ana Gómez/);
+});
+
+test("con secciones, cada una lleva su encabezado y sus notas en las nueve maquetaciones", () => {
+  const n = (i: number) => nota(i, i === 3 ? null : `https://contexto.test/${i}.jpg`);
+  const secciones = [
+    { titulo: "Última hora", articulos: [n(1), n(2)] },
+    { titulo: "Economía <ahora>", articulos: [n(3), n(4), n(5)] },
+  ];
+  const generar = (plantilla: string) =>
+    renderNewsletterHtml({
+      siteName: "CONtexto Ganadero",
+      settings: sanitizeNewsletterSettings({ ...DEFAULT_NEWSLETTER_SETTINGS, design: { plantilla } }),
+      subject: "Edición", preheader: "p", intro: "hola", issue: 3, unsubscribeUrl: "https://contexto.test/baja",
+      articles: secciones.flatMap((s) => s.articulos), secciones,
+    } as unknown as NewsletterRender);
+  for (const plantilla of ["clasica", "editorial", "tarjetas", "numerada", "revista", "minima", "bloques", "mosaico", "dossier"]) {
+    const h = generar(plantilla);
+    assert.match(h, /Última hora/, `${plantilla}: falta el encabezado de la primera sección`);
+    assert.match(h, /Economía &lt;ahora&gt;/, `${plantilla}: el título de la sección debe ir escapado`);
+    assert.doesNotMatch(h, /Economía <ahora>/);
+    for (const i of [1, 2, 3, 4, 5]) assert.match(h, new RegExp(`Titular ${i}\\b`), `${plantilla}: falta la nota ${i}`);
+    assert.ok(h.indexOf("Última hora") < h.indexOf("Titular 1") && h.indexOf("Titular 2") < h.indexOf("Economía"), `${plantilla}: orden de las secciones`);
+  }
+  // Sin secciones el correo es el de siempre (sin encabezados añadidos).
+  assert.doesNotMatch(render({ plantilla: "clasica" }), /Última hora/);
+  // La versión en texto también separa por secciones y conserva una sola destacada.
+  const texto = renderNewsletterText({
+    siteName: "CONtexto Ganadero", settings: sanitizeNewsletterSettings(DEFAULT_NEWSLETTER_SETTINGS), subject: "E", preheader: "", intro: "", issue: 1, unsubscribeUrl: "https://contexto.test/baja",
+    articles: secciones.flatMap((s) => s.articulos), secciones,
+  } as unknown as NewsletterRender);
+  assert.match(texto, /ÚLTIMA HORA\n\n.*DESTACADA/);
+  assert.match(texto, /ECONOMÍA <AHORA>/);
+  assert.equal((texto.match(/DESTACADA/g) ?? []).length, 1);
 });
