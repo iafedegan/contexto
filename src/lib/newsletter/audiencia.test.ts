@@ -68,7 +68,9 @@ test("las opciones traen las ciudades agrupadas, los países y los temas con su 
   assert.equal(o.ciudades[0].n, 3);
   // Para el mapa: el promedio de las ubicaciones de quienes se registraron en esa ciudad (la tercera no trae ubicación).
   assert.ok(Math.abs((o.ciudades[0].lat ?? 0) - 4.71) < 0.001 && Math.abs((o.ciudades[0].lon ?? 0) + 74.07) < 0.001);
-  assert.equal(o.ciudades.find((c) => c.clave === "medellin")?.lat, null);
+  // Sin coordenadas guardadas, una ciudad conocida cae en su centro aproximado para poder dibujarla; una desconocida queda sin punto.
+  assert.ok(Math.abs((o.ciudades.find((c) => c.clave === "medellin")?.lat ?? 0) - 6.2442) < 0.001);
+  assert.equal(o.pendientes, 1, "el suscriptor sin confirmar se cuenta aparte, no entre los que reciben");
   assert.deepEqual(o.paises, [{ codigo: "CO", n: 4 }, { codigo: "VE", n: 1 }]);
   assert.deepEqual(o.temas.find((x) => x.id === "precios"), { id: "precios", n: 2 });
   assert.deepEqual(o.temas.find((x) => x.id === "leche"), { id: "leche", n: 2 });
