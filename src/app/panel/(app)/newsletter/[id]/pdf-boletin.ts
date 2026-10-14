@@ -60,6 +60,17 @@ export async function descargarPdfBoletin(html: string, nombre: string): Promise
       tr,td,img,h1,h2,h3{break-inside:avoid;page-break-inside:avoid}
       h1,h2,h3{break-after:avoid;page-break-after:avoid}`;
     doc.head.appendChild(estilo);
+
+    // Una foto suelta o un título de sección van siempre pegados a lo que sigue: sin esto la foto quedaba al pie de una página y su
+    // titular, resumen y botón en la siguiente.
+    doc.querySelectorAll("tr").forEach((fila) => {
+      const soloFoto = !!fila.querySelector("img") && !fila.querySelector("p,h1,h2,h3") && (fila.textContent ?? "").trim() === "";
+      const soloTitulo = !!fila.querySelector("h1,h2,h3") && !fila.querySelector("img,p") && (fila.textContent ?? "").trim().length < 80;
+      if (soloFoto || soloTitulo) {
+        fila.style.setProperty("break-after", "avoid");
+        fila.style.setProperty("page-break-after", "avoid");
+      }
+    });
     doc.title = nombre;
     marco.style.height = `${Math.ceil(Math.max(doc.body.scrollHeight, doc.documentElement.scrollHeight))}px`;
 
