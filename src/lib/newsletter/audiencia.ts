@@ -42,7 +42,8 @@ export type OpcionesAudiencia = {
   total: number;
   /** Cuántas indicaron al menos un tema al suscribirse. */
   conTemas: number;
-  ciudades: { clave: string; nombre: string; n: number }[];
+  /** `lat` y `lon`: el promedio de donde se registraron (para ubicarla en el mapa); `null` si ninguna trae ubicación. */
+  ciudades: { clave: string; nombre: string; n: number; lat: number | null; lon: number | null }[];
   paises: { codigo: string; n: number }[];
   temas: { id: string; n: number }[];
 };
@@ -51,9 +52,10 @@ export async function opcionesAudiencia(): Promise<OpcionesAudiencia> {
   const base = sql`confirmed and unsubscribed_at is null`;
   const [ciudades, paises, temas, totales] = await Promise.all([
     db.execute(sql`
-      select ${CIUDAD} as clave, min(coalesce(nullif(city, ''), signup_city)) as nombre, count(*)::int as n
+      select ${CIUDAD} as clave, min(coalesce(nullif(city, ''), signup_city)) as nombre, count(*)::int as n,
+             avg(signup_lat::float8) as lat, avg(signup_lon::float8) as lon
       from newsletter_subscribers where ${base} and ${CIUDAD} <> ''
-      group by ${CIUDAD} order by n desc, clave limit 40`),
+      group by ${CIUDAD} order by n desc, clave limit 60`),
     db.execute(sql`
       select upper(signup_country) as codigo, count(*)::int as n
       from newsletter_subscribers where ${base} and coalesce(signup_country, '') <> ''
@@ -70,7 +72,13 @@ export async function opcionesAudiencia(): Promise<OpcionesAudiencia> {
   return {
     total: Number(fila.total ?? 0),
     conTemas: Number(fila.con_temas ?? 0),
-    ciudades: (rowsOf(ciudades) as { clave: string; nombre: string; n: number }[]).map((r) => ({ clave: String(r.clave), nombre: String(r.nombre), n: Number(r.n) })),
+    ciudades: (rowsOf(ciudades) as { clave: string; nombre: string; n: number; lat: number | string | null; lon: number | string | null }[]).map((r) => ({
+      clave: String(r.clave),
+      nombre: String(r.nombre),
+      n: Number(r.n),
+      lat: r.lat === null || r.lat === undefined ? null : Number(r.lat),
+      lon: r.lon === null || r.lon === undefined ? null : Number(r.lon),
+    })),
     paises: (rowsOf(paises) as { codigo: string; n: number }[]).map((r) => ({ codigo: String(r.codigo), n: Number(r.n) })),
     temas: (rowsOf(temas) as { id: string; n: number }[]).map((r) => ({ id: String(r.id), n: Number(r.n) })),
   };

@@ -18,8 +18,8 @@ before(async () => {
   ({ newsletterSubscribers: tabla } = await import("@/db/schema"));
   await db.insert(tabla).values([
     // Bogotá escrita de tres formas, con temas.
-    { email: "a@x.co", confirmed: true, city: "Bogotá", signupCountry: "CO", interests: ["precios", "leche"], createdAt: hace(5) },
-    { email: "b@x.co", confirmed: true, city: "  BOGOTA ", signupCountry: "CO", interests: ["sanidad"], createdAt: hace(100) },
+    { email: "a@x.co", confirmed: true, city: "Bogotá", signupCountry: "CO", signupLat: "4.7000", signupLon: "-74.1000", interests: ["precios", "leche"], createdAt: hace(5) },
+    { email: "b@x.co", confirmed: true, city: "  BOGOTA ", signupCountry: "CO", signupLat: "4.7200", signupLon: "-74.0400", interests: ["sanidad"], createdAt: hace(100) },
     // Sin ciudad escrita: se usa la de la IP.
     { email: "c@x.co", confirmed: true, signupCity: "Bogotá", signupCountry: "CO", interests: [], createdAt: hace(40) },
     { email: "d@x.co", confirmed: true, city: "Medellín", signupCountry: "CO", interests: ["precios"], createdAt: hace(2) },
@@ -64,7 +64,11 @@ test("las opciones traen las ciudades agrupadas, los países y los temas con su 
   const o = await m.opcionesAudiencia();
   assert.equal(o.total, 5);
   assert.equal(o.conTemas, 4);
-  assert.deepEqual(o.ciudades[0], { clave: "bogota", nombre: o.ciudades[0].nombre, n: 3 });
+  assert.equal(o.ciudades[0].clave, "bogota");
+  assert.equal(o.ciudades[0].n, 3);
+  // Para el mapa: el promedio de las ubicaciones de quienes se registraron en esa ciudad (la tercera no trae ubicación).
+  assert.ok(Math.abs((o.ciudades[0].lat ?? 0) - 4.71) < 0.001 && Math.abs((o.ciudades[0].lon ?? 0) + 74.07) < 0.001);
+  assert.equal(o.ciudades.find((c) => c.clave === "medellin")?.lat, null);
   assert.deepEqual(o.paises, [{ codigo: "CO", n: 4 }, { codigo: "VE", n: 1 }]);
   assert.deepEqual(o.temas.find((x) => x.id === "precios"), { id: "precios", n: 2 });
   assert.deepEqual(o.temas.find((x) => x.id === "leche"), { id: "leche", n: 2 });

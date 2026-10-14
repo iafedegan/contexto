@@ -1,6 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { Users, X } from "lucide-react";
+import { MapaSuscriptores } from "@/components/panel/mapa-suscriptores";
 import { AUDIENCIA_VACIA, TEMAS_INTERES, describirAudiencia, esSegmento, type Audiencia } from "@/lib/newsletter/audiencia-tipos";
 import type { OpcionesAudiencia } from "@/lib/newsletter/audiencia";
 
@@ -45,7 +47,9 @@ const alternar = (xs: string[], x: string) => (xs.includes(x) ? xs.filter((y) =>
  * muestra al instante cuántas personas la recibirían. Una vez empieza el envío, el público ya no se cambia.
  */
 export function Destinatarios({ valor, alCambiar, opciones, cuantos, bloqueada }: { valor: Audiencia; alCambiar: (a: Audiencia) => void; opciones: OpcionesAudiencia; cuantos: number; bloqueada: boolean }) {
-  const grupo = esSegmento(valor);
+  // «Un grupo» sin ningún filtro todavía equivale a todos; el modo se recuerda aparte para no imponer filtros que nadie eligió.
+  const [modoGrupo, setModoGrupo] = useState(esSegmento(valor));
+  const grupo = modoGrupo || esSegmento(valor);
   const poner = (cambio: Partial<Audiencia>) => alCambiar({ ...valor, ...cambio });
   const nombreCiudad = (clave: string) => opciones.ciudades.find((c) => c.clave === clave)?.nombre ?? clave;
   const nTema = (id: string) => opciones.temas.find((t) => t.id === id)?.n ?? 0;
@@ -70,13 +74,26 @@ export function Destinatarios({ valor, alCambiar, opciones, cuantos, bloqueada }
             role="radio"
             aria-checked={grupo === g}
             disabled={bloqueada}
-            onClick={() => (g ? (!grupo ? poner({ nuevosDias: 30 }) : undefined) : alCambiar(AUDIENCIA_VACIA))}
+            onClick={() => {
+              setModoGrupo(g);
+              if (!g) alCambiar(AUDIENCIA_VACIA);
+            }}
             className={`rounded-full px-3 py-1 transition disabled:cursor-not-allowed ${grupo === g ? "bg-[var(--accent)] text-[var(--accent-fg)] shadow-sm" : "text-[var(--fg-muted)] hover:text-[var(--fg)]"}`}
           >
             {t}
           </button>
         ))}
       </div>
+
+      <MapaSuscriptores
+        ciudades={opciones.ciudades}
+        seleccionadas={valor.ciudades}
+        bloqueada={bloqueada}
+        alAlternar={(clave) => {
+          setModoGrupo(true);
+          poner({ ciudades: alternar(valor.ciudades, clave) });
+        }}
+      />
 
       {grupo && (
         <div className="flex flex-col gap-3">
@@ -107,7 +124,7 @@ export function Destinatarios({ valor, alCambiar, opciones, cuantos, bloqueada }
             Dentro de cada grupo basta con una opción (Bogotá <em>o</em> Medellín); entre grupos tienen que cumplirse todos (esa ciudad <em>y</em> ese tema). Quien no eligió temas no recibe las ediciones filtradas por tema.
           </p>
           {!bloqueada && (
-            <button type="button" className="lx-link inline-flex w-fit items-center gap-1 text-xs font-semibold" onClick={() => alCambiar(AUDIENCIA_VACIA)}>
+            <button type="button" className="lx-link inline-flex w-fit items-center gap-1 text-xs font-semibold" onClick={() => { setModoGrupo(false); alCambiar(AUDIENCIA_VACIA); }}>
               <X size={12} aria-hidden /> Quitar filtros y enviar a todos
             </button>
           )}
