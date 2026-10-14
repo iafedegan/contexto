@@ -2,36 +2,25 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { and, asc, eq, gt, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { newsletterEditions, newsletterSubscribers, siteSettings } from "@/db/schema";
 import { requirePermiso, requireRole } from "@/lib/auth";
 import { encryptSecret } from "@/lib/secrets";
 import { hit } from "@/lib/rate-limit";
 import { buildMessage, nextIssueNumber, prepareRender, type EditionContent } from "@/lib/newsletter/edition";
-import { contarAudiencia, destinatariosWhere } from "@/lib/newsletter/audiencia";
+import { contarAudiencia } from "@/lib/newsletter/audiencia";
 import { esSegmento, sanitizarAudiencia } from "@/lib/newsletter/audiencia-tipos";
-import { sanitizarItems, slugsDeItems } from "@/lib/newsletter/items";
+import { limpiarContenido } from "@/lib/newsletter/contenido";
+import { MAX_ANTICIPO_MS, MIN_ANTICIPO_MS, describirCuando, fechaBogota } from "@/lib/newsletter/programacion";
 import { sendMany } from "@/lib/newsletter/send";
+import { enviarTanda, type SendProgress } from "@/lib/newsletter/envio";
 import { NEWSLETTER_KEY, NEWSLETTER_SECRET_KEY, getNewsletterSettings, getProviderStatus } from "@/lib/newsletter/settings";
 import { sanitizeNewsletterDesign, sanitizeNewsletterSettings, type NewsletterSettings } from "@/lib/newsletter/types";
 import { EMAIL_RE, HEX6 } from "@/lib/validate";
 
 // Refresca la pantalla del boletín.
 const REVALIDATE = () => revalidatePath("/panel/newsletter");
-
-/** Valida lo que llega del editor: el correo se genera a partir de estos textos. */
-function cleanContent(input: Partial<EditionContent>): { ok: true; content: EditionContent } | { ok: false; message: string } {
-  const subject = String(input.subject ?? "").trim().slice(0, 150);
-  const preheader = String(input.preheader ?? "").trim().slice(0, 200);
-  const intro = String(input.intro ?? "").trim().slice(0, 3000);
-  // El armado con secciones manda; una edición antigua o un cliente que solo manda la lista plana de notas es un armado sin encabezados.
-  const conSecciones = sanitizarItems(input.items);
-  const items = conSecciones.length > 0 ? conSecciones : sanitizarItems((Array.isArray(input.articleSlugs) ? input.articleSlugs : []).map((slug) => ({ t: "n", slug })));
-  const slugs = slugsDeItems(items);
-  if (subject.length < 3) return { ok: false, message: "Escribe un asunto (mínimo 3 caracteres)." };
-  return { ok: true, content: { subject, preheader, intro, articleSlugs: slugs, items } };
-}
 
 // --- Ediciones -----------------------------------------------------------
 
@@ -49,7 +38,7 @@ export async function createEdition() {
 // Guarda el contenido de una edición del boletín.
 export async function saveEdition(id: string, input: Partial<EditionContent>): Promise<{ ok: boolean; message: string }> {
   await requirePermiso("newsletter");
-  const c = cleanContent(input);
+  const c = limpiarContenido(input);
   if (!c.ok) return { ok: false, message: c.message };
   const res = await db
     .update(newsletterEditions)
@@ -68,10 +57,70 @@ export async function deleteEdition(id: string): Promise<void> {
   REVALIDATE();
 }
 
+/**
+ * Programa el envío para una fecha y hora (de Colombia, `2026-10-15T07:00`). Guarda el contenido tal como está en pantalla y deja la edición
+ * «programada»: ya no se edita (se cancela la programación para volver a editarla) y sale a su hora a su público (todos o los filtros elegidos).
+ */
+export async function programarEdicion(id: string, input: Partial<EditionContent>, cuando: string): Promise<{ ok: boolean; message: string }> {
+  await requirePermiso("newsletter");
+  const fecha = fechaBogota(String(cuando ?? ""));
+  if (!fecha) return { ok: false, message: "Elige una fecha y una hora válidas." };
+  const faltan = fecha.getTime() - Date.now();
+  if (faltan < MIN_ANTICIPO_MS) return { ok: false, message: "La hora tiene que ser al menos dentro de dos minutos." };
+  if (faltan > MAX_ANTICIPO_MS) return { ok: false, message: "Solo se puede programar hasta con un año de anticipación." };
+  const c = limpiarContenido(input);
+  if (!c.ok) return { ok: false, message: c.message };
+  if (c.content.articleSlugs.length === 0) return { ok: false, message: "Elige al menos una nota antes de programar." };
+
+  const provider = await getProviderStatus();
+  if (!provider.configured) return { ok: false, message: "Conecta el proveedor de correo en Ajustes antes de programar." };
+  if (!provider.dryRun && !(await getNewsletterSettings()).fromEmail) return { ok: false, message: "Falta el correo remitente en Ajustes." };
+
+  const [actual] = await db.select({ status: newsletterEditions.status, audience: newsletterEditions.audience }).from(newsletterEditions).where(eq(newsletterEditions.id, id)).limit(1);
+  if (!actual) return { ok: false, message: "La edición no existe." };
+  if (actual.status !== "borrador") return { ok: false, message: "Esta edición ya no es un borrador." };
+  const audiencia = sanitizarAudiencia(actual.audience);
+  if ((await contarAudiencia(audiencia)) === 0) return { ok: false, message: esSegmento(audiencia) ? "Nadie cumple esos filtros: cambia el público de la edición." : "Todavía no hay suscriptores confirmados." };
+
+  const res = await db
+    .update(newsletterEditions)
+    .set({ ...c.content, status: "programada", scheduledFor: fecha, updatedAt: sql`now()` })
+    .where(and(eq(newsletterEditions.id, id), eq(newsletterEditions.status, "borrador")))
+    .returning({ id: newsletterEditions.id });
+  if (res.length === 0) return { ok: false, message: "Esta edición ya no es un borrador." };
+  REVALIDATE();
+  return { ok: true, message: `Programada para el ${describirCuando(fecha)} (hora de Colombia).` };
+}
+
+/** Quita la programación: la edición vuelve a ser un borrador editable. */
+export async function cancelarProgramacion(id: string): Promise<{ ok: boolean; message: string }> {
+  await requirePermiso("newsletter");
+  const res = await db
+    .update(newsletterEditions)
+    .set({ status: "borrador", scheduledFor: null, updatedAt: sql`now()` })
+    .where(and(eq(newsletterEditions.id, id), eq(newsletterEditions.status, "programada")))
+    .returning({ id: newsletterEditions.id });
+  REVALIDATE();
+  return res.length ? { ok: true, message: "Programación cancelada: vuelve a ser un borrador." } : { ok: false, message: "Esta edición ya no está programada (puede que ya haya empezado a enviarse)." };
+}
+
+/** Copia una edición (contenido, secciones y público) como un borrador nuevo: sirve para mandar lo mismo a otras ciudades o a otra hora. */
+export async function duplicarEdicion(id: string) {
+  const user = await requirePermiso("newsletter");
+  const [e] = await db.select().from(newsletterEditions).where(eq(newsletterEditions.id, id)).limit(1);
+  if (!e) redirect("/panel/newsletter");
+  const [nueva] = await db
+    .insert(newsletterEditions)
+    .values({ subject: `${e.subject} (copia)`.slice(0, 150), preheader: e.preheader, intro: e.intro, articleSlugs: e.articleSlugs, items: e.items, audience: e.audience, createdBy: user.id })
+    .returning({ id: newsletterEditions.id });
+  REVALIDATE();
+  redirect(`/panel/newsletter/${nueva.id}`);
+}
+
 /** El correo tal como lo verá el lector, para la vista previa del editor. */
 export async function previewEdition(input: Partial<EditionContent>, diseno?: { design: unknown; acento: string }): Promise<{ ok: boolean; html?: string; message?: string }> {
   await requirePermiso("newsletter");
-  const c = cleanContent({ ...input, subject: input.subject?.trim() ? input.subject : "Asunto del boletín" });
+  const c = limpiarContenido({ ...input, subject: input.subject?.trim() ? input.subject : "Asunto del boletín" });
   if (!c.ok) return { ok: false, message: c.message };
   const p = await prepareRender(c.content, await nextIssueNumber());
   // Con un diseño aún sin guardar, la vista previa lo aplica al vuelo (validado igual que al guardar).
@@ -99,7 +148,7 @@ export async function sendTestEmail(input: Partial<EditionContent>, to: string):
   const user = await requirePermiso("newsletter");
   const email = to.trim().toLowerCase();
   if (!EMAIL_RE.test(email)) return { ok: false, message: "Escribe un correo válido para la prueba." };
-  const c = cleanContent(input);
+  const c = limpiarContenido(input);
   if (!c.ok) return { ok: false, message: c.message };
   if (!(await hit(`newsletter:test:${user.id}`, 10, 10 * 60)).allowed) {
     return { ok: false, message: "Demasiadas pruebas seguidas. Espera unos minutos." };
@@ -127,17 +176,6 @@ export async function sendTestEmail(input: Partial<EditionContent>, to: string):
 
 // --- Envío por tandas ----------------------------------------------------
 
-export type SendProgress = {
-  ok: boolean;
-  done: boolean;
-  total: number;
-  delivered: number;
-  message?: string;
-};
-
-// Tiempo máximo de cada tanda de envío (40 s), para no pasar el límite de la función.
-const TIME_BUDGET_MS = 40_000;
-
 /**
  * A quién va una edición: los suscriptores confirmados y sin baja que cumplen sus filtros (sin filtros, todos). Se guarda en la
  * edición y se fija al empezar el envío.
@@ -162,118 +200,10 @@ export async function contarDestinatarios(audiencia: unknown): Promise<number> {
   return contarAudiencia(sanitizarAudiencia(audiencia));
 }
 
-/**
- * Envía la edición a su público (los suscriptores confirmados que cumplan sus filtros), por tandas de 100. Es
- * REANUDABLE: guarda el último suscriptor procesado, así que si una llamada
- * agota su tiempo (o el proveedor falla) se continúa desde ahí, sin repetir
- * correos. El cliente la vuelve a llamar hasta que devuelve `done`.
- */
+/** Envía la edición a su público por tandas (la lógica vive en `enviarTanda`). El panel la vuelve a llamar hasta que devuelve `done`. */
 export async function sendEditionChunk(id: string): Promise<SendProgress> {
   await requirePermiso("newsletter");
-  const t0 = Date.now();
-
-  const provider = await getProviderStatus();
-  if (!provider.configured) {
-    return { ok: false, done: false, total: 0, delivered: 0, message: "Conecta el proveedor de correo en Ajustes antes de enviar." };
-  }
-  const settings = await getNewsletterSettings();
-  if (!provider.dryRun && !settings.fromEmail) {
-    return { ok: false, done: false, total: 0, delivered: 0, message: "Falta el correo remitente en Ajustes." };
-  }
-
-  let [edition] = await db.select().from(newsletterEditions).where(eq(newsletterEditions.id, id)).limit(1);
-  if (!edition) return { ok: false, done: false, total: 0, delivered: 0, message: "La edición no existe." };
-  if (edition.status === "enviada") {
-    return { ok: true, done: true, total: edition.total, delivered: edition.delivered };
-  }
-
-  // Primera llamada: se cierra la edición (ya no se puede editar) y se cuentan destinatarios.
-  if (edition.status === "borrador") {
-    const c = cleanContent({ subject: edition.subject, preheader: edition.preheader, intro: edition.intro, articleSlugs: edition.articleSlugs, items: edition.items as never });
-    if (!c.ok || c.content.articleSlugs.length === 0) {
-      return { ok: false, done: false, total: 0, delivered: 0, message: "Elige al menos una nota antes de enviar." };
-    }
-    const startedAt = new Date();
-    const audiencia = sanitizarAudiencia(edition.audience);
-    const [{ n }] = await db
-      .select({ n: sql<number>`count(*)::int` })
-      .from(newsletterSubscribers)
-      .where(destinatariosWhere(audiencia, startedAt));
-    if (n === 0) {
-      return { ok: false, done: false, total: 0, delivered: 0, message: esSegmento(audiencia) ? "Nadie cumple esos filtros: cambia el público de la edición." : "Todavía no hay suscriptores confirmados." };
-    }
-    const issue = await nextIssueNumber();
-    // Atómico: si dos personas pulsan a la vez, solo una arranca el envío.
-    const claimed = await db
-      .update(newsletterEditions)
-      .set({ status: "enviando", startedAt, issue, total: n, delivered: 0, failed: 0, cursor: null, updatedAt: sql`now()` })
-      .where(and(eq(newsletterEditions.id, id), eq(newsletterEditions.status, "borrador")))
-      .returning();
-    if (claimed.length === 0) {
-      return { ok: false, done: false, total: n, delivered: 0, message: "Esta edición ya se está enviando." };
-    }
-    edition = claimed[0];
-  }
-
-  const content: EditionContent = {
-    subject: edition.subject,
-    preheader: edition.preheader,
-    intro: edition.intro,
-    articleSlugs: edition.articleSlugs,
-    items: sanitizarItems(edition.items),
-  };
-  const prepared = await prepareRender(content, edition.issue);
-
-  let cursor = edition.cursor;
-  let delivered = edition.delivered;
-  // El público quedó fijado al empezar el envío: reanudar sigue sobre el mismo.
-  const audiencia = sanitizarAudiencia(edition.audience);
-
-  while (Date.now() - t0 < TIME_BUDGET_MS) {
-    const batch = await db
-      .select({ id: newsletterSubscribers.id, email: newsletterSubscribers.email, autorizo: sql<boolean>`${newsletterSubscribers.readingAuthorizedAt} is not null` })
-      .from(newsletterSubscribers)
-      .where(and(destinatariosWhere(audiencia, edition.startedAt), ...(cursor ? [gt(newsletterSubscribers.id, cursor)] : [])))
-      .orderBy(asc(newsletterSubscribers.id))
-      .limit(100);
-
-    if (batch.length === 0) {
-      await db
-        .update(newsletterEditions)
-        .set({ status: "enviada", sentAt: new Date(), cursor, delivered, updatedAt: sql`now()` })
-        .where(eq(newsletterEditions.id, id));
-      REVALIDATE();
-      return { ok: true, done: true, total: edition.total, delivered };
-    }
-
-    const res = await sendMany(
-      batch.map((s) => buildMessage(prepared, s.email, s.id, false, s.autorizo)),
-      { fromName: settings.fromName, fromEmail: settings.fromEmail, replyTo: settings.replyTo || undefined },
-    );
-
-    if (res.failed > 0) {
-      // No se avanza el cursor: al reintentar se repite exactamente esta tanda.
-      await db.update(newsletterEditions).set({ failed: sql`${newsletterEditions.failed} + ${res.failed}`, updatedAt: sql`now()` }).where(eq(newsletterEditions.id, id));
-      REVALIDATE();
-      return {
-        ok: false,
-        done: false,
-        total: edition.total,
-        delivered,
-        message: `${res.error ?? "El proveedor rechazó la tanda."} Puedes reintentar: se continúa desde donde quedó.`,
-      };
-    }
-
-    delivered += res.delivered;
-    cursor = batch[batch.length - 1].id;
-    await db
-      .update(newsletterEditions)
-      .set({ cursor, delivered, updatedAt: sql`now()` })
-      .where(eq(newsletterEditions.id, id));
-  }
-
-  REVALIDATE();
-  return { ok: true, done: false, total: edition.total, delivered };
+  return enviarTanda(id, { origen: "navegador", tiempoMs: 40_000 });
 }
 
 // --- Ajustes -------------------------------------------------------------

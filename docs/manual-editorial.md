@@ -45,5 +45,11 @@ Filtros por estado, sección, autor y orden. Por nota: abrir, **Última hora** y
 ## 7. Newsletter, avisos y mensajes
 Ediciones y suscriptores (con mapa), avisos del sitio (franja o ventana emergente) y mensajes de contacto y de pauta.
 
+**Armar una edición.** En *Contenido*, el «Armado» es una lista donde se mezclan **secciones** y notas. «Añadir sección» trae «Última hora» (primero las notas marcadas así y luego las más recientes) o cualquier sección del sitio con sus 3 notas más recientes; también se puede añadir una sección con un clic desde la biblioteca de la izquierda («+ Sección»). Las notas se arrastran o se suben y bajan con las flechas; el título de cada sección se escribe encima. La primera nota es la destacada. Sin secciones, el correo es la lista de siempre.
+
+**A quién va.** El panel «¿A quién va?» muestra el **mapa de Colombia** con una burbuja por ciudad (su tamaño es el número de suscriptores): pulsar una ciudad la elige o la quita. Además se puede filtrar por tema de interés, país y antigüedad. Arriba aparece cuántas personas recibirían la edición.
+
+**Enviar o programar.** «Enviar ahora» manda la edición ya; «Programar» la deja fija para una fecha y hora **de Colombia** y sale sola a su público. Mientras está programada no se edita: «Cancelar programación» la devuelve a borrador. Para mandar lo mismo a otras ciudades o a otra hora, **Duplicar** crea una copia con el mismo contenido, secciones y público.
+
 ## 8. Buenas prácticas
 Título de 15 a 65 caracteres · resumen de 70 a 155 · 3 a 6 palabras clave · imagen con texto alternativo · firma (autor) y fuentes citadas · cifras con unidad, periodo y entidad.

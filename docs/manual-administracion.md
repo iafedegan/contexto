@@ -46,6 +46,13 @@ Solo lectura. El índice (`archive_index`) lo actualiza únicamente `src/lib/arc
 - **Retención** (política de privacidad): altas sin confirmar, 30 días; IP del alta, hasta confirmar; datos personales de quien se da de baja, 30 días. Corre sola cada día (`src/lib/newsletter/retencion.ts`; no borra altas pendientes mientras no haya proveedor de correo, y `RETENCION_BOLETIN=off` la detiene). Para atender una solicitud de supresión, un administrador borra el registro en **Newsletter → Suscriptores**.
 - **Medios**: los archivos de hasta 25 MB se suben directo a Supabase Storage; el tipo se comprueba por los primeros bytes del archivo. Cada persona puede subir 60 archivos por hora. Cada día se borran los archivos sin uso desde hace más de 7 días (`MEDIA_CLEANUP=off` lo detiene).
 
+## 8c. Envíos programados del boletín
+Un boletín «programado» sale cuando llega su hora. Quien lo ejecuta (`procesarBoletinesProgramados`, `src/lib/newsletter/envio.ts`), de más a menos puntual:
+1. **Un aviso externo cada pocos minutos**: el flujo `.github/workflows/programados.yml` llama cada 5 minutos a `/api/cron/publish-scheduled?solo=programados`. Necesita dos secretos del repositorio (*Settings → Secrets and variables → Actions*): `CRON_SECRET` (el mismo de Vercel) y `SITE_URL` (la dirección del sitio). Sin ellos el flujo no hace nada. GitHub puede retrasar estas ejecuciones unos minutos.
+2. **El aviso de los navegadores** (`/api/programadas`): cuando alguien navega el sitio, a lo sumo una vez por minuto en todo el sitio, se envía lo que ya debía salir.
+3. **El cron diario de Vercel** (`publish-scheduled`, 11:00 UTC = 6:00 a. m. en Colombia): red de seguridad. El plan Hobby solo permite 2 cron jobs, ya ocupados; con el plan Pro se puede ajustar a cada minuto en `vercel.json`.
+Un envío en curso lleva su avance (cursor) y solo lo retoma otra pasada si lleva más de 90 s sin avanzar, así que dos disparadores a la vez no duplican correos. Si nadie cumple los filtros o falta alguna nota a la hora de salir, la edición vuelve a borrador.
+
 ## 9. Desarrollo local
 ```bash
 npm install && npm run dev         # PGlite local, sin servidor de base de datos

@@ -34,6 +34,7 @@ export default async function EditionPage({ params }: { params: Promise<{ id: st
       puedeDisenar
       id={edition.id}
       status={edition.status}
+      programadaPara={edition.scheduledFor ? edition.scheduledFor.toISOString() : null}
       recipients={n}
       audiencia={audiencia}
       opciones={opciones}

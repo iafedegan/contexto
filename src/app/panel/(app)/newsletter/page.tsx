@@ -9,6 +9,7 @@ import { createEdition, deleteSubscriber, unsubscribeSubscriber } from "./action
 import { SettingsForm } from "./settings-form";
 import { BorrarEdicion } from "./borrar-edicion";
 import { TEMAS_INTERES } from "@/lib/newsletter/audiencia-tipos";
+import { describirCuando } from "@/lib/newsletter/programacion";
 
 // Se calcula en cada petición, nunca durante la compilación.
 export const dynamic = "force-dynamic";
@@ -130,6 +131,7 @@ async function Ediciones() {
   const estado = {
     enviada: { t: "Enviada", c: "bg-[#16a34a]/12 text-[#15803d]" },
     enviando: { t: "Enviando…", c: "bg-amber-500/15 text-amber-700" },
+    programada: { t: "Programada", c: "bg-[var(--accent)]/12 text-[var(--accent)]" },
     borrador: { t: "Borrador", c: "bg-[var(--surface-2)] text-[var(--fg-muted)]" },
   } as const;
   return (
@@ -149,7 +151,9 @@ async function Ediciones() {
                   ? `Enviada el ${fmt(e.sentAt)}`
                   : e.status === "enviando"
                     ? `Envío en curso · ${e.delivered} de ${e.total}`
-                    : `Editada el ${fmt(e.updatedAt)}`}
+                    : e.status === "programada" && e.scheduledFor
+                      ? `Sale el ${describirCuando(e.scheduledFor)}`
+                      : `Editada el ${fmt(e.updatedAt)}`}
               </p>
               <div className="mt-auto flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-[var(--border)] pt-3 text-xs text-[var(--fg-muted)]">
                 <span className="inline-flex items-center gap-1"><Newspaper size={13} aria-hidden /> {notas} {notas === 1 ? "nota" : "notas"}</span>
@@ -158,7 +162,7 @@ async function Ediciones() {
               </div>
             </Link>
             {/* Fuera del enlace (un botón no puede ir dentro de un <a>); solo los borradores se pueden eliminar. */}
-            {e.status === "borrador" && (
+            {(e.status === "borrador") && (
               <div className="absolute bottom-2.5 right-3"><BorrarEdicion id={e.id} asunto={e.subject} /></div>
             )}
           </li>

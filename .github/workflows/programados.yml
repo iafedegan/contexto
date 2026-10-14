@@ -1,0 +1,27 @@
+name: Programados
+
+# Cada pocos minutos pide al sitio que publique las notas programadas y envíe los boletines programados cuyo momento ya llegó. El plan
+# gratuito de Vercel solo permite cron diario; este aviso da precisión de minutos sin pagar. Se omite solo si faltan los secretos del
+# repositorio (Settings → Secrets and variables → Actions): CRON_SECRET (la misma de Vercel) y SITE_URL (https://contexto-olive.vercel.app).
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+jobs:
+  avisar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Pedir la pasada de programados
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          SITE_URL: ${{ secrets.SITE_URL }}
+        run: |
+          if [ -z "$CRON_SECRET" ] || [ -z "$SITE_URL" ]; then
+            echo "Faltan los secretos CRON_SECRET y SITE_URL: no se hace nada."
+            exit 0
+          fi
+          curl --fail --silent --show-error --max-time 150 \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            "$SITE_URL/api/cron/publish-scheduled?solo=programados"

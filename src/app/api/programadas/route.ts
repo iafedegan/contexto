@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { emitir } from "@/lib/eventos";
 import { procesarProgramadas } from "@/lib/scheduled";
 
 /**
@@ -8,9 +9,13 @@ import { procesarProgramadas } from "@/lib/scheduled";
  * de nadie: solo promueve lo que ya había llegado a su hora y refresca el sitio.
  */
 export const dynamic = "force-dynamic";
+// El envío de un boletín programado puede tardar: se hace después de responder (ver más abajo).
+export const maxDuration = 60;
 
 // Promueve las notas programadas que ya llegaron a su hora (con límite de una pasada por minuto).
 export async function POST() {
   const { ids } = await procesarProgramadas();
+  // Si hay un boletín programado que ya debe salir, quien reacciona (ver oyentes.ts) lo envía DESPUÉS de responder, para no hacer esperar a quien lee.
+  emitir("programadas.aviso", {});
   return NextResponse.json({ ok: true, publicadas: ids.length });
 }

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { cronAutorizado } from "@/lib/cron-auth";
 import { procesarProgramadas } from "@/lib/scheduled";
+import { procesarBoletinesProgramados } from "@/lib/newsletter/envio";
 import { syncMarketData } from "@/lib/sync-market-data";
 import { purgarVencidos } from "@/lib/mantenimiento";
 import { refrescarObservatorio } from "@/lib/observatorio-fedegan";
@@ -11,13 +12,15 @@ import { refrescarObservatorio } from "@/lib/observatorio-fedegan";
  * avisa a los lectores), y la ejecutan también el aviso del navegador (`/api/programadas`) y, con
  * `?solo=programados`, un programador externo cada minuto (p. ej. Supabase pg_cron).
  *
+ * También envía los boletines «programados» cuya hora ya llegó (`procesarBoletinesProgramados`).
+ *
  * Corre a diario desde vercel.json. Aprovecha para refrescar TRM/petróleo (franja económica, H-06) y para el
  * mantenimiento de datos (límites vencidos, retención de datos de suscriptores): el plan Hobby solo permite 2 cron jobs
  * y ya están ocupados, así que se suben aquí una vez al día. Cada tarea va aislada en su propio try/catch: ninguna debe
  * bloquear la publicación programada. También calienta la caché del Observatorio (15 lecturas al origen de FEDEGÁN), para que
  * la primera visita del día no espere esa descarga.
  */
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 export async function GET(req: Request) {
   if (!cronAutorizado(req)) {
@@ -28,7 +31,12 @@ export async function GET(req: Request) {
   const soloProgramados = new URL(req.url).searchParams.get("solo") === "programados";
 
   const pasada = await procesarProgramadas({ forzar: true });
-  if (soloProgramados) return NextResponse.json({ published: pasada.slugs });
+  // Los boletines programados cuya hora llegó salen en esta misma pasada (y se retoman los que quedaron a medias).
+  const boletines = await procesarBoletinesProgramados({ forzar: true, tiempoMs: 90_000 }).catch((e) => {
+    console.error("publish-scheduled: falló el envío de boletines programados", e);
+    return [];
+  });
+  if (soloProgramados) return NextResponse.json({ published: pasada.slugs, boletines });
 
   const [marketData, mantenimiento] = await Promise.all([
     syncMarketData().catch((e) => {
@@ -41,5 +49,5 @@ export async function GET(req: Request) {
     }),
   ]);
   await refrescarObservatorio().catch((e) => console.error("publish-scheduled: falló la copia del Observatorio", e));
-  return NextResponse.json({ published: pasada.slugs, marketData, mantenimiento });
+  return NextResponse.json({ published: pasada.slugs, boletines, marketData, mantenimiento });
 }

@@ -15,6 +15,8 @@
 export type EventosDelSistema = {
   /** Una o varias notas pasaron a «publicado» (a mano, por Telegram o por programación). */
   "nota.publicada": { ids: string[] };
+  /** Un navegador avisó (`/api/programadas`): es buen momento de ver si hay algo programado que ya deba salir (boletines). */
+  "programadas.aviso": Record<string, never>;
 };
 
 type Oyente<K extends keyof EventosDelSistema> = (carga: EventosDelSistema[K]) => void | Promise<void>;

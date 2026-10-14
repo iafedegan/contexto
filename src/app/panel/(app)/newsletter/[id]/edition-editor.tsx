@@ -3,13 +3,14 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, Download, FileText, Loader2, Palette } from "lucide-react";
+import { CalendarClock, ChevronLeft, Copy, Download, FileText, Loader2, Palette } from "lucide-react";
 import { BibliotecaNotas, type Nota } from "./biblioteca-notas";
 import { ArmadoBoletin } from "./armado-boletin";
 import { anadirNota, anadirSeccion, notasDeSeccion, slugsDeItems, type ItemEdicion, type NotaElegible } from "@/lib/newsletter/items";
-import { deleteEdition, guardarAudiencia, previewEdition, saveEdition, sendEditionChunk, sendTestEmail } from "../actions";
+import { cancelarProgramacion, deleteEdition, duplicarEdicion, guardarAudiencia, previewEdition, programarEdicion, saveEdition, sendEditionChunk, sendTestEmail } from "../actions";
 import { Destinatarios, nombrePais } from "./destinatarios";
 import { describirAudiencia, type Audiencia } from "@/lib/newsletter/audiencia-tipos";
+import { aLocalBogota, describirCuando } from "@/lib/newsletter/programacion";
 import type { OpcionesAudiencia } from "@/lib/newsletter/audiencia";
 import { DisenoBoletin, type DisenoEditable } from "./diseno-boletin";
 import { descargarPdfBoletin } from "./pdf-boletin";
@@ -18,8 +19,10 @@ import { descargarPdfBoletin } from "./pdf-boletin";
 type Content = { subject: string; preheader: string; intro: string; items: ItemEdicion[] };
 
 // Editor de una edición del boletín: asunto, textos, notas elegidas y envío.
-export function EditionEditor({ id, status, recipients: recipientsInicial, audiencia, opciones, progress, initial, articles, diseno, puedeDisenar }: {
+export function EditionEditor({ id, status, programadaPara, recipients: recipientsInicial, audiencia, opciones, progress, initial, articles, diseno, puedeDisenar }: {
   id: string; status: string; recipients: number;
+  /** Cuándo sale (ISO) si la edición está programada. */
+  programadaPara: string | null;
   /** A quién va y qué filtros se pueden elegir. */
   audiencia: Audiencia; opciones: OpcionesAudiencia; progress: { delivered: number; total: number; failed: number };
   initial: Content; articles: Nota[];
@@ -55,7 +58,12 @@ export function EditionEditor({ id, status, recipients: recipientsInicial, audie
   const recipients = cuantos;
   const [prog, setProg] = useState(progress);
   const [pending, start] = useTransition();
-  const locked = status === "enviada";
+  // Solo un borrador se edita: programada, enviándose y enviada quedan fijas (una programada se cancela para volver a editarla).
+  const locked = status !== "borrador";
+  // Cuándo se programa: por defecto, mañana a las 7:00 a. m. (hora de Colombia).
+  const [cuando, setCuando] = useState(() => aLocalBogota(new Date(Date.now() + 24 * 3600_000)).slice(0, 11) + "07:00");
+  const [minimo] = useState(() => aLocalBogota(new Date(Date.now() + 5 * 60_000)));
+  const [programando, setProgramando] = useState(false);
   const usadas = new Set(slugsDeItems(c.items));
   // Lo que hace falta de cada nota para traerla por sección o por «última hora».
   const elegibles: NotaElegible[] = articles.map((n) => ({ slug: n.slug, seccion: n.parentName ?? n.categoryName ?? "Sin sección", publishedAt: n.publishedAt, esUltimaHora: n.esUltimaHora }));
@@ -74,8 +82,11 @@ export function EditionEditor({ id, status, recipients: recipientsInicial, audie
     const quien = describirAudiencia(aud, (k) => opciones.ciudades.find((x) => x.clave === k)?.nombre ?? k, nombrePais);
     if (!confirm(`¿Enviar «${c.subject}» a ${recipients} ${recipients === 1 ? "suscriptor" : "suscriptores"} (${quien})? No se puede deshacer.`)) return;
     setSending(true);
-    const s = await saveEdition(id, c);
-    if (!s.ok) { setMsg(s.message); setSending(false); return; }
+    // Una edición que ya empezó a enviarse está cerrada: solo se reanuda (guardar cambios ya no aplica).
+    if (status === "borrador") {
+      const s = await saveEdition(id, c);
+      if (!s.ok) { setMsg(s.message); setSending(false); return; }
+    }
     for (let i = 0; i < 500; i++) {
       const r = await sendEditionChunk(id);
       setProg((p) => ({ ...p, delivered: r.delivered, total: r.total }));
@@ -83,6 +94,23 @@ export function EditionEditor({ id, status, recipients: recipientsInicial, audie
       if (r.done) { setMsg("Edición enviada."); location.reload(); return; }
     }
     setSending(false);
+  }
+
+  // Programa el envío para la hora elegida (hora de Colombia): guarda lo que hay en pantalla y deja la edición fija hasta que llegue su hora.
+  async function programar() {
+    setProgramando(true);
+    const r = await programarEdicion(id, c, cuando);
+    setMsg(r.message);
+    setProgramando(false);
+    if (r.ok) router.refresh();
+  }
+  // Quita la programación: la edición vuelve a ser un borrador editable.
+  async function cancelar() {
+    setProgramando(true);
+    const r = await cancelarProgramacion(id);
+    setMsg(r.message);
+    setProgramando(false);
+    router.refresh();
   }
 
   // Descarga el boletín (tal como se ve en la vista previa, con el diseño actual) como PDF.
@@ -113,9 +141,14 @@ export function EditionEditor({ id, status, recipients: recipientsInicial, audie
             <h1 className="lx-display truncate text-xl font-semibold tracking-tight">{c.subject.trim() || "Edición sin asunto"}</h1>
           </div>
         </div>
-        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${status === "enviada" ? "bg-[#16a34a]/12 text-[#15803d]" : status === "enviando" ? "bg-amber-500/15 text-amber-700" : "bg-[var(--surface-2)] text-[var(--fg-muted)]"}`}>
-          {status === "enviada" ? "Enviada" : status === "enviando" ? "Enviando…" : "Borrador"} · {recipients} {recipients === 1 ? "destinatario" : "destinatarios"}
-        </span>
+        <div className="flex flex-wrap items-center gap-2">
+          <button type="button" disabled={pending} onClick={() => start(async () => { await duplicarEdicion(id); })} title="Crea un borrador nuevo con el mismo contenido, secciones y público: sirve para mandar lo mismo a otras ciudades o a otra hora." className="lx-btn-ghost !px-3 !py-1.5 text-xs">
+            <Copy size={14} aria-hidden /> Duplicar
+          </button>
+          <span className={`rounded-full px-3 py-1 text-xs font-semibold ${status === "enviada" ? "bg-[#16a34a]/12 text-[#15803d]" : status === "enviando" || status === "programada" ? "bg-amber-500/15 text-amber-700" : "bg-[var(--surface-2)] text-[var(--fg-muted)]"}`}>
+            {status === "enviada" ? "Enviada" : status === "enviando" ? "Enviando…" : status === "programada" ? "Programada" : "Borrador"} · {recipients} {recipients === 1 ? "destinatario" : "destinatarios"}
+          </span>
+        </div>
       </div>
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,21rem)_minmax(0,1fr)] xl:grid-cols-[minmax(0,21rem)_minmax(0,1fr)_minmax(0,1fr)]">
         <BibliotecaNotas notas={articles} usadas={usadas} onAgregar={(sl) => setC((p) => ({ ...p, items: anadirNota(p.items, sl) }))} onTraerSeccion={(nombre) => setC((p) => ({ ...p, items: anadirSeccion(p.items, nombre, notasDeSeccion(elegibles, nombre, p.items)) }))} bloqueada={locked} />
@@ -137,8 +170,22 @@ export function EditionEditor({ id, status, recipients: recipientsInicial, audie
 
           <Destinatarios valor={aud} alCambiar={setAud} opciones={opciones} cuantos={recipients} bloqueada={status !== "borrador"} />
 
-          {locked ? (
+          {status === "enviada" ? (
             <p className="text-sm">Enviada: {prog.delivered} entregados{prog.failed ? `, ${prog.failed} fallidos` : ""}.</p>
+          ) : status === "programada" && programadaPara ? (
+            <div className="flex flex-col gap-2 rounded-[var(--radius)] border border-[var(--accent)]/40 bg-[var(--accent)]/8 p-3 text-sm">
+              <p className="inline-flex items-center gap-2 font-semibold"><CalendarClock size={16} aria-hidden className="text-[var(--accent)]" /> Programada para el {describirCuando(new Date(programadaPara))}</p>
+              <p className="text-xs text-[var(--fg-muted)]">
+                Hora de Colombia · {describirAudiencia(aud, (k) => opciones.ciudades.find((x) => x.clave === k)?.nombre ?? k, nombrePais)} ({recipients} {recipients === 1 ? "persona" : "personas"}). Sale sola a esa hora; puede tardar unos minutos en empezar. Para cambiar algo, cancela la programación.
+              </p>
+              <button type="button" className="lx-btn-ghost w-fit text-red-600" disabled={programando} onClick={cancelar}>{programando ? "Cancelando…" : "Cancelar programación"}</button>
+            </div>
+          ) : status === "enviando" ? (
+            programadaPara ? (
+              <p className="text-sm">Enviando… {prog.delivered}/{prog.total || recipients}. La programación termina el envío sola.</p>
+            ) : (
+              <button className="lx-btn" disabled={sending} onClick={send}>{sending ? `Enviando… ${prog.delivered}/${prog.total || recipients}` : "Reanudar envío"}</button>
+            )
           ) : (
             <div className="flex flex-col gap-3 border-t border-[var(--border)] pt-4">
               <div className="flex flex-wrap gap-2">
@@ -150,8 +197,17 @@ export function EditionEditor({ id, status, recipients: recipientsInicial, audie
                 <button className="lx-btn-ghost" disabled={pending || sending} onClick={() => start(async () => setMsg((await sendTestEmail(c, to)).message))}>Enviar prueba</button>
               </div>
               <button className="lx-btn" disabled={sending || recipients === 0} onClick={send}>
-                {sending ? `Enviando… ${prog.delivered}/${prog.total || recipients}` : status === "enviando" ? "Reanudar envío" : `Enviar a ${recipients} ${recipients === 1 ? "suscriptor" : "suscriptores"}`}
+                {sending ? `Enviando… ${prog.delivered}/${prog.total || recipients}` : `Enviar ahora a ${recipients} ${recipients === 1 ? "suscriptor" : "suscriptores"}`}
               </button>
+              <div className="flex flex-col gap-2 rounded-[var(--radius)] border border-[var(--border)] p-3">
+                <label className="flex flex-col gap-1 text-sm font-medium">
+                  <span className="inline-flex items-center gap-1.5"><CalendarClock size={15} aria-hidden className="text-[var(--accent)]" /> O programar el envío <span className="font-normal text-[var(--fg-muted)]">(hora de Colombia)</span></span>
+                  <input type="datetime-local" className="lx-input" value={cuando} min={minimo} onChange={(e) => setCuando(e.target.value)} />
+                </label>
+                <button className="lx-btn" disabled={programando || sending || recipients === 0 || !cuando} onClick={programar}>
+                  <CalendarClock size={15} aria-hidden /> {programando ? "Programando…" : `Programar para ${recipients} ${recipients === 1 ? "suscriptor" : "suscriptores"}`}
+                </button>
+              </div>
             </div>
           )}
           {msg && <p className="text-sm text-[var(--accent)]" role="status">{msg}</p>}
