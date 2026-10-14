@@ -3,8 +3,7 @@
 /**
  * PDF del boletín: se imprime el correo, tal como se ve en la vista previa y a su ancho real, con el motor de impresión del navegador
  * («Guardar como PDF»). Así el PDF sale con texto de verdad (se puede seleccionar y buscar), con las fuentes y los colores exactos,
- * sin recortes y con los enlaces de las notas activos en cualquier visor, incluido el de Adobe. Sale PAGINADO como una revista (páginas A4 que se
- * pasan una a una), cuidando que una nota no quede partida entre dos páginas.
+ * sin recortes y con los enlaces de las notas activos en cualquier visor, incluido el de Adobe. Sale en UNA sola página, del tamaño del correo y con su fondo en toda la hoja.
  */
 
 const ANCHO = 680;
@@ -49,28 +48,15 @@ export async function descargarPdfBoletin(html: string, nombre: string): Promise
       if (c) { fondo = c; if (el !== doc.body) break; }
     }
 
-    // Páginas A4 SIN márgenes (así el navegador tampoco imprime fecha ni dirección arriba y abajo) con el fondo en toda la hoja. El correo
-    // se ensancha un poco para aprovechar la página y se centra; las notas no se parten entre dos páginas ni tampoco las imágenes.
+    // UNA sola página del tamaño exacto del correo, sin márgenes (tampoco fecha ni dirección del navegador), con el fondo del correo
+    // cubriendo toda la hoja y los colores tal cual (sin pedir «Gráficos de fondo»).
+    const alto = Math.ceil(Math.max(doc.body.scrollHeight, doc.documentElement.scrollHeight));
     const estilo = doc.createElement("style");
-    estilo.textContent = `@page{size:A4;margin:0}
-      html,body{background:${fondo} !important;margin:0 !important;min-height:100%}
+    estilo.textContent = `@page{size:${ANCHO}px ${alto + 4}px;margin:0}
+      html,body{background:${fondo} !important;margin:0 !important}
       html,body,*{-webkit-print-color-adjust:exact;print-color-adjust:exact}
-      body{max-width:${ANCHO}px;margin:0 auto !important;padding:14mm 0 !important;zoom:1.1}
-      img{image-rendering:auto;-ms-interpolation-mode:bicubic}
-      tr,td,img,h1,h2,h3{break-inside:avoid;page-break-inside:avoid}
-      h1,h2,h3{break-after:avoid;page-break-after:avoid}`;
+      img{image-rendering:auto}`;
     doc.head.appendChild(estilo);
-
-    // Una foto suelta o un título de sección van siempre pegados a lo que sigue: sin esto la foto quedaba al pie de una página y su
-    // titular, resumen y botón en la siguiente.
-    doc.querySelectorAll("tr").forEach((fila) => {
-      const soloFoto = !!fila.querySelector("img") && !fila.querySelector("p,h1,h2,h3") && (fila.textContent ?? "").trim() === "";
-      const soloTitulo = !!fila.querySelector("h1,h2,h3") && !fila.querySelector("img,p") && (fila.textContent ?? "").trim().length < 80;
-      if (soloFoto || soloTitulo) {
-        fila.style.setProperty("break-after", "avoid");
-        fila.style.setProperty("page-break-after", "avoid");
-      }
-    });
     doc.title = nombre;
     marco.style.height = `${Math.ceil(Math.max(doc.body.scrollHeight, doc.documentElement.scrollHeight))}px`;
 
