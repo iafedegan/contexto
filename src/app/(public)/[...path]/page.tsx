@@ -18,7 +18,9 @@ export const dynamic = "force-dynamic";
 // Rutas que no existen: aplica las redirecciones antiguas (taxonomía legada y tabla redirects) o responde 404.
 export default async function CatchAll({ params }: { params: Promise<{ path: string[] }> }) {
   const { path } = await params;
-  const fromPath = "/" + path.join("/");
+  const completa = "/" + path.join("/");
+  // `/SearchColumnista/<id>/<página>`: la página de un columnista del sitio anterior. Se busca sin el número de página.
+  const fromPath = /^\/SearchColumnista\/[^/]+\/\d*$/i.test(completa) ? completa.split("/").slice(0, 3).join("/") : completa;
 
   let row: { toPath: string; statusCode: number } | undefined;
   try {

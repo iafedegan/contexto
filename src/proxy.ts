@@ -2,6 +2,8 @@ import { type NextRequest, NextResponse } from "next/server";
 import { LEGACY_SYSTEM_REDIRECTS, resolveLegacyTaxonomy } from "@/lib/redirects";
 import { isBlockedBot } from "@/lib/bots";
 import { slugDeNotaAntigua } from "@/lib/nota-antigua";
+import { anfitrionIndexable } from "@/lib/indexacion";
+import { siteUrl } from "@/lib/utils";
 
 /**
  * Proxy de borde (en Next.js 16 el antiguo «middleware» se llama `proxy.ts`).
@@ -61,6 +63,9 @@ function tooFast(ip: string): boolean {
 export async function proxy(req: NextRequest) {
   const { pathname, search } = req.nextUrl;
   const clean = pathname.replace(/\/+$/, "") || "/";
+  // Todas las respuestas llevan las cabeceras de seguridad y, fuera del dominio oficial, la de «no indexar».
+  const host = req.headers.get("host");
+  const conCabeceras = (res: NextResponse, ruta?: string) => applyHeaders(res, ruta, host);
 
   // --- 0. Anti-scraping -------------------------------------------------
   // Los feeds RSS quedan fuera: los lectores RSS usan clientes genéricos.
@@ -70,7 +75,7 @@ export async function proxy(req: NextRequest) {
   const internal = /^\/api\/(cron|inngest|revalidate|boletin|telegram|v1|openapi\.json)\b/.test(pathname);
   if (!pathname.endsWith("/feed.xml") && !internal) {
     if (isBlockedBot(req.headers.get("user-agent"))) {
-      return applyHeaders(new NextResponse("Acceso automatizado no permitido.", { status: 403 }));
+      return conCabeceras(new NextResponse("Acceso automatizado no permitido.", { status: 403 }));
     }
     const ip = (req.headers.get("x-forwarded-for")?.split(",")[0] ?? "").trim();
     // No cuentan: los prefetch y navegaciones internas de Next (una sola página
@@ -94,7 +99,7 @@ export async function proxy(req: NextRequest) {
     const esPanel = pathname.startsWith("/panel");
     const esPagina = !pathname.startsWith("/api/") && !RECURSOS_PWA.test(pathname);
     if (ip && esPagina && !esNavegacionInterna && !esPanel && tooFast(ip)) {
-      return applyHeaders(
+      return conCabeceras(
         new NextResponse("Demasiadas peticiones. Espera un momento.", {
           status: 429,
           headers: { "Retry-After": "60" },
@@ -104,15 +109,15 @@ export async function proxy(req: NextRequest) {
   }
 
   // --- 1. Redirecciones 301 de taxonomía legada (estáticas, en memoria) ----
-  const systemTarget = LEGACY_SYSTEM_REDIRECTS[clean];
+  const systemTarget = LEGACY_SYSTEM_REDIRECTS[clean.toLowerCase()];
   if (systemTarget) {
-    return applyHeaders(NextResponse.redirect(new URL(systemTarget, req.url), 301));
+    return conCabeceras(NextResponse.redirect(new URL(systemTarget, req.url), 301));
   }
 
   const legacyTarget = resolveLegacyTaxonomy(pathname);
   // `/seccion/titulo-de-una-nota` no se manda a la categoría aquí: la ruta comodín busca la nota (y, si no existe, entonces sí va a la categoría).
   if (legacyTarget && !slugDeNotaAntigua(clean.split("/").filter(Boolean))) {
-    return applyHeaders(NextResponse.redirect(new URL(legacyTarget + search, req.url), 301));
+    return conCabeceras(NextResponse.redirect(new URL(legacyTarget + search, req.url), 301));
   }
 
   // --- 2. Puerta del panel editorial ------------------------------------
@@ -124,7 +129,7 @@ export async function proxy(req: NextRequest) {
     if (!hasSession && pathname !== "/panel/login") {
       const url = new URL("/panel/login", req.url);
       url.searchParams.set("next", pathname);
-      return applyHeaders(NextResponse.redirect(url), pathname);
+      return conCabeceras(NextResponse.redirect(url), pathname);
     }
   }
 
@@ -133,7 +138,7 @@ export async function proxy(req: NextRequest) {
   // cliente no puede falsearla enviando su propio `x-pathname`.
   const requestHeaders = new Headers(req.headers);
   requestHeaders.set("x-pathname", pathname);
-  return applyHeaders(NextResponse.next({ request: { headers: requestHeaders } }), pathname);
+  return conCabeceras(NextResponse.next({ request: { headers: requestHeaders } }), pathname);
 }
 
 /**
@@ -142,8 +147,10 @@ export async function proxy(req: NextRequest) {
  * decidir si forzar el alta del segundo factor sin depender de
  * `usePathname` en cliente.
  */
-function applyHeaders(res: NextResponse, pathname?: string): NextResponse {
+function applyHeaders(res: NextResponse, pathname?: string, host?: string | null): NextResponse {
   for (const [k, v] of Object.entries(SECURITY_HEADERS)) res.headers.set(k, v);
+  // Lo que se sirve fuera del dominio oficial (el *.vercel.app, despliegues de prueba) no se indexa: ver src/lib/indexacion.ts.
+  if (host !== undefined && !anfitrionIndexable(host, siteUrl("/"))) res.headers.set("X-Robots-Tag", "noindex, nofollow");
   if (pathname) res.headers.set("x-pathname", pathname);
   return res;
 }

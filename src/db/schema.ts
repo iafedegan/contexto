@@ -14,6 +14,7 @@ import type { TemplateParts } from "@/lib/template-parts";
 import type { TickerConfig } from "@/lib/cintillo";
 import {
   boolean,
+  customType,
   date,
   index,
   integer,
@@ -31,6 +32,9 @@ import {
 } from "drizzle-orm/pg-core";
 
 export const EMBEDDING_DIMENSIONS = 1536;
+
+// Tipo `tsvector` de Postgres (texto indexado para la búsqueda de texto completo).
+const tsvector = customType<{ data: string }>({ dataType: () => "tsvector" });
 
 /**
  * Estilo manual de una tarjeta en /panel/portada. Todo opcional: lo que no se
@@ -216,9 +220,14 @@ export const articles = pgTable(
     body: text("body").notNull(), // markdown / HTML sanitizado
     coverImageUrl: text("cover_image_url"),
     coverImageAlt: text("cover_image_alt"),
+    // Pie de foto de la portada (con el crédito de la imagen), que se muestra bajo ella.
+    coverImageCaption: text("cover_image_caption"),
     categoryId: uuid("category_id").references(() => categories.id, { onDelete: "set null" }),
     authorId: uuid("author_id").references(() => authors.id, { onDelete: "set null" }),
     status: editorialStatus("status").notNull().default("borrador"),
+    // Secciones del sitio donde aparece la nota además de su categoría principal (slugs de categoría): una nota de
+    // «Regiones» puede salir también en «Gremialidad». Las páginas de categoría la incluyen por aquí.
+    secciones: jsonb("secciones").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
     // Metadatos SEO opcionales; si están vacíos se derivan de title/excerpt.
     metaTitle: text("meta_title"),
     metaDescription: text("meta_description"),
@@ -230,6 +239,9 @@ export const articles = pgTable(
     createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
     // Si el artículo nació de un borrador de agente, se conserva la trazabilidad.
     originDraftId: uuid("origin_draft_id"),
+    // Texto completo ya indexado en español (título + resumen + cuerpo), calculado por la base al guardar. La búsqueda lo lee en vez de
+    // recalcularlo fila por fila: con decenas de miles de notas, hacerlo al buscar tardaba decenas de segundos. Nunca se escribe a mano.
+    searchVec: tsvector("search_vec").generatedAlwaysAs(sql`to_tsvector('spanish', title || ' ' || excerpt || ' ' || body)`),
     // Embedding del título + excerpt + body (recorte) para búsqueda híbrida.
     embedding: vector("embedding", { dimensions: EMBEDDING_DIMENSIONS }),
     // Posición manual en la portada (0 = principal, 1 = secundaria, 2..5 =
@@ -250,6 +262,10 @@ export const articles = pgTable(
   (t) => [
     index("articles_status_published_idx").on(t.status, t.publishedAt),
     index("articles_category_idx").on(t.categoryId),
+    // Listado de una categoría (archivo de decenas de miles de notas): filtra por categoría y ordena por fecha sin ordenar en memoria.
+    index("articles_category_published_idx").on(t.categoryId, t.publishedAt),
+    index("articles_secciones_idx").using("gin", t.secciones),
+    index("articles_search_vec_idx").using("gin", t.searchVec),
     index("articles_scheduled_idx").on(t.scheduledFor),
     index("articles_home_position_idx").on(t.homePosition),
     index("articles_views_idx").on(t.views),

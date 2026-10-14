@@ -49,7 +49,9 @@ export async function applyDraftForRequest(opts: { popup?: "auto" | "show" | "hi
       .select({ id: articles.id, slug: articles.slug, title: articles.title, homeStyle: articles.homeStyle, homePosition: articles.homePosition })
       .from(articles)
       .where(eq(articles.status, "publicado"))
-      .orderBy(sql`(${articles.homePosition} is null)`, articles.homePosition, sql`${articles.publishedAt} desc`);
+      .orderBy(sql`(${articles.homePosition} is null)`, articles.homePosition, sql`${articles.publishedAt} desc`)
+      // Con decenas de miles de notas publicadas, la portada solo necesita las ancladas y las más recientes.
+      .limit(150);
     const adRows = await db.select().from(adsZones);
 
     // Convierte una fecha a texto ISO, o vacío si no hay.

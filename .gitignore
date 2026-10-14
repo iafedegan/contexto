@@ -50,3 +50,6 @@ public/subidas/
 
 # resultados de la auditoría de adaptabilidad
 .audit/
+
+# Migración del sitio anterior: caché local de lo descargado (cientos de MB)
+/.migracion-cache/

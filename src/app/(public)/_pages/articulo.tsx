@@ -194,7 +194,8 @@ export function ArticleDocument({
               fetchPriority="high"
               sizes="(min-width: 1280px) 1200px, 100vw"
               quality={75}
-              className="object-cover"
+              // Encuadre algo hacia arriba: en una foto vertical (el retrato de un columnista) queda la cara, no el pecho.
+              className="object-cover object-[50%_28%]"
             />
           ) : (
             <CoverArt seed={a.slug} label={a.categoryName ?? a.title} className="text-[7rem]" />
@@ -207,6 +208,11 @@ export function ArticleDocument({
         </figure>
           }
         />
+
+        {/* Pie de foto y crédito de la portada (las notas del sitio anterior los traían). */}
+        {a.coverImageCaption && a.coverImageUrl && (
+          <p className="lx-ui mx-auto mt-3 text-sm leading-snug text-[var(--fg-muted)]">{a.coverImageCaption}</p>
+        )}
 
         {!preview && <AdsBanner zone="article_top" className="mx-auto mt-10" />}
 

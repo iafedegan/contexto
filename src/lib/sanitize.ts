@@ -9,8 +9,11 @@ import sanitizeHtml from "sanitize-html";
  * ejecutar nada en el navegador de los lectores (XSS almacenado).
  */
 
-/** Únicos orígenes de vídeo incrustable (ver src/lib/embeds.ts). */
-const IFRAME_HOSTS = ["www.youtube-nocookie.com", "player.vimeo.com"];
+/**
+ * Únicos orígenes de contenido incrustable: vídeo (ver src/lib/embeds.ts), el reproductor de audio de SoundCloud (cientos de notas del sitio
+ * anterior lo traen) y los juegos y diccionarios propios que aloja `static.contextoganadero.com`.
+ */
+const IFRAME_HOSTS = ["www.youtube-nocookie.com", "player.vimeo.com", "w.soundcloud.com", "static.contextoganadero.com"];
 
 // Lista blanca de etiquetas, atributos y esquemas permitidos en el cuerpo de una nota; todo lo demás se elimina.
 const OPTIONS: sanitizeHtml.IOptions = {
@@ -18,7 +21,7 @@ const OPTIONS: sanitizeHtml.IOptions = {
     "p", "br", "hr", "h2", "h3", "h4",
     "strong", "b", "em", "i", "u", "s", "sub", "sup", "mark", "small",
     "a", "ul", "ol", "li", "blockquote", "q", "cite", "code", "pre",
-    "figure", "figcaption", "img", "video", "source", "iframe",
+    "figure", "figcaption", "img", "video", "audio", "source", "iframe",
     "table", "thead", "tbody", "tfoot", "tr", "th", "td", "caption",
     "span", "div", "details", "summary",
   ],
@@ -26,6 +29,7 @@ const OPTIONS: sanitizeHtml.IOptions = {
     a: ["href", "title", "target", "rel"],
     img: ["src", "alt", "title", "width", "height", "loading"],
     video: ["src", "controls", "playsinline", "preload", "poster", "width", "height"],
+    audio: ["src", "controls", "preload"],
     source: ["src", "type"],
     iframe: ["src", "title", "loading", "allow", "allowfullscreen", "referrerpolicy", "width", "height"],
     th: ["colspan", "rowspan", "scope"],
@@ -36,7 +40,7 @@ const OPTIONS: sanitizeHtml.IOptions = {
   },
   allowedClasses: { figure: ["lx-embed", "lx-chart"], span: ["*"], div: ["*"] },
   allowedSchemes: ["https", "http", "mailto", "tel"],
-  allowedSchemesByTag: { img: ["https", "http", "data"], video: ["https", "http"], source: ["https", "http"] },
+  allowedSchemesByTag: { img: ["https", "http", "data"], video: ["https", "http"], audio: ["https", "http"], source: ["https", "http"] },
   allowProtocolRelative: false,
   allowedIframeHostnames: IFRAME_HOSTS,
   allowIframeRelativeUrls: false,

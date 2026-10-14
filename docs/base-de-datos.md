@@ -98,9 +98,11 @@ Módulo dueño: **contenido** · variable en el esquema: `articles`
 | `body` | text | obligatorio |
 | `cover_image_url` | text |  |
 | `cover_image_alt` | text |  |
+| `cover_image_caption` | text |  |
 | `category_id` | uuid | → categories.id |
 | `author_id` | uuid | → authors.id |
 | `status` | editorialStatus | obligatorio |
+| `secciones` | jsonb | obligatorio |
 | `meta_title` | text |  |
 | `meta_description` | text |  |
 | `tags` | jsonb | obligatorio |
@@ -110,6 +112,7 @@ Módulo dueño: **contenido** · variable en el esquema: `articles`
 | `created_at` | timestamp | obligatorio |
 | `created_by` | uuid | → users.id |
 | `origin_draft_id` | uuid |  |
+| `search_vec` | tsvector |  |
 | `embedding` | vector |  |
 | `home_position` | integer |  |
 | `home_style` | jsonb |  |
@@ -126,6 +129,40 @@ Módulo dueño: **analitica** · variable en el esquema: `articleViewsDaily`
 | `article_id` | uuid |  |
 | `day` | date | obligatorio |
 | `views` | integer | obligatorio |
+
+## `reader_sessions`
+
+Módulo dueño: **—** · variable en el esquema: `readerSessions`
+
+| Columna | Tipo | Notas |
+|---|---|---|
+| `id` | uuid | PK |
+| `created_at` | timestamp | obligatorio |
+| `updated_at` | timestamp | obligatorio |
+| `visitor_id` | uuid | obligatorio |
+| `article_id` | uuid |  |
+| `device` | text | obligatorio |
+| `browser` | text |  |
+| `os` | text |  |
+| `country` | text |  |
+| `region` | text |  |
+| `city` | text |  |
+| `source` | text |  |
+| `campaign` | text |  |
+| `returning` | boolean | obligatorio |
+| `max_scroll` | smallint | obligatorio |
+| `seconds` | integer | obligatorio |
+
+## `subscriber_visitors`
+
+Módulo dueño: **—** · variable en el esquema: `subscriberVisitors`
+
+| Columna | Tipo | Notas |
+|---|---|---|
+| `subscriber_id` | uuid |  |
+| `visitor_id` | uuid | obligatorio |
+| `linked_at` | timestamp | obligatorio |
+| `verified` | boolean | obligatorio |
 
 ## `rate_limits`
 
@@ -188,9 +225,12 @@ Módulo dueño: **newsletter** · variable en el esquema: `newsletterSubscribers
 | `signup_geo_source` | text |  |
 | `signup_geo_accuracy` | numeric |  |
 | `signup_country` | text |  |
+| `city` | text |  |
+| `interests` | jsonb | obligatorio |
 | `signup_lat` | numeric |  |
 | `signup_lon` | numeric |  |
 | `confirmed` | boolean | obligatorio |
+| `reading_authorized_at` | timestamp |  |
 | `confirm_token` | text |  |
 | `unsubscribed_at` | timestamp |  |
 | `created_at` | timestamp | obligatorio |
@@ -273,9 +313,12 @@ Módulo dueño: **newsletter** · variable en el esquema: `newsletterEditions`
 | `preheader` | text | obligatorio |
 | `intro` | text | obligatorio |
 | `article_slugs` | jsonb | obligatorio |
+| `items` | jsonb | obligatorio |
+| `scheduled_for` | timestamp |  |
 | `status` | text | obligatorio |
 | `issue` | integer |  |
 | `cursor` | text |  |
+| `audience` | jsonb | obligatorio |
 | `total` | integer | obligatorio |
 | `delivered` | integer | obligatorio |
 | `failed` | integer | obligatorio |

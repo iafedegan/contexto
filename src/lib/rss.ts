@@ -1,7 +1,8 @@
 import "server-only";
-import { and, desc, eq, inArray, lte, or, sql } from "drizzle-orm";
+import { and, desc, eq, lte, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { articles, authors, categories } from "@/db/schema";
+import { enCategorias } from "@/lib/content";
 import { env } from "@/lib/env";
 import { siteUrl } from "@/lib/utils";
 import { escapeXml as esc } from "@/lib/escape";
@@ -50,6 +51,7 @@ export async function buildFeed(categorySlug?: string): Promise<{ xml: string } 
 
   let category: FeedCategory | null = null;
   let categoryIds: string[] = [];
+  let seccionesSlugs: string[] = [];
   if (categorySlug) {
     const [cat] = await db
       .select({ id: categories.id, slug: categories.slug, name: categories.name, description: categories.description })
@@ -58,8 +60,9 @@ export async function buildFeed(categorySlug?: string): Promise<{ xml: string } 
       .limit(1);
     if (!cat) return null;
     category = cat;
-    const children = await db.select({ id: categories.id }).from(categories).where(eq(categories.parentId, cat.id));
+    const children = await db.select({ id: categories.id, slug: categories.slug }).from(categories).where(eq(categories.parentId, cat.id));
     categoryIds = [cat.id, ...children.map((c) => c.id)];
+    seccionesSlugs = [cat.slug, ...children.map((c) => c.slug)];
   }
 
   const published = and(eq(articles.status, "publicado"), lte(articles.publishedAt, sql`now()`));
@@ -79,7 +82,7 @@ export async function buildFeed(categorySlug?: string): Promise<{ xml: string } 
     .from(articles)
     .leftJoin(categories, eq(articles.categoryId, categories.id))
     .leftJoin(authors, eq(articles.authorId, authors.id))
-    .where(categoryIds.length ? and(published, or(inArray(articles.categoryId, categoryIds))) : published)
+    .where(categoryIds.length ? and(published, enCategorias(categoryIds, seccionesSlugs)) : published)
     .orderBy(desc(articles.publishedAt))
     .limit(ITEMS);
 

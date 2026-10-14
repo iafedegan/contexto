@@ -35,6 +35,7 @@ export const LEGACY_TAXONOMY: Record<string, string> = {
   "/politica": "/categoria/politica",
   "/gremialidad": "/categoria/gremialidad",
   "/regiones": "/categoria/regiones",
+  "/seguridad": "/categoria/seguridad",
   "/RegionesView": "/categoria/regiones",
   // Economía
   "/nacional": "/categoria/nacional",
@@ -55,7 +56,12 @@ export const LEGACY_TAXONOMY: Record<string, string> = {
   "/innovacion": "/categoria/innovacion",
   "/mascotas": "/categoria/mascotas",
   "/redessociales": "/categoria/redes-sociales",
+  // Especiales de contenido multimedia (carpetas del sitio anterior que el portal nuevo recibió como categorías)
+  "/galeria": "/categoria/galeria",
+  "/video": "/categoria/video",
+  "/audio": "/categoria/audio",
   // Opinión
+  "/blog": "/categoria/blogs",
   "/columna": "/categoria/columnas",
   "/columnas": "/categoria/columnas",
   "/editorial": "/categoria/editorial",
@@ -63,6 +69,8 @@ export const LEGACY_TAXONOMY: Record<string, string> = {
   "/BlogsView": "/categoria/blogs",
   "/columnistas": "/categoria/columnistas",
   "/ColumnistasView": "/categoria/columnistas",
+  // «Ver más» de la portada del sitio anterior
+  "/SeemoreNews": "/",
   // Agenda
   "/congresos": "/categoria/congresos",
   "/ferias": "/categoria/ferias",
@@ -89,18 +97,38 @@ export const LEGACY_TAXONOMY: Record<string, string> = {
 export function resolveLegacyTaxonomy(pathname: string): string | null {
   const normalized = pathname.replace(/\/+$/, "").toLowerCase() || "/";
   for (const [legacyPrefix, target] of Object.entries(LEGACY_TAXONOMY)) {
-    if (normalized === legacyPrefix || normalized.startsWith(legacyPrefix + "/")) {
+    // Las claves llevan mayúsculas (`/RegionesView`, `/otrossistemP`) tal como existían: se comparan sin distinguirlas.
+    const prefijo = legacyPrefix.toLowerCase();
+    if (normalized === prefijo || normalized.startsWith(prefijo + "/")) {
       return target;
     }
   }
   return null;
 }
 
-/** Rutas legadas de sistema que deben responder pero no existen en el portal nuevo. */
+/**
+ * Rutas legadas de sistema que deben responder pero no existen en el portal nuevo. Las claves van en minúscula: se busca sin
+ * distinguir mayúsculas (`/PoliticaEmpresarioView/QuienesSomos` llega igual que `/politicaempresarioview/quienessomos`).
+ */
 export const LEGACY_SYSTEM_REDIRECTS: Record<string, string> = {
   "/rss": "/feed.xml",
   "/feed": "/feed.xml",
   "/sitemap": "/sitemap.xml",
   "/buscador": "/buscar",
   "/noticias": "/",
+  // Páginas institucionales del sitio anterior (menú del pie de página).
+  "/politicaempresarioview/quienessomos": "/quienes-somos",
+  "/politicaempresarioview/lineaeditorial": "/politica-editorial",
+  "/politicaempresarioview/reglasparticipacion": "/terminos-y-condiciones",
+  "/politicaempresarioview/comopublicar": "/terminos-y-condiciones",
+  "/politicaempresarioview/cartasdirector": "/contacto",
+  "/politicaempresarioview/preguntasfrecuentes": "/preguntas-frecuentes",
+  "/politicaempresarioview/politicaprivacidad": "/politica-de-privacidad",
+  // Mapas del sitio del sitio anterior (seis archivos numerados): el índice nuevo los reemplaza.
+  "/sitemap-1.xml": "/sitemap.xml",
+  "/sitemap-2.xml": "/sitemap.xml",
+  "/sitemap-3.xml": "/sitemap.xml",
+  "/sitemap-4.xml": "/sitemap.xml",
+  "/sitemap-5.xml": "/sitemap.xml",
+  "/sitemap-6.xml": "/sitemap.xml",
 };

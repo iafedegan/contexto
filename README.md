@@ -259,7 +259,7 @@ paleta curada + monograma.
 
 | # | Principio | Dónde |
 |---|---|---|
-| 1 | Sin migración del archivo · integración de solo lectura | `src/lib/archive-client.ts` (nunca escribe al origen), tabla `archive_index`, cron `src/app/api/cron/sync-archive` |
+| 1 | ~~Sin migración del archivo~~ → **archivo migrado a `articles`** (docs/migracion-sitio-anterior.md) | `scripts/migracion/*`, tabla `redirects`; `src/lib/archive-client.ts` y `archive_index` quedan sin uso |
 | 2 | Sin CMS comercial · panel a medida | `src/app/panel/**` (roles, borradores, programación, vista previa, asistencia SEO) |
 | 3 | Un solo motor de base de datos | `src/db/schema.ts` — contenido, usuarios, avisos, series de datos y vectores en el mismo Postgres |
 | 4 | Generación estática + borde | Notas y autores son estáticos (ISR: `revalidate` + `generateStaticParams`). La portada y las categorías se generan por visita (`force-dynamic`: prerenderizarlas consultaba Supabase desde el servidor de compilación y el despliegue caía por tiempo de espera, y las categorías filtran por parámetros de la dirección), pero leen de una caché de datos de 60 s (`src/lib/data-cache.ts`) que las acciones del panel invalidan al instante al publicar: ninguna visita consulta la base. Revalidación *on-demand* en `src/app/api/revalidate` y en las Server Actions del panel |
@@ -309,7 +309,7 @@ verificable). Tope diario configurable. Encolados vía Inngest
 | Lighthouse móvil ≥ 90 / LCP ≤ 2.5 s | ⏳ base lista (RSC, next/font, next/image, JS mínimo); medir con datos reales |
 | `NewsArticle` JSON-LD válido en 100 % de artículos nuevos | ✅ emitido siempre desde el servidor |
 | `robots.txt` permite buscadores y buscadores de IA que enlazan, y rechaza el entrenamiento de modelos | ✅ |
-| 0 artículos del archivo transformados; URLs legadas 200/301 | ✅ archivo solo lectura; 301 en proxy + tabla `redirects` |
+| Archivo histórico migrado; URLs legadas 301 | ✅ 51.381 notas migradas con sus imágenes; 301 uno a uno en la tabla `redirects` (verificado con `npm run migracion:verificar`) |
 | Asistente: 0 respuestas sin cita verificable | ✅ modo generativo solo con fuentes; declina si no hay |
 | Nada generado por agentes visible sin aprobación registrada | ✅ `agent_drafts` + atribución al editor |
 

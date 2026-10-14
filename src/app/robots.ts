@@ -1,4 +1,6 @@
 import type { MetadataRoute } from "next";
+import { headers } from "next/headers";
+import { anfitrionIndexable } from "@/lib/indexacion";
 import { siteUrl } from "@/lib/utils";
 import { AI_SEARCH_BOTS, AI_TRAINING_BOTS } from "@/lib/bots";
 
@@ -11,7 +13,11 @@ import { AI_SEARCH_BOTS, AI_TRAINING_BOTS } from "@/lib/bots";
  *    El proxy (src/proxy.ts) además los rechaza con 403, porque
  *    robots.txt es solo una petición y no todos la respetan.
  */
-export default function robots(): MetadataRoute.Robots {
+export default async function robots(): Promise<MetadataRoute.Robots> {
+  // Fuera del dominio oficial (el *.vercel.app, pruebas) no se deja indexar nada: ver src/lib/indexacion.ts.
+  const host = (await headers()).get("host");
+  if (!anfitrionIndexable(host, siteUrl("/"))) return { rules: [{ userAgent: "*", disallow: "/" }] };
+
   // `/vista-previa` lleva además `noindex`: son borradores con enlace firmado.
   const disallow = ["/panel", "/api/", "/buscar", "/vista-previa", "/vista-portada"];
 

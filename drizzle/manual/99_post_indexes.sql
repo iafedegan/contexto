@@ -9,11 +9,7 @@ CREATE INDEX IF NOT EXISTS archive_embedding_hnsw
   ON archive_index USING hnsw (embedding vector_cosine_ops);
 
 -- --- Full-text en español --------------------------------------------------
-CREATE INDEX IF NOT EXISTS articles_fts_es
-  ON articles USING gin (
-    to_tsvector('spanish', title || ' ' || excerpt || ' ' || body)
-  );
-
+-- El de las notas (`articles_search_vec_idx`, sobre la columna `search_vec`) va en la migración numerada 0016.
 CREATE INDEX IF NOT EXISTS archive_fts_es
   ON archive_index USING gin (
     to_tsvector('spanish', title || ' ' || summary)

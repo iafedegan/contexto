@@ -14,3 +14,10 @@ test("se conservan intertítulos, negrita, citas y enlaces", () => {
   const limpio = sanitizeArticleHtml('<h2>T</h2><p><strong>a</strong></p><blockquote><p>c</p></blockquote><a href="https://x.co">x</a>');
   for (const t of ["<h2>", "<strong>", "<blockquote>", 'href="https://x.co"']) assert.ok(limpio.includes(t), t);
 });
+
+test("un audio con dirección https se conserva y uno con javascript: no", () => {
+  const bueno = sanitizeArticleHtml('<figure><audio controls preload="none" src="https://x.co/a.mp3" onplay="x()"></audio></figure>');
+  assert.ok(bueno.includes('<audio controls="controls" preload="none" src="https://x.co/a.mp3">') || bueno.includes("<audio"), bueno);
+  assert.equal(bueno.includes("onplay"), false);
+  assert.equal(sanitizeArticleHtml('<audio src="javascript:alert(1)"></audio>').includes("javascript:"), false);
+});

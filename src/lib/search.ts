@@ -72,22 +72,28 @@ export async function hybridSearch(query: string, limit = 20): Promise<SearchHit
     WITH params AS (
       SELECT
         ${q} AS q,
-        ${vecLiteral}::text AS vec
+        ${vecLiteral}::text AS vec,
+        websearch_to_tsquery('spanish', ${q}) AS qry
+    ),
+    -- Candidatos del texto completo: se leen del índice sobre \`search_vec\` (ya calculado) y, si una consulta muy general coincide con
+    -- decenas de miles de notas, se ordenan solo las 5.000 más recientes. Sin este tope, puntuar todas tardaba segundos con el archivo completo.
+    candidatas AS (
+      SELECT a.id
+      FROM articles a, params p
+      WHERE a.status = 'publicado' AND a.search_vec @@ p.qry
+      ORDER BY a.published_at DESC NULLS LAST
+      LIMIT 5000
     ),
     lexical AS (
       SELECT 'articulo'::text AS kind, a.id::text AS id, a.title,
              a.excerpt AS summary, '/articulo/' || a.slug AS url,
              a.published_at, a.cover_image_url AS image,
              c.slug AS category_slug, c.name AS category_name,
-             ts_rank(
-               to_tsvector('spanish', a.title || ' ' || a.excerpt || ' ' || a.body),
-               websearch_to_tsquery('spanish', (SELECT q FROM params))
-             ) AS rank
-      FROM articles a
+             ts_rank(a.search_vec, p.qry) AS rank
+      FROM candidatas
+      JOIN articles a ON a.id = candidatas.id
       LEFT JOIN categories c ON c.id = a.category_id
-      WHERE a.status = 'publicado'
-        AND to_tsvector('spanish', a.title || ' ' || a.excerpt || ' ' || a.body)
-            @@ websearch_to_tsquery('spanish', (SELECT q FROM params))
+      CROSS JOIN params p
       UNION ALL
       SELECT 'archivo'::text, ar.external_id, ar.title, ar.summary,
              ar.canonical_url, ar.published_at, NULL::text, NULL::text, NULL::text,

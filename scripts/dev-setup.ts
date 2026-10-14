@@ -56,8 +56,6 @@ async function main() {
 
   // Índices que no vienen en las migraciones generadas.
   await client.exec(`
-    CREATE INDEX IF NOT EXISTS articles_fts_es
-      ON articles USING gin (to_tsvector('spanish', title || ' ' || excerpt || ' ' || body));
     CREATE INDEX IF NOT EXISTS archive_fts_es
       ON archive_index USING gin (to_tsvector('spanish', title || ' ' || summary));
   `);

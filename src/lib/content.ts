@@ -1,6 +1,6 @@
 import "server-only";
 import { cache } from "react";
-import { and, desc, eq, gt, gte, inArray, isNull, lte, sql } from "drizzle-orm";
+import { and, desc, eq, gt, gte, inArray, isNull, lte, or, sql, type SQL } from "drizzle-orm";
 import { db } from "@/db";
 import {
   articles,
@@ -162,6 +162,18 @@ type ListadoCategoria = {
   total: number;
 };
 
+/**
+ * Condición «la nota es de una de estas categorías o aparece en una de estas secciones». La categoría principal de cada nota es una sola,
+ * pero el sitio anterior mostraba una misma nota en varias secciones (una de «Regiones» también en «Gremialidad»): esas otras secciones
+ * se guardan en `articles.secciones` y las páginas de categoría y sus feeds las incluyen por aquí.
+ */
+export function enCategorias(ids: string[], slugs: string[]): SQL {
+  if (ids.length === 0 && slugs.length === 0) return sql`false`;
+  const lista = slugs.length ? sql`${articles.secciones} ?| array[${sql.join(slugs.map((s) => sql`${s}`), sql`, `)}]::text[]` : undefined;
+  const porId = ids.length ? inArray(articles.categoryId, ids) : undefined;
+  return (or(porId, lista) ?? sql`false`) as SQL;
+}
+
 /** Lectura de una categoría con sus filtros, cacheada entre peticiones (cada combinación de filtros es una entrada). */
 const leerCategoria = cachear(
   "categoria",
@@ -184,12 +196,14 @@ const leerCategoria = cachear(
   // Por defecto se listan los artículos de la categoría y de sus subcategorías
   // directas; si se pide una subcategoría concreta, se restringe a esa sola.
   let categoryIds = [cat.id, ...children.map((c) => c.id)];
+  let seccionesSlugs = [categorySlug, ...children.map((c) => c.slug)];
   if (subcategorySlug) {
     const match = children.find((c) => c.slug === subcategorySlug);
     categoryIds = match ? [match.id] : [];
+    seccionesSlugs = match ? [match.slug] : [];
   }
 
-  const conditions = [publishedCondition, inArray(articles.categoryId, categoryIds)];
+  const conditions = [publishedCondition, enCategorias(categoryIds, seccionesSlugs)];
   if (dateFrom) conditions.push(gte(articles.publishedAt, sql`${dateFrom}::date`));
   if (dateTo) conditions.push(lte(articles.publishedAt, sql`(${dateTo}::date + interval '1 day')`));
   const where = and(...conditions);
@@ -245,6 +259,8 @@ export type FullArticle = {
   metaDescription: string | null;
   coverImageUrl: string | null;
   coverImageAlt: string | null;
+  /** Pie de foto de la portada, con su crédito. */
+  coverImageCaption: string | null;
   tags: string[];
   publishedAt: Date | null;
   updatedAt: Date;
@@ -269,6 +285,7 @@ export async function getPublishedArticleBySlug(slug: string): Promise<FullArtic
       metaDescription: articles.metaDescription,
       coverImageUrl: articles.coverImageUrl,
       coverImageAlt: articles.coverImageAlt,
+      coverImageCaption: articles.coverImageCaption,
       tags: articles.tags,
       publishedAt: articles.publishedAt,
       updatedAt: articles.updatedAt,
@@ -306,6 +323,7 @@ export async function getArticleForPreview(
       metaDescription: articles.metaDescription,
       coverImageUrl: articles.coverImageUrl,
       coverImageAlt: articles.coverImageAlt,
+      coverImageCaption: articles.coverImageCaption,
       tags: articles.tags,
       publishedAt: articles.publishedAt,
       updatedAt: articles.updatedAt,
@@ -446,10 +464,3 @@ export async function leerMasLeidas(limit: number = 5): Promise<ArticleListItem[
 
 export const getMostReadArticles = cachear("mas-leidas-v2", leerMasLeidas, { tags: [TAG_CONTENIDO], segundos: 300 });
 
-/** Slugs para generateStaticParams (pre-render en build) y sitemap. */
-export async function getAllPublishedSlugs(): Promise<{ slug: string; updatedAt: Date }[]> {
-  return db
-    .select({ slug: articles.slug, updatedAt: articles.updatedAt })
-    .from(articles)
-    .where(publishedCondition);
-}
