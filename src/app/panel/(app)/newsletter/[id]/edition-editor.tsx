@@ -175,7 +175,7 @@ export function EditionEditor({ id, status, programadaPara, recipients: recipien
         <BibliotecaNotas notas={articles} usadas={usadas} onAgregar={(sl) => setC((p) => ({ ...p, items: anadirNota(p.items, sl) }))} onTraerSeccion={(nombre) => setC((p) => ({ ...p, items: anadirSeccion(p.items, nombre, notasDeSeccion(elegibles, nombre, p.items)) }))} bloqueada={locked} />
         <div className="flex min-w-0 flex-col gap-5">
           {/* Recorrido en pasos: qué dice, qué notas lleva, cómo se ve, a quién va y enviar. Cada paso dice qué se espera de la persona. */}
-          <Paso n={1} titulo="Escribe el mensaje" listo={c.subject.trim().length >= 3} ayuda="Lo primero que ve la persona al recibir el correo.">
+          <Paso n={1} titulo="Escribe el mensaje" resumen={c.subject.trim() || "Falta el asunto"} listo={c.subject.trim().length >= 3} ayuda="Lo primero que ve la persona al recibir el correo.">
             <label className="flex flex-col gap-1">
               {label("Asunto")}
               <input className="lx-input" value={c.subject} disabled={locked} onChange={(e) => setC({ ...c, subject: e.target.value })} maxLength={150} placeholder="Ej.: Lo más importante del sector esta semana" />
@@ -192,19 +192,19 @@ export function EditionEditor({ id, status, programadaPara, recipients: recipien
             </label>
           </Paso>
 
-          <Paso n={2} titulo="Elige las notas" listo={slugsDeItems(c.items).length > 0} ayuda={`${slugsDeItems(c.items).length} de 12 notas. Pulsa «+» en la lista de la izquierda o arrástralas aquí; la primera es la destacada.`}>
+          <Paso n={2} titulo="Elige las notas" resumen={`${slugsDeItems(c.items).length} de 12 notas`} listo={slugsDeItems(c.items).length > 0} ayuda={`${slugsDeItems(c.items).length} de 12 notas. Pulsa «+» en la lista de la izquierda o arrástralas aquí; la primera es la destacada.`}>
             <ArmadoBoletin items={c.items} alCambiar={poner} notas={articles} elegibles={elegibles} bloqueado={locked} />
           </Paso>
 
-          <Paso n={3} titulo="Cuida el diseño" opcional ayuda="Colores, maquetación y tipografía. Ya viene con un diseño listo; cámbialo solo si quieres." plegado>
+          <Paso n={3} titulo="Cuida el diseño" opcional resumen="Ya viene con un diseño listo" ayuda="Colores, maquetación y tipografía. Cámbialo solo si quieres.">
             <DisenoBoletin valor={d} alCambiar={setD} puedeEditar={puedeDisenar} />
           </Paso>
 
-          <Paso n={4} titulo="¿A quién va?" listo={recipients > 0} ayuda="Todos los suscriptores confirmados, o solo un grupo (ciudad, tema, antigüedad).">
+          <Paso n={4} titulo="¿A quién va?" resumen={`${recipients} ${recipients === 1 ? "persona" : "personas"} · ${describirAudiencia(aud, (k) => opciones.ciudades.find((x) => x.clave === k)?.nombre ?? k, nombrePais)}`} listo={recipients > 0} ayuda="Todos los suscriptores confirmados, o solo un grupo (ciudad, tema, antigüedad).">
             <Destinatarios valor={aud} alCambiar={setAud} opciones={opciones} cuantos={recipients} bloqueada={status !== "borrador"} />
           </Paso>
 
-          <Paso n={5} titulo="Revisa y envía" listo={status === "enviada"} ayuda="Prueba el correo contigo antes de mandarlo a todos.">
+          <Paso n={5} titulo="Revisa y envía" resumen={status === "enviada" ? "Enviada" : status === "programada" ? "Programada" : status === "enviando" ? "Enviando…" : "Borrador, sin enviar"} listo={status === "enviada"} ayuda="Prueba el correo contigo antes de mandarlo a todos.">
           {status === "enviada" ? (
             <p className="text-sm">Enviada: {prog.delivered} entregados{prog.failed ? `, ${prog.failed} fallidos` : ""}.</p>
           ) : status === "programada" && programadaPara ? (
@@ -344,28 +344,22 @@ function VistaPrevia({ html, ancho }: { html: string; ancho: number }) {
 }
 
 /**
- * Un paso del recorrido de la edición: número (o ✓ cuando ya está), título, una línea que dice qué se espera y su contenido. Los pasos
- * opcionales y con mucho detalle (el diseño) van plegados.
+ * Un paso del recorrido de la edición: plegado por defecto, con número (o ✓ cuando ya está), título, qué se espera de la persona y,
+ * cerrado, el valor actual (`resumen`) para ver el estado de todo sin abrir nada.
  */
-function Paso({ n, titulo, ayuda, listo, opcional, plegado, children }: { n: number; titulo: string; ayuda?: string; listo?: boolean; opcional?: boolean; plegado?: boolean; children: React.ReactNode }) {
-  const cabecera = (
-    <div className="flex items-start gap-3">
-      <span aria-hidden className={`mt-0.5 grid size-7 shrink-0 place-items-center rounded-full text-xs font-bold ${listo ? "bg-[#16a34a] text-white" : "bg-[var(--accent)]/12 text-[var(--accent)]"}`}>{listo ? "✓" : n}</span>
-      <div className="min-w-0">
-        <h2 className="text-base font-semibold leading-tight">{titulo}{opcional && <span className="ml-2 text-xs font-normal text-[var(--fg-muted)]">opcional</span>}</h2>
-        {ayuda && <p className="mt-0.5 text-xs leading-snug text-[var(--fg-muted)]">{ayuda}</p>}
-      </div>
-    </div>
-  );
-  return plegado ? (
-    <details className="group rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)]">
-      <summary className="flex cursor-pointer list-none items-start justify-between gap-3 p-4">{cabecera}<ChevronDown size={16} aria-hidden className="mt-1 shrink-0 text-[var(--fg-muted)] transition group-open:rotate-180" /></summary>
+function Paso({ n, titulo, ayuda, resumen, listo, opcional, children }: { n: number; titulo: string; ayuda?: string; resumen?: string; listo?: boolean; opcional?: boolean; children: React.ReactNode }) {
+  return (
+    <details className="group rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] open:shadow-sm">
+      <summary className="flex cursor-pointer list-none items-start gap-3 p-4">
+        <span aria-hidden className={`mt-0.5 grid size-7 shrink-0 place-items-center rounded-full text-xs font-bold ${listo ? "bg-[#16a34a] text-white" : "bg-[var(--accent)]/12 text-[var(--accent)]"}`}>{listo ? "✓" : n}</span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-base font-semibold leading-tight">{titulo}{opcional && <span className="ml-2 text-xs font-normal text-[var(--fg-muted)]">opcional</span>}</span>
+          {resumen && <span className="mt-0.5 block truncate text-sm text-[var(--fg)] group-open:hidden">{resumen}</span>}
+          {ayuda && <span className="mt-0.5 block text-xs leading-snug text-[var(--fg-muted)]">{ayuda}</span>}
+        </span>
+        <ChevronDown size={16} aria-hidden className="mt-1 shrink-0 text-[var(--fg-muted)] transition group-open:rotate-180" />
+      </summary>
       <div className="flex flex-col gap-4 border-t border-[var(--border)] p-4">{children}</div>
     </details>
-  ) : (
-    <section className="flex flex-col gap-4 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-4">
-      {cabecera}
-      <div className="flex flex-col gap-4">{children}</div>
-    </section>
   );
 }
