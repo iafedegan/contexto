@@ -1489,15 +1489,28 @@ a {
   white-space: nowrap;
 }
 
-/* Capitular de lujo para el primer párrafo del artículo. */
+/* Capitular de lujo para el primer párrafo del artículo.
+   Con `initial-letter` (Chrome, Edge, Safari) el navegador alinea la capitular con la primera línea y la hunde tres líneas, sea cual sea el
+   interlineado de la plantilla. Sin él (Firefox) se usa el flotante de abajo; su margen superior es pequeño a propósito: con 0.32em, que se
+   mide sobre la letra grande (4.2 veces el texto), la bajaba más de una línea y quedaba desalineada del texto. */
 .prose-drop > p:first-of-type::first-letter {
   float: left;
-  margin: 0.32em 0.12em 0 0;
+  margin: 0.07em 0.12em 0 0;
   font-family: var(--font-display);
   font-size: 4.2em;
   line-height: 0.72;
   font-weight: 500;
   color: var(--accent);
+}
+@supports (initial-letter: 3) or (-webkit-initial-letter: 3) {
+  .prose-drop > p:first-of-type::first-letter {
+    -webkit-initial-letter: 3;
+    initial-letter: 3;
+    float: none;
+    margin: 0 0.1em 0 0;
+    font-size: inherit;
+    line-height: inherit;
+  }
 }
 
 /* Modo revista (src/components/reader-mode.tsx): el cuerpo se pagina en
