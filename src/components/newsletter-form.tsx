@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useSyncExternalStore } from "react";
+import { useActionState, useEffect, useSyncExternalStore } from "react";
 import { Turnstile } from "@/components/turnstile";
 import { Check, Loader2, Mail, TriangleAlert } from "lucide-react";
 import { suscribirBoletin, type BoletinState } from "@/app/acciones/boletin";
@@ -19,12 +19,42 @@ const subscribeGeo = (cb: () => void) => {
   };
 };
 
+// Quien ya se suscribió desde este navegador no vuelve a ver el formulario (en ninguno de sus sitios: barra lateral, pie…).
+const SUSCRITO = "cg_suscrito";
+const EVENTO_SUSCRITO = "cg-suscrito";
+const suscribirSuscrito = (cb: () => void) => {
+  window.addEventListener(EVENTO_SUSCRITO, cb);
+  window.addEventListener("storage", cb);
+  return () => {
+    window.removeEventListener(EVENTO_SUSCRITO, cb);
+    window.removeEventListener("storage", cb);
+  };
+};
+const yaSuscrito = () => {
+  try {
+    return localStorage.getItem(SUSCRITO) === "1";
+  } catch {
+    return false;
+  }
+};
+
 /**
  * Alta al boletín (D-08: botón grande y con jerarquía). Se usa en la barra
  * lateral y al pie de la portada.
  */
 export function NewsletterForm({ locale, compacto = false }: { locale: Locale; compacto?: boolean }) {
   const [state, action, pending] = useActionState<BoletinState, FormData>(suscribirBoletin, null);
+  const suscrito = useSyncExternalStore(suscribirSuscrito, yaSuscrito, () => false);
+  // Al darse de alta se recuerda en este navegador; el mensaje de «revisa tu correo» se ve esta vez y después el formulario ya no sale.
+  useEffect(() => {
+    if (!state?.ok) return;
+    try {
+      localStorage.setItem(SUSCRITO, "1");
+      window.dispatchEvent(new Event(EVENTO_SUSCRITO));
+    } catch {
+      /* sin almacenamiento: volverá a salir */
+    }
+  }, [state]);
   // La ubicación la autoriza la persona en el aviso del sitio (cookie cg_loc).
   const geoRaw = useSyncExternalStore(subscribeGeo, readGeo, () => null);
   const geo = (() => {
@@ -35,6 +65,19 @@ export function NewsletterForm({ locale, compacto = false }: { locale: Locale; c
       return null;
     }
   })();
+
+  if (suscrito && !state?.ok) return null;
+  // Recién suscrito: solo el agradecimiento (con la instrucción de confirmar), sin volver a pedir los datos.
+  if (state?.ok) {
+    return (
+      <div role="status" className={compacto ? "" : "lx-card p-6"}>
+        <p className="lx-kicker flex items-center gap-2 text-[var(--accent)]">
+          <Check size={13} /> {t(locale, "newsletter.title")}
+        </p>
+        <p className="mt-2 text-sm leading-relaxed text-[var(--fg-muted)]">{state.message}</p>
+      </div>
+    );
+  }
 
   return (
     <form
