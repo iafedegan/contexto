@@ -17,8 +17,9 @@ import { hit } from "@/lib/rate-limit";
 const SISTEMA = `Eres el editor de un boletín de noticias del sector ganadero colombiano. Escribe el SALUDO de la redacción que va al inicio del correo.
 Reglas:
 - Español de Colombia, tono cercano y profesional, sin emojis ni signos de exclamación en exceso.
-- Entre 60 y 110 palabras, en uno o dos párrafos cortos.
-- Resume lo más importante de las notas dadas y menciona dos o tres temas; ve de lo más relevante a lo menos.
+- Entre 90 y 140 palabras, en dos párrafos cortos. Empieza con «Hola» o «Buenos días», no con «Apreciados».
+- Cuenta lo MÁS importante de esta edición con datos concretos de las notas (qué pasó, dónde, cuándo, qué cambia para el ganadero), de lo más relevante a lo menos, y conecta los temas entre sí cuando haya relación.
+- No repitas los títulos tal cual ni digas «en esta edición encontrarás»: explica el contenido.
 - Usa SOLO lo que dicen los títulos y resúmenes. No inventes cifras, nombres, fechas ni conclusiones.
 - No pongas título, asunto ni firma; no uses viñetas ni enlaces. Termina invitando a leer las notas.
 Responde únicamente con el texto del saludo.`;
@@ -36,27 +37,35 @@ export async function redactarMensajeConIA(slugs: string[]): Promise<{ ok: boole
   if (!cuota.ok) return { ok: false, message: cuota.message };
 
   const filas = await db
-    .select({ slug: articles.slug, titulo: articles.title, resumen: articles.excerpt, seccion: categories.name })
+    .select({ slug: articles.slug, titulo: articles.title, resumen: articles.excerpt, cuerpo: articles.body, seccion: categories.name })
     .from(articles)
     .leftJoin(categories, eq(articles.categoryId, categories.id))
     .where(and(inArray(articles.slug, lista), eq(articles.status, "publicado")));
   if (filas.length === 0) return { ok: false, message: "No encontré esas notas publicadas." };
   // En el orden en que van en el boletín (la primera es la destacada).
   const ordenadas = lista.flatMap((s) => filas.filter((f) => f.slug === s));
-  const notas = ordenadas.map((n, i) => `${i + 1}. [${n.seccion ?? "Sin sección"}] ${n.titulo}\n   ${(n.resumen ?? "").slice(0, 300)}`).join("\n");
+  // Título, resumen y el comienzo del texto de cada nota (sin etiquetas), para que el saludo diga algo concreto de cada una.
+  const limpio = (html: string | null) => (html ?? "").replace(/<[^>]+>/g, " ").replace(/&[a-z#0-9]+;/gi, " ").replace(/\s+/g, " ").trim();
+  const notas = ordenadas
+    .map((n, i) => `${i + 1}. [${n.seccion ?? "Sin sección"}] ${n.titulo}\n   Resumen: ${(n.resumen ?? "").slice(0, 350)}\n   Texto: ${limpio(n.cuerpo).slice(0, 700)}`)
+    .join("\n\n");
 
   try {
-    const { text, usage } = await generateText({
+    const { text, usage, finishReason } = await generateText({
       model,
       system: SISTEMA,
       prompt: `Notas de esta edición, de la más destacada a la menos:\n\n${notas}`,
-      temperature: 0.4,
-      maxOutputTokens: 400,
+      temperature: 0.5,
+      // Los modelos Gemini descuentan su «razonamiento» de este tope: con poco, el texto salía cortado a media frase.
+      maxOutputTokens: 2500,
+      providerOptions: { google: { thinkingConfig: { thinkingBudget: 256 } } },
       abortSignal: AbortSignal.timeout(25_000),
     });
     await registrarUsoIA(user.id, usage);
     const texto = text.trim().replace(/^["«]|["»]$/g, "").slice(0, 2500);
     if (!texto) return { ok: false, message: "La IA no devolvió texto. Inténtalo de nuevo." };
+    // Cortado por el límite: mejor avisar que dejar una frase a medias.
+    if (finishReason === "length") return { ok: false, message: "La IA se cortó antes de terminar. Inténtalo de nuevo." };
     return { ok: true, message: "Texto listo: léelo y ajústalo a tu gusto.", texto };
   } catch (e) {
     console.error("newsletter: fallo al redactar con IA", e);
