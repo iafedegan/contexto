@@ -321,7 +321,7 @@ export function EditionEditor({ id, status, programadaPara, recipients: recipien
             {creandoPdf ? <Loader2 size={14} className="animate-spin" aria-hidden /> : <Download size={14} aria-hidden />} {creandoPdf ? "Preparando…" : "Descargar PDF"}
           </button>
           </div>
-          <p className="-mt-1 text-right text-[0.7rem] text-[var(--fg-muted)]">Se abre el cuadro de impresión: en «Destino» elige «Guardar como PDF».</p>
+          <p className="-mt-1 text-right text-[0.7rem] text-[var(--fg-muted)]">Sale en páginas, como una revista. En «Destino» elige «Guardar como PDF».</p>
           {errorPdf && <p role="alert" className="text-xs text-[var(--danger)]">{errorPdf}</p>}
           <VistaPrevia html={html} ancho={mobile ? 390 : 680} />
         </div>

@@ -3,7 +3,8 @@
 /**
  * PDF del boletín: se imprime el correo, tal como se ve en la vista previa y a su ancho real, con el motor de impresión del navegador
  * («Guardar como PDF»). Así el PDF sale con texto de verdad (se puede seleccionar y buscar), con las fuentes y los colores exactos,
- * sin recortes y con los enlaces de las notas activos en cualquier visor, incluido el de Adobe. Se guarda como una sola página larga.
+ * sin recortes y con los enlaces de las notas activos en cualquier visor, incluido el de Adobe. Sale PAGINADO como una revista (páginas A4 que se
+ * pasan una a una), cuidando que una nota no quede partida entre dos páginas.
  */
 
 const ANCHO = 680;
@@ -36,15 +37,20 @@ export async function descargarPdfBoletin(html: string, nombre: string): Promise
     if (!win || !doc) throw new Error("No se pudo preparar el documento.");
     await imagenesListas(doc);
     await doc.fonts?.ready;
-    const alto = Math.ceil(Math.max(doc.body.scrollHeight, doc.documentElement.scrollHeight));
     const fondo = win.getComputedStyle(doc.body).backgroundColor;
 
-    // Una sola página del tamaño exacto del correo, sin márgenes, con los fondos y colores tal cual (sin pedir «Gráficos de fondo»).
+    // Páginas A4 con un margen pequeño; el correo (680 px) cabe de sobra en el ancho útil y se centra. Los fondos y colores salen tal cual
+    // (sin pedir «Gráficos de fondo»). Las notas (celdas y filas) no se parten entre dos páginas, ni tampoco las imágenes.
     const estilo = doc.createElement("style");
-    estilo.textContent = `@page{size:${ANCHO}px ${alto + 4}px;margin:0} html{background:${fondo} !important} html,body,*{-webkit-print-color-adjust:exact;print-color-adjust:exact}`;
+    estilo.textContent = `@page{size:A4;margin:10mm}
+      html{background:${fondo} !important}
+      html,body,*{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+      body{margin:0 auto !important;max-width:${ANCHO}px}
+      tr,td,img,h1,h2,h3{break-inside:avoid;page-break-inside:avoid}
+      h1,h2,h3{break-after:avoid;page-break-after:avoid}`;
     doc.head.appendChild(estilo);
     doc.title = nombre;
-    marco.style.height = `${alto}px`;
+    marco.style.height = `${Math.ceil(Math.max(doc.body.scrollHeight, doc.documentElement.scrollHeight))}px`;
 
     // El marco se quita al terminar de imprimir (Chrome espera a que se cierre el cuadro; otros navegadores devuelven enseguida).
     win.addEventListener("afterprint", () => setTimeout(quitar, 1000), { once: true });
