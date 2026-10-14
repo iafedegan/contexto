@@ -3,10 +3,11 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { CalendarClock, ChevronDown, ChevronLeft, Copy, Download, Loader2 } from "lucide-react";
+import { CalendarClock, ChevronDown, ChevronLeft, Copy, Download, Loader2, Sparkles } from "lucide-react";
 import { BibliotecaNotas, type Nota } from "./biblioteca-notas";
 import { ArmadoBoletin } from "./armado-boletin";
 import { anadirNota, anadirSeccion, notasDeSeccion, slugsDeItems, type ItemEdicion, type NotaElegible } from "@/lib/newsletter/items";
+import { redactarMensajeConIA } from "../ia-actions";
 import { cancelarProgramacion, deleteEdition, duplicarEdicion, guardarAudiencia, previewEdition, programarEdicion, saveEdition, sendEditionChunk, sendTestEmail } from "../actions";
 import { Destinatarios, nombrePais } from "./destinatarios";
 import { describirAudiencia, type Audiencia } from "@/lib/newsletter/audiencia-tipos";
@@ -134,6 +135,24 @@ export function EditionEditor({ id, status, programadaPara, recipients: recipien
     router.refresh();
   }
 
+  // Redacta con IA el saludo de la edición a partir de las notas elegidas (la persona lo lee y lo edita).
+  const [redactando, setRedactando] = useState(false);
+  const [avisoIa, setAvisoIa] = useState("");
+  async function redactarConIa() {
+    if (c.intro.trim() && !confirm("Ya hay un mensaje escrito. ¿Reemplazarlo por el que propone la IA?")) return;
+    setRedactando(true);
+    setAvisoIa("");
+    try {
+      const r = await redactarMensajeConIA(slugsDeItems(c.items));
+      if (r.ok && r.texto) setC((p) => ({ ...p, intro: r.texto as string }));
+      setAvisoIa(r.message);
+    } catch {
+      setAvisoIa("No se pudo redactar ahora. Inténtalo de nuevo.");
+    } finally {
+      setRedactando(false);
+    }
+  }
+
   // Descarga el boletín (tal como se ve en la vista previa, con el diseño actual) como PDF.
   async function descargarPdf() {
     if (!html) return;
@@ -187,8 +206,21 @@ export function EditionEditor({ id, status, programadaPara, recipients: recipien
               <span className="text-xs text-[var(--fg-muted)]">Si lo dejas vacío, el correo muestra el comienzo del mensaje.</span>
             </label>
             <label className="flex flex-col gap-1">
-              {label("Saludo o mensaje de la redacción (opcional)")}
-              <textarea rows={4} className="lx-input" value={c.intro} disabled={locked} onChange={(e) => setC({ ...c, intro: e.target.value })} placeholder="Unas líneas antes de las noticias" />
+              <span className="flex flex-wrap items-center justify-between gap-2">
+                {label("Saludo o mensaje de la redacción (opcional)")}
+                <button
+                  type="button"
+                  onClick={redactarConIa}
+                  disabled={locked || redactando || slugsDeItems(c.items).length === 0}
+                  title={slugsDeItems(c.items).length === 0 ? "Elige primero las notas (paso 2)" : "Escribe un saludo con un resumen de las notas elegidas"}
+                  className="lx-btn-ghost inline-flex items-center gap-1.5 !px-3 !py-1.5 text-xs"
+                >
+                  {redactando ? <Loader2 size={13} className="animate-spin" aria-hidden /> : <Sparkles size={13} aria-hidden />}
+                  {redactando ? "Redactando…" : "Redactar con IA"}
+                </button>
+              </span>
+              <textarea rows={4} className="lx-input" value={c.intro} disabled={locked} onChange={(e) => setC({ ...c, intro: e.target.value })} placeholder="Unas líneas antes de las noticias, o pulsa «Redactar con IA» y se escriben a partir de las notas que elegiste" />
+              {avisoIa && <span role="status" className="text-xs text-[var(--accent)]">{avisoIa}</span>}
             </label>
           </Paso>
 
