@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { CalendarClock, ChevronLeft, Copy, Download, FileText, Loader2, Palette } from "lucide-react";
+import { CalendarClock, ChevronDown, ChevronLeft, Copy, Download, Loader2 } from "lucide-react";
 import { BibliotecaNotas, type Nota } from "./biblioteca-notas";
 import { ArmadoBoletin } from "./armado-boletin";
 import { anadirNota, anadirSeccion, notasDeSeccion, slugsDeItems, type ItemEdicion, type NotaElegible } from "@/lib/newsletter/items";
@@ -34,7 +34,6 @@ export function EditionEditor({ id, status, programadaPara, recipients: recipien
   const [html, setHtml] = useState("");
   // Diseño del correo (se previsualiza al instante; se guarda aparte) y pestaña activa del panel central.
   const [d, setD] = useState(diseno);
-  const [panel, setPanel] = useState<"contenido" | "diseno">("contenido");
   // Descarga del PDF: mientras se genera y, si falla, el aviso.
   const [creandoPdf, setCreandoPdf] = useState(false);
   const [errorPdf, setErrorPdf] = useState("");
@@ -174,31 +173,45 @@ export function EditionEditor({ id, status, programadaPara, recipients: recipien
       </div>
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,21rem)_minmax(0,1fr)] xl:grid-cols-[minmax(0,21rem)_minmax(0,1fr)_minmax(0,1fr)]">
         <BibliotecaNotas notas={articles} usadas={usadas} onAgregar={(sl) => setC((p) => ({ ...p, items: anadirNota(p.items, sl) }))} onTraerSeccion={(nombre) => setC((p) => ({ ...p, items: anadirSeccion(p.items, nombre, notasDeSeccion(elegibles, nombre, p.items)) }))} bloqueada={locked} />
-        <div className="flex flex-col gap-4">
-          <div role="tablist" aria-label="Qué editar" className="flex gap-1 rounded-full bg-[var(--surface-2)] p-1 text-sm font-semibold">
-            {([["contenido", "Contenido", FileText], ["diseno", "Diseño", Palette]] as const).map(([k, t, Icono]) => (
-              <button key={k} type="button" role="tab" aria-selected={panel === k} onClick={() => setPanel(k)}
-                className={`flex flex-1 items-center justify-center gap-1.5 rounded-full px-3 py-1.5 transition ${panel === k ? "bg-[var(--surface)] text-[var(--accent)] shadow-sm" : "text-[var(--fg-muted)] hover:text-[var(--fg)]"}`}>
-                <Icono size={14} aria-hidden /> {t}
-              </button>
-            ))}
-          </div>
-          {panel === "diseno" && <DisenoBoletin valor={d} alCambiar={setD} puedeEditar={puedeDisenar} />}
-          <div className={panel === "contenido" ? "flex flex-col gap-4" : "hidden"}>
-          <label className="flex flex-col gap-1">{label("Asunto")}<input className="lx-input" value={c.subject} disabled={locked} onChange={(e) => setC({ ...c, subject: e.target.value })} maxLength={150} /></label>
-          <label className="flex flex-col gap-1">{label("Texto de vista previa (preheader)")}<input className="lx-input" value={c.preheader} disabled={locked} onChange={(e) => setC({ ...c, preheader: e.target.value })} maxLength={200} /></label>
-          <label className="flex flex-col gap-1">{label("Mensaje de la redacción")}<textarea rows={5} className="lx-input" value={c.intro} disabled={locked} onChange={(e) => setC({ ...c, intro: e.target.value })} /></label>
-          <ArmadoBoletin items={c.items} alCambiar={poner} notas={articles} elegibles={elegibles} bloqueado={locked} />
+        <div className="flex min-w-0 flex-col gap-5">
+          {/* Recorrido en pasos: qué dice, qué notas lleva, cómo se ve, a quién va y enviar. Cada paso dice qué se espera de la persona. */}
+          <Paso n={1} titulo="Escribe el mensaje" listo={c.subject.trim().length >= 3} ayuda="Lo primero que ve la persona al recibir el correo.">
+            <label className="flex flex-col gap-1">
+              {label("Asunto")}
+              <input className="lx-input" value={c.subject} disabled={locked} onChange={(e) => setC({ ...c, subject: e.target.value })} maxLength={150} placeholder="Ej.: Lo más importante del sector esta semana" />
+              <span className="text-xs text-[var(--fg-muted)]">Es el título del correo en la bandeja. Corto y claro.</span>
+            </label>
+            <label className="flex flex-col gap-1">
+              {label("Resumen que se ve junto al asunto (opcional)")}
+              <input className="lx-input" value={c.preheader} disabled={locked} onChange={(e) => setC({ ...c, preheader: e.target.value })} maxLength={200} placeholder="Una frase que invite a abrirlo" />
+              <span className="text-xs text-[var(--fg-muted)]">Si lo dejas vacío, el correo muestra el comienzo del mensaje.</span>
+            </label>
+            <label className="flex flex-col gap-1">
+              {label("Saludo o mensaje de la redacción (opcional)")}
+              <textarea rows={4} className="lx-input" value={c.intro} disabled={locked} onChange={(e) => setC({ ...c, intro: e.target.value })} placeholder="Unas líneas antes de las noticias" />
+            </label>
+          </Paso>
 
-          <Destinatarios valor={aud} alCambiar={setAud} opciones={opciones} cuantos={recipients} bloqueada={status !== "borrador"} />
+          <Paso n={2} titulo="Elige las notas" listo={slugsDeItems(c.items).length > 0} ayuda={`${slugsDeItems(c.items).length} de 12 notas. Pulsa «+» en la lista de la izquierda o arrástralas aquí; la primera es la destacada.`}>
+            <ArmadoBoletin items={c.items} alCambiar={poner} notas={articles} elegibles={elegibles} bloqueado={locked} />
+          </Paso>
 
+          <Paso n={3} titulo="Cuida el diseño" opcional ayuda="Colores, maquetación y tipografía. Ya viene con un diseño listo; cámbialo solo si quieres." plegado>
+            <DisenoBoletin valor={d} alCambiar={setD} puedeEditar={puedeDisenar} />
+          </Paso>
+
+          <Paso n={4} titulo="¿A quién va?" listo={recipients > 0} ayuda="Todos los suscriptores confirmados, o solo un grupo (ciudad, tema, antigüedad).">
+            <Destinatarios valor={aud} alCambiar={setAud} opciones={opciones} cuantos={recipients} bloqueada={status !== "borrador"} />
+          </Paso>
+
+          <Paso n={5} titulo="Revisa y envía" listo={status === "enviada"} ayuda="Prueba el correo contigo antes de mandarlo a todos.">
           {status === "enviada" ? (
             <p className="text-sm">Enviada: {prog.delivered} entregados{prog.failed ? `, ${prog.failed} fallidos` : ""}.</p>
           ) : status === "programada" && programadaPara ? (
             <div className="flex flex-col gap-2 rounded-[var(--radius)] border border-[var(--accent)]/40 bg-[var(--accent)]/8 p-3 text-sm">
               <p className="inline-flex items-center gap-2 font-semibold"><CalendarClock size={16} aria-hidden className="text-[var(--accent)]" /> Programada para el {describirCuando(new Date(programadaPara))}</p>
               <p className="text-xs text-[var(--fg-muted)]">
-                Hora de Colombia · {describirAudiencia(aud, (k) => opciones.ciudades.find((x) => x.clave === k)?.nombre ?? k, nombrePais)} ({recipients} {recipients === 1 ? "persona" : "personas"}). Sale sola a esa hora; puede tardar unos minutos en empezar. Para cambiar algo, cancela la programación.
+                Hora de Colombia · {describirAudiencia(aud, (k) => opciones.ciudades.find((x) => x.clave === k)?.nombre ?? k, nombrePais)} ({recipients} {recipients === 1 ? "persona" : "personas"}). Sale sola a esa hora; puedes cancelarla para volver a editar.
               </p>
               <button type="button" className="lx-btn-ghost w-fit text-red-600" disabled={programando} onClick={cancelar}>{programando ? "Cancelando…" : "Cancelar programación"}</button>
             </div>
@@ -209,39 +222,62 @@ export function EditionEditor({ id, status, programadaPara, recipients: recipien
               <button className="lx-btn" disabled={sending} onClick={send}>{sending ? `Enviando… ${prog.delivered}/${prog.total || recipients}` : "Reanudar envío"}</button>
             )
           ) : (
-            <div className="flex flex-col gap-3 border-t border-[var(--border)] pt-4">
-              <div className="flex flex-wrap gap-2">
-                <button className="lx-btn-ghost" disabled={pending || sending} onClick={() => start(async () => setMsg((await saveEdition(id, c)).message))}>Guardar borrador</button>
-                <span role="status" aria-live="polite" className={`text-xs font-medium ${guardado === "error" ? "text-[var(--danger)]" : "text-[var(--fg-muted)]"}`}>
+            <div className="flex flex-col gap-4">
+              {/* Lista de revisión: qué falta antes de poder enviar. */}
+              <ul className="flex flex-col gap-1.5 text-sm">
+                {([
+                  [c.subject.trim().length >= 3, "Tiene asunto", "Falta el asunto (paso 1)"],
+                  [slugsDeItems(c.items).length > 0, "Lleva al menos una nota", "No lleva notas todavía (paso 2)"],
+                  [recipients > 0, `Llega a ${recipients} ${recipients === 1 ? "persona" : "personas"}`, "No hay destinatarios: hace falta al menos un suscriptor confirmado (paso 4)"],
+                ] as const).map(([ok, bien, mal]) => (
+                  <li key={bien} className={`flex items-start gap-2 ${ok ? "text-[var(--fg)]" : "text-[#9a2f22]"}`}>
+                    <span aria-hidden className={`mt-0.5 grid size-4 shrink-0 place-items-center rounded-full text-[0.6rem] font-bold text-white ${ok ? "bg-[#16a34a]" : "bg-[#c2410c]"}`}>{ok ? "✓" : "!"}</span>
+                    {ok ? bien : mal}
+                  </li>
+                ))}
+              </ul>
+
+              <div className="flex flex-col gap-2 rounded-[var(--radius)] border border-[var(--border)] p-3">
+                <p className="text-sm font-medium">1. Pruébalo contigo</p>
+                <div className="flex flex-wrap gap-2">
+                  <input className="lx-input min-w-0 flex-1" type="email" placeholder="tu correo" value={to} onChange={(e) => setTo(e.target.value)} />
+                  <button className="lx-btn-ghost" disabled={pending || sending} onClick={() => start(async () => setMsg((await sendTestEmail(c, to)).message))}>Enviar prueba</button>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-2 rounded-[var(--radius)] border border-[var(--border)] p-3">
+                <p className="text-sm font-medium">2. Envíalo</p>
+                <button className="lx-btn" disabled={sending || recipients === 0 || c.subject.trim().length < 3} onClick={send}>
+                  {sending ? `Enviando… ${prog.delivered}/${prog.total || recipients}` : `Enviar ahora a ${recipients} ${recipients === 1 ? "persona" : "personas"}`}
+                </button>
+                <div className="flex flex-wrap items-end gap-2">
+                  <label className="flex min-w-0 flex-1 flex-col gap-1 text-xs text-[var(--fg-muted)]">
+                    <span className="inline-flex items-center gap-1.5"><CalendarClock size={13} aria-hidden /> …o prográmalo (hora de Colombia)</span>
+                    <input type="datetime-local" className="lx-input" value={cuando} min={minimo} onChange={(e) => setCuando(e.target.value)} />
+                  </label>
+                  <button className="lx-btn-ghost" disabled={programando || sending || recipients === 0 || !cuando} onClick={programar}>
+                    {programando ? "Programando…" : "Programar"}
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3 text-xs">
+                <button className="lx-btn-ghost !px-3 !py-1.5" disabled={pending || sending} onClick={() => start(async () => setMsg((await saveEdition(id, c)).message))}>Guardar borrador</button>
+                <span role="status" aria-live="polite" className={`font-medium ${guardado === "error" ? "text-[var(--danger)]" : "text-[var(--fg-muted)]"}`}>
+                  {guardado === "idle" && "Se guarda solo mientras escribes"}
                   {guardado === "guardando" && "Guardando…"}
                   {guardado === "ok" && "Guardado automáticamente ✓"}
                   {guardado === "error" && "No se pudo guardar: pulsa «Guardar borrador»"}
                 </span>
-                <button className="lx-btn-ghost text-red-600" disabled={sending} onClick={async () => { if (confirm("¿Eliminar este borrador?")) { await deleteEdition(id); router.push("/panel/newsletter"); } }}>Eliminar</button>
-              </div>
-              <div className="flex gap-2">
-                <input className="lx-input flex-1" type="email" placeholder="correo para la prueba" value={to} onChange={(e) => setTo(e.target.value)} />
-                <button className="lx-btn-ghost" disabled={pending || sending} onClick={() => start(async () => setMsg((await sendTestEmail(c, to)).message))}>Enviar prueba</button>
-              </div>
-              <button className="lx-btn" disabled={sending || recipients === 0} onClick={send}>
-                {sending ? `Enviando… ${prog.delivered}/${prog.total || recipients}` : `Enviar ahora a ${recipients} ${recipients === 1 ? "suscriptor" : "suscriptores"}`}
-              </button>
-              <div className="flex flex-col gap-2 rounded-[var(--radius)] border border-[var(--border)] p-3">
-                <label className="flex flex-col gap-1 text-sm font-medium">
-                  <span className="inline-flex items-center gap-1.5"><CalendarClock size={15} aria-hidden className="text-[var(--accent)]" /> O programar el envío <span className="font-normal text-[var(--fg-muted)]">(hora de Colombia)</span></span>
-                  <input type="datetime-local" className="lx-input" value={cuando} min={minimo} onChange={(e) => setCuando(e.target.value)} />
-                </label>
-                <button className="lx-btn" disabled={programando || sending || recipients === 0 || !cuando} onClick={programar}>
-                  <CalendarClock size={15} aria-hidden /> {programando ? "Programando…" : `Programar para ${recipients} ${recipients === 1 ? "suscriptor" : "suscriptores"}`}
-                </button>
+                <button className="ml-auto text-red-600 underline" disabled={sending} onClick={async () => { if (confirm("¿Eliminar este borrador?")) { await deleteEdition(id); router.push("/panel/newsletter"); } }}>Eliminar borrador</button>
               </div>
             </div>
           )}
           {msg && <p className="text-sm text-[var(--accent)]" role="status">{msg}</p>}
-          </div>
+          </Paso>
         </div>
 
-        <div className="flex flex-col gap-2 lg:col-span-2 xl:col-span-1">
+        <div className="flex flex-col gap-2 lg:col-span-2 xl:sticky xl:top-4 xl:col-span-1 xl:self-start">
           <div className="flex flex-wrap items-center justify-between gap-2">
           <div role="tablist" aria-label="Tamaño de la vista previa" className="flex w-fit gap-1 rounded-full bg-[var(--surface-2)] p-1 text-sm font-semibold">
             {([[false, "Escritorio"], [true, "Móvil"]] as const).map(([m, t]) => (
@@ -304,5 +340,32 @@ function VistaPrevia({ html, ancho }: { html: string; ancho: number }) {
         />
       </div>
     </div>
+  );
+}
+
+/**
+ * Un paso del recorrido de la edición: número (o ✓ cuando ya está), título, una línea que dice qué se espera y su contenido. Los pasos
+ * opcionales y con mucho detalle (el diseño) van plegados.
+ */
+function Paso({ n, titulo, ayuda, listo, opcional, plegado, children }: { n: number; titulo: string; ayuda?: string; listo?: boolean; opcional?: boolean; plegado?: boolean; children: React.ReactNode }) {
+  const cabecera = (
+    <div className="flex items-start gap-3">
+      <span aria-hidden className={`mt-0.5 grid size-7 shrink-0 place-items-center rounded-full text-xs font-bold ${listo ? "bg-[#16a34a] text-white" : "bg-[var(--accent)]/12 text-[var(--accent)]"}`}>{listo ? "✓" : n}</span>
+      <div className="min-w-0">
+        <h2 className="text-base font-semibold leading-tight">{titulo}{opcional && <span className="ml-2 text-xs font-normal text-[var(--fg-muted)]">opcional</span>}</h2>
+        {ayuda && <p className="mt-0.5 text-xs leading-snug text-[var(--fg-muted)]">{ayuda}</p>}
+      </div>
+    </div>
+  );
+  return plegado ? (
+    <details className="group rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)]">
+      <summary className="flex cursor-pointer list-none items-start justify-between gap-3 p-4">{cabecera}<ChevronDown size={16} aria-hidden className="mt-1 shrink-0 text-[var(--fg-muted)] transition group-open:rotate-180" /></summary>
+      <div className="flex flex-col gap-4 border-t border-[var(--border)] p-4">{children}</div>
+    </details>
+  ) : (
+    <section className="flex flex-col gap-4 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-4">
+      {cabecera}
+      <div className="flex flex-col gap-4">{children}</div>
+    </section>
   );
 }
