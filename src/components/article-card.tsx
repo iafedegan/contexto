@@ -164,9 +164,9 @@ function LeadCard({ a, priority, locale }: { a: ArticleListItem; priority?: bool
           sizes="(min-width: 1280px) 900px, (min-width: 768px) 60vw, 100vw"
         />
       </Link>
-      {/* El degradado que da lectura al texto va del lado donde está el texto. */}
-      <div className={`pointer-events-none absolute inset-x-0 h-[66%] from-[var(--bg)] via-[var(--bg)]/75 to-transparent md:h-3/4 md:via-[var(--bg)]/80 ${st.textArriba ? "top-0 bg-gradient-to-b" : "bottom-0 bg-gradient-to-t"}`} />
-      <div className={`relative z-[4] p-5 md:p-9 ${st.textArriba ? "self-start md:max-w-[62%]" : "self-end"} ${st.textDerecha ? "justify-self-end text-right" : ""}`}>
+      {/* El texto va en un panel de vidrio esmerilado (fondo translúcido con desenfoque) solo detrás de sí mismo: da lectura al titular sin tapar
+          la foto, que antes quedaba lavada bajo un degradado que cubría casi toda la tarjeta. El panel se pega al lado donde está el texto. */}
+      <div className={`relative z-[4] m-3 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--bg)]/60 p-4 shadow-[0_10px_30px_rgba(0,0,0,0.14)] backdrop-blur-md backdrop-saturate-150 md:m-5 md:max-w-[40rem] md:p-6 ${st.textArriba ? "self-start" : "self-end"} ${st.textDerecha ? "justify-self-end text-right" : "justify-self-start"}`}>
         <Kicker a={a} locale={locale} className="text-[var(--accent)]" />
         <h2
           className="lx-display mt-2.5 text-2xl font-semibold leading-[1.12] tracking-tight sm:text-3xl md:mt-3 md:text-[2.75rem]"
