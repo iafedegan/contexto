@@ -37,15 +37,26 @@ export async function descargarPdfBoletin(html: string, nombre: string): Promise
     if (!win || !doc) throw new Error("No se pudo preparar el documento.");
     await imagenesListas(doc);
     await doc.fonts?.ready;
-    const fondo = win.getComputedStyle(doc.body).backgroundColor;
+    // El color de fondo REAL del correo: el `body` suele ser transparente y el color está en la tabla que lo envuelve. Se baja por el primer
+    // hijo hasta dar con uno pintado; ese color cubre toda la hoja (también los márgenes), así no quedan bordes blancos.
+    const pintado = (el: Element) => {
+      const c = win.getComputedStyle(el).backgroundColor;
+      return c && c !== "transparent" && !/rgba\(\s*\d+,\s*\d+,\s*\d+,\s*0\s*\)/.test(c) ? c : null;
+    };
+    let fondo = "#ffffff";
+    for (let el: Element | null = doc.body, n = 0; el && n < 8; el = el.firstElementChild, n++) {
+      const c = pintado(el);
+      if (c) { fondo = c; if (el !== doc.body) break; }
+    }
 
-    // Páginas A4 con un margen pequeño; el correo (680 px) cabe de sobra en el ancho útil y se centra. Los fondos y colores salen tal cual
-    // (sin pedir «Gráficos de fondo»). Las notas (celdas y filas) no se parten entre dos páginas, ni tampoco las imágenes.
+    // Páginas A4 SIN márgenes (así el navegador tampoco imprime fecha ni dirección arriba y abajo) con el fondo en toda la hoja. El correo
+    // se ensancha un poco para aprovechar la página y se centra; las notas no se parten entre dos páginas ni tampoco las imágenes.
     const estilo = doc.createElement("style");
-    estilo.textContent = `@page{size:A4;margin:10mm}
-      html{background:${fondo} !important}
+    estilo.textContent = `@page{size:A4;margin:0}
+      html,body{background:${fondo} !important;margin:0 !important;min-height:100%}
       html,body,*{-webkit-print-color-adjust:exact;print-color-adjust:exact}
-      body{margin:0 auto !important;max-width:${ANCHO}px}
+      body{max-width:${ANCHO}px;margin:0 auto !important;padding:14mm 0 !important;zoom:1.1}
+      img{image-rendering:auto;-ms-interpolation-mode:bicubic}
       tr,td,img,h1,h2,h3{break-inside:avoid;page-break-inside:avoid}
       h1,h2,h3{break-after:avoid;page-break-after:avoid}`;
     doc.head.appendChild(estilo);
