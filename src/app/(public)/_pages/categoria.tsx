@@ -8,7 +8,7 @@ import { JsonLd } from "@/components/json-ld";
 import { breadcrumbJsonLd, collectionJsonLd } from "@/lib/seo";
 import { SiteShell } from "@/components/site-shell";
 import { getSiteTheme } from "@/lib/site-theme";
-import { getArticlesByCategory, getHomeLayoutConfig } from "@/lib/content";
+import { getArticlesByCategory, getAutoresDeSeccion, getHomeLayoutConfig } from "@/lib/content";
 import { siteUrl } from "@/lib/utils";
 import { blockStylesCss } from "@/lib/home-style";
 
@@ -18,9 +18,13 @@ export const revalidate = 600;
 // Parámetros de la ruta: la dirección de la sección.
 type Params = { params: Promise<{ slug: string }> };
 /** Filtros de la sección: subcategoría, rango de fechas y página. */
-type Query = Promise<{ subcategoria?: string; desde?: string; hasta?: string; pagina?: string }>;
+type Query = Promise<{ subcategoria?: string; desde?: string; hasta?: string; pagina?: string; autor?: string; anio?: string; mes?: string }>;
 // Parámetros de la ruta y filtros de la dirección.
 type PageProps = Params & { searchParams?: Query };
+
+// Secciones de columnistas: llevan el filtro «Nombre autor · Año · Mes» del sitio anterior.
+const SECCIONES_CON_AUTOR = new Set(["columnas", "blogs", "opinion"]);
+const MESES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
 
 // Notas por página.
 const PAGE_SIZE = 24;
@@ -57,7 +61,19 @@ async function generateMetadataImpl({ params }: Params): Promise<Metadata> {
 // Página de una sección: notas con filtros por subsección y fechas, y paginación; 404 si no existe.
 async function CategoryPage({ params, searchParams, locale }: PageProps & { locale: Locale }) {
   const { slug } = await params;
-  const { subcategoria, desde, hasta, pagina } = (await searchParams) ?? {};
+  const q = (await searchParams) ?? {};
+  const { subcategoria, pagina } = q;
+  let { desde, hasta } = q;
+  const autor = SECCIONES_CON_AUTOR.has(slug) && /^[\w-]{1,80}$/.test(q.autor ?? "") ? q.autor : undefined;
+  // Año y mes se convierten en un rango de fechas: «mes» solo cuenta junto con un año.
+  const anio = /^\d{4}$/.test(q.anio ?? "") ? Number(q.anio) : undefined;
+  const mes = anio && /^(?:[1-9]|1[0-2])$/.test(q.mes ?? "") ? Number(q.mes) : undefined;
+  if (anio) {
+    const m0 = mes ?? 1;
+    desde = `${anio}-${String(m0).padStart(2, "0")}-01`;
+    const fin = mes ? new Date(Date.UTC(anio, mes, 0)) : new Date(Date.UTC(anio, 12, 0));
+    hasta = fin.toISOString().slice(0, 10);
+  }
   const page = Math.max(1, Number(pagina) || 1);
 
   const { category, subcategories, items, total } = await getArticlesByCategory(slug, {
@@ -66,9 +82,13 @@ async function CategoryPage({ params, searchParams, locale }: PageProps & { loca
     subcategorySlug: subcategoria || undefined,
     dateFrom: desde || undefined,
     dateTo: hasta || undefined,
+    authorSlug: autor,
   }).catch(() => ({ category: null, subcategories: [], items: [], total: 0 }));
   if (!category) notFound();
 
+  const conAutor = SECCIONES_CON_AUTOR.has(slug);
+  const autores = conAutor ? await getAutoresDeSeccion(slug).catch(() => []) : [];
+  const anioActual = new Date().getFullYear();
   const site = await getSiteTheme();
   // Dónde van los filtros lo elige el editor en /panel/portada (por defecto, junto al título).
   const pos = (await getHomeLayoutConfig()).sectionFilters ?? "cabecera";
@@ -78,15 +98,18 @@ async function CategoryPage({ params, searchParams, locale }: PageProps & { loca
       : pos === "centro"
         ? { items: "lg:items-center", justify: "lg:justify-center" }
         : { items: "lg:items-end", justify: "lg:justify-end" };
-  const filtrando = Boolean(subcategoria || desde || hasta);
+  const filtrando = Boolean(subcategoria || desde || hasta || autor);
   const paginas = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   /** Conserva los filtros al cambiar de página. */
   const hrefPagina = (n: number) => {
     const sp = new URLSearchParams();
     if (subcategoria) sp.set("subcategoria", subcategoria);
-    if (desde) sp.set("desde", desde);
-    if (hasta) sp.set("hasta", hasta);
+    if (q.desde && !anio) sp.set("desde", q.desde);
+    if (q.hasta && !anio) sp.set("hasta", q.hasta);
+    if (autor) sp.set("autor", autor);
+    if (anio) sp.set("anio", String(anio));
+    if (mes) sp.set("mes", String(mes));
     if (n > 1) sp.set("pagina", String(n));
     const qs = sp.toString();
     return localePath(locale, `/categoria/${slug}${qs ? `?${qs}` : ""}`);
@@ -95,8 +118,54 @@ async function CategoryPage({ params, searchParams, locale }: PageProps & { loca
   // Filtros de la sección, compactos y junto al título (ver SectionHeader). Los
   // atajos de fecha (C-09) son enlaces, no botones: cada rango tiene su propia
   // URL, cacheable y compartible. El formulario es GET y funciona sin JavaScript.
+  const selectCls = "lx-ui w-full rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] px-3 py-2 text-sm outline-none transition focus:border-[var(--accent)] pointer-coarse:min-h-11";
   const filters = (
     <div data-el="filters" className={`flex flex-wrap items-center gap-x-3 gap-y-2 ${A.justify}`}>
+      {conAutor && autores.length > 0 && (
+        // Filtro de columnistas: autor, año y mes. Formulario GET (URL propia y sin JavaScript).
+        <form action={localePath(locale, `/categoria/${slug}`)} method="get" className="flex w-full max-w-[34rem] flex-col gap-3 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--bg-2)] p-4 text-left">
+          <p className="lx-display text-center text-lg font-semibold text-[var(--accent)]">{t(locale, "section.filter").toUpperCase()}</p>
+          <label className="flex flex-col gap-1">
+            <span className="lx-kicker !text-[0.72rem] text-[var(--fg-muted)]">{t(locale, "section.author")}</span>
+            <select name="autor" defaultValue={autor ?? ""} className={selectCls}>
+              <option value="">{t(locale, "section.anyAuthor")}</option>
+              {autores.map((a) => (
+                <option key={a.slug} value={a.slug}>{a.name}</option>
+              ))}
+            </select>
+          </label>
+          <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-3">
+            <label className="flex flex-col gap-1">
+              <span className="lx-kicker !text-[0.72rem] text-[var(--fg-muted)]">{t(locale, "section.year")}</span>
+              <select name="anio" defaultValue={anio ? String(anio) : ""} className={selectCls}>
+                <option value="">{t(locale, "section.anyYear")}</option>
+                {Array.from({ length: anioActual - 2009 }, (_, i) => anioActual - i).map((y) => (
+                  <option key={y} value={y}>{y}</option>
+                ))}
+              </select>
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="lx-kicker !text-[0.72rem] text-[var(--fg-muted)]">{t(locale, "section.month")}</span>
+              <select name="mes" defaultValue={mes ? String(mes) : ""} className={selectCls}>
+                <option value="">{t(locale, "section.anyMonth")}</option>
+                {MESES.map((m, i) => (
+                  <option key={m} value={i + 1}>{m}</option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <div className="flex items-center justify-center gap-4">
+            <button type="submit" className="lx-ui min-h-11 rounded-full bg-[var(--accent)] px-8 text-sm font-semibold text-[var(--accent-fg)] transition hover:opacity-90 lg:min-h-9">
+              {t(locale, "section.search")}
+            </button>
+            {filtrando && (
+              <Link href={localePath(locale, `/categoria/${slug}`)} className="lx-link text-xs text-[var(--fg-muted)]">
+                {t(locale, "section.clear")}
+              </Link>
+            )}
+          </div>
+        </form>
+      )}
       {/* Filtros de la sección. Formulario GET: cada combinación es una URL
           propia, enlazable y cacheable, y funciona sin JavaScript. */}
       {subcategories.length > 0 && (

@@ -161,6 +161,8 @@ export async function navItems(locale: Locale = DEFAULT_LOCALE): Promise<NavItem
     // visibles sobrecargan la navegación. El resto está en el menú «Más».
     const [categories, hijas] = await Promise.all([getTopLevelCategories(), getNavChildren().catch(() => ({}) as Awaited<ReturnType<typeof getNavChildren>>)]);
     return [
+      // «Portada» abre la barra, como en el sitio anterior.
+      { href: "/", label: t(locale, "nav.home") },
       ...categories.slice(0, NAV_VISIBLE).map((c) => ({
         href: `/categoria/${c.slug}`,
         label: categoryLabel(locale, c.slug, c.name),

@@ -2,6 +2,7 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { ChevronDown } from "lucide-react";
 import { localePath, t, type Locale } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
@@ -15,6 +16,11 @@ export type ItemMenu = { href: string; label: string; children?: ItemMenu[] };
  */
 export function NavMenuItem({ item, locale, className }: { item: ItemMenu; locale: Locale; className?: string }) {
   const hijas = item.children ?? [];
+  // Dónde está el lector: la sección (o una de sus subsecciones) se resalta con el color de acento.
+  const ruta = usePathname() ?? "/";
+  const esHome = item.href === "/";
+  const actual = esHome ? ruta === "/" || ruta === `/${locale}` : ruta === item.href || ruta.startsWith(`${item.href}/`) || hijas.some((h) => ruta === h.href || ruta.startsWith(`${h.href}/`));
+  const claseEnlace = cn(className, actual && "!text-[var(--accent)] font-semibold");
   const [abierto, setAbierto] = useState(false);
   const caja = useRef<HTMLDivElement>(null);
   const menu = useRef<HTMLDivElement>(null);
@@ -49,7 +55,7 @@ export function NavMenuItem({ item, locale, className }: { item: ItemMenu; local
 
   if (hijas.length === 0) {
     return (
-      <Link href={localePath(locale, item.href)} className={className}>
+      <Link href={localePath(locale, item.href)} className={claseEnlace} aria-current={actual ? "page" : undefined}>
         {item.label}
       </Link>
     );
@@ -84,7 +90,7 @@ export function NavMenuItem({ item, locale, className }: { item: ItemMenu; local
         if (!caja.current?.contains(e.relatedTarget as Node | null)) setAbierto(false);
       }}
     >
-      <Link href={localePath(locale, item.href)} className={className}>
+      <Link href={localePath(locale, item.href)} className={claseEnlace} aria-current={actual ? "page" : undefined}>
         {item.label}
       </Link>
       <button

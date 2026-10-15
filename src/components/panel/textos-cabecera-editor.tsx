@@ -21,7 +21,7 @@ export function TextosCabeceraEditor({ value, onChange }: { value: TextosCabecer
   const sinSubtitulo = t.lema === "";
   const campo = "w-full rounded-[var(--radius)] border border-[var(--border-strong)] bg-white px-3 py-2 text-sm text-[#0b0b0b] placeholder:text-[var(--fg-muted)] disabled:opacity-50";
   return (
-    <Group title="Textos de la cabecera" abierto>
+    <Group title="Textos de la cabecera">
       <label className="flex flex-col gap-1 text-sm">
         <span className="font-semibold">Título</span>
         <input

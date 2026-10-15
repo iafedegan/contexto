@@ -57,7 +57,7 @@ export function MenuNavbarEditor({
   );
   const campo = "w-full rounded-[var(--radius)] border border-[var(--border-strong)] bg-white px-2 py-1.5 text-sm text-[#0b0b0b] placeholder:text-[var(--fg-muted)]";
   return (
-    <Group title="Menú de la barra" abierto>
+    <Group title="Menú de la barra">
       <p className="text-xs leading-relaxed text-[var(--fg-muted)]">Marca las secciones que se muestran. Las demás no aparecen en la barra.</p>
       <div className="flex flex-col gap-1.5">
         {[...secciones, { slug: "observatorio", name: "Observatorio" }].map((s) => (

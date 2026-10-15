@@ -155,6 +155,8 @@ export type CategoryFilters = {
   dateFrom?: string;
   /** Fecha máxima de publicación, formato "YYYY-MM-DD" (inclusive). */
   dateTo?: string;
+  /** Slug de un autor para listar solo sus notas de la sección. */
+  authorSlug?: string;
 };
 
 // Resultado de leer una categoría: su ficha, subcategorías, notas de la página y total.
@@ -181,7 +183,7 @@ export function enCategorias(ids: string[], slugs: string[]): SQL {
 const leerCategoria = cachear(
   "categoria",
   async (categorySlug: string, filters: CategoryFilters): Promise<ListadoCategoria> => {
-  const { limit = 20, offset = 0, subcategorySlug, dateFrom, dateTo } = filters;
+  const { limit = 20, offset = 0, subcategorySlug, dateFrom, dateTo, authorSlug } = filters;
 
   const [cat] = await db
     .select({ id: categories.id, name: categories.name, description: categories.description })
@@ -209,6 +211,7 @@ const leerCategoria = cachear(
   const conditions = [publishedCondition, enCategorias(categoryIds, seccionesSlugs)];
   if (dateFrom) conditions.push(gte(articles.publishedAt, sql`${dateFrom}::date`));
   if (dateTo) conditions.push(lte(articles.publishedAt, sql`(${dateTo}::date + interval '1 day')`));
+  if (authorSlug) conditions.push(sql`${articles.authorId} in (select id from authors where slug = ${authorSlug})`);
   const where = and(...conditions);
 
   const [items, [{ count }]] = await Promise.all([
@@ -237,6 +240,25 @@ const leerCategoria = cachear(
   },
   { tags: [TAG_CONTENIDO], segundos: 120 },
 );
+
+/** Autores con notas publicadas en una sección (y sus subsecciones), por nombre: alimentan el filtro «Nombre autor». */
+const leerAutoresDeSeccion = cachear(
+  "autores-seccion",
+  async (categorySlug: string): Promise<{ slug: string; name: string }[]> => {
+    const [cat] = await db.select({ id: categories.id }).from(categories).where(eq(categories.slug, categorySlug)).limit(1);
+    if (!cat) return [];
+    const hijas = await db.select({ id: categories.id, slug: categories.slug }).from(categories).where(eq(categories.parentId, cat.id));
+    const filas = await db
+      .selectDistinct({ slug: authors.slug, name: authors.name })
+      .from(articles)
+      .innerJoin(authors, eq(articles.authorId, authors.id))
+      .where(and(publishedCondition, enCategorias([cat.id, ...hijas.map((h) => h.id)], [categorySlug, ...hijas.map((h) => h.slug)])))
+      .orderBy(authors.name);
+    return filas;
+  },
+  { tags: [TAG_CONTENIDO], segundos: 600 },
+);
+export const getAutoresDeSeccion = (slug: string) => leerAutoresDeSeccion(slug);
 
 // Listado de una categoría (con sus subcategorías) leído de la caché; en la vista previa aplica el estilo de bloque sin publicar.
 export async function getArticlesByCategory(categorySlug: string, filters: CategoryFilters = {}): Promise<ListadoCategoria> {
