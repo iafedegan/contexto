@@ -10,7 +10,7 @@ import { DeleteArticleButton } from "@/components/panel/delete-article-button";
 import { MarcasNota } from "@/components/panel/marcas-nota";
 import { ArticleFilters } from "@/components/panel/article-filters";
 import { SparklineZoom } from "@/components/panel/sparkline-zoom";
-import { dailySeries, hasDailyViews, pctChange, siteWeekTotals, TODAY_CO } from "@/lib/article-stats";
+import { dailySeries, hasDailyViews, pctChange, resumenGlobalNotas, siteWeekTotals, TODAY_CO } from "@/lib/article-stats";
 import { formatDate } from "@/lib/utils";
 import { nfCO as nf } from "@/lib/format";
 import { ESTADO_LABEL as STATUS_LABEL } from "@/lib/estados";
@@ -135,17 +135,20 @@ export default async function ArticlesList({ searchParams }: { searchParams: Sea
       .where(where.length ? and(...where) : undefined)
       .orderBy(...order)
       .limit(200),
-    db
-      .select({
-        total: sql<number>`count(*)::int`,
-        publicados: sql<number>`count(*) filter (where ${articles.status} = 'publicado')::int`,
-        pendientes: sql<number>`count(*) filter (where ${articles.status} in ('borrador', 'en_revision'))::int`,
-        programados: sql<number>`count(*) filter (where ${articles.status} = 'programado')::int`,
-        lecturas: sql<number>`coalesce(sum(${articles.views}), 0)::int`,
-      })
-      .from(articles)
-      .where(alcance)
-      .then((r) => r[0]),
+    // Administración: totales de todo (guardados un minuto). Quien ve solo lo suyo: sus propias notas, que son pocas.
+    alcance
+      ? db
+          .select({
+            total: sql<number>`count(*)::int`,
+            publicados: sql<number>`count(*) filter (where ${articles.status} = 'publicado')::int`,
+            pendientes: sql<number>`count(*) filter (where ${articles.status} in ('borrador', 'en_revision'))::int`,
+            programados: sql<number>`count(*) filter (where ${articles.status} = 'programado')::int`,
+            lecturas: sql<number>`coalesce(sum(${articles.views}), 0)::int`,
+          })
+          .from(articles)
+          .where(alcance)
+          .then((r) => r[0])
+      : resumenGlobalNotas(),
     soloMias ? Promise.resolve(null) : siteWeekTotals(),
   ]);
 

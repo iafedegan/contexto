@@ -9,7 +9,14 @@ import { slugify } from "@/lib/utils";
  * nota. `authors` es una tabla aparte (puede haber firmas sin login), así que aquí
  * se crea, si falta, la ficha de autor vinculada a cada usuario activo.
  */
-export async function ensureUserAuthors(): Promise<void> {
+let ultimaRevision = 0;
+/** Cada cuánto se vuelve a revisar, por instancia, que cada cuenta tenga su ficha de autor (el listado de artículos lo pide en cada carga). */
+const REVISION_CADA_MS = 10 * 60_000;
+
+export async function ensureUserAuthors(opciones: { forzar?: boolean } = {}): Promise<void> {
+  // Sin esta pausa, cada carga del listado pagaba dos consultas más antes de poder hacer nada; las cuentas nuevas se crean pocas veces al día.
+  if (!opciones.forzar && Date.now() - ultimaRevision < REVISION_CADA_MS) return;
+  ultimaRevision = Date.now();
   const [activos, existentes] = await Promise.all([
     db.select({ id: users.id, name: users.name }).from(users).where(eq(users.active, true)),
     db.select({ userId: authors.userId, slug: authors.slug }).from(authors),
@@ -29,7 +36,7 @@ export async function ensureUserAuthors(): Promise<void> {
 /** Ficha de autor de una cuenta del panel (la crea si falta). La firma de una nota es siempre quien la escribe. */
 export async function autorDeUsuario(userId: string): Promise<string | null> {
   try {
-    await ensureUserAuthors();
+    await ensureUserAuthors({ forzar: true });
     const [a] = await db.select({ id: authors.id }).from(authors).where(eq(authors.userId, userId)).limit(1);
     return a?.id ?? null;
   } catch {

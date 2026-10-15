@@ -269,6 +269,9 @@ export const articles = pgTable(
     index("articles_category_published_idx").on(t.categoryId, t.publishedAt),
     index("articles_secciones_idx").using("gin", t.secciones),
     // Listado del panel (51 mil notas): «última edición» y «fecha de publicación» recorren el índice en vez de ordenar toda la tabla (3 s → ms).
+    // Notas de un autor (página de la firma, filtro del panel) y las que creó una cuenta («mis notas»): sin índice recorrían las 51 mil filas.
+    index("articles_author_idx").on(t.authorId, t.publishedAt.desc()),
+    index("articles_created_by_idx").on(t.createdBy),
     index("articles_updated_idx").on(t.updatedAt.desc()),
     index("articles_published_desc_idx").on(t.publishedAt.desc().nullsLast()),
     uniqueIndex("articles_legacy_path_idx").on(t.legacyPath).where(sql`legacy_path is not null`),

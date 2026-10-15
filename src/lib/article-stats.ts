@@ -1,7 +1,8 @@
 import "server-only";
 import { and, eq, gte, inArray, sql } from "drizzle-orm";
 import { db, rowsOf } from "@/db";
-import { articleViewsDaily } from "@/db/schema";
+import { articles, articleViewsDaily } from "@/db/schema";
+import { cachear, TAG_CONTENIDO } from "@/lib/data-cache";
 
 /**
  * Analítica de lecturas para el panel. Las cifras salen del beacon de
@@ -16,10 +17,14 @@ export const TODAY_CO = sql`(now() at time zone 'America/Bogota')::date`;
  * La tabla diaria llega con la migración 0006. Mientras no esté aplicada en un
  * entorno, el panel sigue funcionando con el total histórico en vez de romperse.
  */
+let tablaDiariaExiste = false;
 export async function hasDailyViews(): Promise<boolean> {
+  // Una vez creada, la tabla no desaparece: se recuerda (el listado lo preguntaba tres veces por carga, cada una un viaje a la base).
+  if (tablaDiariaExiste) return true;
   try {
     const res = await db.execute(sql`select to_regclass('public.article_views_daily') is not null as ok`);
-    return Boolean(rowsOf<{ ok: boolean }>(res)[0]?.ok);
+    tablaDiariaExiste = Boolean(rowsOf<{ ok: boolean }>(res)[0]?.ok);
+    return tablaDiariaExiste;
   } catch {
     return false;
   }
@@ -33,10 +38,9 @@ function lastDays(todayIso: string, days: number): string[] {
   );
 }
 
-// Fecha de hoy en hora de Colombia (AAAA-MM-DD), calculada en la base para que coincida con la de las lecturas.
+// Fecha de hoy en hora de Colombia (AAAA-MM-DD): la misma zona con la que la base agrupa las lecturas, sin ir a preguntársela.
 async function todayIso(): Promise<string> {
-  const res = await db.execute(sql`select to_char(${TODAY_CO}, 'YYYY-MM-DD') as d`);
-  return rowsOf<{ d: string }>(res)[0]?.d ?? new Date().toISOString().slice(0, 10);
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Bogota", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
 }
 
 /** Serie diaria (rellena con ceros) de varios artículos a la vez. */
@@ -136,3 +140,24 @@ export function pctChange(current: number, previous: number): number | null {
   return Math.round(((current - previous) / previous) * 100);
 }
 
+
+/**
+ * Totales de TODAS las notas (por estado y lecturas) para la cabecera del listado de artículos. Recorre las 51 mil filas de la tabla, así que se
+ * guarda un minuto (y se renueva al instante al publicar o editar): antes cada carga del listado la leía de nuevo y, con el disco frío, tardaba segundos.
+ */
+export const resumenGlobalNotas = cachear(
+  "panel-resumen-notas",
+  async () => {
+    const [r] = await db
+      .select({
+        total: sql<number>`count(*)::int`,
+        publicados: sql<number>`count(*) filter (where ${articles.status} = 'publicado')::int`,
+        pendientes: sql<number>`count(*) filter (where ${articles.status} in ('borrador', 'en_revision'))::int`,
+        programados: sql<number>`count(*) filter (where ${articles.status} = 'programado')::int`,
+        lecturas: sql<number>`coalesce(sum(${articles.views}), 0)::int`,
+      })
+      .from(articles);
+    return r;
+  },
+  { tags: [TAG_CONTENIDO], segundos: 60 },
+);

@@ -1,5 +1,5 @@
 -- Para pegar en el SQL Editor de Supabase (proyecto CONTEXTOPRO).
--- Reúne las migraciones 0014 a 0018 del repositorio; todas son idempotentes (se pueden correr más de una vez).
+-- Reúne las migraciones 0014 a 0019 del repositorio; todas son idempotentes (se pueden correr más de una vez).
 
 -- ===== 0014_programacion_y_secciones_del_boletin.sql =====
 -- Boletín: armado con secciones (`items`) y envío programado (`scheduled_for`). Cada sentencia es IDEMPOTENTE: en producción las
@@ -37,4 +37,10 @@ CREATE UNIQUE INDEX IF NOT EXISTS "articles_legacy_path_idx" ON "articles" USING
 -- Cada sentencia es IDEMPOTENTE: en producción las migraciones se aplican a mano en el SQL Editor de Supabase.
 CREATE INDEX IF NOT EXISTS "articles_updated_idx" ON "articles" USING btree ("updated_at" DESC);
 CREATE INDEX IF NOT EXISTS "articles_published_desc_idx" ON "articles" USING btree ("published_at" DESC NULLS LAST);
+
+-- ===== 0019_indices_por_autor.sql =====
+-- Notas de un autor (página de la firma, filtro del panel) y notas creadas por una cuenta («mis notas»): sin estos índices la base recorría las
+-- 51 mil filas de `articles`. Cada sentencia es IDEMPOTENTE: en producción las migraciones se aplican a mano en el SQL Editor de Supabase.
+CREATE INDEX IF NOT EXISTS "articles_author_idx" ON "articles" USING btree ("author_id","published_at" DESC NULLS LAST);
+CREATE INDEX IF NOT EXISTS "articles_created_by_idx" ON "articles" USING btree ("created_by");
 
