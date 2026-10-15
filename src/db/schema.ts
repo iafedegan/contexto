@@ -272,6 +272,10 @@ export const articles = pgTable(
     // Notas de un autor (página de la firma, filtro del panel) y las que creó una cuenta («mis notas»): sin índice recorrían las 51 mil filas.
     index("articles_author_idx").on(t.authorId, t.publishedAt.desc()),
     index("articles_created_by_idx").on(t.createdBy),
+    // Orden de la portada (las ancladas primero, luego las más recientes): el editor y la portada leen solo las primeras filas sin ordenar las 51 mil.
+    index("articles_portada_idx")
+      .on(sql`(home_position is null)`, t.homePosition, t.publishedAt.desc())
+      .where(sql`status = 'publicado'`),
     index("articles_updated_idx").on(t.updatedAt.desc()),
     index("articles_published_desc_idx").on(t.publishedAt.desc().nullsLast()),
     uniqueIndex("articles_legacy_path_idx").on(t.legacyPath).where(sql`legacy_path is not null`),

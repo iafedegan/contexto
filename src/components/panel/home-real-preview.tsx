@@ -1,4 +1,4 @@
-import { asc, eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import { adsZones, articles, categories, siteSettings } from "@/db/schema";
 import { auth, requirePermiso } from "@/lib/auth";
@@ -16,6 +16,7 @@ import { countChanges, summarizeChanges, type ChangeLine, type PortadaState } fr
 import type { Anterior } from "@/components/panel/portada-types";
 import type { AdDraft } from "@/components/panel/ads-zone-form";
 import { sql } from "drizzle-orm";
+import { seccionesConConteo } from "@/lib/secciones-conteo";
 import { makePage as makeCategoryPage } from "@/app/(public)/_pages/categoria";
 
 // Página de portada real, reutilizada para la vista previa.
@@ -33,7 +34,7 @@ const Categoria = makeCategoryPage("es");
  * memoizan por petición; llamarlas antes dejaría en caché el diseño publicado.
  */
 /** Carga el borrador del editor, calcula si hay cambios sin publicar y lo fija para esta petición. */
-export async function applyDraftForRequest(opts: { popup?: "auto" | "show" | "hide" } = {}) {
+export async function applyDraftForRequest(opts: { popup?: "auto" | "show" | "hide"; soloAplicar?: boolean } = {}) {
   const user = await requirePermiso("portada");
 
   const [draftRow] = await db.select({ value: siteSettings.value }).from(siteSettings).where(eq(siteSettings.key, draftKey(user.id))).limit(1);
@@ -42,7 +43,9 @@ export async function applyDraftForRequest(opts: { popup?: "auto" | "show" | "hi
   let changed = false;
   let lines: ChangeLine[] = [];
   let anterior: Anterior | null = null;
-  if (draft) {
+  // `soloAplicar` (el lienzo incrustado): solo hace falta fijar el borrador; la comparación con lo publicado es para el marco de la vista previa y
+  // costaba cuatro consultas más (una de ellas ordenando 51 mil notas) en cada cambio del editor.
+  if (draft && !opts.soloAplicar) {
     const [layoutRow] = await db.select({ value: siteSettings.value }).from(siteSettings).where(eq(siteSettings.key, "home_layout")).limit(1);
     const [popupRow] = await db.select({ value: siteSettings.value }).from(siteSettings).where(eq(siteSettings.key, POPUP_KEY)).limit(1);
     const savedItems = await db
@@ -126,21 +129,11 @@ export async function HomeRealPreview({ seccion }: { seccion?: string } = {}) {
   const [adsZones, session, secciones, notas] = await Promise.all([
     getAdsZoneRows().catch(() => []),
     auth(),
-    db
-      .select({
-        id: categories.id,
-        slug: categories.slug,
-        name: categories.name,
-        description: categories.description,
-        sortOrder: categories.sortOrder,
-        parentId: categories.parentId,
-        articleCount: sql<number>`count(${articles.id})::int`,
-      })
-      .from(categories)
-      .leftJoin(articles, eq(articles.categoryId, categories.id))
-      .groupBy(categories.id)
-      .orderBy(asc(categories.sortOrder), asc(categories.name)) as Promise<SectionNode[]>,
-    db.select({ slug: articles.slug, title: articles.title }).from(articles).where(eq(articles.status, "publicado")),
+    seccionesConConteo() as Promise<SectionNode[]>,
+    // Solo los títulos de las notas que el borrador menciona (no las 51 mil publicadas).
+    draft && draft.items.length
+      ? db.select({ slug: articles.slug, title: articles.title }).from(articles).where(inArray(articles.slug, draft.items.map((i) => i.slug)))
+      : Promise.resolve([] as { slug: string; title: string }[]),
   ]);
   return (
     <PreviewChrome
@@ -162,6 +155,6 @@ export async function HomeRealPreview({ seccion }: { seccion?: string } = {}) {
 
 /** La portada real con el borrador aplicado, sin marco: para incrustarla en el lienzo del editor. */
 export async function HomeRealEmbed({ popup }: { popup: "show" | "hide" }) {
-  await applyDraftForRequest({ popup });
+  await applyDraftForRequest({ popup, soloAplicar: true });
   return <Home locale="es" />;
 }

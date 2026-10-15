@@ -204,7 +204,7 @@ export function HomeBuilder({
       void save();
       return;
     }
-    const id = setTimeout(() => void save(), 700);
+    const id = setTimeout(() => void save(), 250);
     return () => clearTimeout(id);
   }, [layout, items, popup, adDrafts, auto, resumePending]);
 

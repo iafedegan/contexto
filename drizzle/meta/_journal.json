@@ -141,6 +141,13 @@
       "when": 1792030982623,
       "tag": "0019_indices_por_autor",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1792079421093,
+      "tag": "0020_indice_de_la_portada",
+      "breakpoints": true
     }
   ]
 }

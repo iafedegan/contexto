@@ -1,5 +1,5 @@
 -- Para pegar en el SQL Editor de Supabase (proyecto CONTEXTOPRO).
--- Reúne las migraciones 0014 a 0019 del repositorio; todas son idempotentes (se pueden correr más de una vez).
+-- Reúne las migraciones 0014 a 0020 del repositorio; todas son idempotentes (se pueden correr más de una vez).
 
 -- ===== 0014_programacion_y_secciones_del_boletin.sql =====
 -- Boletín: armado con secciones (`items`) y envío programado (`scheduled_for`). Cada sentencia es IDEMPOTENTE: en producción las
@@ -43,4 +43,10 @@ CREATE INDEX IF NOT EXISTS "articles_published_desc_idx" ON "articles" USING btr
 -- 51 mil filas de `articles`. Cada sentencia es IDEMPOTENTE: en producción las migraciones se aplican a mano en el SQL Editor de Supabase.
 CREATE INDEX IF NOT EXISTS "articles_author_idx" ON "articles" USING btree ("author_id","published_at" DESC NULLS LAST);
 CREATE INDEX IF NOT EXISTS "articles_created_by_idx" ON "articles" USING btree ("created_by");
+
+-- ===== 0020_indice_de_la_portada.sql =====
+-- Editor de portada y portada pública con 51 mil notas: «las ancladas primero y luego las más recientes» ordenaba todas las publicadas para quedarse con
+-- 13, 80 o 200. Con este índice parcial lee solo esas primeras filas. `published_at DESC` (NULLS FIRST, el valor por defecto) coincide con las consultas.
+-- Idempotente: en producción las migraciones se aplican a mano en el SQL Editor de Supabase.
+CREATE INDEX IF NOT EXISTS "articles_portada_idx" ON "articles" USING btree ((home_position is null),"home_position","published_at" DESC) WHERE status = 'publicado';
 

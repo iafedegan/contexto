@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, lte, sql } from "drizzle-orm";
+import { and, desc, eq, lte, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { articles, authors, categories, siteSettings } from "@/db/schema";
 import { auth, requirePermiso } from "@/lib/auth";
@@ -6,6 +6,7 @@ import { getHomeLayoutConfig } from "@/lib/content";
 import { getAdsZoneRows } from "@/lib/ads";
 import { HomeBuilder } from "@/components/panel/home-builder";
 import { getSitePopup } from "@/lib/popup";
+import { seccionesConConteo } from "@/lib/secciones-conteo";
 import { HomeRealPreview } from "@/components/panel/home-real-preview";
 import { draftKey, sanitizeDraft } from "@/lib/preview-draft";
 import { countChanges, summarizeChanges, type PortadaState } from "@/lib/portada-summary";
@@ -59,20 +60,7 @@ export default async function PortadaPage({
     db.select({ value: siteSettings.value, updatedAt: siteSettings.updatedAt }).from(siteSettings).where(eq(siteSettings.key, draftKey(user.id))).limit(1),
   ]);
 
-  const sections = await db
-    .select({
-      id: categories.id,
-      slug: categories.slug,
-      name: categories.name,
-      description: categories.description,
-      sortOrder: categories.sortOrder,
-      parentId: categories.parentId,
-      articleCount: sql<number>`count(${articles.id})::int`,
-    })
-    .from(categories)
-    .leftJoin(articles, eq(articles.categoryId, categories.id))
-    .groupBy(categories.id)
-    .orderBy(asc(categories.sortOrder), asc(categories.name));
+  const sections = await seccionesConConteo();
 
   // ¿Hay un borrador de una sesión anterior que difiera de lo publicado? Se ofrece retomarlo.
   let resume: { draft: NonNullable<ReturnType<typeof sanitizeDraft>>; at: string; count: number } | null = null;
