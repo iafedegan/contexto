@@ -138,7 +138,14 @@ export async function proxy(req: NextRequest) {
   // cliente no puede falsearla enviando su propio `x-pathname`.
   const requestHeaders = new Headers(req.headers);
   requestHeaders.set("x-pathname", pathname);
-  return conCabeceras(NextResponse.next({ request: { headers: requestHeaders } }), pathname);
+  const res = conCabeceras(NextResponse.next({ request: { headers: requestHeaders } }), pathname);
+  // La portada no cambia según quien la mira (en producción no lee cookies): la red de Vercel la guarda un minuto y sirve la copia
+  // mientras la renueva (hasta diez minutos), así la primera respuesta no espera al servidor ni a la base de datos. El navegador sigue
+  // sin guardarla (`Cache-Control` intacto): solo cambia lo que hace la red. Con búsqueda en la dirección (?…) no se guarda.
+  if (req.method === "GET" && !search && (pathname === "/" || pathname === "/en")) {
+    res.headers.set("Vercel-CDN-Cache-Control", "max-age=60, stale-while-revalidate=600");
+  }
+  return res;
 }
 
 /**

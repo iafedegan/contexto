@@ -72,6 +72,24 @@ export function MapaSeccionRegiones({ locale, actual }: { locale: Locale; actual
               </a>
             );
           })}
+          {/* Insular: San Andrés y Providencia, en un recuadro (el archipiélago queda muy al noroeste, fuera del trazo del continente). */}
+          {(() => {
+            const r = REGIONES_COLOMBIA.find((x) => x.slug === "insular")!;
+            const on = actual === r.slug;
+            return (
+              <a href={hrefDe(r.slug)} aria-label="Noticias de la región Insular: San Andrés y Providencia" aria-current={on ? "true" : undefined} className="group/r outline-none">
+                <rect x="4" y="6" width="104" height="78" rx="8" fill="none" stroke={r.color} strokeWidth="1" strokeDasharray="3 3" className={`transition-opacity ${actual && !on ? "opacity-30" : "opacity-70"} group-hover/r:opacity-100`} />
+                <g fill={r.color} stroke="var(--surface)" strokeWidth="1" className={`cursor-pointer transition-all duration-300 group-hover/r:opacity-100 ${actual ? (on ? "opacity-100" : "opacity-30") : "opacity-80"}`}>
+                  <title>San Andrés y Providencia · Insular</title>
+                  {/* Providencia (arriba, más pequeña) y San Andrés (abajo, alargada). */}
+                  <ellipse cx="38" cy="30" rx="5" ry="8" transform="rotate(-12 38 30)" />
+                  <ellipse cx="62" cy="55" rx="5" ry="12" transform="rotate(8 62 55)" />
+                </g>
+                <text x="56" y="19" textAnchor="middle" fontSize="8.5" fontWeight="700" fill="#fff" stroke="rgba(0,0,0,0.55)" strokeWidth="2.2" paintOrder="stroke" className="pointer-events-none select-none">Providencia</text>
+                <text x="56" y="80" textAnchor="middle" fontSize="8.5" fontWeight="700" fill="#fff" stroke="rgba(0,0,0,0.55)" strokeWidth="2.2" paintOrder="stroke" className="pointer-events-none select-none">San Andrés</text>
+              </a>
+            );
+          })()}
         </svg>
       </div>
     </section>
