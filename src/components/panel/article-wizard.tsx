@@ -48,7 +48,7 @@ import {
 } from "@/app/panel/(app)/articulos/ai-actions";
 import { EditorCuerpo, expandirGraficas } from "@/components/panel/editor-cuerpo";
 import { SectionTree } from "@/components/panel/section-picker";
-import { REGIONES_COLOMBIA } from "@/lib/regiones-colombia";
+import { DEPARTAMENTOS_FILTRO, REGIONES_COLOMBIA } from "@/lib/regiones-colombia";
 import { Carrusel, filasListas, useAltoVentana } from "@/components/panel/carrusel";
 import { textoDeSegmentos, type Material, type Participante, type Segmento } from "@/lib/material-types";
 import { participantesListos, SegmentosEditor } from "@/components/panel/entrevista-editor";
@@ -76,6 +76,7 @@ export type WizardInitial = {
   tags: string[];
   categoryId: string | null;
   region?: string | null;
+  depto?: string | null;
   authorId: string | null;
   coverImageUrl: string | null;
   coverImageAlt: string | null;
@@ -214,6 +215,7 @@ export function ArticleWizard({
   const [tagDraft, setTagDraft] = useState("");
   const [categoryId, setCategoryId] = useState(initial?.categoryId ?? "");
   const [region, setRegion] = useState(initial?.region ?? "");
+  const [depto, setDepto] = useState(initial?.depto ?? "");
   const [authorId] = useState(initial?.authorId ?? miAutorId ?? "");
   // El cuerpo se guarda como HTML (el editor lo muestra ya formateado). Las gráficas viajan como marcador `[[GRAFICA …]]`.
   const [body, setBody] = useState(initial?.body ?? "");
@@ -764,6 +766,7 @@ export function ArticleWizard({
       <input type="hidden" name="tags" value={tags.join(", ")} />
       <input type="hidden" name="categoryId" value={categoryId} />
       <input type="hidden" name="region" value={region} />
+      <input type="hidden" name="depto" value={region ? depto : ""} />
       <input type="hidden" name="authorId" value={authorId} />
       <input type="hidden" name="coverImageUrl" value={cover} />
       <input type="hidden" name="coverImageAlt" value={coverAlt} />
@@ -1257,15 +1260,27 @@ export function ArticleWizard({
         {current.key === "seccion" && (
           <Step ancho="xl" title="Sección y autor" hint="Dónde se publica y quién firma. Puedes dejarlo para después.">
             <SectionTree options={categories} value={categoryId} onChange={setCategoryId} sugeridas={seccionesSugeridas} firma={authorName ?? "tu usuario, al guardar"} filas={filasListas(alto, 130, 38)}>
-              {/* Región de Colombia de la noticia: alimenta el mapa interactivo de la sección «Regiones». */}
+              {/* Región y departamento de la noticia: alimentan el mapa interactivo de la sección «Regiones». Compacto a propósito: el asistente no hace scroll. */}
               <div className="rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] px-3.5 py-2.5">
-                <p id="reg-nota" className="lx-kicker text-[var(--fg-muted)]">Región de la noticia</p>
-                <p className="text-xs leading-snug text-[var(--fg-muted)]">A qué región de Colombia pertenece; así sale en el mapa de «Regiones».</p>
-                <div role="radiogroup" aria-labelledby="reg-nota" className="mt-2 flex flex-wrap gap-1.5">
+                <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+                  <p id="reg-nota" className="lx-kicker text-[var(--fg-muted)]" title="A qué región y departamento de Colombia pertenece; así sale en el mapa de «Regiones».">Región de la noticia</p>
+                  {region && (
+                    <label className="flex items-center gap-2 text-xs text-[var(--fg-muted)]">
+                      Departamento
+                      <select value={depto} onChange={(e) => setDepto(e.target.value)} className="rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-sm text-[var(--fg)]">
+                        <option value="">Sin departamento</option>
+                        {DEPARTAMENTOS_FILTRO.filter((d) => d.region === region).map((d) => (
+                          <option key={d.slug} value={d.slug}>{d.nombre}</option>
+                        ))}
+                      </select>
+                    </label>
+                  )}
+                </div>
+                <div role="radiogroup" aria-labelledby="reg-nota" className="mt-1.5 flex flex-wrap gap-1.5">
                   {[{ slug: "", nombre: "Sin región", color: "" }, ...REGIONES_COLOMBIA].map((r) => (
-                    <button key={r.slug || "ninguna"} type="button" role="radio" aria-checked={region === r.slug} onClick={() => setRegion(r.slug)}
-                      className={`inline-flex min-h-9 items-center gap-1.5 rounded-full border px-3 text-sm font-medium transition ${region === r.slug ? "border-transparent bg-[var(--accent)] text-[var(--accent-fg,#fff)] shadow-sm" : "border-[var(--border)] bg-[var(--surface)] text-[var(--fg-muted)] hover:text-[var(--fg)]"}`}>
-                      {r.color && <span aria-hidden className="size-2.5 rounded-full" style={{ background: r.color }} />}
+                    <button key={r.slug || "ninguna"} type="button" role="radio" aria-checked={region === r.slug} onClick={() => { setRegion(r.slug); setDepto(""); }}
+                      className={`inline-flex min-h-8 items-center gap-1.5 rounded-full border px-2.5 text-xs font-medium transition ${region === r.slug ? "border-transparent bg-[var(--accent)] text-[var(--accent-fg,#fff)] shadow-sm" : "border-[var(--border)] bg-[var(--surface)] text-[var(--fg-muted)] hover:text-[var(--fg)]"}`}>
+                      {r.color && <span aria-hidden className="size-2 rounded-full" style={{ background: r.color }} />}
                       {r.nombre}
                     </button>
                   ))}

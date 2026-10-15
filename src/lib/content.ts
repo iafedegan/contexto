@@ -1,6 +1,6 @@
 import "server-only";
 import { cache } from "react";
-import { regionPorSlug } from "@/lib/regiones-colombia";
+import { departamentoPorSlug, regionPorSlug } from "@/lib/regiones-colombia";
 import { and, desc, eq, gt, gte, inArray, isNull, lte, or, sql, type SQL } from "drizzle-orm";
 import { db } from "@/db";
 import {
@@ -160,6 +160,8 @@ export type CategoryFilters = {
   authorSlug?: string;
   /** Región natural (ver regiones-colombia.ts): notas que mencionan sus departamentos o ciudades en el título, resumen o etiquetas. */
   regionSlug?: string;
+  /** Departamento (ver regiones-colombia.ts): notas que lo mencionan o su capital. */
+  departamentoSlug?: string;
 };
 
 // Resultado de leer una categoría: su ficha, subcategorías, notas de la página y total.
@@ -186,7 +188,7 @@ export function enCategorias(ids: string[], slugs: string[]): SQL {
 const leerCategoria = cachear(
   "categoria",
   async (categorySlug: string, filters: CategoryFilters): Promise<ListadoCategoria> => {
-  const { limit = 20, offset = 0, subcategorySlug, dateFrom, dateTo, authorSlug, regionSlug } = filters;
+  const { limit = 20, offset = 0, subcategorySlug, dateFrom, dateTo, authorSlug, regionSlug, departamentoSlug } = filters;
 
   const [cat] = await db
     .select({ id: categories.id, name: categories.name, description: categories.description })
@@ -220,6 +222,11 @@ const leerCategoria = cachear(
     const texto = sql`translate(lower(${articles.title} || ' ' || ${articles.excerpt} || ' ' || ${articles.tags}::text), 'áéíóúñ', 'aeioun')`;
     // La región que fija el editor al clasificar la nota manda; si no, se reconoce por lo que menciona el texto.
     conditions.push(or(sql`${articles.secciones} ? ${`region-${region.slug}`}`, ...region.terminos.map((t) => sql`${texto} like ${`%${t}%`}`)) as SQL);
+  }
+  const depto = departamentoPorSlug(departamentoSlug);
+  if (depto) {
+    const texto = sql`translate(lower(${articles.title} || ' ' || ${articles.excerpt} || ' ' || ${articles.tags}::text), 'áéíóúñ', 'aeioun')`;
+    conditions.push(or(sql`${articles.secciones} ? ${`depto-${depto.slug}`}`, ...depto.terminos.map((t) => sql`${texto} like ${`%${t}%`}`)) as SQL);
   }
   const where = and(...conditions);
 

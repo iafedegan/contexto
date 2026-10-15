@@ -10,7 +10,7 @@ import { SiteShell } from "@/components/site-shell";
 import { getSiteTheme } from "@/lib/site-theme";
 import { getArticlesByCategory, getAutoresDeSeccion, getHomeLayoutConfig } from "@/lib/content";
 import { MapaSeccionRegiones } from "@/components/mapa-seccion-regiones";
-import { regionPorSlug } from "@/lib/regiones-colombia";
+import { departamentoPorSlug, regionPorSlug } from "@/lib/regiones-colombia";
 import { siteUrl } from "@/lib/utils";
 import { blockStylesCss } from "@/lib/home-style";
 
@@ -20,7 +20,7 @@ export const revalidate = 600;
 // Parámetros de la ruta: la dirección de la sección.
 type Params = { params: Promise<{ slug: string }> };
 /** Filtros de la sección: subcategoría, rango de fechas y página. */
-type Query = Promise<{ subcategoria?: string; desde?: string; hasta?: string; pagina?: string; autor?: string; anio?: string; mes?: string; region?: string }>;
+type Query = Promise<{ subcategoria?: string; desde?: string; hasta?: string; pagina?: string; autor?: string; anio?: string; mes?: string; region?: string; depto?: string }>;
 // Parámetros de la ruta y filtros de la dirección.
 type PageProps = Params & { searchParams?: Query };
 
@@ -77,6 +77,7 @@ async function CategoryPage({ params, searchParams, locale }: PageProps & { loca
     hasta = fin.toISOString().slice(0, 10);
   }
   const region = slug === "regiones" ? regionPorSlug(q.region)?.slug : undefined;
+  const depto = slug === "regiones" ? departamentoPorSlug(q.depto)?.slug : undefined;
   const page = Math.max(1, Number(pagina) || 1);
 
   const { category, subcategories, items, total } = await getArticlesByCategory(slug, {
@@ -87,6 +88,7 @@ async function CategoryPage({ params, searchParams, locale }: PageProps & { loca
     dateTo: hasta || undefined,
     authorSlug: autor,
     regionSlug: region,
+    departamentoSlug: depto,
   }).catch(() => ({ category: null, subcategories: [], items: [], total: 0 }));
   if (!category) notFound();
 
@@ -113,6 +115,7 @@ async function CategoryPage({ params, searchParams, locale }: PageProps & { loca
     if (q.hasta && !anio) sp.set("hasta", q.hasta);
     if (autor) sp.set("autor", autor);
     if (region) sp.set("region", region);
+    if (depto) sp.set("depto", depto);
     if (anio) sp.set("anio", String(anio));
     if (mes) sp.set("mes", String(mes));
     if (n > 1) sp.set("pagina", String(n));
@@ -251,7 +254,7 @@ async function CategoryPage({ params, searchParams, locale }: PageProps & { loca
         }
       />
 
-      {slug === "regiones" && <MapaSeccionRegiones locale={locale} actual={region} />}
+      {slug === "regiones" && <MapaSeccionRegiones locale={locale} actual={region} departamento={depto} />}
 
       {conAutor && autores.length > 0 && (
         // Filtro de columnistas: una barra delgada bajo el encabezado, con autor, año y mes en una sola fila. Formulario GET (URL propia, sin JavaScript).

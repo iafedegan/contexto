@@ -1,6 +1,6 @@
 "use server";
 
-import { regionPorSlug } from "@/lib/regiones-colombia";
+import { departamentoPorSlug, regionPorSlug } from "@/lib/regiones-colombia";
 import { revalidatePath } from "next/cache";
 import { sanitizeArticleHtml } from "@/lib/sanitize";
 import { redirect } from "next/navigation";
@@ -59,7 +59,10 @@ export async function saveArticle(formData: FormData) {
     const r = String(regionForm);
     const quiere = regionPorSlug(r)?.slug;
     const [prev] = id ? await db.select({ s: articles.secciones }).from(articles).where(eq(articles.id, id)).limit(1) : [];
-    secciones = [...(prev?.s ?? []).filter((x) => !x.startsWith("region-")), ...(quiere ? [`region-${quiere}`] : [])];
+    // El departamento solo vale si pertenece a la región elegida.
+    const d = departamentoPorSlug(String(formData.get("depto") ?? ""));
+    const dep = d && d.region === quiere ? d.slug : undefined;
+    secciones = [...(prev?.s ?? []).filter((x) => !x.startsWith("region-") && !x.startsWith("depto-")), ...(quiere ? [`region-${quiere}`] : []), ...(dep ? [`depto-${dep}`] : [])];
   }
 
   const values = {

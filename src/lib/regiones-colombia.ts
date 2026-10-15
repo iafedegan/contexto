@@ -14,3 +14,46 @@ export const REGIONES_COLOMBIA: RegionColombia[] = [
 ];
 
 export const regionPorSlug = (slug: string | undefined) => REGIONES_COLOMBIA.find((r) => r.slug === slug);
+
+/** Un departamento filtrable: `mapa` es su nombre en el trazo del mapa; `terminos` lo que lo identifica en el texto de una nota. */
+export type DepartamentoFiltro = { slug: string; nombre: string; mapa: string; region: string; terminos: string[] };
+
+// [nombre en el mapa, nombre para mostrar, términos (sin tildes), región]
+const BASE: [string, string, string[], string][] = [
+  ["ANTIOQUIA", "Antioquia", ["antioquia", "medellin"], "andina"],
+  ["BOYACA", "Boyacá", ["boyaca", "tunja", "duitama", "sogamoso"], "andina"],
+  ["CALDAS", "Caldas", ["caldas", "manizales"], "andina"],
+  ["CUNDINAMARCA", "Cundinamarca", ["cundinamarca", "bogota"], "andina"],
+  ["HUILA", "Huila", ["huila", "neiva"], "andina"],
+  ["NORTE DE SANTANDER", "Norte de Santander", ["norte de santander", "cucuta"], "andina"],
+  ["QUINDIO", "Quindío", ["quindio", "armenia"], "andina"],
+  ["RISARALDA", "Risaralda", ["risaralda", "pereira"], "andina"],
+  ["SANTANDER", "Santander", ["santander", "bucaramanga"], "andina"],
+  ["TOLIMA", "Tolima", ["tolima", "ibague"], "andina"],
+  ["ATLANTICO", "Atlántico", ["atlantico", "barranquilla"], "caribe"],
+  ["BOLIVAR", "Bolívar", ["bolivar", "cartagena"], "caribe"],
+  ["CESAR", "Cesar", ["cesar", "valledupar"], "caribe"],
+  ["CORDOBA", "Córdoba", ["cordoba", "monteria"], "caribe"],
+  ["LA GUAJIRA", "La Guajira", ["guajira", "riohacha"], "caribe"],
+  ["MAGDALENA", "Magdalena", ["magdalena", "santa marta"], "caribe"],
+  ["SUCRE", "Sucre", ["sucre", "sincelejo"], "caribe"],
+  ["CAUCA", "Cauca", ["cauca", "popayan"], "pacifico"],
+  ["CHOCO", "Chocó", ["choco", "quibdo"], "pacifico"],
+  ["NARINO", "Nariño", ["narino", "pasto"], "pacifico"],
+  ["VALLE DEL CAUCA", "Valle del Cauca", ["valle del cauca", "cali"], "pacifico"],
+  ["ARAUCA", "Arauca", ["arauca"], "orinoquia"],
+  ["CASANARE", "Casanare", ["casanare", "yopal"], "orinoquia"],
+  ["META", "Meta", ["meta", "villavicencio"], "orinoquia"],
+  ["VICHADA", "Vichada", ["vichada", "puerto carreno"], "orinoquia"],
+  ["AMAZONAS", "Amazonas", ["amazonas", "leticia"], "amazonia"],
+  ["CAQUETA", "Caquetá", ["caqueta", "florencia"], "amazonia"],
+  ["GUAINIA", "Guainía", ["guainia", "inirida"], "amazonia"],
+  ["GUAVIARE", "Guaviare", ["guaviare", "san jose del guaviare"], "amazonia"],
+  ["PUTUMAYO", "Putumayo", ["putumayo", "mocoa"], "amazonia"],
+  ["VAUPES", "Vaupés", ["vaupes", "mitu"], "amazonia"],
+  ["", "San Andrés y Providencia", ["san andres", "providencia"], "insular"],
+];
+const slugDe = (n: string) => n.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+
+export const DEPARTAMENTOS_FILTRO: DepartamentoFiltro[] = BASE.map(([mapa, nombre, terminos, region]) => ({ slug: slugDe(nombre), nombre, mapa, region, terminos }));
+export const departamentoPorSlug = (slug: string | undefined) => DEPARTAMENTOS_FILTRO.find((d) => d.slug === slug);

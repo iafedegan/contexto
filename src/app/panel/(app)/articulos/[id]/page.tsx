@@ -36,6 +36,7 @@ type Initial = {
   categoryId: string | null;
   /** Región de Colombia a la que se clasifica la nota (guardada como `region-<slug>` en `secciones`). */
   region: string | null;
+  depto: string | null;
   authorId: string | null;
   metaTitle: string | null;
   metaDescription: string | null;
@@ -55,6 +56,7 @@ const EMPTY: Initial = {
   body: "",
   categoryId: null,
   region: null,
+  depto: null,
   authorId: null,
   metaTitle: null,
   metaDescription: null,
@@ -131,6 +133,7 @@ export default async function ArticleEditorPage({
       body: row.body,
       categoryId: row.categoryId,
       region: (row.secciones.find((x) => x.startsWith("region-")) ?? "").slice(7) || null,
+      depto: (row.secciones.find((x) => x.startsWith("depto-")) ?? "").slice(6) || null,
       authorId: row.authorId,
       metaTitle: row.metaTitle,
       metaDescription: row.metaDescription,
@@ -166,6 +169,7 @@ export default async function ArticleEditorPage({
             tags: row.tags,
             categoryId: row.categoryId,
             region: (row.secciones.find((x) => x.startsWith("region-")) ?? "").slice(7) || null,
+      depto: (row.secciones.find((x) => x.startsWith("depto-")) ?? "").slice(6) || null,
             authorId: row.authorId,
             coverImageUrl: row.coverImageUrl,
             coverImageAlt: row.coverImageAlt,
