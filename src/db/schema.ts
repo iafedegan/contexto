@@ -13,6 +13,7 @@ import type { RegionStyles } from "@/lib/home-regions";
 import type { TemplateParts } from "@/lib/template-parts";
 import type { TickerConfig } from "@/lib/cintillo";
 import type { TextosCabecera } from "@/lib/textos-cabecera";
+import type { MenuNavbar } from "@/lib/menu-navbar";
 import {
   boolean,
   customType,
@@ -711,6 +712,8 @@ export type HomeLayoutConfig = {
   ticker?: TickerConfig;
   /** Título, subtítulo y fecha de la cabecera (ver src/lib/textos-cabecera.ts). */
   textos?: TextosCabecera;
+  /** Secciones visibles, enlaces propios y submenús de la barra (ver src/lib/menu-navbar.ts). */
+  menuNav?: MenuNavbar;
 };
 
 // --- Relaciones ---------------------------------------------------

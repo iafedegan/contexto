@@ -39,3 +39,17 @@ test("el diseño guardado conserva los textos ya validados y el resumen de cambi
   const lineas = summarizeChanges(base as never, cur as never, { titles: {}, adsBase: {}, adNames: {} });
   assert.ok(lineas.some((l) => l.id === "textos"), JSON.stringify(lineas));
 });
+
+import { aplicarMenu, sanitizeMenuNavbar } from "@/lib/menu-navbar";
+test("menú de la barra: oculta, añade enlaces válidos y quita submenús", () => {
+  const items = [
+    { href: "/categoria/a", label: "A", children: [{ href: "/categoria/a1", label: "A1" }] },
+    { href: "/categoria/b", label: "B" },
+  ];
+  const m = sanitizeMenuNavbar({ ocultas: ["b", "<x>"], extras: [{ label: "Ok", href: "/pagina" }, { label: "Mal", href: "javascript:alert(1)" }], submenus: false });
+  assert.deepEqual(m, { ocultas: ["b"], extras: [{ label: "Ok", href: "/pagina" }], submenus: false });
+  const r = aplicarMenu(items, m);
+  assert.deepEqual(r.map((i) => i.label), ["A", "Ok"]);
+  assert.equal(r[0].children, undefined);
+  assert.equal(sanitizeMenuNavbar({}), undefined);
+});

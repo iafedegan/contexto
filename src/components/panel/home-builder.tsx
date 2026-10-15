@@ -494,7 +494,7 @@ export function HomeBuilder({
   }
 
   // Elige una plantilla.
-  function pickTemplate(config: Omit<Layout, "ticker" | "textos">) {
+  function pickTemplate(config: Omit<Layout, "ticker" | "textos" | "menuNav">) {
     const teniaComposicion = Object.values(layout.parts ?? {}).some(Boolean);
     patchLayout({ ...config, parts: {}, sectionFilters: layout.sectionFilters });
     if (teniaComposicion) {
@@ -945,6 +945,8 @@ export function HomeBuilder({
               layout={layout}
               onRegions={(regions: RegionStyles) => patchLayout({ regions })}
               onTextos={(textos) => patchLayout({ textos: textos ?? {} })}
+              onMenu={(menuNav) => patchLayout({ menuNav: menuNav ?? {} })}
+              secciones={sections.filter((x) => !x.parentId).map((x) => ({ slug: x.slug, name: x.name }))}
               nota={selected !== null && items[selected] ? { index: selected, title: items[selected].title, style: items[selected].homeStyle ?? {} } : null}
               onNotaChange={(p) => selected !== null && patchStyle(selected, p)}
               onNotaClear={() => selected !== null && patchStyle(selected, null)}

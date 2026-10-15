@@ -557,6 +557,8 @@ export function PreviewChrome({
                     layout={layout}
                     onRegions={(regions) => editLayout({ ...layout, regions })}
                     onTextos={(textos) => editLayout({ ...layout, textos: textos ?? {} })}
+                    onMenu={(menuNav) => editLayout({ ...layout, menuNav: menuNav ?? {} })}
+                    secciones={sections.filter((x) => !x.parentId).map((x) => ({ slug: x.slug, name: x.name }))}
                     nota={nota}
                     onNotaChange={(p) => selSlug && patchBlock(selSlug, p)}
                     onNotaClear={() => selSlug && patchBlock(selSlug, null)}

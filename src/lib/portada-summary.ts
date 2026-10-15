@@ -98,6 +98,9 @@ export function summarizeChanges(
   if (stable(bl.sectionEls) !== stable(cl.sectionEls) || bl.sectionFilters !== cl.sectionFilters) {
     out.push({ id: "secciones", text: "Encabezado de las secciones" });
   }
+  if (stable(bl.menuNav) !== stable(cl.menuNav)) {
+    out.push({ id: "menuNav", text: "Menú de la barra de navegación" });
+  }
   if (stable(bl.textos) !== stable(cl.textos)) {
     out.push({ id: "textos", text: "Título, subtítulo o fecha de la cabecera" });
   }

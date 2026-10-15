@@ -12,6 +12,7 @@ import type { Theme } from "@/lib/theme";
 import { DEFAULT_LOCALE, categoryLabel, t, type Locale } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { NAV_VISIBLE } from "@/lib/nav-limits";
+import { aplicarMenu } from "@/lib/menu-navbar";
 import { conTextos } from "@/lib/textos-cabecera";
 
 /**
@@ -89,7 +90,7 @@ export async function SiteShell({
    */
   aboveMain?: React.ReactNode;
 }) {
-  const [nav, extraNav, identity, site, popup, ultimaHora] = await Promise.all([
+  const [navTodo, extraNav, identity, site, popup, ultimaHora] = await Promise.all([
     navItems(locale),
     navOverflow(locale),
     getSiteIdentity(),
@@ -97,6 +98,8 @@ export async function SiteShell({
     getSitePopup(),
     getBreakingArticle().catch(() => null),
   ]);
+  // Ajustes del editor: secciones visibles, enlaces propios y submenús.
+  const nav = aplicarMenu(navTodo, site.menuNav);
   const shell = SHELL[variant];
 
   return (

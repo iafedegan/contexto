@@ -7,6 +7,8 @@ import { BlockStyleEditor, type ZoneBundle } from "@/components/panel/block-styl
 import { Inspector } from "@/components/panel/portada-controls";
 import type { Layout } from "@/components/panel/portada-types";
 import { RegionEditor } from "@/components/panel/region-editor";
+import { MenuNavbarEditor } from "@/components/panel/menu-navbar-editor";
+import type { MenuNavbar } from "@/lib/menu-navbar";
 import { TextosCabeceraEditor } from "@/components/panel/textos-cabecera-editor";
 import type { TextosCabecera } from "@/lib/textos-cabecera";
 import { REGIONS, type RegionId, type RegionStyles } from "@/lib/home-regions";
@@ -37,6 +39,8 @@ export function PropiedadesCard({
   layout,
   onRegions,
   onTextos,
+  onMenu,
+  secciones,
   nota,
   onNotaChange,
   onNotaClear,
@@ -52,6 +56,10 @@ export function PropiedadesCard({
   onRegions: (next: RegionStyles) => void;
   /** Cambia el título, subtítulo o fecha de la cabecera (`undefined` = los del sitio). */
   onTextos: (next: TextosCabecera | undefined) => void;
+  /** Cambia el menú de la barra (`undefined` = el original). */
+  onMenu: (next: MenuNavbar | undefined) => void;
+  /** Secciones principales del sitio, para elegir cuáles se muestran en la barra. */
+  secciones: { slug: string; name: string }[];
   /** La nota elegida: su posición (-1 si no está en la lista), título y estilo actual. */
   nota: { index: number; title: string; style: HomeStyle } | null;
   onNotaChange: (p: Partial<HomeStyle>) => void;
@@ -136,6 +144,7 @@ export function PropiedadesCard({
             </p>
             <RegionEditor value={layout.regions ?? {}} active={region} onActive={onRegion} onChange={onRegions} only={PARTES} />
             {region === "navbar" && <TextosCabeceraEditor value={layout.textos} onChange={onTextos} />}
+            {region === "navbar" && <MenuNavbarEditor value={layout.menuNav} onChange={onMenu} secciones={secciones} />}
             {region === "cards" && nota && (
               <button type="button" onClick={() => onFoco("nota")} className="self-start text-xs font-semibold text-[var(--accent)] hover:underline">
                 ← Editar solo {nota.index >= 0 ? `la nota ${nota.index + 1}` : "la nota elegida"}
@@ -200,7 +209,7 @@ function NotaPanel({
 
       {alcance === "nota" ? (
         <>
-          <Inspector style={style} showSpan={index >= 6} showTextPos={index === 0 && layout.templateId === "esmeralda"} onChange={onChange} onClear={onClear} />
+          <Inspector style={style} showSpan={index >= 6} showTextPos={index === 0 && layout.templateId === "esmeralda"} showSize={["esmeralda", "revista"].includes(layout.templateId)} showImage={["esmeralda", "clasico", "revista"].includes(layout.templateId)} onChange={onChange} onClear={onClear} />
           <details className="group rounded-[var(--radius)] border border-[var(--border)]">
             <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2.5 text-sm font-semibold">
               Más ajustes de esta nota

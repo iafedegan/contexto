@@ -224,7 +224,7 @@ export function TemplatePicker({
   compacto = false,
 }: {
   layout: Layout;
-  onPick: (config: Omit<Layout, "ticker" | "textos">) => void;
+  onPick: (config: Omit<Layout, "ticker" | "textos" | "menuNav">) => void;
   /** En la barra lateral: una columna y sin descripción larga. */
   compacto?: boolean;
 }) {
@@ -277,7 +277,7 @@ export function TemplatePicker({
 }
 
 /** Diagrama en miniatura de cómo se organiza cada plantilla. */
-function TemplateThumb({ config }: { config: Omit<Layout, "ticker" | "textos"> }) {
+function TemplateThumb({ config }: { config: Omit<Layout, "ticker" | "textos" | "menuNav"> }) {
   const ink = "bg-[color-mix(in_srgb,var(--ink-faint)_40%,transparent)]";
   const brand = "bg-[color-mix(in_srgb,var(--brand)_35%,transparent)]";
 
@@ -437,11 +437,16 @@ export function Inspector({
   style,
   showSpan,
   showTextPos = false,
+  showSize = true,
+  showImage = true,
   onChange,
   onClear,
 }: {
   style: HomeStyle;
   showSpan: boolean;
+  /** Las fichas de algunas plantillas no cambian con el tamaño S/M/L ni con las medidas de la foto (la foto es el fondo): se ocultan esas filas. */
+  showSize?: boolean;
+  showImage?: boolean;
   /** La nota se pinta con el texto sobre la foto (la principal de Esmeralda): se puede elegir dónde va. */
   showTextPos?: boolean;
   onChange: (p: Partial<HomeStyle>) => void;
@@ -452,6 +457,7 @@ export function Inspector({
   return (
     <div className="flex flex-col">
       {/* Una lista de ajustes cerrados: cada fila muestra su valor actual y se despliega al pulsarla. */}
+      {showSize && (
       <Fila icono={<Type size={13} />} titulo="Tamaño de la tarjeta" resumen={tamano}>
         <div className="flex gap-1.5">
           <SegButton active={!s.size} onClick={() => onChange({ size: undefined })} title="Lo decide la plantilla">Automático</SegButton>
@@ -460,6 +466,7 @@ export function Inspector({
           <SegButton active={s.size === "lg"} onClick={() => onChange({ size: "lg" })} title="Grande">L</SegButton>
         </div>
       </Fila>
+      )}
 
       {showTextPos && (
         <Fila icono={<Type size={13} />} titulo="Texto sobre la foto" resumen={{ "arriba-izq": "Arriba a la izquierda", "arriba-der": "Arriba a la derecha" }[s.textPos ?? "" as "arriba-izq"] ?? "Abajo"}>
@@ -507,6 +514,7 @@ export function Inspector({
         <SliderRow label="Tamaño" value={s.titleScale ?? 100} min={70} max={160} step={5} onChange={(v) => onChange({ titleScale: v === 100 ? undefined : v })} />
       </Fila>
 
+      {showImage && (
       <Fila icono={<ImageIcon size={13} />} titulo="Tamaño de la imagen" resumen={resumenImagen(s)}>
         <SliderRow label="Tamaño (porcentaje)" value={s.imageScale ?? 100} min={40} max={100} step={5} onChange={(v) => onChange({ imageScale: v === 100 ? undefined : v })} />
         <p className="mt-3 text-xs font-semibold">O con medidas exactas</p>
@@ -539,6 +547,7 @@ export function Inspector({
           </button>
         )}
       </Fila>
+      )}
 
       <button type="button" onClick={onClear} className="mt-3 self-start text-xs font-medium text-[var(--fg-muted)] underline-offset-2 hover:text-[var(--danger)] hover:underline">
         Quitar todo el estilo de esta nota

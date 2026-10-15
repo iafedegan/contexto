@@ -9,6 +9,7 @@ import { BreveCarousel } from "@/components/home/breve-carousel";
 import { EditableCard, type BuilderProps } from "@/components/home/editable-card";
 import { NewsletterForm } from "@/components/newsletter-form";
 import { CoverArt } from "@/components/cover-art";
+import { homeStyleTitleCss } from "@/lib/home-style";
 import type { ArticleListItem } from "@/lib/content";
 import { BREVE_COLS, RIVER_COLS, anchaEnCelular, type HomeTemplateId } from "@/lib/home-layout";
 import type { HomeLayoutConfig } from "@/db/schema";
@@ -596,7 +597,7 @@ export function GremialTemplate({
             <div aria-hidden className="hidden w-full sm:block sm:aspect-[16/9]" />
             <div className="relative self-end p-5 sm:p-8">
               <GremialTag a={lead} locale={locale} />
-              <h1 className="lx-display mt-3 line-clamp-4 text-2xl font-bold leading-tight text-white sm:line-clamp-none sm:text-3xl md:text-4xl">{lead.title}</h1>
+              <h1 className="lx-display mt-3 line-clamp-4 text-2xl font-bold leading-tight text-white sm:line-clamp-none sm:text-3xl md:text-4xl" style={homeStyleTitleCss(lead.homeStyle, 36, 1.25)}>{lead.title}</h1>
               <p className="mt-3 hidden max-w-2xl line-clamp-2 text-sm text-white/85 sm:block sm:text-base">{lead.excerpt}</p>
               <span className="mt-4 inline-flex items-center gap-2 rounded-[var(--radius)] bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--accent-fg)] transition group-hover:opacity-90">
                 {t(locale, "home.readNews")} →
@@ -614,7 +615,7 @@ export function GremialTemplate({
                 </div>
                 <div className="min-w-0">
                   <GremialTag a={a} locale={locale} />
-                  <p className="mt-1.5 line-clamp-2 text-sm font-semibold leading-snug transition group-hover:text-[var(--accent)]">
+                  <p className="mt-1.5 line-clamp-2 text-sm font-semibold leading-snug transition group-hover:text-[var(--accent)]" style={homeStyleTitleCss(a.homeStyle, 14, 1.375)}>
                     {a.title}
                   </p>
                 </div>
@@ -644,7 +645,7 @@ export function GremialTemplate({
                       <GremialTag a={a} locale={locale} />
                     </div>
                   </div>
-                  <p className="mt-3 line-clamp-2 text-[0.95rem] font-semibold leading-snug transition group-hover:text-[var(--accent)]">
+                  <p className="mt-3 line-clamp-2 text-[0.95rem] font-semibold leading-snug transition group-hover:text-[var(--accent)]" style={homeStyleTitleCss(a.homeStyle, 15, 1.375)}>
                     {a.title}
                   </p>
                   <p className="mt-1.5 text-xs text-[var(--fg-muted)]">
@@ -699,7 +700,7 @@ export function GremialTemplate({
                 <GremialThumb a={sostenible} sizes="(min-width: 640px) 40vw, 100vw" />
               </div>
               <div>
-                <h3 className="text-xl font-bold leading-snug transition group-hover:text-[var(--accent)] sm:text-2xl">
+                <h3 className="text-xl font-bold leading-snug transition group-hover:text-[var(--accent)] sm:text-2xl" style={homeStyleTitleCss(sostenible.homeStyle, 24, 1.375)}>
                   {sostenible.title}
                 </h3>
                 <p className="mt-3 line-clamp-3 text-sm text-[var(--fg-muted)] sm:text-base">{sostenible.excerpt}</p>

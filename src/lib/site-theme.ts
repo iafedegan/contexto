@@ -10,6 +10,7 @@ import { zonesCss } from "@/lib/zones";
 import { resolveParts, PRESET_PARTS, type TemplateParts } from "@/lib/template-parts";
 import type { Theme } from "@/lib/theme";
 import type { TextosCabecera } from "@/lib/textos-cabecera";
+import type { MenuNavbar } from "@/lib/menu-navbar";
 
 /**
  * Tema activo del sitio = la plantilla elegida en /panel/portada.
@@ -22,7 +23,7 @@ import type { TextosCabecera } from "@/lib/textos-cabecera";
  * por separado y solo se paga una consulta.
  */
 export const getSiteTheme = cache(
-  async (): Promise<{ theme: Theme; style?: CSSProperties; css?: string; parts: Required<TemplateParts>; textos?: TextosCabecera }> => {
+  async (): Promise<{ theme: Theme; style?: CSSProperties; css?: string; parts: Required<TemplateParts>; textos?: TextosCabecera; menuNav?: MenuNavbar }> => {
     try {
       const layout = await getHomeLayoutConfig();
       // Solo en desarrollo: cookie `cg-tema` para revisar cada plantilla sin
@@ -41,6 +42,7 @@ export const getSiteTheme = cache(
         theme: (override || layout.templateId) as Theme,
         style: homeBackgroundStyle(layout.background),
         textos: layout.textos,
+        menuNav: layout.menuNav,
         css: [regionsCss(layout.regions), sectionElsCss(layout.sectionEls), zonesCss(layout.zones)].filter(Boolean).join("\n"),
         // Piezas de la plantilla compuesta (navbar, cuerpo, footer). Con la
         // cookie de desarrollo se ve la plantilla prediseñada entera.

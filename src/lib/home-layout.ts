@@ -19,6 +19,7 @@ export const DEFAULT_HOME_LAYOUT: Required<HomeLayoutConfig> = {
   zones: {},
   ticker: DEFAULT_TICKER,
   textos: {},
+  menuNav: {},
 };
 
 // Identificador de una plantilla de portada.
@@ -30,7 +31,7 @@ export type HomeTemplate = {
   name: string;
   description: string;
   /** Sin `ticker` ni `textos`: elegir una plantilla no debe borrar el cintillo ni los textos de la cabecera que el editor configuró. */
-  config: Omit<Required<HomeLayoutConfig>, "ticker" | "textos">;
+  config: Omit<Required<HomeLayoutConfig>, "ticker" | "textos" | "menuNav">;
 };
 
 /**
