@@ -2,6 +2,8 @@ import Image from "next/image";
 import { AD_ZONE_SPECS, getAdsForPosition, type AdPosition } from "@/lib/ads";
 import { SANDBOX_ANUNCIO, documentoPublicitario } from "@/lib/ads-frame";
 import { cn } from "@/lib/utils";
+import { GamSlot } from "@/components/gam-slot";
+import { GAM_POR_POSICION } from "@/lib/gam";
 
 /**
  * Pinta los anuncios de una posición (home top, sidebar de artículo, …). Si hay
@@ -11,7 +13,11 @@ import { cn } from "@/lib/utils";
 export async function AdsBanner({ zone, className }: { zone: AdPosition; className?: string }) {
   const spec = AD_ZONE_SPECS[zone];
   const ads = await getAdsForPosition(zone).catch(() => []);
-  if (ads.length === 0) return null;
+  if (ads.length === 0) {
+    // Sin anuncio propio cargado en el panel, la posición usa el espacio de Google Ad Manager del sitio anterior (si está activado).
+    const unidad = GAM_POR_POSICION[zone];
+    return process.env.NEXT_PUBLIC_GAM_ENABLED === "1" && unidad ? <GamSlot unidad={unidad} className={cn("mx-auto w-full", className)} /> : null;
+  }
 
   return (
     <div className={cn("flex flex-col gap-4", className)} style={{ maxWidth: spec.width }}>

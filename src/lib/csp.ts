@@ -44,7 +44,7 @@ export function cabeceraCsp(
     // unpkg.com: Leaflet del mapa de suscriptores, cargado por CDN sin instalarlo (ver subscriber-map.tsx).
     dir(
       "script-src",
-      ["'self'", "'unsafe-inline'", ...(docs ? ["'unsafe-eval'"] : []), "https://www.googletagmanager.com", "https://www.google-analytics.com", "https://challenges.cloudflare.com", "https://cdn.jsdelivr.net", "https://unpkg.com"],
+      ["'self'", "'unsafe-inline'", ...(docs ? ["'unsafe-eval'"] : []), "https://www.googletagmanager.com", "https://www.google-analytics.com", "https://challenges.cloudflare.com", "https://cdn.jsdelivr.net", "https://unpkg.com", "https://securepubads.g.doubleclick.net", "https://pagead2.googlesyndication.com", "https://www.googletagservices.com", "https://adservice.google.com"],
       "CSP_SCRIPT_SRC_EXTRA",
     ),
     dir("style-src", ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdn.jsdelivr.net", "https://unpkg.com"], "CSP_STYLE_SRC_EXTRA"),
@@ -55,13 +55,13 @@ export function cabeceraCsp(
     // /api-docs (Scalar) llama a su propio worker cargado desde jsdelivr.
     dir(
       "connect-src",
-      ["'self'", "https://www.google-analytics.com", "https://*.google-analytics.com", "https://*.analytics.google.com", "https://www.googletagmanager.com", "https://challenges.cloudflare.com", "https://cdn.jsdelivr.net", "https://*.supabase.co"],
+      ["'self'", "https://www.google-analytics.com", "https://*.google-analytics.com", "https://*.analytics.google.com", "https://www.googletagmanager.com", "https://challenges.cloudflare.com", "https://cdn.jsdelivr.net", "https://*.supabase.co", "https://*.doubleclick.net", "https://*.googlesyndication.com", "https://*.google.com"],
       "CSP_CONNECT_SRC_EXTRA",
     ),
     // 'self': el editor de portada enmarca /vista-portada del propio sitio.
     dir(
       "frame-src",
-      ["'self'", "https://www.youtube-nocookie.com", "https://player.vimeo.com", "https://w.soundcloud.com", "https://static.contextoganadero.com", "https://challenges.cloudflare.com", "https://www.googletagmanager.com"],
+      ["'self'", "https://www.youtube-nocookie.com", "https://player.vimeo.com", "https://w.soundcloud.com", "https://static.contextoganadero.com", "https://challenges.cloudflare.com", "https://www.googletagmanager.com", "https://*.doubleclick.net", "https://*.googlesyndication.com", "https://*.google.com"],
       "CSP_FRAME_SRC_EXTRA",
     ),
     "worker-src 'self' blob:",
