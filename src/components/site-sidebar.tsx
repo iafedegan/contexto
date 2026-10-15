@@ -4,7 +4,8 @@ import { AdsBanner } from "@/components/ads-banner";
 import { NewsletterForm } from "@/components/newsletter-form";
 import { PushToggle } from "@/components/push-toggle";
 import { getMostReadArticles } from "@/lib/content";
-import { localePath, t, type Locale } from "@/lib/i18n";
+import { t, type Locale } from "@/lib/i18n";
+import { hrefNota } from "@/lib/ruta-nota";
 
 /**
  * Barra lateral del §8: más leídas, publicidad, boletín y redes.
@@ -32,7 +33,7 @@ export async function SiteSidebar({ locale }: { locale: Locale }) {
             {masLeidas.map((a, i) => (
               <li key={a.slug} className="border-b border-[var(--border)] last:border-0">
                 <Link
-                  href={localePath(locale, `/articulo/${a.slug}`)}
+                  href={hrefNota(locale, a)}
                   className="group flex items-baseline gap-3 py-3"
                 >
                   <span className="lx-display w-7 shrink-0 text-lg leading-none text-[var(--accent-2)]">

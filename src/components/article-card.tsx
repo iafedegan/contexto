@@ -5,6 +5,7 @@ import { LiveBadge } from "@/components/live-badge";
 import { formatDate } from "@/lib/utils";
 import { homeStyleImageBox, homeStyleTitleCss } from "@/lib/home-style";
 import { DEFAULT_LOCALE, INTL_LOCALE, categoryLabel, localePath, type Locale } from "@/lib/i18n";
+import { hrefNota } from "@/lib/ruta-nota";
 
 // Variantes visuales de la tarjeta de nota.
 export type CardVariant = "lead" | "gold" | "copper" | "pearl" | "rail";
@@ -148,7 +149,7 @@ function LeadCard({ a, priority, locale }: { a: ArticleListItem; priority?: bool
       <div className="lx-shine pointer-events-none absolute inset-0 z-[3]" />
       <div className="lx-inlay pointer-events-none absolute inset-0 z-[2]" />
       <Link
-        href={localePath(locale, `/articulo/${a.slug}`)}
+        href={hrefNota(locale, a)}
         className="block"
         aria-label={a.title}
         tabIndex={-1}
@@ -172,7 +173,7 @@ function LeadCard({ a, priority, locale }: { a: ArticleListItem; priority?: bool
           className="lx-display mt-2.5 text-2xl font-semibold leading-[1.12] tracking-tight sm:text-3xl md:mt-3 md:text-[2.75rem]"
           style={st.title}
         >
-          <Link href={localePath(locale, `/articulo/${a.slug}`)} className="transition-colors hover:text-[var(--link)] after:absolute after:inset-0 after:z-[2]">
+          <Link href={hrefNota(locale, a)} className="transition-colors hover:text-[var(--link)] after:absolute after:inset-0 after:z-[2]">
             {a.title}
           </Link>
         </h2>
@@ -197,7 +198,7 @@ function GoldCard({ a, priority, locale, compact = false }: { a: ArticleListItem
       <div className="lx-shine pointer-events-none absolute inset-0 z-[3]" />
       {!st.hideMedia && (
         <Link
-          href={localePath(locale, `/articulo/${a.slug}`)}
+          href={hrefNota(locale, a)}
           className="relative block"
           style={st.imageBox}
         >
@@ -217,7 +218,7 @@ function GoldCard({ a, priority, locale, compact = false }: { a: ArticleListItem
       <div className={`flex flex-1 flex-col gap-2.5 p-5 ${compact ? "max-sm:gap-1.5 max-sm:p-3" : ""}`}>
         <Kicker a={a} locale={locale} className={`text-[var(--accent)] ${compact ? "max-sm:!text-[0.6rem] max-sm:!tracking-[0.14em] max-sm:leading-snug" : ""}`} />
         <h3 className={`lx-display text-xl font-semibold leading-snug ${compact ? "max-sm:!text-[0.95rem] max-sm:!leading-[1.25]" : ""}`} style={st.title}>
-          <Link href={localePath(locale, `/articulo/${a.slug}`)} className="transition-colors hover:text-[var(--link)] after:absolute after:inset-0 after:z-[2]">
+          <Link href={hrefNota(locale, a)} className="transition-colors hover:text-[var(--link)] after:absolute after:inset-0 after:z-[2]">
             {a.title}
           </Link>
         </h3>
@@ -247,7 +248,7 @@ function RailCard({ a, index, locale }: { a: ArticleListItem; index?: number; lo
       <div className="min-w-0 flex-1 leading-snug">
         <Kicker a={a} locale={locale} className="text-xs text-[var(--fg-muted)]" />
         <h3 className="lx-display mt-1.5 text-lg font-medium leading-snug" style={st.title}>
-          <Link href={localePath(locale, `/articulo/${a.slug}`)} className="lx-link">
+          <Link href={hrefNota(locale, a)} className="lx-link">
             {a.title}
           </Link>
         </h3>
@@ -255,7 +256,7 @@ function RailCard({ a, index, locale }: { a: ArticleListItem; index?: number; lo
       </div>
       {/* La miniatura también va en el celular: sin ella «Lo último» era una lista de texto plano. */}
       {!st.hideMedia && (
-      <Link href={localePath(locale, `/articulo/${a.slug}`)} className="block max-w-[45%] shrink-0" aria-hidden tabIndex={-1}>
+      <Link href={hrefNota(locale, a)} className="block max-w-[45%] shrink-0" aria-hidden tabIndex={-1}>
         {/* La miniatura es cuadrada; con medidas exactas en el panel toma esas (si solo hay una, es el lado del cuadrado) y el texto, al lado, se acomoda. */}
         <span className={`lx-media block overflow-hidden rounded-[var(--radius)] ${medidasMiniatura ? "max-w-full" : "size-[5.25rem] sm:size-20"}`} style={medidasMiniatura}>
           <CardMedia
@@ -280,7 +281,7 @@ function CopperCard({ a, index, locale }: { a: ArticleListItem; index?: number; 
     <article data-bs-root={a.slug} className="lx-card lx-reveal group flex h-full flex-col">
       <div className="lx-shine pointer-events-none absolute inset-0 z-[3]" />
       <Link
-        href={localePath(locale, `/articulo/${a.slug}`)}
+        href={hrefNota(locale, a)}
         className="relative block"
         style={st.imageBox}
       >
@@ -303,7 +304,7 @@ function CopperCard({ a, index, locale }: { a: ArticleListItem; index?: number; 
           className="lx-display text-2xl font-extrabold leading-[1.1] tracking-tight"
           style={st.title}
         >
-          <Link href={localePath(locale, `/articulo/${a.slug}`)} className="transition-colors hover:text-[var(--accent)] after:absolute after:inset-0 after:z-[2]">
+          <Link href={hrefNota(locale, a)} className="transition-colors hover:text-[var(--accent)] after:absolute after:inset-0 after:z-[2]">
             {a.title}
           </Link>
         </h3>
@@ -332,7 +333,7 @@ function PearlCard({ a, locale }: { a: ArticleListItem; locale: Locale }) {
   return (
     <article data-bs-root={a.slug} className="lx-card lx-reveal group flex h-full flex-col rounded-[var(--radius-lg)]">
       <div className="lx-shine pointer-events-none absolute inset-0 z-[3]" />
-      <Link href={localePath(locale, `/articulo/${a.slug}`)} className="relative block px-3 pt-3">
+      <Link href={hrefNota(locale, a)} className="relative block px-3 pt-3">
         <span className="block overflow-hidden rounded-[calc(var(--radius-lg)-0.5rem)]">
           <CardMedia
             src={a.coverImageUrl}
@@ -346,7 +347,7 @@ function PearlCard({ a, locale }: { a: ArticleListItem; locale: Locale }) {
       <div className="flex flex-1 flex-col gap-2 p-6 text-center">
         <Kicker a={a} locale={locale} className="text-[var(--accent)]" />
         <h3 className="lx-display text-2xl font-light leading-tight" style={st.title}>
-          <Link href={localePath(locale, `/articulo/${a.slug}`)} className="transition-colors hover:text-[var(--accent)] after:absolute after:inset-0 after:z-[2]">
+          <Link href={hrefNota(locale, a)} className="transition-colors hover:text-[var(--accent)] after:absolute after:inset-0 after:z-[2]">
             {a.title}
           </Link>
         </h3>

@@ -9,7 +9,8 @@ import type { ArticleListItem } from "@/lib/content";
 import { formatDate } from "@/lib/utils";
 import { homeStyleImageScale, homeStyleTitleCss } from "@/lib/home-style";
 import { CoverArt } from "@/components/cover-art";
-import { DEFAULT_LOCALE, INTL_LOCALE, categoryLabel, localePath, type Locale } from "@/lib/i18n";
+import { DEFAULT_LOCALE, INTL_LOCALE, categoryLabel, type Locale } from "@/lib/i18n";
+import { hrefNota } from "@/lib/ruta-nota";
 
 // Tiempo entre diapositivas del carrusel automático.
 const AUTOPLAY_MS = 6000;
@@ -172,7 +173,7 @@ export function HeroCarousel({
                 transition={{ duration: 0.4 }}
                 className="max-w-3xl bg-[var(--paper-2)] p-5 shadow-[0_20px_50px_-20px_rgba(0,0,0,0.4)] sm:p-8"
               >
-                <Wrapper {...(interactive ? { href: localePath(locale, `/articulo/${active.slug}`) } : {})} className="group block">
+                <Wrapper {...(interactive ? { href: hrefNota(locale, active) } : {})} className="group block">
                   {/* El estilo fijado en /panel/portada manda sobre el tamaño
                       base del hero (el titular más grande de la portada). */}
                   <h2

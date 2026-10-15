@@ -14,6 +14,7 @@ import { BREVE_COLS, RIVER_COLS, anchaEnCelular, type HomeTemplateId } from "@/l
 import type { HomeLayoutConfig } from "@/db/schema";
 import { cn, formatDate } from "@/lib/utils";
 import { DEFAULT_LOCALE, INTL_LOCALE, categoryLabel, localePath, t, type Locale } from "@/lib/i18n";
+import { hrefNota } from "@/lib/ruta-nota";
 
 /**
  * Estos cuatro usan Framer Motion (~160 KB) para sus animaciones. Solo UNA
@@ -479,7 +480,7 @@ function GremialCardLink({
   children: React.ReactNode;
 }) {
   const Wrapper: React.ElementType = interactive ? Link : "div";
-  const wrapperProps = interactive ? { href: localePath(locale, `/articulo/${a.slug}`) } : {};
+  const wrapperProps = interactive ? { href: hrefNota(locale, a) } : {};
   return (
     <Wrapper {...wrapperProps} className={className}>
       {children}

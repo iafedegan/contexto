@@ -54,6 +54,8 @@ const publishedCondition = and(
 // Datos de una nota para listados y tarjetas.
 export type ArticleListItem = {
   slug: string;
+  /** Dirección original del sitio anterior (las notas migradas se sirven ahí); null en las notas nuevas. */
+  legacyPath?: string | null;
   title: string;
   excerpt: string;
   coverImageUrl: string | null;
@@ -73,6 +75,7 @@ export type ArticleListItem = {
 // Columnas que se leen de la base para armar un listado de notas.
 const listSelection = {
   slug: articles.slug,
+  legacyPath: articles.legacyPath,
   title: articles.title,
   excerpt: articles.excerpt,
   coverImageUrl: articles.coverImageUrl,
@@ -252,6 +255,7 @@ export async function getArticlesByCategory(categorySlug: string, filters: Categ
 export type FullArticle = {
   id: string;
   slug: string;
+  legacyPath: string | null;
   title: string;
   excerpt: string;
   body: string;
@@ -278,6 +282,7 @@ export async function getPublishedArticleBySlug(slug: string): Promise<FullArtic
     .select({
       id: articles.id,
       slug: articles.slug,
+      legacyPath: articles.legacyPath,
       title: articles.title,
       excerpt: articles.excerpt,
       body: articles.body,
@@ -316,6 +321,7 @@ export async function getArticleForPreview(
     .select({
       id: articles.id,
       slug: articles.slug,
+      legacyPath: articles.legacyPath,
       title: articles.title,
       excerpt: articles.excerpt,
       body: articles.body,
@@ -464,3 +470,13 @@ export async function leerMasLeidas(limit: number = 5): Promise<ArticleListItem[
 
 export const getMostReadArticles = cachear("mas-leidas-v2", leerMasLeidas, { tags: [TAG_CONTENIDO], segundos: 300 });
 
+
+/** Dirección (slug) de la nota publicada cuya dirección original del sitio anterior es `ruta` (`/seccion/titulo`); null si no hay. */
+export async function getSlugPorRutaOriginal(ruta: string): Promise<string | null> {
+  const [row] = await db
+    .select({ slug: articles.slug })
+    .from(articles)
+    .where(and(eq(articles.legacyPath, ruta), publishedCondition))
+    .limit(1);
+  return row?.slug ?? null;
+}

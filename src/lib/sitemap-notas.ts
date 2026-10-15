@@ -25,9 +25,9 @@ export async function cantidadDeMapasDeNotas(): Promise<number> {
 }
 
 /** Tanda `numero` (desde 1) de notas: dirección y última modificación. */
-export async function notasDelMapa(numero: number): Promise<{ slug: string; updatedAt: Date }[]> {
+export async function notasDelMapa(numero: number): Promise<{ slug: string; legacyPath: string | null; updatedAt: Date }[]> {
   return db
-    .select({ slug: articles.slug, updatedAt: articles.updatedAt })
+    .select({ slug: articles.slug, legacyPath: articles.legacyPath, updatedAt: articles.updatedAt })
     .from(articles)
     .where(publicadas)
     .orderBy(asc(articles.publishedAt), asc(articles.id))

@@ -4,7 +4,8 @@ import type { ArticleListItem } from "@/lib/content";
 import { homeStyleImageBox, homeStyleTitleCss } from "@/lib/home-style";
 import { cn, formatDate } from "@/lib/utils";
 import { CoverArt } from "@/components/cover-art";
-import { DEFAULT_LOCALE, INTL_LOCALE, categoryLabel, localePath, type Locale } from "@/lib/i18n";
+import { DEFAULT_LOCALE, INTL_LOCALE, categoryLabel, type Locale } from "@/lib/i18n";
+import { hrefNota } from "@/lib/ruta-nota";
 
 // Variantes de la tarjeta.
 type Variant = "lead" | "feature" | "compact";
@@ -74,7 +75,7 @@ export function HomeCard({
   const imageBox = homeStyleImageBox(style).css;
 
   const Wrapper: React.ElementType = interactive ? Link : "div";
-  const wrapperProps = interactive ? { href: localePath(locale, `/articulo/${a.slug}`) } : {};
+  const wrapperProps = interactive ? { href: hrefNota(locale, a) } : {};
 
   return (
     <article data-bs-root={a.slug} className={cn("group", hover === "zoom" && "hover-zoom", className)}>

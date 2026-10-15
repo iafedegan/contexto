@@ -83,7 +83,7 @@ export async function reindexarNota(articleId: string) {
 export async function revalidarNotas(articleIds: string[]) {
   if (!articleIds.length) return;
   const filas = await db
-    .select({ slug: articles.slug, categorySlug: categories.slug, authorSlug: authors.slug })
+    .select({ slug: articles.slug, legacyPath: articles.legacyPath, categorySlug: categories.slug, authorSlug: authors.slug })
     .from(articles)
     .leftJoin(categories, eq(articles.categoryId, categories.id))
     .leftJoin(authors, eq(articles.authorId, authors.id))
@@ -96,6 +96,7 @@ export async function revalidarNotas(articleIds: string[]) {
   const rutas = new Set<string>();
   for (const a of filas) {
     rutas.add(`/articulo/${a.slug}`);
+    if (a.legacyPath) rutas.add(a.legacyPath);
     if (a.categorySlug) rutas.add(`/categoria/${a.categorySlug}`);
     if (a.authorSlug) rutas.add(`/autor/${a.authorSlug}`);
   }

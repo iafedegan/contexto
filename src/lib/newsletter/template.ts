@@ -2,6 +2,7 @@ import { siteUrl } from "@/lib/utils";
 import { DEFAULT_NEWSLETTER_DESIGN, type NewsletterSettings } from "@/lib/newsletter/types";
 import { escapeHtml as esc } from "@/lib/escape";
 import { luminosidad, mezclar, profundo, textoSobre } from "@/lib/newsletter/color";
+import { rutaDeNota } from "@/lib/ruta-nota";
 
 /**
  * Correo del boletín. Maquetación con tablas y estilos en línea: es lo único
@@ -11,6 +12,8 @@ import { luminosidad, mezclar, profundo, textoSobre } from "@/lib/newsletter/col
 
 export type EmailArticle = {
   slug: string;
+  /** Dirección original del sitio anterior, si la nota viene de allí. */
+  legacyPath?: string | null;
   title: string;
   excerpt: string;
   coverImageUrl: string | null;
@@ -44,8 +47,8 @@ export type NewsletterRender = {
 const absolute = (u: string) => (/^https?:\/\//i.test(u) ? u : siteUrl(u.startsWith("/") ? u : `/${u}`));
 
 /** Enlace a una nota, con parámetros para medir en analítica cuánto trae el boletín. */
-function articleLink(slug: string, issue: number | null, lector?: { id: string; token: string }): string {
-  const url = new URL(siteUrl(`/articulo/${slug}`));
+function articleLink(a: { slug: string; legacyPath?: string | null }, issue: number | null, lector?: { id: string; token: string }): string {
+  const url = new URL(siteUrl(rutaDeNota(a)));
   url.searchParams.set("utm_source", "boletin");
   url.searchParams.set("utm_medium", "email");
   url.searchParams.set("utm_campaign", issue ? `edicion-${issue}` : "prueba");
@@ -91,7 +94,7 @@ export function renderNewsletterHtml(r: NewsletterRender): string {
   const radioBoton = { pildora: "999px", redondo: "8px", recto: "0" }[d.boton];
   const date = fmtDate(r.date ?? new Date());
   const homeUrl = siteUrl("/");
-  const link = (a: EmailArticle) => articleLink(a.slug, r.issue, r.lector);
+  const link = (a: EmailArticle) => articleLink(a, r.issue, r.lector);
   const centrada = d.cabecera === "centrada";
   const alinear = centrada ? "center" : "left";
   const enAcento = textoSobre(accent);
@@ -492,7 +495,7 @@ export function renderNewsletterText(r: NewsletterRender): string {
       parts.push(
         `${n === 0 ? "DESTACADA · " : ""}${a.categoryName ? a.categoryName.toUpperCase() + " · " : ""}${a.title}`,
         a.excerpt,
-        articleLink(a.slug, r.issue, r.lector),
+        articleLink(a, r.issue, r.lector),
         "",
       );
       n++;

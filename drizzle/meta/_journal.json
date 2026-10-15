@@ -120,6 +120,13 @@
       "when": 1792007353680,
       "tag": "0016_busqueda_en_texto_completo",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1792023685997,
+      "tag": "0017_direccion_original_de_las_notas",
+      "breakpoints": true
     }
   ]
 }

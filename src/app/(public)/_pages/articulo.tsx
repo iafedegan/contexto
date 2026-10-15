@@ -1,7 +1,6 @@
 import { INTL_LOCALE, categoryLabel, localePath, t, type Locale } from "@/lib/i18n";
 import { sanitizeArticleHtml } from "@/lib/sanitize";
 import { ArticleBody } from "@/components/article-body";
-import { siteUrl } from "@/lib/utils";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -22,12 +21,17 @@ import { relatedContent } from "@/lib/search";
 import { articleMetadata, breadcrumbJsonLd, newsArticleJsonLd } from "@/lib/seo";
 import { formatDate } from "@/lib/utils";
 import { PREFIJO_IMAGEN_IA } from "@/lib/ai-image";
+import { rutaDeNota } from "@/lib/ruta-nota";
 
 /** Artículo — plantilla «Marfil & Burdeos». */
 export const revalidate = 3600;
 
 // Parámetros de la ruta: la dirección de la nota.
-type Params = { params: Promise<{ slug: string }> };
+type Params = {
+  params: Promise<{ slug: string }>;
+  /** La nota se pidió por su dirección original (`/seccion/titulo`): es la canónica y la que se indexa. */
+  desdeOriginal?: boolean;
+};
 
 /**
  * Ningún artículo se prerenderiza en el build, a propósito.
@@ -47,11 +51,14 @@ export async function generateStaticParams() {
 }
 
 // Metadatos de la nota: título, descripción, canónica y datos para redes.
-async function generateMetadataImpl({ params }: Params): Promise<Metadata> {
+async function generateMetadataImpl({ params, desdeOriginal }: Params): Promise<Metadata> {
   const { slug } = await params;
   const a = await getPublishedArticleBySlug(slug).catch(() => null);
   if (!a) return { title: "Artículo no encontrado", robots: { index: false } };
-  return articleMetadata({ ...a, authorName: a.authorName, categoryName: a.categoryName });
+  const meta = articleMetadata({ ...a, authorName: a.authorName, categoryName: a.categoryName });
+  // Una nota migrada vive en su dirección original: por `/articulo/<slug>` se puede abrir, pero no se indexa (la canónica es la original).
+  if (a.legacyPath && !desdeOriginal) return { ...meta, robots: { index: false, follow: true } };
+  return meta;
 }
 
 // Página de una nota publicada: cuerpo saneado, autor, relacionados y datos estructurados; 404 si no existe.
@@ -113,7 +120,7 @@ export function ArticleDocument({
             ...(a.categorySlug
               ? [{ name: a.categoryName ?? "", path: `/categoria/${a.categorySlug}` }]
               : []),
-            { name: a.title, path: `/articulo/${a.slug}` },
+            { name: a.title, path: rutaDeNota(a) },
           ])}
         />
         )}
@@ -293,7 +300,7 @@ export function ArticleDocument({
 
 /** Fábrica: la misma página en cualquier idioma de interfaz. */
 export function makePage(locale: Locale) {
-  return function Page(props: Parameters<typeof ArticlePage>[0]) {
+  return function Page(props: Omit<Parameters<typeof ArticlePage>[0], "locale">) {
     return ArticlePage({ ...props, locale } as never);
   };
 }
@@ -304,14 +311,10 @@ export function makePage(locale: Locale) {
  * no competir contra ella con contenido duplicado.
  */
 export function makeMetadata(locale: Locale) {
-  return async (props: Parameters<typeof generateMetadataImpl>[0]) => {
+  return async (props: Omit<Parameters<typeof generateMetadataImpl>[0], "locale">) => {
     const meta = await generateMetadataImpl({ ...props, locale } as never);
     if (locale === "es") return meta;
-    const { slug } = await props.params;
-    return {
-      ...meta,
-      robots: { index: false, follow: true },
-      alternates: { canonical: siteUrl(`/articulo/${slug}`) },
-    };
+    // La canónica (ya calculada en `meta`) es la dirección española de la nota: su dirección original si viene del sitio anterior.
+    return { ...meta, robots: { index: false, follow: true } };
   };
 }

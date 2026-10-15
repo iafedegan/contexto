@@ -6,6 +6,7 @@ import { enCategorias } from "@/lib/content";
 import { env } from "@/lib/env";
 import { siteUrl } from "@/lib/utils";
 import { escapeXml as esc } from "@/lib/escape";
+import { rutaDeNota } from "@/lib/ruta-nota";
 
 /**
  * Feeds RSS 2.0 del sitio: el general (/feed.xml) y uno por sección
@@ -69,6 +70,7 @@ export async function buildFeed(categorySlug?: string): Promise<{ xml: string } 
   const rows = await db
     .select({
       slug: articles.slug,
+      legacyPath: articles.legacyPath,
       title: articles.title,
       excerpt: articles.excerpt,
       coverImageUrl: articles.coverImageUrl,
@@ -93,7 +95,7 @@ export async function buildFeed(categorySlug?: string): Promise<{ xml: string } 
   const lastBuild = rows[0]?.updatedAt ?? rows[0]?.publishedAt ?? new Date();
 
   const items = rows.map((a) => {
-    const url = siteUrl(`/articulo/${a.slug}`);
+    const url = siteUrl(rutaDeNota(a));
     const enlace = conUtm(url, category?.slug ?? "general");
     const cover = a.coverImageUrl ? absUrl(a.coverImageUrl) : null;
     const coverHtml = cover

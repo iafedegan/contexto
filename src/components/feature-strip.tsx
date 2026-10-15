@@ -3,7 +3,8 @@ import Image from "next/image";
 import type { ArticleListItem } from "@/lib/content";
 import { formatDate } from "@/lib/utils";
 import { CoverArt } from "@/components/cover-art";
-import { DEFAULT_LOCALE, INTL_LOCALE, localePath, t, type Locale } from "@/lib/i18n";
+import { DEFAULT_LOCALE, INTL_LOCALE, t, type Locale } from "@/lib/i18n";
+import { hrefNota } from "@/lib/ruta-nota";
 
 // Elemento de la franja: etiqueta y nota.
 type Item = { label: string; article: ArticleListItem };
@@ -23,7 +24,7 @@ export function FeatureStrip({ locale = DEFAULT_LOCALE, items }: { locale?: Loca
       {items.map(({ label, article: a }) => (
         <article key={a.slug} className="group flex gap-4 lg:px-6 lg:first:pl-0 lg:last:pr-0">
           <Link
-            href={localePath(locale, `/articulo/${a.slug}`)}
+            href={hrefNota(locale, a)}
             className="media-frame aspect-square w-24 shrink-0 self-start sm:w-28"
           >
             {a.coverImageUrl ? (
@@ -41,7 +42,7 @@ export function FeatureStrip({ locale = DEFAULT_LOCALE, items }: { locale?: Loca
           <div className="min-w-0">
             <span className="kicker">{label}</span>
             <h3 className="entry-title mt-1 text-[1.05rem] leading-snug">
-              <Link href={localePath(locale, `/articulo/${a.slug}`)} className="hover:underline">
+              <Link href={hrefNota(locale, a)} className="hover:underline">
                 {a.title}
               </Link>
             </h3>

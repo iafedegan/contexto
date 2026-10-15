@@ -28,11 +28,27 @@ function simularEmbeddings() {
 test("el embedding se calcula sobre la pregunta original y no sobre la lista de palabras de la consulta de texto", async () => {
   const { pedidos, restaurar } = simularEmbeddings();
   try {
+    // Solo se pide el embedding si hay alguna nota con vector (sin ninguna, la llamada al proveedor se ahorra).
+    await bd.db.insert(schema.articles).values({
+      slug: "con-embedding", title: "Con embedding", excerpt: "x", body: "<p>x</p>", status: "publicado", publishedAt: new Date(),
+      embedding: Array.from({ length: schema.EMBEDDING_DIMENSIONS }, (_, i) => (i === 0 ? 1 : 0)),
+    });
     const pregunta = "¿Cómo van los precios del novillo en Medellín?";
     await search.hybridSearch(pregunta);
     assert.equal(pedidos.length, 1);
     assert.equal(pedidos[0], pregunta);
     assert.ok(!/ or /.test(pedidos[0]), "no debe ser la lista «palabra or palabra»");
+  } finally {
+    restaurar();
+  }
+});
+
+test("las notas relacionadas y las búsquedas sin ningún embedding no llaman al proveedor de embeddings", async () => {
+  const { pedidos, restaurar } = simularEmbeddings();
+  try {
+    await search.hybridSearch("novillo", 5, { semantico: false });
+    await search.relatedContent("Precios del novillo", "00000000-0000-0000-0000-000000000000", 3);
+    assert.equal(pedidos.length, 0);
   } finally {
     restaurar();
   }

@@ -4,6 +4,7 @@ import { articles, categories } from "@/db/schema";
 import { getSiteIdentity } from "@/lib/site-identity";
 import { siteUrl } from "@/lib/utils";
 import { escapeXml as esc } from "@/lib/escape";
+import { rutaDeNota } from "@/lib/ruta-nota";
 
 /**
  * Sitemap de Google News (SEO-07).
@@ -19,11 +20,12 @@ export async function GET() {
   const identity = await getSiteIdentity().catch(() => null);
   const nombre = identity?.name ?? "CONtexto Ganadero";
 
-  let filas: { slug: string; title: string; publishedAt: Date | null; categoryName: string | null }[] = [];
+  let filas: { slug: string; legacyPath: string | null; title: string; publishedAt: Date | null; categoryName: string | null }[] = [];
   try {
     filas = await db
       .select({
         slug: articles.slug,
+        legacyPath: articles.legacyPath,
         title: articles.title,
         publishedAt: articles.publishedAt,
         categoryName: categories.name,
@@ -47,7 +49,7 @@ export async function GET() {
     .map((a) => {
       const fecha = (a.publishedAt ?? new Date()).toISOString();
       return `  <url>
-    <loc>${esc(siteUrl(`/articulo/${a.slug}`))}</loc>
+    <loc>${esc(siteUrl(rutaDeNota(a)))}</loc>
     <news:news>
       <news:publication>
         <news:name>${esc(nombre)}</news:name>

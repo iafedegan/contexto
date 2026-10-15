@@ -7,6 +7,7 @@
 import type { Metadata } from "next";
 import { siteUrl } from "./utils";
 import { SITE_NAME } from "./theme";
+import { rutaDeNota } from "@/lib/ruta-nota";
 
 // El logo del NewsArticle/Organization apuntaba a /logo-512.png, un archivo
 // que nunca existió en public/ (404): Google Rich Results marcaba el schema
@@ -27,6 +28,8 @@ type ArticleLike = {
   authorName?: string | null;
   authorSlug?: string | null;
   coverImageAlt?: string | null;
+  /** Dirección original del sitio anterior, si la nota viene de allí. */
+  legacyPath?: string | null;
   /** HTML del cuerpo: solo para contar palabras (wordCount). */
   body?: string | null;
   categoryName?: string | null;
@@ -42,7 +45,7 @@ function clampDescription(text: string, max = 155): string {
 
 // Metadatos de una nota: título, descripción, canónica, Open Graph y Twitter, derivados del titular y el resumen.
 export function articleMetadata(a: ArticleLike): Metadata {
-  const url = siteUrl(`/articulo/${a.slug}`);
+  const url = siteUrl(rutaDeNota(a));
   const title = a.metaTitle?.trim() || a.title;
   // Fuente de la descripción: el resumen editorial, nunca una lista de términos.
   const description = clampDescription(a.metaDescription?.trim() || a.excerpt);
@@ -77,7 +80,7 @@ export function articleMetadata(a: ArticleLike): Metadata {
 
 /** JSON-LD NewsArticle — verificable en Rich Results Test. */
 export function newsArticleJsonLd(a: ArticleLike) {
-  const url = siteUrl(`/articulo/${a.slug}`);
+  const url = siteUrl(rutaDeNota(a));
   return {
     "@context": "https://schema.org",
     "@type": "NewsArticle",
@@ -156,7 +159,7 @@ export function collectionJsonLd(input: {
   name: string;
   description?: string | null;
   path: string;
-  items: Array<{ title: string; slug: string }>;
+  items: Array<{ title: string; slug: string; legacyPath?: string | null }>;
 }) {
   return {
     "@context": "https://schema.org",
@@ -171,7 +174,7 @@ export function collectionJsonLd(input: {
       itemListElement: input.items.map((a, i) => ({
         "@type": "ListItem",
         position: i + 1,
-        url: siteUrl(`/articulo/${a.slug}`),
+        url: siteUrl(rutaDeNota(a)),
         name: a.title,
       })),
     },
@@ -183,7 +186,7 @@ export function authorJsonLd(input: {
   name: string;
   bio?: string | null;
   slug: string;
-  items: Array<{ title: string; slug: string }>;
+  items: Array<{ title: string; slug: string; legacyPath?: string | null }>;
 }) {
   return {
     "@context": "https://schema.org",
@@ -198,7 +201,7 @@ export function authorJsonLd(input: {
     hasPart: input.items.slice(0, 20).map((a) => ({
       "@type": "NewsArticle",
       headline: a.title,
-      url: siteUrl(`/articulo/${a.slug}`),
+      url: siteUrl(rutaDeNota(a)),
     })),
   };
 }

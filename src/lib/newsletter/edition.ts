@@ -48,6 +48,7 @@ export async function loadEmailArticles(slugs: string[]): Promise<EmailArticle[]
   const rows = await db
     .select({
       slug: articles.slug,
+      legacyPath: articles.legacyPath,
       title: articles.title,
       excerpt: articles.excerpt,
       coverImageUrl: articles.coverImageUrl,

@@ -6,6 +6,7 @@ import { articles } from "@/db/schema";
 import { requirePermiso } from "@/lib/auth";
 import { enviarAviso, pushConfigurado } from "@/lib/push";
 import { siteUrl } from "@/lib/utils";
+import { rutaDeNota } from "@/lib/ruta-nota";
 
 // Estado que se devuelve al formulario: si salió bien y el mensaje.
 export type AvisoState = { ok: boolean; message: string } | null;
@@ -35,7 +36,7 @@ export async function enviarAvisoUltimaHora(
   if (!articleId) return { ok: false, message: "Elige la nota que quieres anunciar." };
 
   const [nota] = await db
-    .select({ id: articles.id, slug: articles.slug, title: articles.title, excerpt: articles.excerpt, cover: articles.coverImageUrl })
+    .select({ id: articles.id, slug: articles.slug, legacyPath: articles.legacyPath, title: articles.title, excerpt: articles.excerpt, cover: articles.coverImageUrl })
     .from(articles)
     .where(and(eq(articles.id, articleId), eq(articles.status, "publicado")))
     .limit(1);
@@ -44,7 +45,7 @@ export async function enviarAvisoUltimaHora(
   const res = await enviarAviso({
     titulo: titulo || nota.title,
     cuerpo: cuerpo || nota.excerpt,
-    url: `${siteUrl(`/articulo/${nota.slug}`)}?utm_source=push&utm_medium=notificacion&utm_campaign=ultima-hora`,
+    url: `${siteUrl(rutaDeNota(nota))}?utm_source=push&utm_medium=notificacion&utm_campaign=ultima-hora`,
     imagen: nota.cover && /^https?:\/\//i.test(nota.cover) ? nota.cover : null,
     tag: `nota-${nota.id.slice(0, 8)}`,
     urgente: true,

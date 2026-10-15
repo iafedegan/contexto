@@ -72,18 +72,31 @@ async function main() {
   if (!SOLO_HTTP) {
     const { db } = await import("@/db");
     const { articles, redirects } = await import("@/db/schema");
+    // Cada dirección antigua debe: (a) ser la dirección original de una nota publicada (se sirve directamente) o (b) tener una redirección
+    // que lleve a una nota publicada (la copia repetida de otra sección).
+    const directas = new Set<string>();
     for (let i = 0; i < rutas.length; i += 5000) {
       const trozo = rutas.slice(i, i + 5000);
+      for (const f of await db.select({ r: articles.legacyPath }).from(articles).where(and(inArray(articles.legacyPath, trozo), eq(articles.status, "publicado")))) if (f.r) directas.add(f.r);
+    }
+    const sinNota = rutas.filter((r) => !directas.has(r));
+    for (let i = 0; i < sinNota.length; i += 5000) {
+      const trozo = sinNota.slice(i, i + 5000);
       for (const f of await db.select({ de: redirects.fromPath, a: redirects.toPath }).from(redirects).where(inArray(redirects.fromPath, trozo))) filas.set(f.de, f.a);
     }
-    falla("direcciones antiguas SIN redirección", rutas.filter((r) => !filas.has(r)));
+    falla("direcciones antiguas que ni se sirven directamente ni tienen redirección", sinNota.filter((r) => !filas.has(r)));
 
-    const destinos = [...new Set(filas.values())].map((d) => d.replace(/^\/articulo\//, ""));
+    const destinos = [...new Set(filas.values())];
     const publicadas = new Set<string>();
-    for (let i = 0; i < destinos.length; i += 5000) {
-      for (const f of await db.select({ slug: articles.slug }).from(articles).where(and(inArray(articles.slug, destinos.slice(i, i + 5000)), eq(articles.status, "publicado")))) publicadas.add(f.slug);
+    const slugs = destinos.filter((d) => d.startsWith("/articulo/")).map((d) => d.replace(/^\/articulo\//, ""));
+    const rutasDestino = destinos.filter((d) => !d.startsWith("/articulo/"));
+    for (let i = 0; i < slugs.length; i += 5000) {
+      for (const f of await db.select({ slug: articles.slug }).from(articles).where(and(inArray(articles.slug, slugs.slice(i, i + 5000)), eq(articles.status, "publicado")))) publicadas.add(`/articulo/${f.slug}`);
     }
-    falla("redirecciones que apuntan a una nota NO publicada o inexistente", [...filas].filter(([, a]) => !publicadas.has(a.replace(/^\/articulo\//, ""))).map(([de, a]) => `${de} → ${a}`));
+    for (let i = 0; i < rutasDestino.length; i += 5000) {
+      for (const f of await db.select({ r: articles.legacyPath }).from(articles).where(and(inArray(articles.legacyPath, rutasDestino.slice(i, i + 5000)), eq(articles.status, "publicado")))) if (f.r) publicadas.add(f.r);
+    }
+    falla("redirecciones que apuntan a una nota NO publicada o inexistente", [...filas].filter(([, a]) => !publicadas.has(a)).map(([de, a]) => `${de} → ${a}`));
 
     [resumen] = await db
       .select({
@@ -101,8 +114,8 @@ async function main() {
     console.log("Notas migradas en la base:", resumen);
     if (resumen.sinCuerpo > 20) fallas.push({ que: "notas migradas con cuerpo vacío", total: resumen.sinCuerpo, ejemplos: [] });
     if (resumen.conStoryblok) fallas.push({ que: "notas que aún apuntan a imágenes de Storyblok (no se copiaron)", total: resumen.conStoryblok, ejemplos: [] });
-    esperadas = new Set(filas.values()).size;
-    console.log(`Notas distintas esperadas (tras unir repetidas): ${esperadas} · publicadas halladas: ${publicadas.size}`);
+    esperadas = directas.size;
+    console.log(`Direcciones antiguas servidas directamente: ${directas.size} · con redirección (copias repetidas): ${filas.size} · de ${rutas.length}`);
 
   }
 
@@ -117,18 +130,27 @@ async function main() {
     for (const ruta of elegidas) {
       http.pedidas++;
       try {
+        // La dirección original debe responder 200 directamente (sin redirección) con su canónica igual a sí misma; solo las copias repetidas
+        // de otra sección pueden redirigir (una vez) a la dirección de la nota.
         const r1 = await fetch(BASE + encodeURI(ruta), { redirect: "manual", signal: AbortSignal.timeout(30_000) });
-        const destino = r1.headers.get("location");
-        if (r1.status !== 301 && r1.status !== 308) { http.fallos.push(`${ruta}: respondió ${r1.status}, no 301`); await dormir(RITMO); continue; }
-        if (!destino || !/\/articulo\//.test(destino)) { http.fallos.push(`${ruta}: redirige a ${destino}`); await dormir(RITMO); continue; }
-        await dormir(RITMO / 2);
-        const r2 = await fetch(new URL(destino, BASE).toString(), { signal: AbortSignal.timeout(30_000) });
-        const html = await r2.text();
+        let html: string;
+        let esCopia = false;
+        if (r1.status === 200) html = await r1.text();
+        else if (r1.status === 301 || r1.status === 308) {
+          const destino = r1.headers.get("location");
+          if (!destino) { http.fallos.push(`${ruta}: redirige sin destino`); await dormir(RITMO); continue; }
+          esCopia = true;
+          await dormir(RITMO / 2);
+          const r2 = await fetch(new URL(destino, BASE).toString(), { redirect: "manual", signal: AbortSignal.timeout(30_000) });
+          if (r2.status !== 200) { http.fallos.push(`${ruta} → ${destino}: ${r2.status}`); await dormir(RITMO); continue; }
+          html = await r2.text();
+        } else { http.fallos.push(`${ruta}: respondió ${r1.status}`); await dormir(RITMO); continue; }
         const titulo = titulos.get(ruta) ?? "";
         // El titular visible (h1): el <title> puede llevar el título SEO, que es otro texto.
         const enPagina = aTextoPlano(html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/)?.[1] ?? "").toLowerCase();
-        if (r2.status !== 200) http.fallos.push(`${ruta} → ${destino}: ${r2.status}`);
-        else if (titulo && !soloLetras(enPagina).includes(soloLetras(titulo).slice(0, 25))) http.fallos.push(`${ruta} → ${destino}: el titular de la página no coincide («${enPagina.slice(0, 60)}»)`);
+        const canonica = decodeURIComponent((html.match(/<link rel="canonical" href="([^"]+)"/)?.[1] ?? "").replace(/^https?:\/\/[^/]+/, ""));
+        if (!esCopia && canonica !== ruta) http.fallos.push(`${ruta}: la canónica es «${canonica}»`);
+        else if (titulo && !soloLetras(enPagina).includes(soloLetras(titulo).slice(0, 25))) http.fallos.push(`${ruta}: el titular de la página no coincide («${enPagina.slice(0, 60)}»)`);
         else http.ok++;
       } catch (e) {
         http.fallos.push(`${ruta}: ${e instanceof Error ? e.message : String(e)}`);

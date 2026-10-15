@@ -8,6 +8,7 @@ import { getSiteIdentity } from "@/lib/site-identity";
 import { usoUnico } from "@/lib/rate-limit";
 import { env } from "@/lib/env";
 import { siteUrl } from "@/lib/utils";
+import { rutaDeNota } from "@/lib/ruta-nota";
 
 /**
  * Notificaciones push (FM-01) mediante Web Push con claves VAPID.
@@ -211,7 +212,7 @@ export type AvisoNota = { ok: true; enviados: number; caducados: number; fallido
 export async function avisarNota(articleId: string, opts: { repetir?: boolean; urgente?: boolean } = {}): Promise<AvisoNota> {
   if (!pushConfigurado()) return { ok: false, motivo: "Las notificaciones no están configuradas (faltan las claves VAPID)." };
   const [nota] = await db
-    .select({ id: articles.id, slug: articles.slug, title: articles.title, excerpt: articles.excerpt, cover: articles.coverImageUrl, breaking: articles.isBreaking })
+    .select({ id: articles.id, slug: articles.slug, legacyPath: articles.legacyPath, title: articles.title, excerpt: articles.excerpt, cover: articles.coverImageUrl, breaking: articles.isBreaking })
     .from(articles)
     .where(and(eq(articles.id, articleId), eq(articles.status, "publicado")))
     .limit(1);
@@ -225,7 +226,7 @@ export async function avisarNota(articleId: string, opts: { repetir?: boolean; u
   const res = await enviarAviso({
     titulo: nota.title,
     cuerpo: nota.excerpt,
-    url: `${siteUrl(`/articulo/${nota.slug}`)}?utm_source=push&utm_medium=notificacion&utm_campaign=${nota.breaking || opts.urgente ? "ultima-hora" : "noticia"}`,
+    url: `${siteUrl(rutaDeNota(nota))}?utm_source=push&utm_medium=notificacion&utm_campaign=${nota.breaking || opts.urgente ? "ultima-hora" : "noticia"}`,
     imagen: nota.cover && /^https?:\/\//i.test(nota.cover) ? nota.cover : null,
     tag: `nota-${nota.id.slice(0, 8)}`,
     urgente: nota.breaking || opts.urgente,

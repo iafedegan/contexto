@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { notasDelMapa, paginasDelMapa, xmlDeDirecciones } from "@/lib/sitemap-notas";
 import { siteUrl } from "@/lib/utils";
+import { rutaDeNota } from "@/lib/ruta-nota";
 
 /**
  * Cada archivo del mapa del sitio: `/sitemaps/paginas.xml` (portada, secciones, autores) y `/sitemaps/notas-N.xml` (una tanda de notas).
@@ -19,5 +20,5 @@ export async function GET(_req: Request, { params }: { params: Promise<{ archivo
   const m = archivo.match(/^notas-(\d{1,3})\.xml$/);
   if (!m || Number(m[1]) < 1) notFound();
   const notas = await notasDelMapa(Number(m[1]));
-  return new Response(xmlDeDirecciones(notas.map((n) => ({ url: siteUrl(`/articulo/${n.slug}`), fecha: n.updatedAt, cambio: "weekly", prioridad: 0.8 }))), { headers: cabeceras });
+  return new Response(xmlDeDirecciones(notas.map((n) => ({ url: siteUrl(rutaDeNota(n)), fecha: n.updatedAt, cambio: "weekly", prioridad: 0.8 }))), { headers: cabeceras });
 }

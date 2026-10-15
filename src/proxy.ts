@@ -1,7 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { LEGACY_SYSTEM_REDIRECTS, resolveLegacyTaxonomy } from "@/lib/redirects";
 import { isBlockedBot } from "@/lib/bots";
-import { slugDeNotaAntigua } from "@/lib/nota-antigua";
 import { anfitrionIndexable } from "@/lib/indexacion";
 import { siteUrl } from "@/lib/utils";
 
@@ -115,8 +114,9 @@ export async function proxy(req: NextRequest) {
   }
 
   const legacyTarget = resolveLegacyTaxonomy(pathname);
-  // `/seccion/titulo-de-una-nota` no se manda a la categoría aquí: la ruta comodín busca la nota (y, si no existe, entonces sí va a la categoría).
-  if (legacyTarget && !slugDeNotaAntigua(clean.split("/").filter(Boolean))) {
+  // `/seccion/titulo-de-una-nota` (dos tramos) no se manda a la categoría aquí: la nota migrada se sirve en esa misma dirección y, si
+  // no existe, la ruta `[seccion]/[slug]` resuelve (y entonces sí va a la categoría). Cualquier título cuenta, también el de mayúsculas o signos.
+  if (legacyTarget && clean.split("/").filter(Boolean).length !== 2) {
     return conCabeceras(NextResponse.redirect(new URL(legacyTarget + search, req.url), 301));
   }
 

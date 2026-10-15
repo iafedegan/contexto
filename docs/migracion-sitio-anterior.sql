@@ -1,5 +1,5 @@
 -- Para pegar en el SQL Editor de Supabase (proyecto CONTEXTOPRO) ANTES de cargar las notas del sitio anterior.
--- Reúne las migraciones 0014, 0015 y 0016 del repositorio; todas son idempotentes (se pueden correr más de una vez).
+-- Reúne las migraciones 0014 a 0017 del repositorio; todas son idempotentes (se pueden correr más de una vez).
 
 -- ===== 0014_programacion_y_secciones_del_boletin.sql =====
 -- Boletín: armado con secciones (`items`) y envío programado (`scheduled_for`). Cada sentencia es IDEMPOTENTE: en producción las
@@ -24,4 +24,10 @@ CREATE INDEX IF NOT EXISTS "articles_secciones_idx" ON "articles" USING gin ("se
 ALTER TABLE "articles" ADD COLUMN IF NOT EXISTS "search_vec" tsvector GENERATED ALWAYS AS (to_tsvector('spanish', title || ' ' || excerpt || ' ' || body)) STORED;
 CREATE INDEX IF NOT EXISTS "articles_search_vec_idx" ON "articles" USING gin ("search_vec");
 DROP INDEX IF EXISTS "articles_fts_es";
+
+-- ===== 0017_direccion_original_de_las_notas.sql =====
+-- Las notas migradas se sirven en su dirección original del sitio anterior (`/seccion/titulo`), sin redirección: la guardamos aquí.
+-- Cada sentencia es IDEMPOTENTE: en producción las migraciones se aplican a mano en el SQL Editor de Supabase.
+ALTER TABLE "articles" ADD COLUMN IF NOT EXISTS "legacy_path" text;
+CREATE UNIQUE INDEX IF NOT EXISTS "articles_legacy_path_idx" ON "articles" USING btree ("legacy_path") WHERE legacy_path is not null;
 

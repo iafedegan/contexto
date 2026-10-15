@@ -222,6 +222,9 @@ export const articles = pgTable(
     coverImageAlt: text("cover_image_alt"),
     // Pie de foto de la portada (con el crédito de la imagen), que se muestra bajo ella.
     coverImageCaption: text("cover_image_caption"),
+    // Dirección original de la nota en el sitio anterior (`/seccion/titulo`). Las notas migradas se sirven EN ESA dirección, sin redirección,
+    // para no cambiar ni una URL que Google ya tiene indexada. Las notas nuevas la dejan vacía y viven en `/articulo/<slug>`.
+    legacyPath: text("legacy_path"),
     categoryId: uuid("category_id").references(() => categories.id, { onDelete: "set null" }),
     authorId: uuid("author_id").references(() => authors.id, { onDelete: "set null" }),
     status: editorialStatus("status").notNull().default("borrador"),
@@ -265,6 +268,7 @@ export const articles = pgTable(
     // Listado de una categoría (archivo de decenas de miles de notas): filtra por categoría y ordena por fecha sin ordenar en memoria.
     index("articles_category_published_idx").on(t.categoryId, t.publishedAt),
     index("articles_secciones_idx").using("gin", t.secciones),
+    uniqueIndex("articles_legacy_path_idx").on(t.legacyPath).where(sql`legacy_path is not null`),
     index("articles_search_vec_idx").using("gin", t.searchVec),
     index("articles_scheduled_idx").on(t.scheduledFor),
     index("articles_home_position_idx").on(t.homePosition),

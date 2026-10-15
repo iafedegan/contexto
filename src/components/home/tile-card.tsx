@@ -7,7 +7,8 @@ import type { ArticleListItem } from "@/lib/content";
 import { homeStyleTitleCss } from "@/lib/home-style";
 import { cn, formatDate } from "@/lib/utils";
 import { CoverArt } from "@/components/cover-art";
-import { DEFAULT_LOCALE, INTL_LOCALE, categoryLabel, localePath, type Locale } from "@/lib/i18n";
+import { DEFAULT_LOCALE, INTL_LOCALE, categoryLabel, type Locale } from "@/lib/i18n";
+import { hrefNota } from "@/lib/ruta-nota";
 
 // Paleta fija por categoría (elección editorial, no del esquema): refuerza el
 // escaneo rápido tipo "panel de datos" — cada tema se reconoce por color
@@ -47,7 +48,7 @@ export function TileCard({
   className?: string;
 }) {
   const Wrapper: React.ElementType = interactive ? Link : "div";
-  const wrapperProps = interactive ? { href: localePath(locale, `/articulo/${a.slug}`) } : {};
+  const wrapperProps = interactive ? { href: hrefNota(locale, a) } : {};
   const accent = a.categorySlug ? (ACCENT[a.categorySlug] ?? DEFAULT_ACCENT) : DEFAULT_ACCENT;
   const titleStyle = homeStyleTitleCss(a.homeStyle, size === "lg" ? 22 : 14.5, 1.28);
 

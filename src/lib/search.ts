@@ -29,6 +29,19 @@ export type SearchHit = {
   score: number;
 };
 
+let embeddingsMemo: { hay: boolean; hasta: number } | null = null;
+/** ¿Hay alguna nota con embedding? Se recuerda 10 minutos por instancia (la consulta recorre la tabla si no hay ninguna). */
+async function hayEmbeddings(): Promise<boolean> {
+  if (embeddingsMemo && embeddingsMemo.hasta > Date.now()) return embeddingsMemo.hay;
+  try {
+    const f = rowsOf(await db.execute(sql`select 1 as x from articles where embedding is not null limit 1`));
+    embeddingsMemo = { hay: f.length > 0, hasta: Date.now() + 10 * 60_000 };
+  } catch {
+    return true; // ante la duda, se comporta como antes
+  }
+  return embeddingsMemo.hay;
+}
+
 // Constante de la fusión por rangos recíprocos (RRF) que mezcla los dos rankings.
 const K = 60; // constante RRF
 
@@ -57,14 +70,16 @@ function toOrQuery(input: string): string {
 }
 
 // Búsqueda híbrida: mezcla similitud vectorial y texto completo en español sobre las notas propias y el archivo histórico, en una sola consulta SQL.
-export async function hybridSearch(query: string, limit = 20): Promise<SearchHit[]> {
+export async function hybridSearch(query: string, limit = 20, opciones: { semantico?: boolean } = {}): Promise<SearchHit[]> {
   const q = toOrQuery(query);
   if (!q) return [];
 
   // El embedding se calcula sobre la pregunta ORIGINAL, no sobre `q`: la lista «palabra or palabra» sin acentos ni palabras
   // vacías sirve para el texto completo, pero le quita al modelo justo lo que entiende (el orden, los matices, las
   // palabras que unen) y empeoraba la parte semántica (H-16).
-  const queryVec = await embed(query);
+  // Sin notas con embedding (o si quien llama solo quiere texto, como las «notas relacionadas») no se paga la llamada al proveedor de embeddings:
+  // con el archivo migrado aún sin vectores, cada página nueva esperaba ~medio segundo a una API cuyo resultado no se usaba.
+  const queryVec = opciones.semantico === false || !(await hayEmbeddings()) ? null : await embed(query);
   const vecLiteral = queryVec ? toVectorLiteral(queryVec) : null;
 
   // Un solo round-trip: CTEs para cada señal y fusión RRF en SQL.
@@ -86,7 +101,7 @@ export async function hybridSearch(query: string, limit = 20): Promise<SearchHit
     ),
     lexical AS (
       SELECT 'articulo'::text AS kind, a.id::text AS id, a.title,
-             a.excerpt AS summary, '/articulo/' || a.slug AS url,
+             a.excerpt AS summary, coalesce(a.legacy_path, '/articulo/' || a.slug) AS url,
              a.published_at, a.cover_image_url AS image,
              c.slug AS category_slug, c.name AS category_name,
              ts_rank(a.search_vec, p.qry) AS rank
@@ -111,7 +126,7 @@ export async function hybridSearch(query: string, limit = 20): Promise<SearchHit
     ),
     semantic AS (
       SELECT 'articulo'::text AS kind, a.id::text AS id, a.title,
-             a.excerpt AS summary, '/articulo/' || a.slug AS url, a.published_at,
+             a.excerpt AS summary, coalesce(a.legacy_path, '/articulo/' || a.slug) AS url, a.published_at,
              a.cover_image_url AS image, c.slug AS category_slug, c.name AS category_name,
              a.embedding <=> (SELECT vec FROM params)::vector AS dist
       FROM articles a
@@ -167,14 +182,14 @@ export async function relatedContent(
   limit = 5,
   fallbackCategorySlug?: string | null,
 ): Promise<SearchHit[]> {
-  const hits = await hybridSearch(seedText, limit + 3);
+  const hits = await hybridSearch(seedText, limit + 3, { semantico: false });
   let out = hits.filter((h) => !(h.kind === "articulo" && h.id === excludeArticleId)).slice(0, limit);
 
   // Respaldo por categoría cuando la búsqueda no arroja suficientes resultados.
   if (out.length < 3 && fallbackCategorySlug) {
     const rows = rowsOf(await db.execute(sql`
       SELECT a.id::text AS id, a.title, a.excerpt AS summary,
-             '/articulo/' || a.slug AS url, a.published_at,
+             coalesce(a.legacy_path, '/articulo/' || a.slug) AS url, a.published_at,
              a.cover_image_url AS image, c.slug AS category_slug, c.name AS category_name
       FROM articles a
       JOIN categories c ON c.id = a.category_id

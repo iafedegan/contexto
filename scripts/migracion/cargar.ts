@@ -189,9 +189,11 @@ async function main() {
       tomados.add(slug);
       if (g.length > 1) informe.duplicadasMismaNota.push(g.map((m) => m.path).join(" | "));
       if (slug !== g[0].slugOrig) informe.slugsNormalizados.push(`${g[0].slugOrig} → ${slug}`);
-      canonicaPorSlug.set(slug, [...g].sort((a, b) => b.riqueza - a.riqueza || a.path.localeCompare(b.path))[0].path);
+      const canonica = [...g].sort((a, b) => b.riqueza - a.riqueza || a.path.localeCompare(b.path))[0].path;
+      canonicaPorSlug.set(slug, canonica);
       miembrosPorSlug.set(slug, g);
-      for (const m of g) { slugFinalPorPath.set(m.path, slug); destinoPorPath.set(m.path, `/articulo/${slug}`); }
+      // La nota se sirve EN su dirección original (`legacy_path`); la otra dirección, si estaba repetida, redirige a ella.
+      for (const m of g) { slugFinalPorPath.set(m.path, slug); destinoPorPath.set(m.path, canonica); }
     }
   }
   const claveEnlace = (p: string) => p.toLowerCase().replace(/-+$/, "");
@@ -271,7 +273,8 @@ async function main() {
       const slug = slugFinalPorPath.get(r.path);
       if (slug === undefined) continue;
       const destino = destinoPorPath.get(r.path)!;
-      for (const desde of new Set([r.path, encodeURI(r.path)])) reds.push({ fromPath: desde, toPath: destino, statusCode: 301 });
+      // La dirección canónica se sirve directamente (sin fila de redirección); solo las copias repetidas redirigen a ella.
+      if (r.path !== destino) for (const desde of new Set([r.path, encodeURI(r.path)])) reds.push({ fromPath: desde, toPath: destino, statusCode: 301 });
       if (slug === null) { resumen.omitidasRedaccion++; continue; }
       // Una nota repetida en dos secciones se guarda una sola vez (la más antigua); la otra dirección solo lleva su redirección.
       if (canonicaPorSlug.get(slug) !== r.path) continue;
@@ -304,6 +307,7 @@ async function main() {
         coverImageUrl: portada,
         coverImageAlt: portada ? b.portadaAlt : null,
         coverImageCaption: portada ? b.pie : null,
+        legacyPath: r.path,
         categoryId: principal ? idPorSlug.get(principal) ?? null : null,
         authorId: autor.id,
         status: "publicado",
@@ -327,7 +331,7 @@ async function main() {
           target: articles.slug,
           set: {
             title: sql`excluded.title`, excerpt: sql`excluded.excerpt`, body: sql`excluded.body`,
-            coverImageUrl: sql`excluded.cover_image_url`, coverImageAlt: sql`excluded.cover_image_alt`, coverImageCaption: sql`excluded.cover_image_caption`,
+            coverImageUrl: sql`excluded.cover_image_url`, coverImageAlt: sql`excluded.cover_image_alt`, coverImageCaption: sql`excluded.cover_image_caption`, legacyPath: sql`excluded.legacy_path`,
             categoryId: sql`excluded.category_id`, authorId: sql`excluded.author_id`, status: sql`excluded.status`,
             metaTitle: sql`excluded.meta_title`, metaDescription: sql`excluded.meta_description`, tags: sql`excluded.tags`, secciones: sql`excluded.secciones`,
             publishedAt: sql`excluded.published_at`, updatedAt: sql`excluded.updated_at`, createdAt: sql`excluded.created_at`,
@@ -358,6 +362,14 @@ async function main() {
     if (LIMITE && hechas >= LIMITE) break;
   }
   if (lote.length) await procesarLote(lote);
+
+  // Las filas de redirección que apuntan a la propia dirección de una nota (de cargas anteriores, cuando todo redirigía a `/articulo/…`) sobran:
+  // la nota se sirve directamente en esa dirección.
+  if (!SIMULACRO) {
+    await conReintentos(() => db.execute(sql`delete from redirects r using articles a where r.from_path = a.legacy_path`));
+    // Y las que llevaban a `/articulo/<slug>` de una nota con dirección original ahora llevan a esa dirección.
+    await conReintentos(() => db.execute(sql`update redirects r set to_path = a.legacy_path from articles a where r.to_path = '/articulo/' || a.slug and a.legacy_path is not null and r.from_path <> a.legacy_path`));
+  }
 
   // --- Informe -------------------------------------------------------------------------------------------------------------
   const informeFinal = { fecha: new Date().toISOString(), produccion: PRODUCCION, simulacro: SIMULACRO, resumen, sinCategoriaPropia, autoresNuevos, imagenes: copiador.estadisticas, porCategoria, publicadasPorAnio, ...informe };

@@ -7,7 +7,8 @@ import type { ArticleListItem } from "@/lib/content";
 import { homeStyleImageBox, homeStyleTitleCss } from "@/lib/home-style";
 import { cn, formatDate } from "@/lib/utils";
 import { CoverArt } from "@/components/cover-art";
-import { DEFAULT_LOCALE, INTL_LOCALE, categoryLabel, localePath, t, type Locale } from "@/lib/i18n";
+import { DEFAULT_LOCALE, INTL_LOCALE, categoryLabel, t, type Locale } from "@/lib/i18n";
+import { hrefNota } from "@/lib/ruta-nota";
 
 // Variantes de la tarjeta de periódico.
 type Variant = "lead" | "feature" | "compact";
@@ -44,7 +45,7 @@ export function BroadsheetCard({
   className?: string;
 }) {
   const Wrapper: React.ElementType = interactive ? Link : "div";
-  const wrapperProps = interactive ? { href: localePath(locale, `/articulo/${a.slug}`) } : {};
+  const wrapperProps = interactive ? { href: hrefNota(locale, a) } : {};
   const titleStyle = homeStyleTitleCss(a.homeStyle, BASE_PX[variant], variant === "lead" ? 1.02 : 1.14);
   const imageBox = homeStyleImageBox(a.homeStyle).css;
   const num = String(index + 1).padStart(2, "0");

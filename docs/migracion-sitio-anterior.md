@@ -20,24 +20,23 @@ tabla `archive_index`, cron `sync-archive`) queda sin uso y se puede retirar cua
 | Secciones marcadas (`home`, `colombia`, `regiones`, `gremialidad`…) | La más específica es la **categoría principal** (`category_id`); todas se guardan en `articles.secciones` y la página de cada categoría también lista las notas que la marcaron |
 | Etiquetas, título/descripción SEO | `tags`, `meta_title`, `meta_description` |
 | Carpetas `galeria`, `video`, `audio`, `blog` y la sección `seguridad` | Categorías nuevas **Galería** (en Especiales), **Video** (en TV), **Audio** (en Radio) y **Seguridad** (en Colombia), y la dirección antigua `/blog` en Blogs |
-| Cada dirección antigua `/seccion/titulo` | Una fila en `redirects` (301) hacia `/articulo/titulo`; además la ruta comodín busca por título las notas publicadas después de la última carga |
+| Cada dirección antigua `/seccion/titulo` | **La misma dirección**: la nota se sirve ahí, sin redirección (`articles.legacy_path`, ruta `app/(public)/[seccion]/[slug]`), con su canónica igual a sí misma. Solo la copia repetida de una nota en dos secciones redirige (301) a la otra. `/articulo/<slug>` sigue abriendo la nota pero con `noindex` y canónica a la original. La ruta comodín busca por título las notas publicadas después de la última carga |
 | Páginas de columnista `/SearchColumnista/<id>/<n>` | 301 a `/autor/<slug>` |
 | Páginas institucionales `/PoliticaEmpresarioView/…`, `/sitemap-N.xml`, `/SeemoreNews` | 301 a su equivalente (`src/lib/redirects.ts`) |
 | `/sitemap.xml` (índice de 6 mapas) | `/sitemap.xml` es ahora un índice (`/sitemaps/paginas.xml` + `/sitemaps/notas-N.xml`, 10.000 notas por archivo) |
 | `ads.txt` | `public/ads.txt` (misma línea de Google) |
 
-Direcciones: las notas pasan de `/seccion/titulo` a `/articulo/titulo` **con un 301 uno a uno**, que Google trata como traslado de la
-misma página (se transmite el posicionamiento; en las primeras semanas es normal ver la reindexación en Search Console). Cuando el título
-ya era una dirección válida se conservó idéntico; si traía mayúsculas, signos o guiones en los bordes (≈380 notas) se normalizó y la
-redirección lo cubre. Si dos secciones tenían el mismo título: si era la **misma nota** (mismo título y fecha) queda una sola; si eran
-**notas distintas** la segunda lleva la sección al final de su dirección (`…-otroseventos`).
+Direcciones: **no cambia ninguna**. Dominio y ruta quedan exactamente iguales (`https://www.contextoganadero.com/regiones/titulo`), así que para Google
+es la misma página: no hay traslado ni reindexación que esperar. Incluye las ≈430 notas con mayúsculas, signos o guiones en el título, que conservan su
+dirección original tal cual (en `articles.slug` van normalizadas, pero se sirven en `legacy_path`). Si dos secciones tenían el mismo título: si era la **misma
+nota** (mismo título y fecha) se sirve en una dirección y la otra redirige a ella; si eran **notas distintas**, las dos se sirven cada una en la suya.
 
 ## Pasos (en este orden)
 
 Todo se ejecuta desde la carpeta del proyecto. Los pasos de descarga, carga y verificación se pueden repetir sin riesgo: no duplican nada.
 
-1. **Base de datos**: pegar `docs/migracion-sitio-anterior.sql` en el SQL Editor de Supabase (reúne las migraciones 0014, 0015 y 0016; son idempotentes).
-   Añade el pie de foto, las secciones adicionales y la columna de búsqueda `search_vec` (con su índice). Hay que hacerlo **antes** de desplegar y de cargar.
+1. **Base de datos**: pegar `docs/migracion-sitio-anterior.sql` en el SQL Editor de Supabase (reúne las migraciones 0014 a 0017; son idempotentes).
+   Añade el pie de foto, las secciones adicionales, la columna de búsqueda `search_vec` (con su índice) y `legacy_path` (la dirección original de cada nota). Hay que hacerlo **antes** de desplegar y de cargar.
 2. **Desplegar** el código de esta rama (`push main`). Lo nuevo que necesita: categorías con secciones adicionales, mapa del sitio por partes,
    redirecciones de páginas antiguas, búsqueda sobre `search_vec` y el encabezado `noindex` fuera del dominio oficial.
 3. **Descargar** el sitio anterior a la caché local (`.migracion-cache/`, ~600 MB, fuera de git). Tarda ~1 hora y se puede interrumpir y reanudar
@@ -49,7 +48,7 @@ Todo se ejecuta desde la carpeta del proyecto. Los pasos de descarga, carga y ve
    ```bash
    npm run migracion:cargar -- --sin-imagenes
    ```
-5. **Carga real** (base y almacenamiento de Supabase; usa `DATABASE_URL`/`SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY` del entorno o de `.env.migracion`).
+5. **Carga real** (si ya hubo una carga anterior, repetirla es lo que graba `legacy_path` en cada nota, reescribe los enlaces internos y limpia las redirecciones sobrantes; las imágenes ya copiadas no se vuelven a bajar) (base y almacenamiento de Supabase; usa `DATABASE_URL`/`SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY` del entorno o de `.env.migracion`).
    Primero un simulacro que solo lee, y después la carga: ~1,5–2 horas por las imágenes (≈39.500 archivos, ≈9 GB); si se corta, se vuelve a lanzar y sigue:
    ```bash
    npm run migracion:cargar -- --produccion --simulacro
