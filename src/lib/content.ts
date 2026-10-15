@@ -1,5 +1,6 @@
 import "server-only";
 import { cache } from "react";
+import { regionPorSlug } from "@/lib/regiones-colombia";
 import { and, desc, eq, gt, gte, inArray, isNull, lte, or, sql, type SQL } from "drizzle-orm";
 import { db } from "@/db";
 import {
@@ -157,6 +158,8 @@ export type CategoryFilters = {
   dateTo?: string;
   /** Slug de un autor para listar solo sus notas de la sección. */
   authorSlug?: string;
+  /** Región natural (ver regiones-colombia.ts): notas que mencionan sus departamentos o ciudades en el título, resumen o etiquetas. */
+  regionSlug?: string;
 };
 
 // Resultado de leer una categoría: su ficha, subcategorías, notas de la página y total.
@@ -183,7 +186,7 @@ export function enCategorias(ids: string[], slugs: string[]): SQL {
 const leerCategoria = cachear(
   "categoria",
   async (categorySlug: string, filters: CategoryFilters): Promise<ListadoCategoria> => {
-  const { limit = 20, offset = 0, subcategorySlug, dateFrom, dateTo, authorSlug } = filters;
+  const { limit = 20, offset = 0, subcategorySlug, dateFrom, dateTo, authorSlug, regionSlug } = filters;
 
   const [cat] = await db
     .select({ id: categories.id, name: categories.name, description: categories.description })
@@ -212,6 +215,11 @@ const leerCategoria = cachear(
   if (dateFrom) conditions.push(gte(articles.publishedAt, sql`${dateFrom}::date`));
   if (dateTo) conditions.push(lte(articles.publishedAt, sql`(${dateTo}::date + interval '1 day')`));
   if (authorSlug) conditions.push(sql`${articles.authorId} in (select id from authors where slug = ${authorSlug})`);
+  const region = regionPorSlug(regionSlug);
+  if (region) {
+    const texto = sql`translate(lower(${articles.title} || ' ' || ${articles.excerpt} || ' ' || ${articles.tags}::text), 'áéíóúñ', 'aeioun')`;
+    conditions.push(or(...region.terminos.map((t) => sql`${texto} like ${`%${t}%`}`)) as SQL);
+  }
   const where = and(...conditions);
 
   const [items, [{ count }]] = await Promise.all([

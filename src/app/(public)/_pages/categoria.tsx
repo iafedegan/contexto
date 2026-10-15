@@ -9,6 +9,8 @@ import { breadcrumbJsonLd, collectionJsonLd } from "@/lib/seo";
 import { SiteShell } from "@/components/site-shell";
 import { getSiteTheme } from "@/lib/site-theme";
 import { getArticlesByCategory, getAutoresDeSeccion, getHomeLayoutConfig } from "@/lib/content";
+import { MapaSeccionRegiones } from "@/components/mapa-seccion-regiones";
+import { regionPorSlug } from "@/lib/regiones-colombia";
 import { siteUrl } from "@/lib/utils";
 import { blockStylesCss } from "@/lib/home-style";
 
@@ -18,7 +20,7 @@ export const revalidate = 600;
 // Parámetros de la ruta: la dirección de la sección.
 type Params = { params: Promise<{ slug: string }> };
 /** Filtros de la sección: subcategoría, rango de fechas y página. */
-type Query = Promise<{ subcategoria?: string; desde?: string; hasta?: string; pagina?: string; autor?: string; anio?: string; mes?: string }>;
+type Query = Promise<{ subcategoria?: string; desde?: string; hasta?: string; pagina?: string; autor?: string; anio?: string; mes?: string; region?: string }>;
 // Parámetros de la ruta y filtros de la dirección.
 type PageProps = Params & { searchParams?: Query };
 
@@ -74,6 +76,7 @@ async function CategoryPage({ params, searchParams, locale }: PageProps & { loca
     const fin = mes ? new Date(Date.UTC(anio, mes, 0)) : new Date(Date.UTC(anio, 12, 0));
     hasta = fin.toISOString().slice(0, 10);
   }
+  const region = slug === "regiones" ? regionPorSlug(q.region)?.slug : undefined;
   const page = Math.max(1, Number(pagina) || 1);
 
   const { category, subcategories, items, total } = await getArticlesByCategory(slug, {
@@ -83,6 +86,7 @@ async function CategoryPage({ params, searchParams, locale }: PageProps & { loca
     dateFrom: desde || undefined,
     dateTo: hasta || undefined,
     authorSlug: autor,
+    regionSlug: region,
   }).catch(() => ({ category: null, subcategories: [], items: [], total: 0 }));
   if (!category) notFound();
 
@@ -108,6 +112,7 @@ async function CategoryPage({ params, searchParams, locale }: PageProps & { loca
     if (q.desde && !anio) sp.set("desde", q.desde);
     if (q.hasta && !anio) sp.set("hasta", q.hasta);
     if (autor) sp.set("autor", autor);
+    if (region) sp.set("region", region);
     if (anio) sp.set("anio", String(anio));
     if (mes) sp.set("mes", String(mes));
     if (n > 1) sp.set("pagina", String(n));
@@ -118,54 +123,9 @@ async function CategoryPage({ params, searchParams, locale }: PageProps & { loca
   // Filtros de la sección, compactos y junto al título (ver SectionHeader). Los
   // atajos de fecha (C-09) son enlaces, no botones: cada rango tiene su propia
   // URL, cacheable y compartible. El formulario es GET y funciona sin JavaScript.
-  const selectCls = "lx-ui w-full rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] px-3 py-2 text-sm outline-none transition focus:border-[var(--accent)] pointer-coarse:min-h-11";
+  const selectCls = "lx-ui w-full min-h-11 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-sm lg:min-h-10 outline-none transition focus:border-[var(--accent)] pointer-coarse:min-h-11";
   const filters = (
     <div data-el="filters" className={`flex flex-wrap items-center gap-x-3 gap-y-2 ${A.justify}`}>
-      {conAutor && autores.length > 0 && (
-        // Filtro de columnistas: autor, año y mes. Formulario GET (URL propia y sin JavaScript).
-        <form action={localePath(locale, `/categoria/${slug}`)} method="get" className="flex w-full max-w-[34rem] flex-col gap-3 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--bg-2)] p-4 text-left">
-          <p className="lx-display text-center text-lg font-semibold text-[var(--accent)]">{t(locale, "section.filter").toUpperCase()}</p>
-          <label className="flex flex-col gap-1">
-            <span className="lx-kicker !text-[0.72rem] text-[var(--fg-muted)]">{t(locale, "section.author")}</span>
-            <select name="autor" defaultValue={autor ?? ""} className={selectCls}>
-              <option value="">{t(locale, "section.anyAuthor")}</option>
-              {autores.map((a) => (
-                <option key={a.slug} value={a.slug}>{a.name}</option>
-              ))}
-            </select>
-          </label>
-          <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-3">
-            <label className="flex flex-col gap-1">
-              <span className="lx-kicker !text-[0.72rem] text-[var(--fg-muted)]">{t(locale, "section.year")}</span>
-              <select name="anio" defaultValue={anio ? String(anio) : ""} className={selectCls}>
-                <option value="">{t(locale, "section.anyYear")}</option>
-                {Array.from({ length: anioActual - 2009 }, (_, i) => anioActual - i).map((y) => (
-                  <option key={y} value={y}>{y}</option>
-                ))}
-              </select>
-            </label>
-            <label className="flex flex-col gap-1">
-              <span className="lx-kicker !text-[0.72rem] text-[var(--fg-muted)]">{t(locale, "section.month")}</span>
-              <select name="mes" defaultValue={mes ? String(mes) : ""} className={selectCls}>
-                <option value="">{t(locale, "section.anyMonth")}</option>
-                {MESES.map((m, i) => (
-                  <option key={m} value={i + 1}>{m}</option>
-                ))}
-              </select>
-            </label>
-          </div>
-          <div className="flex items-center justify-center gap-4">
-            <button type="submit" className="lx-ui min-h-11 rounded-full bg-[var(--accent)] px-8 text-sm font-semibold text-[var(--accent-fg)] transition hover:opacity-90 lg:min-h-9">
-              {t(locale, "section.search")}
-            </button>
-            {filtrando && (
-              <Link href={localePath(locale, `/categoria/${slug}`)} className="lx-link text-xs text-[var(--fg-muted)]">
-                {t(locale, "section.clear")}
-              </Link>
-            )}
-          </div>
-        </form>
-      )}
       {/* Filtros de la sección. Formulario GET: cada combinación es una URL
           propia, enlazable y cacheable, y funciona sin JavaScript. */}
       {subcategories.length > 0 && (
@@ -290,6 +250,55 @@ async function CategoryPage({ params, searchParams, locale }: PageProps & { loca
           </>
         }
       />
+
+      {slug === "regiones" && <MapaSeccionRegiones locale={locale} actual={region} />}
+
+      {conAutor && autores.length > 0 && (
+        // Filtro de columnistas: una barra delgada bajo el encabezado, con autor, año y mes en una sola fila. Formulario GET (URL propia, sin JavaScript).
+        <form
+          action={localePath(locale, `/categoria/${slug}`)}
+          method="get"
+          className="mb-8 grid grid-cols-2 items-end gap-3 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--bg-2)] p-3 sm:p-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1.2fr)_auto]"
+        >
+          <label className="col-span-2 flex flex-col gap-1 lg:col-span-1">
+            <span className="lx-kicker !text-[0.68rem] text-[var(--fg-muted)]">{t(locale, "section.author")}</span>
+            <select name="autor" defaultValue={autor ?? ""} className={selectCls}>
+              <option value="">{t(locale, "section.anyAuthor")}</option>
+              {autores.map((a) => (
+                <option key={a.slug} value={a.slug}>{a.name}</option>
+              ))}
+            </select>
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="lx-kicker !text-[0.68rem] text-[var(--fg-muted)]">{t(locale, "section.year")}</span>
+            <select name="anio" defaultValue={anio ? String(anio) : ""} className={selectCls}>
+              <option value="">{t(locale, "section.anyYear")}</option>
+              {Array.from({ length: anioActual - 2009 }, (_, i) => anioActual - i).map((y) => (
+                <option key={y} value={y}>{y}</option>
+              ))}
+            </select>
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="lx-kicker !text-[0.68rem] text-[var(--fg-muted)]">{t(locale, "section.month")}</span>
+            <select name="mes" defaultValue={mes ? String(mes) : ""} className={selectCls}>
+              <option value="">{t(locale, "section.anyMonth")}</option>
+              {MESES.map((m, i) => (
+                <option key={m} value={i + 1}>{m}</option>
+              ))}
+            </select>
+          </label>
+          <div className="col-span-2 flex items-center gap-4 lg:col-span-1">
+            <button type="submit" className="lx-ui min-h-11 flex-1 rounded-full bg-[var(--accent)] px-7 text-sm font-semibold text-[var(--accent-fg)] transition hover:opacity-90 lg:min-h-10 lg:flex-none">
+              {t(locale, "section.search")}
+            </button>
+            {filtrando && (
+              <Link href={localePath(locale, `/categoria/${slug}`)} className="lx-link whitespace-nowrap text-xs text-[var(--fg-muted)]">
+                {t(locale, "section.clear")}
+              </Link>
+            )}
+          </div>
+        </form>
+      )}
 
       {pos !== "cabecera" && pos !== "barra" && pos !== "oculto" && (
         <div
