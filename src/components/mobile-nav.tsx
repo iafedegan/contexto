@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ChevronRight, Menu, Search, X } from "lucide-react";
+import { ChevronDown, ChevronRight, Menu, Search, X } from "lucide-react";
 import { LocaleSwitch } from "@/components/locale-switch";
 import { LogoMark } from "@/components/logo-mark";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -57,6 +57,8 @@ export function MobileNav({
   tagline?: string;
 }) {
   const [open, setOpen] = useState(false);
+  // Sección cuyas subsecciones están desplegadas (ninguna al abrir el menú).
+  const [desplegada, setDesplegada] = useState<string | null>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
   const label = LABELS[locale === "en" ? "en" : "es"];
   const all = [...nav, ...extra];
@@ -212,34 +214,53 @@ export function MobileNav({
           <nav aria-label={t(locale, "nav.sections")} className="flex-1 overflow-y-auto px-4 py-2">
             <p className="lx-kicker px-1 pb-1 pt-3 text-[var(--accent)]">{t(locale, "nav.sections")}</p>
             <ul>
-              {all.map((n) => (
-                <li key={n.href} className="border-b border-[var(--border)]">
-                  <Link
-                    href={localePath(locale, n.href)}
-                    onClick={() => setOpen(false)}
-                    className="lx-display flex min-h-14 items-center justify-between gap-3 px-1 text-[1.35rem] leading-tight active:text-[var(--accent)]"
-                  >
-                    {n.label}
-                    <ChevronRight size={18} className="shrink-0 text-[var(--accent)]" />
-                  </Link>
-                  {/* Subsecciones: enlaces más pequeños bajo la sección. */}
-                  {n.children && n.children.length > 0 && (
-                    <ul className="-mt-1 mb-3 flex flex-wrap gap-x-4 gap-y-1 px-1">
-                      {n.children.map((h) => (
-                        <li key={h.href}>
-                          <Link
-                            href={localePath(locale, h.href)}
-                            onClick={() => setOpen(false)}
-                            className="lx-ui inline-flex min-h-9 items-center text-[0.85rem] text-[var(--fg-muted)] active:text-[var(--accent)]"
-                          >
-                            {h.label}
+              {all.map((n) => {
+                const hijas = n.children ?? [];
+                const abierta = desplegada === n.href;
+                return (
+                  <li key={n.href} className="border-b border-[var(--border)]">
+                    {/* El nombre lleva a la sección; la flecha despliega sus subsecciones (cerradas al abrir el menú). */}
+                    <div className="flex items-center">
+                      <Link
+                        href={localePath(locale, n.href)}
+                        onClick={() => setOpen(false)}
+                        className="lx-display flex min-h-14 min-w-0 flex-1 items-center px-1 text-[1.35rem] leading-tight active:text-[var(--accent)]"
+                      >
+                        {n.label}
+                      </Link>
+                      {hijas.length > 0 ? (
+                        <button
+                          type="button"
+                          aria-expanded={abierta}
+                          aria-label={`${n.label}: ${t(locale, "nav.subsections")}`}
+                          onClick={() => setDesplegada(abierta ? null : n.href)}
+                          className="grid size-12 shrink-0 place-items-center text-[var(--accent)]"
+                        >
+                          <ChevronDown size={20} className={`transition-transform ${abierta ? "rotate-180" : ""}`} />
+                        </button>
+                      ) : (
+                        <ChevronRight size={18} aria-hidden className="mx-3.5 shrink-0 text-[var(--accent)]" />
+                      )}
+                    </div>
+                    {abierta && hijas.length > 0 && (
+                      <ul className="mb-3 ml-1 flex flex-col border-l border-[var(--border)] pl-3">
+                        <li>
+                          <Link href={localePath(locale, n.href)} onClick={() => setOpen(false)} className="lx-ui flex min-h-11 items-center text-[0.9rem] font-semibold text-[var(--accent)]">
+                            {t(locale, "nav.seeAll")} {n.label}
                           </Link>
                         </li>
-                      ))}
-                    </ul>
-                  )}
-                </li>
-              ))}
+                        {hijas.map((h) => (
+                          <li key={h.href}>
+                            <Link href={localePath(locale, h.href)} onClick={() => setOpen(false)} className="lx-ui flex min-h-11 items-center text-[0.95rem] text-[var(--fg-muted)] active:text-[var(--accent)]">
+                              {h.label}
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
             <Link
               href={localePath(locale, "/buscar")}

@@ -133,7 +133,7 @@ async function CategoryPage({ params, searchParams, locale }: PageProps & { loca
           propia, enlazable y cacheable, y funciona sin JavaScript. */}
       {subcategories.length > 0 && (
         // Los filtros avanzados quedan plegados tras un solo botón; se abre un panel flotante (sin JavaScript: <details>).
-        <details className="group relative" open={filtrando || undefined}>
+        <details className="group relative max-lg:w-full" open={filtrando || undefined}>
           <summary className="lx-ui inline-flex min-h-10 cursor-pointer list-none items-center gap-1.5 rounded-full border border-[var(--border)] px-3 text-[0.68rem] uppercase tracking-[0.12em] text-[var(--fg-muted)] transition hover:border-[var(--accent)] hover:text-[var(--accent)] group-open:border-[var(--accent)] group-open:text-[var(--accent)] lg:min-h-7 [&::-webkit-details-marker]:hidden">
             <svg aria-hidden viewBox="0 0 24 24" className="size-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M4 6h16M7 12h10M10 18h4" /></svg>
             {t(locale, "section.filter")}
@@ -142,9 +142,9 @@ async function CategoryPage({ params, searchParams, locale }: PageProps & { loca
         <form
           action={localePath(locale, `/categoria/${slug}`)}
           method="get"
-          className="absolute right-0 top-[calc(100%+0.5rem)] z-40 flex w-[min(30rem,calc(100vw-2rem))] flex-wrap items-end gap-3 rounded-[var(--radius-lg)] border border-[var(--border-strong,var(--border))] bg-[var(--bg-2)] p-4 text-left shadow-2xl"
+          className="mt-2 grid w-full grid-cols-2 items-end gap-3 rounded-[var(--radius-lg)] border border-[var(--border-strong,var(--border))] bg-[var(--bg-2)] p-4 text-left sm:flex sm:flex-wrap lg:absolute lg:right-0 lg:top-[calc(100%+0.5rem)] lg:z-40 lg:mt-0 lg:w-[min(30rem,calc(100vw-2rem))] lg:shadow-2xl"
         >
-          <label className="flex min-w-[8.5rem] flex-col gap-1">
+          <label className="col-span-2 flex min-w-[8.5rem] flex-col gap-1 sm:col-span-1">
             <span className="lx-kicker !text-[0.72rem] text-[var(--fg-muted)]">{t(locale, "section.subcategory")}</span>
             <select
               name="subcategoria"
@@ -166,7 +166,7 @@ async function CategoryPage({ params, searchParams, locale }: PageProps & { loca
               type="date"
               name="desde"
               defaultValue={desde ?? ""}
-              className="lx-ui w-[8.5rem] rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] px-2 py-1.5 text-xs outline-none transition focus:border-[var(--accent)] pointer-coarse:min-h-11"
+              className="lx-ui w-full min-w-0 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] px-2 py-1.5 text-xs outline-none transition focus:border-[var(--accent)] pointer-coarse:min-h-11 sm:w-[8.5rem]"
             />
           </label>
 
@@ -176,13 +176,13 @@ async function CategoryPage({ params, searchParams, locale }: PageProps & { loca
               type="date"
               name="hasta"
               defaultValue={hasta ?? ""}
-              className="lx-ui w-[8.5rem] rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] px-2 py-1.5 text-xs outline-none transition focus:border-[var(--accent)] pointer-coarse:min-h-11"
+              className="lx-ui w-full min-w-0 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] px-2 py-1.5 text-xs outline-none transition focus:border-[var(--accent)] pointer-coarse:min-h-11 sm:w-[8.5rem]"
             />
           </label>
 
           <button
             type="submit"
-            className="lx-ui min-h-11 rounded-full bg-[var(--accent)] px-4 text-xs font-semibold lg:min-h-8 text-[var(--accent-fg)] transition hover:opacity-90"
+            className="lx-ui col-span-2 min-h-11 rounded-full bg-[var(--accent)] px-4 text-xs font-semibold text-[var(--accent-fg)] transition hover:opacity-90 sm:col-span-1 lg:min-h-8"
           >
             {t(locale, "section.filter")}
           </button>
