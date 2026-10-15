@@ -228,6 +228,17 @@ export function regionsCss(input: RegionStyles | undefined, scope = "[data-site-
       continue;
     }
     decl.push(...coloresDecl(s));
+    // El fondo del cuerpo es el de TODA la página entre la barra de navegación y el pie, no solo el de la columna central (`main` es un
+    // contenedor de ancho limitado: pintarlo ahí dejaba franjas a los lados y los bloques de arriba con el fondo anterior). Se pinta en la
+    // raíz del sitio, que la barra y el pie cubren con el suyo; el color del texto y los tonos siguen en el cuerpo.
+    if (id === "body") {
+      const fondos = decl.filter((d) => d.startsWith("background:"));
+      if (fondos.length) {
+        rules.push(`${scope}{${fondos.join(";")}}`);
+        for (const d of fondos) decl.splice(decl.indexOf(d), 1);
+        rules.push(`${sel} .tpl-broadsheet{background:transparent!important}`);
+      }
+    }
     if (s.textFont) {
       const f = homeFontFamily(s.textFont)!;
       decl.push(`--font-body:${f}`, `--font-ui:${f}`, `--font-sans:${f}`, `--font-serif:${f}`, `font-family:${f}`);

@@ -49,3 +49,14 @@ test("el radio de esquinas recorta (overflow) las partes con imágenes, pero no 
   assert.match(regla("encabezado"), /border-radius:24px/);
   assert.doesNotMatch(regla("encabezado"), /overflow/);
 });
+
+test("el fondo del cuerpo se pinta en toda la página (raíz del sitio) y no solo en la columna central", async () => {
+  const { regionsCss } = await import("@/lib/home-regions");
+  const css = regionsCss({ body: { bg: "#112233" } });
+  assert.match(css, /\[data-site-root\]\{background:#112233!important\}/);
+  // En el propio cuerpo quedan el texto y los tonos, pero ya no el fondo.
+  const regla = css.split("}").find((r) => r.startsWith('[data-site-root] [data-region="body"]{'))!;
+  assert.ok(regla && !/background:#112233/.test(regla), regla);
+  // La barra y el pie no se tocan.
+  assert.equal(regionsCss({ navbar: { bg: "#112233" } }).includes("[data-site-root]{background"), false);
+});

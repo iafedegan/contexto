@@ -5,7 +5,6 @@ import {
   ArrowUp,
   BadgeCheck,
   ArrowUpRight,
-  Bot,
   Eye,
   Newspaper,
   CalendarClock,
@@ -13,14 +12,13 @@ import {
   Minus,
   MessagesSquare,
   ScanSearch,
-  Sparkles,
   ChevronRight,
 } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { tienePermiso } from "@/lib/permisos-server";
 import { TabsResumen } from "@/components/panel/tabs-resumen";
 import { db } from "@/db";
-import { agentDrafts, articles, assistantQueries } from "@/db/schema";
+import { articles, assistantQueries } from "@/db/schema";
 import { Card } from "@/components/ui";
 import { pctChange, siteDailySeries, siteWeekTotals } from "@/lib/article-stats";
 import { AreaChart, Donut } from "@/components/panel/dash-charts";
@@ -34,10 +32,9 @@ export const dynamic = "force-dynamic";
 
 // Resumen del panel: notas por estado, borradores pendientes, consultas del asistente, tendencia de lecturas, suscriptores y notas más leídas.
 export default async function PanelHome() {
-  const [session, byStatus, pendingDrafts, queries7d, week, trend, top] = await Promise.all([
+  const [session, byStatus, queries7d, week, trend, top] = await Promise.all([
     auth(),
     db.select({ status: articles.status, n: sql<number>`count(*)::int` }).from(articles).groupBy(articles.status),
-    db.select({ n: sql<number>`count(*)::int` }).from(agentDrafts).where(sql`${agentDrafts.status} = 'pendiente'`),
     db.select({ n: sql<number>`count(*)::int` }).from(assistantQueries).where(sql`${assistantQueries.createdAt} > now() - interval '7 days'`),
     siteWeekTotals(),
     siteDailySeries(7),
@@ -73,11 +70,9 @@ export default async function PanelHome() {
   const verAnalitica = session?.user ? await tienePermiso(session.user.id, session.user.role, "analitica") : false;
   const fecha = new Intl.DateTimeFormat("es-CO", { weekday: "long", day: "numeric", month: "long", timeZone: "America/Bogota" }).format(new Date());
   const enRevision = st["en_revision"] ?? 0;
-  const borradoresIA = pendingDrafts[0]?.n ?? 0;
   // Lo que espera una acción del equipo: se muestra arriba solo si hay algo.
   const atencion = [
     { n: enRevision, texto: enRevision === 1 ? "nota espera revisión" : "notas esperan revisión", href: "/panel/articulos?estado=en_revision", icon: <ScanSearch size={18} aria-hidden /> },
-    { n: borradoresIA, texto: borradoresIA === 1 ? "borrador de IA por aprobar" : "borradores de IA por aprobar", href: "/panel/borradores-ia", icon: <Bot size={18} aria-hidden /> },
   ].filter((a) => a.n > 0);
 
   return (
@@ -92,9 +87,6 @@ export default async function PanelHome() {
           <p className="mt-1 text-sm text-[var(--fg-muted)]">Así va el sitio hoy: lecturas, estado de las notas y de dónde llegan tus suscriptores.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Link href="/panel/articulos/nuevo?modo=ia" className="lx-btn lx-btn-ghost">
-            <Sparkles size={16} aria-hidden /> Nota con IA
-          </Link>
           <Link href="/panel/articulos/nuevo?modo=manual" className="lx-btn">
             Nueva nota <ArrowUpRight size={16} aria-hidden />
           </Link>
@@ -109,7 +101,7 @@ export default async function PanelHome() {
               href={a.href}
               className="group flex min-w-0 flex-1 basis-64 items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--accent)]/35 bg-[var(--accent)]/8 px-4 py-3 transition hover:border-[var(--accent)] hover:bg-[var(--accent)]/12"
             >
-              <span className="grid size-10 shrink-0 place-items-center rounded-full bg-[var(--accent)] text-[var(--accent-fg)]">{a.icon}</span>
+              <span className="grid size-10 shrink-0 place-items-center rounded-full bg-[var(--accent)] !text-white">{a.icon}</span>
               <span className="min-w-0 flex-1 text-sm"><strong className="lx-display mr-1 text-xl tabular-nums">{a.n}</strong>{a.texto}</span>
               <ChevronRight size={18} aria-hidden className="shrink-0 text-[var(--accent)] transition group-hover:translate-x-0.5" />
             </Link>
@@ -198,7 +190,7 @@ export default async function PanelHome() {
             {top.map((a, i) => (
               <li key={a.slug} className="min-w-0">
                 <div className="group flex items-center gap-3 rounded-[var(--radius)] px-2 py-2 transition hover:bg-[var(--surface-2)]">
-                  <span className={`grid size-8 shrink-0 place-items-center rounded-full text-sm font-bold tabular-nums ${i === 0 ? "bg-[var(--accent)] text-[var(--accent-fg)]" : "bg-[var(--surface-2)] text-[var(--fg-muted)]"}`}>{i + 1}</span>
+                  <span className={`grid size-8 shrink-0 place-items-center rounded-full text-sm font-bold tabular-nums ${i === 0 ? "bg-[var(--accent)] !text-white" : "bg-[var(--surface-2)] text-[var(--fg-muted)]"}`}>{i + 1}</span>
                   <div className="min-w-0 flex-1">
                     <Link href={`/panel/articulos/${a.id}`} className="block truncate text-sm font-medium group-hover:text-[var(--accent)]" title="Abrir en el editor">{a.title}</Link>
                     <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[var(--surface-2)] group-hover:bg-[var(--border)]">
@@ -213,7 +205,6 @@ export default async function PanelHome() {
         </Card>
 
         <div className="flex flex-col gap-5 sm:gap-6">
-          <Highlight label="Borradores de IA por aprobar" value={pendingDrafts[0]?.n ?? 0} href="/panel/borradores-ia" cta="Revisar cola" icon={<Bot size={20} />} />
           <Highlight label="Preguntas al asistente (7 días)" value={queries7d[0]?.n ?? 0} href="/panel/demanda" cta="Ver demanda" icon={<MessagesSquare size={20} />} />
         </div>
       </div>

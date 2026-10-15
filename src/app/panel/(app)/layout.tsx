@@ -53,6 +53,8 @@ export default async function PanelLayout({ children }: { children: React.ReactN
   const mezcla = (color: string, pct: number, con: string) => `color-mix(in srgb, ${color} ${pct}%, ${con})`;
   const estiloContenido = {
     "--accent": marca.desde,
+    // El acento del contenido es el tono OSCURO de la barra: el texto sobre él (botones, pestañas activas) debe ser blanco, no el oscuro de la barra.
+    "--accent-fg": "#ffffff",
     "--link": marca.desde,
     "--accent-2": mezcla(marca.acento, 80, "#7a4a00"),
     "--fg": mezcla(marca.hasta, 80, "#000000"),
