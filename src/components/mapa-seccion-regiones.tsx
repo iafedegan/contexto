@@ -58,7 +58,7 @@ export function MapaSeccionRegiones({ locale, actual: regionParam, departamento 
           )}
         </div>
 
-        <svg viewBox={`0 0 ${MAPA_ANCHO} ${MAPA_ALTO}`} role="group" aria-label="Mapa de Colombia por regiones" className="mx-auto block h-auto max-h-[28rem] w-full drop-shadow-[0_18px_30px_rgba(0,0,0,0.25)]">
+        <svg viewBox={`-56 0 ${MAPA_ANCHO + 56} ${MAPA_ALTO}`} role="group" aria-label="Mapa de Colombia por regiones" className="mx-auto block h-auto max-h-[28rem] w-full drop-shadow-[0_18px_30px_rgba(0,0,0,0.25)]">
           {DEPARTAMENTOS_FILTRO.filter((d) => d.mapa).map((d) => {
             const trazo = DEPARTAMENTOS.find((x) => x.nombre === d.mapa);
             const r = regionPorSlug(d.region);
@@ -68,7 +68,7 @@ export function MapaSeccionRegiones({ locale, actual: regionParam, departamento 
             const resalta = dep ? on : actual ? actual === d.region : true;
             return (
               <a key={d.slug} href={hrefDepto(d.slug)} aria-label={`Noticias de ${d.nombre}`} aria-current={on ? "true" : undefined} className="group/r outline-none">
-                <path d={trazo.d} fill={r.color} stroke="var(--surface)" strokeWidth={on ? 1.8 : 1} strokeLinejoin="round" className={`cursor-pointer transition-all duration-200 group-hover/r:opacity-100 group-focus-visible/r:opacity-100 ${resalta ? (actual || dep ? "opacity-100" : "opacity-75") : "opacity-25"}`}>
+                <path d={trazo.d} fill={r.color} stroke={on ? "#fff" : "rgba(255,255,255,0.7)"} strokeWidth={on ? 2 : 0.9} strokeLinejoin="round" className={`cursor-pointer transition-all duration-200 group-hover/r:opacity-100 group-focus-visible/r:opacity-100 ${resalta ? (actual || dep ? "opacity-100" : "opacity-75") : "opacity-25"}`}>
                   <title>{`${d.nombre} · ${r.nombre}`}</title>
                 </path>
                 {(on || (!dep && actual === d.region && deptosDeLaRegion.length <= 12)) && (
@@ -85,6 +85,7 @@ export function MapaSeccionRegiones({ locale, actual: regionParam, departamento 
             const r = REGIONES_COLOMBIA.find((x) => x.slug === "insular")!;
             const on = actual === r.slug;
             return (
+              <g transform="translate(-52 0)">
               <a href={hrefDe(r.slug)} aria-label="Noticias de la región Insular: San Andrés y Providencia" aria-current={on ? "true" : undefined} className="group/r outline-none">
                 <rect x="4" y="6" width="104" height="78" rx="8" fill="none" stroke={r.color} strokeWidth="1" strokeDasharray="3 3" className={`transition-opacity ${actual && !on ? "opacity-30" : "opacity-70"} group-hover/r:opacity-100`} />
                 <g fill={r.color} stroke="var(--surface)" strokeWidth="1" className={`cursor-pointer transition-all duration-300 group-hover/r:opacity-100 ${actual ? (on ? "opacity-100" : "opacity-30") : "opacity-80"}`}>
@@ -96,6 +97,7 @@ export function MapaSeccionRegiones({ locale, actual: regionParam, departamento 
                 <text x="56" y="19" textAnchor="middle" fontSize="8.5" fontWeight="700" fill="#fff" stroke="rgba(0,0,0,0.55)" strokeWidth="2.2" paintOrder="stroke" className="pointer-events-none select-none">Providencia</text>
                 <text x="56" y="80" textAnchor="middle" fontSize="8.5" fontWeight="700" fill="#fff" stroke="rgba(0,0,0,0.55)" strokeWidth="2.2" paintOrder="stroke" className="pointer-events-none select-none">San Andrés</text>
               </a>
+              </g>
             );
           })()}
         </svg>

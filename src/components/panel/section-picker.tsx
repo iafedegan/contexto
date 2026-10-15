@@ -151,7 +151,7 @@ export function SectionTree({
   };
 
   const coincidencias = t ? options.filter((o) => norm(o.name).includes(t)).sort((a, b) => Number(sugeridas.includes(b.id)) - Number(sugeridas.includes(a.id))) : [];
-  const sugs = sugeridas.map((x) => porId.get(x)).filter((x): x is Nodo => !!x).slice(0, 6);
+  const sugs = sugeridas.map((x) => porId.get(x)).filter((x): x is Nodo => !!x).slice(0, 4);
 
   const hayRama = !!ramaNodo && subs.length > 0;
   return (
@@ -176,11 +176,9 @@ export function SectionTree({
         )}
       </div>
 
-      {children}
-
       {sugs.length > 0 && !t && (
-        <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Secciones sugeridas">
-          <span className="text-xs font-medium text-[var(--fg-muted)]">Sugeridas para esta nota:</span>
+        <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Secciones sugeridas">
+          <span className="text-xs font-medium text-[var(--fg-muted)]">Sugeridas:</span>
           {sugs.map((o) => {
             const activa = value === o.id;
             return (
@@ -189,7 +187,7 @@ export function SectionTree({
                 type="button"
                 aria-pressed={activa}
                 onClick={() => { onChange(activa ? "" : o.id); setRama(raizDe(o)?.id ?? null); }}
-                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-medium transition focus-visible:outline-2 focus-visible:outline-[var(--accent)] ${
+                className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium transition focus-visible:outline-2 focus-visible:outline-[var(--accent)] ${
                   activa ? "border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-fg)] shadow-sm" : "border-[var(--accent-2)]/40 bg-[var(--accent-2)]/10 hover:border-[var(--accent-2)]"
                 }`}
               >
@@ -200,6 +198,8 @@ export function SectionTree({
           })}
         </div>
       )}
+
+      {children}
       </div>
 
       {/* Dos columnas, como el sitio: secciones | subsecciones. Cada lista es un carrusel de `filas` filas por página. */}

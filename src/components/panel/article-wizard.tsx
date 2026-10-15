@@ -1287,14 +1287,16 @@ export function ArticleWizard({
                 </div>
               </div>
               {canPortada ? (
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] px-3.5 py-2.5">
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] px-3.5 py-2">
                   <div className="min-w-0 flex-1 basis-48">
                     <p id="pt-sitio" className="lx-kicker text-[var(--fg-muted)]" title="Sin destacar: entra a la portada por fecha, como cualquier nota.">En la portada del sitio</p>
-                    <p className="text-xs leading-snug text-[var(--fg-muted)]">
-                      {portadaPos === "0" && "Se fija como la nota grande de arriba cuando se publique."}
-                      {portadaPos === "1" && "Se fija junto a la principal cuando se publique."}
-                      {portadaPos === "keep" && "Ya ocupa otro lugar fijado en la portada; se conserva (se ajusta en «Portada» del menú)."}
-                    </p>
+                    {portadaPos !== "none" && (
+                      <p className="text-xs leading-snug text-[var(--fg-muted)]">
+                        {portadaPos === "0" && "Será la nota grande de arriba."}
+                        {portadaPos === "1" && "Irá junto a la principal."}
+                        {portadaPos === "keep" && "Ya tiene un lugar fijado; se conserva."}
+                      </p>
+                    )}
                   </div>
                   <div role="radiogroup" aria-labelledby="pt-sitio" className="grid w-full grid-cols-3 gap-1 rounded-full border border-[var(--border)] bg-[var(--surface)] p-1 sm:w-auto">
                     {([
@@ -1303,7 +1305,7 @@ export function ArticleWizard({
                       ["1", "Segunda", "Segunda destacada", "Junto a la principal."],
                     ] as const).map(([v, corto, t, d]) => (
                       <button key={v} type="button" role="radio" aria-checked={portadaPos === v} title={d} onClick={() => setPortadaPos(v)}
-                        className={`rounded-full px-3 py-1.5 text-center text-sm font-medium transition sm:px-3.5 ${portadaPos === v ? "bg-[var(--accent)] text-[var(--accent-fg,#fff)] shadow-sm" : "text-[var(--fg-muted)] hover:text-[var(--fg)]"}`}>
+                        className={`rounded-full px-3 py-1 text-center text-sm font-medium transition sm:px-3.5 ${portadaPos === v ? "bg-[var(--accent)] text-[var(--accent-fg,#fff)] shadow-sm" : "text-[var(--fg-muted)] hover:text-[var(--fg)]"}`}>
                         <span className="sm:hidden">{corto}</span><span className="hidden sm:inline">{t}</span>
                       </button>
                     ))}
