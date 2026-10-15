@@ -1687,4 +1687,3 @@ main > div:has([data-asistente]) { max-width: none; }
 /* Ancho del menú lateral del panel (cerrado o desplegado): lo usan las pantallas que ocupan todo el ancho, como el editor de portada. */
 .lx-shell { --sb-w: 4rem; }
 .lx-shell:has(> aside:hover), .lx-shell:has(> aside:focus-within) { --sb-w: 16rem; }
-}
