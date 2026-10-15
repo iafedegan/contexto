@@ -94,8 +94,8 @@ async function HomePage({ locale }: { locale: Locale }) {
     piezas.length > 0 ? (
       <div className="mb-2 overflow-hidden border-b border-[var(--border)] py-2.5 sm:mb-3 sm:border-y">
         <div
-          className="lx-marquee text-[0.72rem] uppercase tracking-[0.14em] text-[var(--fg-muted)] sm:tracking-[0.25em]"
-          style={{ "--lx-marquee-s": `${duracionDelCintillo(piezas, ticker.velocidad)}s` } as React.CSSProperties}
+          className="lx-marquee text-[0.72rem] uppercase tracking-[0.14em] text-[color:var(--cin,var(--fg-muted))] sm:tracking-[0.25em]"
+          style={{ "--lx-marquee-s": `${duracionDelCintillo(piezas, ticker.velocidad)}s`, ...(ticker.color ? { "--cin": ticker.color } : {}) } as React.CSSProperties}
         >
           {/* Dos copias seguidas: la animación avanza media tira y reinicia sin que se note el salto. */}
           {[...piezas, ...piezas].map((p, i) =>
@@ -105,7 +105,7 @@ async function HomePage({ locale }: { locale: Locale }) {
                 {p.texto}
               </span>
             ) : (
-              <span key={`${p.clave}-${i}`} className="flex items-center gap-1.5 whitespace-nowrap font-semibold text-[var(--fg)]">
+              <span key={`${p.clave}-${i}`} className="flex items-center gap-1.5 whitespace-nowrap font-semibold text-[color:var(--cin,var(--fg))]">
                 <span className="text-[var(--accent)]">◆</span>
                 {p.texto}
               </span>

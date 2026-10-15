@@ -21,6 +21,8 @@ export type TickerConfig = {
   textos?: string[];
   /** 1 (muy lento) a 10 (muy rápido); 6 equivale a como corría antes. */
   velocidad?: number;
+  /** Color del texto (#rrggbb); vacío = el del tema. */
+  color?: string;
 };
 
 export const MERCADO_CINTILLO: { id: CintilloMercado; etiqueta: string }[] = [
@@ -37,6 +39,7 @@ export const DEFAULT_TICKER: Required<TickerConfig> = {
   mercado: ["trm", "oil", "cattle"],
   textos: [],
   velocidad: 6,
+  color: "",
 };
 
 export const CINTILLO_MAX_TEXTOS = 10;
@@ -70,6 +73,7 @@ export function sanitizeTicker(input: unknown): Required<TickerConfig> {
     mercado,
     textos,
     velocidad: entero(t.velocidad, 1, 10, DEFAULT_TICKER.velocidad),
+    color: typeof t.color === "string" && /^#(?:[\da-f]{3}|[\da-f]{6})$/i.test(t.color) ? t.color : "",
   };
 }
 
