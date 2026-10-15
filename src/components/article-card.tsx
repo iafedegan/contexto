@@ -197,8 +197,9 @@ function LeadCard({ a, priority, locale }: { a: ArticleListItem; priority?: bool
       <div className={`relative z-[4] m-3 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--bg)]/60 p-4 shadow-[0_10px_30px_rgba(0,0,0,0.14)] backdrop-blur-md backdrop-saturate-150 md:m-5 md:max-w-[40rem] md:p-6 ${posicionPanel}`}>
         <Kicker a={a} locale={locale} className="text-[var(--accent)]" />
         <h2
-          className="lx-display mt-2.5 text-2xl font-semibold leading-[1.12] tracking-tight sm:text-3xl md:mt-3 md:text-[2.75rem]"
-          style={st.title}
+          className="lead-titulo lx-display mt-2.5 text-2xl font-semibold leading-[1.12] tracking-tight sm:text-3xl md:mt-3 md:text-[2.75rem]"
+          // El tamaño elegido es el que se ve al pasar el puntero; en reposo el titular va más pequeño (ver .lead-titulo).
+          style={{ ...st.title, fontSize: undefined, ["--lead-fs" as string]: st.title.fontSize }}
         >
           <Link href={hrefNota(locale, a)} className="transition-colors hover:text-[var(--link)] after:absolute after:inset-0 after:z-[2]">
             {a.title}

@@ -884,6 +884,22 @@ a {
   }
 }
 
+/* El titular de la nota de apertura va pequeño en reposo y crece al pasar el puntero (sin hover: tamaño completo). */
+.lead-titulo {
+  font-size: var(--lead-fs);
+}
+
+@media (hover: hover) {
+  .lead-titulo {
+    font-size: calc(var(--lead-fs) * 0.6);
+    transition: font-size 0.4s var(--ease-lux);
+  }
+  .lx-card:hover .lead-titulo,
+  .lx-card:focus-within .lead-titulo {
+    font-size: var(--lead-fs);
+  }
+}
+
 /* Portada generada: malla de degradados + inicial en caja alta. */
 .lx-art {
   position: relative;

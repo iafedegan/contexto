@@ -10,7 +10,7 @@ import { zonesCss } from "@/lib/zones";
 import { resolveParts, PRESET_PARTS, type TemplateParts } from "@/lib/template-parts";
 import type { Theme } from "@/lib/theme";
 import type { TextosCabecera } from "@/lib/textos-cabecera";
-import type { MenuNavbar } from "@/lib/menu-navbar";
+import { menuNavCss, type MenuNavbar } from "@/lib/menu-navbar";
 
 /**
  * Tema activo del sitio = la plantilla elegida en /panel/portada.
@@ -43,7 +43,7 @@ export const getSiteTheme = cache(
         style: homeBackgroundStyle(layout.background),
         textos: layout.textos,
         menuNav: layout.menuNav,
-        css: [regionsCss(layout.regions), sectionElsCss(layout.sectionEls), zonesCss(layout.zones)].filter(Boolean).join("\n"),
+        css: [regionsCss(layout.regions), sectionElsCss(layout.sectionEls), zonesCss(layout.zones), menuNavCss(layout.menuNav)].filter(Boolean).join("\n"),
         // Piezas de la plantilla compuesta (navbar, cuerpo, footer). Con la
         // cookie de desarrollo se ve la plantilla prediseñada entera.
         parts: resolveParts(override || layout.templateId, devParts ?? (override ? undefined : layout.parts)),

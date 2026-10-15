@@ -34,8 +34,10 @@ export type ChangeLine = {
 export function stable(v: unknown): string {
   if (Array.isArray(v)) return `[${v.map(stable).join(",")}]`;
   if (v && typeof v === "object") {
-    return `{${Object.entries(v as Record<string, unknown>)
-      .filter(([, x]) => x !== undefined)
+    const campos = Object.entries(v as Record<string, unknown>).filter(([, x]) => x !== undefined);
+    // Un objeto vacío es «sin ajustes», igual que no tenerlo: si no, lo publicado (`{}`) y el borrador (sin la clave) parecerían distintos.
+    if (!campos.length) return "null";
+    return `{${campos
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([k, x]) => `${JSON.stringify(k)}:${stable(x)}`)
       .join(",")}}`;
