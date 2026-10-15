@@ -1,5 +1,5 @@
--- Para pegar en el SQL Editor de Supabase (proyecto CONTEXTOPRO) ANTES de cargar las notas del sitio anterior.
--- Reúne las migraciones 0014 a 0017 del repositorio; todas son idempotentes (se pueden correr más de una vez).
+-- Para pegar en el SQL Editor de Supabase (proyecto CONTEXTOPRO).
+-- Reúne las migraciones 0014 a 0018 del repositorio; todas son idempotentes (se pueden correr más de una vez).
 
 -- ===== 0014_programacion_y_secciones_del_boletin.sql =====
 -- Boletín: armado con secciones (`items`) y envío programado (`scheduled_for`). Cada sentencia es IDEMPOTENTE: en producción las
@@ -30,4 +30,11 @@ DROP INDEX IF EXISTS "articles_fts_es";
 -- Cada sentencia es IDEMPOTENTE: en producción las migraciones se aplican a mano en el SQL Editor de Supabase.
 ALTER TABLE "articles" ADD COLUMN IF NOT EXISTS "legacy_path" text;
 CREATE UNIQUE INDEX IF NOT EXISTS "articles_legacy_path_idx" ON "articles" USING btree ("legacy_path") WHERE legacy_path is not null;
+
+-- ===== 0018_indices_del_listado_del_panel.sql =====
+-- Listado de artículos del panel con 51 mil notas: ordenar por «última edición» o por fecha de publicación recorría y ordenaba toda la tabla (~3 s).
+-- Con estos índices lee solo las 200 filas que muestra. `updated_at` es NOT NULL, así que `DESC` (NULLS FIRST por defecto) coincide con la consulta.
+-- Cada sentencia es IDEMPOTENTE: en producción las migraciones se aplican a mano en el SQL Editor de Supabase.
+CREATE INDEX IF NOT EXISTS "articles_updated_idx" ON "articles" USING btree ("updated_at" DESC);
+CREATE INDEX IF NOT EXISTS "articles_published_desc_idx" ON "articles" USING btree ("published_at" DESC NULLS LAST);
 

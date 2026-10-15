@@ -127,6 +127,13 @@
       "when": 1792023685997,
       "tag": "0017_direccion_original_de_las_notas",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1792028796336,
+      "tag": "0018_indices_del_listado_del_panel",
+      "breakpoints": true
     }
   ]
 }

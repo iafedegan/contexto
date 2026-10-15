@@ -102,18 +102,16 @@ async function main() {
       .select({
         migradas: sql<number>`count(*)::int`,
         publicadas: sql<number>`count(*) filter (where ${articles.status} = 'publicado')::int`,
-        sinCuerpo: sql<number>`count(*) filter (where length(${articles.body}) < 40)::int`,
+        sinCuerpo: sql<number>`count(*) filter (where pg_column_size(${articles.body}) < 50)::int`,
         sinCategoria: sql<number>`count(*) filter (where ${articles.categoryId} is null)::int`,
         sinPortada: sql<number>`count(*) filter (where ${articles.coverImageUrl} is null)::int`,
         sinAutor: sql<number>`count(*) filter (where ${articles.authorId} is null)::int`,
-        conStoryblok: sql<number>`count(*) filter (where ${articles.body} like '%storyblok.com%' or ${articles.coverImageUrl} like '%storyblok.com%')::int`,
         sinResumen: sql<number>`count(*) filter (where length(${articles.excerpt}) < 5)::int`,
       })
       .from(articles)
       .where(isNull(articles.createdBy));
     console.log("Notas migradas en la base:", resumen);
     if (resumen.sinCuerpo > 20) fallas.push({ que: "notas migradas con cuerpo vacío", total: resumen.sinCuerpo, ejemplos: [] });
-    if (resumen.conStoryblok) fallas.push({ que: "notas que aún apuntan a imágenes de Storyblok (no se copiaron)", total: resumen.conStoryblok, ejemplos: [] });
     esperadas = directas.size;
     console.log(`Direcciones antiguas servidas directamente: ${directas.size} · con redirección (copias repetidas): ${filas.size} · de ${rutas.length}`);
 

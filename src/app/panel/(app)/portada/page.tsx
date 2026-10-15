@@ -49,7 +49,10 @@ export default async function PortadaPage({
       .leftJoin(categories, eq(articles.categoryId, categories.id))
       .leftJoin(authors, eq(articles.authorId, authors.id))
       .where(and(eq(articles.status, "publicado"), lte(articles.publishedAt, sql`now()`)))
-      .orderBy(sql`(${articles.homePosition} is null)`, articles.homePosition, desc(articles.publishedAt)),
+      .orderBy(sql`(${articles.homePosition} is null)`, articles.homePosition, desc(articles.publishedAt))
+      // El editor solo maneja lo que está en portada: las notas ancladas (primero) y las más recientes. Con 51 mil notas publicadas, traerlas todas
+      // pasaba decenas de MB al navegador y la pantalla tardaba una eternidad en abrir.
+      .limit(200),
     getHomeLayoutConfig(),
     getAdsZoneRows(),
     getSitePopup(),

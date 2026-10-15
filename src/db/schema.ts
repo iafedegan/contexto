@@ -268,6 +268,9 @@ export const articles = pgTable(
     // Listado de una categoría (archivo de decenas de miles de notas): filtra por categoría y ordena por fecha sin ordenar en memoria.
     index("articles_category_published_idx").on(t.categoryId, t.publishedAt),
     index("articles_secciones_idx").using("gin", t.secciones),
+    // Listado del panel (51 mil notas): «última edición» y «fecha de publicación» recorren el índice en vez de ordenar toda la tabla (3 s → ms).
+    index("articles_updated_idx").on(t.updatedAt.desc()),
+    index("articles_published_desc_idx").on(t.publishedAt.desc().nullsLast()),
     uniqueIndex("articles_legacy_path_idx").on(t.legacyPath).where(sql`legacy_path is not null`),
     index("articles_search_vec_idx").using("gin", t.searchVec),
     index("articles_scheduled_idx").on(t.scheduledFor),
