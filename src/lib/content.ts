@@ -218,7 +218,8 @@ const leerCategoria = cachear(
   const region = regionPorSlug(regionSlug);
   if (region) {
     const texto = sql`translate(lower(${articles.title} || ' ' || ${articles.excerpt} || ' ' || ${articles.tags}::text), 'áéíóúñ', 'aeioun')`;
-    conditions.push(or(...region.terminos.map((t) => sql`${texto} like ${`%${t}%`}`)) as SQL);
+    // La región que fija el editor al clasificar la nota manda; si no, se reconoce por lo que menciona el texto.
+    conditions.push(or(sql`${articles.secciones} ? ${`region-${region.slug}`}`, ...region.terminos.map((t) => sql`${texto} like ${`%${t}%`}`)) as SQL);
   }
   const where = and(...conditions);
 

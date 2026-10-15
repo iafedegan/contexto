@@ -5,6 +5,9 @@ import { procesarBoletinesProgramados } from "@/lib/newsletter/envio";
 import { syncMarketData } from "@/lib/sync-market-data";
 import { purgarVencidos } from "@/lib/mantenimiento";
 import { refrescarObservatorio } from "@/lib/observatorio-fedegan";
+import { refrescarIndicadores } from "@/lib/indicadores-fedegan";
+import { invalidarCache } from "@/lib/data-cache";
+import { revalidatePath } from "next/cache";
 
 /**
  * Publica las notas «programado» cuya hora ya llegó y refresca el sitio. Toda la lógica vive en
@@ -48,6 +51,15 @@ export async function GET(req: Request) {
       return null;
     }),
   ]);
-  await refrescarObservatorio().catch((e) => console.error("publish-scheduled: falló la copia del Observatorio", e));
+  // Observatorio: copia diaria en la base (precios y demás cifras). Si algo cambió, se vacía su caché y se regenera la página estática.
+  const [obs, precios] = await Promise.all([
+    refrescarObservatorio().catch((e) => (console.error("publish-scheduled: falló la copia del Observatorio", e), false)),
+    refrescarIndicadores().catch((e) => (console.error("publish-scheduled: falló la copia de precios", e), false)),
+  ]);
+  if (obs || precios) {
+    invalidarCache("indicadores");
+    revalidatePath("/observatorio");
+    revalidatePath("/en/observatorio");
+  }
   return NextResponse.json({ published: pasada.slugs, boletines, marketData, mantenimiento });
 }

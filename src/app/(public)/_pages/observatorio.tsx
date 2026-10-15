@@ -1,4 +1,3 @@
-import { Suspense } from "react";
 import { Beef, CircleDollarSign, Factory, FileText, Globe, MapPinned, Wallet, type LucideIcon } from "lucide-react";
 import { SiteShell } from "@/components/site-shell";
 import { ObservatorioHero, type KpiHero } from "@/components/observatorio-hero";
@@ -108,40 +107,7 @@ function Seccion({ id, n, titulo, texto, children }: { id: string; n: number; ti
   );
 }
 
-// Lo que se ve mientras llegan las cifras del origen: el nombre y la presentación (que no dependen de él) y bloques en el lugar de las
-// cifras. Así la página aparece al instante aunque el sistema de FEDEGÁN esté lento.
-function Esqueleto({ locale }: { locale: Locale }) {
-  const tx = TEXTOS[locale];
-  return (
-    <div role="status" aria-label={tx.cargando}>
-      <div className="relative isolate overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border)] bg-gradient-to-br from-[var(--surface-2)] via-[var(--surface)] to-transparent px-5 pb-6 pt-8 sm:px-10 sm:pb-9 sm:pt-12">
-        <div className="max-w-3xl">
-          <p className="inline-flex items-center gap-2 rounded-full border border-[var(--border-strong)] bg-[var(--bg)]/50 px-3.5 py-1.5 text-xs font-semibold text-[var(--fg-muted)]">
-            <span aria-hidden className="size-2 rounded-full bg-[var(--accent-2)]" />
-            {tx.kicker}
-          </p>
-          <p aria-hidden className="lx-display mt-5 text-[2.9rem] font-semibold leading-[1.02] tracking-tight sm:text-7xl">
-            {tx.titulo[0]} <span className="lx-foil">{tx.titulo[1]}</span>
-          </p>
-          <p className="mt-5 max-w-2xl text-base leading-relaxed text-[var(--fg-muted)] sm:text-lg">{tx.intro}</p>
-        </div>
-        <div aria-hidden className="mt-8 grid animate-pulse grid-cols-1 gap-3 min-[460px]:grid-cols-2 lg:grid-cols-4">
-          {[0, 1, 2, 3].map((i) => <div key={i} className="h-36 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--bg)]/55" />)}
-        </div>
-      </div>
-      <div aria-hidden className="mt-6 flex animate-pulse flex-col gap-5 lg:mt-10">
-        <div className="h-8 w-56 rounded-full bg-[var(--surface-2)]" />
-        <div className="grid gap-5 md:grid-cols-2">
-          {[0, 1].map((i) => <div key={i} className="h-72 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)]" />)}
-        </div>
-      </div>
-      <span className="sr-only">{tx.cargando}</span>
-    </div>
-  );
-}
-
-// El cuerpo de la página: lee las cifras (caché de datos; si está vacía, del origen) y las pinta. Va dentro de `Suspense` para que lo de
-// arriba no tenga que esperarlas.
+// El cuerpo de la página: lee las cifras (caché de datos; si está vacía, del origen) y las pinta. Va en el HTML estático de la página (ver `revalidate` en la ruta).
 async function Cifras({ locale }: { locale: Locale }) {
   const [precios, obs] = await Promise.all([getIndicadores(), getObservatorio()]);
   const tx = TEXTOS[locale];
@@ -254,9 +220,8 @@ export function makePage(locale: Locale) {
     return (
       <SiteShell theme={site.theme} style={site.style} locale={locale} variant="seccion">
         <div className="mx-auto max-w-7xl">
-          <Suspense fallback={<Esqueleto locale={locale} />}>
-            <Cifras locale={locale} />
-          </Suspense>
+          {/* Sin Suspense/esqueleto: la página va ya completa en el HTML estático (el esqueleto cambiaba de alto al llegar los datos y movía todo). */}
+          <Cifras locale={locale} />
         </div>
       </SiteShell>
     );

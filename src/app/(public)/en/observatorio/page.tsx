@@ -7,7 +7,7 @@ import type { Metadata } from "next";
 import { makePage } from "../../_pages/observatorio";
 
 // Se genera en cada visita y nunca en el build (lee de la caché de datos).
-export const dynamic = "force-dynamic";
+export const revalidate = 3600;
 
 // Título y descripción de la página.
 export const metadata: Metadata = {

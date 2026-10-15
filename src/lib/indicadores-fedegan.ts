@@ -1,4 +1,7 @@
 import "server-only";
+import { eq, sql } from "drizzle-orm";
+import { db } from "@/db";
+import { siteSettings } from "@/db/schema";
 import { cachear } from "@/lib/data-cache";
 import { descargarSeguro } from "@/lib/safe-fetch";
 import { parsearCsvIndicador, rangoDeMeses, type SerieCsv } from "@/lib/indicadores-csv";
@@ -90,20 +93,64 @@ async function leerUno(e: Entrada, desde: string, hasta: string): Promise<Indica
 const ESPERA_TRAS_FALLO_MS = 90_000;
 let falloEn = 0;
 
-// Lee todo el catálogo. Sin try/catch por fuera: si el origen falla del todo se lanza, y así NO se guarda en la caché
-// una lista vacía durante seis horas. El argumento (el primer mes del rango) renueva la caché sola al cambiar de mes.
+// Copia en la base de la última lectura completa de los precios: ninguna visita espera las descargas al origen, solo una consulta.
+const SNAPSHOT_KEY = "indicadores_snapshot";
+const SNAPSHOT_MAX_MS = 36 * 3600 * 1000;
+
+// Lee la copia guardada con su fecha; `null` si no hay o no se puede leer.
+async function leerSnapshot(): Promise<{ valor: Indicador[]; en: number } | null> {
+  try {
+    const [row] = await db.select({ value: siteSettings.value, updatedAt: siteSettings.updatedAt }).from(siteSettings).where(eq(siteSettings.key, SNAPSHOT_KEY)).limit(1);
+    const valor = row?.value as Indicador[] | undefined;
+    return Array.isArray(valor) && valor.length ? { valor, en: row.updatedAt.getTime() } : null;
+  } catch {
+    return null;
+  }
+}
+
+// Lee todo el catálogo del origen. Si falla del todo se lanza (no se guarda una lista vacía).
+async function leerDelOrigen(desde: string): Promise<Indicador[]> {
+  const { hasta } = rangoDeMeses(new Date(), MESES);
+  const todos = await Promise.all(CATALOGO.map((e) => leerUno(e, desde, hasta).catch(() => null)));
+  const ok = todos.filter((x): x is Indicador => x !== null);
+  if (!ok.length) throw new Error("El origen de indicadores no respondió");
+  return ok;
+}
+
+/** Vuelve a leer los precios del origen y deja la copia en la base (la llama el cron diario). Devuelve si se guardó. */
+export async function refrescarIndicadores(): Promise<boolean> {
+  const ok = await leerDelOrigen(rangoDeMeses(new Date(), MESES).desde);
+  // Solo se guarda una lectura completa: si faltan indicadores no se pisa la copia buena.
+  if (ok.length < CATALOGO.length) return false;
+  await guardarSnapshot(ok);
+  return true;
+}
+
+// Guarda la lectura completa como copia en la base.
+async function guardarSnapshot(valor: Indicador[]) {
+  await db.insert(siteSettings).values({ key: SNAPSHOT_KEY, value: valor }).onConflictDoUpdate({ target: siteSettings.key, set: { value: valor, updatedAt: sql`now()` } });
+}
+
+// Orden: copia en la base (una consulta, instantánea) -> si no hay o es muy vieja, el origen. Con el origen caído se prefiere la copia vieja.
 const leer = cachear(
-  "indicadores-fedegan",
+  "indicadores-fedegan-v2",
   async (desde: string): Promise<Indicador[]> => {
-    if (Date.now() - falloEn < ESPERA_TRAS_FALLO_MS) throw new Error("El origen de indicadores falló hace poco");
-    const { hasta } = rangoDeMeses(new Date(), MESES);
-    const todos = await Promise.all(CATALOGO.map((e) => leerUno(e, desde, hasta).catch(() => null)));
-    const ok = todos.filter((x): x is Indicador => x !== null);
-    if (!ok.length) {
-      falloEn = Date.now();
-      throw new Error("El origen de indicadores no respondió");
+    const copia = await leerSnapshot();
+    if (copia && Date.now() - copia.en < SNAPSHOT_MAX_MS) return copia.valor;
+    if (Date.now() - falloEn < ESPERA_TRAS_FALLO_MS) {
+      if (copia) return copia.valor;
+      throw new Error("El origen de indicadores falló hace poco");
     }
-    return ok;
+    try {
+      const ok = await leerDelOrigen(desde);
+      // La primera lectura completa deja la copia: las siguientes visitas (y el cron) ya no esperan al origen.
+      if (ok.length >= CATALOGO.length) await guardarSnapshot(ok).catch((e) => console.error("indicadores: no se pudo guardar la copia", e));
+      return ok;
+    } catch (e) {
+      falloEn = Date.now();
+      if (copia) return copia.valor;
+      throw e;
+    }
   },
   { tags: ["indicadores"], segundos: SEGUNDOS },
 );

@@ -5,8 +5,9 @@
 import type { Metadata } from "next";
 import { makePage } from "../_pages/observatorio";
 
-// Se genera en cada visita y nunca en el build (lee de la caché de datos).
-export const dynamic = "force-dynamic";
+// Página estática: se genera en la primera visita y se sirve desde la caché global. Se regenera cada hora y, además, al instante
+// cuando el cron diario detecta datos nuevos (ver /api/cron/publish-scheduled). Nunca se prerenderiza en el build.
+export const revalidate = 3600;
 
 // Título y descripción de la página.
 export const metadata: Metadata = {

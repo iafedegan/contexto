@@ -1,5 +1,6 @@
 "use server";
 
+import { regionPorSlug } from "@/lib/regiones-colombia";
 import { revalidatePath } from "next/cache";
 import { sanitizeArticleHtml } from "@/lib/sanitize";
 import { redirect } from "next/navigation";
@@ -51,7 +52,18 @@ export async function saveArticle(formData: FormData) {
 
   if (!title || !excerpt) throw new Error("Título y resumen son obligatorios.");
 
+  // Región de Colombia (`region-<slug>` dentro de `secciones`, junto a las demás secciones de la nota). Ausente = no tocar.
+  const regionForm = formData.get("region");
+  let secciones: string[] | undefined;
+  if (regionForm !== null) {
+    const r = String(regionForm);
+    const quiere = regionPorSlug(r)?.slug;
+    const [prev] = id ? await db.select({ s: articles.secciones }).from(articles).where(eq(articles.id, id)).limit(1) : [];
+    secciones = [...(prev?.s ?? []).filter((x) => !x.startsWith("region-")), ...(quiere ? [`region-${quiere}`] : [])];
+  }
+
   const values = {
+    ...(secciones ? { secciones } : {}),
     title,
     excerpt,
     body,
