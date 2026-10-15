@@ -29,7 +29,7 @@ import { EVENTO_ABRIR_MENU } from "@/lib/pestanas";
 export type MobileLook = "masthead" | "couture" | "bold" | "glass" | "crest";
 
 // Elemento del menú: dirección y etiqueta.
-type Item = { href: string; label: string };
+type Item = { href: string; label: string; children?: Item[] };
 
 // Textos del menú en cada idioma.
 const LABELS = {
@@ -222,6 +222,22 @@ export function MobileNav({
                     {n.label}
                     <ChevronRight size={18} className="shrink-0 text-[var(--accent)]" />
                   </Link>
+                  {/* Subsecciones: enlaces más pequeños bajo la sección. */}
+                  {n.children && n.children.length > 0 && (
+                    <ul className="-mt-1 mb-3 flex flex-wrap gap-x-4 gap-y-1 px-1">
+                      {n.children.map((h) => (
+                        <li key={h.href}>
+                          <Link
+                            href={localePath(locale, h.href)}
+                            onClick={() => setOpen(false)}
+                            className="lx-ui inline-flex min-h-9 items-center text-[0.85rem] text-[var(--fg-muted)] active:text-[var(--accent)]"
+                          >
+                            {h.label}
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </li>
               ))}
             </ul>

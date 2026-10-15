@@ -135,6 +135,20 @@ function Kicker({
 /* --------------------------------------------- Portada: pieza de apertura */
 function LeadCard({ a, priority, locale }: { a: ArticleListItem; priority?: boolean; locale: Locale }) {
   const st = cardStyle(a, "lead");
+  const posicionPanel = `${st.textArriba ? "self-start" : "self-end"} ${st.textDerecha ? "justify-self-end text-right" : "justify-self-start"}`;
+  // Lo que se revela al pasar el puntero: el resumen y la firma.
+  const detalle = (
+    <>
+      {!st.hideExcerpt && (
+        <p
+          className={`mt-3 hidden max-w-xl text-sm leading-relaxed text-[var(--fg-muted)] sm:block md:text-base ${st.excerptClamp} ${st.textDerecha ? "ml-auto" : ""}`}
+        >
+          {a.excerpt}
+        </p>
+      )}
+      <Meta a={a} locale={locale} className="mt-3 md:mt-4" />
+    </>
+  );
   return (
     /* El texto va SOBRE la foto, en la misma celda de cuadrícula, en todos los tamaños: la tarjeta mide lo que
        mida lo mayor entre la foto y el texto, y la foto se estira para llenarla. En el celular la foto es vertical
@@ -167,7 +181,20 @@ function LeadCard({ a, priority, locale }: { a: ArticleListItem; priority?: bool
       </Link>
       {/* El texto va en un panel de vidrio esmerilado (fondo translúcido con desenfoque) solo detrás de sí mismo: da lectura al titular sin tapar
           la foto, que antes quedaba lavada bajo un degradado que cubría casi toda la tarjeta. El panel se pega al lado donde está el texto. */}
-      <div className={`relative z-[4] m-3 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--bg)]/60 p-4 shadow-[0_10px_30px_rgba(0,0,0,0.14)] backdrop-blur-md backdrop-saturate-150 md:m-5 md:max-w-[40rem] md:p-6 ${st.textArriba ? "self-start" : "self-end"} ${st.textDerecha ? "justify-self-end text-right" : "justify-self-start"}`}>
+      {/* Con ratón solo se ve la categoría y el titular; el resumen y el autor aparecen al pasar el puntero (o al enfocar un enlace con el teclado).
+          En pantallas táctiles no hay "pasar el puntero": todo queda visible. Para que la tarjeta no cambie de alto al revelar el texto (empujaría
+          la portada entera), una copia invisible del texto completo reserva el alto que ya tenía; nadie la ve, la oyen ni la enfocan. */}
+      <div
+        aria-hidden
+        className={`pointer-events-none invisible m-3 rounded-[var(--radius-lg)] border border-transparent p-4 md:m-5 md:max-w-[40rem] md:p-6 [@media(hover:none)]:hidden ${posicionPanel}`}
+      >
+        <Kicker a={a} locale={locale} className="text-[var(--accent)]" />
+        <div className="lx-display mt-2.5 text-2xl font-semibold leading-[1.12] tracking-tight sm:text-3xl md:mt-3 md:text-[2.75rem]" style={st.title}>
+          {a.title}
+        </div>
+        {detalle}
+      </div>
+      <div className={`relative z-[4] m-3 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--bg)]/60 p-4 shadow-[0_10px_30px_rgba(0,0,0,0.14)] backdrop-blur-md backdrop-saturate-150 md:m-5 md:max-w-[40rem] md:p-6 ${posicionPanel}`}>
         <Kicker a={a} locale={locale} className="text-[var(--accent)]" />
         <h2
           className="lx-display mt-2.5 text-2xl font-semibold leading-[1.12] tracking-tight sm:text-3xl md:mt-3 md:text-[2.75rem]"
@@ -177,14 +204,9 @@ function LeadCard({ a, priority, locale }: { a: ArticleListItem; priority?: bool
             {a.title}
           </Link>
         </h2>
-        {!st.hideExcerpt && (
-          <p
-            className={`mt-3 hidden max-w-xl text-sm leading-relaxed text-[var(--fg-muted)] sm:block md:text-base ${st.excerptClamp} ${st.textDerecha ? "ml-auto" : ""}`}
-          >
-            {a.excerpt}
-          </p>
-        )}
-        <Meta a={a} locale={locale} className="mt-3 md:mt-4" />
+        <div className="lead-detalle">
+          <div className="min-h-0 overflow-hidden">{detalle}</div>
+        </div>
       </div>
     </article>
   );

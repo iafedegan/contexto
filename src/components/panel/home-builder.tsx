@@ -494,7 +494,7 @@ export function HomeBuilder({
   }
 
   // Elige una plantilla.
-  function pickTemplate(config: Omit<Layout, "ticker">) {
+  function pickTemplate(config: Omit<Layout, "ticker" | "textos">) {
     const teniaComposicion = Object.values(layout.parts ?? {}).some(Boolean);
     patchLayout({ ...config, parts: {}, sectionFilters: layout.sectionFilters });
     if (teniaComposicion) {
@@ -944,6 +944,7 @@ export function HomeBuilder({
               onRegion={setRegion}
               layout={layout}
               onRegions={(regions: RegionStyles) => patchLayout({ regions })}
+              onTextos={(textos) => patchLayout({ textos: textos ?? {} })}
               nota={selected !== null && items[selected] ? { index: selected, title: items[selected].title, style: items[selected].homeStyle ?? {} } : null}
               onNotaChange={(p) => selected !== null && patchStyle(selected, p)}
               onNotaClear={() => selected !== null && patchStyle(selected, null)}

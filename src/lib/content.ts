@@ -378,6 +378,27 @@ const leerCategoriasPrincipales = cachear(
 /** Solo las categorías de primer nivel (sin padre) — para el navbar. */
 export const getTopLevelCategories = cache(() => leerCategoriasPrincipales());
 
+// Subsecciones de cada sección de primer nivel (por slug del padre), en su orden, leídas de la caché de datos (5 minutos).
+const leerHijasDelMenu = cachear(
+  "menu-hijas",
+  async (): Promise<Record<string, { slug: string; name: string }[]>> => {
+    const filas = await db
+      .select({ id: categories.id, slug: categories.slug, name: categories.name, parentId: categories.parentId })
+      .from(categories)
+      .orderBy(categories.sortOrder, categories.name);
+    const slugDe = new Map(filas.map((f) => [f.id, f.slug]));
+    const salida: Record<string, { slug: string; name: string }[]> = {};
+    for (const f of filas) {
+      const padre = f.parentId ? slugDe.get(f.parentId) : undefined;
+      if (padre) (salida[padre] ??= []).push({ slug: f.slug, name: f.name });
+    }
+    return salida;
+  },
+  { tags: [TAG_CONTENIDO], segundos: 300 },
+);
+/** Subsecciones de cada sección de primer nivel: alimentan los menús desplegables de la barra de navegación. */
+export const getNavChildren = cache(() => leerHijasDelMenu());
+
 /**
  * Última hora (H-05): la nota marcada como `is_breaking` más reciente. Solo
  * una: la barra pierde su fuerza si se usa para todo.

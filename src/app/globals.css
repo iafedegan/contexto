@@ -864,6 +864,26 @@ a {
   }
 }
 
+/* Nota de apertura: con ratón el panel de vidrio muestra solo el titular y despliega el resumen y la firma al pasar el puntero o al
+   enfocar un enlace. Sin hover (celular, tableta) el detalle queda siempre a la vista. */
+.lead-detalle {
+  display: grid;
+  grid-template-rows: 1fr;
+}
+
+@media (hover: hover) {
+  .lead-detalle {
+    grid-template-rows: 0fr;
+    opacity: 0;
+    transition: grid-template-rows 0.4s var(--ease-lux), opacity 0.3s ease;
+  }
+  .lx-card:hover .lead-detalle,
+  .lx-card:focus-within .lead-detalle {
+    grid-template-rows: 1fr;
+    opacity: 1;
+  }
+}
+
 /* Portada generada: malla de degradados + inicial en caja alta. */
 .lx-art {
   position: relative;

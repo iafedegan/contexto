@@ -7,6 +7,8 @@ import { BlockStyleEditor, type ZoneBundle } from "@/components/panel/block-styl
 import { Inspector } from "@/components/panel/portada-controls";
 import type { Layout } from "@/components/panel/portada-types";
 import { RegionEditor } from "@/components/panel/region-editor";
+import { TextosCabeceraEditor } from "@/components/panel/textos-cabecera-editor";
+import type { TextosCabecera } from "@/lib/textos-cabecera";
 import { REGIONS, type RegionId, type RegionStyles } from "@/lib/home-regions";
 
 /** Qué se está editando: una nota concreta o una parte entera de la plantilla. */
@@ -34,6 +36,7 @@ export function PropiedadesCard({
   onRegion,
   layout,
   onRegions,
+  onTextos,
   nota,
   onNotaChange,
   onNotaClear,
@@ -47,6 +50,8 @@ export function PropiedadesCard({
   onRegion: (r: RegionId) => void;
   layout: Layout;
   onRegions: (next: RegionStyles) => void;
+  /** Cambia el título, subtítulo o fecha de la cabecera (`undefined` = los del sitio). */
+  onTextos: (next: TextosCabecera | undefined) => void;
   /** La nota elegida: su posición (-1 si no está en la lista), título y estilo actual. */
   nota: { index: number; title: string; style: HomeStyle } | null;
   onNotaChange: (p: Partial<HomeStyle>) => void;
@@ -130,6 +135,7 @@ export function PropiedadesCard({
               Portada <ChevronRight size={12} aria-hidden /> <span className="font-semibold text-[var(--fg)]">{parteLabel(region)}</span>
             </p>
             <RegionEditor value={layout.regions ?? {}} active={region} onActive={onRegion} onChange={onRegions} only={PARTES} />
+            {region === "navbar" && <TextosCabeceraEditor value={layout.textos} onChange={onTextos} />}
             {region === "cards" && nota && (
               <button type="button" onClick={() => onFoco("nota")} className="self-start text-xs font-semibold text-[var(--accent)] hover:underline">
                 ← Editar solo {nota.index >= 0 ? `la nota ${nota.index + 1}` : "la nota elegida"}

@@ -12,6 +12,7 @@ import type { HomeTitleFont } from "@/lib/home-fonts";
 import type { RegionStyles } from "@/lib/home-regions";
 import type { TemplateParts } from "@/lib/template-parts";
 import type { TickerConfig } from "@/lib/cintillo";
+import type { TextosCabecera } from "@/lib/textos-cabecera";
 import {
   boolean,
   customType,
@@ -708,6 +709,8 @@ export type HomeLayoutConfig = {
   parts?: TemplateParts;
   /** Cintillo de titulares: qué lleva y a qué velocidad (ver src/lib/cintillo.ts). */
   ticker?: TickerConfig;
+  /** Título, subtítulo y fecha de la cabecera (ver src/lib/textos-cabecera.ts). */
+  textos?: TextosCabecera;
 };
 
 // --- Relaciones ---------------------------------------------------

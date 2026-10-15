@@ -7,6 +7,7 @@ import type { Theme } from "@/lib/theme";
 import { DEFAULT_IDENTITY, type SiteIdentity } from "@/lib/site-identity";
 import { DEFAULT_LOCALE, INTL_LOCALE, localePath, t, type Locale } from "@/lib/i18n";
 import { MoreMenu } from "@/components/more-menu";
+import { NavMenuItem } from "@/components/nav-menu-item";
 import { MobileNav, type MobileLook } from "@/components/mobile-nav";
 import { RadioPlayer } from "@/components/radio-player";
 import { InstalarApp } from "@/components/instalar-app";
@@ -15,7 +16,7 @@ import { StickyRail } from "@/components/sticky-rail";
 import { cn } from "@/lib/utils";
 
 // Elemento de la navegación: dirección y etiqueta.
-export type NavItem = { href: string; label: string };
+export type NavItem = { href: string; label: string; children?: NavItem[] };
 
 // Propiedades de la cabecera.
 type Props = {
@@ -73,7 +74,7 @@ export function SiteHeader(props: Props & { variant?: NavbarId }) {
         extra={extraNav}
         locale={locale}
         radioStreamUrl={identity.radioStreamUrl}
-        tagline={conMasthead ? identity.tagline || t(locale, "nav.tagline") : undefined}
+        tagline={conMasthead && !identity.sinLema ? identity.tagline || t(locale, "nav.tagline") : undefined}
       />
       {/* `contents`: la cabecera de escritorio sigue siendo `sticky` respecto a la página. */}
       <div className="hidden lg:contents">
@@ -163,8 +164,8 @@ function MastheadHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extr
             </span>
             {/* El lema y, debajo, la fecha. */}
             <span className="mt-2 flex flex-col items-center gap-y-1">
-              <span className="lx-kicker text-[var(--fg-muted)]">{identity.tagline || t(locale, "nav.tagline")}</span>
-              <span className="lx-ui text-[0.62rem] font-medium uppercase tracking-[0.18em] text-[var(--fg-muted)]/80">{today}</span>
+              {!identity.sinLema && <span className="lx-kicker text-[var(--fg-muted)]">{identity.tagline || t(locale, "nav.tagline")}</span>}
+              {identity.fecha !== false && <span className="lx-ui text-[0.62rem] font-medium uppercase tracking-[0.18em] text-[var(--fg-muted)]/80">{today}</span>}
             </span>
           </Link>
           <span className="hidden h-px flex-1 bg-gradient-to-l from-transparent to-[var(--border-strong)] md:block" />
@@ -177,9 +178,7 @@ function MastheadHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extr
       >
         <div className="lx-navrail mx-auto max-w-[96rem] items-center justify-start gap-x-5 gap-y-2 px-6 py-2.5 text-[0.72rem] uppercase tracking-[0.16em] sm:justify-center xl:gap-x-6">
           {nav.map((n) => (
-            <Link key={n.href} href={localePath(locale, n.href)} className="lx-link lx-ui">
-              {n.label}
-            </Link>
+            <NavMenuItem key={n.href} item={n} locale={locale} className="lx-link lx-ui" />
           ))}
           <Link
             href={localePath(locale, "/buscar")}
@@ -212,9 +211,7 @@ function ReadingHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extra
         </Link>
         <nav aria-label={t(locale, "nav.sections")} className="hidden gap-6 text-[0.72rem] uppercase tracking-[0.18em] lg:flex">
           {nav.slice(0, 4).map((n) => (
-            <Link key={n.href} href={localePath(locale, n.href)} className="lx-link lx-ui text-[var(--fg-muted)]">
-              {n.label}
-            </Link>
+            <NavMenuItem key={n.href} item={n} locale={locale} className="lx-link lx-ui text-[var(--fg-muted)]" />
           ))}
         </nav>
         <div className="flex items-center gap-3">
@@ -254,9 +251,11 @@ function GremialHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extra
           <span className="lx-display block truncate text-xl font-black tracking-tight text-[var(--accent)] sm:text-2xl">
             {identity.name}
           </span>
-          <span className="block truncate text-[0.72rem] font-semibold uppercase tracking-[0.14em] text-[var(--fg-muted)]">
-            {identity.tagline || t(locale, "nav.tagline")}
-          </span>
+          {!identity.sinLema && (
+            <span className="block truncate text-[0.72rem] font-semibold uppercase tracking-[0.14em] text-[var(--fg-muted)]">
+              {identity.tagline || t(locale, "nav.tagline")}
+            </span>
+          )}
         </Link>
 
         <div className="shrink-0 text-sm lg:hidden">
@@ -265,9 +264,7 @@ function GremialHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extra
 
         <nav aria-label={t(locale, "nav.sections")} className="hidden items-center gap-x-5 gap-y-1 text-sm font-semibold lg:flex">
           {nav.map((n, i) => (
-            <Link key={n.href} href={localePath(locale, n.href)} className={cn("lx-ui transition hover:text-[var(--accent)]", i >= 4 ? "hidden" : "pointer-coarse:py-3")}>
-              {n.label}
-            </Link>
+            <NavMenuItem key={n.href} item={n} locale={locale} className={cn("lx-ui transition hover:text-[var(--accent)]", i >= 4 ? "hidden" : "pointer-coarse:py-3")} />
           ))}
           <MoreMenu locale={locale} extra={[...nav.slice(4), ...extra]} />
         </nav>
@@ -319,16 +316,14 @@ function BoldHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extra: N
             justo cuando ya cabe en la barra. */}
         <nav aria-label={t(locale, "nav.sections")} className="hidden flex-wrap items-center gap-2 lg:flex">
           {nav.map((n, i) => (
-            <Link
+            <NavMenuItem
               key={n.href}
-              href={localePath(locale, n.href)}
+              item={n} locale={locale}
               className={cn(
                 "lx-ui rounded-full border border-[var(--border)] px-4 py-1.5 text-xs font-medium transition hover:border-[var(--border-strong)] hover:bg-[var(--surface-2)] hover:text-[var(--accent-2)] pointer-coarse:py-[0.8125rem]",
                 i >= 6 ? "hidden" : i >= 4 ? "max-xl:hidden" : "",
               )}
-            >
-              {n.label}
-            </Link>
+             />
           ))}
           <MoreMenu locale={locale} extra={[...nav.slice(4).map((n, i) => ({ ...n, cls: i + 4 >= 6 ? undefined : "xl:hidden" })), ...extra]} />
         </nav>
@@ -376,9 +371,7 @@ function CoutureHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extra
           {nav.map((n, i) => (
             <span key={n.href} className="flex items-center gap-5">
               {i > 0 && <span aria-hidden className="text-[var(--accent)]">·</span>}
-              <Link href={localePath(locale, n.href)} className="lx-link">
-                {n.label}
-              </Link>
+              <NavMenuItem item={n} locale={locale} className="lx-link" />
             </span>
           ))}
           <MoreMenu locale={locale} extra={extra} />
@@ -404,9 +397,7 @@ function CommandHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extra
         </Link>
         <nav aria-label={t(locale, "nav.sections")} className="ml-4 hidden gap-4 text-xs md:flex">
           {nav.slice(0, 5).map((n) => (
-            <Link key={n.href} href={localePath(locale, n.href)} className="lx-link lx-mono text-[var(--fg-muted)]">
-              {n.label.toLowerCase()}
-            </Link>
+            <NavMenuItem key={n.href} item={{ ...n, label: n.label.toLowerCase() }} locale={locale} className="lx-link lx-mono text-[var(--fg-muted)]" />
           ))}
           <MoreMenu locale={locale} extra={extra} />
         </nav>
@@ -449,9 +440,7 @@ function GlassHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extra: 
         </div>
         <nav aria-label={t(locale, "nav.sections")} className="hidden items-center gap-4 whitespace-nowrap text-xs text-[var(--fg-muted)] lg:flex">
           {nav.slice(0, 3).map((n) => (
-            <Link key={n.href} href={localePath(locale, n.href)} className="lx-link">
-              {n.label}
-            </Link>
+            <NavMenuItem key={n.href} item={n} locale={locale} className="lx-link" />
           ))}
           <Link href={localePath(locale, "/buscar")} className="lx-link text-[var(--accent)]">
             {t(locale, "nav.search")}
@@ -488,9 +477,7 @@ function CrestHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extra: 
       >
         <div className="lx-navrail mx-auto max-w-5xl justify-start gap-x-8 gap-y-2 px-6 py-3 text-[0.72rem] uppercase tracking-[0.2em] text-[var(--fg-muted)] sm:justify-center">
           {nav.map((n) => (
-            <Link key={n.href} href={localePath(locale, n.href)} className="lx-link lx-ui">
-              {n.label}
-            </Link>
+            <NavMenuItem key={n.href} item={n} locale={locale} className="lx-link lx-ui" />
           ))}
         </div>
         <MoreMenu locale={locale} extra={extra} />
@@ -514,9 +501,7 @@ function ArchiveHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extra
         <InstalarApp locale={locale} />
         <nav aria-label={t(locale, "nav.sections")} className="flex gap-5 text-xs tracking-wide text-[var(--fg-muted)]">
           {nav.slice(0, 3).map((n) => (
-            <Link key={n.href} href={localePath(locale, n.href)} className="lx-link">
-              {n.label}
-            </Link>
+            <NavMenuItem key={n.href} item={n} locale={locale} className="lx-link" />
           ))}
           <Link href={localePath(locale, "/buscar")} className="lx-link text-[var(--accent)]">
             {t(locale, "nav.search")}

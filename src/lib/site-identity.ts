@@ -21,6 +21,10 @@ export type SiteIdentity = {
   domain: string;
   /** Stream de la emisora (AI-02). Vacío = no se muestra el botón de play. */
   radioStreamUrl: string;
+  /** Solo en la cabecera: `false` oculta la fecha de hoy (lo fija el editor de portada, no se guarda en la identidad). */
+  fecha?: boolean;
+  /** Solo en la cabecera: `true` quita el subtítulo (el editor lo dejó vacío a propósito). */
+  sinLema?: boolean;
 };
 
 // Clave de site_settings donde se guarda la identidad del sitio.

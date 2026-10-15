@@ -556,6 +556,7 @@ export function PreviewChrome({
                     onRegion={setRegion}
                     layout={layout}
                     onRegions={(regions) => editLayout({ ...layout, regions })}
+                    onTextos={(textos) => editLayout({ ...layout, textos: textos ?? {} })}
                     nota={nota}
                     onNotaChange={(p) => selSlug && patchBlock(selSlug, p)}
                     onNotaClear={() => selSlug && patchBlock(selSlug, null)}

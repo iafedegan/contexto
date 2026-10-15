@@ -18,6 +18,7 @@ export const DEFAULT_HOME_LAYOUT: Required<HomeLayoutConfig> = {
   sectionEls: {},
   zones: {},
   ticker: DEFAULT_TICKER,
+  textos: {},
 };
 
 // Identificador de una plantilla de portada.
@@ -28,8 +29,8 @@ export type HomeTemplate = {
   id: HomeTemplateId;
   name: string;
   description: string;
-  /** Sin `ticker`: elegir una plantilla no debe borrar el cintillo que el editor configuró. */
-  config: Omit<Required<HomeLayoutConfig>, "ticker">;
+  /** Sin `ticker` ni `textos`: elegir una plantilla no debe borrar el cintillo ni los textos de la cabecera que el editor configuró. */
+  config: Omit<Required<HomeLayoutConfig>, "ticker" | "textos">;
 };
 
 /**

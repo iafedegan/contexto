@@ -1,4 +1,4 @@
-import { getBreakingArticle, getTopLevelCategories } from "@/lib/content";
+import { getBreakingArticle, getNavChildren, getTopLevelCategories } from "@/lib/content";
 import { getSiteIdentity } from "@/lib/site-identity";
 import { getSiteTheme } from "@/lib/site-theme";
 import { getSitePopup } from "@/lib/popup";
@@ -12,6 +12,7 @@ import type { Theme } from "@/lib/theme";
 import { DEFAULT_LOCALE, categoryLabel, t, type Locale } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { NAV_VISIBLE } from "@/lib/nav-limits";
+import { conTextos } from "@/lib/textos-cabecera";
 
 /**
  * Estructura del contenido por tipo de página (ancho, aire y texturas). Es lo
@@ -110,7 +111,7 @@ export async function SiteShell({
       )}
       {/* «Última hora» ya no es una franja roja: la nota marcada lleva una insignia en la esquina de su imagen (ver `estiloUltimaHora`). */}
       {ultimaHora && /^[a-z0-9-]+$/.test(ultimaHora.slug) && <style dangerouslySetInnerHTML={{ __html: estiloUltimaHora(ultimaHora.slug, t(locale, "breaking.label")) }} />}
-      <SiteHeader theme={theme} nav={nav} extraNav={extraNav} locale={locale} identity={identity} variant={site.parts.navbar} />
+      <SiteHeader theme={theme} nav={nav} extraNav={extraNav} locale={locale} identity={conTextos(identity, site.textos)} variant={site.parts.navbar} />
       {aboveMain}
       <main id="contenido" data-region="body" className={mainClassName ?? shell.main}>
         {/* Honestidad con el lector: la interfaz cambia de idioma, las notas no. */}
@@ -155,11 +156,13 @@ export async function navItems(locale: Locale = DEFAULT_LOCALE): Promise<NavItem
   try {
     // Solo las de primer nivel, y como mucho ocho (N-04): más opciones
     // visibles sobrecargan la navegación. El resto está en el menú «Más».
-    const categories = await getTopLevelCategories();
+    const [categories, hijas] = await Promise.all([getTopLevelCategories(), getNavChildren().catch(() => ({}) as Awaited<ReturnType<typeof getNavChildren>>)]);
     return [
       ...categories.slice(0, NAV_VISIBLE).map((c) => ({
         href: `/categoria/${c.slug}`,
         label: categoryLabel(locale, c.slug, c.name),
+        // Subsecciones que se despliegan bajo la sección en la barra de navegación.
+        children: (hijas[c.slug] ?? []).map((h) => ({ href: `/categoria/${h.slug}`, label: categoryLabel(locale, h.slug, h.name) })),
       })),
       // El Observatorio (indicadores y mapa) es una página fija del sitio, no una sección: va aparte del límite N-04.
       { href: "/observatorio", label: t(locale, "nav.observatory") },
