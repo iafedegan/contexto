@@ -77,7 +77,7 @@ export async function proponerTemasConsejoCore(
 /** El editor jefe reparte los temas en las casillas de la semana. Devuelve la pauta de cada casilla que logró llenar. */
 export async function armarPautaCore(
   userId: string,
-  input: { lunes: string; casillas: CasillaParaIa[]; temas: TemaConsejo[]; enfoque?: string },
+  input: { lunes: string; casillas: CasillaParaIa[]; temas: TemaConsejo[]; enfoque?: string; /** Respuestas del consejo a las preguntas de cada sección, ya en texto, por slug. */ briefs?: Record<string, string> },
 ): Promise<{ ok: true; pauta: PautaCasilla[] } | { ok: false; error: string }> {
   const model = await getAiModel();
   if (!model) return { ok: false, error: "Falta la clave del modelo de IA (la conecta un administrador en Configuración → Asistente)." };
@@ -113,6 +113,7 @@ export async function armarPautaCore(
           `Hoy es ${hoy}. Semana del ${input.lunes}.`,
           input.enfoque?.trim() ? `PEDIDO DEL CONSEJO: ${input.enfoque.trim().slice(0, 600)}` : "",
           temas ? `TEMAS QUE EL CONSEJO QUIERE CUBRIR (úsalos primero, en la sección que corresponda):\n${temas}` : "El consejo no trajo temas: propón los de la agenda del sector para esta semana.",
+          Object.keys(input.briefs ?? {}).length ? `INDICACIONES DEL CONSEJO POR SECCIÓN (las respuestas del consejo mandan sobre tu criterio):\n${Object.entries(input.briefs ?? {}).map(([slug, txt]) => `[${slug}]\n${txt}`).join("\n\n")}` : "",
           yaPlaneado.length ? `YA PLANEADO EN ESTA SEMANA (no repetir hechos):\n${yaPlaneado.map((x) => `- ${x}`).join("\n")}` : "",
           `CASILLAS A LLENAR (devuelve una entrada por cada número #i, sin saltarte ninguna):\n${lista}`,
         ].filter(Boolean).join("\n\n"),

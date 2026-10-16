@@ -564,9 +564,28 @@ html:not([data-fuentes]) {
   background-attachment: fixed;
 }
 
+/* Tarjetas del panel con presencia: borde visible, un filete de color arriba, un leve tinte en la cabecera y sombra con profundidad.
+   Antes eran blancas con un borde casi invisible sobre un fondo igual de pálido y todo se perdía. */
 [data-theme="panel-amber"] .lx-card:not([data-site-root] *) {
-  border-top: 0;
+  border: 1px solid var(--border-strong);
   border-radius: 1rem;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--accent) 9%, #fff) 0, #fff 5.5rem),
+    #fff;
+  box-shadow:
+    inset 0 3px 0 var(--accent),
+    0 1px 2px rgba(10, 30, 20, 0.12),
+    0 16px 32px -18px rgba(10, 30, 20, 0.42);
+}
+@media (hover: hover) {
+  [data-theme="panel-amber"] a.lx-card:not([data-site-root] *):hover,
+  [data-theme="panel-amber"] .lx-card:not([data-site-root] *):hover {
+    border-color: var(--accent);
+    box-shadow:
+      inset 0 3px 0 var(--accent-2),
+      0 2px 4px rgba(10, 30, 20, 0.16),
+      0 22px 40px -18px rgba(10, 30, 20, 0.5);
+  }
 }
 [data-theme="panel-amber"] thead th:not([data-site-root] *) {
   background: var(--surface-2);

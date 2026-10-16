@@ -4,6 +4,7 @@ import { ArrowLeft, CalendarRange, ChevronRight } from "lucide-react";
 import { db } from "@/db";
 import { editorialPlans, editorialSlots } from "@/db/schema";
 import { requirePermiso } from "@/lib/auth";
+import { escritoresParaElegir } from "@/lib/ai/estilo";
 import { ConsejoNuevo } from "@/components/panel/consejo-nuevo";
 import { ConsejoBorrar } from "@/components/panel/consejo-borrar";
 import { lunesDe, sumarDias } from "@/lib/consejo/plan";
@@ -15,7 +16,8 @@ const ESTADO = { borrador: "Borrador", activo: "Activo", cerrado: "Cerrado" } as
 
 /** Lista de consejos de redacción y alta de uno nuevo. */
 export default async function ConsejosPage() {
-  await requirePermiso("articulos");
+  const user = await requirePermiso("articulos");
+  const escritores = (await escritoresParaElegir(user)).map((e) => ({ id: e.id, nombre: e.nombre, tipo: e.tipo, conDiagnostico: e.conDiagnostico }));
   const hoy = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Bogota" }).format(new Date());
   const proximoLunes = sumarDias(lunesDe(hoy), 7);
   const planes = await db
@@ -38,7 +40,7 @@ export default async function ConsejosPage() {
         <h1 className="lx-display mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">Consejo de redacción</h1>
         <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[var(--fg-muted)]">Como en una sala de redacción: se planea la semana (temas, cuántas notas por día y sección, horas de publicación y quién aprueba), y la IA redacta cada pieza a su tiempo. Nada sale sin que un editor lo haya autorizado.</p>
       </div>
-      <ConsejoNuevo proximoLunes={proximoLunes} />
+      <ConsejoNuevo proximoLunes={proximoLunes} escritores={escritores} yoId={user.id} />
       {planes.length > 0 && (
         <ul className="flex flex-col gap-3">
           {planes.map((p) => (

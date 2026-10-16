@@ -8,8 +8,9 @@ import { categories, editorialPlans, editorialSlots } from "@/db/schema";
 import { canPublish, requirePermiso } from "@/lib/auth";
 import { tienePermiso } from "@/lib/permisos-server";
 import { armarPautaCore, completarFichaCore, proponerTemasConsejoCore } from "@/lib/ai/consejo-ia";
+import { escritoresParaElegir } from "@/lib/ai/estilo";
 import { aprobarCasilla, procesarConsejo, sincronizarCasillas } from "@/lib/ai/consejo-ejecucion";
-import { CONFIG_BASE, construirParrilla, lunesDe, sanearConfig, sanearFicha, type ConfigConsejo, type FichaPauta, type TemaConsejo } from "@/lib/consejo/plan";
+import { CONFIG_BASE, briefParaPrompt, construirParrilla, lunesDe, sanearConfig, sanearFicha, type ConfigConsejo, type FichaPauta, type TemaConsejo } from "@/lib/consejo/plan";
 
 /**
  * Acciones del consejo de redacción. Todo exige el permiso de redacción; activar un plan con casillas «automáticas» y aprobar piezas
@@ -27,13 +28,15 @@ async function puedePublicar(user: { id: string; role: Parameters<typeof canPubl
 }
 
 /** Crea un plan en borrador para la semana de una fecha. */
-export async function crearPlan(input: { fecha: string; titulo?: string }): Promise<Res<{ id: string }>> {
+export async function crearPlan(input: { fecha: string; titulo?: string; escritorId?: string }): Promise<Res<{ id: string }>> {
   const user = await requirePermiso("articulos");
   if (!/^\d{4}-\d{2}-\d{2}$/.test(input.fecha)) return { ok: false, message: "Elige una fecha válida." };
   const lunes = lunesDe(input.fecha);
+  // Solo se acepta un escritor que esta persona pueda elegir.
+  const escritorId = input.escritorId && (await escritoresParaElegir(user)).some((e) => e.id === input.escritorId) ? input.escritorId : undefined;
   const [row] = await db
     .insert(editorialPlans)
-    .values({ title: input.titulo?.trim().slice(0, 120) || `Consejo de redacción · semana del ${new Intl.DateTimeFormat("es-CO", { day: "numeric", month: "long", timeZone: "America/Bogota" }).format(new Date(`${lunes}T12:00:00-05:00`))}`, weekStart: lunes, config: CONFIG_BASE, createdBy: user.id })
+    .values({ title: input.titulo?.trim().slice(0, 120) || `Consejo de redacción · semana del ${new Intl.DateTimeFormat("es-CO", { day: "numeric", month: "long", timeZone: "America/Bogota" }).format(new Date(`${lunes}T12:00:00-05:00`))}`, weekStart: lunes, config: sanearConfig({ ...CONFIG_BASE, ...(escritorId ? { escritorId } : {}) }), createdBy: user.id })
     .returning({ id: editorialPlans.id });
   rev();
   return { ok: true, id: row.id };
@@ -41,12 +44,14 @@ export async function crearPlan(input: { fecha: string; titulo?: string }): Prom
 
 /** Guarda la configuración y los temas del plan (solo en borrador o activo). */
 export async function guardarPlan(id: string, input: { titulo?: string; config: ConfigConsejo; temas: TemaConsejo[] }): Promise<Res> {
-  await requirePermiso("articulos");
+  const user = await requirePermiso("articulos");
   const temas = (Array.isArray(input.temas) ? input.temas : [])
     .map((t) => ({ id: typeof t.id === "string" && t.id ? t.id.slice(0, 60) : randomUUID(), texto: String(t.texto ?? "").trim().slice(0, 200), seccion: t.seccion && /^[\w-]{1,80}$/.test(t.seccion) ? t.seccion : undefined, prioridad: (t.prioridad === 1 || t.prioridad === 3 ? t.prioridad : 2) as 1 | 2 | 3, origen: t.origen === "ia" ? ("ia" as const) : ("manual" as const), angulo: t.angulo ? String(t.angulo).slice(0, 400) : undefined }))
     .filter((t) => t.texto.length >= 4)
     .slice(0, 60);
-  await db.update(editorialPlans).set({ ...(input.titulo?.trim() ? { title: input.titulo.trim().slice(0, 120) } : {}), config: sanearConfig(input.config), temas, updatedAt: new Date() }).where(eq(editorialPlans.id, id));
+  const cfgGuardada = sanearConfig(input.config);
+  if (cfgGuardada.escritorId && !(await escritoresParaElegir(user)).some((e) => e.id === cfgGuardada.escritorId)) delete cfgGuardada.escritorId;
+  await db.update(editorialPlans).set({ ...(input.titulo?.trim() ? { title: input.titulo.trim().slice(0, 120) } : {}), config: cfgGuardada, temas, updatedAt: new Date() }).where(eq(editorialPlans.id, id));
   rev(id);
   return { ok: true };
 }
@@ -63,7 +68,10 @@ export async function proponerTemas(id: string, opciones: { seccion?: string; ca
     seccion = c;
   }
   const actuales = plan.temas ?? [];
-  const r = await proponerTemasConsejoCore(user.id, { lunes: plan.weekStart, enfoque: opciones.enfoque, seccion, cantidad: opciones.cantidad, yaTiene: actuales.map((t) => t.texto) });
+  // Las respuestas del consejo a las preguntas de esa sección (temas de interés, audiencia, alcance, fuentes…) orientan la búsqueda.
+  const briefTxt = seccion ? briefParaPrompt(seccion.name, sanearConfig(plan.config).briefs?.[seccion.slug]) : "";
+  const enfoque = [opciones.enfoque?.trim(), briefTxt].filter(Boolean).join("\n") || undefined;
+  const r = await proponerTemasConsejoCore(user.id, { lunes: plan.weekStart, enfoque, seccion, cantidad: opciones.cantidad, yaTiene: actuales.map((t) => t.texto) });
   if (!r.ok) return { ok: false, message: r.error };
   return { ok: true, temas: r.temas, fuentes: r.fuentes, message: `La IA propuso ${r.temas.length} tema(s)${seccion ? ` para ${seccion.name}` : ""}: añade los que quieras.` };
 }
@@ -82,6 +90,7 @@ export async function armarPauta(id: string, enfoque?: string): Promise<Res<{ ca
     lunes: plan.weekStart,
     enfoque,
     temas: plan.temas ?? [],
+    briefs: Object.fromEntries(Object.entries(cfg.briefs ?? {}).map(([slug, b]) => [slug, briefParaPrompt(slug, b)]).filter(([, txt]) => txt)),
     casillas: parrilla.map((c, i) => ({ i, cuando: fmt.format(c.publicaEn), seccion: c.seccion, prioridad: c.prioridad })),
   });
   if (!r.ok) return { ok: false, message: r.error };
@@ -91,7 +100,11 @@ export async function armarPauta(id: string, enfoque?: string): Promise<Res<{ ca
   await db.insert(editorialSlots).values(
     parrilla.map((c, i) => {
       const p = pauta.get(i);
-      return { planId: id, publishAt: c.publicaEn, sectionSlug: c.seccion, topic: p?.tema ?? "", angle: p?.angulo ?? "", brief: p?.encargo ?? "", priority: p?.prioridad ?? c.prioridad, approval: c.aprobacion, ficha: p?.ficha ?? {} };
+      // Lo que el consejo contestó para la sección manda: la extensión elegida y, si el género de la IA no es de los pedidos, uno de los pedidos.
+      const b = cfg.briefs?.[c.seccion];
+      const ficha = { ...(p?.ficha ?? {}), ...(b?.palabras ? { palabras: b.palabras } : {}) };
+      if (b?.generos?.length && (!ficha.genero || !b.generos.includes(ficha.genero))) ficha.genero = b.generos[i % b.generos.length];
+      return { planId: id, publishAt: c.publicaEn, sectionSlug: c.seccion, topic: p?.tema ?? "", angle: p?.angulo ?? "", brief: p?.encargo ?? "", priority: p?.prioridad ?? c.prioridad, approval: c.aprobacion, ficha };
     }),
   );
   rev(id);
@@ -107,11 +120,14 @@ export async function guardarCasilla(slotId: string, d: { topic: string; angle: 
   const cuando = new Date(d.publishAt);
   if (Number.isNaN(cuando.getTime())) return { ok: false, message: "La fecha y hora no son válidas." };
   if (d.approval === "auto" && !(await puedePublicar(user))) return { ok: false, message: "Para dejar una pieza en publicación automática tu cuenta debe poder publicar." };
+  // El escritor de la pieza debe ser uno que esta persona pueda elegir.
+  const fichaLimpia = d.ficha ? sanearFicha(d.ficha) : undefined;
+  if (fichaLimpia?.escritorId && !(await escritoresParaElegir(user)).some((e) => e.id === fichaLimpia.escritorId)) delete fichaLimpia.escritorId;
   await db.update(editorialSlots).set({
     topic: d.topic.trim().slice(0, 160), angle: d.angle.trim().slice(0, 400), brief: d.brief.trim().slice(0, 1200),
     sectionSlug: /^[\w-]{1,80}$/.test(d.sectionSlug) ? d.sectionSlug : c.sectionSlug, publishAt: cuando,
     priority: d.priority === 1 || d.priority === 3 ? d.priority : 2, approval: d.approval === "auto" ? "auto" : "manual",
-    ...(d.ficha ? { ficha: sanearFicha(d.ficha) } : {}),
+    ...(fichaLimpia ? { ficha: fichaLimpia } : {}),
     status: "planificada", error: null, updatedAt: new Date(),
   }).where(eq(editorialSlots.id, slotId));
   rev(c.planId);
@@ -203,4 +219,18 @@ export async function completarFicha(slotId: string, actual: FichaPauta): Promis
   await db.update(editorialSlots).set({ ficha: r.ficha, updatedAt: new Date() }).where(eq(editorialSlots.id, slotId));
   rev(c.planId);
   return { ok: true, ficha: r.ficha, message: "Ficha completada con investigación y fuentes: revísala antes de activar el plan." };
+}
+
+/** Mueve una pieza a otro día u hora (arrastrándola en el calendario). Solo piezas aún sin redactar y a una hora futura. */
+export async function moverCasilla(slotId: string, publishAtIso: string): Promise<Res> {
+  await requirePermiso("articulos");
+  const cuando = new Date(publishAtIso);
+  if (Number.isNaN(cuando.getTime())) return { ok: false, message: "La fecha y hora no son válidas." };
+  if (cuando.getTime() <= Date.now()) return { ok: false, message: "Esa hora ya pasó: elige una hora futura." };
+  const [c] = await db.select({ planId: editorialSlots.planId, status: editorialSlots.status }).from(editorialSlots).where(eq(editorialSlots.id, slotId)).limit(1);
+  if (!c) return { ok: false, message: "La casilla ya no existe." };
+  if (c.status !== "planificada" && c.status !== "fallida") return { ok: false, message: "Esta pieza ya se redactó: cambia su hora desde Artículos." };
+  await db.update(editorialSlots).set({ publishAt: cuando, status: "planificada", error: null, updatedAt: new Date() }).where(eq(editorialSlots.id, slotId));
+  rev(c.planId);
+  return { ok: true, message: "Pieza movida." };
 }

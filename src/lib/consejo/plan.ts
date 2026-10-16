@@ -38,6 +38,10 @@ export type ConfigConsejo = {
   antelacionHoras: number;
   /** Añade al final de cada nota redactada por la IA el aviso de que se elaboró con su asistencia (transparencia con el lector). Por defecto sí. */
   divulgarIA?: boolean;
+  /** Escritor cuyo estilo imita la IA (persona de la redacción o escritor externo; ver src/lib/ai/estilo.ts). Vacío = el de quien activa el plan. */
+  escritorId?: string;
+  /** Respuestas del consejo a las preguntas de cada sección (temas de interés, extensión, tono…), por slug de sección. */
+  briefs?: Record<string, BriefSeccion>;
 };
 
 export const CONFIG_BASE: ConfigConsejo = {
@@ -92,6 +96,8 @@ export function sanearConfig(input: unknown): ConfigConsejo {
     aprobacion: c.aprobacion === "auto" ? "auto" : "manual",
     antelacionHoras: Math.min(48, Math.max(1, Math.round(Number(c.antelacionHoras) || CONFIG_BASE.antelacionHoras))),
     divulgarIA: c.divulgarIA !== false,
+    ...(typeof c.escritorId === "string" && /^[0-9a-f-]{36}$/i.test(c.escritorId) ? { escritorId: c.escritorId } : {}),
+    ...(briefsSaneados(c.briefs) ? { briefs: briefsSaneados(c.briefs) } : {}),
   };
 }
 
@@ -174,6 +180,8 @@ export type FichaPauta = {
   vigencia?: Vigencia;
   /** 13 · Lo que NO debe hacer la nota. */
   evitar?: string[];
+  /** 14 · Quién la escribe: el escritor cuyo estilo imita la IA en ESTA pieza (si falta, el del consejo). */
+  escritorId?: string;
 };
 
 export const FICHA_VACIA: FichaPauta = {};
@@ -238,6 +246,7 @@ export function sanearFicha(input: unknown): FichaPauta {
     genero: (Object.keys(GENEROS) as Genero[]).find((g) => g === f.genero), palabras: typeof f.palabras === "number" && f.palabras >= 150 && f.palabras <= 1500 ? Math.round(f.palabras) : undefined,
     riesgos: lista(f.riesgos, 200, 8), visual: texto(f.visual, 250), palabraClave: texto(f.palabraClave, 80),
     vigencia: (Object.keys(VIGENCIAS) as Vigencia[]).find((v) => v === f.vigencia), evitar: lista(f.evitar, 200, 8),
+    escritorId: typeof f.escritorId === "string" && /^[0-9a-f-]{36}$/i.test(f.escritorId) ? f.escritorId : undefined,
   };
   return Object.fromEntries(Object.entries(out).filter(([, v]) => v !== undefined)) as FichaPauta;
 }
@@ -260,5 +269,96 @@ export function fichaParaPrompt(f: FichaPauta): string {
     f.palabraClave && `PALABRA CLAVE DE ENFOQUE: ${f.palabraClave} (en el título y el primer párrafo, con naturalidad).`,
     f.visual && `IMAGEN/GRÁFICA SUGERIDA: ${f.visual}`,
     l("LO QUE NO DEBE DECIR", f.evitar),
+  ].filter(Boolean).join("\n");
+}
+
+/* -------------------------------------------------------------------------------------------------------------------------------
+ * Preguntas del editor jefe a cada sección: lo que el consejo contesta ANTES de pedirle temas a la IA. Sirven para proponer mejores temas,
+ * armar la pauta y redactar (extensión, tono, qué evitar, fuentes preferidas…).
+ * ------------------------------------------------------------------------------------------------------------------------------- */
+
+export const AUDIENCIAS = ["Productores ganaderos", "Gremios y asociaciones", "Comercializadores e industria", "Público general", "Mixta"] as const;
+export const ALCANCES = ["Colombia", "Una región o departamento", "Internacional", "Colombia e internacional"] as const;
+export const TONOS = ["Informativo y neutral", "Cercano y práctico para el productor", "Técnico y de datos", "Analítico y crítico"] as const;
+export const PALABRAS_OPCIONES = [300, 450, 600, 800, 1000] as const;
+
+export type BriefSeccion = {
+  /** ¿Qué temas o asuntos te interesan esta semana? */
+  temas?: string;
+  audiencia?: (typeof AUDIENCIAS)[number];
+  /** ¿Qué géneros? (noticia, explicativo, análisis…) */
+  generos?: Genero[];
+  /** ¿Cuántas palabras por nota? */
+  palabras?: number;
+  alcance?: (typeof ALCANCES)[number];
+  /** Regiones, departamentos o países de interés. */
+  lugares?: string;
+  tono?: (typeof TONOS)[number];
+  /** ¿Qué debe evitar? */
+  evitar?: string;
+  /** ¿Hay eventos, ferias, decisiones o cifras de la semana que ya conozcas? */
+  agenda?: string;
+  /** ¿Qué fuentes prefieres? */
+  fuentes?: string;
+};
+
+/** Las preguntas, en orden, con su ayuda. `clave` es el campo de BriefSeccion. */
+export const PREGUNTAS_SECCION: { clave: keyof BriefSeccion; pregunta: string; ayuda: string }[] = [
+  { clave: "temas", pregunta: "¿Qué temas o asuntos te interesan esta semana?", ayuda: "Palabras clave, problemas del sector, personas o entidades. Cuanto más concreto, mejores temas." },
+  { clave: "agenda", pregunta: "¿Hay eventos, ferias, decisiones o cifras de la semana que ya conozcas?", ayuda: "Fechas y hechos que la IA no debe perderse (ciclo de vacunación, feria, publicación del DANE…)." },
+  { clave: "audiencia", pregunta: "¿Para quién escribimos?", ayuda: "Cambia el enfoque y el lenguaje de cada nota." },
+  { clave: "generos", pregunta: "¿Qué géneros quieres?", ayuda: "Puedes marcar varios: la IA los reparte entre las notas." },
+  { clave: "palabras", pregunta: "¿Cuántas palabras por nota?", ayuda: "Una noticia breve ronda 300–450; un análisis, 600–1.000." },
+  { clave: "alcance", pregunta: "¿Cuál es el alcance geográfico?", ayuda: "Colombia, una región, el mundo o una mezcla." },
+  { clave: "lugares", pregunta: "¿Regiones, departamentos o países de interés?", ayuda: "Por ejemplo: «Caribe, Meta, Brasil»." },
+  { clave: "tono", pregunta: "¿Qué tono?", ayuda: "Se combina con el estilo del escritor elegido." },
+  { clave: "fuentes", pregunta: "¿Qué fuentes prefieres que se consulten?", ayuda: "Entidades, gremios o medios de confianza (ICA, FEDEGAN, DANE…)." },
+  { clave: "evitar", pregunta: "¿Qué debe evitar la IA?", ayuda: "Enfoques agotados, términos sensibles, temas que ya cubrieron otros." },
+];
+
+const t = (v: unknown, max: number) => (typeof v === "string" ? v.replace(/[\u0000-\u001f<>]/g, " ").replace(/\s+/g, " ").trim().slice(0, max) : undefined) || undefined;
+
+/** Valida las respuestas de una sección. */
+export function sanearBrief(input: unknown): BriefSeccion {
+  const b = (input && typeof input === "object" ? input : {}) as Record<string, unknown>;
+  const out: BriefSeccion = {
+    temas: t(b.temas, 500), agenda: t(b.agenda, 500), lugares: t(b.lugares, 160), evitar: t(b.evitar, 400), fuentes: t(b.fuentes, 200),
+    audiencia: AUDIENCIAS.find((x) => x === b.audiencia), alcance: ALCANCES.find((x) => x === b.alcance), tono: TONOS.find((x) => x === b.tono),
+    palabras: PALABRAS_OPCIONES.find((x) => x === b.palabras),
+    generos: (Array.isArray(b.generos) ? (b.generos as unknown[]) : []).filter((g): g is Genero => (Object.keys(GENEROS) as string[]).includes(String(g))).filter((g, i, a) => a.indexOf(g) === i).slice(0, 6),
+  };
+  if (!out.generos?.length) delete out.generos;
+  return Object.fromEntries(Object.entries(out).filter(([, v]) => v !== undefined)) as BriefSeccion;
+}
+
+function briefsSaneados(input: unknown): Record<string, BriefSeccion> | undefined {
+  if (!input || typeof input !== "object") return undefined;
+  const salida: Record<string, BriefSeccion> = {};
+  for (const [slug, v] of Object.entries(input as Record<string, unknown>).slice(0, 40)) {
+    if (!/^[\w-]{1,80}$/.test(slug)) continue;
+    const b = sanearBrief(v);
+    if (Object.keys(b).length) salida[slug] = b;
+  }
+  return Object.keys(salida).length ? salida : undefined;
+}
+
+/** Cuántas de las preguntas de la sección están respondidas. */
+export const respondidas = (b: BriefSeccion | undefined) => PREGUNTAS_SECCION.filter((q) => { const v = b?.[q.clave]; return Array.isArray(v) ? v.length > 0 : !!v; }).length;
+
+/** Las respuestas convertidas en texto para la IA (vacío si no hay ninguna). */
+export function briefParaPrompt(seccion: string, b: BriefSeccion | undefined): string {
+  if (!b || !respondidas(b)) return "";
+  return [
+    `INDICACIONES DEL CONSEJO PARA LA SECCIÓN «${seccion}» (respétalas):`,
+    b.temas && `- Temas de interés: ${b.temas}`,
+    b.agenda && `- Agenda ya conocida de la semana: ${b.agenda}`,
+    b.audiencia && `- Audiencia: ${b.audiencia}`,
+    b.generos?.length && `- Géneros: ${b.generos.map((g) => GENEROS[g]).join(", ")}`,
+    b.palabras && `- Extensión: unas ${b.palabras} palabras por nota`,
+    b.alcance && `- Alcance: ${b.alcance}${b.lugares ? ` (${b.lugares})` : ""}`,
+    !b.alcance && b.lugares && `- Lugares de interés: ${b.lugares}`,
+    b.tono && `- Tono: ${b.tono}`,
+    b.fuentes && `- Fuentes preferidas: ${b.fuentes}`,
+    b.evitar && `- Evitar: ${b.evitar}`,
   ].filter(Boolean).join("\n");
 }

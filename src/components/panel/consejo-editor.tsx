@@ -4,9 +4,10 @@ import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, Bot, Check, ChevronRight, Clock, Loader2, Plus, Rocket, Sparkles, Trash2, X } from "lucide-react";
-import { activarPlan, aprobar, armarPauta, cambiarEstadoPlan, completarFicha, guardarCasilla, guardarPlan, proponerTemas, quitarCasilla, redactarAhora } from "@/app/panel/(app)/consejo/actions";
+import { activarPlan, aprobar, armarPauta, cambiarEstadoPlan, completarFicha, guardarCasilla, guardarPlan, moverCasilla, proponerTemas, quitarCasilla, redactarAhora } from "@/app/panel/(app)/consejo/actions";
 import { ConsejoBorrar } from "@/components/panel/consejo-borrar";
-import { ESTADOS_CASILLA, GENEROS, PREGUNTAS_FICHA, VIGENCIAS, evaluarFicha, notasPorSemana, sanearConfig, sumarDias, type Aprobacion, type ConfigConsejo, type EstadoCasilla, type EstadoPlan, type FichaPauta, type FuentePrevista, type Genero, type TemaConsejo, type Vigencia } from "@/lib/consejo/plan";
+import { SelectorEscritor, type EscritorOpcion } from "@/components/panel/selector-escritor";
+import { ALCANCES, AUDIENCIAS, ESTADOS_CASILLA, GENEROS, PALABRAS_OPCIONES, PREGUNTAS_SECCION, TONOS, respondidas, PREGUNTAS_FICHA, VIGENCIAS, evaluarFicha, notasPorSemana, sanearConfig, sumarDias, type Aprobacion, type ConfigConsejo, type EstadoCasilla, type BriefSeccion, type EstadoPlan, type FichaPauta, type FuentePrevista, type Genero, type TemaConsejo, type Vigencia } from "@/lib/consejo/plan";
 
 export type CasillaVista = { id: string; publishAt: string; sectionSlug: string; topic: string; angle: string; brief: string; priority: number; approval: Aprobacion; status: EstadoCasilla; articleId: string | null; error: string | null; ficha: FichaPauta };
 type Seccion = { slug: string; name: string };
@@ -52,9 +53,14 @@ function Paso({ n, titulo, ayuda, children }: { n: number; titulo: string; ayuda
  * Consejo de redacción como paso a paso: 1 Semana, 2 Cobertura, 3 Temas, 4 Pauta (calendario con horas) y 5 Poner en marcha. Cada paso
  * es una pantalla; la barra de abajo guarda y avanza. La IA propone temas y arma la pauta; nada sale sin autorización de un editor.
  */
-export function ConsejoEditor({ plan, casillas, secciones, puedePublicar, pasoInicial = 0 }: { plan: { id: string; title: string; weekStart: string; status: EstadoPlan; config: ConfigConsejo; temas: TemaConsejo[] }; casillas: CasillaVista[]; secciones: Seccion[]; puedePublicar: boolean; pasoInicial?: number }) {
+export function ConsejoEditor({ plan, casillas: casillasProp, secciones, puedePublicar, escritores, yoId, pasoInicial = 0 }: { plan: { id: string; title: string; weekStart: string; status: EstadoPlan; config: ConfigConsejo; temas: TemaConsejo[] }; casillas: CasillaVista[]; secciones: Seccion[]; puedePublicar: boolean; escritores: EscritorOpcion[]; yoId: string; pasoInicial?: number }) {
   const router = useRouter();
   const [pend, run] = useTransition();
+  // Arrastrar y soltar en el calendario: `movidas` aplica el cambio al instante (antes de que el servidor responda); `sobre` resalta la celda de destino.
+  const [movidas, setMovidas] = useState<Record<string, string>>({});
+  const [arrastrando, setArrastrando] = useState<string | null>(null);
+  const [sobre, setSobre] = useState<string | null>(null);
+  const casillas = useMemo(() => casillasProp.map((c) => (movidas[c.id] ? { ...c, publishAt: movidas[c.id] } : c)), [casillasProp, movidas]);
   const [paso, setPasoEstado] = useState(Math.min(PASOS.length - 1, Math.max(0, pasoInicial)));
   const [cfg, setCfg] = useState<ConfigConsejo>(plan.config);
   const [titulo, setTitulo] = useState(plan.title);
@@ -64,11 +70,24 @@ export function ConsejoEditor({ plan, casillas, secciones, puedePublicar, pasoIn
   const [propuestas, setPropuestas] = useState<Record<string, TemaConsejo[]>>({});
   const [fuentes, setFuentes] = useState<Record<string, { title: string; url: string }[]>>({});
   const [cargando, setCargando] = useState<string | null>(null);
+  // Panel de preguntas de cada sección: abierto mientras no se haya respondido nada.
+  const [preguntasCerradas, setPreguntasCerradas] = useState<Record<string, boolean>>({});
+  const ponerBrief = (slug: string, cambio: Partial<BriefSeccion>) =>
+    setCfg((c) => {
+      const b = { ...(c.briefs?.[slug] ?? {}), ...cambio } as BriefSeccion;
+      for (const k of Object.keys(b) as (keyof BriefSeccion)[]) { const v = b[k]; if (v === undefined || v === "" || (Array.isArray(v) && !v.length)) delete b[k]; }
+      const briefs = { ...(c.briefs ?? {}) };
+      if (Object.keys(b).length) briefs[slug] = b; else delete briefs[slug];
+      return { ...c, briefs };
+    });
   const [enfoque, setEnfoque] = useState("");
   const [nuevaHora, setNuevaHora] = useState("");
   const [msg, setMsg] = useState<{ ok: boolean; texto: string } | null>(null);
   const [selId, setSelId] = useState<string | null>(null);
   const nombre = (slug: string) => secciones.find((s) => s.slug === slug)?.name ?? slug;
+  // Quién escribe cada pieza: el elegido en su ficha o, si no, el del consejo. `nombreEscritor` solo devuelve algo si la pieza tiene uno propio.
+  const escritorDe = (c: CasillaVista) => c.ficha.escritorId ?? cfg.escritorId ?? "";
+  const nombreEscritor = (id: string) => (escritores.find((e) => e.id === id)?.nombre ?? "").split(" ").slice(0, 2).join(" ");
   const sel = casillas.find((c) => c.id === selId) ?? null;
   const editable = plan.status !== "cerrado";
 
@@ -107,6 +126,21 @@ export function ConsejoEditor({ plan, casillas, secciones, puedePublicar, pasoIn
     if (texto.length < 4) return;
     setTemas((t) => [...t, { id: crypto.randomUUID(), texto, seccion: slug, prioridad: 2, origen: "manual" }]);
     setNuevos((n) => ({ ...n, [slug]: "" }));
+  };
+  // Suelta una pieza en la celda de un día y una hora: se mueve al instante y se guarda; si el servidor la rechaza, vuelve a su sitio.
+  const soltar = (slotId: string, fecha: string, hora: string) => {
+    setSobre(null);
+    setArrastrando(null);
+    const nueva = new Date(`${fecha}T${hora}:00-05:00`).toISOString();
+    const antes = casillas.find((c) => c.id === slotId);
+    if (!antes || antes.publishAt === nueva) return;
+    setMovidas((m) => ({ ...m, [slotId]: nueva }));
+    run(async () => {
+      const r = await moverCasilla(slotId, nueva);
+      setMsg({ ok: r.ok, texto: r.message ?? (r.ok ? "Pieza movida." : "No se pudo mover.") });
+      if (r.ok) router.refresh();
+      else setMovidas((m) => { const x = { ...m }; delete x[slotId]; return x; });
+    });
   };
   // Pide a la IA los temas que faltan de una sección (guarda antes la configuración).
   const traerTemas = async (slug: string, faltan: number): Promise<{ ok: boolean; message?: string }> => {
@@ -189,6 +223,7 @@ export function ConsejoEditor({ plan, casillas, secciones, puedePublicar, pasoIn
               <button type="button" disabled={!editable || !nuevaHora} onClick={() => { setCfg((c) => ({ ...c, horas: [...new Set([...c.horas, nuevaHora])].sort() })); setNuevaHora(""); }} className={secundario}><Plus size={14} /> Añadir hora</button>
             </div>
           </div>
+          <SelectorEscritor valor={cfg.escritorId ?? ""} onChange={(id) => setCfg((c) => ({ ...c, escritorId: id || undefined }))} escritores={escritores} yoId={yoId} deshabilitado={!editable} />
           <label className="flex max-w-md flex-col gap-1 text-sm"><span className="lx-kicker text-[var(--fg-muted)]">La IA redacta cada nota con esta antelación (horas)</span>
             <input type="number" min={1} max={48} value={cfg.antelacionHoras} disabled={!editable} onChange={(e) => setCfg((c) => ({ ...c, antelacionHoras: Number(e.target.value) }))} className={campo} />
             <span className="text-xs text-[var(--fg-muted)]">Así un editor alcanza a revisarla antes de que salga.</span></label>
@@ -256,6 +291,7 @@ export function ConsejoEditor({ plan, casillas, secciones, puedePublicar, pasoIn
                   <span className="text-xs text-[var(--fg-muted)]">{sec.porDia} por día × {cfg.dias.length} días</span>
                 </div>
                 <div className="h-1.5 overflow-hidden rounded-full bg-[var(--surface-2)]" aria-hidden><div className="h-full rounded-full bg-[var(--accent)] transition-all" style={{ width: `${Math.min(100, (sec.propios.length / Math.max(1, sec.necesita)) * 100)}%` }} /></div>
+                <PreguntasSeccion nombre={sec.name} valor={cfg.briefs?.[sec.slug]} onChange={(c) => ponerBrief(sec.slug, c)} editable={editable} abierto={!preguntasCerradas[sec.slug]} onToggle={() => setPreguntasCerradas((p) => ({ ...p, [sec.slug]: !p[sec.slug] }))} />
                 <div className="flex flex-wrap gap-2">
                   <input value={nuevos[sec.slug] ?? ""} disabled={!editable} onChange={(e) => setNuevos((n) => ({ ...n, [sec.slug]: e.target.value }))} onKeyDown={(e) => e.key === "Enter" && agregarTema(sec.slug)} placeholder={`Un tema de ${sec.name}, p. ej. «Vacunación contra la aftosa en el Caribe»`} className={`${campo} min-w-0 flex-1`} />
                   <button type="button" disabled={!editable || (nuevos[sec.slug] ?? "").trim().length < 4} onClick={() => agregarTema(sec.slug)} className={secundario}><Plus size={15} /> Añadir</button>
@@ -323,7 +359,7 @@ export function ConsejoEditor({ plan, casillas, secciones, puedePublicar, pasoIn
         <Paso n={4} titulo="Pauta de la semana" ayuda="Así reparte la IA las notas por día, hora y sección. Toca una pieza para cambiar el tema, la hora o cómo sale.">
           <div className="flex flex-wrap items-center gap-3">
             <button type="button" disabled={pend || !editable} onClick={() => hacer(async () => { await guardar(); return armarPauta(plan.id, enfoque); })} className={secundario}>{pend ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />} {activas.length ? "Rearmar la pauta con IA" : "Armar la pauta con IA"}</button>
-            {activas.length > 0 && <p className="text-xs text-[var(--fg-muted)]">{activas.length} piezas · {activas.filter((c) => c.approval === "auto").length} automáticas · ✋ con aprobación · ⚡ automática</p>}
+            {activas.length > 0 && <p className="text-xs text-[var(--fg-muted)]">{activas.length} piezas · {activas.filter((c) => c.approval === "auto").length} automáticas · ✋ con aprobación · ⚡ automática · <strong>arrastra una pieza a otro día u hora</strong></p>}
           </div>
           {activas.length === 0 ? (
             <p className="rounded-[var(--radius)] border border-dashed border-[var(--border-strong)] p-8 text-center text-sm text-[var(--fg-muted)]">Todavía no hay pauta. Pulsa «Armar la pauta con IA».</p>
@@ -336,11 +372,25 @@ export function ConsejoEditor({ plan, casillas, secciones, puedePublicar, pasoIn
                     {horas.map((h) => (
                       <tr key={h}>
                         <td className="align-top pr-1 pt-2 tabular-nums text-[var(--fg-muted)]">{h}</td>
-                        {fechas.map((f) => (
-                          <td key={f} className="align-top">
-                            {casillas.filter((c) => c.status !== "omitida" && diaDe(c.publishAt) === f && horaDe(c.publishAt) === h).map((c) => <Chip key={c.id} c={c} nombre={nombre(c.sectionSlug)} activa={c.id === selId} onClick={() => setSelId(c.id === selId ? null : c.id)} />)}
-                          </td>
-                        ))}
+                        {fechas.map((f) => {
+                          const clave = `${f}|${h}`;
+                          return (
+                            <td
+                              key={f}
+                              className={`align-top transition ${sobre === clave ? "rounded-[var(--radius)] bg-[var(--accent)]/15 outline outline-2 outline-dashed outline-[var(--accent)]" : ""}`}
+                              onDragOver={(e) => { if (arrastrando) { e.preventDefault(); e.dataTransfer.dropEffect = "move"; if (sobre !== clave) setSobre(clave); } }}
+                              onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setSobre((s) => (s === clave ? null : s)); }}
+                              onDrop={(e) => { e.preventDefault(); const id = e.dataTransfer.getData("text/plain") || arrastrando; if (id) soltar(id, f, h); }}
+                            >
+                              {casillas.filter((c) => c.status !== "omitida" && diaDe(c.publishAt) === f && horaDe(c.publishAt) === h).map((c) => (
+                                <Chip key={c.id} c={c} nombre={nombre(c.sectionSlug)} escritor={c.ficha.escritorId ? nombreEscritor(c.ficha.escritorId) : undefined} activa={c.id === selId} onClick={() => setSelId(c.id === selId ? null : c.id)}
+                                  arrastrable={editable && (c.status === "planificada" || c.status === "fallida")}
+                                  onDragStart={(e) => { e.dataTransfer.setData("text/plain", c.id); e.dataTransfer.effectAllowed = "move"; setArrastrando(c.id); }}
+                                  onDragEnd={() => { setArrastrando(null); setSobre(null); }} />
+                              ))}
+                            </td>
+                          );
+                        })}
                       </tr>
                     ))}
                   </tbody>
@@ -351,13 +401,13 @@ export function ConsejoEditor({ plan, casillas, secciones, puedePublicar, pasoIn
                   const delDia = activas.filter((c) => diaDe(c.publishAt) === f).sort((a, b) => a.publishAt.localeCompare(b.publishAt));
                   return delDia.length ? (
                     <div key={f}><p className="lx-kicker mb-1 text-[var(--fg-muted)]">{nombreDia(f)}</p>
-                      <div className="flex flex-col gap-1">{delDia.map((c) => <Chip key={c.id} c={c} nombre={nombre(c.sectionSlug)} hora activa={c.id === selId} onClick={() => setSelId(c.id === selId ? null : c.id)} />)}</div></div>
+                      <div className="flex flex-col gap-1">{delDia.map((c) => <Chip key={c.id} c={c} nombre={nombre(c.sectionSlug)} escritor={c.ficha.escritorId ? nombreEscritor(c.ficha.escritorId) : undefined} hora activa={c.id === selId} onClick={() => setSelId(c.id === selId ? null : c.id)} />)}</div></div>
                   ) : null;
                 })}
               </div>
             </>
           )}
-          {sel && <PanelCasilla key={sel.id} c={sel} secciones={secciones} puedePublicar={puedePublicar} onClose={() => setSelId(null)} onGuardar={(d) => hacer(() => guardarCasilla(sel.id, d))} onQuitar={() => hacer(() => quitarCasilla(sel.id), () => setSelId(null))} onAprobar={() => hacer(() => aprobar(sel.id))} pend={pend} />}
+          {sel && <PanelCasilla key={sel.id} c={sel} secciones={secciones} puedePublicar={puedePublicar} escritores={escritores} escritorConsejo={cfg.escritorId ?? ""} yoId={yoId} onClose={() => setSelId(null)} onGuardar={(d) => hacer(() => guardarCasilla(sel.id, d))} onQuitar={() => hacer(() => quitarCasilla(sel.id), () => setSelId(null))} onAprobar={() => hacer(() => aprobar(sel.id))} pend={pend} />}
         </Paso>
       )}
 
@@ -387,7 +437,7 @@ export function ConsejoEditor({ plan, casillas, secciones, puedePublicar, pasoIn
                   return (
                     <li key={c.id} className="flex flex-col gap-2 px-4 py-3">
                       <div className="flex flex-wrap items-center gap-3">
-                        <div className="min-w-0 flex-1 basis-64"><p className="text-sm font-semibold">{c.topic || "Sin tema"}</p><p className="text-xs text-[var(--fg-muted)]">{nombre(c.sectionSlug)} · sale {nombreDia(diaDe(c.publishAt))} {horaDe(c.publishAt)}</p></div>
+                        <div className="min-w-0 flex-1 basis-64"><p className="text-sm font-semibold">{c.topic || "Sin tema"}</p><p className="text-xs text-[var(--fg-muted)]">{nombre(c.sectionSlug)} · sale {nombreDia(diaDe(c.publishAt))} {horaDe(c.publishAt)}{escritorDe(c) ? ` · ✍ ${escritores.find((e) => e.id === escritorDe(c))?.nombre ?? ""}` : ""}</p></div>
                         <span className={`rounded-full px-3 py-1 text-xs font-semibold ${ev.lista ? "bg-emerald-600/15 text-emerald-700" : "bg-amber-500/15 text-amber-700"}`}>{ev.lista ? `Lista · ${ev.avance}%` : `Incompleta · ${ev.avance}%`}</span>
                         <button type="button" onClick={() => setSelId(c.id === selId ? null : c.id)} className={secundario}>{c.id === selId ? "Cerrar" : "Abrir la ficha"}</button>
                       </div>
@@ -398,7 +448,7 @@ export function ConsejoEditor({ plan, casillas, secciones, puedePublicar, pasoIn
                   );
                 })}
               </ul>
-              {sel && <PanelCasilla key={sel.id} c={sel} secciones={secciones} puedePublicar={puedePublicar} onClose={() => setSelId(null)} onGuardar={(d) => hacer(() => guardarCasilla(sel.id, d))} onQuitar={() => hacer(() => quitarCasilla(sel.id), () => setSelId(null))} onAprobar={() => hacer(() => aprobar(sel.id))} pend={pend} />}
+              {sel && <PanelCasilla key={sel.id} c={sel} secciones={secciones} puedePublicar={puedePublicar} escritores={escritores} escritorConsejo={cfg.escritorId ?? ""} yoId={yoId} onClose={() => setSelId(null)} onGuardar={(d) => hacer(() => guardarCasilla(sel.id, d))} onQuitar={() => hacer(() => quitarCasilla(sel.id), () => setSelId(null))} onAprobar={() => hacer(() => aprobar(sel.id))} pend={pend} />}
             </>
           )}
         </Paso>
@@ -464,11 +514,12 @@ export function ConsejoEditor({ plan, casillas, secciones, puedePublicar, pasoIn
 }
 
 // Una pieza en el calendario.
-function Chip({ c, nombre, activa, onClick, hora }: { c: CasillaVista; nombre: string; activa: boolean; onClick: () => void; hora?: boolean }) {
+function Chip({ c, nombre, escritor, activa, onClick, hora, arrastrable, onDragStart, onDragEnd }: { c: CasillaVista; nombre: string; escritor?: string; activa: boolean; onClick: () => void; hora?: boolean; arrastrable?: boolean; onDragStart?: (e: React.DragEvent) => void; onDragEnd?: () => void }) {
   return (
-    <button type="button" onClick={onClick} aria-pressed={activa} className={`flex w-full flex-col gap-0.5 rounded-[var(--radius)] border px-2 py-1.5 text-left transition hover:border-[var(--accent)] ${COLOR[c.status]} ${activa ? "ring-2 ring-[var(--accent)]" : ""}`}>
+    <button type="button" onClick={onClick} aria-pressed={activa} draggable={arrastrable} onDragStart={onDragStart} onDragEnd={onDragEnd} title={arrastrable ? "Arrástrala a otro día u hora" : undefined} className={`flex w-full flex-col gap-0.5 rounded-[var(--radius)] border px-2 py-1.5 text-left transition hover:border-[var(--accent)] ${arrastrable ? "cursor-grab active:cursor-grabbing" : ""} ${COLOR[c.status]} ${activa ? "ring-2 ring-[var(--accent)]" : ""}`}>
       <span className="flex items-center justify-between gap-1 text-[0.68rem] font-semibold uppercase tracking-wide text-[var(--fg-muted)]"><span className="truncate">{hora ? `${horaDe(c.publishAt)} · ` : ""}{nombre}</span><span className="shrink-0">{c.approval === "auto" ? "⚡ auto" : "✋"}</span></span>
       <span className="line-clamp-2 text-xs font-medium leading-snug">{c.topic || "Sin tema"}</span>
+      {escritor && <span className="truncate text-[0.68rem] text-[var(--fg-muted)]">✍ {escritor}</span>}
       <span className="flex items-center justify-between gap-1 text-[0.68rem] text-[var(--fg-muted)]"><span>{ESTADOS_CASILLA[c.status]}{c.priority === 1 ? " · prioritaria" : ""}</span>{(c.status === "planificada" || c.status === "fallida") && <span title={evaluarFicha(c.ficha).lista ? "Ficha de pauta lista" : "Falta la ficha de pauta: " + evaluarFicha(c.ficha).faltanObligatorias.join(", ")} className={evaluarFicha(c.ficha).lista ? "text-emerald-600" : "text-amber-600"}>{evaluarFicha(c.ficha).lista ? "✓ ficha" : "⚠ ficha"}</span>}</span>
     </button>
   );
@@ -484,6 +535,43 @@ const textoAFuentes = (t: string): FuentePrevista[] =>
   });
 const lineas = (t: string) => t.split("\n").map((l) => l.trim()).filter(Boolean);
 
+// Una pregunta de la sección: texto, campo y ayuda.
+function Caja({ clave, children }: { clave: keyof BriefSeccion; children: React.ReactNode }) {
+  const q = PREGUNTAS_SECCION.find((p) => p.clave === clave)!;
+  return <label className="flex flex-col gap-1 text-sm"><span className="font-semibold">{q.pregunta}</span>{children}<span className="text-xs text-[var(--fg-muted)]">{q.ayuda}</span></label>;
+}
+
+// Las preguntas del editor jefe a una sección: lo que el consejo contesta antes de pedirle temas a la IA. Fuera del editor para que los campos no pierdan el foco.
+function PreguntasSeccion({ nombre, valor, onChange, editable, abierto, onToggle }: { nombre: string; valor: BriefSeccion | undefined; onChange: (c: Partial<BriefSeccion>) => void; editable: boolean; abierto: boolean; onToggle: () => void }) {
+  const n = respondidas(valor);
+  const sel = "w-full rounded-[var(--radius)] border border-[var(--border-strong)] bg-white px-3 py-2 text-sm text-[#0b0b0b]";
+  return (
+    <div className="rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface-2)]/50">
+      <button type="button" onClick={onToggle} aria-expanded={abierto} className="flex w-full items-center gap-3 px-3 py-2.5 text-left">
+        <Bot size={16} className="shrink-0 text-[var(--accent)]" aria-hidden />
+        <span className="min-w-0 flex-1 text-sm font-semibold">Cuéntale a la IA sobre {nombre}<span className="ml-2 text-xs font-normal text-[var(--fg-muted)]">{n} de {PREGUNTAS_SECCION.length} respondidas · cuantas más, mejores temas y notas</span></span>
+        <ChevronRight size={16} className={`shrink-0 transition-transform ${abierto ? "rotate-90" : ""}`} aria-hidden />
+      </button>
+      {abierto && (
+        <div className="grid gap-4 border-t border-[var(--border)] p-3 sm:grid-cols-2">
+          <div className="sm:col-span-2"><Caja clave="temas"><textarea rows={2} disabled={!editable} value={valor?.temas ?? ""} onChange={(e) => onChange({ temas: e.target.value })} placeholder="Ej.: sequía y pasturas, precio del novillo, ciclo de vacunación contra la aftosa" className={sel} /></Caja></div>
+          <div className="sm:col-span-2"><Caja clave="agenda"><textarea rows={2} disabled={!editable} value={valor?.agenda ?? ""} onChange={(e) => onChange({ agenda: e.target.value })} placeholder="Ej.: Feria de Montería del 15 al 18; el DANE publica el sacrificio el jueves" className={sel} /></Caja></div>
+          <Caja clave="audiencia"><select disabled={!editable} value={valor?.audiencia ?? ""} onChange={(e) => onChange({ audiencia: (e.target.value || undefined) as BriefSeccion["audiencia"] })} className={sel}><option value="">Sin definir</option>{AUDIENCIAS.map((a) => <option key={a} value={a}>{a}</option>)}</select></Caja>
+          <Caja clave="palabras"><select disabled={!editable} value={valor?.palabras ?? ""} onChange={(e) => onChange({ palabras: e.target.value ? Number(e.target.value) : undefined })} className={sel}><option value="">Sin definir</option>{PALABRAS_OPCIONES.map((p) => <option key={p} value={p}>Unas {p} palabras</option>)}</select></Caja>
+          <div className="sm:col-span-2">
+            <Caja clave="generos"><span className="flex flex-wrap gap-1.5">{(Object.keys(GENEROS) as Genero[]).map((g) => { const on = valor?.generos?.includes(g) ?? false; return <button key={g} type="button" disabled={!editable} aria-pressed={on} onClick={() => onChange({ generos: on ? (valor?.generos ?? []).filter((x) => x !== g) : [...(valor?.generos ?? []), g] })} className={`min-h-9 rounded-full border px-3 text-sm font-medium ${on ? "border-transparent bg-[var(--accent)] text-[var(--accent-fg,#fff)]" : "border-[var(--border-strong)] text-[var(--fg-muted)]"}`}>{GENEROS[g]}</button>; })}</span></Caja>
+          </div>
+          <Caja clave="alcance"><select disabled={!editable} value={valor?.alcance ?? ""} onChange={(e) => onChange({ alcance: (e.target.value || undefined) as BriefSeccion["alcance"] })} className={sel}><option value="">Sin definir</option>{ALCANCES.map((a) => <option key={a} value={a}>{a}</option>)}</select></Caja>
+          <Caja clave="lugares"><input disabled={!editable} value={valor?.lugares ?? ""} onChange={(e) => onChange({ lugares: e.target.value })} placeholder="Ej.: Caribe, Meta, Brasil" className={sel} /></Caja>
+          <Caja clave="tono"><select disabled={!editable} value={valor?.tono ?? ""} onChange={(e) => onChange({ tono: (e.target.value || undefined) as BriefSeccion["tono"] })} className={sel}><option value="">Sin definir</option>{TONOS.map((t) => <option key={t} value={t}>{t}</option>)}</select></Caja>
+          <Caja clave="fuentes"><input disabled={!editable} value={valor?.fuentes ?? ""} onChange={(e) => onChange({ fuentes: e.target.value })} placeholder="Ej.: ICA, FEDEGAN, DANE" className={sel} /></Caja>
+          <div className="sm:col-span-2"><Caja clave="evitar"><textarea rows={2} disabled={!editable} value={valor?.evitar ?? ""} onChange={(e) => onChange({ evitar: e.target.value })} placeholder="Ej.: no repetir la sequía de la semana pasada; evitar cifras sin fuente" className={sel} /></Caja></div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Una pregunta de la ficha: etiqueta, campo y ayuda (fuera de PanelCasilla para que el campo no pierda el foco al escribir).
 function Pregunta({ clave, children }: { clave: string; children: React.ReactNode }) {
   const q = PREGUNTAS_FICHA.find((p) => p.clave === clave)!;
@@ -493,7 +581,7 @@ function Pregunta({ clave, children }: { clave: string; children: React.ReactNod
 }
 
 // Edición de una pieza y de su ficha de pauta.
-function PanelCasilla({ c, secciones, puedePublicar, onClose, onGuardar, onQuitar, onAprobar, pend }: { c: CasillaVista; secciones: Seccion[]; puedePublicar: boolean; onClose: () => void; onGuardar: (d: { topic: string; angle: string; brief: string; sectionSlug: string; publishAt: string; priority: number; approval: Aprobacion; ficha: FichaPauta }) => void; onQuitar: () => void; onAprobar: () => void; pend: boolean }) {
+function PanelCasilla({ c, secciones, puedePublicar, escritores, escritorConsejo, yoId, onClose, onGuardar, onQuitar, onAprobar, pend }: { c: CasillaVista; secciones: Seccion[]; puedePublicar: boolean; escritores: EscritorOpcion[]; escritorConsejo: string; yoId: string; onClose: () => void; onGuardar: (d: { topic: string; angle: string; brief: string; sectionSlug: string; publishAt: string; priority: number; approval: Aprobacion; ficha: FichaPauta }) => void; onQuitar: () => void; onAprobar: () => void; pend: boolean }) {
   const [d, setD] = useState({ topic: c.topic, angle: c.angle, brief: c.brief, sectionSlug: c.sectionSlug, fecha: diaDe(c.publishAt), hora: horaDe(c.publishAt), priority: c.priority, approval: c.approval });
   const [f, setF] = useState<FichaPauta>(c.ficha);
   const [fuentesTxt, setFuentesTxt] = useState(fuentesATexto(c.ficha.fuentes));
@@ -517,6 +605,12 @@ function PanelCasilla({ c, secciones, puedePublicar, onClose, onGuardar, onQuita
         <label className="flex flex-col gap-1 text-sm"><span className="font-semibold">Hora</span><input type="time" value={d.hora} disabled={!editable} onChange={(e) => setD({ ...d, hora: e.target.value })} className={campo} /></label>
         <label className="flex flex-col gap-1 text-sm"><span className="font-semibold">Prioridad</span><select value={d.priority} disabled={!editable} onChange={(e) => setD({ ...d, priority: Number(e.target.value) })} className={campo}><option value={1}>Alta</option><option value={2}>Normal</option><option value={3}>De apoyo</option></select></label>
       </div>
+      <label className="flex flex-col gap-1 text-sm"><span className="font-semibold">Editor IA que escribe esta nota</span>
+        <select value={f.escritorId ?? ""} disabled={!editable} onChange={(e) => setF({ ...f, escritorId: e.target.value || undefined })} className={campo}>
+          <option value="">El del consejo ({escritores.find((e) => e.id === (escritorConsejo || yoId))?.nombre ?? "yo"})</option>
+          {[...escritores].sort((a, b) => Number(b.conDiagnostico) - Number(a.conDiagnostico) || a.nombre.localeCompare(b.nombre)).map((e) => <option key={e.id} value={e.id}>{e.nombre}{e.id === yoId ? " (yo)" : ""}{e.tipo === "externo" ? " · externo" : ""}{e.conDiagnostico ? "" : " · sin estilo aprendido"}</option>)}
+        </select>
+        <span className="text-xs text-[var(--fg-muted)]">La IA escribe con el estilo de esa persona (tono, ritmo, vocabulario; nunca sus hechos). Si tiene cuenta en el panel, la nota sale firmada por ella.</span></label>
       <label className="flex flex-col gap-1 text-sm"><span className="font-semibold">Cómo sale</span>
         <select value={d.approval} disabled={!editable} onChange={(e) => setD({ ...d, approval: e.target.value as Aprobacion })} className={campo}>
           <option value="manual">Con aprobación previa de un editor</option>

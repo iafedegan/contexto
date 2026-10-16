@@ -8,7 +8,7 @@ import { requireRole } from "@/lib/auth";
 import { getAiModel } from "@/lib/ai-provider";
 import { registrarUsoIA, verificarCuotaIA } from "@/lib/ai-cuota";
 import { leerEnlacesCore } from "@/lib/ai-core";
-import { borrarEstilo, getEstilo, guardarEstilo } from "@/lib/ai/estilo";
+import { borrarEstilo, crearExterno, esEscritorValido, getEstilo, guardarEstilo, leerExternos, listarEscritores, quitarExterno, type Escritor } from "@/lib/ai/estilo";
 import { ESTILO_LIMITES, aVista, contarPalabras, type EstiloVista, type FuenteEstilo } from "@/lib/ai/estilo-tipos";
 
 /**
@@ -22,16 +22,28 @@ export type EstiloResultado = { ok: boolean; message: string; estado?: EstiloVis
 
 const nueva = (e: Awaited<ReturnType<typeof getEstilo>>, message: string, ok = true): EstiloResultado => ({ ok, message, estado: aVista(e) });
 
+/**
+ * A quién se le enseña: por defecto a la propia persona. Un administrador puede enseñarle (y borrar lo aprendido) a CUALQUIER escritor:
+ * las demás personas de la redacción o un escritor externo registrado. Las demás cuentas solo trabajan con su propio estilo.
+ */
+async function objetivo(user: { id: string; role: string }, escritorId?: string): Promise<string> {
+  if (!escritorId || escritorId === user.id) return user.id;
+  if (user.role !== "administrador") throw new Error("Solo un administrador puede gestionar el estilo de otros escritores.");
+  if (!(await esEscritorValido(escritorId))) throw new Error("Ese escritor ya no existe.");
+  return escritorId;
+}
+
 /** Estado actual de la persona con sesión. */
-export async function estadoEstilo(): Promise<EstiloVista> {
+export async function estadoEstilo(escritorId?: string): Promise<EstiloVista> {
   const user = await requireRole("redactor");
-  return aVista(await getEstilo(user.id));
+  return aVista(await getEstilo(await objetivo(user, escritorId)));
 }
 
 /** Añade notas de la persona por su dirección (una por línea, hasta 5 a la vez). */
-export async function agregarEnlaces(urls: string): Promise<EstiloResultado> {
+export async function agregarEnlaces(urls: string, escritorId?: string): Promise<EstiloResultado> {
   const user = await requireRole("redactor");
-  const e = await getEstilo(user.id);
+  const para = await objetivo(user, escritorId);
+  const e = await getEstilo(para);
   const sitio = ESTILO_LIMITES.muestras - e.fuentes.length;
   if (sitio <= 0) return nueva(e, `Ya tienes ${ESTILO_LIMITES.muestras} muestras: quita alguna para añadir otra.`, false);
   const lista = [...new Set(urls.split(/[\s,]+/).map((x) => x.trim()).filter((x) => /^https?:\/\//i.test(x)))]
@@ -44,49 +56,52 @@ export async function agregarEnlaces(urls: string): Promise<EstiloResultado> {
     const texto = m.text.slice(0, ESTILO_LIMITES.caracteresPorMuestra);
     e.fuentes.push({ id: randomUUID(), tipo: "enlace", titulo: m.title.slice(0, 160), url: m.url, texto, palabras: contarPalabras(texto), en: new Date().toISOString() });
   }
-  await guardarEstilo(user.id, e);
+  await guardarEstilo(para, e);
   revalidatePath("/panel/configuracion");
   const falta = r.fallidos.length ? ` No se pudo leer ${r.fallidos.length}: ${r.fallidos.join(", ")} (puede estar protegido o ser un video).` : "";
   return nueva(e, `Se añadieron ${r.materiales.length} muestra(s).${falta}`);
 }
 
 /** Añade un texto pegado o cargado desde un archivo. */
-export async function agregarTexto(titulo: string, texto: string): Promise<EstiloResultado> {
+export async function agregarTexto(titulo: string, texto: string, escritorId?: string): Promise<EstiloResultado> {
   const user = await requireRole("redactor");
-  const e = await getEstilo(user.id);
+  const para = await objetivo(user, escritorId);
+  const e = await getEstilo(para);
   if (e.fuentes.length >= ESTILO_LIMITES.muestras) return nueva(e, `Ya tienes ${ESTILO_LIMITES.muestras} muestras: quita alguna para añadir otra.`, false);
   const limpio = texto.replace(/<[^>]+>/g, " ").replace(/[ \t]+/g, " ").replace(/\n{3,}/g, "\n\n").trim().slice(0, ESTILO_LIMITES.caracteresPorMuestra);
   if (contarPalabras(limpio) < 120) return nueva(e, "El texto es muy corto: pega una nota completa (mínimo ~120 palabras).", false);
   e.fuentes.push({ id: randomUUID(), tipo: "texto", titulo: (titulo.trim() || "Texto pegado").slice(0, 160), texto: limpio, palabras: contarPalabras(limpio), en: new Date().toISOString() });
-  await guardarEstilo(user.id, e);
+  await guardarEstilo(para, e);
   revalidatePath("/panel/configuracion");
   return nueva(e, "Muestra añadida.");
 }
 
 /** Quita una muestra. */
-export async function quitarFuente(id: string): Promise<EstiloResultado> {
+export async function quitarFuente(id: string, escritorId?: string): Promise<EstiloResultado> {
   const user = await requireRole("redactor");
-  const e = await getEstilo(user.id);
+  const para = await objetivo(user, escritorId);
+  const e = await getEstilo(para);
   e.fuentes = e.fuentes.filter((f: FuenteEstilo) => f.id !== id);
-  await guardarEstilo(user.id, e);
+  await guardarEstilo(para, e);
   revalidatePath("/panel/configuracion");
   return nueva(e, "Muestra quitada.");
 }
 
 /** Enciende o apaga el uso del estilo al redactar con IA (el diagnóstico se conserva). */
-export async function alternarEstilo(activo: boolean): Promise<EstiloResultado> {
+export async function alternarEstilo(activo: boolean, escritorId?: string): Promise<EstiloResultado> {
   const user = await requireRole("redactor");
-  const e = await getEstilo(user.id);
+  const para = await objetivo(user, escritorId);
+  const e = await getEstilo(para);
   e.activo = activo;
-  await guardarEstilo(user.id, e);
+  await guardarEstilo(para, e);
   revalidatePath("/panel/configuracion");
   return nueva(e, activo ? "La IA escribirá con tu estilo." : "La IA dejará de usar tu estilo.");
 }
 
 /** Borra todo: muestras y diagnóstico. */
-export async function borrarMiEstilo(): Promise<EstiloResultado> {
+export async function borrarMiEstilo(escritorId?: string): Promise<EstiloResultado> {
   const user = await requireRole("redactor");
-  await borrarEstilo(user.id);
+  await borrarEstilo(await objetivo(user, escritorId));
   revalidatePath("/panel/configuracion");
   return nueva({ fuentes: [], diagnostico: null, activo: true }, "Se borraron tus muestras y tu diagnóstico.");
 }
@@ -107,9 +122,10 @@ const esquema = z.object({
 });
 
 /** Genera (o regenera) el diagnóstico de estilo con las muestras cargadas. */
-export async function generarDiagnostico(): Promise<EstiloResultado> {
+export async function generarDiagnostico(escritorId?: string): Promise<EstiloResultado> {
   const user = await requireRole("redactor");
-  const e = await getEstilo(user.id);
+  const para = await objetivo(user, escritorId);
+  const e = await getEstilo(para);
   const palabras = e.fuentes.reduce((s, f) => s + f.palabras, 0);
   if (e.fuentes.length < ESTILO_LIMITES.minimoMuestras || palabras < ESTILO_LIMITES.minimoPalabras) {
     return nueva(e, `Para un diagnóstico fiable carga al menos ${ESTILO_LIMITES.minimoMuestras} notas tuyas (y unas ${ESTILO_LIMITES.minimoPalabras.toLocaleString("es-CO")} palabras en total). Tienes ${e.fuentes.length} y ${palabras.toLocaleString("es-CO")} palabras.`, false);
@@ -134,11 +150,41 @@ export async function generarDiagnostico(): Promise<EstiloResultado> {
     await registrarUsoIA(user.id, usage);
     e.diagnostico = { ...object, muestras: e.fuentes.length, palabras, generadoEn: new Date().toISOString() };
     e.activo = true;
-    await guardarEstilo(user.id, e);
+    await guardarEstilo(para, e);
     revalidatePath("/panel/configuracion");
-    return nueva(e, "Diagnóstico listo. Desde ahora la IA escribirá con tu estilo cuando redactes con ella.");
+    return nueva(e, para === user.id ? "Diagnóstico listo. Desde ahora la IA escribirá con tu estilo cuando redactes con ella." : "Diagnóstico listo. La IA podrá escribir con este estilo cuando lo elijas (por ejemplo en el consejo de redacción).");
   } catch (err) {
     console.error("generarDiagnostico:", err);
     return nueva(e, "No se pudo generar el diagnóstico ahora. Inténtalo de nuevo en un momento.", false);
   }
+}
+
+/** Todos los escritores con su resumen (solo administradores: ven a toda la redacción y a los externos). */
+export async function listaEscritores(): Promise<Escritor[]> {
+  const user = await requireRole("redactor");
+  if (user.role !== "administrador") throw new Error("Solo un administrador ve a todos los escritores.");
+  return listarEscritores();
+}
+
+/** Registra un escritor externo (columnista, firma invitada) para enseñarle su estilo a la IA. */
+export async function crearEscritor(nombre: string): Promise<{ ok: boolean; message: string; escritores?: Escritor[]; id?: string }> {
+  const user = await requireRole("redactor");
+  if (user.role !== "administrador") return { ok: false, message: "Solo un administrador puede añadir escritores." };
+  try {
+    const nuevo = await crearExterno(nombre);
+    revalidatePath("/panel/configuracion");
+    return { ok: true, message: `Escritor añadido: ${nuevo.nombre}. Carga sus notas para enseñarle su estilo a la IA.`, escritores: await listarEscritores(), id: nuevo.id };
+  } catch (e) {
+    return { ok: false, message: e instanceof Error ? e.message : "No se pudo añadir." };
+  }
+}
+
+/** Quita un escritor externo y todo lo que se aprendió de él. */
+export async function quitarEscritor(id: string): Promise<{ ok: boolean; message: string; escritores?: Escritor[] }> {
+  const user = await requireRole("redactor");
+  if (user.role !== "administrador") return { ok: false, message: "Solo un administrador puede quitar escritores." };
+  if (!(await leerExternos()).some((x) => x.id === id)) return { ok: false, message: "Solo se pueden quitar los escritores externos." };
+  await quitarExterno(id);
+  revalidatePath("/panel/configuracion");
+  return { ok: true, message: "Escritor quitado.", escritores: await listarEscritores() };
 }

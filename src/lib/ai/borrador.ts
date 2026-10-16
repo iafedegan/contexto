@@ -64,6 +64,8 @@ export async function generateArticleDraftCore(userId: string, input: {
   instrucciones?: string;
   /** Ficha de pauta del consejo de redacción ya convertida en texto (ver fichaParaPrompt): el encargo estructurado. */
   ficha?: string;
+  /** Escritor cuyo estilo se imita (por defecto, el de quien pide el borrador). */
+  estiloDe?: string;
 }): Promise<GenerateResult> {
 
   const tema = input.title.trim();
@@ -92,7 +94,7 @@ export async function generateArticleDraftCore(userId: string, input: {
     const cuotaIA = await verificarCuotaIA(userId);
     if (!cuotaIA.ok) return { ok: false, error: cuotaIA.message };
     // Estilo de escritura de la persona (si lo cargó y lo dejó activo): solo de forma, nunca cambia las reglas de veracidad.
-    const sistema = await sistemaConEstilo(EDITOR_ASSIST_SYSTEM, userId);
+    const sistema = await sistemaConEstilo(EDITOR_ASSIST_SYSTEM, input.estiloDe ?? userId);
     const suficiente = mat.length >= 2500 || encargo.length >= 600;
     const inv = suficiente && refs.length ? null : await investigarTema(userId, tema, encargo, input.section);
     if (!suficiente && !refs.length && !mat && !(inv && inv.sources.length)) {

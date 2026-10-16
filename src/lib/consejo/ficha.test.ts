@@ -34,3 +34,23 @@ test("fichaParaPrompt convierte la ficha en un encargo estructurado", () => {
   assert.match(t, /LO QUE AÚN NO SE SABE/);
   assert.match(t, /ICA \(documento\/dato oficial\) https:\/\/www\.ica\.gov\.co\/x/);
 });
+
+import { briefParaPrompt, respondidas, sanearBrief, sanearConfig, CONFIG_BASE } from "@/lib/consejo/plan";
+
+test("las respuestas del consejo a una sección se validan y se vuelven texto para la IA", () => {
+  const b = sanearBrief({ temas: "sequía y pasturas", palabras: 450, generos: ["noticia", "analisis", "chisme", "noticia"], tono: "Técnico y de datos", audiencia: "nadie", alcance: "Colombia", evitar: "<b>cifras sin fuente</b>" });
+  assert.equal(b.palabras, 450);
+  assert.deepEqual(b.generos, ["noticia", "analisis"]);
+  assert.equal(b.audiencia, undefined);
+  assert.equal(respondidas(b), 6);
+  const t = briefParaPrompt("Ganadería", b);
+  assert.match(t, /SECCIÓN «Ganadería»/);
+  assert.match(t, /unas 450 palabras/);
+  assert.match(t, /Géneros: Noticia, Análisis/);
+  assert.equal(briefParaPrompt("X", {}), "");
+});
+
+test("la configuración conserva las respuestas por sección y descarta las secciones inválidas", () => {
+  const c = sanearConfig({ ...CONFIG_BASE, briefs: { ganaderia: { temas: "aftosa", palabras: 600 }, "mala sección": { temas: "x" }, vacia: {} } });
+  assert.deepEqual(c.briefs, { ganaderia: { temas: "aftosa", palabras: 600 } });
+});

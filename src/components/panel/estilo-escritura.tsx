@@ -21,8 +21,12 @@ const fecha = (iso: string) => new Intl.DateTimeFormat("es-CO", { day: "numeric"
  * le entrega un diagnóstico de su tono y su forma de escribir. Con el diagnóstico activo, la IA redacta con ese estilo cuando
  * ella le pide un borrador.
  */
-export function EstiloEscritura({ inicial }: { inicial: EstiloVista }) {
-  const [estado, setEstado] = useState(inicial);
+export function EstiloEscritura({ inicial, escritorId, nombre, onCambio }: { inicial: EstiloVista; escritorId?: string; nombre?: string; onCambio?: (e: EstiloVista) => void }) {
+  // Con `escritorId` (solo administradores) se le enseña a OTRO escritor; sin él, a la propia persona.
+  const de = nombre ?? "";
+  const ajeno = !!escritorId;
+  const [estado, setEstadoLocal] = useState(inicial);
+  const setEstado = (e: EstiloVista) => { setEstadoLocal(e); onCambio?.(e); };
   const [aviso, setAviso] = useState<{ ok: boolean; texto: string } | null>(null);
   const [enlaces, setEnlaces] = useState("");
   const [titulo, setTitulo] = useState("");
@@ -54,7 +58,7 @@ export function EstiloEscritura({ inicial }: { inicial: EstiloVista }) {
     if (!f) return;
     if (f.size > 2_000_000) return setAviso({ ok: false, texto: "El archivo es muy grande (máximo 2 MB)." });
     const t = await f.text();
-    correr("texto", () => agregarTexto(f.name.replace(/\.[a-z0-9]+$/i, ""), t));
+    correr("texto", () => agregarTexto(f.name.replace(/\.[a-z0-9]+$/i, ""), t, escritorId));
     if (archivo.current) archivo.current.value = "";
   }
 
@@ -66,9 +70,11 @@ export function EstiloEscritura({ inicial }: { inicial: EstiloVista }) {
   return (
     <div className="flex flex-col gap-5">
       <p className="max-w-3xl text-sm leading-relaxed text-[var(--fg-muted)]">
-        Enséñale a la IA cómo escribes. Carga <strong>al menos {ESTILO_LIMITES.minimoMuestras} notas tuyas</strong> (por enlace, pegando el texto o subiendo un archivo) y
-        te entregará un diagnóstico de tu tono y tu forma de escribir. Con el estilo activo, cuando le pidas un borrador, la IA lo redactará como tú, sin cambiar las reglas de
-        veracidad y de fuentes. Solo tú ves tus muestras.
+        {ajeno ? (
+          <>Enséñale a la IA cómo escribe <strong>{de}</strong>. Carga <strong>al menos {ESTILO_LIMITES.minimoMuestras} notas suyas</strong> (por enlace, pegando el texto o subiendo un archivo) y te entregará un diagnóstico de su tono y su forma de escribir. Después podrás elegir a {de} como escritor del consejo de redacción: la IA redactará con su estilo, sin cambiar las reglas de veracidad y de fuentes. Solo los administradores ven estas muestras.</>
+        ) : (
+          <>Enséñale a la IA cómo escribes. Carga <strong>al menos {ESTILO_LIMITES.minimoMuestras} notas tuyas</strong> (por enlace, pegando el texto o subiendo un archivo) y te entregará un diagnóstico de tu tono y tu forma de escribir. Con el estilo activo, cuando le pidas un borrador, la IA lo redactará como tú, sin cambiar las reglas de veracidad y de fuentes. Solo tú ves tus muestras.</>
+        )}
       </p>
 
       <div className="grid gap-5 lg:grid-cols-2">
@@ -76,7 +82,7 @@ export function EstiloEscritura({ inicial }: { inicial: EstiloVista }) {
         <div className="flex flex-col gap-4">
           <div className={caja}>
             <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-              <h3 className="text-sm font-semibold">Tus muestras</h3>
+              <h3 className="text-sm font-semibold">{ajeno ? `Muestras de ${de}` : "Tus muestras"}</h3>
               <span className={`text-xs tabular-nums ${listo ? "font-semibold text-[var(--accent-2)]" : "text-[var(--fg-muted)]"}`}>
                 {estado.fuentes.length} de {ESTILO_LIMITES.muestras} · {nf.format(palabras)} palabras {listo ? "✓" : `(mínimo ${ESTILO_LIMITES.minimoMuestras} notas y ~${nf.format(ESTILO_LIMITES.minimoPalabras)} palabras)`}
               </span>
@@ -96,7 +102,7 @@ export function EstiloEscritura({ inicial }: { inicial: EstiloVista }) {
                       type="button"
                       aria-label={`Quitar ${f.titulo}`}
                       disabled={pendiente}
-                      onClick={() => correr("quitar", () => quitarFuente(f.id))}
+                      onClick={() => correr("quitar", () => quitarFuente(f.id, escritorId))}
                       className="grid size-8 shrink-0 place-items-center rounded-full text-[var(--fg-muted)] transition hover:bg-[var(--surface-2)] hover:text-[var(--danger)]"
                     >
                       <Trash2 size={14} />
@@ -119,7 +125,7 @@ export function EstiloEscritura({ inicial }: { inicial: EstiloVista }) {
             <button
               type="button"
               disabled={pendiente || !enlaces.trim()}
-              onClick={() => correr("enlaces", () => agregarEnlaces(enlaces), (r) => r.ok && setEnlaces(""))}
+              onClick={() => correr("enlaces", () => agregarEnlaces(enlaces, escritorId), (r) => r.ok && setEnlaces(""))}
               className="lx-btn mt-2"
             >
               {haciendo === "enlaces" ? <Loader2 size={15} className="animate-spin" /> : <Link2 size={15} />}
@@ -135,7 +141,7 @@ export function EstiloEscritura({ inicial }: { inicial: EstiloVista }) {
               <button
                 type="button"
                 disabled={pendiente || !texto.trim()}
-                onClick={() => correr("texto", () => agregarTexto(titulo, texto), (r) => { if (r.ok) { setTexto(""); setTitulo(""); } })}
+                onClick={() => correr("texto", () => agregarTexto(titulo, texto, escritorId), (r) => { if (r.ok) { setTexto(""); setTitulo(""); } })}
                 className="lx-btn"
               >
                 {haciendo === "texto" ? <Loader2 size={15} className="animate-spin" /> : <FileText size={15} />}
@@ -155,10 +161,10 @@ export function EstiloEscritura({ inicial }: { inicial: EstiloVista }) {
           <div className={caja}>
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <h3 className="text-sm font-semibold">Diagnóstico de tu estilo</h3>
+                <h3 className="text-sm font-semibold">{ajeno ? `Diagnóstico del estilo de ${de}` : "Diagnóstico de tu estilo"}</h3>
                 <p className="text-xs text-[var(--fg-muted)]">{d ? `Generado el ${fecha(d.generadoEn)} con ${d.muestras} notas y ${nf.format(d.palabras)} palabras.` : "Aún no se ha generado."}</p>
               </div>
-              <button type="button" disabled={pendiente || !listo} onClick={() => correr("diagnostico", generarDiagnostico)} className="lx-btn">
+              <button type="button" disabled={pendiente || !listo} onClick={() => correr("diagnostico", () => generarDiagnostico(escritorId))} className="lx-btn">
                 {haciendo === "diagnostico" ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
                 {haciendo === "diagnostico" ? "Analizando tu estilo…" : d ? "Volver a generar" : "Generar diagnóstico"}
               </button>
@@ -197,12 +203,12 @@ export function EstiloEscritura({ inicial }: { inicial: EstiloVista }) {
                 </div>
               )}
               <div>
-                <p className="text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-[var(--fg-muted)]">Reglas que seguirá la IA al escribir por ti</p>
+                <p className="text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-[var(--fg-muted)]">{ajeno ? `Reglas que seguirá la IA al escribir como ${de}` : "Reglas que seguirá la IA al escribir por ti"}</p>
                 <ol className="mt-1 list-decimal pl-5 text-sm leading-snug">{d.reglas.map((x) => <li key={x}>{x}</li>)}</ol>
               </div>
               <label className="flex cursor-pointer items-center gap-2 border-t border-[var(--border)] pt-3 text-sm font-medium">
-                <input type="checkbox" checked={estado.activo} disabled={pendiente} onChange={(e) => correr("activo", () => alternarEstilo(e.target.checked))} className="size-4 accent-[var(--accent)]" />
-                Usar mi estilo cuando la IA redacte por mí
+                <input type="checkbox" checked={estado.activo} disabled={pendiente} onChange={(e) => correr("activo", () => alternarEstilo(e.target.checked, escritorId))} className="size-4 accent-[var(--accent)]" />
+                {ajeno ? `Usar el estilo de ${de} cuando se elija` : "Usar mi estilo cuando la IA redacte por mí"}
               </label>
             </div>
           )}
@@ -211,7 +217,7 @@ export function EstiloEscritura({ inicial }: { inicial: EstiloVista }) {
             <button
               type="button"
               disabled={pendiente}
-              onClick={() => { if (window.confirm("¿Borrar todas tus muestras y tu diagnóstico?")) correr("borrar", borrarMiEstilo); }}
+              onClick={() => { if (window.confirm(ajeno ? `¿Borrar las muestras y el diagnóstico de ${de}?` : "¿Borrar todas tus muestras y tu diagnóstico?")) correr("borrar", () => borrarMiEstilo(escritorId)); }}
               className="self-start text-xs font-medium text-[var(--fg-muted)] underline-offset-2 transition hover:text-[var(--danger)] hover:underline"
             >
               Borrar mis muestras y mi diagnóstico

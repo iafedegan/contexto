@@ -14,10 +14,11 @@ import { articles, categories, editorialPlans, editorialSlots, users } from "@/d
 import { generateArticleDraftCore } from "@/lib/ai/borrador";
 import { generateCoverImageCore } from "@/lib/ai/portada";
 import { canPublish } from "@/lib/auth";
+import { autorDeUsuario } from "@/lib/user-authors";
 import { tienePermiso } from "@/lib/permisos-server";
 import { enviarARevisionCore, guardarBorradorCore, programarCore, publicarCore } from "@/lib/article-ops";
 import { completarFichaCore } from "@/lib/ai/consejo-ia";
-import { evaluarFicha, fichaParaPrompt, sanearConfig, sanearFicha, tocaRedactar, type EstadoCasilla } from "@/lib/consejo/plan";
+import { briefParaPrompt, evaluarFicha, fichaParaPrompt, sanearConfig, sanearFicha, tocaRedactar, type EstadoCasilla } from "@/lib/consejo/plan";
 
 /** Controles mínimos para que una nota se programe sola: redactada por la IA con fuentes, de longitud suficiente y con título y resumen reales. */
 export function pasaControl(d: { title: string; excerpt: string; body: string }): { ok: boolean; motivo?: string } {
@@ -38,6 +39,11 @@ const poner = (id: string, estado: EstadoCasilla, extra: Partial<typeof editoria
 /** Redacta una casilla ya reclamada (estado «redactando») y la deja en revisión o programada. */
 async function redactar(c: Casilla, plan: Plan): Promise<void> {
   const inicio = Date.now();
+  const cfgPlan = sanearConfig(plan.config);
+  // La nota sale firmada por el escritor elegido cuando es una persona del panel (un escritor externo no tiene cuenta: firma quien activó el plan).
+  // Quién escribe: el elegido para ESTA pieza (en su ficha) o, si no, el del consejo.
+  const escritorId = sanearFicha(c.ficha).escritorId ?? cfgPlan.escritorId;
+  const autorId = escritorId ? await autorDeUsuario(escritorId).catch(() => null) : null;
   const userId = plan.activatedBy ?? plan.createdBy;
   if (!userId) return void (await poner(c.id, "fallida", { error: "El plan no tiene una persona responsable." }));
   const [cat] = await db.select({ id: categories.id, name: categories.name }).from(categories).where(eq(categories.slug, c.sectionSlug)).limit(1);
@@ -62,9 +68,10 @@ async function redactar(c: Casilla, plan: Plan): Promise<void> {
     title: c.topic,
     prompt: encargo.length >= 20 ? encargo : `${c.topic}. ${encargo}`.slice(0, 600).padEnd(20, "."),
     ficha: fichaParaPrompt(ficha),
+    estiloDe: escritorId,
     references: referencias.length ? referencias : undefined,
     section: cat?.name,
-    instrucciones: `Es una pieza del plan semanal del consejo de redacción (prioridad ${c.priority === 1 ? "alta" : c.priority === 3 ? "de apoyo" : "normal"}). Respeta el enfoque indicado.`,
+    instrucciones: [`Es una pieza del plan semanal del consejo de redacción (prioridad ${c.priority === 1 ? "alta" : c.priority === 3 ? "de apoyo" : "normal"}). Respeta el enfoque indicado.`, briefParaPrompt(cat?.name ?? c.sectionSlug, cfgPlan.briefs?.[c.sectionSlug])].filter(Boolean).join("\n"),
   });
   if (!r.ok) return void (await poner(c.id, "fallida", { error: r.error.slice(0, 400) }));
   if (r.mode !== "ia") return void (await poner(c.id, "fallida", { error: "No hay modelo de IA conectado: no se redacta (sería inventar)." }));
@@ -83,6 +90,7 @@ async function redactar(c: Casilla, plan: Plan): Promise<void> {
     categoryId: cat?.id ?? null,
     metaTitle: d.metaTitle,
     metaDescription: d.metaDescription,
+    authorId: autorId,
     coverImageUrl: img?.ok ? img.url : null,
     coverImageAlt: img?.ok ? img.alt : null,
   });

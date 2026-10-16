@@ -24,6 +24,8 @@ import { ConfigTabs } from "@/components/panel/config-tabs";
 import { getAnalyticsStatus } from "@/lib/analytics-server";
 import { saveAnalyticsSettings, saveSiteIdentity } from "./actions";
 import { estadoEstilo } from "./estilo-actions";
+import { listarEscritores } from "@/lib/ai/estilo";
+import { EstilosEscritores } from "@/components/panel/estilos-escritores";
 import { EstiloEscritura } from "@/components/panel/estilo-escritura";
 
 // Se calcula en cada petición, nunca durante la compilación.
@@ -89,7 +91,7 @@ export default async function ConfiguracionPage() {
           // La identidad del sitio es solo de administradores: a las demás personas ni se les muestra.
           ...(isAdmin ? [{ id: "sitio", label: "Identidad del sitio", icon: <Globe size={13} /> }] : []),
           { id: "usuarios", label: isAdmin ? "Personas y roles" : "Mis datos", icon: <Users size={13} /> },
-          { id: "estilo", label: "Mi estilo de escritura", icon: <PenLine size={13} /> },
+          { id: "estilo", label: isAdmin ? "Estilos de escritura" : "Mi estilo de escritura", icon: <PenLine size={13} /> },
           { id: "seguridad", label: "Seguridad de mi cuenta", icon: <ShieldCheck size={13} /> },
           ...(isAdmin
             ? [
@@ -171,8 +173,8 @@ export default async function ConfiguracionPage() {
         </Section>
       )}
 
-      <Section id="estilo" icon={<PenLine size={14} />} title="Mi estilo de escritura" hint="La IA aprende cómo escribes">
-        <EstiloEscritura inicial={miEstilo} />
+      <Section id="estilo" icon={<PenLine size={14} />} title={isAdmin ? "Estilos de escritura" : "Mi estilo de escritura"} hint={isAdmin ? "La IA aprende cómo escribe cada escritor" : "La IA aprende cómo escribes"}>
+        {isAdmin ? <EstilosEscritores escritores={await listarEscritores()} miId={session!.user.id} miEstilo={miEstilo} /> : <EstiloEscritura inicial={miEstilo} />}
       </Section>
 
       {/* ---------------------------------------------------------- Personas */}
