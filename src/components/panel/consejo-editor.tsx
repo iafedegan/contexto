@@ -58,6 +58,9 @@ export function ConsejoEditor({ plan, casillas, secciones, puedePublicar, pasoIn
   const [titulo, setTitulo] = useState(plan.title);
   const [temas, setTemas] = useState<TemaConsejo[]>(plan.temas);
   const [nuevoTema, setNuevoTema] = useState("");
+  // Temas que la IA sugiere y que todavía no están en el plan: se añaden con su botón.
+  const [propuestas, setPropuestas] = useState<TemaConsejo[]>([]);
+  const [fuentes, setFuentes] = useState<{ title: string; url: string }[]>([]);
   const [enfoque, setEnfoque] = useState("");
   const [nuevaHora, setNuevaHora] = useState("");
   const [msg, setMsg] = useState<{ ok: boolean; texto: string } | null>(null);
@@ -205,9 +208,34 @@ export function ConsejoEditor({ plan, casillas, secciones, puedePublicar, pasoIn
             <p className="flex items-center gap-2 text-sm font-semibold"><Sparkles size={16} className="text-[var(--accent)]" /> Que la IA proponga temas</p>
             <div className="flex flex-wrap items-center gap-2">
               <input value={enfoque} disabled={!editable} onChange={(e) => setEnfoque(e.target.value)} placeholder="Enfoque opcional (p. ej. «más sanidad animal y exportaciones»)" className={`${campo} min-w-0 flex-1`} />
-              <button type="button" disabled={pend || !editable} onClick={() => hacer(async () => { await guardar(); const r = await proponerTemas(plan.id, enfoque); if (r.ok) setTemas(r.temas); return r; })} className={primario}>{pend ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />} Proponer temas</button>
+              <button type="button" disabled={pend || !editable} onClick={() => hacer(async () => { await guardar(); const r = await proponerTemas(plan.id, enfoque); if (r.ok) { setPropuestas(r.temas); setFuentes(r.fuentes); } return r; })} className={primario}>{pend ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />} Proponer temas</button>
             </div>
           </div>
+          {propuestas.length > 0 && (
+            <div className="flex flex-col gap-3 rounded-[var(--radius-lg)] border border-[var(--accent)] bg-[var(--accent)]/5 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="flex items-center gap-2 text-sm font-semibold"><Bot size={16} className="text-[var(--accent)]" /> La IA propone ({propuestas.length})</p>
+                <div className="flex gap-2">
+                  <button type="button" onClick={() => { setTemas((t) => [...t, ...propuestas].slice(0, 60)); setPropuestas([]); }} className={primario}><Plus size={15} /> Añadir todos</button>
+                  <button type="button" onClick={() => setPropuestas([])} className={secundario}>Descartar</button>
+                </div>
+              </div>
+              <ul className="flex flex-col divide-y divide-[var(--border)]">
+                {propuestas.map((t) => (
+                  <li key={t.id} className="flex flex-wrap items-center gap-3 py-2.5">
+                    <div className="min-w-0 flex-1 basis-64"><p className="text-sm font-semibold">{t.texto}</p>{t.angulo && <p className="text-xs text-[var(--fg-muted)]">{t.angulo}</p>}</div>
+                    <button type="button" onClick={() => { setTemas((l) => [...l, t].slice(0, 60)); setPropuestas((l) => l.filter((x) => x.id !== t.id)); }} className={primario}><Plus size={15} /> Añadir tema</button>
+                    <button type="button" aria-label="Descartar esta propuesta" onClick={() => setPropuestas((l) => l.filter((x) => x.id !== t.id))} className="grid size-10 place-items-center rounded-full hover:bg-[var(--surface-2)]"><X size={15} /></button>
+                  </li>
+                ))}
+              </ul>
+              {fuentes.length > 0 && (
+                <details className="text-xs text-[var(--fg-muted)]"><summary className="cursor-pointer font-medium">Fuentes consultadas ({fuentes.length})</summary>
+                  <ul className="mt-1 list-disc pl-5">{fuentes.map((f) => <li key={f.url}><a href={f.url} target="_blank" rel="noopener noreferrer" className="underline">{f.title}</a></li>)}</ul></details>
+              )}
+            </div>
+          )}
+          {temas.length > 0 && <h3 className="lx-display text-lg font-semibold">Temas del consejo ({temas.length})</h3>}
           {temas.length > 0 ? (
             <ul className="flex flex-col divide-y divide-[var(--border)] rounded-[var(--radius)] border border-[var(--border)]">
               {temas.map((t) => (
@@ -225,7 +253,7 @@ export function ConsejoEditor({ plan, casillas, secciones, puedePublicar, pasoIn
                 </li>
               ))}
             </ul>
-          ) : <p className="text-sm text-[var(--fg-muted)]">Aún no hay temas. Puedes seguir: «Armar la pauta con IA» los propone por ti.</p>}
+          ) : <p className="text-sm text-[var(--fg-muted)]">Todavía no has añadido temas. Puedes seguir sin ellos: «Armar la pauta con IA» los propone por ti.</p>}
         </Paso>
       )}
 

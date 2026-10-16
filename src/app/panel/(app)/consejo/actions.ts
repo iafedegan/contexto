@@ -58,12 +58,10 @@ export async function proponerTemas(id: string, enfoque?: string): Promise<Res<{
   if (!plan) return { ok: false, message: "El plan ya no existe." };
   const r = await proponerTemasConsejoCore(user.id, { lunes: plan.weekStart, enfoque });
   if (!r.ok) return { ok: false, message: r.error };
+  // Son SUGERENCIAS: no entran al plan hasta que quien lo planea las añada (una a una o todas).
   const actuales = plan.temas ?? [];
   const nuevos = r.temas.filter((t) => !actuales.some((a) => a.texto.toLowerCase() === t.texto.toLowerCase()));
-  const temas = [...actuales, ...nuevos].slice(0, 60);
-  await db.update(editorialPlans).set({ temas, updatedAt: new Date() }).where(eq(editorialPlans.id, id));
-  rev(id);
-  return { ok: true, temas, fuentes: r.fuentes, message: `La IA propuso ${nuevos.length} tema(s).` };
+  return { ok: true, temas: nuevos, fuentes: r.fuentes, message: nuevos.length ? `La IA propuso ${nuevos.length} tema(s): añade los que quieras.` : "La IA no tiene temas nuevos que no estén ya en tu lista." };
 }
 
 /** Arma la pauta: construye la parrilla con las cuotas y la IA llena el tema, enfoque y encargo de cada casilla. Reemplaza las casillas aún sin redactar. */
