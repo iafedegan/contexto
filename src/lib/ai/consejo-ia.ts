@@ -29,15 +29,37 @@ const esquemaPauta = z.object({
 export type CasillaParaIa = { i: number; cuando: string; seccion: string; prioridad: number };
 export type PautaCasilla = { i: number; tema: string; angulo: string; encargo: string; prioridad: 1 | 2 | 3 };
 
-/** Temas candidatos para la semana, con búsqueda en la web y fuentes (Gemini). */
-export async function proponerTemasConsejoCore(userId: string, input: { lunes: string; enfoque?: string }): Promise<{ ok: true; temas: TemaConsejo[]; fuentes: { title: string; url: string }[] } | { ok: false; error: string }> {
+/**
+ * Temas candidatos para una sección de la semana, con búsqueda en la web y fuentes (Gemini). Trae hasta `cantidad` temas distintos
+ * (cada búsqueda da de 5 a 8, así que si hacen falta más se repite una vez pidiendo otros). Cada tema queda en esa sección.
+ */
+export async function proponerTemasConsejoCore(
+  userId: string,
+  input: { lunes: string; enfoque?: string; seccion?: { slug: string; name: string }; cantidad?: number; yaTiene?: string[] },
+): Promise<{ ok: true; temas: TemaConsejo[]; fuentes: { title: string; url: string }[] } | { ok: false; error: string }> {
   const domingo = sumarDias(input.lunes, 6);
-  const r = await suggestTopicIdeasCore(userId, {
-    focus: `Agenda y temas para la semana del ${input.lunes} al ${domingo}: eventos, ferias, publicaciones de cifras (DANE, FEDEGAN, ICA), decisiones de política, clima y mercados que se esperan.${input.enfoque?.trim() ? ` ${input.enfoque.trim()}` : ""}`,
-  });
-  if (!r.ok) return r;
-  const temas: TemaConsejo[] = r.ideas.map((i) => ({ id: randomUUID(), texto: i.title, prioridad: 2, origen: "ia", angulo: i.angle }));
-  return { ok: true, temas, fuentes: r.sources };
+  const quiere = Math.min(20, Math.max(1, input.cantidad ?? 6));
+  const visto = new Set((input.yaTiene ?? []).map((t) => t.toLowerCase()));
+  const temas: TemaConsejo[] = [];
+  const fuentes: { title: string; url: string }[] = [];
+  let ultimoError = "";
+  for (let intento = 0; intento < 2 && temas.length < quiere; intento++) {
+    const otros = [...visto].slice(0, 12).map((t) => `«${t}»`).join(", ");
+    const r = await suggestTopicIdeasCore(userId, {
+      section: input.seccion?.name,
+      focus: `Agenda y temas para la semana del ${input.lunes} al ${domingo}${input.seccion ? ` en la sección «${input.seccion.name}»` : ""}: eventos, ferias, publicaciones de cifras (DANE, FEDEGAN, ICA), decisiones de política, clima y mercados que se esperan.${input.enfoque?.trim() ? ` ${input.enfoque.trim()}` : ""}${otros ? ` NO repitas estos temas ya elegidos: ${otros}.` : ""}`,
+    });
+    if (!r.ok) { ultimoError = r.error; break; }
+    for (const i of r.ideas) {
+      const k = i.title.toLowerCase();
+      if (visto.has(k) || temas.length >= quiere) continue;
+      visto.add(k);
+      temas.push({ id: randomUUID(), texto: i.title, seccion: input.seccion?.slug, prioridad: 2, origen: "ia", angulo: i.angle });
+    }
+    for (const f of r.sources) if (!fuentes.some((x) => x.url === f.url)) fuentes.push(f);
+  }
+  if (!temas.length) return { ok: false, error: ultimoError || "La IA no encontró temas nuevos para esa sección." };
+  return { ok: true, temas, fuentes };
 }
 
 /** El editor jefe reparte los temas en las casillas de la semana. Devuelve la pauta de cada casilla que logró llenar. */

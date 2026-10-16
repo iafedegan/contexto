@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
-import { editorialPlans, editorialSlots } from "@/db/schema";
+import { categories, editorialPlans, editorialSlots } from "@/db/schema";
 import { canPublish, requirePermiso } from "@/lib/auth";
 import { tienePermiso } from "@/lib/permisos-server";
 import { armarPautaCore, proponerTemasConsejoCore } from "@/lib/ai/consejo-ia";
@@ -51,17 +51,21 @@ export async function guardarPlan(id: string, input: { titulo?: string; config: 
   return { ok: true };
 }
 
-/** La IA propone temas de la semana (con búsqueda y fuentes) y los suma a la lista del plan. */
-export async function proponerTemas(id: string, enfoque?: string): Promise<Res<{ temas: TemaConsejo[]; fuentes: { title: string; url: string }[] }>> {
+/** La IA propone los temas de UNA sección (hasta `cantidad`, con búsqueda y fuentes). Son sugerencias: no entran al plan hasta que se añadan. */
+export async function proponerTemas(id: string, opciones: { seccion?: string; cantidad?: number; enfoque?: string } = {}): Promise<Res<{ temas: TemaConsejo[]; fuentes: { title: string; url: string }[] }>> {
   const user = await requirePermiso("articulos");
   const [plan] = await db.select().from(editorialPlans).where(eq(editorialPlans.id, id)).limit(1);
   if (!plan) return { ok: false, message: "El plan ya no existe." };
-  const r = await proponerTemasConsejoCore(user.id, { lunes: plan.weekStart, enfoque });
-  if (!r.ok) return { ok: false, message: r.error };
-  // Son SUGERENCIAS: no entran al plan hasta que quien lo planea las añada (una a una o todas).
+  let seccion: { slug: string; name: string } | undefined;
+  if (opciones.seccion) {
+    const [c] = await db.select({ slug: categories.slug, name: categories.name }).from(categories).where(eq(categories.slug, opciones.seccion)).limit(1);
+    if (!c) return { ok: false, message: "Esa sección ya no existe." };
+    seccion = c;
+  }
   const actuales = plan.temas ?? [];
-  const nuevos = r.temas.filter((t) => !actuales.some((a) => a.texto.toLowerCase() === t.texto.toLowerCase()));
-  return { ok: true, temas: nuevos, fuentes: r.fuentes, message: nuevos.length ? `La IA propuso ${nuevos.length} tema(s): añade los que quieras.` : "La IA no tiene temas nuevos que no estén ya en tu lista." };
+  const r = await proponerTemasConsejoCore(user.id, { lunes: plan.weekStart, enfoque: opciones.enfoque, seccion, cantidad: opciones.cantidad, yaTiene: actuales.map((t) => t.texto) });
+  if (!r.ok) return { ok: false, message: r.error };
+  return { ok: true, temas: r.temas, fuentes: r.fuentes, message: `La IA propuso ${r.temas.length} tema(s)${seccion ? ` para ${seccion.name}` : ""}: añade los que quieras.` };
 }
 
 /** Arma la pauta: construye la parrilla con las cuotas y la IA llena el tema, enfoque y encargo de cada casilla. Reemplaza las casillas aún sin redactar. */

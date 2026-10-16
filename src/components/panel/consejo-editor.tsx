@@ -57,10 +57,11 @@ export function ConsejoEditor({ plan, casillas, secciones, puedePublicar, pasoIn
   const [cfg, setCfg] = useState<ConfigConsejo>(plan.config);
   const [titulo, setTitulo] = useState(plan.title);
   const [temas, setTemas] = useState<TemaConsejo[]>(plan.temas);
-  const [nuevoTema, setNuevoTema] = useState("");
-  // Temas que la IA sugiere y que todavía no están en el plan: se añaden con su botón.
-  const [propuestas, setPropuestas] = useState<TemaConsejo[]>([]);
-  const [fuentes, setFuentes] = useState<{ title: string; url: string }[]>([]);
+  // Un campo de «nuevo tema» por sección, y las sugerencias de la IA por sección (todavía no están en el plan: se añaden con su botón).
+  const [nuevos, setNuevos] = useState<Record<string, string>>({});
+  const [propuestas, setPropuestas] = useState<Record<string, TemaConsejo[]>>({});
+  const [fuentes, setFuentes] = useState<Record<string, { title: string; url: string }[]>>({});
+  const [cargando, setCargando] = useState<string | null>(null);
   const [enfoque, setEnfoque] = useState("");
   const [nuevaHora, setNuevaHora] = useState("");
   const [msg, setMsg] = useState<{ ok: boolean; texto: string } | null>(null);
@@ -93,7 +94,28 @@ export function ConsejoEditor({ plan, casillas, secciones, puedePublicar, pasoIn
   const cuota = (slug: string) => cfg.cuotas.find((q) => q.seccion === slug);
   const ponerCuota = (slug: string, porDia: number, aprobacion?: Aprobacion) =>
     setCfg((c) => ({ ...c, cuotas: [...c.cuotas.filter((q) => q.seccion !== slug), ...(porDia > 0 ? [{ seccion: slug, porDia, ...(aprobacion ? { aprobacion } : {}) }] : [])] }));
-  const agregarTema = () => { if (nuevoTema.trim().length >= 4) { setTemas((t) => [...t, { id: crypto.randomUUID(), texto: nuevoTema.trim(), prioridad: 2, origen: "manual" }]); setNuevoTema(""); } };
+  // Secciones elegidas en el paso 2, con cuántos temas hacen falta (notas por día × días de la semana) y cuántos hay.
+  const porSeccion = cfg.cuotas.map((q) => {
+    const propios = temas.filter((t) => t.seccion === q.seccion);
+    return { slug: q.seccion, name: nombre(q.seccion), porDia: q.porDia, necesita: q.porDia * cfg.dias.length, propios };
+  });
+  const otrosTemas = temas.filter((t) => !t.seccion || !cfg.cuotas.some((q) => q.seccion === t.seccion));
+  const agregarTema = (slug: string) => {
+    const texto = (nuevos[slug] ?? "").trim();
+    if (texto.length < 4) return;
+    setTemas((t) => [...t, { id: crypto.randomUUID(), texto, seccion: slug, prioridad: 2, origen: "manual" }]);
+    setNuevos((n) => ({ ...n, [slug]: "" }));
+  };
+  // Pide a la IA los temas que faltan de una sección (guarda antes la configuración).
+  const traerTemas = async (slug: string, faltan: number): Promise<{ ok: boolean; message?: string }> => {
+    setCargando(slug);
+    try {
+      await guardar();
+      const r = await proponerTemas(plan.id, { seccion: slug, cantidad: Math.max(1, faltan), enfoque });
+      if (r.ok) { setPropuestas((p) => ({ ...p, [slug]: r.temas })); setFuentes((f) => ({ ...f, [slug]: r.fuentes })); }
+      return r;
+    } finally { setCargando(null); }
+  };
 
   // ¿Qué pasos ya están listos? (el ✓ de la barra)
   const listo = [cfg.dias.length > 0 && cfg.horas.length > 0, cfg.cuotas.length > 0, temas.length > 0, activas.length > 0, plan.status === "activo"];
@@ -111,17 +133,19 @@ export function ConsejoEditor({ plan, casillas, secciones, puedePublicar, pasoIn
 
   return (
     <div className="flex flex-col gap-5 pb-28">
+      {/* Cabecera y barra de pasos fijas: no se mueven al desplazar, solo el contenido del paso. */}
+      <div className="sticky top-[3.9rem] z-30 -mx-4 flex flex-col gap-3 border-b border-[var(--border)] bg-[var(--bg)]/95 px-4 pb-3 pt-3 backdrop-blur sm:-mx-6 sm:px-6 lg:top-0">
       <div>
-        <Link href="/panel/consejo" className="mb-3 inline-flex items-center gap-1.5 text-sm text-[var(--fg-muted)] hover:text-[var(--accent)]"><ArrowLeft size={15} /> Consejos de redacción</Link>
+        <Link href="/panel/consejo" className="mb-1 inline-flex items-center gap-1.5 text-sm text-[var(--fg-muted)] hover:text-[var(--accent)]"><ArrowLeft size={15} /> Consejos de redacción</Link>
         <div className="flex flex-wrap items-center gap-3">
-          <input value={titulo} onChange={(e) => setTitulo(e.target.value)} disabled={!editable} aria-label="Nombre del consejo" className="lx-display min-w-0 flex-1 bg-transparent text-2xl font-semibold tracking-tight outline-none focus:underline sm:text-3xl" />
+          <input value={titulo} onChange={(e) => setTitulo(e.target.value)} disabled={!editable} aria-label="Nombre del consejo" className="lx-display min-w-0 flex-1 bg-transparent text-xl font-semibold tracking-tight outline-none focus:underline sm:text-2xl" />
           <span className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-wide ${plan.status === "activo" ? "border-emerald-600 text-emerald-600" : "border-[var(--border-strong)] text-[var(--fg-muted)]"}`}>{plan.status === "activo" ? "Activo" : plan.status === "cerrado" ? "Cerrado" : "Borrador"}</span>
         </div>
         <p className="mt-1 text-sm text-[var(--fg-muted)]">Semana del {nombreDia(plan.weekStart)} al {nombreDia(sumarDias(plan.weekStart, 6))}.</p>
       </div>
 
       {/* Barra de pasos */}
-      <nav aria-label="Pasos del consejo" className="lx-card overflow-x-auto p-3">
+      <nav aria-label="Pasos del consejo" className="overflow-x-auto rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-2">
         <ol className="flex min-w-max items-center gap-1 sm:min-w-0 sm:justify-between">
           {PASOS.map((p, i) => (
             <li key={p.titulo} className="flex items-center gap-1 sm:flex-1">
@@ -134,6 +158,7 @@ export function ConsejoEditor({ plan, casillas, secciones, puedePublicar, pasoIn
           ))}
         </ol>
       </nav>
+      </div>
 
       {msg && <p role="status" className={`rounded-[var(--radius)] border px-4 py-2.5 text-sm ${msg.ok ? "border-emerald-600/50 bg-emerald-600/10" : "border-red-600/50 bg-red-600/10"}`}>{msg.texto}</p>}
 
@@ -199,61 +224,94 @@ export function ConsejoEditor({ plan, casillas, secciones, puedePublicar, pasoIn
       )}
 
       {paso === 2 && (
-        <Paso n={3} titulo="Temas del consejo" ayuda="Escribe los temas que quieres cubrir o deja que la IA busque la agenda del sector (con fuentes). Es opcional: si no pones ninguno, la IA completa la pauta sola.">
-          <div className="flex flex-wrap gap-2">
-            <input value={nuevoTema} disabled={!editable} onChange={(e) => setNuevoTema(e.target.value)} onKeyDown={(e) => e.key === "Enter" && agregarTema()} placeholder="Un tema, p. ej. «Vacunación contra la aftosa en el Caribe»" className={`${campo} min-w-0 flex-1`} />
-            <button type="button" disabled={!editable || nuevoTema.trim().length < 4} onClick={agregarTema} className={secundario}><Plus size={15} /> Añadir</button>
-          </div>
-          <div className="flex flex-col gap-2 rounded-[var(--radius-lg)] border border-dashed border-[var(--border-strong)] p-4">
-            <p className="flex items-center gap-2 text-sm font-semibold"><Sparkles size={16} className="text-[var(--accent)]" /> Que la IA proponga temas</p>
-            <div className="flex flex-wrap items-center gap-2">
-              <input value={enfoque} disabled={!editable} onChange={(e) => setEnfoque(e.target.value)} placeholder="Enfoque opcional (p. ej. «más sanidad animal y exportaciones»)" className={`${campo} min-w-0 flex-1`} />
-              <button type="button" disabled={pend || !editable} onClick={() => hacer(async () => { await guardar(); const r = await proponerTemas(plan.id, enfoque); if (r.ok) { setPropuestas(r.temas); setFuentes(r.fuentes); } return r; })} className={primario}>{pend ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />} Proponer temas</button>
+        <Paso n={3} titulo="Temas por sección" ayuda="Para cada sección que elegiste, escribe los temas que quieres cubrir o pídele a la IA que los traiga (con fuentes). Cada sección necesita tantos temas como notas tendrá en la semana. Es opcional: lo que falte, la IA lo completa al armar la pauta.">
+          {porSeccion.length === 0 && <p className="rounded-[var(--radius)] border border-dashed border-[var(--border-strong)] p-6 text-center text-sm text-[var(--fg-muted)]">Primero elige las secciones en el paso 2 (Cobertura).</p>}
+          {porSeccion.length > 0 && (
+            <div className="flex flex-col gap-2 rounded-[var(--radius-lg)] border border-dashed border-[var(--border-strong)] p-4 sm:flex-row sm:items-center">
+              <input value={enfoque} disabled={!editable} onChange={(e) => setEnfoque(e.target.value)} placeholder="Enfoque opcional para la IA (p. ej. «más sanidad animal y exportaciones»)" className={`${campo} min-w-0 flex-1`} />
+              <button type="button" disabled={pend || !!cargando || !editable} onClick={() => run(async () => {
+                for (const sec of porSeccion) {
+                  const faltan = sec.necesita - sec.propios.length - (propuestas[sec.slug]?.length ?? 0);
+                  if (faltan <= 0) continue;
+                  const r = await traerTemas(sec.slug, faltan);
+                  setMsg({ ok: r.ok, texto: r.message ?? "Listo." });
+                  if (!r.ok) break;
+                }
+              })} className={primario}>{cargando ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />} Traer los temas de todas</button>
             </div>
-          </div>
-          {propuestas.length > 0 && (
-            <div className="flex flex-col gap-3 rounded-[var(--radius-lg)] border border-[var(--accent)] bg-[var(--accent)]/5 p-4">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="flex items-center gap-2 text-sm font-semibold"><Bot size={16} className="text-[var(--accent)]" /> La IA propone ({propuestas.length})</p>
-                <div className="flex gap-2">
-                  <button type="button" onClick={() => { setTemas((t) => [...t, ...propuestas].slice(0, 60)); setPropuestas([]); }} className={primario}><Plus size={15} /> Añadir todos</button>
-                  <button type="button" onClick={() => setPropuestas([])} className={secundario}>Descartar</button>
+          )}
+          {porSeccion.map((sec) => {
+            const sugeridas = propuestas[sec.slug] ?? [];
+            const faltan = Math.max(0, sec.necesita - sec.propios.length);
+            const completo = faltan === 0;
+            return (
+              <div key={sec.slug} className={`flex flex-col gap-3 rounded-[var(--radius-lg)] border p-4 ${completo ? "border-emerald-600/60" : "border-[var(--border)]"}`}>
+                <div className="flex flex-wrap items-center gap-3">
+                  <h3 className="lx-display text-lg font-semibold">{sec.name}</h3>
+                  <span className={`rounded-full px-3 py-1 text-xs font-semibold ${completo ? "bg-emerald-600/15 text-emerald-700" : "bg-[var(--surface-2)] text-[var(--fg-muted)]"}`}>{completo ? <><Check size={12} className="mr-1 inline" />Completa</> : `Faltan ${faltan}`} · {sec.propios.length} de {sec.necesita} temas</span>
+                  <span className="text-xs text-[var(--fg-muted)]">{sec.porDia} por día × {cfg.dias.length} días</span>
                 </div>
+                <div className="h-1.5 overflow-hidden rounded-full bg-[var(--surface-2)]" aria-hidden><div className="h-full rounded-full bg-[var(--accent)] transition-all" style={{ width: `${Math.min(100, (sec.propios.length / Math.max(1, sec.necesita)) * 100)}%` }} /></div>
+                <div className="flex flex-wrap gap-2">
+                  <input value={nuevos[sec.slug] ?? ""} disabled={!editable} onChange={(e) => setNuevos((n) => ({ ...n, [sec.slug]: e.target.value }))} onKeyDown={(e) => e.key === "Enter" && agregarTema(sec.slug)} placeholder={`Un tema de ${sec.name}, p. ej. «Vacunación contra la aftosa en el Caribe»`} className={`${campo} min-w-0 flex-1`} />
+                  <button type="button" disabled={!editable || (nuevos[sec.slug] ?? "").trim().length < 4} onClick={() => agregarTema(sec.slug)} className={secundario}><Plus size={15} /> Añadir</button>
+                  <button type="button" disabled={pend || !!cargando || !editable} onClick={() => run(async () => { const r = await traerTemas(sec.slug, completo ? 3 : faltan); setMsg({ ok: r.ok, texto: r.message ?? "Listo." }); })} className={primario}>{cargando === sec.slug ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />} {completo ? "Traer 3 más" : `Traer ${faltan} con IA`}</button>
+                </div>
+                {sugeridas.length > 0 && (
+                  <div className="flex flex-col gap-2 rounded-[var(--radius)] border border-[var(--accent)] bg-[var(--accent)]/5 p-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="flex items-center gap-2 text-sm font-semibold"><Bot size={15} className="text-[var(--accent)]" /> La IA propone para {sec.name} ({sugeridas.length})</p>
+                      <div className="flex gap-2">
+                        <button type="button" onClick={() => { setTemas((t) => [...t, ...sugeridas].slice(0, 60)); setPropuestas((p) => ({ ...p, [sec.slug]: [] })); }} className={primario}><Plus size={15} /> Añadir todos</button>
+                        <button type="button" onClick={() => setPropuestas((p) => ({ ...p, [sec.slug]: [] }))} className={secundario}>Descartar</button>
+                      </div>
+                    </div>
+                    <ul className="flex flex-col divide-y divide-[var(--border)]">
+                      {sugeridas.map((t) => (
+                        <li key={t.id} className="flex flex-wrap items-center gap-3 py-2">
+                          <div className="min-w-0 flex-1 basis-64"><p className="text-sm font-semibold">{t.texto}</p>{t.angulo && <p className="text-xs text-[var(--fg-muted)]">{t.angulo}</p>}</div>
+                          <button type="button" onClick={() => { setTemas((l) => [...l, t].slice(0, 60)); setPropuestas((p) => ({ ...p, [sec.slug]: (p[sec.slug] ?? []).filter((x) => x.id !== t.id) })); }} className={primario}><Plus size={15} /> Añadir tema</button>
+                          <button type="button" aria-label="Descartar esta propuesta" onClick={() => setPropuestas((p) => ({ ...p, [sec.slug]: (p[sec.slug] ?? []).filter((x) => x.id !== t.id) }))} className="grid size-10 place-items-center rounded-full hover:bg-[var(--surface-2)]"><X size={15} /></button>
+                        </li>
+                      ))}
+                    </ul>
+                    {(fuentes[sec.slug]?.length ?? 0) > 0 && (
+                      <details className="text-xs text-[var(--fg-muted)]"><summary className="cursor-pointer font-medium">Fuentes consultadas ({fuentes[sec.slug].length})</summary>
+                        <ul className="mt-1 list-disc pl-5">{fuentes[sec.slug].map((f) => <li key={f.url}><a href={f.url} target="_blank" rel="noopener noreferrer" className="underline">{f.title}</a></li>)}</ul></details>
+                    )}
+                  </div>
+                )}
+                {sec.propios.length > 0 && (
+                  <ul className="flex flex-col divide-y divide-[var(--border)] rounded-[var(--radius)] border border-[var(--border)]">
+                    {sec.propios.map((t) => (
+                      <li key={t.id} className="flex flex-wrap items-center gap-2 px-3 py-2">
+                        {t.origen === "ia" && <Bot size={15} aria-label="Propuesto por la IA" className="shrink-0 text-[var(--accent)]" />}
+                        <div className="min-w-0 flex-1 basis-56"><p className="text-sm font-medium">{t.texto}</p>{t.angulo && <p className="text-xs text-[var(--fg-muted)]">{t.angulo}</p>}</div>
+                        <select value={t.prioridad} disabled={!editable} onChange={(e) => setTemas((l) => l.map((x) => (x.id === t.id ? { ...x, prioridad: Number(e.target.value) as 1 | 2 | 3 } : x)))} aria-label="Prioridad" className="rounded-[var(--radius)] border border-[var(--border-strong)] bg-white px-2 py-2 text-xs text-[#0b0b0b]">
+                          <option value={1}>Prioritario</option><option value={2}>Normal</option><option value={3}>De apoyo</option>
+                        </select>
+                        <button type="button" aria-label="Quitar tema" disabled={!editable} onClick={() => setTemas((l) => l.filter((x) => x.id !== t.id))} className="grid size-10 place-items-center rounded-full hover:bg-[var(--surface-2)]"><Trash2 size={15} /></button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
+            );
+          })}
+          {otrosTemas.length > 0 && (
+            <div className="flex flex-col gap-2 rounded-[var(--radius-lg)] border border-[var(--border)] p-4">
+              <h3 className="lx-display text-lg font-semibold">Otros temas ({otrosTemas.length})</h3>
+              <p className="text-xs text-[var(--fg-muted)]">Sin sección elegida o de una sección que ya no está en la cobertura: la IA los reparte donde mejor encajen.</p>
               <ul className="flex flex-col divide-y divide-[var(--border)]">
-                {propuestas.map((t) => (
-                  <li key={t.id} className="flex flex-wrap items-center gap-3 py-2.5">
-                    <div className="min-w-0 flex-1 basis-64"><p className="text-sm font-semibold">{t.texto}</p>{t.angulo && <p className="text-xs text-[var(--fg-muted)]">{t.angulo}</p>}</div>
-                    <button type="button" onClick={() => { setTemas((l) => [...l, t].slice(0, 60)); setPropuestas((l) => l.filter((x) => x.id !== t.id)); }} className={primario}><Plus size={15} /> Añadir tema</button>
-                    <button type="button" aria-label="Descartar esta propuesta" onClick={() => setPropuestas((l) => l.filter((x) => x.id !== t.id))} className="grid size-10 place-items-center rounded-full hover:bg-[var(--surface-2)]"><X size={15} /></button>
+                {otrosTemas.map((t) => (
+                  <li key={t.id} className="flex flex-wrap items-center gap-2 py-2">
+                    <p className="min-w-0 flex-1 basis-56 text-sm font-medium">{t.texto}</p>
+                    <button type="button" aria-label="Quitar tema" disabled={!editable} onClick={() => setTemas((l) => l.filter((x) => x.id !== t.id))} className="grid size-10 place-items-center rounded-full hover:bg-[var(--surface-2)]"><Trash2 size={15} /></button>
                   </li>
                 ))}
               </ul>
-              {fuentes.length > 0 && (
-                <details className="text-xs text-[var(--fg-muted)]"><summary className="cursor-pointer font-medium">Fuentes consultadas ({fuentes.length})</summary>
-                  <ul className="mt-1 list-disc pl-5">{fuentes.map((f) => <li key={f.url}><a href={f.url} target="_blank" rel="noopener noreferrer" className="underline">{f.title}</a></li>)}</ul></details>
-              )}
             </div>
           )}
-          {temas.length > 0 && <h3 className="lx-display text-lg font-semibold">Temas del consejo ({temas.length})</h3>}
-          {temas.length > 0 ? (
-            <ul className="flex flex-col divide-y divide-[var(--border)] rounded-[var(--radius)] border border-[var(--border)]">
-              {temas.map((t) => (
-                <li key={t.id} className="flex flex-wrap items-center gap-2 px-3 py-2.5">
-                  {t.origen === "ia" && <Bot size={15} aria-label="Propuesto por la IA" className="shrink-0 text-[var(--accent)]" />}
-                  <div className="min-w-0 flex-1 basis-56"><p className="text-sm font-medium">{t.texto}</p>{t.angulo && <p className="text-xs text-[var(--fg-muted)]">{t.angulo}</p>}</div>
-                  <select value={t.seccion ?? ""} disabled={!editable} onChange={(e) => setTemas((l) => l.map((x) => (x.id === t.id ? { ...x, seccion: e.target.value || undefined } : x)))} aria-label="Sección del tema" className="rounded-[var(--radius)] border border-[var(--border-strong)] bg-white px-2 py-2 text-xs text-[#0b0b0b]">
-                    <option value="">Cualquier sección</option>
-                    {secciones.map((s) => <option key={s.slug} value={s.slug}>{s.name}</option>)}
-                  </select>
-                  <select value={t.prioridad} disabled={!editable} onChange={(e) => setTemas((l) => l.map((x) => (x.id === t.id ? { ...x, prioridad: Number(e.target.value) as 1 | 2 | 3 } : x)))} aria-label="Prioridad" className="rounded-[var(--radius)] border border-[var(--border-strong)] bg-white px-2 py-2 text-xs text-[#0b0b0b]">
-                    <option value={1}>Prioritario</option><option value={2}>Normal</option><option value={3}>De apoyo</option>
-                  </select>
-                  <button type="button" aria-label="Quitar tema" disabled={!editable} onClick={() => setTemas((l) => l.filter((x) => x.id !== t.id))} className="grid size-10 place-items-center rounded-full hover:bg-[var(--surface-2)]"><Trash2 size={15} /></button>
-                </li>
-              ))}
-            </ul>
-          ) : <p className="text-sm text-[var(--fg-muted)]">Todavía no has añadido temas. Puedes seguir sin ellos: «Armar la pauta con IA» los propone por ti.</p>}
         </Paso>
       )}
 
