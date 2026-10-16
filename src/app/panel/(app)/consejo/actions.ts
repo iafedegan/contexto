@@ -175,3 +175,17 @@ export async function refrescarPlan(id: string): Promise<void> {
   await requirePermiso("articulos");
   await sincronizarCasillas(id);
 }
+
+/**
+ * Borra un consejo y todas sus casillas. Las notas que ya se redactaron NO se borran: siguen en Artículos (y las ya programadas siguen
+ * programadas). Solo lo borra quien lo creó o un editor.
+ */
+export async function borrarPlan(id: string): Promise<Res> {
+  const user = await requirePermiso("articulos");
+  const [plan] = await db.select({ createdBy: editorialPlans.createdBy }).from(editorialPlans).where(eq(editorialPlans.id, id)).limit(1);
+  if (!plan) return { ok: true, message: "Ya no existe." };
+  if (plan.createdBy !== user.id && !canPublish(user.role)) return { ok: false, message: "Solo quien creó el consejo o un editor puede borrarlo." };
+  await db.delete(editorialPlans).where(eq(editorialPlans.id, id));
+  rev();
+  return { ok: true, message: "Consejo borrado." };
+}

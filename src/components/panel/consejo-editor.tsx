@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, Bot, Check, ChevronRight, Clock, Loader2, Plus, Rocket, Sparkles, Trash2, X } from "lucide-react";
 import { activarPlan, aprobar, armarPauta, cambiarEstadoPlan, guardarCasilla, guardarPlan, proponerTemas, quitarCasilla, redactarAhora } from "@/app/panel/(app)/consejo/actions";
+import { ConsejoBorrar } from "@/components/panel/consejo-borrar";
 import { ESTADOS_CASILLA, notasPorSemana, sanearConfig, sumarDias, type Aprobacion, type ConfigConsejo, type EstadoCasilla, type EstadoPlan, type TemaConsejo } from "@/lib/consejo/plan";
 
 export type CasillaVista = { id: string; publishAt: string; sectionSlug: string; topic: string; angle: string; brief: string; priority: number; approval: Aprobacion; status: EstadoCasilla; articleId: string | null; error: string | null };
@@ -386,6 +387,7 @@ export function ConsejoEditor({ plan, casillas, secciones, puedePublicar, pasoIn
               <button type="button" disabled={pend} onClick={() => hacer(() => cambiarEstadoPlan(plan.id, "borrador"))} className={secundario}>Pausar</button>
             </>}
             {editable && <button type="button" disabled={pend} onClick={() => hacer(() => cambiarEstadoPlan(plan.id, "cerrado"))} className={secundario}>Cerrar el consejo</button>}
+            <ConsejoBorrar id={plan.id} titulo={titulo} piezas={activas.length} activo={plan.status === "activo"} volverA="/panel/consejo" etiqueta />
           </div>
           {activas.length === 0 && <p className="text-sm text-amber-600">Antes de activar necesitas una pauta: vuelve al paso 4.</p>}
         </Paso>

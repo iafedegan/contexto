@@ -5,6 +5,7 @@ import { db } from "@/db";
 import { editorialPlans, editorialSlots } from "@/db/schema";
 import { requirePermiso } from "@/lib/auth";
 import { ConsejoNuevo } from "@/components/panel/consejo-nuevo";
+import { ConsejoBorrar } from "@/components/panel/consejo-borrar";
 import { lunesDe, sumarDias } from "@/lib/consejo/plan";
 
 export const metadata = { title: "Consejo de redacción" };
@@ -41,8 +42,8 @@ export default async function ConsejosPage() {
       {planes.length > 0 && (
         <ul className="flex flex-col gap-3">
           {planes.map((p) => (
-            <li key={p.id}>
-              <Link href={`/panel/consejo/${p.id}`} className="lx-card group flex flex-wrap items-center gap-4 p-4 transition hover:border-[var(--accent)]">
+            <li key={p.id} className="flex items-center gap-2">
+              <Link href={`/panel/consejo/${p.id}`} className="lx-card group flex min-w-0 flex-1 flex-wrap items-center gap-4 p-4 transition hover:border-[var(--accent)]">
                 <span className="grid size-10 shrink-0 place-items-center rounded-full bg-[var(--surface-2)] text-[var(--accent)]"><CalendarRange size={18} /></span>
                 <div className="min-w-0 flex-1">
                   <p className="font-semibold">{p.title}</p>
@@ -50,6 +51,7 @@ export default async function ConsejosPage() {
                 </div>
                 <ChevronRight size={18} className="text-[var(--accent)]" />
               </Link>
+              <ConsejoBorrar id={p.id} titulo={p.title} piezas={p.total} activo={p.status === "activo"} />
             </li>
           ))}
         </ul>
