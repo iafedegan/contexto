@@ -33,7 +33,7 @@ export default async function ConsejosPage() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <Link href="/panel/articulos/nuevo?modo=ia-opciones" className="mb-3 inline-flex items-center gap-1.5 text-sm text-[var(--fg-muted)] hover:text-[var(--accent)]"><ArrowLeft size={15} /> Volver</Link>
+        <Link href="/panel/articulos" className="mb-3 inline-flex items-center gap-1.5 text-sm text-[var(--fg-muted)] hover:text-[var(--accent)]"><ArrowLeft size={15} /> Volver</Link>
         <p className="lx-kicker text-[var(--accent)]">Con asistente de IA</p>
         <h1 className="lx-display mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">Consejo de redacción</h1>
         <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[var(--fg-muted)]">Como en una sala de redacción: se planea la semana (temas, cuántas notas por día y sección, horas de publicación y quién aprueba), y la IA redacta cada pieza a su tiempo. Nada sale sin que un editor lo haya autorizado.</p>
