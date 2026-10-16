@@ -12,6 +12,7 @@ import { slugify } from "@/lib/utils";
 import { autorDeUsuario } from "@/lib/user-authors";
 import { archivarCore, distintivosCore, enviarARevisionCore, fijarPortadaCore, guardarBorradorCore, programarCore, publicarCore, reindexarNota, revalidarNota, type BorradorInput } from "@/lib/article-ops";
 import { tienePermiso } from "@/lib/permisos-server";
+import { avisarSiUltimaHora } from "@/lib/push";
 import { invalidarCache } from "@/lib/data-cache";
 import { esNotaPropia, exigirNotaPropia } from "@/lib/propiedad-notas";
 
@@ -174,13 +175,14 @@ export async function unpublishArticle(articleId: string) {
 
 /**
  * Pone o quita «Última hora» o «En desarrollo» (en vivo) de una nota desde la lista, sin abrir el editor.
- * No envía la notificación push de última hora: ese aviso solo sale al publicar la nota.
+ * Al activar «Última hora» en una nota ya publicada se avisa a los lectores por notificación (una sola vez por nota).
  */
 export async function setArticleFlag(articleId: string, flag: "isBreaking" | "isLive", value: boolean): Promise<{ ok: boolean; message?: string }> {
   const user = await requirePublicador();
   if (!(await esNotaPropiaSegura(user, articleId))) return { ok: false, message: "Solo puedes modificar tus propias notas." };
   if (flag !== "isBreaking" && flag !== "isLive") return { ok: false, message: "Marca no válida." };
   if (!(await distintivosCore(articleId, { [flag]: value }))) return { ok: false, message: "Esa nota ya no existe." };
+  if (flag === "isBreaking" && value) avisarSiUltimaHora(articleId); // solo avisa si está publicada y no se avisó antes
   revalidatePath("/panel/articulos");
   return { ok: true };
 }

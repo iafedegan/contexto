@@ -42,7 +42,7 @@ async function redactar(c: Casilla, plan: Plan): Promise<void> {
   const cfgPlan = sanearConfig(plan.config);
   // La nota sale firmada por el escritor elegido cuando es una persona del panel (un escritor externo no tiene cuenta: firma quien activó el plan).
   // Quién escribe: el elegido para ESTA pieza (en su ficha) o, si no, el del consejo.
-  const escritorId = sanearFicha(c.ficha).escritorId ?? cfgPlan.escritorId;
+  const escritorId = sanearFicha(c.ficha).escritorId ?? cfgPlan.briefs?.[c.sectionSlug]?.escritorId ?? cfgPlan.escritorId;
   const autorId = escritorId ? await autorDeUsuario(escritorId).catch(() => null) : null;
   const userId = plan.activatedBy ?? plan.createdBy;
   if (!userId) return void (await poner(c.id, "fallida", { error: "El plan no tiene una persona responsable." }));
