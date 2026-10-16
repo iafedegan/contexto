@@ -36,6 +36,7 @@ const poner = (id: string, estado: EstadoCasilla, extra: Partial<typeof editoria
 
 /** Redacta una casilla ya reclamada (estado «redactando») y la deja en revisión o programada. */
 async function redactar(c: Casilla, plan: Plan): Promise<void> {
+  const inicio = Date.now();
   const userId = plan.activatedBy ?? plan.createdBy;
   if (!userId) return void (await poner(c.id, "fallida", { error: "El plan no tiene una persona responsable." }));
   const [cat] = await db.select({ id: categories.id, name: categories.name }).from(categories).where(eq(categories.slug, c.sectionSlug)).limit(1);
@@ -51,7 +52,8 @@ async function redactar(c: Casilla, plan: Plan): Promise<void> {
   const d = r.draft;
 
   // Portada generada (si falla, la nota sigue sin ella: el editor puede ponerla).
-  const img = await generateCoverImageCore(userId, { title: d.title, excerpt: d.excerpt, section: cat?.name, body: d.body }).catch(() => null);
+  // Si la redacción ya gastó casi todo el tiempo de la ruta, se omite la portada: es mejor la nota sin imagen que perderla por un corte.
+  const img = Date.now() - inicio > 170_000 ? null : await generateCoverImageCore(userId, { title: d.title, excerpt: d.excerpt, section: cat?.name, body: d.body }).catch(() => null);
   const g = await guardarBorradorCore(userId, {
     title: d.title,
     excerpt: d.excerpt,
@@ -131,11 +133,11 @@ export async function sincronizarCasillas(planId?: string): Promise<void> {
     const nuevo: EstadoCasilla | null = f.nota === "publicado" ? "publicada" : f.nota === "programado" ? "programada" : f.nota === "archivado" ? "omitida" : f.nota === "en_revision" || f.nota === "borrador" ? (f.estado === "programada" ? "revision" : null) : null;
     if (nuevo && nuevo !== f.estado) await poner(f.id, nuevo);
   }
-  // «Redactando» hace más de 15 minutos = la pasada se cortó: se libera para reintentar.
+  // «Redactando» hace más de 6 minutos = la pasada se cortó (la ruta dura 5 como máximo): se libera para reintentar.
   await db
     .update(editorialSlots)
     .set({ status: "planificada", updatedAt: sql`now()` })
-    .where(and(eq(editorialSlots.status, "redactando"), lte(editorialSlots.updatedAt, new Date(Date.now() - 15 * 60_000)), filtroPlan));
+    .where(and(eq(editorialSlots.status, "redactando"), lte(editorialSlots.updatedAt, new Date(Date.now() - 6 * 60_000)), filtroPlan));
 }
 
 /** Aprueba una casilla en revisión: la nota se programa para su hora (o sale ya si la hora pasó). Quien llama debe poder publicar. */

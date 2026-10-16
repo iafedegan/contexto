@@ -10,7 +10,8 @@ import { procesarProgramadas } from "@/lib/scheduled";
  */
 export const dynamic = "force-dynamic";
 // El envío de un boletín programado puede tardar: se hace después de responder (ver más abajo).
-export const maxDuration = 60;
+// 300 s: redactar una pieza del consejo de redacción (investigación con fuentes + borrador verificado + portada) tarda más de un minuto y corre después de responder (`after`); con 60 s se cortaba y la pieza quedaba trabada.
+export const maxDuration = 300;
 
 // Promueve las notas programadas que ya llegaron a su hora (con límite de una pasada por minuto).
 export async function POST() {

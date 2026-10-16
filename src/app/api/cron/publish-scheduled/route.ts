@@ -24,7 +24,7 @@ import { revalidatePath } from "next/cache";
  * bloquear la publicación programada. También calienta la caché del Observatorio (15 lecturas al origen de FEDEGÁN), para que
  * la primera visita del día no espere esa descarga.
  */
-export const maxDuration = 120;
+export const maxDuration = 300;
 
 export async function GET(req: Request) {
   if (!cronAutorizado(req)) {
