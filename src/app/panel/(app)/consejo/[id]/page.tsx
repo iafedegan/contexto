@@ -12,9 +12,10 @@ export const metadata = { title: "Consejo de redacción" };
 export const dynamic = "force-dynamic";
 
 /** Un consejo de redacción: semana, temas, pauta con calendario y puesta en marcha. */
-export default async function ConsejoPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function ConsejoPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ paso?: string }> }) {
   const user = await requirePermiso("articulos");
   const { id } = await params;
+  const { paso } = await searchParams;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   await sincronizarCasillas(id).catch(() => undefined);
   const [plan] = await db.select().from(editorialPlans).where(eq(editorialPlans.id, id)).limit(1);
@@ -28,5 +29,5 @@ export default async function ConsejoPage({ params }: { params: Promise<{ id: st
     id: c.id, publishAt: c.publishAt.toISOString(), sectionSlug: c.sectionSlug, topic: c.topic, angle: c.angle, brief: c.brief, priority: c.priority,
     approval: c.approval === "auto" ? "auto" : "manual", status: c.status as EstadoCasilla, articleId: c.articleId, error: c.error,
   }));
-  return <ConsejoEditor plan={{ id: plan.id, title: plan.title, weekStart: plan.weekStart, status: plan.status as EstadoPlan, config: sanearConfig(plan.config), temas: plan.temas ?? [] }} casillas={casillas} secciones={secciones} puedePublicar={puedePublicar} />;
+  return <ConsejoEditor plan={{ id: plan.id, title: plan.title, weekStart: plan.weekStart, status: plan.status as EstadoPlan, config: sanearConfig(plan.config), temas: plan.temas ?? [] }} casillas={casillas} secciones={secciones} puedePublicar={puedePublicar} pasoInicial={Math.max(0, (Number(paso) || 1) - 1)} />;
 }
