@@ -16,7 +16,8 @@ import { generateCoverImageCore } from "@/lib/ai/portada";
 import { canPublish } from "@/lib/auth";
 import { tienePermiso } from "@/lib/permisos-server";
 import { enviarARevisionCore, guardarBorradorCore, programarCore, publicarCore } from "@/lib/article-ops";
-import { sanearConfig, tocaRedactar, type EstadoCasilla } from "@/lib/consejo/plan";
+import { completarFichaCore } from "@/lib/ai/consejo-ia";
+import { evaluarFicha, fichaParaPrompt, sanearConfig, sanearFicha, tocaRedactar, type EstadoCasilla } from "@/lib/consejo/plan";
 
 /** Controles mínimos para que una nota se programe sola: redactada por la IA con fuentes, de longitud suficiente y con título y resumen reales. */
 export function pasaControl(d: { title: string; excerpt: string; body: string }): { ok: boolean; motivo?: string } {
@@ -41,15 +42,35 @@ async function redactar(c: Casilla, plan: Plan): Promise<void> {
   if (!userId) return void (await poner(c.id, "fallida", { error: "El plan no tiene una persona responsable." }));
   const [cat] = await db.select({ id: categories.id, name: categories.name }).from(categories).where(eq(categories.slug, c.sectionSlug)).limit(1);
   const encargo = [c.brief, c.angle && `Enfoque: ${c.angle}`].filter(Boolean).join("\n");
+
+  // Antes de redactar, la ficha de pauta debe estar lista (foco, por qué ahora, audiencia, fuentes y preguntas). Si falta algo, el «editor jefe»
+  // la completa con investigación real; si aun así faltan los datos obligatorios, NO se redacta: sin ficha la IA inventaría.
+  let ficha = sanearFicha(c.ficha);
+  if (!evaluarFicha(ficha).lista) {
+    const f = await completarFichaCore(userId, { tema: c.topic, angulo: c.angle, encargo: c.brief, seccion: cat?.name, existente: ficha });
+    if (f.ok) {
+      ficha = f.ficha;
+      await db.update(editorialSlots).set({ ficha, updatedAt: sql`now()` }).where(eq(editorialSlots.id, c.id));
+    }
+  }
+  const ev = evaluarFicha(ficha);
+  if (!ev.lista) return void (await poner(c.id, "fallida", { error: `Falta la ficha de pauta, así que no se redactó (sería inventar): ${ev.faltanObligatorias.join("; ")}. Complétala en la casilla y se reintenta.`.slice(0, 400) }));
+  // Las fuentes con enlace de la ficha se citan como referencias de la nota.
+  const referencias = (ficha.fuentes ?? []).filter((x) => x.url).map((x) => ({ title: x.nombre, outlet: (() => { try { return new URL(x.url!).hostname.replace(/^www\./, ""); } catch { return ""; } })(), url: x.url! }));
+
   const r = await generateArticleDraftCore(userId, {
     title: c.topic,
     prompt: encargo.length >= 20 ? encargo : `${c.topic}. ${encargo}`.slice(0, 600).padEnd(20, "."),
+    ficha: fichaParaPrompt(ficha),
+    references: referencias.length ? referencias : undefined,
     section: cat?.name,
     instrucciones: `Es una pieza del plan semanal del consejo de redacción (prioridad ${c.priority === 1 ? "alta" : c.priority === 3 ? "de apoyo" : "normal"}). Respeta el enfoque indicado.`,
   });
   if (!r.ok) return void (await poner(c.id, "fallida", { error: r.error.slice(0, 400) }));
   if (r.mode !== "ia") return void (await poner(c.id, "fallida", { error: "No hay modelo de IA conectado: no se redacta (sería inventar)." }));
   const d = r.draft;
+  // Transparencia con el lector (como piden AP o The Guardian): la nota dice que se elaboró con asistencia de IA. Se puede apagar en el consejo.
+  if (sanearConfig(plan.config).divulgarIA) d.body = `${d.body}<p><em>Nota elaborada con asistencia de inteligencia artificial a partir de las fuentes citadas.</em></p>`;
 
   // Portada generada (si falla, la nota sigue sin ella: el editor puede ponerla).
   // Si la redacción ya gastó casi todo el tiempo de la ruta, se omite la portada: es mejor la nota sin imagen que perderla por un corte.

@@ -4,11 +4,11 @@ import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, Bot, Check, ChevronRight, Clock, Loader2, Plus, Rocket, Sparkles, Trash2, X } from "lucide-react";
-import { activarPlan, aprobar, armarPauta, cambiarEstadoPlan, guardarCasilla, guardarPlan, proponerTemas, quitarCasilla, redactarAhora } from "@/app/panel/(app)/consejo/actions";
+import { activarPlan, aprobar, armarPauta, cambiarEstadoPlan, completarFicha, guardarCasilla, guardarPlan, proponerTemas, quitarCasilla, redactarAhora } from "@/app/panel/(app)/consejo/actions";
 import { ConsejoBorrar } from "@/components/panel/consejo-borrar";
-import { ESTADOS_CASILLA, notasPorSemana, sanearConfig, sumarDias, type Aprobacion, type ConfigConsejo, type EstadoCasilla, type EstadoPlan, type TemaConsejo } from "@/lib/consejo/plan";
+import { ESTADOS_CASILLA, GENEROS, PREGUNTAS_FICHA, VIGENCIAS, evaluarFicha, notasPorSemana, sanearConfig, sumarDias, type Aprobacion, type ConfigConsejo, type EstadoCasilla, type EstadoPlan, type FichaPauta, type FuentePrevista, type Genero, type TemaConsejo, type Vigencia } from "@/lib/consejo/plan";
 
-export type CasillaVista = { id: string; publishAt: string; sectionSlug: string; topic: string; angle: string; brief: string; priority: number; approval: Aprobacion; status: EstadoCasilla; articleId: string | null; error: string | null };
+export type CasillaVista = { id: string; publishAt: string; sectionSlug: string; topic: string; angle: string; brief: string; priority: number; approval: Aprobacion; status: EstadoCasilla; articleId: string | null; error: string | null; ficha: FichaPauta };
 type Seccion = { slug: string; name: string };
 
 const DIAS = [[1, "Lun"], [2, "Mar"], [3, "Mié"], [4, "Jue"], [5, "Vie"], [6, "Sáb"], [7, "Dom"]] as const;
@@ -365,6 +365,16 @@ export function ConsejoEditor({ plan, casillas, secciones, puedePublicar, pasoIn
               <li key={t as string} className="rounded-[var(--radius)] border border-[var(--border)] p-4"><p className="lx-kicker text-[var(--fg-muted)]">{t}</p><p className="lx-display text-3xl font-semibold tabular-nums">{n}</p></li>
             ))}
           </ul>
+          {(() => {
+            const pend = activas.filter((c) => c.status === "planificada" || c.status === "fallida");
+            const listas = pend.filter((c) => evaluarFicha(c.ficha).lista).length;
+            return pend.length ? (
+              <p className={`rounded-[var(--radius)] border px-4 py-3 text-sm ${listas === pend.length ? "border-emerald-600/50 bg-emerald-600/10" : "border-amber-500/50 bg-amber-500/10"}`}>
+                <strong>Fichas de pauta: {listas} de {pend.length} listas.</strong> {listas === pend.length ? "Todas las piezas tienen su foco, fuentes y preguntas." : "Las que falten las completa el editor jefe con investigación al llegar la hora; si aun así faltan datos obligatorios, la pieza se detiene y te avisa. Puedes completarlas ya desde el calendario (paso 4)."}
+              </p>
+            ) : null;
+          })()}
+          <label className="flex items-start gap-3 text-sm"><input type="checkbox" className="mt-1" checked={cfg.divulgarIA !== false} disabled={!editable} onChange={(e) => setCfg((c) => ({ ...c, divulgarIA: e.target.checked }))} /><span><strong>Avisar al lector.</strong> Cada nota termina con «Nota elaborada con asistencia de inteligencia artificial a partir de las fuentes citadas». Es la práctica de medios como AP o The Guardian y la recomendamos.</span></label>
           <p className="text-sm leading-relaxed text-[var(--fg-muted)]">La IA redacta cada pieza <strong>{cfg.antelacionHoras} h antes de su hora</strong>, con la tubería verificada del asistente (sin inventar cifras ni citas) y con tu estilo de escritura. Las «con aprobación» quedan en revisión hasta que un editor las apruebe; las «automáticas» solo se programan si la nota pasa el control de calidad (300 palabras, con fuentes y sin marcadores); si no lo pasa, esperan tu aprobación.</p>
           {porRevisar.length > 0 && (
             <div>
@@ -413,22 +423,48 @@ function Chip({ c, nombre, activa, onClick, hora }: { c: CasillaVista; nombre: s
     <button type="button" onClick={onClick} aria-pressed={activa} className={`flex w-full flex-col gap-0.5 rounded-[var(--radius)] border px-2 py-1.5 text-left transition hover:border-[var(--accent)] ${COLOR[c.status]} ${activa ? "ring-2 ring-[var(--accent)]" : ""}`}>
       <span className="flex items-center justify-between gap-1 text-[0.68rem] font-semibold uppercase tracking-wide text-[var(--fg-muted)]"><span className="truncate">{hora ? `${horaDe(c.publishAt)} · ` : ""}{nombre}</span><span className="shrink-0">{c.approval === "auto" ? "⚡ auto" : "✋"}</span></span>
       <span className="line-clamp-2 text-xs font-medium leading-snug">{c.topic || "Sin tema"}</span>
-      <span className="text-[0.68rem] text-[var(--fg-muted)]">{ESTADOS_CASILLA[c.status]}{c.priority === 1 ? " · prioritaria" : ""}</span>
+      <span className="flex items-center justify-between gap-1 text-[0.68rem] text-[var(--fg-muted)]"><span>{ESTADOS_CASILLA[c.status]}{c.priority === 1 ? " · prioritaria" : ""}</span>{(c.status === "planificada" || c.status === "fallida") && <span title={evaluarFicha(c.ficha).lista ? "Ficha de pauta lista" : "Falta la ficha de pauta: " + evaluarFicha(c.ficha).faltanObligatorias.join(", ")} className={evaluarFicha(c.ficha).lista ? "text-emerald-600" : "text-amber-600"}>{evaluarFicha(c.ficha).lista ? "✓ ficha" : "⚠ ficha"}</span>}</span>
     </button>
   );
 }
 
-// Edición de una pieza.
-function PanelCasilla({ c, secciones, puedePublicar, onClose, onGuardar, onQuitar, onAprobar, pend }: { c: CasillaVista; secciones: Seccion[]; puedePublicar: boolean; onClose: () => void; onGuardar: (d: { topic: string; angle: string; brief: string; sectionSlug: string; publishAt: string; priority: number; approval: Aprobacion }) => void; onQuitar: () => void; onAprobar: () => void; pend: boolean }) {
-  const [d, setD] = useState({ topic: c.topic, angle: c.angle, brief: c.brief, sectionSlug: c.sectionSlug, fecha: diaDe(c.publishAt), hora: horaDe(c.publishAt), priority: c.priority, approval: c.approval });
-  const editable = c.status === "planificada" || c.status === "fallida";
+// Las fuentes se editan como líneas: «Nombre — https://enlace» (documento/dato oficial) o solo «Nombre» (voz).
+const fuentesATexto = (fs?: FuentePrevista[]) => (fs ?? []).map((f) => (f.url ? `${f.nombre} — ${f.url}` : f.tipo === "documento" ? `doc: ${f.nombre}` : f.nombre)).join("\n");
+const textoAFuentes = (t: string): FuentePrevista[] =>
+  t.split("\n").map((l) => l.trim()).filter(Boolean).map((l) => {
+    const m = l.match(/^(.*?)\s*[—-]\s*(https?:\/\/\S+)$/);
+    if (m) return { nombre: m[1] || m[2], tipo: "documento" as const, url: m[2] };
+    return /^doc:/i.test(l) ? { nombre: l.replace(/^doc:\s*/i, ""), tipo: "documento" as const } : { nombre: l, tipo: "voz" as const };
+  });
+const lineas = (t: string) => t.split("\n").map((l) => l.trim()).filter(Boolean);
+
+// Una pregunta de la ficha: etiqueta, campo y ayuda (fuera de PanelCasilla para que el campo no pierda el foco al escribir).
+function Pregunta({ clave, children }: { clave: string; children: React.ReactNode }) {
+  const q = PREGUNTAS_FICHA.find((p) => p.clave === clave)!;
   return (
-    <div className="flex flex-col gap-3 rounded-[var(--radius-lg)] border border-[var(--accent)] bg-[var(--bg-2)] p-4">
+    <label className="flex flex-col gap-1 text-sm"><span className="font-semibold">{q.etiqueta}{q.obligatoria && <span className="ml-1 text-amber-600" title="Obligatoria para redactar">*</span>}</span>{children}<span className="text-xs text-[var(--fg-muted)]">{q.ayuda}</span></label>
+  );
+}
+
+// Edición de una pieza y de su ficha de pauta.
+function PanelCasilla({ c, secciones, puedePublicar, onClose, onGuardar, onQuitar, onAprobar, pend }: { c: CasillaVista; secciones: Seccion[]; puedePublicar: boolean; onClose: () => void; onGuardar: (d: { topic: string; angle: string; brief: string; sectionSlug: string; publishAt: string; priority: number; approval: Aprobacion; ficha: FichaPauta }) => void; onQuitar: () => void; onAprobar: () => void; pend: boolean }) {
+  const [d, setD] = useState({ topic: c.topic, angle: c.angle, brief: c.brief, sectionSlug: c.sectionSlug, fecha: diaDe(c.publishAt), hora: horaDe(c.publishAt), priority: c.priority, approval: c.approval });
+  const [f, setF] = useState<FichaPauta>(c.ficha);
+  const [fuentesTxt, setFuentesTxt] = useState(fuentesATexto(c.ficha.fuentes));
+  const [msg, setMsg] = useState("");
+  const [buscando, empezar] = useTransition();
+  const router = useRouter();
+  const editable = c.status === "planificada" || c.status === "fallida";
+  const fichaActual: FichaPauta = { ...f, fuentes: textoAFuentes(fuentesTxt) };
+  const ev = evaluarFicha(fichaActual);
+  const campoLista = (clave: "datosAConfirmar" | "preguntas" | "abiertas" | "riesgos" | "evitar") => (
+    <textarea rows={3} disabled={!editable} value={(f[clave] ?? []).join("\n")} onChange={(e) => setF({ ...f, [clave]: lineas(e.target.value) })} placeholder="Uno por línea" className={campo} />
+  );
+  return (
+    <div className="flex flex-col gap-4 rounded-[var(--radius-lg)] border border-[var(--accent)] bg-[var(--bg-2)] p-4">
       <div className="flex items-center justify-between"><p className="lx-kicker text-[var(--accent)]">Pieza · {ESTADOS_CASILLA[c.status]}</p><button type="button" onClick={onClose} aria-label="Cerrar" className="grid size-9 place-items-center rounded-full hover:bg-[var(--surface-2)]"><X size={16} /></button></div>
       {c.error && <p className="rounded-[var(--radius)] border border-amber-500/50 bg-amber-500/10 px-3 py-2 text-xs">{c.error}</p>}
       <label className="flex flex-col gap-1 text-sm"><span className="font-semibold">Tema (titular tentativo)</span><input value={d.topic} disabled={!editable} onChange={(e) => setD({ ...d, topic: e.target.value })} className={campo} /></label>
-      <label className="flex flex-col gap-1 text-sm"><span className="font-semibold">Enfoque</span><input value={d.angle} disabled={!editable} onChange={(e) => setD({ ...d, angle: e.target.value })} className={campo} /></label>
-      <label className="flex flex-col gap-1 text-sm"><span className="font-semibold">Encargo para la IA (qué contar y qué datos y fuentes confirmar)</span><textarea rows={4} value={d.brief} disabled={!editable} onChange={(e) => setD({ ...d, brief: e.target.value })} className={campo} /></label>
       <div className="grid gap-3 sm:grid-cols-4">
         <label className="flex flex-col gap-1 text-sm"><span className="font-semibold">Sección</span><select value={d.sectionSlug} disabled={!editable} onChange={(e) => setD({ ...d, sectionSlug: e.target.value })} className={campo}>{secciones.map((s) => <option key={s.slug} value={s.slug}>{s.name}</option>)}</select></label>
         <label className="flex flex-col gap-1 text-sm"><span className="font-semibold">Día</span><input type="date" value={d.fecha} disabled={!editable} onChange={(e) => setD({ ...d, fecha: e.target.value })} className={campo} /></label>
@@ -440,8 +476,38 @@ function PanelCasilla({ c, secciones, puedePublicar, onClose, onGuardar, onQuita
           <option value="manual">Con aprobación previa de un editor</option>
           <option value="auto" disabled={!puedePublicar}>Publicar automáticamente a su hora (si pasa el control de calidad)</option>
         </select></label>
+
+      {/* Ficha de pauta: las preguntas que se responden antes de encargar la nota */}
+      <div className="flex flex-col gap-3 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] p-3 sm:p-4">
+        <div className="flex flex-wrap items-center gap-3">
+          <p className="lx-display flex-1 text-lg font-semibold">Ficha de pauta</p>
+          <span className={`rounded-full px-3 py-1 text-xs font-semibold ${ev.lista ? "bg-emerald-600/15 text-emerald-700" : "bg-amber-500/15 text-amber-700"}`}>{ev.lista ? `Lista para redactar · ${ev.avance}%` : `Falta: ${ev.faltanObligatorias.length} obligatoria(s) · ${ev.avance}%`}</span>
+          {editable && <button type="button" disabled={buscando || pend || d.topic.trim().length < 8} onClick={() => empezar(async () => { const r = await completarFicha(c.id, fichaActual); setMsg(r.message ?? ""); if (r.ok) { setF(r.ficha); setFuentesTxt(fuentesATexto(r.ficha.fuentes)); router.refresh(); } })} className={secundario}>{buscando ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />} Completar con investigación</button>}
+        </div>
+        {msg && <p role="status" className="text-xs text-[var(--fg-muted)]">{msg}</p>}
+        <p className="text-xs text-[var(--fg-muted)]">Sin las preguntas con * la IA no redacta: no inventa. Si faltan al llegar la hora, el «editor jefe» las completa con investigación; si aun así faltan, la pieza queda detenida y te avisa.</p>
+        <Pregunta clave="foco"><input value={f.foco ?? ""} disabled={!editable} onChange={(e) => setF({ ...f, foco: e.target.value })} className={campo} /></Pregunta>
+        <Pregunta clave="porQueAhora"><input value={f.porQueAhora ?? ""} disabled={!editable} onChange={(e) => setF({ ...f, porQueAhora: e.target.value })} className={campo} /></Pregunta>
+        <Pregunta clave="audiencia"><input value={f.audiencia ?? ""} disabled={!editable} onChange={(e) => setF({ ...f, audiencia: e.target.value })} className={campo} /></Pregunta>
+        <Pregunta clave="novedad"><input value={f.novedad ?? ""} disabled={!editable} onChange={(e) => setF({ ...f, novedad: e.target.value })} className={campo} /></Pregunta>
+        <Pregunta clave="fuentes"><textarea rows={3} disabled={!editable} value={fuentesTxt} onChange={(e) => setFuentesTxt(e.target.value)} placeholder={"Una por línea: «ICA — https://enlace» (documento), «doc: Boletín DANE» o «Gerente de FEDEGAN» (voz)"} className={campo} /></Pregunta>
+        <Pregunta clave="preguntas">{campoLista("preguntas")}</Pregunta>
+        <Pregunta clave="datosAConfirmar">{campoLista("datosAConfirmar")}</Pregunta>
+        <Pregunta clave="abiertas">{campoLista("abiertas")}</Pregunta>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <label className="flex flex-col gap-1 text-sm"><span className="font-semibold">Género</span><select value={f.genero ?? ""} disabled={!editable} onChange={(e) => setF({ ...f, genero: (e.target.value || undefined) as Genero | undefined })} className={campo}><option value="">Sin definir</option>{(Object.keys(GENEROS) as Genero[]).map((g) => <option key={g} value={g}>{GENEROS[g]}</option>)}</select></label>
+          <label className="flex flex-col gap-1 text-sm"><span className="font-semibold">Palabras (aprox.)</span><input type="number" min={150} max={1500} step={50} disabled={!editable} value={f.palabras ?? ""} onChange={(e) => setF({ ...f, palabras: e.target.value ? Number(e.target.value) : undefined })} placeholder="450" className={campo} /></label>
+          <label className="flex flex-col gap-1 text-sm"><span className="font-semibold">Vigencia</span><select value={f.vigencia ?? ""} disabled={!editable} onChange={(e) => setF({ ...f, vigencia: (e.target.value || undefined) as Vigencia | undefined })} className={campo}><option value="">Sin definir</option>{(Object.keys(VIGENCIAS) as Vigencia[]).map((v) => <option key={v} value={v}>{VIGENCIAS[v]}</option>)}</select></label>
+        </div>
+        <Pregunta clave="riesgos">{campoLista("riesgos")}</Pregunta>
+        <Pregunta clave="palabraClave"><input value={f.palabraClave ?? ""} disabled={!editable} onChange={(e) => setF({ ...f, palabraClave: e.target.value })} className={campo} /></Pregunta>
+        <Pregunta clave="visual"><input value={f.visual ?? ""} disabled={!editable} onChange={(e) => setF({ ...f, visual: e.target.value })} className={campo} /></Pregunta>
+        <Pregunta clave="evitar">{campoLista("evitar")}</Pregunta>
+        <label className="flex flex-col gap-1 text-sm"><span className="font-semibold">Notas adicionales para la IA</span><textarea rows={3} value={d.brief} disabled={!editable} onChange={(e) => setD({ ...d, brief: e.target.value })} className={campo} /></label>
+      </div>
+
       <div className="flex flex-wrap gap-2">
-        {editable && <button type="button" disabled={pend} onClick={() => onGuardar({ topic: d.topic, angle: d.angle, brief: d.brief, sectionSlug: d.sectionSlug, publishAt: `${d.fecha}T${d.hora}:00-05:00`, priority: d.priority, approval: d.approval })} className={primario}><Check size={15} /> Guardar la pieza</button>}
+        {editable && <button type="button" disabled={pend} onClick={() => onGuardar({ topic: d.topic, angle: d.angle, brief: d.brief, sectionSlug: d.sectionSlug, publishAt: `${d.fecha}T${d.hora}:00-05:00`, priority: d.priority, approval: d.approval, ficha: fichaActual })} className={primario}><Check size={15} /> Guardar la pieza</button>}
         {editable && <button type="button" disabled={pend} onClick={onQuitar} className={secundario}><Trash2 size={15} /> Quitar</button>}
         {c.status === "revision" && <button type="button" disabled={pend || !puedePublicar} onClick={onAprobar} className={primario}><Check size={15} /> Aprobar y programar</button>}
         {c.articleId && <Link href={`/panel/articulos/${c.articleId}?modo=ia&paso=vista`} className={secundario}>Abrir la nota <ChevronRight size={14} /></Link>}

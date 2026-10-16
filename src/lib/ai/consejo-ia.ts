@@ -11,7 +11,8 @@ import { z } from "zod";
 import { getAiModel } from "@/lib/ai-provider";
 import { registrarUsoIA, verificarCuotaIA } from "@/lib/ai-cuota";
 import { suggestTopicIdeasCore } from "@/lib/ai/ideas-noticias";
-import { sumarDias, type TemaConsejo } from "@/lib/consejo/plan";
+import { investigarTema } from "@/lib/ai/investigacion";
+import { GENEROS, VIGENCIAS, sanearFicha, sumarDias, type FichaPauta, type Genero, type TemaConsejo, type Vigencia } from "@/lib/consejo/plan";
 
 const esquemaPauta = z.object({
   casillas: z.array(
@@ -21,13 +22,24 @@ const esquemaPauta = z.object({
       angulo: z.string().describe("Enfoque periodístico: qué contar y a quién le importa"),
       encargo: z.string().describe("Encargo para quien redacta: qué hechos desarrollar y QUÉ DATOS Y FUENTES HAY QUE CONFIRMAR (sin inventar cifras)"),
       prioridad: z.number().int().min(1).max(3).describe("1 = importante o urgente, 2 = normal, 3 = de apoyo o atemporal"),
+      // Ficha de pauta: lo que un consejo de redacción deja definido antes de encargar la nota.
+      foco: z.string().describe("La nota en UNA frase: «alguien hace algo porque…»"),
+      porQueAhora: z.string().describe("Por qué esta semana: el hecho, la fecha o la decisión que la justifica (sin inventar)"),
+      audiencia: z.string().describe("A quién le importa y qué cambia para esa persona"),
+      genero: z.enum(Object.keys(GENEROS) as [Genero, ...Genero[]]),
+      preguntas: z.array(z.string()).describe("2 a 4 preguntas que la nota debe responder"),
+      fuentes: z.array(z.object({ nombre: z.string(), tipo: z.enum(["voz", "documento"]) })).describe("1 a 3 fuentes previstas: entidades, documentos oficiales o tipos de voz a consultar (sin inventar nombres de personas)"),
+      datosAConfirmar: z.array(z.string()).describe("Cifras o hechos que hay que confirmar antes de afirmarlos"),
+      riesgos: z.array(z.string()).describe("Riesgos o sensibilidades (réplica, presunción de inocencia, alertas sanitarias…); vacío si no hay"),
+      palabraClave: z.string().describe("Lo que un ganadero escribiría en el buscador"),
+      vigencia: z.enum(Object.keys(VIGENCIAS) as [Vigencia, ...Vigencia[]]),
     }),
   ),
 });
 
 /** Una casilla de la parrilla tal como se le presenta a la IA. */
 export type CasillaParaIa = { i: number; cuando: string; seccion: string; prioridad: number };
-export type PautaCasilla = { i: number; tema: string; angulo: string; encargo: string; prioridad: 1 | 2 | 3 };
+export type PautaCasilla = { i: number; tema: string; angulo: string; encargo: string; prioridad: 1 | 2 | 3; ficha: FichaPauta };
 
 /**
  * Temas candidatos para una sección de la semana, con búsqueda en la web y fuentes (Gemini). Trae hasta `cantidad` temas distintos
@@ -111,7 +123,10 @@ export async function armarPautaCore(
         if (!validas.has(c.i) || pauta.some((p) => p.i === c.i)) continue;
         const tema = c.tema.trim().slice(0, 160);
         if (tema.length < 8) continue;
-        pauta.push({ i: c.i, tema, angulo: c.angulo.trim().slice(0, 400), encargo: c.encargo.trim().slice(0, 1200), prioridad: (c.prioridad === 1 || c.prioridad === 3 ? c.prioridad : 2) as 1 | 2 | 3 });
+        pauta.push({
+          i: c.i, tema, angulo: c.angulo.trim().slice(0, 400), encargo: c.encargo.trim().slice(0, 1200), prioridad: (c.prioridad === 1 || c.prioridad === 3 ? c.prioridad : 2) as 1 | 2 | 3,
+          ficha: sanearFicha({ foco: c.foco, porQueAhora: c.porQueAhora, audiencia: c.audiencia, genero: c.genero, preguntas: c.preguntas, fuentes: c.fuentes, datosAConfirmar: c.datosAConfirmar, riesgos: c.riesgos, palabraClave: c.palabraClave, vigencia: c.vigencia, novedad: c.angulo }),
+        });
         yaPlaneado.push(tema);
       }
     }
@@ -124,4 +139,59 @@ export async function armarPautaCore(
   }
   if (!pauta.length) return { ok: false, error: "La IA no devolvió una pauta utilizable; inténtalo de nuevo." };
   return { ok: true, pauta };
+}
+
+const esquemaFicha = z.object({
+  foco: z.string(), porQueAhora: z.string(), audiencia: z.string(), novedad: z.string().describe("Qué aporta frente a lo ya publicado, SOLO si se desprende del dossier; si no, cadena vacía"),
+  genero: z.enum(Object.keys(GENEROS) as [Genero, ...Genero[]]),
+  preguntas: z.array(z.string()).describe("3 a 5 preguntas que la nota debe responder, contestables con el dossier"),
+  abiertas: z.array(z.string()).describe("Lo que el dossier NO responde (se dirá que no se sabe)"),
+  fuentes: z.array(z.object({ nombre: z.string(), tipo: z.enum(["voz", "documento"]), url: z.string().describe("Enlace de la fuente tal como consta en el dossier, o cadena vacía") })),
+  datosAConfirmar: z.array(z.string()), riesgos: z.array(z.string()), palabraClave: z.string(), vigencia: z.enum(Object.keys(VIGENCIAS) as [Vigencia, ...Vigencia[]]),
+});
+
+/**
+ * Completa la ficha de una casilla con INVESTIGACIÓN real (búsqueda con fuentes): primero se consulta la web, y la ficha se llena solo con lo que
+ * consta en ese dossier. Las fuentes llevan su enlace; lo que no se encuentra va a «lo que aún no se sabe». Mantiene lo que el editor ya escribió.
+ */
+export async function completarFichaCore(
+  userId: string,
+  input: { tema: string; angulo?: string; encargo?: string; seccion?: string; existente?: FichaPauta },
+): Promise<{ ok: true; ficha: FichaPauta } | { ok: false; error: string }> {
+  const model = await getAiModel();
+  if (!model) return { ok: false, error: "Falta la clave del modelo de IA (la conecta un administrador en Configuración → Asistente)." };
+  const cuota = await verificarCuotaIA(userId);
+  if (!cuota.ok) return { ok: false, error: cuota.message };
+  try {
+    const inv = await investigarTema(userId, input.tema, [input.angulo, input.encargo].filter(Boolean).join(". "), input.seccion);
+    if (!inv || !inv.sources.length) return { ok: false, error: "No encontré fuentes verificables para ese tema: no puedo completar la ficha sin inventar. Precisa el tema o añade las fuentes a mano." };
+    const { object, usage } = await generateObject({
+      model,
+      schema: esquemaFicha,
+      temperature: 0.2,
+      abortSignal: AbortSignal.timeout(60_000),
+      system:
+        "Eres el editor jefe de CONtexto Ganadero (medio colombiano del sector ganadero y agropecuario). Antes de encargar una nota llenas su FICHA DE PAUTA, como en un consejo de redacción. " +
+        "Te basas SOLO en el dossier que recibes: no inventes cifras, fechas, cargos, nombres de personas ni enlaces. Si el dossier no responde algo, ponlo en «abiertas». " +
+        "Las fuentes deben ser entidades, documentos o personas que consten en el dossier, con el enlace tal como aparece. Escribe en español de Colombia.",
+      prompt: `TEMA: ${input.tema}
+${input.angulo ? `ENFOQUE PROPUESTO: ${input.angulo}
+` : ""}${input.seccion ? `SECCIÓN: ${input.seccion}
+` : ""}
+DOSSIER (búsqueda web con fuentes: ${inv.sources.map((x) => `${x.outlet} ${x.url}`).join("; ")}):
+${inv.text.slice(0, 9000)}
+
+Llena la ficha de pauta.`,
+    });
+    await registrarUsoIA(userId, usage);
+    const nueva = sanearFicha({ ...object, novedad: object.novedad });
+    // Lo que el editor ya escribió manda; la IA solo rellena lo vacío (y suma fuentes nuevas con enlace).
+    const previa = sanearFicha(input.existente ?? {});
+    const fuentes = [...(previa.fuentes ?? []), ...(nueva.fuentes ?? []).filter((f) => !(previa.fuentes ?? []).some((p) => p.nombre.toLowerCase() === f.nombre.toLowerCase()))].slice(0, 10);
+    return { ok: true, ficha: { ...nueva, ...previa, ...(fuentes.length ? { fuentes } : {}) } };
+  } catch (err) {
+    console.error("completarFichaCore:", err);
+    const detalle = err && typeof err === "object" && "message" in err ? String((err as Error).message) : "";
+    return { ok: false, error: detalle ? `No se pudo completar la ficha: ${detalle.slice(0, 200)}` : "El modelo no respondió." };
+  }
 }

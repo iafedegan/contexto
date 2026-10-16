@@ -14,7 +14,7 @@ import type { TemplateParts } from "@/lib/template-parts";
 import type { TickerConfig } from "@/lib/cintillo";
 import type { TextosCabecera } from "@/lib/textos-cabecera";
 import type { MenuNavbar } from "@/lib/menu-navbar";
-import type { ConfigConsejo, TemaConsejo } from "@/lib/consejo/plan";
+import type { ConfigConsejo, FichaPauta, TemaConsejo } from "@/lib/consejo/plan";
 import {
   boolean,
   customType,
@@ -670,6 +670,8 @@ export const editorialSlots = pgTable(
     angle: text("angle").notNull().default(""),
     /** Encargo para la IA: qué contar, qué datos y fuentes confirmar. */
     brief: text("brief").notNull().default(""),
+    /** Ficha de pauta: las preguntas que el consejo responde antes de encargar la nota (foco, por qué ahora, fuentes, riesgos…). */
+    ficha: jsonb("ficha").$type<FichaPauta>().notNull().default(sql`'{}'::jsonb`),
     priority: smallint("priority").notNull().default(2),
     /** manual (un editor aprueba antes) | auto (se programa sola). */
     approval: text("approval").notNull().default("manual"),

@@ -7,9 +7,9 @@ import { db } from "@/db";
 import { categories, editorialPlans, editorialSlots } from "@/db/schema";
 import { canPublish, requirePermiso } from "@/lib/auth";
 import { tienePermiso } from "@/lib/permisos-server";
-import { armarPautaCore, proponerTemasConsejoCore } from "@/lib/ai/consejo-ia";
+import { armarPautaCore, completarFichaCore, proponerTemasConsejoCore } from "@/lib/ai/consejo-ia";
 import { aprobarCasilla, procesarConsejo, sincronizarCasillas } from "@/lib/ai/consejo-ejecucion";
-import { CONFIG_BASE, construirParrilla, lunesDe, sanearConfig, type ConfigConsejo, type TemaConsejo } from "@/lib/consejo/plan";
+import { CONFIG_BASE, construirParrilla, lunesDe, sanearConfig, sanearFicha, type ConfigConsejo, type FichaPauta, type TemaConsejo } from "@/lib/consejo/plan";
 
 /**
  * Acciones del consejo de redacción. Todo exige el permiso de redacción; activar un plan con casillas «automáticas» y aprobar piezas
@@ -91,7 +91,7 @@ export async function armarPauta(id: string, enfoque?: string): Promise<Res<{ ca
   await db.insert(editorialSlots).values(
     parrilla.map((c, i) => {
       const p = pauta.get(i);
-      return { planId: id, publishAt: c.publicaEn, sectionSlug: c.seccion, topic: p?.tema ?? "", angle: p?.angulo ?? "", brief: p?.encargo ?? "", priority: p?.prioridad ?? c.prioridad, approval: c.aprobacion };
+      return { planId: id, publishAt: c.publicaEn, sectionSlug: c.seccion, topic: p?.tema ?? "", angle: p?.angulo ?? "", brief: p?.encargo ?? "", priority: p?.prioridad ?? c.prioridad, approval: c.aprobacion, ficha: p?.ficha ?? {} };
     }),
   );
   rev(id);
@@ -99,7 +99,7 @@ export async function armarPauta(id: string, enfoque?: string): Promise<Res<{ ca
 }
 
 /** Edita una casilla (tema, enfoque, encargo, hora, sección, prioridad, aprobación). Solo si aún no se redactó. */
-export async function guardarCasilla(slotId: string, d: { topic: string; angle: string; brief: string; sectionSlug: string; publishAt: string; priority: number; approval: "manual" | "auto" }): Promise<Res> {
+export async function guardarCasilla(slotId: string, d: { topic: string; angle: string; brief: string; sectionSlug: string; publishAt: string; priority: number; approval: "manual" | "auto"; ficha?: FichaPauta }): Promise<Res> {
   const user = await requirePermiso("articulos");
   const [c] = await db.select().from(editorialSlots).where(eq(editorialSlots.id, slotId)).limit(1);
   if (!c) return { ok: false, message: "La casilla ya no existe." };
@@ -111,6 +111,7 @@ export async function guardarCasilla(slotId: string, d: { topic: string; angle: 
     topic: d.topic.trim().slice(0, 160), angle: d.angle.trim().slice(0, 400), brief: d.brief.trim().slice(0, 1200),
     sectionSlug: /^[\w-]{1,80}$/.test(d.sectionSlug) ? d.sectionSlug : c.sectionSlug, publishAt: cuando,
     priority: d.priority === 1 || d.priority === 3 ? d.priority : 2, approval: d.approval === "auto" ? "auto" : "manual",
+    ...(d.ficha ? { ficha: sanearFicha(d.ficha) } : {}),
     status: "planificada", error: null, updatedAt: new Date(),
   }).where(eq(editorialSlots.id, slotId));
   rev(c.planId);
@@ -188,4 +189,18 @@ export async function borrarPlan(id: string): Promise<Res> {
   await db.delete(editorialPlans).where(eq(editorialPlans.id, id));
   rev();
   return { ok: true, message: "Consejo borrado." };
+}
+
+/** El «editor jefe» completa la ficha de una casilla con investigación real (con fuentes y enlaces). Respeta lo que ya se escribió. */
+export async function completarFicha(slotId: string, actual: FichaPauta): Promise<Res<{ ficha: FichaPauta }>> {
+  const user = await requirePermiso("articulos");
+  const [c] = await db.select().from(editorialSlots).where(eq(editorialSlots.id, slotId)).limit(1);
+  if (!c) return { ok: false, message: "La casilla ya no existe." };
+  if (c.status !== "planificada" && c.status !== "fallida") return { ok: false, message: "Esta pieza ya se redactó." };
+  const [cat] = await db.select({ name: categories.name }).from(categories).where(eq(categories.slug, c.sectionSlug)).limit(1);
+  const r = await completarFichaCore(user.id, { tema: c.topic, angulo: c.angle, encargo: c.brief, seccion: cat?.name, existente: sanearFicha(actual) });
+  if (!r.ok) return { ok: false, message: r.error };
+  await db.update(editorialSlots).set({ ficha: r.ficha, updatedAt: new Date() }).where(eq(editorialSlots.id, slotId));
+  rev(c.planId);
+  return { ok: true, ficha: r.ficha, message: "Ficha completada con investigación y fuentes: revísala antes de activar el plan." };
 }

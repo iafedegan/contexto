@@ -36,6 +36,8 @@ export type ConfigConsejo = {
   aprobacion: Aprobacion;
   /** Con cuántas horas de antelación se redacta cada borrador (para que el editor alcance a revisarlo). */
   antelacionHoras: number;
+  /** Añade al final de cada nota redactada por la IA el aviso de que se elaboró con su asistencia (transparencia con el lector). Por defecto sí. */
+  divulgarIA?: boolean;
 };
 
 export const CONFIG_BASE: ConfigConsejo = {
@@ -44,6 +46,7 @@ export const CONFIG_BASE: ConfigConsejo = {
   cuotas: [],
   aprobacion: "manual",
   antelacionHoras: 4,
+  divulgarIA: true,
 };
 
 /** Un tema que el consejo quiere cubrir (lo escribe una persona o lo propone la IA). */
@@ -88,6 +91,7 @@ export function sanearConfig(input: unknown): ConfigConsejo {
     cuotas,
     aprobacion: c.aprobacion === "auto" ? "auto" : "manual",
     antelacionHoras: Math.min(48, Math.max(1, Math.round(Number(c.antelacionHoras) || CONFIG_BASE.antelacionHoras))),
+    divulgarIA: c.divulgarIA !== false,
   };
 }
 
@@ -127,3 +131,134 @@ export const notasPorSemana = (cfg: ConfigConsejo) => cfg.dias.length * cfg.cuot
 /** ¿Ya toca redactar esta casilla? (faltan `antelacionHoras` o menos para su hora). */
 export const tocaRedactar = (publicaEn: Date, cfg: Pick<ConfigConsejo, "antelacionHoras">, ahora: Date = new Date()) =>
   publicaEn.getTime() - ahora.getTime() <= cfg.antelacionHoras * 3600_000;
+
+/* -------------------------------------------------------------------------------------------------------------------------------
+ * Ficha de pauta: lo que un consejo de redacción real deja definido ANTES de encargar una nota. Es el insumo del editor de IA: sin foco,
+ * sin audiencia y sin fuentes la IA no debe redactar (inventaría). Ver docs/consejo-de-redaccion.md para el porqué de cada campo.
+ * ------------------------------------------------------------------------------------------------------------------------------- */
+
+export type Genero = "noticia" | "explicativo" | "analisis" | "datos" | "cronica" | "entrevista";
+export const GENEROS: Record<Genero, string> = { noticia: "Noticia", explicativo: "Explicativo", analisis: "Análisis", datos: "Datos y cifras", cronica: "Crónica", entrevista: "Entrevista" };
+export type Vigencia = "hoy" | "semana" | "atemporal";
+export const VIGENCIAS: Record<Vigencia, string> = { hoy: "Urgente (se pierde si no sale hoy)", semana: "Vigente toda la semana", atemporal: "Atemporal (puede moverse)" };
+
+/** Una fuente prevista: una voz (persona o entidad) o un documento/dato oficial, con su enlace si ya se conoce. */
+export type FuentePrevista = { nombre: string; tipo: "voz" | "documento"; url?: string };
+
+export type FichaPauta = {
+  /** 1 · Foco: la nota en una frase («alguien hace algo porque…»). */
+  foco?: string;
+  /** 2 · ¿Por qué ahora? El gancho de actualidad. */
+  porQueAhora?: string;
+  /** 3 · ¿A quién le importa y qué cambia para él? */
+  audiencia?: string;
+  /** 4 · ¿Qué aporta que no se haya publicado ya? */
+  novedad?: string;
+  /** 5 · Fuentes previstas: voces y documentos oficiales. */
+  fuentes?: FuentePrevista[];
+  /** 6 · Datos y cifras que hay que confirmar antes de afirmarlos. */
+  datosAConfirmar?: string[];
+  /** 7 · Preguntas que la nota debe responder (lo que se sabe) y las que quedan abiertas (lo que NO se sabe: no se escribe como si se supiera). */
+  preguntas?: string[];
+  abiertas?: string[];
+  /** 8 · Género y extensión. */
+  genero?: Genero;
+  palabras?: number;
+  /** 9 · Riesgos y sensibilidad: réplica, presunción de inocencia, menores, salud animal/pública, conflicto de interés. */
+  riesgos?: string[];
+  /** 10 · Imagen o gráfica sugerida. */
+  visual?: string;
+  /** 11 · Palabra clave de enfoque (lo que el productor escribiría en el buscador). */
+  palabraClave?: string;
+  /** 12 · Cuánto dura vigente la nota. */
+  vigencia?: Vigencia;
+  /** 13 · Lo que NO debe hacer la nota. */
+  evitar?: string[];
+};
+
+export const FICHA_VACIA: FichaPauta = {};
+
+/** Qué pide cada pregunta de la ficha: etiqueta, ayuda y si es obligatoria para poder redactar. */
+export const PREGUNTAS_FICHA: { clave: keyof FichaPauta; etiqueta: string; ayuda: string; obligatoria: boolean }[] = [
+  { clave: "foco", etiqueta: "¿De qué trata, en una frase?", ayuda: "«Alguien hace algo porque…». Si no cabe en una frase, la nota no está enfocada.", obligatoria: true },
+  { clave: "porQueAhora", etiqueta: "¿Por qué ahora?", ayuda: "El hecho, la fecha o la decisión que hace que valga la pena publicarla esta semana.", obligatoria: true },
+  { clave: "audiencia", etiqueta: "¿A quién le importa y qué cambia para él?", ayuda: "El productor, el comercializador, el gremio… y la consecuencia concreta.", obligatoria: true },
+  { clave: "novedad", etiqueta: "¿Qué aporta que no se haya publicado ya?", ayuda: "Un dato, una voz o un ángulo nuevos frente a lo que ya salió en el sitio y en otros medios.", obligatoria: false },
+  { clave: "fuentes", etiqueta: "Fuentes previstas", ayuda: "Quién debe hablar (con su cargo) y qué documentos u oficiales respaldan la nota. Mínimo una.", obligatoria: true },
+  { clave: "datosAConfirmar", etiqueta: "Datos que hay que confirmar", ayuda: "Cifras, fechas y cargos que no se afirman hasta verlos en la fuente.", obligatoria: false },
+  { clave: "preguntas", etiqueta: "Preguntas que la nota debe responder", ayuda: "Qué, quién, cuándo, dónde, por qué y cómo. Mínimo dos.", obligatoria: true },
+  { clave: "abiertas", etiqueta: "Lo que aún no se sabe", ayuda: "Se dice que no se sabe; nunca se escribe como si se supiera.", obligatoria: false },
+  { clave: "genero", etiqueta: "Género y extensión", ayuda: "Noticia, explicativo, análisis, datos, crónica o entrevista, y cuántas palabras.", obligatoria: false },
+  { clave: "riesgos", etiqueta: "Riesgos y sensibilidad", ayuda: "Derecho de réplica, presunción de inocencia, menores, alertas sanitarias, conflicto de interés.", obligatoria: false },
+  { clave: "visual", etiqueta: "Imagen o gráfica", ayuda: "Qué se muestra y de dónde saldrán los datos.", obligatoria: false },
+  { clave: "palabraClave", etiqueta: "Palabra clave de enfoque", ayuda: "Lo que un ganadero escribiría en el buscador.", obligatoria: false },
+  { clave: "vigencia", etiqueta: "Vigencia", ayuda: "Si se pierde hoy, dura la semana o se puede mover.", obligatoria: false },
+  { clave: "evitar", etiqueta: "Lo que NO debe decir", ayuda: "Afirmaciones sin respaldo, enfoques ya agotados, términos sensibles.", obligatoria: false },
+];
+
+const lleno = (v: unknown): boolean => (Array.isArray(v) ? v.length > 0 : typeof v === "string" ? v.trim().length >= 8 : typeof v === "number" ? v > 0 : !!v);
+
+/** ¿Está lista la ficha para redactar? Devuelve el avance (0-100) y qué falta. Lo obligatorio frena la redacción; lo demás solo suma. */
+export function evaluarFicha(f: FichaPauta | null | undefined): { lista: boolean; avance: number; faltanObligatorias: string[]; faltanOpcionales: string[] } {
+  const ficha = f ?? {};
+  const faltanObligatorias: string[] = [];
+  const faltanOpcionales: string[] = [];
+  let ok = 0;
+  for (const q of PREGUNTAS_FICHA) {
+    const v = ficha[q.clave];
+    // «preguntas» pide al menos dos; «fuentes» al menos una con nombre.
+    const bien = q.clave === "preguntas" ? Array.isArray(v) && v.filter((x) => String(x).trim().length >= 6).length >= 2 : lleno(v);
+    if (bien) ok++;
+    else (q.obligatoria ? faltanObligatorias : faltanOpcionales).push(q.etiqueta);
+  }
+  return { lista: faltanObligatorias.length === 0, avance: Math.round((ok / PREGUNTAS_FICHA.length) * 100), faltanObligatorias, faltanOpcionales };
+}
+
+const texto = (v: unknown, max: number) => (typeof v === "string" ? v.replace(/[\u0000-\u001f<>]/g, " ").replace(/\s+/g, " ").trim().slice(0, max) : undefined) || undefined;
+const lista = (v: unknown, max: number, n: number) => {
+  const xs = (Array.isArray(v) ? v : []).map((x) => texto(x, max)).filter((x): x is string => !!x).slice(0, n);
+  return xs.length ? xs : undefined;
+};
+
+/** Valida lo que llegue del navegador o de la IA. */
+export function sanearFicha(input: unknown): FichaPauta {
+  const f = (input && typeof input === "object" ? input : {}) as Record<string, unknown>;
+  const fuentes = (Array.isArray(f.fuentes) ? f.fuentes : [])
+    .map((x) => {
+      const r = (x ?? {}) as Record<string, unknown>;
+      const nombre = texto(r.nombre, 160);
+      const url = typeof r.url === "string" && /^https?:\/\/[^\s<>"']{4,300}$/.test(r.url.trim()) ? r.url.trim() : undefined;
+      return nombre ? { nombre, tipo: r.tipo === "documento" ? ("documento" as const) : ("voz" as const), ...(url ? { url } : {}) } : null;
+    })
+    .filter((x): x is FuentePrevista => !!x)
+    .slice(0, 10);
+  const out: FichaPauta = {
+    foco: texto(f.foco, 300), porQueAhora: texto(f.porQueAhora, 300), audiencia: texto(f.audiencia, 300), novedad: texto(f.novedad, 300),
+    fuentes: fuentes.length ? fuentes : undefined, datosAConfirmar: lista(f.datosAConfirmar, 200, 10), preguntas: lista(f.preguntas, 200, 10), abiertas: lista(f.abiertas, 200, 10),
+    genero: (Object.keys(GENEROS) as Genero[]).find((g) => g === f.genero), palabras: typeof f.palabras === "number" && f.palabras >= 150 && f.palabras <= 1500 ? Math.round(f.palabras) : undefined,
+    riesgos: lista(f.riesgos, 200, 8), visual: texto(f.visual, 250), palabraClave: texto(f.palabraClave, 80),
+    vigencia: (Object.keys(VIGENCIAS) as Vigencia[]).find((v) => v === f.vigencia), evitar: lista(f.evitar, 200, 8),
+  };
+  return Object.fromEntries(Object.entries(out).filter(([, v]) => v !== undefined)) as FichaPauta;
+}
+
+/** La ficha convertida en el bloque de texto que se le entrega al editor de IA como encargo estructurado. */
+export function fichaParaPrompt(f: FichaPauta): string {
+  const l = (t: string, xs?: string[]) => (xs?.length ? `${t}:\n${xs.map((x) => `- ${x}`).join("\n")}` : "");
+  return [
+    "FICHA DE PAUTA (la definió el consejo de redacción; es el encargo: síguela):",
+    f.foco && `FOCO: ${f.foco}`,
+    f.porQueAhora && `POR QUÉ AHORA: ${f.porQueAhora}`,
+    f.audiencia && `A QUIÉN LE IMPORTA: ${f.audiencia}`,
+    f.novedad && `QUÉ APORTA DE NUEVO: ${f.novedad}`,
+    f.genero && `GÉNERO: ${GENEROS[f.genero]}${f.palabras ? `, de unas ${f.palabras} palabras` : ""}.`,
+    f.fuentes?.length && `FUENTES PREVISTAS (atribuye con ellas; no inventes otras):\n${f.fuentes.map((x) => `- ${x.nombre} (${x.tipo === "voz" ? "voz" : "documento/dato oficial"})${x.url ? ` ${x.url}` : ""}`).join("\n")}`,
+    l("DATOS A CONFIRMAR (solo se afirman si constan en el material o el dossier)", f.datosAConfirmar),
+    l("PREGUNTAS QUE LA NOTA DEBE RESPONDER", f.preguntas),
+    l("LO QUE AÚN NO SE SABE (di que no se sabe; no lo escribas como hecho)", f.abiertas),
+    l("RIESGOS Y SENSIBILIDAD (trátalos con cuidado: réplica, presunción de inocencia, menores, alertas sanitarias)", f.riesgos),
+    f.palabraClave && `PALABRA CLAVE DE ENFOQUE: ${f.palabraClave} (en el título y el primer párrafo, con naturalidad).`,
+    f.visual && `IMAGEN/GRÁFICA SUGERIDA: ${f.visual}`,
+    l("LO QUE NO DEBE DECIR", f.evitar),
+  ].filter(Boolean).join("\n");
+}

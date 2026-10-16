@@ -62,6 +62,8 @@ export async function generateArticleDraftCore(userId: string, input: {
   material?: Material[];
   /** Indicaciones del editor sobre cómo escribir (tono, estructura, qué incluir o evitar). Tienen prioridad. */
   instrucciones?: string;
+  /** Ficha de pauta del consejo de redacción ya convertida en texto (ver fichaParaPrompt): el encargo estructurado. */
+  ficha?: string;
 }): Promise<GenerateResult> {
 
   const tema = input.title.trim();
@@ -109,6 +111,7 @@ export async function generateArticleDraftCore(userId: string, input: {
         ? `NOTICIAS DE REFERENCIA (las eligió el periodista): ${refs.map((r, i) => `[${i + 1}] ${r.outlet}: «${r.title}»`).join("; ")}. Atribúyelas en el texto («según …») sin copiar frases textuales: redacta con palabras propias.`
         : "",
       input.instrucciones?.trim() ? `INSTRUCCIONES DEL EDITOR (síguelas con prioridad sobre el estilo por defecto, sin inventar hechos):\n${input.instrucciones.trim().slice(0, 1500)}` : "",
+      input.ficha?.trim() ? input.ficha.trim().slice(0, 4000) : "",
       REGLAS_ENFOQUE_Y_CITAS,
       "REGLA DE ORO: la nota debe ser 100 % real y verificable. Usa SOLO hechos, cifras, fechas, nombres, cargos y declaraciones que consten en el encargo, el material o el dossier. Si algo no consta, NO lo escribas (no lo deduzcas, no lo redondees, no lo completes con conocimiento propio). Atribuye cada dato a su fuente en el texto («según el DANE, con corte a junio de 2026…»). La nota debe apoyarse en CIFRAS AUDITABLES: incluye las cifras clave que traiga el dossier o el material (mínimo tres cuando existan), cada una con su unidad, su periodo y la entidad que la publica, y nunca mezcles periodos o unidades sin decirlo. Es preferible una nota más corta y exacta que una larga con datos dudosos.",
     ]

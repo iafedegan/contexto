@@ -155,6 +155,13 @@
       "when": 1792172634098,
       "tag": "0021_consejo_de_redaccion",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1792182938268,
+      "tag": "0022_ficha_de_pauta",
+      "breakpoints": true
     }
   ]
 }

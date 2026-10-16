@@ -6,7 +6,7 @@ import { canPublish, requirePermiso } from "@/lib/auth";
 import { tienePermiso } from "@/lib/permisos-server";
 import { sincronizarCasillas } from "@/lib/ai/consejo-ejecucion";
 import { ConsejoEditor, type CasillaVista } from "@/components/panel/consejo-editor";
-import { sanearConfig, type EstadoCasilla, type EstadoPlan } from "@/lib/consejo/plan";
+import { sanearConfig, sanearFicha, type EstadoCasilla, type EstadoPlan } from "@/lib/consejo/plan";
 
 export const metadata = { title: "Consejo de redacción" };
 export const dynamic = "force-dynamic";
@@ -27,7 +27,7 @@ export default async function ConsejoPage({ params, searchParams }: { params: Pr
   ]);
   const casillas: CasillaVista[] = filas.map((c) => ({
     id: c.id, publishAt: c.publishAt.toISOString(), sectionSlug: c.sectionSlug, topic: c.topic, angle: c.angle, brief: c.brief, priority: c.priority,
-    approval: c.approval === "auto" ? "auto" : "manual", status: c.status as EstadoCasilla, articleId: c.articleId, error: c.error,
+    approval: c.approval === "auto" ? "auto" : "manual", status: c.status as EstadoCasilla, articleId: c.articleId, error: c.error, ficha: sanearFicha(c.ficha),
   }));
   return <ConsejoEditor plan={{ id: plan.id, title: plan.title, weekStart: plan.weekStart, status: plan.status as EstadoPlan, config: sanearConfig(plan.config), temas: plan.temas ?? [] }} casillas={casillas} secciones={secciones} puedePublicar={puedePublicar} pasoInicial={Math.max(0, (Number(paso) || 1) - 1)} />;
 }
