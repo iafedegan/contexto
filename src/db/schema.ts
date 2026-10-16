@@ -14,6 +14,7 @@ import type { TemplateParts } from "@/lib/template-parts";
 import type { TickerConfig } from "@/lib/cintillo";
 import type { TextosCabecera } from "@/lib/textos-cabecera";
 import type { MenuNavbar } from "@/lib/menu-navbar";
+import type { ConfigConsejo, TemaConsejo } from "@/lib/consejo/plan";
 import {
   boolean,
   customType,
@@ -633,6 +634,54 @@ export const siteSettings = pgTable("site_settings", {
   value: jsonb("value").notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+/**
+ * Consejo de redacción: el plan de la semana. Cada plan lleva su configuración (días, horas, cuotas por sección y aprobación), los temas
+ * que el consejo quiere cubrir y una casilla por cada pieza (`editorial_slots`) con su día, hora y sección. Ver src/lib/consejo.
+ */
+export const editorialPlans = pgTable("editorial_plans", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  title: text("title").notNull(),
+  /** Lunes de la semana que cubre (fecha de Colombia). */
+  weekStart: date("week_start").notNull(),
+  /** borrador | activo | cerrado. Solo un plan activo redacta y programa. */
+  status: text("status").notNull().default("borrador"),
+  config: jsonb("config").$type<ConfigConsejo>().notNull(),
+  temas: jsonb("temas").$type<TemaConsejo[]>().notNull().default(sql`'[]'::jsonb`),
+  createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+  /** Quién activó el plan: con sus permisos se redacta y, si una casilla es automática, se programa. */
+  activatedBy: uuid("activated_by").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** Una pieza del plan: qué, cuándo, en qué sección y cómo sale (con aprobación o automática). */
+export const editorialSlots = pgTable(
+  "editorial_slots",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    planId: uuid("plan_id")
+      .notNull()
+      .references(() => editorialPlans.id, { onDelete: "cascade" }),
+    /** Hora exacta de publicación. */
+    publishAt: timestamp("publish_at", { withTimezone: true }).notNull(),
+    sectionSlug: text("section_slug").notNull(),
+    topic: text("topic").notNull().default(""),
+    angle: text("angle").notNull().default(""),
+    /** Encargo para la IA: qué contar, qué datos y fuentes confirmar. */
+    brief: text("brief").notNull().default(""),
+    priority: smallint("priority").notNull().default(2),
+    /** manual (un editor aprueba antes) | auto (se programa sola). */
+    approval: text("approval").notNull().default("manual"),
+    /** planificada | redactando | revision | programada | publicada | fallida | omitida. */
+    status: text("status").notNull().default("planificada"),
+    articleId: uuid("article_id").references(() => articles.id, { onDelete: "set null" }),
+    error: text("error"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("editorial_slots_plan_idx").on(t.planId, t.publishAt), index("editorial_slots_pendientes_idx").on(t.status, t.publishAt)],
+);
 
 /**
  * Fondo de la portada, elegido por un editor en /panel/portada. Se aplica a

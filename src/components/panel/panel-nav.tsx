@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Inbox, KeyRound, LayoutDashboard, LayoutTemplate, Mail, Newspaper, Settings, Users, Circle } from "lucide-react";
+import { CalendarRange, Inbox, KeyRound, LayoutDashboard, LayoutTemplate, Mail, Newspaper, Settings, Users, Circle } from "lucide-react";
 import type { PermisoId } from "@/lib/permisos";
 import { PanelMobileMenu } from "@/components/panel/panel-mobile-menu";
 
@@ -43,6 +43,7 @@ const GROUPS: Group[] = [
     items: [
       { href: "/panel", label: "Resumen", hint: "Estado editorial, audiencia y suscriptores" },
       { href: "/panel/articulos", label: "Artículos", hint: "Crear, editar y programar", permiso: "articulos" },
+      { href: "/panel/consejo", label: "Consejo de redacción", hint: "Planear la semana con IA", permiso: "articulos" },
       { href: "/panel/newsletter", label: "Newsletter", hint: "Configurar y enviar el boletín", permiso: "newsletter" },
     ],
   },
@@ -98,6 +99,7 @@ const ICONOS: Record<string, typeof Circle> = {
   "/panel": LayoutDashboard,
   "/panel/portada": LayoutTemplate,
   "/panel/articulos": Newspaper,
+  "/panel/consejo": CalendarRange,
   "/panel/newsletter": Mail,
   "/panel/configuracion": Settings,
   "/panel/newsletter?tab=suscriptores": Users,

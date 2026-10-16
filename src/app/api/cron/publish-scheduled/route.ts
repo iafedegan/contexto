@@ -6,6 +6,7 @@ import { syncMarketData } from "@/lib/sync-market-data";
 import { purgarVencidos } from "@/lib/mantenimiento";
 import { refrescarObservatorio } from "@/lib/observatorio-fedegan";
 import { refrescarIndicadores } from "@/lib/indicadores-fedegan";
+import { procesarConsejo } from "@/lib/ai/consejo-ejecucion";
 import { invalidarCache } from "@/lib/data-cache";
 import { revalidatePath } from "next/cache";
 
@@ -39,7 +40,9 @@ export async function GET(req: Request) {
     console.error("publish-scheduled: falló el envío de boletines programados", e);
     return [];
   });
-  if (soloProgramados) return NextResponse.json({ published: pasada.slugs, boletines });
+  // Consejo de redacción: redacta las piezas que ya tocan (una por pasada cada minuto; hasta dos en la pasada diaria).
+  const consejo = await procesarConsejo({ max: soloProgramados ? 1 : 2 }).catch(() => ({ redactadas: 0 }));
+  if (soloProgramados) return NextResponse.json({ published: pasada.slugs, boletines, consejo });
 
   const [marketData, mantenimiento] = await Promise.all([
     syncMarketData().catch((e) => {
@@ -61,5 +64,5 @@ export async function GET(req: Request) {
     revalidatePath("/observatorio");
     revalidatePath("/en/observatorio");
   }
-  return NextResponse.json({ published: pasada.slugs, boletines, marketData, mantenimiento });
+  return NextResponse.json({ published: pasada.slugs, boletines, consejo, marketData, mantenimiento });
 }

@@ -148,6 +148,13 @@
       "when": 1792079421093,
       "tag": "0020_indice_de_la_portada",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1792172634098,
+      "tag": "0021_consejo_de_redaccion",
+      "breakpoints": true
     }
   ]
 }

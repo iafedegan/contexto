@@ -6,7 +6,7 @@ import { articles, authors, categories } from "@/db/schema";
 import { auth, canPublish, requirePermiso } from "@/lib/auth";
 import { tienePermiso } from "@/lib/permisos-server";
 import Link from "next/link";
-import { ArrowLeft, PenLine, Sparkles } from "lucide-react";
+import { ArrowLeft, CalendarRange, FileText, PenLine, Sparkles } from "lucide-react";
 import { ArticleEditor } from "@/components/article-editor";
 import { ArticleWizard } from "@/components/panel/article-wizard";
 import { getEstilo } from "@/lib/ai/estilo";
@@ -109,6 +109,7 @@ export default async function ArticleEditorPage({
         />
       );
     }
+    if (modo === "ia-opciones") return <IaChooser />;
     return <ModeChooser />;
   }
 
@@ -311,6 +312,47 @@ function ArticleStats({
   );
 }
 
+// Segunda elección del asistente de IA: una sola nota (artículo del día) o el plan de toda la semana (consejo de redacción).
+function IaChooser() {
+  const options = [
+    {
+      href: "/panel/articulos/nuevo?modo=ia",
+      icon: <FileText size={22} />,
+      title: "Artículo del día",
+      text: "Una sola nota: das el título y un poco de contexto, la IA redacta el borrador y lo revisas paso a paso, con barra SEO y vista previa.",
+      cta: "Redactar una nota",
+    },
+    {
+      href: "/panel/consejo",
+      icon: <CalendarRange size={22} />,
+      title: "Consejo de redacción",
+      text: "Planea la semana: temas (tuyos o propuestos por la IA), cuántas notas por día y sección, calendario con horas y si cada pieza sale con tu aprobación o sola. La IA redacta cada nota a su tiempo.",
+      cta: "Planear la semana",
+    },
+  ];
+  return (
+    <div className="flex flex-col gap-6">
+      <div>
+        <Link href="/panel/articulos/nuevo" className="mb-3 inline-flex items-center gap-1.5 text-sm text-[var(--fg-muted)] transition hover:text-[var(--accent)]">
+          <ArrowLeft size={15} /> Volver
+        </Link>
+        <p className="lx-kicker text-[var(--accent)]">Con asistente de IA</p>
+        <h1 className="lx-display mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">¿Qué quieres preparar?</h1>
+      </div>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        {options.map((o) => (
+          <Link key={o.href} href={o.href} className="lx-card group flex flex-col gap-3 p-6 transition hover:-translate-y-0.5 hover:border-[var(--accent)]">
+            <span className="grid size-11 place-items-center rounded-full bg-[var(--surface-2)] text-[var(--accent)]">{o.icon}</span>
+            <h2 className="lx-display text-xl font-semibold">{o.title}</h2>
+            <p className="text-sm leading-relaxed text-[var(--fg-muted)]">{o.text}</p>
+            <span className="mt-auto pt-2 text-sm font-semibold text-[var(--accent)] group-hover:underline">{o.cta} →</span>
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // Pantalla para elegir cómo crear la nota: paso a paso a mano o con el asistente de IA.
 function ModeChooser() {
   const options = [
@@ -322,10 +364,10 @@ function ModeChooser() {
       cta: "Empezar paso a paso",
     },
     {
-      href: "/panel/articulos/nuevo?modo=ia",
+      href: "/panel/articulos/nuevo?modo=ia-opciones",
       icon: <Sparkles size={22} />,
       title: "Con asistente de IA",
-      text: "Solo el título y un poco de contexto: la IA redacta el borrador y lo revisas con el mismo paso a paso, barra SEO y vista previa. Nada se publica sin tu aprobación.",
+      text: "Solo el título y un poco de contexto: la IA redacta el borrador y lo revisas con el mismo paso a paso, barra SEO y vista previa. O planea toda la semana con un consejo de redacción. Nada se publica sin tu aprobación.",
       cta: "Usar el asistente",
     },
   ];

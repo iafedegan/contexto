@@ -3,6 +3,8 @@ import { after } from "next/server";
 import { alOcurrir } from "@/lib/eventos";
 import { procesarBoletinesProgramados } from "@/lib/newsletter/envio";
 import { avisarSiUltimaHora } from "@/lib/push";
+import { procesarConsejo } from "@/lib/ai/consejo-ejecucion";
+import { hit } from "@/lib/rate-limit";
 
 /**
  * Cableado de los eventos de dominio: aquí (y solo aquí) se decide quién reacciona a qué. Lo carga
@@ -17,4 +19,9 @@ alOcurrir("nota.publicada", ({ ids }) => avisarSiUltimaHora(ids));
 // Sin nada pendiente no hace nada, y la pasada se limita a una cada ~50 s en todo el sitio.
 alOcurrir("programadas.aviso", () => {
   after(() => procesarBoletinesProgramados({ tiempoMs: 45_000 }).catch((e) => console.error("programadas.aviso: falló el envío de boletines", e)));
+  // Consejo de redacción: redacta la pieza que ya toca (una por pasada, una pasada por minuto en todo el sitio; sin planes activos no hace nada).
+  after(async () => {
+    if (!(await hit("consejo:pasada", 1, 60)).allowed) return;
+    await procesarConsejo({ max: 1 }).catch((e) => console.error("programadas.aviso: falló el consejo de redacción", e));
+  });
 });
