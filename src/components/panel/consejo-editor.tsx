@@ -17,6 +17,7 @@ const PASOS = [
   { titulo: "Cobertura", sub: "Cuántas notas y quién aprueba" },
   { titulo: "Temas", sub: "Qué se quiere cubrir" },
   { titulo: "Pauta", sub: "Calendario con horas" },
+  { titulo: "Fichas", sub: "Qué se sabe antes de redactar" },
   { titulo: "Poner en marcha", sub: "Revisar y activar" },
 ] as const;
 const COLOR: Record<EstadoCasilla, string> = {
@@ -119,7 +120,9 @@ export function ConsejoEditor({ plan, casillas, secciones, puedePublicar, pasoIn
   };
 
   // ¿Qué pasos ya están listos? (el ✓ de la barra)
-  const listo = [cfg.dias.length > 0 && cfg.horas.length > 0, cfg.cuotas.length > 0, temas.length > 0, activas.length > 0, plan.status === "activo"];
+  const aRedactar = activas.filter((c) => c.status === "planificada" || c.status === "fallida");
+  const fichasListas = aRedactar.filter((c) => evaluarFicha(c.ficha).lista);
+  const listo = [cfg.dias.length > 0 && cfg.horas.length > 0, cfg.cuotas.length > 0, temas.length > 0, activas.length > 0, aRedactar.length > 0 && fichasListas.length === aRedactar.length, plan.status === "activo"];
   // Lo que hace «Siguiente» en cada paso: guarda y avanza; en Temas arma la pauta si aún no hay.
   const siguiente = () => {
     if (paso === 0 || paso === 1) return hacer(guardar, () => irA(paso + 1));
@@ -129,7 +132,7 @@ export function ConsejoEditor({ plan, casillas, secciones, puedePublicar, pasoIn
     }
     return irA(paso + 1);
   };
-  const textoSiguiente = paso === 2 && activas.length === 0 ? "Armar la pauta con IA" : paso === 0 ? "Siguiente · Cobertura" : paso === 1 ? "Siguiente · Temas" : paso === 2 ? "Siguiente · Pauta" : "Siguiente · Poner en marcha";
+  const textoSiguiente = paso === 2 && activas.length === 0 ? "Armar la pauta con IA" : paso === 0 ? "Siguiente · Cobertura" : paso === 1 ? "Siguiente · Temas" : paso === 2 ? "Siguiente · Pauta" : paso === 3 ? "Siguiente · Fichas" : "Siguiente · Poner en marcha";
   const bloqueoSiguiente = paso === 1 && cfg.cuotas.length === 0 ? "Elige al menos una sección con notas por día" : "";
 
   return (
@@ -359,7 +362,50 @@ export function ConsejoEditor({ plan, casillas, secciones, puedePublicar, pasoIn
       )}
 
       {paso === 4 && (
-        <Paso n={5} titulo="Poner en marcha" ayuda="Revisa el resumen y activa el plan. Desde ese momento la IA redacta cada pieza a su tiempo.">
+        <Paso n={5} titulo="Fichas de pauta" ayuda="Antes de que la IA escriba una nota, el consejo debe dejar definido de qué trata, por qué ahora, a quién le importa, con qué fuentes y qué preguntas responde. Así la IA no inventa. Aquí ves cómo va cada pieza y puedes completarlas con investigación.">
+          {aRedactar.length === 0 ? (
+            <p className="rounded-[var(--radius)] border border-dashed border-[var(--border-strong)] p-8 text-center text-sm text-[var(--fg-muted)]">No hay piezas por redactar. Arma la pauta en el paso 4.</p>
+          ) : (
+            <>
+              <div className="flex flex-wrap items-center gap-3 rounded-[var(--radius)] bg-[var(--surface-2)] px-4 py-3">
+                <p className="flex-1 text-sm"><strong>{fichasListas.length} de {aRedactar.length}</strong> fichas listas para redactar.</p>
+                <button type="button" disabled={pend || !!cargando || !editable || fichasListas.length === aRedactar.length} onClick={() => run(async () => {
+                  for (const c of aRedactar) {
+                    if (evaluarFicha(c.ficha).lista || c.topic.trim().length < 8) continue;
+                    setCargando(c.id);
+                    const r = await completarFicha(c.id, c.ficha);
+                    setCargando(null);
+                    setMsg({ ok: r.ok, texto: r.ok ? `Ficha completada: «${c.topic}»` : `«${c.topic}»: ${r.message}` });
+                    if (!r.ok) break;
+                    router.refresh();
+                  }
+                })} className={primario}>{cargando ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />} Completar todas con investigación</button>
+              </div>
+              <ul className="flex flex-col divide-y divide-[var(--border)] rounded-[var(--radius)] border border-[var(--border)]">
+                {aRedactar.map((c) => {
+                  const ev = evaluarFicha(c.ficha);
+                  return (
+                    <li key={c.id} className="flex flex-col gap-2 px-4 py-3">
+                      <div className="flex flex-wrap items-center gap-3">
+                        <div className="min-w-0 flex-1 basis-64"><p className="text-sm font-semibold">{c.topic || "Sin tema"}</p><p className="text-xs text-[var(--fg-muted)]">{nombre(c.sectionSlug)} · sale {nombreDia(diaDe(c.publishAt))} {horaDe(c.publishAt)}</p></div>
+                        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${ev.lista ? "bg-emerald-600/15 text-emerald-700" : "bg-amber-500/15 text-amber-700"}`}>{ev.lista ? `Lista · ${ev.avance}%` : `Incompleta · ${ev.avance}%`}</span>
+                        <button type="button" onClick={() => setSelId(c.id === selId ? null : c.id)} className={secundario}>{c.id === selId ? "Cerrar" : "Abrir la ficha"}</button>
+                      </div>
+                      <div className="h-1.5 overflow-hidden rounded-full bg-[var(--surface-2)]" aria-hidden><div className={`h-full rounded-full transition-all ${ev.lista ? "bg-emerald-600" : "bg-amber-500"}`} style={{ width: `${ev.avance}%` }} /></div>
+                      {!ev.lista && <p className="text-xs text-[var(--fg-muted)]">Falta: {ev.faltanObligatorias.join(" · ")}</p>}
+                      {c.error && <p className="text-xs text-amber-700">{c.error}</p>}
+                    </li>
+                  );
+                })}
+              </ul>
+              {sel && <PanelCasilla key={sel.id} c={sel} secciones={secciones} puedePublicar={puedePublicar} onClose={() => setSelId(null)} onGuardar={(d) => hacer(() => guardarCasilla(sel.id, d))} onQuitar={() => hacer(() => quitarCasilla(sel.id), () => setSelId(null))} onAprobar={() => hacer(() => aprobar(sel.id))} pend={pend} />}
+            </>
+          )}
+        </Paso>
+      )}
+
+      {paso === 5 && (
+        <Paso n={6} titulo="Poner en marcha" ayuda="Revisa el resumen y activa el plan. Desde ese momento la IA redacta cada pieza a su tiempo.">
           <ul className="grid gap-3 sm:grid-cols-3">
             {[["Piezas en la semana", activas.length], ["Con aprobación previa", activas.filter((c) => c.approval === "manual").length], ["Automáticas", activas.filter((c) => c.approval === "auto").length]].map(([t, n]) => (
               <li key={t as string} className="rounded-[var(--radius)] border border-[var(--border)] p-4"><p className="lx-kicker text-[var(--fg-muted)]">{t}</p><p className="lx-display text-3xl font-semibold tabular-nums">{n}</p></li>
@@ -370,7 +416,7 @@ export function ConsejoEditor({ plan, casillas, secciones, puedePublicar, pasoIn
             const listas = pend.filter((c) => evaluarFicha(c.ficha).lista).length;
             return pend.length ? (
               <p className={`rounded-[var(--radius)] border px-4 py-3 text-sm ${listas === pend.length ? "border-emerald-600/50 bg-emerald-600/10" : "border-amber-500/50 bg-amber-500/10"}`}>
-                <strong>Fichas de pauta: {listas} de {pend.length} listas.</strong> {listas === pend.length ? "Todas las piezas tienen su foco, fuentes y preguntas." : "Las que falten las completa el editor jefe con investigación al llegar la hora; si aun así faltan datos obligatorios, la pieza se detiene y te avisa. Puedes completarlas ya desde el calendario (paso 4)."}
+                <strong>Fichas de pauta: {listas} de {pend.length} listas.</strong> {listas === pend.length ? "Todas las piezas tienen su foco, fuentes y preguntas." : "Las que falten las completa el editor jefe con investigación al llegar la hora; si aun así faltan datos obligatorios, la pieza se detiene y te avisa. Puedes completarlas ya en el paso 5 (Fichas)."}
               </p>
             ) : null;
           })()}
