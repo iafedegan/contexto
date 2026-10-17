@@ -33,6 +33,7 @@ import {
   regenerateDraftPart,
   suggestTitlesAndContexts,
   suggestTopicIdeas,
+  autollenarPreguntas,
   searchNewsAbout,
   generateCoverImage,
   transcribirEntrevista,
@@ -53,6 +54,7 @@ import { Carrusel, filasListas, useAltoVentana } from "@/components/panel/carrus
 import { textoDeSegmentos, type Material, type Participante, type Segmento } from "@/lib/material-types";
 import { participantesListos, SegmentosEditor } from "@/components/panel/entrevista-editor";
 import { SiteArticlePreview, type SitePreviewChrome } from "@/components/panel/site-article-preview";
+import { briefParaPrompt, type BriefSeccion } from "@/lib/consejo/plan";
 import { FuenteCards, PantallaEnlaces, PantallaEntrevista, PantallaIdeas, PantallaNoticias, type Fuente } from "@/components/panel/wizard-fuentes";
 import { WizardStepper } from "@/components/panel/wizard-stepper";
 import { BotonVoz } from "@/components/panel/boton-voz";
@@ -192,7 +194,8 @@ export function ArticleWizard({
   const [sceneTxt, setSceneTxt] = useState("");
   const [imgError, setImgError] = useState("");
   const [genImg, startImg] = useTransition();
-  const [ideasFocus, setIdeasFocus] = useState("");
+  const [ideasBrief, setIdeasBrief] = useState<BriefSeccion>({});
+  const [llenandoIdeas, startLlenar] = useTransition();
   const [searchingIdeas, startIdeas] = useTransition();
   const [pickedContext, setPickedContext] = useState<number | null>(null);
   // Gráfica con datos reales (Gemini + búsqueda en Google).
@@ -656,7 +659,7 @@ export function ArticleWizard({
     startIdeas(async () => {
       const res = await suggestTopicIdeas({
         section: categories.find((c) => c.id === categoryId)?.name,
-        focus: ideasFocus,
+        focus: briefParaPrompt("", ideasBrief).split("\n").slice(1).join(" ") || undefined,
       });
       if (!res.ok) return setIdeasError(res.error);
       setIdeas({ ideas: res.ideas, sources: res.sources });
@@ -931,8 +934,15 @@ export function ArticleWizard({
             {/* Cada fuente tiene su pantalla: así el tema, las ideas, las noticias y la grabación caben sin desplazarse. */}
             {subpantalla === "ideas" && (
               <PantallaIdeas
-                foco={ideasFocus}
-                onFoco={setIdeasFocus}
+                brief={ideasBrief}
+                onBrief={(c) => setIdeasBrief((b) => ({ ...b, ...c }))}
+                llenando={llenandoIdeas}
+                onAutollenar={() => startLlenar(async () => {
+                  const r = await autollenarPreguntas({ tema: ideasBrief.temas ?? "", seccion: categories.find((c) => c.id === categoryId)?.name });
+                  if (!r.ok) return setIdeasError(r.error);
+                  setIdeasError("");
+                  setIdeasBrief((b) => ({ ...r.brief, temas: b.temas }));
+                })}
                 onBuscar={findIdeas}
                 buscando={searchingIdeas}
                 ocupado={generating}

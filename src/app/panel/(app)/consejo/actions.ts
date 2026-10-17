@@ -102,8 +102,11 @@ export async function armarPauta(id: string, enfoque?: string): Promise<Res<{ ca
   const parrilla = construirParrilla(plan.weekStart, cfg);
   if (!parrilla.length) return { ok: false, message: "Esa semana ya pasó: crea el consejo para una semana que no haya terminado." };
   const fmt = new Intl.DateTimeFormat("es-CO", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit", timeZone: "America/Bogota" });
+  // Cada tema puede tener su escritor: se agrupan los temas por escritor y se le da a la IA el estilo de cada uno.
   const estilos: Record<string, string> = {};
-  for (const [slug, b] of Object.entries(cfg.briefs ?? {})) { const t = await bloqueDeEscritor(b.escritorId ?? cfg.escritorId); if (t) estilos[slug] = t; }
+  const porEscritor = new Map<string, number[]>();
+  (plan.temas ?? []).forEach((t, n) => { const e = t.brief?.escritorId ?? cfg.briefs?.[t.seccion ?? ""]?.escritorId ?? cfg.escritorId; if (e) porEscritor.set(e, [...(porEscritor.get(e) ?? []), n + 1]); });
+  for (const [e, ns] of porEscritor) { const t = await bloqueDeEscritor(e); if (t) estilos[`temas ${ns.join(", ")}`] = t; }
   const r = await armarPautaCore(user.id, {
     estilos,
     lunes: plan.weekStart,
@@ -120,8 +123,9 @@ export async function armarPauta(id: string, enfoque?: string): Promise<Res<{ ca
     parrilla.map((c, i) => {
       const p = pauta.get(i);
       // Lo que el consejo contestó para la sección manda: la extensión elegida y, si el género de la IA no es de los pedidos, uno de los pedidos.
-      const b = cfg.briefs?.[c.seccion];
-      const ficha = { ...(p?.ficha ?? {}), ...(b?.palabras ? { palabras: b.palabras } : {}) };
+      const tema = p && p.temaN > 0 ? (plan.temas ?? [])[p.temaN - 1] : undefined;
+      const b = { ...cfg.briefs?.[c.seccion], ...(tema?.brief ?? {}) };
+      const ficha: FichaPauta = { ...(p?.ficha ?? {}), ...(b?.palabras ? { palabras: b.palabras } : {}), ...(tema?.brief?.escritorId ? { escritorId: tema.brief.escritorId } : {}) };
       if (b?.generos?.length && (!ficha.genero || !b.generos.includes(ficha.genero))) ficha.genero = b.generos[i % b.generos.length];
       return { planId: id, publishAt: c.publicaEn, sectionSlug: c.seccion, topic: p?.tema ?? "", angle: p?.angulo ?? "", brief: p?.encargo ?? "", priority: p?.prioridad ?? c.prioridad, approval: c.aprobacion, ficha };
     }),

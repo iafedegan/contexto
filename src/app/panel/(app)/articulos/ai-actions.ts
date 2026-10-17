@@ -5,6 +5,7 @@
  * para poder usarla también desde el bot de Telegram, que no tiene sesión de navegador.
  */
 import { requirePermiso } from "@/lib/auth";
+import { autollenarPreguntasCore } from "@/lib/ai/consejo-ia";
 import {
   generateArticleDraftCore,
   regenerateDraftPartCore,
@@ -66,6 +67,13 @@ export async function generateChart(...args: Parameters<typeof generateChartCore
 export async function suggestTopicIdeas(...args: Parameters<typeof suggestTopicIdeasCore> extends [string, ...infer R] ? R : never) {
   const user = await requirePermiso("articulos");
   return suggestTopicIdeasCore(user.id, ...args);
+}
+
+// La IA contesta las preguntas previas de un tema (para quién, palabras, géneros, alcance, tono, fuentes y qué evitar) a partir de su descripción.
+export async function autollenarPreguntas(input: { tema: string; seccion?: string }) {
+  const user = await requirePermiso("articulos");
+  if (input.tema.trim().length < 4) return { ok: false as const, error: "Describe primero el tema." };
+  return autollenarPreguntasCore(user.id, { tema: input.tema, seccion: input.seccion ?? "General" });
 }
 
 // Busca noticias sobre un tema. Exige el permiso «articulos» y delega en la función núcleo, que descuenta la cuota de IA.

@@ -18,6 +18,7 @@ const esquemaPauta = z.object({
   casillas: z.array(
     z.object({
       i: z.number().int().describe("Número de la casilla tal como llegó"),
+      temaNumero: z.number().int().describe("Número del tema del consejo (el de la lista TEMAS) en que se basa esta casilla; 0 si es de la agenda y no hay tema"),
       tema: z.string().describe("Titular tentativo de la nota (claro, máx. 110 caracteres)"),
       angulo: z.string().describe("Enfoque periodístico: qué contar y a quién le importa"),
       encargo: z.string().describe("Encargo para quien redacta: qué hechos desarrollar y QUÉ DATOS Y FUENTES HAY QUE CONFIRMAR (sin inventar cifras)"),
@@ -39,7 +40,7 @@ const esquemaPauta = z.object({
 
 /** Una casilla de la parrilla tal como se le presenta a la IA. */
 export type CasillaParaIa = { i: number; cuando: string; seccion: string; prioridad: number };
-export type PautaCasilla = { i: number; tema: string; angulo: string; encargo: string; prioridad: 1 | 2 | 3; ficha: FichaPauta };
+export type PautaCasilla = { i: number; temaN: number; tema: string; angulo: string; encargo: string; prioridad: 1 | 2 | 3; ficha: FichaPauta };
 
 /**
  * Temas candidatos para una sección de la semana, con búsqueda en la web y fuentes (Gemini). Trae hasta `cantidad` temas distintos
@@ -127,7 +128,7 @@ export async function armarPautaCore(
         const tema = c.tema.trim().slice(0, 160);
         if (tema.length < 8) continue;
         pauta.push({
-          i: c.i, tema, angulo: c.angulo.trim().slice(0, 400), encargo: c.encargo.trim().slice(0, 1200), prioridad: (c.prioridad === 1 || c.prioridad === 3 ? c.prioridad : 2) as 1 | 2 | 3,
+          i: c.i, temaN: Math.max(0, Math.round(c.temaNumero) || 0), tema, angulo: c.angulo.trim().slice(0, 400), encargo: c.encargo.trim().slice(0, 1200), prioridad: (c.prioridad === 1 || c.prioridad === 3 ? c.prioridad : 2) as 1 | 2 | 3,
           ficha: sanearFicha({ foco: c.foco, porQueAhora: c.porQueAhora, audiencia: c.audiencia, genero: c.genero, preguntas: c.preguntas, fuentes: c.fuentes, datosAConfirmar: c.datosAConfirmar, riesgos: c.riesgos, palabraClave: c.palabraClave, vigencia: c.vigencia, novedad: c.angulo }),
         });
         yaPlaneado.push(tema);
@@ -234,6 +235,7 @@ export async function autollenarPreguntasCore(
     return { ok: true, brief: b };
   } catch (err) {
     console.error("autollenarPreguntasCore:", err);
-    return { ok: false, error: "La IA no pudo completar las preguntas. Intenta de nuevo." };
+    const detalle = err && typeof err === "object" && "message" in err ? String((err as Error).message) : "";
+    return { ok: false, error: `La IA no pudo completar las preguntas${detalle ? `: ${detalle.slice(0, 200)}` : ""}. Intenta de nuevo.` };
   }
 }

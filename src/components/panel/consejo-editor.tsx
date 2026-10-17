@@ -68,20 +68,13 @@ export function ConsejoEditor({ plan, casillas: casillasProp, secciones, puedePu
   const [temas, setTemas] = useState<TemaConsejo[]>(plan.temas);
   // Un campo de «nuevo tema» por sección, y las sugerencias de la IA por sección (todavía no están en el plan: se añaden con su botón).
   const [llenando, setLlenando] = useState<string | null>(null);
+  const [avisoLlenar, setAvisoLlenar] = useState<{ slug: string; ok: boolean; texto: string } | null>(null);
   const [cargando, setCargando] = useState<string | null>(null);
   // Panel de preguntas de cada sección: abierto mientras no se haya respondido nada.
   const [filtroSec, setFiltroSec] = useState("");
   const [temaAbierto, setTemaAbierto] = useState<Record<string, boolean>>({});
   const [borrador, setBorrador] = useState<Record<string, BriefSeccion>>({});
   const [preguntasAbiertas, setPreguntasAbiertas] = useState<Record<string, boolean>>({});
-  const ponerBrief = (slug: string, cambio: Partial<BriefSeccion>) =>
-    setCfg((c) => {
-      const b = { ...(c.briefs?.[slug] ?? {}), ...cambio } as BriefSeccion;
-      for (const k of Object.keys(b) as (keyof BriefSeccion)[]) { const v = b[k]; if (v === undefined || v === "" || (Array.isArray(v) && !v.length)) delete b[k]; }
-      const briefs = { ...(c.briefs ?? {}) };
-      if (Object.keys(b).length) briefs[slug] = b; else delete briefs[slug];
-      return { ...c, briefs };
-    });
   const [nuevaHora, setNuevaHora] = useState("");
   const [msg, setMsg] = useState<{ ok: boolean; texto: string } | null>(null);
   const [selId, setSelId] = useState<string | null>(null);
@@ -128,7 +121,6 @@ export function ConsejoEditor({ plan, casillas: casillasProp, secciones, puedePu
     if (texto.length < 4) return;
     const resto: BriefSeccion = { ...b };
     delete resto.temas;
-    delete resto.escritorId;
     setTemas((l) => [...l, { id: crypto.randomUUID(), texto, seccion: slug, prioridad: 2 as const, origen: "manual" as const, ...(respondidas(resto) ? { brief: resto } : {}) }].slice(0, 60));
     setBorrador((d) => ({ ...d, [slug]: {} }));
     setMsg({ ok: true, texto: "Tema guardado. Puedes proponer otro." });
@@ -152,10 +144,11 @@ export function ConsejoEditor({ plan, casillas: casillasProp, secciones, puedePu
   // La IA contesta las demás preguntas del tema que se está describiendo (guarda el resultado en el borrador de esa sección).
   const autollenar = async (slug: string) => {
     setLlenando(slug);
+    setAvisoLlenar(null);
     try {
       const r = await autollenarTema(plan.id, slug, borrador[slug]?.temas ?? "");
-      if (r.ok) setBorrador((d) => ({ ...d, [slug]: { ...r.brief, temas: d[slug]?.temas, escritorId: undefined } }));
-      setMsg({ ok: r.ok, texto: r.message ?? "Listo." });
+      if (r.ok) setBorrador((d) => ({ ...d, [slug]: { ...r.brief, temas: d[slug]?.temas, escritorId: d[slug]?.escritorId } }));
+      setAvisoLlenar({ slug, ok: r.ok, texto: r.message ?? "Listo." });
     } finally { setLlenando(null); }
   };
 
@@ -276,15 +269,11 @@ export function ConsejoEditor({ plan, casillas: casillasProp, secciones, puedePu
                   <span className="text-xs text-[var(--fg-muted)]">{sec.porDia} por día × {cfg.dias.length} días</span>
                 </div>
                 <div className="h-1.5 overflow-hidden rounded-full bg-[var(--surface-2)]" aria-hidden><div className="h-full rounded-full bg-[var(--accent)] transition-all" style={{ width: `${Math.min(100, (sec.propios.length / Math.max(1, sec.necesita)) * 100)}%` }} /></div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <label className="flex items-center gap-2 text-sm font-semibold"><PenLine size={15} aria-hidden /> ¿Quién la escribe?
-                    <select disabled={!editable} value={cfg.briefs?.[sec.slug]?.escritorId ?? ""} onChange={(e) => ponerBrief(sec.slug, { escritorId: e.target.value || undefined })} className="rounded-[var(--radius)] border border-[var(--border-strong)] bg-white px-3 py-2 text-sm font-normal text-[#0b0b0b]"><option value="">El predeterminado ({escritores.find((e) => e.id === yoId)?.nombre ?? "yo"})</option>{[...escritores].sort((a, b) => Number(b.conDiagnostico) - Number(a.conDiagnostico) || a.nombre.localeCompare(b.nombre)).map((e) => <option key={e.id} value={e.id}>{e.nombre}{e.id === yoId ? " (yo)" : ""}{e.tipo === "externo" ? " · externo" : ""}{e.conDiagnostico ? "" : " · sin estilo aprendido"}</option>)}</select></label>
-                  <span className="text-xs text-[var(--fg-muted)]">Sus temas, la pauta y la nota usan su diagnóstico de estilo.</span>
-                </div>
                 <div className="flex flex-col gap-3">
-                  <PreguntasSeccion titulo="Proponer un tema con sus preguntas" nombre={sec.name} valor={borrador[sec.slug]} onChange={(c) => setBorrador((d) => ({ ...d, [sec.slug]: { ...d[sec.slug], ...c } }))} editable={editable} abierto={!!preguntasAbiertas[sec.slug]} onToggle={() => setPreguntasAbiertas((p) => ({ ...p, [sec.slug]: !p[sec.slug] }))}>
+                  <PreguntasSeccion titulo="Proponer un tema con sus preguntas" escritores={escritores} yoId={yoId} nombre={sec.name} valor={borrador[sec.slug]} onChange={(c) => setBorrador((d) => ({ ...d, [sec.slug]: { ...d[sec.slug], ...c } }))} editable={editable} abierto={!!preguntasAbiertas[sec.slug]} onToggle={() => setPreguntasAbiertas((p) => ({ ...p, [sec.slug]: !p[sec.slug] }))}>
                     <div className="flex flex-wrap items-center justify-between gap-2 sm:col-span-2">
                       <span className="text-xs text-[var(--fg-muted)]">Describe un solo tema en la primera pregunta. Al guardarlo, el formulario queda limpio para proponer otro.</span>
+                      {(llenando === sec.slug || avisoLlenar?.slug === sec.slug) && <p role="status" className={`w-full text-sm font-medium ${llenando === sec.slug ? "text-[var(--fg-muted)]" : avisoLlenar?.ok ? "text-emerald-700" : "text-red-600"}`}>{llenando === sec.slug ? "La IA está contestando las preguntas…" : avisoLlenar?.texto}</p>}
                       <div className="flex flex-wrap gap-2">
                         <button type="button" disabled={!editable || !!llenando || (borrador[sec.slug]?.temas ?? "").trim().length < 4} onClick={() => autollenar(sec.slug)} className={secundario}>{llenando === sec.slug ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />} Autollenar el resto con IA</button>
                         <button type="button" disabled={!editable || (borrador[sec.slug]?.temas ?? "").trim().length < 4} onClick={() => guardarTemaNuevo(sec.slug)} className={primario}><Check size={15} /> Guardar tema</button>
@@ -298,12 +287,12 @@ export function ConsejoEditor({ plan, casillas: casillasProp, secciones, puedePu
                     {sec.propios.map((t) => (
                       <li key={t.id} className="flex flex-wrap items-center gap-2 px-3 py-2">
                         {t.origen === "ia" && <Bot size={15} aria-label="Propuesto por la IA" className="shrink-0 text-[var(--accent)]" />}
-                        <div className="min-w-0 flex-1 basis-56"><p className="text-sm font-medium">{t.texto}</p>{t.angulo && <p className="text-xs text-[var(--fg-muted)]">{t.angulo}</p>}</div>
+                        <div className="min-w-0 flex-1 basis-56"><p className="text-sm font-medium">{t.texto}</p>{t.brief?.escritorId && <p className="text-xs text-[var(--fg-muted)]">✍ {nombreEscritor(t.brief.escritorId)}</p>}{t.angulo && <p className="text-xs text-[var(--fg-muted)]">{t.angulo}</p>}</div>
                         <select value={t.prioridad} disabled={!editable} onChange={(e) => setTemas((l) => l.map((x) => (x.id === t.id ? { ...x, prioridad: Number(e.target.value) as 1 | 2 | 3 } : x)))} aria-label="Prioridad" className="rounded-[var(--radius)] border border-[var(--border-strong)] bg-white px-2 py-2 text-xs text-[#0b0b0b]">
                           <option value={1}>Prioritario</option><option value={2}>Normal</option><option value={3}>De apoyo</option>
                         </select>
                         <button type="button" aria-label="Quitar tema" disabled={!editable} onClick={() => setTemas((l) => l.filter((x) => x.id !== t.id))} className="grid size-10 place-items-center rounded-full hover:bg-[var(--surface-2)]"><Trash2 size={15} /></button>
-                        <div className="basis-full"><PreguntasSeccion nombre={`este tema`} valor={t.brief} onChange={(c) => ponerBriefTema(t.id, c)} editable={editable} abierto={!!temaAbierto[t.id]} onToggle={() => setTemaAbierto((p) => ({ ...p, [t.id]: !p[t.id] }))} /></div>
+                        <div className="basis-full"><PreguntasSeccion nombre={`este tema`} escritores={escritores} yoId={yoId} valor={t.brief} onChange={(c) => ponerBriefTema(t.id, c)} editable={editable} abierto={!!temaAbierto[t.id]} onToggle={() => setTemaAbierto((p) => ({ ...p, [t.id]: !p[t.id] }))} /></div>
                       </li>
                     ))}
                   </ul>
@@ -536,7 +525,7 @@ function Caja({ clave, children }: { clave: keyof BriefSeccion; children: React.
 }
 
 // Las preguntas del editor jefe a una sección: lo que el consejo contesta antes de pedirle temas a la IA. Fuera del editor para que los campos no pierdan el foco.
-function PreguntasSeccion({ nombre, titulo, children, valor, onChange, editable, abierto, onToggle }: { nombre: string; titulo?: string; children?: React.ReactNode; valor: BriefSeccion | undefined; onChange: (c: Partial<BriefSeccion>) => void; editable: boolean; abierto: boolean; onToggle: () => void }) {
+function PreguntasSeccion({ nombre, titulo, escritores, yoId, children, valor, onChange, editable, abierto, onToggle }: { nombre: string; titulo?: string; escritores?: EscritorOpcion[]; yoId?: string; children?: React.ReactNode; valor: BriefSeccion | undefined; onChange: (c: Partial<BriefSeccion>) => void; editable: boolean; abierto: boolean; onToggle: () => void }) {
   const n = respondidas(valor);
   const sel = "w-full rounded-[var(--radius)] border border-[var(--border-strong)] bg-white px-3 py-2 text-sm text-[#0b0b0b]";
   return (
@@ -548,6 +537,11 @@ function PreguntasSeccion({ nombre, titulo, children, valor, onChange, editable,
       </button>
       {abierto && (
         <div className="grid gap-4 border-t border-[var(--border)] p-3 sm:grid-cols-2">
+          {escritores && yoId && (
+            <label className="flex flex-col gap-1 text-sm sm:col-span-2"><span className="flex items-center gap-1.5 font-semibold"><PenLine size={14} aria-hidden /> ¿Quién la escribe?</span>
+              <select disabled={!editable} value={valor?.escritorId ?? ""} onChange={(e) => onChange({ escritorId: e.target.value || undefined })} className={sel}><option value="">El predeterminado ({escritores.find((e) => e.id === yoId)?.nombre ?? "yo"})</option>{[...escritores].sort((a, b) => Number(b.conDiagnostico) - Number(a.conDiagnostico) || a.nombre.localeCompare(b.nombre)).map((e) => <option key={e.id} value={e.id}>{e.nombre}{e.id === yoId ? " (yo)" : ""}{e.tipo === "externo" ? " · externo" : ""}{e.conDiagnostico ? "" : " · sin estilo aprendido"}</option>)}</select>
+              <span className="text-xs text-[var(--fg-muted)]">Sus temas, la pauta y la nota usan su diagnóstico de estilo.</span></label>
+          )}
           <div className="sm:col-span-2"><Caja clave="temas"><AreaVoz rows={2} disabled={!editable} value={valor?.temas ?? ""} onValue={(v) => onChange({ temas: v })} placeholder="Ej.: sequía y pasturas, precio del novillo, ciclo de vacunación contra la aftosa" className={sel} /></Caja></div>
           <div className="sm:col-span-2"><Caja clave="agenda"><AreaVoz rows={2} disabled={!editable} value={valor?.agenda ?? ""} onValue={(v) => onChange({ agenda: v })} placeholder="Ej.: Feria de Montería del 15 al 18; el DANE publica el sacrificio el jueves" className={sel} /></Caja></div>
           <Caja clave="audiencia"><select disabled={!editable} value={valor?.audiencia ?? ""} onChange={(e) => onChange({ audiencia: (e.target.value || undefined) as BriefSeccion["audiencia"] })} className={sel}><option value="">Sin definir</option>{AUDIENCIAS.map((a) => <option key={a} value={a}>{a}</option>)}</select></Caja>

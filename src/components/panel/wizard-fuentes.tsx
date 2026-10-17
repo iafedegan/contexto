@@ -1,8 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import { ArrowRight, Check, Link2, Lightbulb, Loader2, Mic, Search, Sparkles, TrendingUp } from "lucide-react";
 import type { NewsItem, TopicIdea } from "@/app/panel/(app)/articulos/ai-actions";
 import { Carrusel } from "@/components/panel/carrusel";
+import { AreaVoz, InputVoz } from "@/components/panel/campo-voz";
+import { ALCANCES, AUDIENCIAS, GENEROS, PALABRAS_OPCIONES, PREGUNTAS_SECCION, TONOS, respondidas, type BriefSeccion, type Genero } from "@/lib/consejo/plan";
 import { ParticipantesForm, participantesListos } from "@/components/panel/entrevista-editor";
 import type { Participante } from "@/lib/material-types";
 
@@ -92,10 +95,12 @@ function IdeaCard({ i, elegido, onPick }: { i: TopicIdea; elegido: boolean; onPi
  * (hasta 3 columnas y `filas` filas por página) con las fuentes consultadas en un globo.
  */
 export function PantallaIdeas({
-  foco, onFoco, onBuscar, buscando, ocupado, error, ideas, picked, onPick, filas,
+  brief, onBrief, onAutollenar, llenando, onBuscar, buscando, ocupado, error, ideas, picked, onPick, filas,
 }: {
-  foco: string;
-  onFoco: (v: string) => void;
+  brief: BriefSeccion;
+  onBrief: (c: Partial<BriefSeccion>) => void;
+  onAutollenar: () => void;
+  llenando: boolean;
   onBuscar: () => void;
   buscando: boolean;
   /** Otra tarea de la IA en curso (p. ej. redactar): se bloquea el botón. */
@@ -106,28 +111,46 @@ export function PantallaIdeas({
   onPick: (i: TopicIdea) => void;
   filas: number;
 }) {
+  // Con ideas a la vista se ocultan las preguntas (nada se desplaza); el botón las vuelve a mostrar.
+  const [verPreguntas, setVerPreguntas] = useState(true);
+  const mostrar = verPreguntas || !ideas;
+  const tema = brief.temas ?? "";
   return (
     <div className="flex min-h-0 flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2">
-        <input
-          value={foco}
-          onChange={(e) => onFoco(e.target.value)}
-          placeholder="Opcional: enfoque (p. ej. leche, exportaciones, sanidad)"
-          aria-label="Enfoque de las ideas"
+        <InputVoz
+          value={tema}
+          onValue={(v) => onBrief({ temas: v })}
+          placeholder="¿Qué temas o asuntos te interesan? (p. ej. leche, exportaciones, sanidad)"
+          aria-label="Temas de interés"
           className={`${CAMPO} min-w-0 flex-1`}
         />
-        <button type="button" onClick={onBuscar} disabled={buscando || ocupado} className="lx-btn">
-          {buscando ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
+        <button type="button" onClick={onAutollenar} disabled={llenando || buscando || tema.trim().length < 4} className="lx-btn">
+          {llenando ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
+          Autollenar el resto con IA
+        </button>
+        <button type="button" onClick={() => { setVerPreguntas(false); onBuscar(); }} disabled={buscando || ocupado} className="lx-btn">
+          {buscando ? <Loader2 size={15} className="animate-spin" /> : <Lightbulb size={15} />}
           {ideas ? "Buscar otros temas" : "Aconséjame temas"}
         </button>
       </div>
+      {ideas && (
+        <button type="button" onClick={() => setVerPreguntas((v) => !v)} aria-expanded={mostrar} className="self-start text-xs font-medium text-[var(--accent)]">
+          {mostrar ? "Ocultar preguntas" : `Preguntas para la IA (${respondidas(brief)} de ${PREGUNTAS_SECCION.length - 1} respondidas)`}
+        </button>
+      )}
+      {mostrar && (
+        <Carrusel
+          etiqueta="Preguntas para la IA"
+          items={PREGUNTAS_SECCION.filter((q) => q.clave !== "temas" && q.clave !== "escritorId")}
+          filas={1}
+          anchoMinimo={260}
+          maxColumnas={4}
+          render={(q) => <PreguntaIdea q={q} brief={brief} onBrief={onBrief} />}
+        />
+      )}
       {buscando && <p role="status" className="text-xs text-[var(--fg-muted)]">Buscando tendencias en internet… puede tardar hasta un minuto.</p>}
       {error && <p role="alert" className="text-sm text-[var(--danger,#b4442e)]">{error}</p>}
-      {!ideas && !buscando && !error && (
-        <p className="rounded-[var(--radius)] border border-dashed border-[var(--border-strong,var(--border))] px-4 py-6 text-center text-sm text-[var(--fg-muted)]">
-          La IA busca en internet qué es tendencia en el sector, en Colombia y en el mundo, y te propone temas con sus fuentes.
-        </p>
-      )}
       {ideas && (
         <>
           <p className="text-xs text-[var(--fg-muted)]">
@@ -374,5 +397,36 @@ export function PantallaEntrevista({
         {error && <p role="alert" className="text-sm text-[var(--danger,#b4442e)]">{error}</p>}
       </div>
     </div>
+  );
+}
+
+// Una pregunta previa de la IA, en una tarjeta compacta: texto, campo (con micrófono si es de texto) y ayuda.
+function PreguntaIdea({ q, brief, onBrief }: { q: { clave: keyof BriefSeccion; pregunta: string; ayuda: string }; brief: BriefSeccion; onBrief: (c: Partial<BriefSeccion>) => void }) {
+  const sel = "w-full rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] px-3 !py-2 text-sm";
+  const k = q.clave;
+  let campo: React.ReactNode;
+  if (k === "audiencia" || k === "alcance" || k === "tono") {
+    const lista: readonly string[] = k === "audiencia" ? AUDIENCIAS : k === "alcance" ? ALCANCES : TONOS;
+    campo = <select value={(brief[k] as string | undefined) ?? ""} onChange={(e) => onBrief({ [k]: e.target.value || undefined } as Partial<BriefSeccion>)} className={sel}><option value="">Sin definir</option>{lista.map((x) => <option key={x} value={x}>{x}</option>)}</select>;
+  } else if (k === "palabras") {
+    campo = <select value={brief.palabras ?? ""} onChange={(e) => onBrief({ palabras: e.target.value ? Number(e.target.value) : undefined })} className={sel}><option value="">Sin definir</option>{PALABRAS_OPCIONES.map((p) => <option key={p} value={p}>Unas {p} palabras</option>)}</select>;
+  } else if (k === "generos") {
+    campo = (
+      <span className="flex flex-wrap gap-1">
+        {(Object.keys(GENEROS) as Genero[]).map((g) => { const on = brief.generos?.includes(g) ?? false; return <button key={g} type="button" aria-pressed={on} onClick={() => onBrief({ generos: on ? (brief.generos ?? []).filter((x) => x !== g) : [...(brief.generos ?? []), g] })} className={`min-h-8 rounded-full border px-2.5 text-xs font-medium ${on ? "border-transparent bg-[var(--accent)] text-[var(--accent-fg,#fff)]" : "border-[var(--border-strong,var(--border))] text-[var(--fg-muted)]"}`}>{GENEROS[g]}</button>; })}
+      </span>
+    );
+  } else {
+    const valor = (brief[k] as string | undefined) ?? "";
+    campo = k === "agenda" || k === "evitar"
+      ? <AreaVoz rows={2} value={valor} onValue={(v) => onBrief({ [k]: v } as Partial<BriefSeccion>)} className={sel} />
+      : <InputVoz value={valor} onValue={(v) => onBrief({ [k]: v } as Partial<BriefSeccion>)} className={sel} />;
+  }
+  return (
+    <label className="flex h-full w-full flex-col gap-1 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] p-3 text-sm">
+      <span className="font-semibold leading-tight">{q.pregunta}</span>
+      {campo}
+      <span className="text-xs text-[var(--fg-muted)]">{q.ayuda}</span>
+    </label>
   );
 }
