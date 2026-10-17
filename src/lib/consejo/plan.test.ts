@@ -43,3 +43,11 @@ test("tocaRedactar usa la antelación configurada", () => {
   assert.equal(tocaRedactar(sale, { antelacionHoras: 4 }, new Date("2026-10-14T05:30:00-05:00")), false);
   assert.equal(tocaRedactar(sale, { antelacionHoras: 4 }, new Date("2026-10-14T06:30:00-05:00")), true);
 });
+
+test("cada sección puede publicar solo en sus días", () => {
+  const c = sanearConfig({ ...CONFIG_BASE, cuotas: [{ seccion: "ganaderia", porDia: 1, dias: [2, 4] }, { seccion: "economia", porDia: 1 }] });
+  const p = construirParrilla("2026-10-12", c, pasado);
+  assert.equal(p.filter((x) => x.seccion === "ganaderia").length, 2); // martes y jueves
+  assert.equal(p.filter((x) => x.seccion === "economia").length, 5); // los días del consejo
+  assert.equal(p.length, notasPorSemana(c));
+});

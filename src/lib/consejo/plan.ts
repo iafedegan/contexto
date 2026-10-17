@@ -23,7 +23,11 @@ export const ESTADOS_CASILLA: Record<EstadoCasilla, string> = {
 };
 
 /** Cuota de una sección: cuántas notas por día y con qué aprobación salen. */
-export type CuotaSeccion = { seccion: string; porDia: number; aprobacion?: Aprobacion };
+/** `dias`: los días en que esta sección publica (ISO 1–7); si falta, los del consejo. */
+export type CuotaSeccion = { seccion: string; porDia: number; aprobacion?: Aprobacion; dias?: number[] };
+
+/** Los días en que publica una sección: los suyos o, si no tiene, los del consejo. */
+export const diasDeCuota = (q: CuotaSeccion, cfg: { dias: number[] }) => (q.dias?.length ? q.dias : cfg.dias);
 
 /** Configuración del consejo (se guarda en `editorial_plans.config`). */
 export type ConfigConsejo = {
@@ -87,7 +91,7 @@ export function sanearConfig(input: unknown): ConfigConsejo {
   const horas = [...new Set((Array.isArray(c.horas) ? c.horas : CONFIG_BASE.horas).filter((h): h is string => typeof h === "string" && HORA_VALIDA.test(h)))].sort();
   const cuotas = (Array.isArray(c.cuotas) ? c.cuotas : [])
     .filter((q): q is CuotaSeccion => !!q && typeof q.seccion === "string" && /^[\w-]{1,80}$/.test(q.seccion))
-    .map((q) => ({ seccion: q.seccion, porDia: Math.min(6, Math.max(0, Math.round(Number(q.porDia) || 0))), ...(q.aprobacion === "auto" || q.aprobacion === "manual" ? { aprobacion: q.aprobacion } : {}) }))
+    .map((q) => ({ seccion: q.seccion, porDia: Math.min(6, Math.max(0, Math.round(Number(q.porDia) || 0))), ...(q.aprobacion === "auto" || q.aprobacion === "manual" ? { aprobacion: q.aprobacion } : {}), ...(Array.isArray(q.dias) && q.dias.length ? { dias: [...new Set(q.dias.filter((d) => Number.isInteger(d) && d >= 1 && d <= 7))].sort() } : {}) }))
     .filter((q, i, a) => q.porDia > 0 && a.findIndex((x) => x.seccion === q.seccion) === i);
   return {
     dias: dias.length ? dias : CONFIG_BASE.dias,
@@ -110,11 +114,13 @@ export function construirParrilla(lunes: string, cfg: ConfigConsejo, ahora: Date
   const out: CasillaBase[] = [];
   const horas = cfg.horas;
   if (!horas.length) return out;
-  for (const dia of cfg.dias) {
+  const todosLosDias = [...new Set([...cfg.dias, ...cfg.cuotas.flatMap((q) => q.dias ?? [])])].sort();
+  for (const dia of todosLosDias) {
     const fecha = sumarDias(lunes, dia - 1);
     // Cuántas casillas se han puesto ya en cada hora ese día: así las secciones se reparten por todas las horas.
     const usadas = new Map<string, number>();
     cfg.cuotas.forEach((q, qi) => {
+      if (!diasDeCuota(q, cfg).includes(dia)) return;
       for (let k = 0; k < q.porDia; k++) {
         // Posición ideal repartida en el día + un desfase por sección; si la hora está muy cargada se busca la más libre cercana.
         const ideal = Math.floor(((k + 0.5) * horas.length) / q.porDia + qi) % horas.length;
@@ -132,7 +138,7 @@ export function construirParrilla(lunes: string, cfg: ConfigConsejo, ahora: Date
 }
 
 /** Resumen de cuántas notas lleva una configuración en la semana (para mostrarlo antes de armar la pauta). */
-export const notasPorSemana = (cfg: ConfigConsejo) => cfg.dias.length * cfg.cuotas.reduce((s, q) => s + q.porDia, 0);
+export const notasPorSemana = (cfg: ConfigConsejo) => cfg.cuotas.reduce((s, q) => s + q.porDia * diasDeCuota(q, cfg).length, 0);
 
 /** ¿Ya toca redactar esta casilla? (faltan `antelacionHoras` o menos para su hora). */
 export const tocaRedactar = (publicaEn: Date, cfg: Pick<ConfigConsejo, "antelacionHoras">, ahora: Date = new Date()) =>

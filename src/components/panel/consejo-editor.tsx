@@ -8,7 +8,7 @@ import { activarPlan, aprobar, armarPauta, autollenarTema, cambiarEstadoPlan, co
 import { ConsejoBorrar } from "@/components/panel/consejo-borrar";
 import { AreaVoz, InputVoz } from "@/components/panel/campo-voz";
 import { type EscritorOpcion } from "@/components/panel/selector-escritor";
-import { ALCANCES, AUDIENCIAS, sanearBrief, ESTADOS_CASILLA, GENEROS, PALABRAS_OPCIONES, PREGUNTAS_SECCION, TONOS, respondidas, PREGUNTAS_FICHA, VIGENCIAS, evaluarFicha, sanearConfig, sumarDias, type Aprobacion, type ConfigConsejo, type EstadoCasilla, type BriefSeccion, type EstadoPlan, type FichaPauta, type FuentePrevista, type Genero, type TemaConsejo, type Vigencia } from "@/lib/consejo/plan";
+import { diasDeCuota, ALCANCES, AUDIENCIAS, sanearBrief, ESTADOS_CASILLA, GENEROS, PALABRAS_OPCIONES, PREGUNTAS_SECCION, TONOS, respondidas, PREGUNTAS_FICHA, VIGENCIAS, evaluarFicha, sanearConfig, sumarDias, type Aprobacion, type ConfigConsejo, type EstadoCasilla, type BriefSeccion, type EstadoPlan, type FichaPauta, type FuentePrevista, type Genero, type TemaConsejo, type Vigencia } from "@/lib/consejo/plan";
 
 export type CasillaVista = { id: string; publishAt: string; sectionSlug: string; topic: string; angle: string; brief: string; priority: number; approval: Aprobacion; status: EstadoCasilla; articleId: string | null; error: string | null; ficha: FichaPauta };
 type Seccion = { slug: string; name: string };
@@ -107,12 +107,12 @@ export function ConsejoEditor({ plan, casillas: casillasProp, secciones, puedePu
   const activas = casillas.filter((c) => c.status !== "omitida");
   const porRevisar = casillas.filter((c) => c.status === "revision");
   const cuota = (slug: string) => cfg.cuotas.find((q) => q.seccion === slug);
-  const ponerCuota = (slug: string, porDia: number, aprobacion?: Aprobacion) =>
-    setCfg((c) => ({ ...c, cuotas: [...c.cuotas.filter((q) => q.seccion !== slug), ...(porDia > 0 ? [{ seccion: slug, porDia, ...(aprobacion ? { aprobacion } : {}) }] : [])] }));
+  const ponerCuota = (slug: string, porDia: number, aprobacion?: Aprobacion, dias?: number[]) =>
+    setCfg((c) => ({ ...c, cuotas: [...c.cuotas.filter((q) => q.seccion !== slug), ...(porDia > 0 ? [{ seccion: slug, porDia, ...(aprobacion ? { aprobacion } : {}), ...(dias?.length ? { dias } : {}) }] : [])] }));
   // Secciones elegidas en el paso 2, con cuántos temas hacen falta (notas por día × días de la semana) y cuántos hay.
   const porSeccion = cfg.cuotas.map((q) => {
     const propios = temas.filter((t) => t.seccion === q.seccion);
-    return { slug: q.seccion, name: nombre(q.seccion), porDia: q.porDia, necesita: q.porDia * cfg.dias.length, propios };
+    return { slug: q.seccion, name: nombre(q.seccion), porDia: q.porDia, necesita: q.porDia * diasDeCuota(q, cfg).length, dias: diasDeCuota(q, cfg).length, propios };
   });
   const otrosTemas = temas.filter((t) => !t.seccion || !cfg.cuotas.some((q) => q.seccion === t.seccion));
   // Guarda el tema que se acaba de describir (con sus respuestas) y deja el formulario limpio para proponer otro.
@@ -253,7 +253,7 @@ export function ConsejoEditor({ plan, casillas: casillasProp, secciones, puedePu
                   {abierto && (
                     <ul className="flex flex-col divide-y divide-[var(--border)]">
                       {visibles.map((x) => (
-                        <FilaCobertura key={x.slug} nombre={x.name.includes(" › ") ? x.name.split(" › ").slice(1).join(" › ") : "Toda la sección"} sub={x.name.includes(" › ")} cuota={cuota(x.slug)} defecto={cfg.aprobacion} editable={editable} puedePublicar={puedePublicar} onCambiar={(n, ap) => ponerCuota(x.slug, n, ap)} />
+                        <FilaCobertura key={x.slug} nombre={x.name.includes(" › ") ? x.name.split(" › ").slice(1).join(" › ") : "Toda la sección"} sub={x.name.includes(" › ")} cuota={cuota(x.slug)} defecto={cfg.aprobacion} editable={editable} puedePublicar={puedePublicar} diasConsejo={cfg.dias} onCambiar={(n, ap, dias) => ponerCuota(x.slug, n, ap, dias)} />
                       ))}
                     </ul>
                   )}
@@ -275,7 +275,7 @@ export function ConsejoEditor({ plan, casillas: casillasProp, secciones, puedePu
                 <div className="flex flex-wrap items-center gap-3">
                   <div className="flex flex-col"><span className="lx-kicker text-[var(--fg-muted)]">{sec.name.includes(" › ") ? "Subsección" : "Sección"}</span><h3 className="lx-display text-lg font-semibold">{sec.name.split(" › ").join(" / ")}</h3></div>
                   <span className={`rounded-full px-3 py-1 text-xs font-semibold ${completo ? "bg-emerald-600/15 text-emerald-700" : "bg-[var(--surface-2)] text-[var(--fg-muted)]"}`}>{completo ? <><Check size={12} className="mr-1 inline" />Completa</> : `Faltan ${faltan}`} · {sec.propios.length} de {sec.necesita} temas</span>
-                  <span className="text-xs text-[var(--fg-muted)]">{sec.porDia} por día × {cfg.dias.length} días</span>
+                  <span className="text-xs text-[var(--fg-muted)]">{sec.porDia} por día × {sec.dias} {sec.dias === 1 ? "día" : "días"}</span>
                 </div>
                 <div className="h-1.5 overflow-hidden rounded-full bg-[var(--surface-2)]" aria-hidden><div className="h-full rounded-full bg-[var(--accent)] transition-all" style={{ width: `${Math.min(100, (sec.propios.length / Math.max(1, sec.necesita)) * 100)}%` }} /></div>
                 <div className="flex flex-col gap-3">
@@ -507,7 +507,7 @@ const textoAFuentes = (t: string): FuentePrevista[] =>
 const lineas = (t: string) => t.split("\n").map((l) => l.trim()).filter(Boolean);
 
 // Una fila de la cobertura: nombre, notas por día con atajos 0–3 y cómo sale (con aprobación o automática).
-function FilaCobertura({ nombre, sub, cuota, defecto, editable, puedePublicar, onCambiar }: { nombre: string; sub: boolean; cuota?: { porDia: number; aprobacion?: Aprobacion }; defecto: Aprobacion; editable: boolean; puedePublicar: boolean; onCambiar: (porDia: number, ap?: Aprobacion) => void }) {
+function FilaCobertura({ nombre, sub, cuota, defecto, diasConsejo, editable, puedePublicar, onCambiar }: { nombre: string; sub: boolean; cuota?: { porDia: number; aprobacion?: Aprobacion; dias?: number[] }; defecto: Aprobacion; diasConsejo: number[]; editable: boolean; puedePublicar: boolean; onCambiar: (porDia: number, ap?: Aprobacion, dias?: number[]) => void }) {
   const n = cuota?.porDia ?? 0;
   const ap = cuota?.aprobacion ?? defecto;
   return (
@@ -515,14 +515,26 @@ function FilaCobertura({ nombre, sub, cuota, defecto, editable, puedePublicar, o
       <span className={`min-w-0 flex-1 basis-28 text-[0.82rem] leading-tight ${n ? "font-semibold" : "text-[var(--fg-muted)]"}`}>{sub && <span aria-hidden className="mr-1 text-[var(--fg-muted)]">↳</span>}{nombre}</span>
       <div className="flex items-center gap-1" role="group" aria-label={`Notas por día: ${nombre}`}>
         {[0, 1, 2, 3].map((v) => (
-          <button key={v} type="button" disabled={!editable} aria-pressed={n === v} onClick={() => onCambiar(v, cuota?.aprobacion)} className={`grid size-8 place-items-center rounded-full border text-xs font-semibold tabular-nums ${n === v ? "border-transparent bg-[var(--accent)] text-[var(--accent-fg,#fff)]" : "border-[var(--border-strong)] hover:bg-[var(--surface-2)]"}`}>{v}</button>
+          <button key={v} type="button" disabled={!editable} aria-pressed={n === v} onClick={() => onCambiar(v, cuota?.aprobacion, cuota?.dias)} className={`grid size-8 place-items-center rounded-full border text-xs font-semibold tabular-nums ${n === v ? "border-transparent bg-[var(--accent)] text-[var(--accent-fg,#fff)]" : "border-[var(--border-strong)] hover:bg-[var(--surface-2)]"}`}>{v}</button>
         ))}
-        <button type="button" disabled={!editable || n >= 6} onClick={() => onCambiar(Math.max(4, n + 1), cuota?.aprobacion)} aria-label="Más de tres por día" className={`grid h-8 min-w-8 place-items-center rounded-full border px-2 text-xs font-semibold ${n > 3 ? "border-transparent bg-[var(--accent)] text-[var(--accent-fg,#fff)]" : "border-[var(--border-strong)] hover:bg-[var(--surface-2)]"}`}>{n > 3 ? n : "+"}</button>
+        <button type="button" disabled={!editable || n >= 6} onClick={() => onCambiar(Math.max(4, n + 1), cuota?.aprobacion, cuota?.dias)} aria-label="Más de tres por día" className={`grid h-8 min-w-8 place-items-center rounded-full border px-2 text-xs font-semibold ${n > 3 ? "border-transparent bg-[var(--accent)] text-[var(--accent-fg,#fff)]" : "border-[var(--border-strong)] hover:bg-[var(--surface-2)]"}`}>{n > 3 ? n : "+"}</button>
       </div>
       <div className={`flex overflow-hidden rounded-full border border-[var(--border-strong)] text-xs font-semibold ${n ? "" : "invisible"}`} role="group" aria-label={`Cómo sale: ${nombre}`}>
-        <button type="button" disabled={!editable || !n} aria-pressed={ap === "manual"} onClick={() => onCambiar(n, "manual")} className={`min-h-8 px-2.5 ${ap === "manual" ? "bg-[var(--accent)] text-[var(--accent-fg,#fff)]" : ""}`}>✋ Aprobar</button>
-        <button type="button" disabled={!editable || !n || !puedePublicar} aria-pressed={ap === "auto"} onClick={() => onCambiar(n, "auto")} className={`min-h-8 px-2.5 disabled:opacity-40 ${ap === "auto" ? "bg-[var(--accent)] text-[var(--accent-fg,#fff)]" : ""}`}>⚡ Automática</button>
+        <button type="button" disabled={!editable || !n} aria-pressed={ap === "manual"} onClick={() => onCambiar(n, "manual", cuota?.dias)} className={`min-h-8 px-2.5 ${ap === "manual" ? "bg-[var(--accent)] text-[var(--accent-fg,#fff)]" : ""}`}>✋ Aprobar</button>
+        <button type="button" disabled={!editable || !n || !puedePublicar} aria-pressed={ap === "auto"} onClick={() => onCambiar(n, "auto", cuota?.dias)} className={`min-h-8 px-2.5 disabled:opacity-40 ${ap === "auto" ? "bg-[var(--accent)] text-[var(--accent-fg,#fff)]" : ""}`}>⚡ Automática</button>
       </div>
+      {n > 0 && (
+        <div className="flex basis-full flex-wrap items-center gap-1 text-xs" role="group" aria-label={`Días que publica: ${nombre}`}>
+          <span className="mr-1 text-[var(--fg-muted)]">Días:</span>
+          {DIAS.map(([d, etq]) => {
+            const activos = cuota?.dias?.length ? cuota.dias : diasConsejo;
+            const on = activos.includes(d);
+            return (
+              <button key={d} type="button" disabled={!editable} aria-pressed={on} onClick={() => { const nuevo = on ? activos.filter((x) => x !== d) : [...activos, d].sort(); if (nuevo.length) onCambiar(n, cuota?.aprobacion, nuevo); }} className={`min-h-8 min-w-10 rounded-full border px-2 font-semibold ${on ? "border-transparent bg-[var(--accent)] text-[var(--accent-fg,#fff)]" : "border-[var(--border-strong)] text-[var(--fg-muted)] hover:bg-[var(--surface-2)]"}`}>{etq}</button>
+            );
+          })}
+        </div>
+      )}
     </li>
   );
 }
