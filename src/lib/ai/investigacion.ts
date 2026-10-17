@@ -30,17 +30,33 @@ export async function investigarTema(userId: string, tema: string, encargo: stri
     ]);
     await registrarUsoIA(userId, hechos.usage);
     await registrarUsoIA(userId, cifras.usage);
-    const sources = [...hechos.sources, ...cifras.sources]
-      .filter((x) => x.sourceType === "url")
+    let textos = [`HECHOS:\n${hechos.text}`, `CIFRAS OFICIALES:\n${cifras.text}`];
+    let crudas = [...fuentesDe(hechos), ...fuentesDe(cifras)];
+    // Segundo intento, más simple: una sola búsqueda con el tema tal cual (el contexto largo a veces desvía la búsqueda y no devuelve fuentes).
+    if (!crudas.length) {
+      const simple = await generateText({ model: ai.model, tools: ai.tools as unknown as ToolSet, system: sistema, prompt: `Hoy es ${hoy}. Busca en la web noticias y documentos oficiales recientes sobre: ${(tema || encargo).slice(0, 200)}. Resume los hechos verificables (qué, cuándo, quién) y cita la fuente de cada uno.` });
+      await registrarUsoIA(userId, simple.usage);
+      crudas = fuentesDe(simple);
+      if (crudas.length) textos = [`HECHOS:\n${simple.text}`];
+    }
+    const sources = crudas
       .map((x) => { const host = hostFuente(x.title, x.url); return { title: (x.title && x.title !== host ? x.title : host || x.url).slice(0, 120), outlet: host, url: x.url }; })
       .filter((x, i, a) => a.findIndex((y) => y.url === x.url) === i)
       .slice(0, 10);
-    const r = { text: `HECHOS:\n${hechos.text}\n\nCIFRAS OFICIALES:\n${cifras.text}` };
-    return { text: r.text, sources: await resolverEnlaces(sources) };
+    return { text: textos.join("\n\n"), sources: await resolverEnlaces(sources), error: undefined as string | undefined };
   } catch (e) {
     console.warn("investigarTema:", e);
-    return null;
+    // Se devuelve el motivo para que quien llama pueda decir por qué no hubo fuentes (cuota, clave, proveedor caído…).
+    return { text: "", sources: [] as { title: string; outlet: string; url: string }[], error: (e instanceof Error ? e.message : String(e)).slice(0, 200) };
   }
+}
+
+/** Fuentes de una respuesta con búsqueda: las `sources` del SDK y, si vienen vacías, los fragmentos de la búsqueda de Google (groundingChunks). */
+function fuentesDe(r: { sources: { sourceType: string; url?: string; title?: string }[]; providerMetadata?: unknown }): { url: string; title?: string }[] {
+  const directas = r.sources.filter((x) => x.sourceType === "url" && x.url).map((x) => ({ url: x.url as string, title: x.title }));
+  if (directas.length) return directas;
+  const meta = (r.providerMetadata as { google?: { groundingMetadata?: { groundingChunks?: { web?: { uri?: string; title?: string } }[] } } } | undefined)?.google?.groundingMetadata?.groundingChunks ?? [];
+  return meta.filter((c) => c.web?.uri).map((c) => ({ url: c.web!.uri as string, title: c.web!.title }));
 }
 
 /** Las fuentes de la búsqueda de Gemini llegan como enlaces de redirección: se siguen para guardar la página real. */

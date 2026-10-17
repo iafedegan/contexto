@@ -98,7 +98,7 @@ export async function generateArticleDraftCore(userId: string, input: {
     const suficiente = mat.length >= 2500 || encargo.length >= 600;
     const inv = suficiente && refs.length ? null : await investigarTema(userId, tema, encargo, input.section);
     if (!suficiente && !refs.length && !mat && !(inv && inv.sources.length)) {
-      return { ok: false, error: "No encontré fuentes verificables para ese tema y no hay material tuyo (entrevista, enlaces o texto). Para no inventar información, no redacto la nota. Pega enlaces o el texto base, o precisa el tema." };
+      return { ok: false, error: `No encontré fuentes verificables para ese tema y no hay material tuyo (entrevista, enlaces o texto). Para no inventar información, no redacto la nota. Pega enlaces o el texto base, o precisa el tema.${inv?.error ? ` (La búsqueda web falló: ${inv.error})` : ""}` };
     }
     const fuentes = [...refs, ...(inv?.sources ?? [])].filter((r, i, a) => a.findIndex((y) => y.url === r.url) === i).slice(0, 10);
     const respaldo = [tema, encargo, mat, inv?.text ?? "", refs.map((r) => `${r.title} ${r.outlet}`).join(" ")].join("\n");
