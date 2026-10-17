@@ -118,19 +118,20 @@ export function ConsejoEditor({ plan, casillas: casillasProp, secciones, puedePu
   });
   const otrosTemas = temas.filter((t) => !t.seccion || !cfg.cuotas.some((q) => q.seccion === t.seccion));
   // Guarda el tema que se acaba de describir (con sus respuestas) y deja el formulario limpio para proponer otro.
-  const guardarTemaNuevo = (slug: string) => {
-    const b = sanearBrief(borrador[slug]);
+  const guardarTemaNuevo = (slug: string, diaFijo?: number) => {
+    const clave = diaFijo ? `${slug}:${diaFijo}` : slug;
+    const b = sanearBrief(borrador[clave]);
     const texto = (b.temas ?? "").trim().slice(0, 200);
     if (texto.length < 4) return;
     const resto: BriefSeccion = { ...b };
     delete resto.temas;
     const sec = porSeccion.find((x) => x.slug === slug);
     const libres = (sec?.diasLista ?? []).filter((d) => !sec?.propios.some((t) => t.dia === d));
-    const dia = diaBorrador[slug] ?? libres[0] ?? sec?.diasLista[0];
+    const dia = diaFijo ?? diaBorrador[slug] ?? libres[0] ?? sec?.diasLista[0];
     setTemas((l) => [...l, { id: crypto.randomUUID(), texto, seccion: slug, prioridad: 2 as const, origen: "manual" as const, ...(dia ? { dia } : {}), ...(respondidas(resto) ? { brief: resto } : {}) }].slice(0, 60));
-    setBorrador((d) => ({ ...d, [slug]: {} }));
+    setBorrador((d) => ({ ...d, [clave]: {} }));
     setDiaBorrador((d) => { const x = { ...d }; delete x[slug]; return x; });
-    setMsg({ ok: true, texto: "Tema guardado. Puedes proponer otro." });
+    setMsg({ ok: true, texto: "Tema guardado." });
   };
   const ponerBriefTema = (id: string, c: Partial<BriefSeccion>) => setTemas((l) => l.map((x) => (x.id === id ? { ...x, brief: { ...x.brief, ...c } } : x)));
   // Suelta una pieza en la celda de un día y una hora: se mueve al instante y se guarda; si el servidor la rechaza, vuelve a su sitio.
@@ -149,13 +150,13 @@ export function ConsejoEditor({ plan, casillas: casillasProp, secciones, puedePu
     });
   };
   // La IA contesta las demás preguntas del tema que se está describiendo (guarda el resultado en el borrador de esa sección).
-  const autollenar = async (slug: string) => {
-    setLlenando(slug);
+  const autollenar = async (slug: string, clave: string) => {
+    setLlenando(clave);
     setAvisoLlenar(null);
     try {
-      const r = await autollenarTema(plan.id, slug, borrador[slug]?.temas ?? "");
-      if (r.ok) setBorrador((d) => ({ ...d, [slug]: { ...r.brief, temas: d[slug]?.temas, escritorId: d[slug]?.escritorId } }));
-      setAvisoLlenar({ slug, ok: r.ok, texto: r.message ?? "Listo." });
+      const r = await autollenarTema(plan.id, slug, borrador[clave]?.temas ?? "");
+      if (r.ok) setBorrador((d) => ({ ...d, [clave]: { ...r.brief, temas: d[clave]?.temas, escritorId: d[clave]?.escritorId } }));
+      setAvisoLlenar({ slug: clave, ok: r.ok, texto: r.message ?? "Listo." });
     } finally { setLlenando(null); }
   };
 
@@ -285,21 +286,31 @@ export function ConsejoEditor({ plan, casillas: casillasProp, secciones, puedePu
                 </div>
                 <div className="h-1.5 overflow-hidden rounded-full bg-[var(--surface-2)]" aria-hidden><div className="h-full rounded-full bg-[var(--accent)] transition-all" style={{ width: `${Math.min(100, (sec.propios.length / Math.max(1, sec.necesita)) * 100)}%` }} /></div>
                 <div className="flex flex-col gap-3">
-                  <PreguntasSeccion titulo="Proponer un tema con sus preguntas" escritores={escritores} yoId={yoId} nombre={sec.name} valor={borrador[sec.slug]} onChange={(c) => setBorrador((d) => ({ ...d, [sec.slug]: { ...d[sec.slug], ...c } }))} editable={editable} abierto={!!preguntasAbiertas[sec.slug]} onToggle={() => setPreguntasAbiertas((p) => ({ ...p, [sec.slug]: !p[sec.slug] }))}>
-                    <div className="flex flex-wrap items-center justify-between gap-2 sm:col-span-2">
-                      <label className="flex items-center gap-2 text-sm font-semibold">¿Qué día sale?
-                        <select disabled={!editable} value={diaBorrador[sec.slug] ?? (sec.diasLista.filter((d) => !sec.propios.some((t) => t.dia === d))[0] ?? sec.diasLista[0])} onChange={(e) => setDiaBorrador((d) => ({ ...d, [sec.slug]: Number(e.target.value) }))} className="rounded-[var(--radius)] border border-[var(--border-strong)] bg-white px-3 py-2 text-sm font-normal text-[#0b0b0b]">
-                          {sec.diasLista.map((d) => <option key={d} value={d}>{DIAS_LARGO[d - 1]}{sec.propios.some((t) => t.dia === d) ? " (ya tiene tema)" : ""}</option>)}
-                        </select></label>
-                      <span className="text-xs text-[var(--fg-muted)]">Describe un solo tema en la primera pregunta. Al guardarlo, el formulario queda limpio para proponer otro.</span>
-                      {(llenando === sec.slug || avisoLlenar?.slug === sec.slug) && <p role="status" className={`w-full text-sm font-medium ${llenando === sec.slug ? "text-[var(--fg-muted)]" : avisoLlenar?.ok ? "text-emerald-700" : "text-red-600"}`}>{llenando === sec.slug ? "La IA está contestando las preguntas…" : avisoLlenar?.texto}</p>}
-                      <div className="flex flex-wrap gap-2">
-                        <button type="button" disabled={!editable || !!llenando || (borrador[sec.slug]?.temas ?? "").trim().length < 4} onClick={() => autollenar(sec.slug)} className={secundario}>{llenando === sec.slug ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />} Autollenar el resto con IA</button>
-                        <button type="button" disabled={!editable || (borrador[sec.slug]?.temas ?? "").trim().length < 4} onClick={() => guardarTemaNuevo(sec.slug)} className={primario}><Check size={15} /> Guardar tema</button>
-                      </div>
-                    </div>
-                  </PreguntasSeccion>
-                  <div className="flex justify-end"><button type="button" disabled={!editable} onClick={() => ((borrador[sec.slug]?.temas ?? "").trim().length >= 4 ? guardarTemaNuevo(sec.slug) : setPreguntasAbiertas((p) => ({ ...p, [sec.slug]: true })))} className={primario}><Plus size={15} /> Agregar otro tema</button></div>
+                  {(() => {
+                    // Un formulario por cada día que aún no tiene su tema; cuando todos están, un botón para agregar uno extra.
+                    const pendientes = sec.diasLista.filter((d) => sec.propios.filter((t) => t.dia === d).length < sec.porDia);
+                    const formulario = (clave: string, titulo: string, diaFijo?: number) => (
+                      <PreguntasSeccion key={clave} titulo={titulo} escritores={escritores} yoId={yoId} nombre={sec.name} valor={borrador[clave]} onChange={(c) => setBorrador((d) => ({ ...d, [clave]: { ...d[clave], ...c } }))} editable={editable} abierto={!!preguntasAbiertas[clave]} onToggle={() => setPreguntasAbiertas((p) => ({ ...p, [clave]: !p[clave] }))}>
+                        <div className="flex flex-wrap items-center justify-between gap-2 sm:col-span-2">
+                          {!diaFijo && (
+                            <label className="flex items-center gap-2 text-sm font-semibold">¿Qué día sale?
+                              <select disabled={!editable} value={diaBorrador[sec.slug] ?? sec.diasLista[0]} onChange={(e) => setDiaBorrador((d) => ({ ...d, [sec.slug]: Number(e.target.value) }))} className="rounded-[var(--radius)] border border-[var(--border-strong)] bg-white px-3 py-2 text-sm font-normal text-[#0b0b0b]">
+                                {sec.diasLista.map((d) => <option key={d} value={d}>{DIAS_LARGO[d - 1]}</option>)}
+                              </select></label>
+                          )}
+                          <span className="text-xs text-[var(--fg-muted)]">Describe un solo tema en la primera pregunta.</span>
+                          {(llenando === clave || avisoLlenar?.slug === clave) && <p role="status" className={`w-full text-sm font-medium ${llenando === clave ? "text-[var(--fg-muted)]" : avisoLlenar?.ok ? "text-emerald-700" : "text-red-600"}`}>{llenando === clave ? "La IA está contestando las preguntas…" : avisoLlenar?.texto}</p>}
+                          <div className="flex flex-wrap gap-2">
+                            <button type="button" disabled={!editable || !!llenando || (borrador[clave]?.temas ?? "").trim().length < 4} onClick={() => autollenar(sec.slug, clave)} className={secundario}>{llenando === clave ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />} Autollenar el resto con IA</button>
+                            <button type="button" disabled={!editable || (borrador[clave]?.temas ?? "").trim().length < 4} onClick={() => guardarTemaNuevo(sec.slug, diaFijo)} className={primario}><Check size={15} /> Guardar tema</button>
+                          </div>
+                        </div>
+                      </PreguntasSeccion>
+                    );
+                    return pendientes.length
+                      ? pendientes.map((d) => formulario(`${sec.slug}:${d}`, `Tema del ${DIAS_LARGO[d - 1].toLowerCase()}`, d))
+                      : formulario(sec.slug, "Agregar otro tema");
+                  })()}
                 </div>
                 {sec.propios.length > 0 && (
                   <ul className="flex flex-col divide-y divide-[var(--border)] rounded-[var(--radius)] border border-[var(--border)]">
