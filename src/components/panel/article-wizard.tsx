@@ -671,7 +671,7 @@ export function ArticleWizard({
     setError("");
     startGenerating(async () => {
       const res = await suggestTitlesAndContexts({
-        topic: topic.trim(),
+        topic: [topic.trim(), briefParaPrompt("", { ...ideasBrief, temas: undefined }).split("\n").slice(1).join("; ")].filter(Boolean).join("\n"),
         section: categories.find((c) => c.id === categoryId)?.name,
         material,
       });
@@ -935,7 +935,7 @@ export function ArticleWizard({
             {subpantalla === "ideas" && (
               <PantallaIdeas
                 brief={ideasBrief}
-                onBrief={(c) => setIdeasBrief((b) => ({ ...b, ...c }))}
+                onBrief={(c) => { setIdeasBrief((b) => ({ ...b, ...c })); if (c.temas !== undefined) { setTopic(c.temas); setIdeaElegida(null); setOptions(null); } }}
                 llenando={llenandoIdeas}
                 onAutollenar={() => startLlenar(async () => {
                   const r = await autollenarPreguntas({ tema: ideasBrief.temas ?? "", seccion: categories.find((c) => c.id === categoryId)?.name });
