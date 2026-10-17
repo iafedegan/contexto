@@ -12,7 +12,7 @@ import { getAiModel } from "@/lib/ai-provider";
 import { registrarUsoIA, verificarCuotaIA } from "@/lib/ai-cuota";
 import { suggestTopicIdeasCore } from "@/lib/ai/ideas-noticias";
 import { investigarTema } from "@/lib/ai/investigacion";
-import { GENEROS, VIGENCIAS, sanearFicha, sumarDias, type FichaPauta, type Genero, type TemaConsejo, type Vigencia } from "@/lib/consejo/plan";
+import { GENEROS, VIGENCIAS, briefParaPrompt, respondidas, sanearFicha, sumarDias, type FichaPauta, type Genero, type TemaConsejo, type Vigencia } from "@/lib/consejo/plan";
 
 const esquemaPauta = z.object({
   casillas: z.array(
@@ -47,7 +47,7 @@ export type PautaCasilla = { i: number; tema: string; angulo: string; encargo: s
  */
 export async function proponerTemasConsejoCore(
   userId: string,
-  input: { lunes: string; enfoque?: string; seccion?: { slug: string; name: string }; cantidad?: number; yaTiene?: string[] },
+  input: { lunes: string; enfoque?: string; seccion?: { slug: string; name: string }; cantidad?: number; yaTiene?: string[]; /** Diagnóstico de estilo del escritor elegido. */ estilo?: string },
 ): Promise<{ ok: true; temas: TemaConsejo[]; fuentes: { title: string; url: string }[] } | { ok: false; error: string }> {
   const domingo = sumarDias(input.lunes, 6);
   const quiere = Math.min(20, Math.max(1, input.cantidad ?? 6));
@@ -59,6 +59,7 @@ export async function proponerTemasConsejoCore(
     const otros = [...visto].slice(0, 12).map((t) => `«${t}»`).join(", ");
     const r = await suggestTopicIdeasCore(userId, {
       section: input.seccion?.name,
+      estilo: input.estilo,
       focus: `Agenda y temas para la semana del ${input.lunes} al ${domingo}${input.seccion ? ` en la sección «${input.seccion.name}»` : ""}: eventos, ferias, publicaciones de cifras (DANE, FEDEGAN, ICA), decisiones de política, clima y mercados que se esperan.${input.enfoque?.trim() ? ` ${input.enfoque.trim()}` : ""}${otros ? ` NO repitas estos temas ya elegidos: ${otros}.` : ""}`,
     });
     if (!r.ok) { ultimoError = r.error; break; }
@@ -77,7 +78,7 @@ export async function proponerTemasConsejoCore(
 /** El editor jefe reparte los temas en las casillas de la semana. Devuelve la pauta de cada casilla que logró llenar. */
 export async function armarPautaCore(
   userId: string,
-  input: { lunes: string; casillas: CasillaParaIa[]; temas: TemaConsejo[]; enfoque?: string; /** Respuestas del consejo a las preguntas de cada sección, ya en texto, por slug. */ briefs?: Record<string, string> },
+  input: { lunes: string; casillas: CasillaParaIa[]; temas: TemaConsejo[]; enfoque?: string; /** Respuestas del consejo a las preguntas de cada sección, ya en texto, por slug. */ briefs?: Record<string, string>; /** Diagnóstico de estilo por sección (slug): quién escribe y cómo. */ estilos?: Record<string, string> },
 ): Promise<{ ok: true; pauta: PautaCasilla[] } | { ok: false; error: string }> {
   const model = await getAiModel();
   if (!model) return { ok: false, error: "Falta la clave del modelo de IA (la conecta un administrador en Configuración → Asistente)." };
@@ -86,7 +87,7 @@ export async function armarPautaCore(
   if (!cuota.ok) return { ok: false, error: cuota.message };
 
   const hoy = new Intl.DateTimeFormat("es-CO", { dateStyle: "long", timeZone: "America/Bogota" }).format(new Date());
-  const temas = input.temas.map((t, n) => `${n + 1}. ${t.texto}${t.seccion ? ` [sección: ${t.seccion}]` : ""}${t.angulo ? ` — enfoque: ${t.angulo}` : ""}${t.prioridad === 1 ? " (PRIORITARIO)" : ""}`).join("\n");
+  const temas = input.temas.map((t, n) => `${n + 1}. ${t.texto}${t.seccion ? ` [sección: ${t.seccion}]` : ""}${t.angulo ? ` — enfoque: ${t.angulo}` : ""}${t.prioridad === 1 ? " (PRIORITARIO)" : ""}${t.brief && respondidas({ ...t.brief, escritorId: undefined }) ? `\n   ${briefParaPrompt(t.texto, t.brief).split("\n").slice(1).join("\n   ")}` : ""}`).join("\n");
   const sistema =
     "Eres el editor jefe de CONtexto Ganadero, un medio colombiano del sector ganadero y agropecuario, y diriges el consejo de redacción semanal. " +
     "Tu trabajo es repartir la cobertura de la semana: qué se publica en cada casilla (día, hora y sección ya definidos), con qué enfoque y con qué encargo para quien redacta. " +
@@ -114,6 +115,7 @@ export async function armarPautaCore(
           input.enfoque?.trim() ? `PEDIDO DEL CONSEJO: ${input.enfoque.trim().slice(0, 600)}` : "",
           temas ? `TEMAS QUE EL CONSEJO QUIERE CUBRIR (úsalos primero, en la sección que corresponda):\n${temas}` : "El consejo no trajo temas: propón los de la agenda del sector para esta semana.",
           Object.keys(input.briefs ?? {}).length ? `INDICACIONES DEL CONSEJO POR SECCIÓN (las respuestas del consejo mandan sobre tu criterio):\n${Object.entries(input.briefs ?? {}).map(([slug, txt]) => `[${slug}]\n${txt}`).join("\n\n")}` : "",
+          Object.keys(input.estilos ?? {}).length ? `ESCRITOR Y ESTILO POR SECCIÓN (el encargo y el ángulo de cada casilla deben encajar con la voz de quien la escribe):\n${Object.entries(input.estilos ?? {}).map(([slug, txt]) => `[${slug}]\n${txt}`).join("\n\n")}` : "",
           yaPlaneado.length ? `YA PLANEADO EN ESTA SEMANA (no repetir hechos):\n${yaPlaneado.map((x) => `- ${x}`).join("\n")}` : "",
           `CASILLAS A LLENAR (devuelve una entrada por cada número #i, sin saltarte ninguna):\n${lista}`,
         ].filter(Boolean).join("\n\n"),
@@ -157,7 +159,7 @@ const esquemaFicha = z.object({
  */
 export async function completarFichaCore(
   userId: string,
-  input: { tema: string; angulo?: string; encargo?: string; seccion?: string; existente?: FichaPauta },
+  input: { tema: string; angulo?: string; encargo?: string; seccion?: string; existente?: FichaPauta; estilo?: string },
 ): Promise<{ ok: true; ficha: FichaPauta } | { ok: false; error: string }> {
   const model = await getAiModel();
   if (!model) return { ok: false, error: "Falta la clave del modelo de IA (la conecta un administrador en Configuración → Asistente)." };
@@ -174,7 +176,7 @@ export async function completarFichaCore(
       system:
         "Eres el editor jefe de CONtexto Ganadero (medio colombiano del sector ganadero y agropecuario). Antes de encargar una nota llenas su FICHA DE PAUTA, como en un consejo de redacción. " +
         "Te basas SOLO en el dossier que recibes: no inventes cifras, fechas, cargos, nombres de personas ni enlaces. Si el dossier no responde algo, ponlo en «abiertas». " +
-        "Las fuentes deben ser entidades, documentos o personas que consten en el dossier, con el enlace tal como aparece. Escribe en español de Colombia.",
+        "Las fuentes deben ser entidades, documentos o personas que consten en el dossier, con el enlace tal como aparece. Escribe en español de Colombia." + (input.estilo ? `\n\nLa nota la escribirá este escritor; adapta el enfoque, el género y las preguntas a su voz:\n${input.estilo}` : ""),
       prompt: `TEMA: ${input.tema}
 ${input.angulo ? `ENFOQUE PROPUESTO: ${input.angulo}
 ` : ""}${input.seccion ? `SECCIÓN: ${input.seccion}

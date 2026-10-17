@@ -34,7 +34,7 @@ export type TopicIdeasResult =
  * (Colombia y el mundo) y propone temas con su porqué. Solo con fuentes citables;
  * el periodista elige uno y sigue el flujo normal (nada se publica sin revisión).
  */
-export async function suggestTopicIdeasCore(userId: string, input: { section?: string; focus?: string }): Promise<TopicIdeasResult> {
+export async function suggestTopicIdeasCore(userId: string, input: { section?: string; focus?: string; estilo?: string }): Promise<TopicIdeasResult> {
   const ai = await getGroundedAi();
   if (!ai) return { ok: false, error: "Falta la clave del modelo (la conecta un administrador en Configuración → Asistente)." };
   if (ai === "otro-proveedor") {
@@ -49,7 +49,7 @@ export async function suggestTopicIdeasCore(userId: string, input: { section?: s
       tools: ai.tools as unknown as ToolSet,
       system:
         "Eres editor de un medio ganadero colombiano. Investiga en la web LO QUE ESTÁ SIENDO NOTICIA O TENDENCIA ahora: (a) en Colombia y sus regiones ganaderas (precios, sanidad animal, política pública, clima, exportaciones, FEDEGAN, ICA, Ministerio de Agricultura) y (b) a nivel internacional (mercados de carne y leche, comercio, enfermedades, tecnología, sostenibilidad, FAO, USDA). Reporta hechos con fecha y fuente; no inventes.",
-      prompt: `Hoy es ${hoy}.${input.section ? ` Sección de interés: ${input.section}.` : ""}${input.focus?.trim() ? ` Enfoque pedido por el periodista: ${input.focus.trim()}.` : ""}\n\nBusca las tendencias y noticias más recientes (últimas semanas) del sector ganadero local e internacional y resume de 8 a 12 temas candidatos con el hecho, la fecha y la fuente.`,
+      prompt: `Hoy es ${hoy}.${input.section ? ` Sección de interés: ${input.section}.` : ""}${input.focus?.trim() ? ` Enfoque pedido por el periodista: ${input.focus.trim()}.` : ""}\n\nBusca las tendencias y noticias más recientes (últimas semanas) del sector ganadero local e internacional y resume de 8 a 12 temas candidatos con el hecho, la fecha y la fuente.${input.estilo ? `\n\nLos temas y enfoques se proponen para el escritor que redactará. Elige lo que encaje con su voz y su manera de contar:\n${input.estilo}` : ""}`,
     });
     await registrarUsoIA(userId, found.usage);
     const sources = found.sources

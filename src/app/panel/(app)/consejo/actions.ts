@@ -8,9 +8,9 @@ import { categories, editorialPlans, editorialSlots } from "@/db/schema";
 import { canPublish, requirePermiso } from "@/lib/auth";
 import { tienePermiso } from "@/lib/permisos-server";
 import { armarPautaCore, completarFichaCore, proponerTemasConsejoCore } from "@/lib/ai/consejo-ia";
-import { escritoresParaElegir } from "@/lib/ai/estilo";
+import { bloqueDeEscritor, escritoresParaElegir } from "@/lib/ai/estilo";
 import { aprobarCasilla, procesarConsejo, sincronizarCasillas } from "@/lib/ai/consejo-ejecucion";
-import { CONFIG_BASE, briefParaPrompt, construirParrilla, lunesDe, sanearConfig, sanearFicha, type ConfigConsejo, type FichaPauta, type TemaConsejo } from "@/lib/consejo/plan";
+import { CONFIG_BASE, briefParaPrompt, respondidas, sanearBrief, construirParrilla, lunesDe, sanearConfig, sanearFicha, type ConfigConsejo, type FichaPauta, type TemaConsejo } from "@/lib/consejo/plan";
 
 /**
  * Acciones del consejo de redacción. Todo exige el permiso de redacción; activar un plan con casillas «automáticas» y aprobar piezas
@@ -46,7 +46,7 @@ export async function crearPlan(input: { fecha: string; titulo?: string; escrito
 export async function guardarPlan(id: string, input: { titulo?: string; config: ConfigConsejo; temas: TemaConsejo[] }): Promise<Res> {
   const user = await requirePermiso("articulos");
   const temas = (Array.isArray(input.temas) ? input.temas : [])
-    .map((t) => ({ id: typeof t.id === "string" && t.id ? t.id.slice(0, 60) : randomUUID(), texto: String(t.texto ?? "").trim().slice(0, 200), seccion: t.seccion && /^[\w-]{1,80}$/.test(t.seccion) ? t.seccion : undefined, prioridad: (t.prioridad === 1 || t.prioridad === 3 ? t.prioridad : 2) as 1 | 2 | 3, origen: t.origen === "ia" ? ("ia" as const) : ("manual" as const), angulo: t.angulo ? String(t.angulo).slice(0, 400) : undefined }))
+    .map((t) => ({ id: typeof t.id === "string" && t.id ? t.id.slice(0, 60) : randomUUID(), texto: String(t.texto ?? "").trim().slice(0, 200), seccion: t.seccion && /^[\w-]{1,80}$/.test(t.seccion) ? t.seccion : undefined, prioridad: (t.prioridad === 1 || t.prioridad === 3 ? t.prioridad : 2) as 1 | 2 | 3, origen: t.origen === "ia" ? ("ia" as const) : ("manual" as const), angulo: t.angulo ? String(t.angulo).slice(0, 400) : undefined, brief: t.brief && respondidas(sanearBrief(t.brief)) ? sanearBrief(t.brief) : undefined }))
     .filter((t) => t.texto.length >= 4)
     .slice(0, 60);
   const cfgGuardada = sanearConfig(input.config);
@@ -71,7 +71,9 @@ export async function proponerTemas(id: string, opciones: { seccion?: string; ca
   // Las respuestas del consejo a las preguntas de esa sección (temas de interés, audiencia, alcance, fuentes…) orientan la búsqueda.
   const briefTxt = seccion ? briefParaPrompt(seccion.name, sanearConfig(plan.config).briefs?.[seccion.slug]) : "";
   const enfoque = [opciones.enfoque?.trim(), briefTxt].filter(Boolean).join("\n") || undefined;
-  const r = await proponerTemasConsejoCore(user.id, { lunes: plan.weekStart, enfoque, seccion, cantidad: opciones.cantidad, yaTiene: actuales.map((t) => t.texto) });
+  const cfgP = sanearConfig(plan.config);
+  const estilo = await bloqueDeEscritor(seccion ? cfgP.briefs?.[seccion.slug]?.escritorId ?? cfgP.escritorId : cfgP.escritorId);
+  const r = await proponerTemasConsejoCore(user.id, { lunes: plan.weekStart, enfoque, estilo: estilo || undefined, seccion, cantidad: opciones.cantidad, yaTiene: actuales.map((t) => t.texto) });
   if (!r.ok) return { ok: false, message: r.error };
   return { ok: true, temas: r.temas, fuentes: r.fuentes, message: `La IA propuso ${r.temas.length} tema(s)${seccion ? ` para ${seccion.name}` : ""}: añade los que quieras.` };
 }
@@ -86,7 +88,10 @@ export async function armarPauta(id: string, enfoque?: string): Promise<Res<{ ca
   const parrilla = construirParrilla(plan.weekStart, cfg);
   if (!parrilla.length) return { ok: false, message: "Esa semana ya pasó: crea el consejo para una semana que no haya terminado." };
   const fmt = new Intl.DateTimeFormat("es-CO", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit", timeZone: "America/Bogota" });
+  const estilos: Record<string, string> = {};
+  for (const [slug, b] of Object.entries(cfg.briefs ?? {})) { const t = await bloqueDeEscritor(b.escritorId ?? cfg.escritorId); if (t) estilos[slug] = t; }
   const r = await armarPautaCore(user.id, {
+    estilos,
     lunes: plan.weekStart,
     enfoque,
     temas: plan.temas ?? [],
@@ -214,7 +219,10 @@ export async function completarFicha(slotId: string, actual: FichaPauta): Promis
   if (!c) return { ok: false, message: "La casilla ya no existe." };
   if (c.status !== "planificada" && c.status !== "fallida") return { ok: false, message: "Esta pieza ya se redactó." };
   const [cat] = await db.select({ name: categories.name }).from(categories).where(eq(categories.slug, c.sectionSlug)).limit(1);
-  const r = await completarFichaCore(user.id, { tema: c.topic, angulo: c.angle, encargo: c.brief, seccion: cat?.name, existente: sanearFicha(actual) });
+  const [pl] = await db.select({ config: editorialPlans.config }).from(editorialPlans).where(eq(editorialPlans.id, c.planId)).limit(1);
+  const cfgF = sanearConfig(pl?.config);
+  const estilo = await bloqueDeEscritor(sanearFicha(actual).escritorId ?? cfgF.briefs?.[c.sectionSlug]?.escritorId ?? cfgF.escritorId);
+  const r = await completarFichaCore(user.id, { estilo: estilo || undefined, tema: c.topic, angulo: c.angle, encargo: c.brief, seccion: cat?.name, existente: sanearFicha(actual) });
   if (!r.ok) return { ok: false, message: r.error };
   await db.update(editorialSlots).set({ ficha: r.ficha, updatedAt: new Date() }).where(eq(editorialSlots.id, slotId));
   rev(c.planId);

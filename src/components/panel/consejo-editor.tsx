@@ -3,9 +3,10 @@
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ArrowRight, Bot, Check, ChevronRight, Clock, Loader2, Plus, Rocket, Sparkles, Trash2, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, Bot, Check, ChevronRight, Clock, Loader2, ListPlus, PenLine, Plus, Rocket, Sparkles, Trash2, X } from "lucide-react";
 import { activarPlan, aprobar, armarPauta, cambiarEstadoPlan, completarFicha, guardarCasilla, guardarPlan, moverCasilla, proponerTemas, quitarCasilla, redactarAhora } from "@/app/panel/(app)/consejo/actions";
 import { ConsejoBorrar } from "@/components/panel/consejo-borrar";
+import { AreaVoz, InputVoz } from "@/components/panel/campo-voz";
 import { type EscritorOpcion } from "@/components/panel/selector-escritor";
 import { ALCANCES, AUDIENCIAS, ESTADOS_CASILLA, GENEROS, PALABRAS_OPCIONES, PREGUNTAS_SECCION, TONOS, respondidas, PREGUNTAS_FICHA, VIGENCIAS, evaluarFicha, notasPorSemana, sanearConfig, sumarDias, type Aprobacion, type ConfigConsejo, type EstadoCasilla, type BriefSeccion, type EstadoPlan, type FichaPauta, type FuentePrevista, type Genero, type TemaConsejo, type Vigencia } from "@/lib/consejo/plan";
 
@@ -71,6 +72,8 @@ export function ConsejoEditor({ plan, casillas: casillasProp, secciones, puedePu
   const [fuentes, setFuentes] = useState<Record<string, { title: string; url: string }[]>>({});
   const [cargando, setCargando] = useState<string | null>(null);
   // Panel de preguntas de cada sección: abierto mientras no se haya respondido nada.
+  const [modo, setModo] = useState<Record<string, "manual" | "ia">>({});
+  const [temaAbierto, setTemaAbierto] = useState<Record<string, boolean>>({});
   const [preguntasAbiertas, setPreguntasAbiertas] = useState<Record<string, boolean>>({});
   const ponerBrief = (slug: string, cambio: Partial<BriefSeccion>) =>
     setCfg((c) => {
@@ -121,12 +124,14 @@ export function ConsejoEditor({ plan, casillas: casillasProp, secciones, puedePu
     return { slug: q.seccion, name: nombre(q.seccion), porDia: q.porDia, necesita: q.porDia * cfg.dias.length, propios };
   });
   const otrosTemas = temas.filter((t) => !t.seccion || !cfg.cuotas.some((q) => q.seccion === t.seccion));
+  // Un tema por línea: se pueden pegar o dictar varios de una vez.
   const agregarTema = (slug: string) => {
-    const texto = (nuevos[slug] ?? "").trim();
-    if (texto.length < 4) return;
-    setTemas((t) => [...t, { id: crypto.randomUUID(), texto, seccion: slug, prioridad: 2, origen: "manual" }]);
+    const textos = (nuevos[slug] ?? "").split("\n").map((l) => l.trim()).filter((l) => l.length >= 4);
+    if (!textos.length) return;
+    setTemas((t) => [...t, ...textos.map((texto) => ({ id: crypto.randomUUID(), texto, seccion: slug, prioridad: 2 as const, origen: "manual" as const }))].slice(0, 60));
     setNuevos((n) => ({ ...n, [slug]: "" }));
   };
+  const ponerBriefTema = (id: string, c: Partial<BriefSeccion>) => setTemas((l) => l.map((x) => (x.id === id ? { ...x, brief: { ...x.brief, ...c } } : x)));
   // Suelta una pieza en la celda de un día y una hora: se mueve al instante y se guarda; si el servidor la rechaza, vuelve a su sitio.
   const soltar = (slotId: string, fecha: string, hora: string) => {
     setSobre(null);
@@ -176,7 +181,7 @@ export function ConsejoEditor({ plan, casillas: casillasProp, secciones, puedePu
       <div>
         <Link href="/panel/consejo" className="mb-1 inline-flex items-center gap-1.5 text-sm text-[var(--fg-muted)] hover:text-[var(--accent)]"><ArrowLeft size={15} /> Consejos de redacción</Link>
         <div className="flex flex-wrap items-center gap-3">
-          <input value={titulo} onChange={(e) => setTitulo(e.target.value)} disabled={!editable} aria-label="Nombre del consejo" className="lx-display min-w-0 flex-1 bg-transparent text-xl font-semibold tracking-tight outline-none focus:underline sm:text-2xl" />
+          <InputVoz value={titulo} onValue={(v) => setTitulo(v)} disabled={!editable} aria-label="Nombre del consejo" className="lx-display min-w-0 flex-1 bg-transparent text-xl font-semibold tracking-tight outline-none focus:underline sm:text-2xl" />
           <span className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-wide ${plan.status === "activo" ? "border-emerald-600 text-emerald-600" : "border-[var(--border-strong)] text-[var(--fg-muted)]"}`}>{plan.status === "activo" ? "Activo" : plan.status === "cerrado" ? "Cerrado" : "Borrador"}</span>
         </div>
         <p className="mt-1 text-sm text-[var(--fg-muted)]">Semana del {nombreDia(plan.weekStart)} al {nombreDia(sumarDias(plan.weekStart, 6))}.</p>
@@ -266,7 +271,7 @@ export function ConsejoEditor({ plan, casillas: casillasProp, secciones, puedePu
           {porSeccion.length === 0 && <p className="rounded-[var(--radius)] border border-dashed border-[var(--border-strong)] p-6 text-center text-sm text-[var(--fg-muted)]">Primero elige las secciones en el paso 2 (Cobertura).</p>}
           {porSeccion.length > 0 && (
             <div className="flex flex-col gap-2 rounded-[var(--radius-lg)] border border-dashed border-[var(--border-strong)] p-4 sm:flex-row sm:items-center">
-              <input value={enfoque} disabled={!editable} onChange={(e) => setEnfoque(e.target.value)} placeholder="Enfoque opcional para la IA (p. ej. «más sanidad animal y exportaciones»)" className={`${campo} min-w-0 flex-1`} />
+              <InputVoz value={enfoque} disabled={!editable} onValue={(v) => setEnfoque(v)} placeholder="Enfoque opcional para la IA (p. ej. «más sanidad animal y exportaciones»)" className={`${campo} min-w-0 flex-1`} />
               <button type="button" disabled={pend || !!cargando || !editable} onClick={() => run(async () => {
                 for (const sec of porSeccion) {
                   const faltan = sec.necesita - sec.propios.length - (propuestas[sec.slug]?.length ?? 0);
@@ -290,12 +295,33 @@ export function ConsejoEditor({ plan, casillas: casillasProp, secciones, puedePu
                   <span className="text-xs text-[var(--fg-muted)]">{sec.porDia} por día × {cfg.dias.length} días</span>
                 </div>
                 <div className="h-1.5 overflow-hidden rounded-full bg-[var(--surface-2)]" aria-hidden><div className="h-full rounded-full bg-[var(--accent)] transition-all" style={{ width: `${Math.min(100, (sec.propios.length / Math.max(1, sec.necesita)) * 100)}%` }} /></div>
-                <PreguntasSeccion nombre={sec.name} escritores={escritores} yoId={yoId} valor={cfg.briefs?.[sec.slug]} onChange={(c) => ponerBrief(sec.slug, c)} editable={editable} abierto={!!preguntasAbiertas[sec.slug]} onToggle={() => setPreguntasAbiertas((p) => ({ ...p, [sec.slug]: !p[sec.slug] }))} />
-                <div className="flex flex-wrap gap-2">
-                  <input value={nuevos[sec.slug] ?? ""} disabled={!editable} onChange={(e) => setNuevos((n) => ({ ...n, [sec.slug]: e.target.value }))} onKeyDown={(e) => e.key === "Enter" && agregarTema(sec.slug)} placeholder={`Un tema de ${sec.name}, p. ej. «Vacunación contra la aftosa en el Caribe»`} className={`${campo} min-w-0 flex-1`} />
-                  <button type="button" disabled={!editable || (nuevos[sec.slug] ?? "").trim().length < 4} onClick={() => agregarTema(sec.slug)} className={secundario}><Plus size={15} /> Añadir</button>
-                  <button type="button" disabled={pend || !!cargando || !editable} onClick={() => run(async () => { const r = await traerTemas(sec.slug, completo ? 3 : faltan); setMsg({ ok: r.ok, texto: r.message ?? "Listo." }); })} className={primario}>{cargando === sec.slug ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />} {completo ? "Traer 3 más" : `Traer ${faltan} con IA`}</button>
+                <div className="flex flex-wrap items-center gap-2">
+                  <label className="flex items-center gap-2 text-sm font-semibold"><PenLine size={15} aria-hidden /> ¿Quién la escribe?
+                    <select disabled={!editable} value={cfg.briefs?.[sec.slug]?.escritorId ?? ""} onChange={(e) => ponerBrief(sec.slug, { escritorId: e.target.value || undefined })} className="rounded-[var(--radius)] border border-[var(--border-strong)] bg-white px-3 py-2 text-sm font-normal text-[#0b0b0b]"><option value="">El predeterminado ({escritores.find((e) => e.id === yoId)?.nombre ?? "yo"})</option>{[...escritores].sort((a, b) => Number(b.conDiagnostico) - Number(a.conDiagnostico) || a.nombre.localeCompare(b.nombre)).map((e) => <option key={e.id} value={e.id}>{e.nombre}{e.id === yoId ? " (yo)" : ""}{e.tipo === "externo" ? " · externo" : ""}{e.conDiagnostico ? "" : " · sin estilo aprendido"}</option>)}</select></label>
+                  <span className="text-xs text-[var(--fg-muted)]">Sus temas, la pauta y la nota usan su diagnóstico de estilo.</span>
                 </div>
+                <div role="tablist" aria-label={`Cómo definir los temas de ${sec.name}`} className="grid gap-2 sm:grid-cols-2">
+                  {([["manual", ListPlus, "Poner mis temas", "Los escribo o los dicto yo: uno por línea."], ["ia", Sparkles, "Que la IA los proponga", "Investiga con fuentes y me sugiere los que faltan."]] as const).map(([k, Icono, titulo, ayuda]) => {
+                    const on = (modo[sec.slug] ?? "manual") === k;
+                    return (
+                      <button key={k} type="button" role="tab" aria-selected={on} onClick={() => setModo((m) => ({ ...m, [sec.slug]: k }))} className={`flex items-start gap-3 rounded-[var(--radius)] border-2 p-3 text-left transition ${on ? "border-[var(--accent)] bg-[var(--accent)]/10" : "border-[var(--border)] hover:border-[var(--border-strong)]"}`}>
+                        <Icono size={20} className="mt-0.5 shrink-0 text-[var(--accent)]" aria-hidden />
+                        <span className="flex flex-col"><span className="text-sm font-bold">{titulo}</span><span className="text-xs text-[var(--fg-muted)]">{ayuda}</span></span>
+                      </button>
+                    );
+                  })}
+                </div>
+                {(modo[sec.slug] ?? "manual") === "manual" ? (
+                  <div className="flex flex-col gap-2">
+                    <AreaVoz rows={3} value={nuevos[sec.slug] ?? ""} onValue={(v) => setNuevos((n) => ({ ...n, [sec.slug]: v }))} disabled={!editable} placeholder={`Escribe o dicta los temas de ${sec.name}, uno por línea. Ej.: «Vacunación contra la aftosa en el Caribe»`} className={campo} />
+                    <div className="flex justify-end"><button type="button" disabled={!editable || !(nuevos[sec.slug] ?? "").split("\n").some((l) => l.trim().length >= 4)} onClick={() => agregarTema(sec.slug)} className={primario}><Plus size={15} /> Añadir a la lista</button></div>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-3">
+                    <PreguntasSeccion nombre={sec.name} valor={cfg.briefs?.[sec.slug]} onChange={(c) => ponerBrief(sec.slug, c)} editable={editable} abierto={!!preguntasAbiertas[sec.slug]} onToggle={() => setPreguntasAbiertas((p) => ({ ...p, [sec.slug]: !p[sec.slug] }))} />
+                    <div className="flex justify-end"><button type="button" disabled={pend || !!cargando || !editable} onClick={() => run(async () => { const r = await traerTemas(sec.slug, completo ? 3 : faltan); setMsg({ ok: r.ok, texto: r.message ?? "Listo." }); })} className={primario}>{cargando === sec.slug ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />} {completo ? "Traer 3 más con IA" : `Traer ${faltan} con IA`}</button></div>
+                  </div>
+                )}
                 {sugeridas.length > 0 && (
                   <div className="flex flex-col gap-2 rounded-[var(--radius)] border border-[var(--accent)] bg-[var(--accent)]/5 p-3">
                     <div className="flex flex-wrap items-center justify-between gap-2">
@@ -330,6 +356,7 @@ export function ConsejoEditor({ plan, casillas: casillasProp, secciones, puedePu
                           <option value={1}>Prioritario</option><option value={2}>Normal</option><option value={3}>De apoyo</option>
                         </select>
                         <button type="button" aria-label="Quitar tema" disabled={!editable} onClick={() => setTemas((l) => l.filter((x) => x.id !== t.id))} className="grid size-10 place-items-center rounded-full hover:bg-[var(--surface-2)]"><Trash2 size={15} /></button>
+                        <div className="basis-full"><PreguntasSeccion nombre={`este tema`} valor={t.brief} onChange={(c) => ponerBriefTema(t.id, c)} editable={editable} abierto={!!temaAbierto[t.id]} onToggle={() => setTemaAbierto((p) => ({ ...p, [t.id]: !p[t.id] }))} /></div>
                       </li>
                     ))}
                   </ul>
@@ -541,7 +568,7 @@ function Caja({ clave, children }: { clave: keyof BriefSeccion; children: React.
 }
 
 // Las preguntas del editor jefe a una sección: lo que el consejo contesta antes de pedirle temas a la IA. Fuera del editor para que los campos no pierdan el foco.
-function PreguntasSeccion({ nombre, escritores, yoId, valor, onChange, editable, abierto, onToggle }: { nombre: string; escritores: EscritorOpcion[]; yoId: string; valor: BriefSeccion | undefined; onChange: (c: Partial<BriefSeccion>) => void; editable: boolean; abierto: boolean; onToggle: () => void }) {
+function PreguntasSeccion({ nombre, valor, onChange, editable, abierto, onToggle }: { nombre: string; valor: BriefSeccion | undefined; onChange: (c: Partial<BriefSeccion>) => void; editable: boolean; abierto: boolean; onToggle: () => void }) {
   const n = respondidas(valor);
   const sel = "w-full rounded-[var(--radius)] border border-[var(--border-strong)] bg-white px-3 py-2 text-sm text-[#0b0b0b]";
   return (
@@ -553,19 +580,18 @@ function PreguntasSeccion({ nombre, escritores, yoId, valor, onChange, editable,
       </button>
       {abierto && (
         <div className="grid gap-4 border-t border-[var(--border)] p-3 sm:grid-cols-2">
-          <div className="sm:col-span-2"><Caja clave="temas"><textarea rows={2} disabled={!editable} value={valor?.temas ?? ""} onChange={(e) => onChange({ temas: e.target.value })} placeholder="Ej.: sequía y pasturas, precio del novillo, ciclo de vacunación contra la aftosa" className={sel} /></Caja></div>
-          <div className="sm:col-span-2"><Caja clave="agenda"><textarea rows={2} disabled={!editable} value={valor?.agenda ?? ""} onChange={(e) => onChange({ agenda: e.target.value })} placeholder="Ej.: Feria de Montería del 15 al 18; el DANE publica el sacrificio el jueves" className={sel} /></Caja></div>
-          <div className="sm:col-span-2"><Caja clave="escritorId"><select disabled={!editable} value={valor?.escritorId ?? ""} onChange={(e) => onChange({ escritorId: e.target.value || undefined })} className={sel}><option value="">El predeterminado ({escritores.find((e) => e.id === yoId)?.nombre ?? "yo"})</option>{[...escritores].sort((a, b) => Number(b.conDiagnostico) - Number(a.conDiagnostico) || a.nombre.localeCompare(b.nombre)).map((e) => <option key={e.id} value={e.id}>{e.nombre}{e.id === yoId ? " (yo)" : ""}{e.tipo === "externo" ? " · externo" : ""}{e.conDiagnostico ? "" : " · sin estilo aprendido"}</option>)}</select></Caja></div>
+          <div className="sm:col-span-2"><Caja clave="temas"><AreaVoz rows={2} disabled={!editable} value={valor?.temas ?? ""} onValue={(v) => onChange({ temas: v })} placeholder="Ej.: sequía y pasturas, precio del novillo, ciclo de vacunación contra la aftosa" className={sel} /></Caja></div>
+          <div className="sm:col-span-2"><Caja clave="agenda"><AreaVoz rows={2} disabled={!editable} value={valor?.agenda ?? ""} onValue={(v) => onChange({ agenda: v })} placeholder="Ej.: Feria de Montería del 15 al 18; el DANE publica el sacrificio el jueves" className={sel} /></Caja></div>
           <Caja clave="audiencia"><select disabled={!editable} value={valor?.audiencia ?? ""} onChange={(e) => onChange({ audiencia: (e.target.value || undefined) as BriefSeccion["audiencia"] })} className={sel}><option value="">Sin definir</option>{AUDIENCIAS.map((a) => <option key={a} value={a}>{a}</option>)}</select></Caja>
           <Caja clave="palabras"><select disabled={!editable} value={valor?.palabras ?? ""} onChange={(e) => onChange({ palabras: e.target.value ? Number(e.target.value) : undefined })} className={sel}><option value="">Sin definir</option>{PALABRAS_OPCIONES.map((p) => <option key={p} value={p}>Unas {p} palabras</option>)}</select></Caja>
           <div className="sm:col-span-2">
             <Caja clave="generos"><span className="flex flex-wrap gap-1.5">{(Object.keys(GENEROS) as Genero[]).map((g) => { const on = valor?.generos?.includes(g) ?? false; return <button key={g} type="button" disabled={!editable} aria-pressed={on} onClick={() => onChange({ generos: on ? (valor?.generos ?? []).filter((x) => x !== g) : [...(valor?.generos ?? []), g] })} className={`min-h-9 rounded-full border px-3 text-sm font-medium ${on ? "border-transparent bg-[var(--accent)] text-[var(--accent-fg,#fff)]" : "border-[var(--border-strong)] text-[var(--fg-muted)]"}`}>{GENEROS[g]}</button>; })}</span></Caja>
           </div>
           <Caja clave="alcance"><select disabled={!editable} value={valor?.alcance ?? ""} onChange={(e) => onChange({ alcance: (e.target.value || undefined) as BriefSeccion["alcance"] })} className={sel}><option value="">Sin definir</option>{ALCANCES.map((a) => <option key={a} value={a}>{a}</option>)}</select></Caja>
-          <Caja clave="lugares"><input disabled={!editable} value={valor?.lugares ?? ""} onChange={(e) => onChange({ lugares: e.target.value })} placeholder="Ej.: Caribe, Meta, Brasil" className={sel} /></Caja>
+          <Caja clave="lugares"><InputVoz disabled={!editable} value={valor?.lugares ?? ""} onValue={(v) => onChange({ lugares: v })} placeholder="Ej.: Caribe, Meta, Brasil" className={sel} /></Caja>
           <Caja clave="tono"><select disabled={!editable} value={valor?.tono ?? ""} onChange={(e) => onChange({ tono: (e.target.value || undefined) as BriefSeccion["tono"] })} className={sel}><option value="">Sin definir</option>{TONOS.map((t) => <option key={t} value={t}>{t}</option>)}</select></Caja>
-          <Caja clave="fuentes"><input disabled={!editable} value={valor?.fuentes ?? ""} onChange={(e) => onChange({ fuentes: e.target.value })} placeholder="Ej.: ICA, FEDEGAN, DANE" className={sel} /></Caja>
-          <div className="sm:col-span-2"><Caja clave="evitar"><textarea rows={2} disabled={!editable} value={valor?.evitar ?? ""} onChange={(e) => onChange({ evitar: e.target.value })} placeholder="Ej.: no repetir la sequía de la semana pasada; evitar cifras sin fuente" className={sel} /></Caja></div>
+          <Caja clave="fuentes"><InputVoz disabled={!editable} value={valor?.fuentes ?? ""} onValue={(v) => onChange({ fuentes: v })} placeholder="Ej.: ICA, FEDEGAN, DANE" className={sel} /></Caja>
+          <div className="sm:col-span-2"><Caja clave="evitar"><AreaVoz rows={2} disabled={!editable} value={valor?.evitar ?? ""} onValue={(v) => onChange({ evitar: v })} placeholder="Ej.: no repetir la sequía de la semana pasada; evitar cifras sin fuente" className={sel} /></Caja></div>
         </div>
       )}
     </div>
@@ -592,13 +618,13 @@ function PanelCasilla({ c, secciones, puedePublicar, escritores, escritorConsejo
   const fichaActual: FichaPauta = { ...f, fuentes: textoAFuentes(fuentesTxt) };
   const ev = evaluarFicha(fichaActual);
   const campoLista = (clave: "datosAConfirmar" | "preguntas" | "abiertas" | "riesgos" | "evitar") => (
-    <textarea rows={3} disabled={!editable} value={(f[clave] ?? []).join("\n")} onChange={(e) => setF({ ...f, [clave]: lineas(e.target.value) })} placeholder="Uno por línea" className={campo} />
+    <AreaVoz rows={3} disabled={!editable} value={(f[clave] ?? []).join("\n")} onValue={(v) => setF({ ...f, [clave]: lineas(v) })} placeholder="Uno por línea" className={campo} />
   );
   return (
     <div className="flex flex-col gap-4 rounded-[var(--radius-lg)] border border-[var(--accent)] bg-[var(--bg-2)] p-4">
       <div className="flex items-center justify-between"><p className="lx-kicker text-[var(--accent)]">Pieza · {ESTADOS_CASILLA[c.status]}</p><button type="button" onClick={onClose} aria-label="Cerrar" className="grid size-9 place-items-center rounded-full hover:bg-[var(--surface-2)]"><X size={16} /></button></div>
       {c.error && <p className="rounded-[var(--radius)] border border-amber-500/50 bg-amber-500/10 px-3 py-2 text-xs">{c.error}</p>}
-      <label className="flex flex-col gap-1 text-sm"><span className="font-semibold">Tema (titular tentativo)</span><input value={d.topic} disabled={!editable} onChange={(e) => setD({ ...d, topic: e.target.value })} className={campo} /></label>
+      <label className="flex flex-col gap-1 text-sm"><span className="font-semibold">Tema (titular tentativo)</span><InputVoz value={d.topic} disabled={!editable} onValue={(v) => setD({ ...d, topic: v })} className={campo} /></label>
       <div className="grid gap-3 sm:grid-cols-4">
         <label className="flex flex-col gap-1 text-sm"><span className="font-semibold">Sección</span><select value={d.sectionSlug} disabled={!editable} onChange={(e) => setD({ ...d, sectionSlug: e.target.value })} className={campo}>{secciones.map((s) => <option key={s.slug} value={s.slug}>{s.name}</option>)}</select></label>
         <label className="flex flex-col gap-1 text-sm"><span className="font-semibold">Día</span><input type="date" value={d.fecha} disabled={!editable} onChange={(e) => setD({ ...d, fecha: e.target.value })} className={campo} /></label>
@@ -626,11 +652,11 @@ function PanelCasilla({ c, secciones, puedePublicar, escritores, escritorConsejo
         </div>
         {msg && <p role="status" className="text-xs text-[var(--fg-muted)]">{msg}</p>}
         <p className="text-xs text-[var(--fg-muted)]">Sin las preguntas con * la IA no redacta: no inventa. Si faltan al llegar la hora, el «editor jefe» las completa con investigación; si aun así faltan, la pieza queda detenida y te avisa.</p>
-        <Pregunta clave="foco"><input value={f.foco ?? ""} disabled={!editable} onChange={(e) => setF({ ...f, foco: e.target.value })} className={campo} /></Pregunta>
-        <Pregunta clave="porQueAhora"><input value={f.porQueAhora ?? ""} disabled={!editable} onChange={(e) => setF({ ...f, porQueAhora: e.target.value })} className={campo} /></Pregunta>
-        <Pregunta clave="audiencia"><input value={f.audiencia ?? ""} disabled={!editable} onChange={(e) => setF({ ...f, audiencia: e.target.value })} className={campo} /></Pregunta>
-        <Pregunta clave="novedad"><input value={f.novedad ?? ""} disabled={!editable} onChange={(e) => setF({ ...f, novedad: e.target.value })} className={campo} /></Pregunta>
-        <Pregunta clave="fuentes"><textarea rows={3} disabled={!editable} value={fuentesTxt} onChange={(e) => setFuentesTxt(e.target.value)} placeholder={"Una por línea: «ICA — https://enlace» (documento), «doc: Boletín DANE» o «Gerente de FEDEGAN» (voz)"} className={campo} /></Pregunta>
+        <Pregunta clave="foco"><InputVoz value={f.foco ?? ""} disabled={!editable} onValue={(v) => setF({ ...f, foco: v })} className={campo} /></Pregunta>
+        <Pregunta clave="porQueAhora"><InputVoz value={f.porQueAhora ?? ""} disabled={!editable} onValue={(v) => setF({ ...f, porQueAhora: v })} className={campo} /></Pregunta>
+        <Pregunta clave="audiencia"><InputVoz value={f.audiencia ?? ""} disabled={!editable} onValue={(v) => setF({ ...f, audiencia: v })} className={campo} /></Pregunta>
+        <Pregunta clave="novedad"><InputVoz value={f.novedad ?? ""} disabled={!editable} onValue={(v) => setF({ ...f, novedad: v })} className={campo} /></Pregunta>
+        <Pregunta clave="fuentes"><AreaVoz rows={3} disabled={!editable} value={fuentesTxt} onValue={(v) => setFuentesTxt(v)} placeholder={"Una por línea: «ICA — https://enlace» (documento), «doc: Boletín DANE» o «Gerente de FEDEGAN» (voz)"} className={campo} /></Pregunta>
         <Pregunta clave="preguntas">{campoLista("preguntas")}</Pregunta>
         <Pregunta clave="datosAConfirmar">{campoLista("datosAConfirmar")}</Pregunta>
         <Pregunta clave="abiertas">{campoLista("abiertas")}</Pregunta>
@@ -640,10 +666,10 @@ function PanelCasilla({ c, secciones, puedePublicar, escritores, escritorConsejo
           <label className="flex flex-col gap-1 text-sm"><span className="font-semibold">Vigencia</span><select value={f.vigencia ?? ""} disabled={!editable} onChange={(e) => setF({ ...f, vigencia: (e.target.value || undefined) as Vigencia | undefined })} className={campo}><option value="">Sin definir</option>{(Object.keys(VIGENCIAS) as Vigencia[]).map((v) => <option key={v} value={v}>{VIGENCIAS[v]}</option>)}</select></label>
         </div>
         <Pregunta clave="riesgos">{campoLista("riesgos")}</Pregunta>
-        <Pregunta clave="palabraClave"><input value={f.palabraClave ?? ""} disabled={!editable} onChange={(e) => setF({ ...f, palabraClave: e.target.value })} className={campo} /></Pregunta>
-        <Pregunta clave="visual"><input value={f.visual ?? ""} disabled={!editable} onChange={(e) => setF({ ...f, visual: e.target.value })} className={campo} /></Pregunta>
+        <Pregunta clave="palabraClave"><InputVoz value={f.palabraClave ?? ""} disabled={!editable} onValue={(v) => setF({ ...f, palabraClave: v })} className={campo} /></Pregunta>
+        <Pregunta clave="visual"><InputVoz value={f.visual ?? ""} disabled={!editable} onValue={(v) => setF({ ...f, visual: v })} className={campo} /></Pregunta>
         <Pregunta clave="evitar">{campoLista("evitar")}</Pregunta>
-        <label className="flex flex-col gap-1 text-sm"><span className="font-semibold">Notas adicionales para la IA</span><textarea rows={3} value={d.brief} disabled={!editable} onChange={(e) => setD({ ...d, brief: e.target.value })} className={campo} /></label>
+        <label className="flex flex-col gap-1 text-sm"><span className="font-semibold">Notas adicionales para la IA</span><AreaVoz rows={3} value={d.brief} disabled={!editable} onValue={(v) => setD({ ...d, brief: v })} className={campo} /></label>
       </div>
 
       <div className="flex flex-wrap gap-2">

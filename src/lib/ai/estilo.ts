@@ -35,6 +35,11 @@ export async function sistemaConEstilo(base: string, userId: string): Promise<st
   return bloque ? `${base}\n\n${bloque}` : base;
 }
 
+/** El bloque de estilo (diagnóstico) de un escritor para añadirlo a un prompt; vacío si no hay escritor o no tiene estilo aprendido. */
+export async function bloqueDeEscritor(escritorId?: string): Promise<string> {
+  return escritorId ? bloqueEstilo(await getEstilo(escritorId)) : "";
+}
+
 /* -------------------------------------------------------------------------------------------------------------------------------
  * Escritores: además de la gente de la redacción (cada usuario tiene su estilo), el administrador puede registrar escritores EXTERNOS
  * (columnistas, firmas invitadas, un referente) y enseñarle a la IA cómo escriben. Cada escritor es un perfil `estilo_escritura:<id>`.

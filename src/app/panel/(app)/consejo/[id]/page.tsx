@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { asc, eq, isNull } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { categories, editorialPlans, editorialSlots } from "@/db/schema";
 import { canPublish, requirePermiso } from "@/lib/auth";
@@ -21,11 +21,16 @@ export default async function ConsejoPage({ params, searchParams }: { params: Pr
   await sincronizarCasillas(id).catch(() => undefined);
   const [plan] = await db.select().from(editorialPlans).where(eq(editorialPlans.id, id)).limit(1);
   if (!plan) notFound();
-  const [filas, secciones, puedePublicar, escritoresTodos] = await Promise.all([
+  const [filas, todasLasSecciones, puedePublicar, escritoresTodos] = await Promise.all([
     db.select().from(editorialSlots).where(eq(editorialSlots.planId, id)).orderBy(asc(editorialSlots.publishAt)),
-    db.select({ slug: categories.slug, name: categories.name }).from(categories).where(isNull(categories.parentId)).orderBy(asc(categories.sortOrder), asc(categories.name)),
+    db.select({ id: categories.id, parentId: categories.parentId, slug: categories.slug, name: categories.name }).from(categories).orderBy(asc(categories.sortOrder), asc(categories.name)),
     tienePermiso(user.id, user.role, "publicar").then((p) => p && canPublish(user.role)),
     escritoresParaElegir(user),
+  ]);
+  // Secciones y subsecciones: cada sección seguida de sus hijas («Padre › Hija»).
+  const secciones = todasLasSecciones.filter((c) => !c.parentId).flatMap((p) => [
+    { slug: p.slug, name: p.name },
+    ...todasLasSecciones.filter((h) => h.parentId === p.id).map((h) => ({ slug: h.slug, name: `${p.name} › ${h.name}` })),
   ]);
   const escritores = escritoresTodos.map((e) => ({ id: e.id, nombre: e.nombre, tipo: e.tipo, conDiagnostico: e.conDiagnostico }));
   const casillas: CasillaVista[] = filas.map((c) => ({
