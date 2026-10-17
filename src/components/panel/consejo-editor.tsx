@@ -4,11 +4,11 @@ import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, Bot, Check, ChevronRight, Clock, Loader2, PenLine, Plus, Rocket, Sparkles, Trash2, X } from "lucide-react";
-import { activarPlan, aprobar, armarPauta, cambiarEstadoPlan, completarFicha, guardarCasilla, guardarPlan, moverCasilla, proponerTemas, quitarCasilla, redactarAhora } from "@/app/panel/(app)/consejo/actions";
+import { activarPlan, aprobar, armarPauta, autollenarTema, cambiarEstadoPlan, completarFicha, guardarCasilla, guardarPlan, moverCasilla, quitarCasilla, redactarAhora } from "@/app/panel/(app)/consejo/actions";
 import { ConsejoBorrar } from "@/components/panel/consejo-borrar";
 import { AreaVoz, InputVoz } from "@/components/panel/campo-voz";
 import { type EscritorOpcion } from "@/components/panel/selector-escritor";
-import { ALCANCES, AUDIENCIAS, briefParaPrompt, sanearBrief, ESTADOS_CASILLA, GENEROS, PALABRAS_OPCIONES, PREGUNTAS_SECCION, TONOS, respondidas, PREGUNTAS_FICHA, VIGENCIAS, evaluarFicha, sanearConfig, sumarDias, type Aprobacion, type ConfigConsejo, type EstadoCasilla, type BriefSeccion, type EstadoPlan, type FichaPauta, type FuentePrevista, type Genero, type TemaConsejo, type Vigencia } from "@/lib/consejo/plan";
+import { ALCANCES, AUDIENCIAS, sanearBrief, ESTADOS_CASILLA, GENEROS, PALABRAS_OPCIONES, PREGUNTAS_SECCION, TONOS, respondidas, PREGUNTAS_FICHA, VIGENCIAS, evaluarFicha, sanearConfig, sumarDias, type Aprobacion, type ConfigConsejo, type EstadoCasilla, type BriefSeccion, type EstadoPlan, type FichaPauta, type FuentePrevista, type Genero, type TemaConsejo, type Vigencia } from "@/lib/consejo/plan";
 
 export type CasillaVista = { id: string; publishAt: string; sectionSlug: string; topic: string; angle: string; brief: string; priority: number; approval: Aprobacion; status: EstadoCasilla; articleId: string | null; error: string | null; ficha: FichaPauta };
 type Seccion = { slug: string; name: string };
@@ -67,8 +67,7 @@ export function ConsejoEditor({ plan, casillas: casillasProp, secciones, puedePu
   const [titulo, setTitulo] = useState(plan.title);
   const [temas, setTemas] = useState<TemaConsejo[]>(plan.temas);
   // Un campo de «nuevo tema» por sección, y las sugerencias de la IA por sección (todavía no están en el plan: se añaden con su botón).
-  const [propuestas, setPropuestas] = useState<Record<string, TemaConsejo[]>>({});
-  const [fuentes, setFuentes] = useState<Record<string, { title: string; url: string }[]>>({});
+  const [llenando, setLlenando] = useState<string | null>(null);
   const [cargando, setCargando] = useState<string | null>(null);
   // Panel de preguntas de cada sección: abierto mientras no se haya respondido nada.
   const [filtroSec, setFiltroSec] = useState("");
@@ -150,15 +149,14 @@ export function ConsejoEditor({ plan, casillas: casillasProp, secciones, puedePu
       else setMovidas((m) => { const x = { ...m }; delete x[slotId]; return x; });
     });
   };
-  // Pide a la IA los temas que faltan de una sección (guarda antes la configuración).
-  const traerTemas = async (slug: string, faltan: number): Promise<{ ok: boolean; message?: string }> => {
-    setCargando(slug);
+  // La IA contesta las demás preguntas del tema que se está describiendo (guarda el resultado en el borrador de esa sección).
+  const autollenar = async (slug: string) => {
+    setLlenando(slug);
     try {
-      await guardar();
-      const r = await proponerTemas(plan.id, { seccion: slug, cantidad: Math.max(1, faltan), enfoque: briefParaPrompt(nombre(slug), borrador[slug]) || undefined });
-      if (r.ok) { setPropuestas((p) => ({ ...p, [slug]: r.temas })); setFuentes((f) => ({ ...f, [slug]: r.fuentes })); }
-      return r;
-    } finally { setCargando(null); }
+      const r = await autollenarTema(plan.id, slug, borrador[slug]?.temas ?? "");
+      if (r.ok) setBorrador((d) => ({ ...d, [slug]: { ...r.brief, temas: d[slug]?.temas, escritorId: undefined } }));
+      setMsg({ ok: r.ok, texto: r.message ?? "Listo." });
+    } finally { setLlenando(null); }
   };
 
   // ¿Qué pasos ya están listos? (el ✓ de la barra)
@@ -243,15 +241,15 @@ export function ConsejoEditor({ plan, casillas: casillasProp, secciones, puedePu
             <InputVoz value={filtroSec} onValue={setFiltroSec} placeholder="Buscar sección…" aria-label="Buscar sección" className="min-h-10 w-full rounded-full border border-[var(--border-strong)] bg-white px-4 text-sm text-[#0b0b0b]" />
             {cfg.cuotas.length > 0 && <button type="button" disabled={!editable} onClick={() => setCfg((c) => ({ ...c, cuotas: [] }))} className={secundario}>Quitar todas</button>}
           </div>
-          <div className="flex flex-col gap-4">
+          <div className="grid items-start gap-3 lg:grid-cols-2">
             {secciones.filter((x) => !x.name.includes(" › ")).map((padre) => {
               const hijas = secciones.filter((x) => x.name.startsWith(`${padre.name} › `));
               const visibles = [padre, ...hijas].filter((x) => !filtroSec.trim() || x.name.toLowerCase().includes(filtroSec.trim().toLowerCase()));
               if (!visibles.length) return null;
               const activas = [padre, ...hijas].filter((x) => cuota(x.slug)).length;
               return (
-                <section key={padre.slug} className={`overflow-hidden rounded-[var(--radius-lg)] border-2 ${activas ? "border-[var(--accent)]" : "border-[var(--border)]"}`}>
-                  <header className="flex items-center justify-between gap-2 bg-[var(--surface-2)] px-4 py-2.5"><h3 className="lx-display text-base font-semibold">{padre.name}</h3><span className="text-xs text-[var(--fg-muted)]">{activas ? `${activas} activa${activas === 1 ? "" : "s"}` : "sin notas"}</span></header>
+                <section key={padre.slug} className={`overflow-hidden rounded-[var(--radius)] border ${activas ? "border-[var(--accent)]" : "border-[var(--border)]"}`}>
+                  <header className="flex items-center justify-between gap-2 bg-[var(--surface-2)] px-3 py-1.5"><h3 className="lx-display text-sm font-semibold">{padre.name}</h3><span className="text-xs text-[var(--fg-muted)]">{activas ? `${activas} activa${activas === 1 ? "" : "s"}` : "sin notas"}</span></header>
                   <ul className="flex flex-col divide-y divide-[var(--border)]">
                     {visibles.map((x) => (
                       <FilaCobertura key={x.slug} nombre={x.name.includes(" › ") ? x.name.split(" › ").slice(1).join(" › ") : "Toda la sección"} sub={x.name.includes(" › ")} cuota={cuota(x.slug)} defecto={cfg.aprobacion} editable={editable} puedePublicar={puedePublicar} onCambiar={(n, ap) => ponerCuota(x.slug, n, ap)} />
@@ -265,10 +263,9 @@ export function ConsejoEditor({ plan, casillas: casillasProp, secciones, puedePu
       )}
 
       {paso === 2 && (
-        <Paso n={3} titulo="Temas por sección" ayuda="Para cada sección que elegiste, escribe los temas que quieres cubrir o pídele a la IA que los traiga (con fuentes). Cada sección necesita tantos temas como notas tendrá en la semana. Es opcional: lo que falte, la IA lo completa al armar la pauta.">
+        <Paso n={3} titulo="Temas por sección" ayuda="Para cada sección que elegiste, describe cada tema que quieres cubrir y deja que la IA conteste el resto de las preguntas. Cada sección necesita tantos temas como notas tendrá en la semana. Es opcional: lo que falte, la IA lo completa al armar la pauta.">
           {porSeccion.length === 0 && <p className="rounded-[var(--radius)] border border-dashed border-[var(--border-strong)] p-6 text-center text-sm text-[var(--fg-muted)]">Primero elige las secciones en el paso 2 (Cobertura).</p>}
           {porSeccion.map((sec) => {
-            const sugeridas = propuestas[sec.slug] ?? [];
             const faltan = Math.max(0, sec.necesita - sec.propios.length);
             const completo = faltan === 0;
             return (
@@ -288,35 +285,14 @@ export function ConsejoEditor({ plan, casillas: casillasProp, secciones, puedePu
                   <PreguntasSeccion titulo="Proponer un tema con sus preguntas" nombre={sec.name} valor={borrador[sec.slug]} onChange={(c) => setBorrador((d) => ({ ...d, [sec.slug]: { ...d[sec.slug], ...c } }))} editable={editable} abierto={!!preguntasAbiertas[sec.slug]} onToggle={() => setPreguntasAbiertas((p) => ({ ...p, [sec.slug]: !p[sec.slug] }))}>
                     <div className="flex flex-wrap items-center justify-between gap-2 sm:col-span-2">
                       <span className="text-xs text-[var(--fg-muted)]">Describe un solo tema en la primera pregunta. Al guardarlo, el formulario queda limpio para proponer otro.</span>
-                      <button type="button" disabled={!editable || (borrador[sec.slug]?.temas ?? "").trim().length < 4} onClick={() => guardarTemaNuevo(sec.slug)} className={primario}><Check size={15} /> Guardar tema</button>
-                    </div>
-                  </PreguntasSeccion>
-                  <div className="flex justify-end"><button type="button" disabled={pend || !!cargando || !editable} onClick={() => run(async () => { const r = await traerTemas(sec.slug, completo ? 3 : faltan); setMsg({ ok: r.ok, texto: r.message ?? "Listo." }); })} className={primario}>{cargando === sec.slug ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />} {completo ? "Proponer 3 temas más" : `Proponer ${faltan} temas`}</button></div>
-                </div>
-                {sugeridas.length > 0 && (
-                  <div className="flex flex-col gap-2 rounded-[var(--radius)] border border-[var(--accent)] bg-[var(--accent)]/5 p-3">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <p className="flex items-center gap-2 text-sm font-semibold"><Bot size={15} className="text-[var(--accent)]" /> La IA propone para {sec.name} ({sugeridas.length})</p>
-                      <div className="flex gap-2">
-                        <button type="button" onClick={() => { setTemas((t) => [...t, ...sugeridas].slice(0, 60)); setPropuestas((p) => ({ ...p, [sec.slug]: [] })); }} className={primario}><Plus size={15} /> Añadir todos</button>
-                        <button type="button" onClick={() => setPropuestas((p) => ({ ...p, [sec.slug]: [] }))} className={secundario}>Descartar</button>
+                      <div className="flex flex-wrap gap-2">
+                        <button type="button" disabled={!editable || !!llenando || (borrador[sec.slug]?.temas ?? "").trim().length < 4} onClick={() => autollenar(sec.slug)} className={secundario}>{llenando === sec.slug ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />} Autollenar el resto con IA</button>
+                        <button type="button" disabled={!editable || (borrador[sec.slug]?.temas ?? "").trim().length < 4} onClick={() => guardarTemaNuevo(sec.slug)} className={primario}><Check size={15} /> Guardar tema</button>
                       </div>
                     </div>
-                    <ul className="flex flex-col divide-y divide-[var(--border)]">
-                      {sugeridas.map((t) => (
-                        <li key={t.id} className="flex flex-wrap items-center gap-3 py-2">
-                          <div className="min-w-0 flex-1 basis-64"><p className="text-sm font-semibold">{t.texto}</p>{t.angulo && <p className="text-xs text-[var(--fg-muted)]">{t.angulo}</p>}</div>
-                          <button type="button" onClick={() => { setTemas((l) => [...l, t].slice(0, 60)); setPropuestas((p) => ({ ...p, [sec.slug]: (p[sec.slug] ?? []).filter((x) => x.id !== t.id) })); }} className={primario}><Plus size={15} /> Añadir tema</button>
-                          <button type="button" aria-label="Descartar esta propuesta" onClick={() => setPropuestas((p) => ({ ...p, [sec.slug]: (p[sec.slug] ?? []).filter((x) => x.id !== t.id) }))} className="grid size-10 place-items-center rounded-full hover:bg-[var(--surface-2)]"><X size={15} /></button>
-                        </li>
-                      ))}
-                    </ul>
-                    {(fuentes[sec.slug]?.length ?? 0) > 0 && (
-                      <details className="text-xs text-[var(--fg-muted)]"><summary className="cursor-pointer font-medium">Fuentes consultadas ({fuentes[sec.slug].length})</summary>
-                        <ul className="mt-1 list-disc pl-5">{fuentes[sec.slug].map((f) => <li key={f.url}><a href={f.url} target="_blank" rel="noopener noreferrer" className="underline">{f.title}</a></li>)}</ul></details>
-                    )}
-                  </div>
-                )}
+                  </PreguntasSeccion>
+                  <div className="flex justify-end"><button type="button" disabled={!editable} onClick={() => ((borrador[sec.slug]?.temas ?? "").trim().length >= 4 ? guardarTemaNuevo(sec.slug) : setPreguntasAbiertas((p) => ({ ...p, [sec.slug]: true })))} className={primario}><Plus size={15} /> Agregar otro tema</button></div>
+                </div>
                 {sec.propios.length > 0 && (
                   <ul className="flex flex-col divide-y divide-[var(--border)] rounded-[var(--radius)] border border-[var(--border)]">
                     {sec.propios.map((t) => (
@@ -537,18 +513,17 @@ function FilaCobertura({ nombre, sub, cuota, defecto, editable, puedePublicar, o
   const n = cuota?.porDia ?? 0;
   const ap = cuota?.aprobacion ?? defecto;
   return (
-    <li className={`flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2.5 ${n ? "bg-[var(--accent)]/5" : ""} ${sub ? "pl-8" : ""}`}>
-      <span className={`min-w-0 flex-1 basis-40 text-sm ${n ? "font-semibold" : "text-[var(--fg-muted)]"}`}>{sub && <span aria-hidden className="mr-1 text-[var(--fg-muted)]">↳</span>}{nombre}</span>
+    <li className={`flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-1 ${n ? "bg-[var(--accent)]/5" : ""} ${sub ? "pl-6" : ""}`}>
+      <span className={`min-w-0 flex-1 basis-28 text-[0.82rem] leading-tight ${n ? "font-semibold" : "text-[var(--fg-muted)]"}`}>{sub && <span aria-hidden className="mr-1 text-[var(--fg-muted)]">↳</span>}{nombre}</span>
       <div className="flex items-center gap-1" role="group" aria-label={`Notas por día: ${nombre}`}>
         {[0, 1, 2, 3].map((v) => (
-          <button key={v} type="button" disabled={!editable} aria-pressed={n === v} onClick={() => onCambiar(v, cuota?.aprobacion)} className={`grid size-10 place-items-center rounded-full border text-sm font-semibold tabular-nums ${n === v ? "border-transparent bg-[var(--accent)] text-[var(--accent-fg,#fff)]" : "border-[var(--border-strong)] hover:bg-[var(--surface-2)]"}`}>{v}</button>
+          <button key={v} type="button" disabled={!editable} aria-pressed={n === v} onClick={() => onCambiar(v, cuota?.aprobacion)} className={`grid size-8 place-items-center rounded-full border text-xs font-semibold tabular-nums ${n === v ? "border-transparent bg-[var(--accent)] text-[var(--accent-fg,#fff)]" : "border-[var(--border-strong)] hover:bg-[var(--surface-2)]"}`}>{v}</button>
         ))}
-        <button type="button" disabled={!editable || n >= 6} onClick={() => onCambiar(Math.max(4, n + 1), cuota?.aprobacion)} aria-label="Más de tres por día" className={`grid h-10 min-w-10 place-items-center rounded-full border px-2 text-sm font-semibold ${n > 3 ? "border-transparent bg-[var(--accent)] text-[var(--accent-fg,#fff)]" : "border-[var(--border-strong)] hover:bg-[var(--surface-2)]"}`}>{n > 3 ? n : "+"}</button>
-        <span className="ml-1 text-xs text-[var(--fg-muted)]">por día</span>
+        <button type="button" disabled={!editable || n >= 6} onClick={() => onCambiar(Math.max(4, n + 1), cuota?.aprobacion)} aria-label="Más de tres por día" className={`grid h-8 min-w-8 place-items-center rounded-full border px-2 text-xs font-semibold ${n > 3 ? "border-transparent bg-[var(--accent)] text-[var(--accent-fg,#fff)]" : "border-[var(--border-strong)] hover:bg-[var(--surface-2)]"}`}>{n > 3 ? n : "+"}</button>
       </div>
       <div className={`flex overflow-hidden rounded-full border border-[var(--border-strong)] text-xs font-semibold ${n ? "" : "invisible"}`} role="group" aria-label={`Cómo sale: ${nombre}`}>
-        <button type="button" disabled={!editable || !n} aria-pressed={ap === "manual"} onClick={() => onCambiar(n, "manual")} className={`min-h-10 px-3 ${ap === "manual" ? "bg-[var(--accent)] text-[var(--accent-fg,#fff)]" : ""}`}>✋ Aprobar</button>
-        <button type="button" disabled={!editable || !n || !puedePublicar} aria-pressed={ap === "auto"} onClick={() => onCambiar(n, "auto")} className={`min-h-10 px-3 disabled:opacity-40 ${ap === "auto" ? "bg-[var(--accent)] text-[var(--accent-fg,#fff)]" : ""}`}>⚡ Automática</button>
+        <button type="button" disabled={!editable || !n} aria-pressed={ap === "manual"} onClick={() => onCambiar(n, "manual")} className={`min-h-8 px-2.5 ${ap === "manual" ? "bg-[var(--accent)] text-[var(--accent-fg,#fff)]" : ""}`}>✋ Aprobar</button>
+        <button type="button" disabled={!editable || !n || !puedePublicar} aria-pressed={ap === "auto"} onClick={() => onCambiar(n, "auto")} className={`min-h-8 px-2.5 disabled:opacity-40 ${ap === "auto" ? "bg-[var(--accent)] text-[var(--accent-fg,#fff)]" : ""}`}>⚡ Automática</button>
       </div>
     </li>
   );

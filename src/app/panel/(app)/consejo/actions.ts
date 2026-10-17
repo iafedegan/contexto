@@ -7,10 +7,10 @@ import { db } from "@/db";
 import { categories, editorialPlans, editorialSlots } from "@/db/schema";
 import { canPublish, requirePermiso } from "@/lib/auth";
 import { tienePermiso } from "@/lib/permisos-server";
-import { armarPautaCore, completarFichaCore, proponerTemasConsejoCore } from "@/lib/ai/consejo-ia";
+import { armarPautaCore, autollenarPreguntasCore, completarFichaCore, proponerTemasConsejoCore } from "@/lib/ai/consejo-ia";
 import { bloqueDeEscritor, escritoresParaElegir } from "@/lib/ai/estilo";
 import { aprobarCasilla, procesarConsejo, sincronizarCasillas } from "@/lib/ai/consejo-ejecucion";
-import { CONFIG_BASE, briefParaPrompt, respondidas, sanearBrief, construirParrilla, lunesDe, sanearConfig, sanearFicha, type ConfigConsejo, type FichaPauta, type TemaConsejo } from "@/lib/consejo/plan";
+import { CONFIG_BASE, briefParaPrompt, respondidas, sanearBrief, construirParrilla, lunesDe, sanearConfig, sanearFicha, type BriefSeccion, type ConfigConsejo, type FichaPauta, type TemaConsejo } from "@/lib/consejo/plan";
 
 /**
  * Acciones del consejo de redacción. Todo exige el permiso de redacción; activar un plan con casillas «automáticas» y aprobar piezas
@@ -76,6 +76,20 @@ export async function proponerTemas(id: string, opciones: { seccion?: string; ca
   const r = await proponerTemasConsejoCore(user.id, { lunes: plan.weekStart, enfoque, estilo: estilo || undefined, seccion, cantidad: opciones.cantidad, yaTiene: actuales.map((t) => t.texto) });
   if (!r.ok) return { ok: false, message: r.error };
   return { ok: true, temas: r.temas, fuentes: r.fuentes, message: `La IA propuso ${r.temas.length} tema(s)${seccion ? ` para ${seccion.name}` : ""}: añade los que quieras.` };
+}
+
+/** La IA contesta las preguntas de un tema a partir de su descripción (con el estilo del escritor de esa sección si hay). */
+export async function autollenarTema(planId: string, seccion: string, tema: string): Promise<Res<{ brief: BriefSeccion }>> {
+  const user = await requirePermiso("articulos");
+  if (tema.trim().length < 4) return { ok: false, message: "Describe primero el tema." };
+  const [plan] = await db.select({ config: editorialPlans.config }).from(editorialPlans).where(eq(editorialPlans.id, planId)).limit(1);
+  if (!plan) return { ok: false, message: "El plan ya no existe." };
+  const cfg = sanearConfig(plan.config);
+  const [cat] = await db.select({ name: categories.name }).from(categories).where(eq(categories.slug, seccion)).limit(1);
+  const estilo = await bloqueDeEscritor(cfg.briefs?.[seccion]?.escritorId ?? cfg.escritorId);
+  const r = await autollenarPreguntasCore(user.id, { tema, seccion: cat?.name ?? seccion, estilo: estilo || undefined });
+  if (!r.ok) return { ok: false, message: r.error };
+  return { ok: true, brief: r.brief, message: "Listo: revisa y corrige lo que quieras." };
 }
 
 /** Arma la pauta: construye la parrilla con las cuotas y la IA llena el tema, enfoque y encargo de cada casilla. Reemplaza las casillas aún sin redactar. */

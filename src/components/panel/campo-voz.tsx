@@ -62,7 +62,7 @@ export function InputVoz({ value, onValue, className = "", ...rest }: Comunes & 
   const d = useDictado(value, onValue);
   return (
     <div className="relative min-w-0 flex-1">
-      <input {...rest} value={value} onChange={(e) => onValue(e.target.value)} className={`${className} ${d.soporta ? "pr-12" : ""}`} />
+      <input {...rest} value={value} onChange={(e) => onValue(e.target.value)} className={`w-full ${className} ${d.soporta ? "pr-12" : ""}`} />
       <Micro {...d} deshabilitado={rest.disabled} />
     </div>
   );

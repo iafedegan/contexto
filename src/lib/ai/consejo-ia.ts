@@ -12,7 +12,7 @@ import { getAiModel } from "@/lib/ai-provider";
 import { registrarUsoIA, verificarCuotaIA } from "@/lib/ai-cuota";
 import { suggestTopicIdeasCore } from "@/lib/ai/ideas-noticias";
 import { investigarTema } from "@/lib/ai/investigacion";
-import { GENEROS, VIGENCIAS, briefParaPrompt, respondidas, sanearFicha, sumarDias, type FichaPauta, type Genero, type TemaConsejo, type Vigencia } from "@/lib/consejo/plan";
+import { ALCANCES, AUDIENCIAS, GENEROS, PALABRAS_OPCIONES, TONOS, VIGENCIAS, briefParaPrompt, respondidas, sanearBrief, type BriefSeccion, sanearFicha, sumarDias, type FichaPauta, type Genero, type TemaConsejo, type Vigencia } from "@/lib/consejo/plan";
 
 const esquemaPauta = z.object({
   casillas: z.array(
@@ -196,5 +196,44 @@ Llena la ficha de pauta.`,
     console.error("completarFichaCore:", err);
     const detalle = err && typeof err === "object" && "message" in err ? String((err as Error).message) : "";
     return { ok: false, error: detalle ? `No se pudo completar la ficha: ${detalle.slice(0, 200)}` : "El modelo no respondió." };
+  }
+}
+
+const esquemaPreguntas = z.object({
+  agenda: z.string().describe("Eventos, ferias, decisiones o cifras de la semana ligados al tema, SOLO si el tema los menciona; si no, cadena vacía"),
+  audiencia: z.enum(AUDIENCIAS), palabras: z.number().describe("300, 450, 600, 800 o 1000"),
+  generos: z.array(z.enum(Object.keys(GENEROS) as [Genero, ...Genero[]])).describe("1 a 2 géneros"),
+  alcance: z.enum(ALCANCES), lugares: z.string().describe("Regiones, departamentos o países, solo si el tema los menciona; si no, cadena vacía"),
+  tono: z.enum(TONOS), fuentes: z.string().describe("Entidades o medios de confianza a consultar (ICA, FEDEGAN, DANE…), sin enlaces inventados"),
+  evitar: z.string().describe("Enfoques o errores a evitar con este tema, breve"),
+});
+
+/** Contesta las preguntas de un tema a partir de su descripción, para que el editor solo corrija. No investiga ni inventa hechos: lo que el tema no dice queda vacío. */
+export async function autollenarPreguntasCore(
+  userId: string,
+  input: { tema: string; seccion: string; estilo?: string },
+): Promise<{ ok: true; brief: BriefSeccion } | { ok: false; error: string }> {
+  const model = await getAiModel();
+  if (!model) return { ok: false, error: "Falta la clave del modelo de IA (la conecta un administrador en Configuración → Asistente)." };
+  const cuota = await verificarCuotaIA(userId);
+  if (!cuota.ok) return { ok: false, error: cuota.message };
+  try {
+    const { object, usage } = await generateObject({
+      model,
+      schema: esquemaPreguntas,
+      temperature: 0.3,
+      abortSignal: AbortSignal.timeout(45_000),
+      system:
+        "Eres el editor jefe de CONtexto Ganadero (medio colombiano del sector ganadero y agropecuario). Un editor te describe un tema y tú contestas las preguntas previas del consejo de redacción: " +
+        "para quién se escribe, extensión, género, alcance, tono, fuentes a consultar y qué evitar. No inventes hechos, cifras, fechas ni enlaces: lo que el tema no menciona va vacío. Español de Colombia." +
+        (input.estilo ? `\n\nLa nota la escribirá este escritor; el tono y el género deben encajar con su voz:\n${input.estilo}` : ""),
+      prompt: `SECCIÓN: ${input.seccion}\nTEMA: ${input.tema.slice(0, 400)}`,
+    });
+    await registrarUsoIA(userId, usage);
+    const b = sanearBrief({ ...object, palabras: PALABRAS_OPCIONES.reduce((a, x) => (Math.abs(x - object.palabras) < Math.abs(a - object.palabras) ? x : a), PALABRAS_OPCIONES[0]) });
+    return { ok: true, brief: b };
+  } catch (err) {
+    console.error("autollenarPreguntasCore:", err);
+    return { ok: false, error: "La IA no pudo completar las preguntas. Intenta de nuevo." };
   }
 }
