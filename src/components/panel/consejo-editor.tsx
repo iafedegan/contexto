@@ -271,7 +271,7 @@ export function ConsejoEditor({ plan, casillas: casillasProp, secciones, puedePu
             return (
               <div key={sec.slug} className={`flex flex-col gap-3 rounded-[var(--radius-lg)] border p-4 ${completo ? "border-emerald-600/60" : "border-[var(--border)]"}`}>
                 <div className="flex flex-wrap items-center gap-3">
-                  <div className="flex flex-col"><span className="lx-kicker text-[var(--fg-muted)]">{sec.name.includes(" › ") ? `Sección · ${sec.name.split(" › ")[0]}` : "Sección"}</span><h3 className="lx-display text-lg font-semibold">{sec.name.includes(" › ") ? <><span className="text-[var(--fg-muted)]">Subsección · </span>{sec.name.split(" › ").slice(1).join(" › ")}</> : sec.name}</h3></div>
+                  <div className="flex flex-col"><span className="lx-kicker text-[var(--fg-muted)]">{sec.name.includes(" › ") ? "Subsección" : "Sección"}</span><h3 className="lx-display text-lg font-semibold">{sec.name.split(" › ").slice(-1)[0]}</h3></div>
                   <span className={`rounded-full px-3 py-1 text-xs font-semibold ${completo ? "bg-emerald-600/15 text-emerald-700" : "bg-[var(--surface-2)] text-[var(--fg-muted)]"}`}>{completo ? <><Check size={12} className="mr-1 inline" />Completa</> : `Faltan ${faltan}`} · {sec.propios.length} de {sec.necesita} temas</span>
                   <span className="text-xs text-[var(--fg-muted)]">{sec.porDia} por día × {cfg.dias.length} días</span>
                 </div>
