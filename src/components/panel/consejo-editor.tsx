@@ -72,6 +72,7 @@ export function ConsejoEditor({ plan, casillas: casillasProp, secciones, puedePu
   const [cargando, setCargando] = useState<string | null>(null);
   // Panel de preguntas de cada sección: abierto mientras no se haya respondido nada.
   const [filtroSec, setFiltroSec] = useState("");
+  const [gruposAbiertos, setGruposAbiertos] = useState<Record<string, boolean>>({});
   const [temaAbierto, setTemaAbierto] = useState<Record<string, boolean>>({});
   const [borrador, setBorrador] = useState<Record<string, BriefSeccion>>({});
   const [preguntasAbiertas, setPreguntasAbiertas] = useState<Record<string, boolean>>({});
@@ -240,14 +241,22 @@ export function ConsejoEditor({ plan, casillas: casillasProp, secciones, puedePu
               const visibles = [padre, ...hijas].filter((x) => !filtroSec.trim() || x.name.toLowerCase().includes(filtroSec.trim().toLowerCase()));
               if (!visibles.length) return null;
               const activas = [padre, ...hijas].filter((x) => cuota(x.slug)).length;
+              const notasGrupo = [padre, ...hijas].reduce((t, x) => t + (cuota(x.slug)?.porDia ?? 0), 0);
+              const abierto = !!gruposAbiertos[padre.slug] || !!filtroSec.trim();
               return (
-                <section key={padre.slug} className={`overflow-hidden rounded-[var(--radius)] border ${activas ? "border-[var(--accent)]" : "border-[var(--border)]"}`}>
-                  <header className="flex items-center justify-between gap-2 bg-[var(--surface-2)] px-3 py-1.5"><h3 className="lx-display text-sm font-semibold">{padre.name}</h3><span className="text-xs text-[var(--fg-muted)]">{activas ? `${activas} activa${activas === 1 ? "" : "s"}` : "sin notas"}</span></header>
-                  <ul className="flex flex-col divide-y divide-[var(--border)]">
-                    {visibles.map((x) => (
-                      <FilaCobertura key={x.slug} nombre={x.name.includes(" › ") ? x.name.split(" › ").slice(1).join(" › ") : "Toda la sección"} sub={x.name.includes(" › ")} cuota={cuota(x.slug)} defecto={cfg.aprobacion} editable={editable} puedePublicar={puedePublicar} onCambiar={(n, ap) => ponerCuota(x.slug, n, ap)} />
-                    ))}
-                  </ul>
+                <section key={padre.slug} className={`overflow-hidden rounded-[var(--radius)] border-2 transition-colors ${activas ? "border-[var(--accent)]" : "border-[var(--border)]"}`}>
+                  <button type="button" onClick={() => setGruposAbiertos((g) => ({ ...g, [padre.slug]: !g[padre.slug] }))} aria-expanded={abierto} className={`flex w-full items-center gap-2 px-3 py-2 text-left transition-colors ${activas ? "bg-[var(--accent)] text-[var(--accent-fg,#fff)]" : "bg-[var(--surface-2)]"}`}>
+                    <ChevronRight size={16} className={`shrink-0 transition-transform ${abierto ? "rotate-90" : ""}`} aria-hidden />
+                    <h3 className="lx-display min-w-0 flex-1 text-sm font-semibold">{padre.name}</h3>
+                    <span className={`text-xs ${activas ? "font-semibold" : "text-[var(--fg-muted)]"}`}>{activas ? `${activas} activa${activas === 1 ? "" : "s"} · ${notasGrupo} por día` : `${hijas.length + 1} opciones`}</span>
+                  </button>
+                  {abierto && (
+                    <ul className="flex flex-col divide-y divide-[var(--border)]">
+                      {visibles.map((x) => (
+                        <FilaCobertura key={x.slug} nombre={x.name.includes(" › ") ? x.name.split(" › ").slice(1).join(" › ") : "Toda la sección"} sub={x.name.includes(" › ")} cuota={cuota(x.slug)} defecto={cfg.aprobacion} editable={editable} puedePublicar={puedePublicar} onCambiar={(n, ap) => ponerCuota(x.slug, n, ap)} />
+                      ))}
+                    </ul>
+                  )}
                 </section>
               );
             })}
@@ -549,6 +558,7 @@ function PreguntasSeccion({ nombre, titulo, escritores, yoId, children, valor, o
           <div className="sm:col-span-2">
             <Caja clave="generos"><span className="flex flex-wrap gap-1.5">{(Object.keys(GENEROS) as Genero[]).map((g) => { const on = valor?.generos?.includes(g) ?? false; return <button key={g} type="button" disabled={!editable} aria-pressed={on} onClick={() => onChange({ generos: on ? (valor?.generos ?? []).filter((x) => x !== g) : [...(valor?.generos ?? []), g] })} className={`min-h-9 rounded-full border px-3 text-sm font-medium ${on ? "border-transparent bg-[var(--accent)] text-[var(--accent-fg,#fff)]" : "border-[var(--border-strong)] text-[var(--fg-muted)]"}`}>{GENEROS[g]}</button>; })}</span></Caja>
           </div>
+          <Caja clave="grafica"><select disabled={!editable} value={valor?.grafica ?? ""} onChange={(e) => onChange({ grafica: (e.target.value || undefined) as BriefSeccion["grafica"] })} className={sel}><option value="">Sin definir</option><option value="si">Sí, si hay cifras con fuente</option><option value="no">No</option></select></Caja>
           <Caja clave="alcance"><select disabled={!editable} value={valor?.alcance ?? ""} onChange={(e) => onChange({ alcance: (e.target.value || undefined) as BriefSeccion["alcance"] })} className={sel}><option value="">Sin definir</option>{ALCANCES.map((a) => <option key={a} value={a}>{a}</option>)}</select></Caja>
           <Caja clave="lugares"><InputVoz disabled={!editable} value={valor?.lugares ?? ""} onValue={(v) => onChange({ lugares: v })} placeholder="Ej.: Caribe, Meta, Brasil" className={sel} /></Caja>
           <Caja clave="tono"><select disabled={!editable} value={valor?.tono ?? ""} onChange={(e) => onChange({ tono: (e.target.value || undefined) as BriefSeccion["tono"] })} className={sel}><option value="">Sin definir</option>{TONOS.map((t) => <option key={t} value={t}>{t}</option>)}</select></Caja>
@@ -631,6 +641,7 @@ function PanelCasilla({ c, secciones, puedePublicar, escritores, escritorConsejo
         <Pregunta clave="riesgos">{campoLista("riesgos")}</Pregunta>
         <Pregunta clave="palabraClave"><InputVoz value={f.palabraClave ?? ""} disabled={!editable} onValue={(v) => setF({ ...f, palabraClave: v })} className={campo} /></Pregunta>
         <Pregunta clave="visual"><InputVoz value={f.visual ?? ""} disabled={!editable} onValue={(v) => setF({ ...f, visual: v })} className={campo} /></Pregunta>
+        <label className="flex items-center gap-2 text-sm"><input type="checkbox" disabled={!editable} checked={f.conGrafica === true} onChange={(e) => setF({ ...f, conGrafica: e.target.checked || undefined })} /> <span className="font-semibold">Incluir una gráfica de datos</span><span className="text-xs text-[var(--fg-muted)]">· la IA la arma con cifras con fuente; si no las halla, la nota sale sin ella.</span></label>
         <Pregunta clave="evitar">{campoLista("evitar")}</Pregunta>
         <label className="flex flex-col gap-1 text-sm"><span className="font-semibold">Notas adicionales para la IA</span><AreaVoz rows={3} value={d.brief} disabled={!editable} onValue={(v) => setD({ ...d, brief: v })} className={campo} /></label>
       </div>

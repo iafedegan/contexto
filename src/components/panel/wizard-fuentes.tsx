@@ -408,6 +408,8 @@ function PreguntaIdea({ q, brief, onBrief }: { q: { clave: keyof BriefSeccion; p
   if (k === "audiencia" || k === "alcance" || k === "tono") {
     const lista: readonly string[] = k === "audiencia" ? AUDIENCIAS : k === "alcance" ? ALCANCES : TONOS;
     campo = <select value={(brief[k] as string | undefined) ?? ""} onChange={(e) => onBrief({ [k]: e.target.value || undefined } as Partial<BriefSeccion>)} className={sel}><option value="">Sin definir</option>{lista.map((x) => <option key={x} value={x}>{x}</option>)}</select>;
+  } else if (k === "grafica") {
+    campo = <select value={brief.grafica ?? ""} onChange={(e) => onBrief({ grafica: (e.target.value || undefined) as BriefSeccion["grafica"] })} className={sel}><option value="">Sin definir</option><option value="si">Sí, si hay cifras con fuente</option><option value="no">No</option></select>;
   } else if (k === "palabras") {
     campo = <select value={brief.palabras ?? ""} onChange={(e) => onBrief({ palabras: e.target.value ? Number(e.target.value) : undefined })} className={sel}><option value="">Sin definir</option>{PALABRAS_OPCIONES.map((p) => <option key={p} value={p}>Unas {p} palabras</option>)}</select>;
   } else if (k === "generos") {

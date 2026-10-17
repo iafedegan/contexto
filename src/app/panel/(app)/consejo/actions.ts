@@ -125,7 +125,7 @@ export async function armarPauta(id: string, enfoque?: string): Promise<Res<{ ca
       // Lo que el consejo contestó para la sección manda: la extensión elegida y, si el género de la IA no es de los pedidos, uno de los pedidos.
       const tema = p && p.temaN > 0 ? (plan.temas ?? [])[p.temaN - 1] : undefined;
       const b = { ...cfg.briefs?.[c.seccion], ...(tema?.brief ?? {}) };
-      const ficha: FichaPauta = { ...(p?.ficha ?? {}), ...(b?.palabras ? { palabras: b.palabras } : {}), ...(tema?.brief?.escritorId ? { escritorId: tema.brief.escritorId } : {}) };
+      const ficha: FichaPauta = { ...(p?.ficha ?? {}), ...(b?.palabras ? { palabras: b.palabras } : {}), ...(tema?.brief?.escritorId ? { escritorId: tema.brief.escritorId } : {}), ...(b.grafica === "si" ? { conGrafica: true } : {}) };
       if (b?.generos?.length && (!ficha.genero || !b.generos.includes(ficha.genero))) ficha.genero = b.generos[i % b.generos.length];
       return { planId: id, publishAt: c.publicaEn, sectionSlug: c.seccion, topic: p?.tema ?? "", angle: p?.angulo ?? "", brief: p?.encargo ?? "", priority: p?.prioridad ?? c.prioridad, approval: c.aprobacion, ficha };
     }),

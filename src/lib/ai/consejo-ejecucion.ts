@@ -13,6 +13,8 @@ import { db } from "@/db";
 import { articles, categories, editorialPlans, editorialSlots, users } from "@/db/schema";
 import { generateArticleDraftCore } from "@/lib/ai/borrador";
 import { generateCoverImageCore } from "@/lib/ai/portada";
+import { generateChartCore } from "@/lib/ai/grafica";
+import { encodeSpec } from "@/lib/chart-svg";
 import { canPublish } from "@/lib/auth";
 import { autorDeUsuario } from "@/lib/user-authors";
 import { tienePermiso } from "@/lib/permisos-server";
@@ -76,6 +78,15 @@ async function redactar(c: Casilla, plan: Plan): Promise<void> {
   if (!r.ok) return void (await poner(c.id, "fallida", { error: r.error.slice(0, 400) }));
   if (r.mode !== "ia") return void (await poner(c.id, "fallida", { error: "No hay modelo de IA conectado: no se redacta (sería inventar)." }));
   const d = r.draft;
+  // Gráfica de datos (si la ficha la pide y queda tiempo): busca cifras con fuente y la inserta antes del aviso de IA. Si no hay datos, la nota sale sin ella.
+  if (ficha.conGrafica && Date.now() - inicio < 110_000) {
+    const ch = await generateChartCore(userId, { topic: d.title, section: cat?.name, articulo: d.body.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").slice(0, 4000) }).catch(() => null);
+    if (ch?.ok) {
+      const limpia = (t: string) => t.replace(/[|\]]/g, " ");
+      const fuente = `Fuente: ${ch.sourceNote || "Google Search"}. Consultado en: ${ch.sources.slice(0, 3).map((x) => x.title).join(", ")}.`;
+      d.body = `${d.body}\n\n[[GRAFICA ${encodeSpec(ch.chart)} | ${limpia(ch.chart.title)} | ${limpia(fuente)}]]\n`;
+    }
+  }
   // Transparencia con el lector (como piden AP o The Guardian): la nota dice que se elaboró con asistencia de IA. Se puede apagar en el consejo.
   if (sanearConfig(plan.config).divulgarIA) d.body = `${d.body}<p><em>Nota elaborada con asistencia de inteligencia artificial a partir de las fuentes citadas.</em></p>`;
 

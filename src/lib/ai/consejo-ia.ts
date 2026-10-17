@@ -205,6 +205,7 @@ const esquemaPreguntas = z.object({
   audiencia: z.enum(AUDIENCIAS), palabras: z.number().describe("300, 450, 600, 800 o 1000"),
   generos: z.array(z.enum(Object.keys(GENEROS) as [Genero, ...Genero[]])).describe("1 a 2 géneros"),
   alcance: z.enum(ALCANCES), lugares: z.string().describe("Regiones, departamentos o países, solo si el tema los menciona; si no, cadena vacía"),
+  grafica: z.enum(["si", "no"]).describe("«si» solo si el tema se presta a cifras con fuente que se puedan graficar (precios, volúmenes, series)"),
   tono: z.enum(TONOS), fuentes: z.string().describe("Entidades o medios de confianza a consultar (ICA, FEDEGAN, DANE…), sin enlaces inventados"),
   evitar: z.string().describe("Enfoques o errores a evitar con este tema, breve"),
 });

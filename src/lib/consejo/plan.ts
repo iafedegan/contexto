@@ -182,6 +182,8 @@ export type FichaPauta = {
   evitar?: string[];
   /** 14 · Quién la escribe: el escritor cuyo estilo imita la IA en ESTA pieza (si falta, el del consejo). */
   escritorId?: string;
+  /** Incluir una gráfica de datos (con fuentes) al redactar. */
+  conGrafica?: boolean;
 };
 
 export const FICHA_VACIA: FichaPauta = {};
@@ -247,6 +249,7 @@ export function sanearFicha(input: unknown): FichaPauta {
     riesgos: lista(f.riesgos, 200, 8), visual: texto(f.visual, 250), palabraClave: texto(f.palabraClave, 80),
     vigencia: (Object.keys(VIGENCIAS) as Vigencia[]).find((v) => v === f.vigencia), evitar: lista(f.evitar, 200, 8),
     escritorId: typeof f.escritorId === "string" && /^[0-9a-f-]{36}$/i.test(f.escritorId) ? f.escritorId : undefined,
+    conGrafica: f.conGrafica === true ? true : undefined,
   };
   return Object.fromEntries(Object.entries(out).filter(([, v]) => v !== undefined)) as FichaPauta;
 }
@@ -302,6 +305,8 @@ export type BriefSeccion = {
   fuentes?: string;
   /** ¿Quién quieres que la escriba? Escritor cuyo estilo imita la IA en las notas de esta sección. */
   escritorId?: string;
+  /** ¿Lleva gráfica de datos? Solo se incluye si hay cifras con fuente. */
+  grafica?: "si" | "no";
 };
 
 /** Las preguntas, en orden, con su ayuda. `clave` es el campo de BriefSeccion. */
@@ -314,6 +319,7 @@ export const PREGUNTAS_SECCION: { clave: keyof BriefSeccion; pregunta: string; a
   { clave: "palabras", pregunta: "¿Cuántas palabras por nota?", ayuda: "Una noticia breve ronda 300–450; un análisis, 600–1.000." },
   { clave: "alcance", pregunta: "¿Cuál es el alcance geográfico?", ayuda: "Colombia, una región, el mundo o una mezcla." },
   { clave: "lugares", pregunta: "¿Regiones, departamentos o países de interés?", ayuda: "Por ejemplo: «Caribe, Meta, Brasil»." },
+  { clave: "grafica", pregunta: "¿Lleva gráfica de datos?", ayuda: "Si hay cifras con fuente, la IA arma una gráfica y la inserta en la nota." },
   { clave: "tono", pregunta: "¿Qué tono?", ayuda: "Se combina con el estilo del escritor elegido." },
   { clave: "fuentes", pregunta: "¿Qué fuentes prefieres que se consulten?", ayuda: "Entidades, gremios o medios de confianza (ICA, FEDEGAN, DANE…)." },
   { clave: "evitar", pregunta: "¿Qué debe evitar la IA?", ayuda: "Enfoques agotados, términos sensibles, temas que ya cubrieron otros." },
@@ -327,6 +333,7 @@ export function sanearBrief(input: unknown): BriefSeccion {
   const out: BriefSeccion = {
     temas: t(b.temas, 500), agenda: t(b.agenda, 500), lugares: t(b.lugares, 160), evitar: t(b.evitar, 400), fuentes: t(b.fuentes, 200),
     escritorId: typeof b.escritorId === "string" && /^[0-9a-f-]{36}$/i.test(b.escritorId) ? b.escritorId : undefined,
+    grafica: b.grafica === "si" || b.grafica === "no" ? b.grafica : undefined,
     audiencia: AUDIENCIAS.find((x) => x === b.audiencia), alcance: ALCANCES.find((x) => x === b.alcance), tono: TONOS.find((x) => x === b.tono),
     palabras: PALABRAS_OPCIONES.find((x) => x === b.palabras),
     generos: (Array.isArray(b.generos) ? (b.generos as unknown[]) : []).filter((g): g is Genero => (Object.keys(GENEROS) as string[]).includes(String(g))).filter((g, i, a) => a.indexOf(g) === i).slice(0, 6),
@@ -363,6 +370,7 @@ export function briefParaPrompt(seccion: string, b: BriefSeccion | undefined): s
     !b.alcance && b.lugares && `- Lugares de interés: ${b.lugares}`,
     b.tono && `- Tono: ${b.tono}`,
     b.fuentes && `- Fuentes preferidas: ${b.fuentes}`,
+    b.grafica === "si" && "- Lleva una gráfica de datos: prepara la nota alrededor de cifras con fuente que se puedan graficar",
     b.evitar && `- Evitar: ${b.evitar}`,
   ].filter(Boolean).join("\n");
 }
