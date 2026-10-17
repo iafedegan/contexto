@@ -46,7 +46,7 @@ export async function crearPlan(input: { fecha: string; titulo?: string; escrito
 export async function guardarPlan(id: string, input: { titulo?: string; config: ConfigConsejo; temas: TemaConsejo[] }): Promise<Res> {
   const user = await requirePermiso("articulos");
   const temas = (Array.isArray(input.temas) ? input.temas : [])
-    .map((t) => ({ id: typeof t.id === "string" && t.id ? t.id.slice(0, 60) : randomUUID(), texto: String(t.texto ?? "").trim().slice(0, 200), seccion: t.seccion && /^[\w-]{1,80}$/.test(t.seccion) ? t.seccion : undefined, prioridad: (t.prioridad === 1 || t.prioridad === 3 ? t.prioridad : 2) as 1 | 2 | 3, origen: t.origen === "ia" ? ("ia" as const) : ("manual" as const), angulo: t.angulo ? String(t.angulo).slice(0, 400) : undefined, brief: t.brief && respondidas(sanearBrief(t.brief)) ? sanearBrief(t.brief) : undefined }))
+    .map((t) => ({ id: typeof t.id === "string" && t.id ? t.id.slice(0, 60) : randomUUID(), texto: String(t.texto ?? "").trim().slice(0, 200), seccion: t.seccion && /^[\w-]{1,80}$/.test(t.seccion) ? t.seccion : undefined, prioridad: (t.prioridad === 1 || t.prioridad === 3 ? t.prioridad : 2) as 1 | 2 | 3, origen: t.origen === "ia" ? ("ia" as const) : ("manual" as const), angulo: t.angulo ? String(t.angulo).slice(0, 400) : undefined, dia: Number.isInteger(t.dia) && (t.dia as number) >= 1 && (t.dia as number) <= 7 ? t.dia : undefined, brief: t.brief && respondidas(sanearBrief(t.brief)) ? sanearBrief(t.brief) : undefined }))
     .filter((t) => t.texto.length >= 4)
     .slice(0, 60);
   const cfgGuardada = sanearConfig(input.config);

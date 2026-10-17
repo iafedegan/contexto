@@ -58,7 +58,7 @@ export const CONFIG_BASE: ConfigConsejo = {
 };
 
 /** Un tema que el consejo quiere cubrir (lo escribe una persona o lo propone la IA). */
-export type TemaConsejo = { id: string; texto: string; seccion?: string; prioridad: 1 | 2 | 3; origen: "manual" | "ia"; angulo?: string; /** Respuestas a las preguntas de ESTE tema (mismas que las de la sección). */ brief?: BriefSeccion };
+export type TemaConsejo = { id: string; texto: string; seccion?: string; prioridad: 1 | 2 | 3; origen: "manual" | "ia"; angulo?: string; /** Día de la semana (ISO 1–7) en que sale este tema; si falta, la IA lo reparte. */ dia?: number; /** Respuestas a las preguntas de ESTE tema (mismas que las de la sección). */ brief?: BriefSeccion };
 
 /** Una casilla de la parrilla: una pieza con su día, hora y sección. */
 export type CasillaBase = { publicaEn: Date; seccion: string; aprobacion: Aprobacion; prioridad: 1 | 2 | 3 };

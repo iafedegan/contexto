@@ -88,13 +88,13 @@ export async function armarPautaCore(
   if (!cuota.ok) return { ok: false, error: cuota.message };
 
   const hoy = new Intl.DateTimeFormat("es-CO", { dateStyle: "long", timeZone: "America/Bogota" }).format(new Date());
-  const temas = input.temas.map((t, n) => `${n + 1}. ${t.texto}${t.seccion ? ` [sección: ${t.seccion}]` : ""}${t.angulo ? ` — enfoque: ${t.angulo}` : ""}${t.prioridad === 1 ? " (PRIORITARIO)" : ""}${t.brief && respondidas({ ...t.brief, escritorId: undefined }) ? `\n   ${briefParaPrompt(t.texto, t.brief).split("\n").slice(1).join("\n   ")}` : ""}`).join("\n");
+  const temas = input.temas.map((t, n) => `${n + 1}. ${t.texto}${t.seccion ? ` [sección: ${t.seccion}]` : ""}${t.angulo ? ` — enfoque: ${t.angulo}` : ""}${t.prioridad === 1 ? " (PRIORITARIO)" : ""}${t.dia ? ` (DÍA FIJO: ${["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"][t.dia - 1]})` : ""}${t.brief && respondidas({ ...t.brief, escritorId: undefined }) ? `\n   ${briefParaPrompt(t.texto, t.brief).split("\n").slice(1).join("\n   ")}` : ""}`).join("\n");
   const sistema =
     "Eres el editor jefe de CONtexto Ganadero, un medio colombiano del sector ganadero y agropecuario, y diriges el consejo de redacción semanal. " +
     "Tu trabajo es repartir la cobertura de la semana: qué se publica en cada casilla (día, hora y sección ya definidos), con qué enfoque y con qué encargo para quien redacta. " +
     "Criterios de un consejo de redacción real: (1) lo urgente y de mayor impacto sale temprano y en días fuertes; el análisis, los explicativos y los temas atemporales, a media tarde y en la noche o el fin de semana; " +
     "(2) no repetir el mismo hecho en dos casillas: si un tema merece dos piezas, la segunda va con otro ángulo (consecuencia para el productor, antecedentes, voces del sector); " +
-    "(3) mezclar lo local y lo internacional y variar los formatos (noticia, explicativo, análisis, datos); (4) respetar la sección de cada casilla; " +
+    "(3) mezclar lo local y lo internacional y variar los formatos (noticia, explicativo, análisis, datos); (4) respetar la sección de cada casilla; si un tema trae DÍA FIJO, va en la casilla de esa sección que sale ese día; " +
     "(5) usar primero los temas que trae el consejo y completar el resto con temas de la agenda del sector, sin inventar hechos, cifras, fechas ni declaraciones. " +
     "El encargo debe decir qué desarrollar y qué datos y fuentes confirmar (entidad, publicación o persona), nunca afirmar cifras. Español de Colombia.";
 

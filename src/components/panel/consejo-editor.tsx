@@ -13,6 +13,7 @@ import { diasDeCuota, ALCANCES, AUDIENCIAS, sanearBrief, ESTADOS_CASILLA, GENERO
 export type CasillaVista = { id: string; publishAt: string; sectionSlug: string; topic: string; angle: string; brief: string; priority: number; approval: Aprobacion; status: EstadoCasilla; articleId: string | null; error: string | null; ficha: FichaPauta };
 type Seccion = { slug: string; name: string };
 
+const DIAS_LARGO = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
 const DIAS = [[1, "Lun"], [2, "Mar"], [3, "Mié"], [4, "Jue"], [5, "Vie"], [6, "Sáb"], [7, "Dom"]] as const;
 const PASOS = [
   { titulo: "Semana", sub: "Cuándo se publica" },
@@ -74,6 +75,7 @@ export function ConsejoEditor({ plan, casillas: casillasProp, secciones, puedePu
   const [filtroSec, setFiltroSec] = useState("");
   const [gruposAbiertos, setGruposAbiertos] = useState<Record<string, boolean>>({});
   const [temaAbierto, setTemaAbierto] = useState<Record<string, boolean>>({});
+  const [diaBorrador, setDiaBorrador] = useState<Record<string, number>>({});
   const [borrador, setBorrador] = useState<Record<string, BriefSeccion>>({});
   const [preguntasAbiertas, setPreguntasAbiertas] = useState<Record<string, boolean>>({});
   const [nuevaHora, setNuevaHora] = useState("");
@@ -112,7 +114,7 @@ export function ConsejoEditor({ plan, casillas: casillasProp, secciones, puedePu
   // Secciones elegidas en el paso 2, con cuántos temas hacen falta (notas por día × días de la semana) y cuántos hay.
   const porSeccion = cfg.cuotas.map((q) => {
     const propios = temas.filter((t) => t.seccion === q.seccion);
-    return { slug: q.seccion, name: nombre(q.seccion), porDia: q.porDia, necesita: q.porDia * diasDeCuota(q, cfg).length, dias: diasDeCuota(q, cfg).length, propios };
+    return { slug: q.seccion, name: nombre(q.seccion), porDia: q.porDia, necesita: q.porDia * diasDeCuota(q, cfg).length, dias: diasDeCuota(q, cfg).length, diasLista: diasDeCuota(q, cfg), propios };
   });
   const otrosTemas = temas.filter((t) => !t.seccion || !cfg.cuotas.some((q) => q.seccion === t.seccion));
   // Guarda el tema que se acaba de describir (con sus respuestas) y deja el formulario limpio para proponer otro.
@@ -122,8 +124,12 @@ export function ConsejoEditor({ plan, casillas: casillasProp, secciones, puedePu
     if (texto.length < 4) return;
     const resto: BriefSeccion = { ...b };
     delete resto.temas;
-    setTemas((l) => [...l, { id: crypto.randomUUID(), texto, seccion: slug, prioridad: 2 as const, origen: "manual" as const, ...(respondidas(resto) ? { brief: resto } : {}) }].slice(0, 60));
+    const sec = porSeccion.find((x) => x.slug === slug);
+    const libres = (sec?.diasLista ?? []).filter((d) => !sec?.propios.some((t) => t.dia === d));
+    const dia = diaBorrador[slug] ?? libres[0] ?? sec?.diasLista[0];
+    setTemas((l) => [...l, { id: crypto.randomUUID(), texto, seccion: slug, prioridad: 2 as const, origen: "manual" as const, ...(dia ? { dia } : {}), ...(respondidas(resto) ? { brief: resto } : {}) }].slice(0, 60));
     setBorrador((d) => ({ ...d, [slug]: {} }));
+    setDiaBorrador((d) => { const x = { ...d }; delete x[slug]; return x; });
     setMsg({ ok: true, texto: "Tema guardado. Puedes proponer otro." });
   };
   const ponerBriefTema = (id: string, c: Partial<BriefSeccion>) => setTemas((l) => l.map((x) => (x.id === id ? { ...x, brief: { ...x.brief, ...c } } : x)));
@@ -281,6 +287,10 @@ export function ConsejoEditor({ plan, casillas: casillasProp, secciones, puedePu
                 <div className="flex flex-col gap-3">
                   <PreguntasSeccion titulo="Proponer un tema con sus preguntas" escritores={escritores} yoId={yoId} nombre={sec.name} valor={borrador[sec.slug]} onChange={(c) => setBorrador((d) => ({ ...d, [sec.slug]: { ...d[sec.slug], ...c } }))} editable={editable} abierto={!!preguntasAbiertas[sec.slug]} onToggle={() => setPreguntasAbiertas((p) => ({ ...p, [sec.slug]: !p[sec.slug] }))}>
                     <div className="flex flex-wrap items-center justify-between gap-2 sm:col-span-2">
+                      <label className="flex items-center gap-2 text-sm font-semibold">¿Qué día sale?
+                        <select disabled={!editable} value={diaBorrador[sec.slug] ?? (sec.diasLista.filter((d) => !sec.propios.some((t) => t.dia === d))[0] ?? sec.diasLista[0])} onChange={(e) => setDiaBorrador((d) => ({ ...d, [sec.slug]: Number(e.target.value) }))} className="rounded-[var(--radius)] border border-[var(--border-strong)] bg-white px-3 py-2 text-sm font-normal text-[#0b0b0b]">
+                          {sec.diasLista.map((d) => <option key={d} value={d}>{DIAS_LARGO[d - 1]}{sec.propios.some((t) => t.dia === d) ? " (ya tiene tema)" : ""}</option>)}
+                        </select></label>
                       <span className="text-xs text-[var(--fg-muted)]">Describe un solo tema en la primera pregunta. Al guardarlo, el formulario queda limpio para proponer otro.</span>
                       {(llenando === sec.slug || avisoLlenar?.slug === sec.slug) && <p role="status" className={`w-full text-sm font-medium ${llenando === sec.slug ? "text-[var(--fg-muted)]" : avisoLlenar?.ok ? "text-emerald-700" : "text-red-600"}`}>{llenando === sec.slug ? "La IA está contestando las preguntas…" : avisoLlenar?.texto}</p>}
                       <div className="flex flex-wrap gap-2">
@@ -296,7 +306,8 @@ export function ConsejoEditor({ plan, casillas: casillasProp, secciones, puedePu
                     {sec.propios.map((t) => (
                       <li key={t.id} className="flex flex-wrap items-center gap-2 px-3 py-2">
                         {t.origen === "ia" && <Bot size={15} aria-label="Propuesto por la IA" className="shrink-0 text-[var(--accent)]" />}
-                        <div className="min-w-0 flex-1 basis-56"><p className="text-sm font-medium">{t.texto}</p>{t.brief?.escritorId && <p className="text-xs text-[var(--fg-muted)]">✍ {nombreEscritor(t.brief.escritorId)}</p>}{t.angulo && <p className="text-xs text-[var(--fg-muted)]">{t.angulo}</p>}</div>
+                        <div className="min-w-0 flex-1 basis-56"><p className="text-sm font-medium">{t.texto}</p><p className="text-xs text-[var(--fg-muted)]">{t.dia ? `📅 ${DIAS_LARGO[t.dia - 1]}` : "📅 Sin día fijo"}{t.brief?.escritorId ? ` · ✍ ${nombreEscritor(t.brief.escritorId)}` : ""}</p>{t.angulo && <p className="text-xs text-[var(--fg-muted)]">{t.angulo}</p>}</div>
+                        <select value={t.dia ?? ""} disabled={!editable} onChange={(e) => setTemas((l) => l.map((x) => (x.id === t.id ? { ...x, dia: e.target.value ? Number(e.target.value) : undefined } : x)))} aria-label="Día en que sale" className="rounded-[var(--radius)] border border-[var(--border-strong)] bg-white px-2 py-2 text-xs text-[#0b0b0b]"><option value="">Sin día fijo</option>{sec.diasLista.map((d) => <option key={d} value={d}>{DIAS_LARGO[d - 1]}</option>)}</select>
                         <select value={t.prioridad} disabled={!editable} onChange={(e) => setTemas((l) => l.map((x) => (x.id === t.id ? { ...x, prioridad: Number(e.target.value) as 1 | 2 | 3 } : x)))} aria-label="Prioridad" className="rounded-[var(--radius)] border border-[var(--border-strong)] bg-white px-2 py-2 text-xs text-[#0b0b0b]">
                           <option value={1}>Prioritario</option><option value={2}>Normal</option><option value={3}>De apoyo</option>
                         </select>
@@ -527,12 +538,13 @@ function FilaCobertura({ nombre, sub, cuota, defecto, diasConsejo, editable, pue
         <div className="flex basis-full flex-wrap items-center gap-1 text-xs" role="group" aria-label={`Días que publica: ${nombre}`}>
           <span className="mr-1 text-[var(--fg-muted)]">Días:</span>
           {DIAS.map(([d, etq]) => {
-            const activos = cuota?.dias?.length ? cuota.dias : diasConsejo;
-            const on = activos.includes(d);
+            const elegidos = cuota?.dias ?? [];
+            const on = elegidos.includes(d);
             return (
-              <button key={d} type="button" disabled={!editable} aria-pressed={on} onClick={() => { const nuevo = on ? activos.filter((x) => x !== d) : [...activos, d].sort(); if (nuevo.length) onCambiar(n, cuota?.aprobacion, nuevo); }} className={`min-h-8 min-w-10 rounded-full border px-2 font-semibold ${on ? "border-transparent bg-[var(--accent)] text-[var(--accent-fg,#fff)]" : "border-[var(--border-strong)] text-[var(--fg-muted)] hover:bg-[var(--surface-2)]"}`}>{etq}</button>
+              <button key={d} type="button" disabled={!editable} aria-pressed={on} onClick={() => { const nuevo = on ? elegidos.filter((x) => x !== d) : [...elegidos, d].sort(); onCambiar(n, cuota?.aprobacion, nuevo.length ? nuevo : undefined); }} className={`min-h-8 min-w-10 rounded-full border px-2 font-semibold ${on ? "border-transparent bg-[var(--accent)] text-[var(--accent-fg,#fff)]" : "border-[var(--border-strong)] text-[var(--fg-muted)] hover:bg-[var(--surface-2)]"}`}>{etq}</button>
             );
           })}
+          <span className="ml-1 text-[var(--fg-muted)]">{cuota?.dias?.length ? `${cuota.dias.length} ${cuota.dias.length === 1 ? "día" : "días"} × ${n} = ${cuota.dias.length * n} ${cuota.dias.length * n === 1 ? "tema" : "temas"}` : `Sin marcar: publica los ${diasConsejo.length} días del consejo`}</span>
         </div>
       )}
     </li>
