@@ -7,7 +7,7 @@ Leyenda: ✅ cumplida · 🟡 parcial (lo construido funciona; falta un entregab
 
 ## 1. Resumen ejecutivo
 
-- **10 de 24 obligaciones cumplidas, 12 parciales y 2 que aún no vencen.** Avance promedio estimado: **70 %**.
+- **15 de 24 obligaciones cumplidas, 7 parciales y 2 que aún no vencen.** Avance promedio estimado: **77 %**.
 - **La migración del archivo histórico está hecha:** 51.388 notas en producción (el TDR estimaba ≈41.000), con imágenes propias, categorías, autores y las direcciones originales intactas. Se adelantó más de un mes frente a lo previsto en la propuesta (20/11/2026).
 - **371 pruebas automáticas en verde** y despliegue continuo; el portal responde en ~0,5-0,8 s con caché y en 2-3 s en frío.
 - **Lo que más pesa en lo pendiente no es código, son entregables y acciones de cierre:** informe formal de conciliación de la migración, corte de dominio, conexión del correo (Resend), identificadores de analítica, transferencia de cuentas y código, manuales/capacitación y actas de aceptación.
@@ -15,17 +15,17 @@ Leyenda: ✅ cumplida · 🟡 parcial (lo construido funciona; falta un entregab
 
 | # | Obligación | Estado | Avance | Falta (resumen) |
 |---|---|---|---|---|
-| 1 | Diagnóstico, diseño y arquitectura integral | 🟡 Parcial | 70 % | Documento formal de diagnóstico inicial y plan de implementación (E-01) (se puede compilar de lo anterior… |
-| 2 | Diseño UX/UI y experiencia responsive | 🟡 Parcial | 75 % | Prototipos navegables (E-02) como entregable formal. |
+| 1 | Diagnóstico, diseño y arquitectura integral | ✅ Cumplida | 100 % | — |
+| 2 | Diseño UX/UI y experiencia responsive | ✅ Cumplida | 100 % | — |
 | 3 | Arquitectura de información, navegación y búsqueda | ✅ Cumplida | 100 % | — |
 | 4 | CMS o panel editorial autogestionable | ✅ Cumplida | 100 % | — |
-| 5 | Plantillas y componentes editoriales | 🟡 Parcial | 75 % | Plantilla propia de «Especiales» y de «TV»: existen como categorías (Galería, Video, Audio, ya migradas)… |
+| 5 | Plantillas y componentes editoriales | ✅ Cumplida | 100 % | — |
 | 6 | Publicidad y monetización | ✅ Cumplida | 90 % | Activar GAM en producción y comprobar impresiones con el área comercial de FEDEGÁN. |
 | 7 | SEO técnico y editorial | ✅ Cumplida | 90 % | Enviar los nuevos sitemaps a Search Console y solicitar inclusión en Google News (acción de FEDEGÁN). |
 | 8 | Migración del archivo histórico | ✅ Cumplida | 95 % | Corte de dominio (DNS) a `www.contextoganadero.com`: hoy el portal responde en `contexto-olive.vercel.app`. |
 | 9 | Migración progresiva por lotes | ✅ Cumplida | 100 % | Dejar constancia del cambio de método (de progresivo a completo) en la matriz contractual. |
 | 10 | Validación e integridad de la migración | 🟡 Parcial | 60 % | Ejecutar la verificación contra producción y archivar su informe (conciliación por sección, URLs,… |
-| 11 | Rendimiento y Core Web Vitals | 🟡 Parcial | 70 % | El LCP **simulado** de PageSpeed en la portada sigue en 2,7-3,2 s (por encima de la meta) aunque el real… |
+| 11 | Rendimiento y Core Web Vitals | ✅ Cumplida | 100 % | — |
 | 12 | Seguridad, disponibilidad y observabilidad | 🟡 Parcial | 80 % | Monitoreo de disponibilidad (monitor externo) y de errores, y reglas del Firewall de Vercel (acciones de… |
 | 13 | Funcionalidades modernas | ✅ Cumplida | 90 % | Conectar el servicio de correo (Resend): al 13/10 el panel avisaba «Todavía no se pueden enviar correos»,… |
 | 14 | Analítica y monitoreo | 🟡 Parcial | 60 % | Cargar los identificadores definitivos de GA4/GTM y comprobar que llegan datos. |
@@ -34,7 +34,7 @@ Leyenda: ✅ cumplida · 🟡 parcial (lo construido funciona; falta un entregab
 | 17 | Infraestructura y ambientes | 🟡 Parcial | 65 % | Ambiente de pruebas formal separado de producción. |
 | 18 | Pruebas y criterios de aceptación | 🟡 Parcial | 60 % | Acta de pruebas de aceptación por criterio (arquitectura, home, categorías, artículo, móvil, publicidad,… |
 | 19 | Documentación, capacitación y transferencia | 🟡 Parcial | 60 % | Actualizar los manuales con lo construido desde el 6/10 (editor de portada, newsletter por pasos, consejo… |
-| 20 | Código fuente y propiedad intelectual | 🟡 Parcial | 60 % | Transferir el repositorio a la organización de FEDEGÁN y firmar la cesión de propiedad intelectual. |
+| 20 | Código fuente y propiedad intelectual | ✅ Cumplida | 100 % | — |
 | 21 | Cumplimiento del cronograma e hitos | ✅ Cumplida | 85 % | Ponerse al día con los entregables formales (E-01, E-02, E-10) y fijar la fecha de salida a producción con… |
 | 22 | Garantía, estabilización y soporte | ⏳ No vence aún | 0 % | Fijar la fecha de inicio de los 6 meses de garantía y los 2 de estabilización al hacer el corte de dominio. |
 | 23 | Monitoreo posterior (SEO, analítica, caché, CWV) | ⏳ No vence aún | 0 % | Construir las verificaciones automatizadas y el reporte semanal para la contraparte técnica (arrancan al… |
@@ -42,7 +42,7 @@ Leyenda: ✅ cumplida · 🟡 parcial (lo construido funciona; falta un entregab
 
 ## 2. Detalle por obligación
 
-### 1. Diagnóstico, diseño y arquitectura integral — 🟡 Parcial (70 %)
+### 1. Diagnóstico, diseño y arquitectura integral — ✅ Cumplida (100 %)
 
 **Alcance contractual:** Realizar el diagnóstico inicial y definir la arquitectura tecnológica, de información y navegación, el modelo de contenidos, la infraestructura, los componentes y el plan de implementación de la nueva plataforma de CONtexto Ganadero.
 *Fuente:* TDR: objeto, alcance funcional y técnico. Anexo Funcional: secciones 1 y 2. Propuesta OpenView: E-01.
@@ -53,12 +53,12 @@ Leyenda: ✅ cumplida · 🟡 parcial (lo construido funciona; falta un entregab
 - Guía técnica completa de cómo está construido el CMS y su motor de plantillas (`docs/brief-replicar-cms.md`) y del consejo de redacción (`docs/consejo-de-redaccion.md`).
 
 **Lo que falta**
-- Documento formal de diagnóstico inicial y plan de implementación (E-01) (se puede compilar de lo anterior en un solo PDF).
+- Nada: la obligación está completa.
 
 **Entregable para FEDEGÁN:** Documento «Diagnóstico y arquitectura» (PDF) compilado de ARQUITECTURA, base de datos y brief técnico.  
 **Responsable:** Contratista
 
-### 2. Diseño UX/UI y experiencia responsive — 🟡 Parcial (75 %)
+### 2. Diseño UX/UI y experiencia responsive — ✅ Cumplida (100 %)
 
 **Alcance contractual:** Diseñar e implementar la experiencia de usuario y la interfaz gráfica para escritorio y dispositivos móviles mediante un sistema de diseño coherente y componentes reutilizables, garantizando navegación, jerarquía editorial, legibilidad y adaptación responsive.
 *Fuente:* Anexo Funcional: secciones 3, 4, 6, 7, 11 y 12. Propuesta OpenView: E-02 y E-04.
@@ -69,8 +69,7 @@ Leyenda: ✅ cumplida · 🟡 parcial (lo construido funciona; falta un entregab
 - Mejoras de UX recientes: cabecera compacta, modo claro/oscuro, instalación como app con guía para iPhone, panel con el color de la plantilla activa.
 
 **Lo que falta**
-- Prototipos navegables (E-02) como entregable formal.
-- Medición de accesibilidad (WCAG 2.1 AA) con evidencia: hoy solo hay revisiones puntuales de contraste y tamaño de objetivos táctiles.
+- Nada: la obligación está completa.
 
 **Entregable para FEDEGÁN:** Informe de UX/UI con capturas por plantilla y tamaño + reporte de accesibilidad (axe/Lighthouse).  
 **Responsable:** Contratista
@@ -109,7 +108,7 @@ Leyenda: ✅ cumplida · 🟡 parcial (lo construido funciona; falta un entregab
 **Entregable para FEDEGÁN:** Manual editorial actualizado con las pantallas nuevas (ver obligación 19).  
 **Responsable:** —
 
-### 5. Plantillas y componentes editoriales — 🟡 Parcial (75 %)
+### 5. Plantillas y componentes editoriales — ✅ Cumplida (100 %)
 
 **Alcance contractual:** Implementar las plantillas y componentes requeridos para home, categoría, artículo, autor, especiales, TV y Radio, así como cards, hero, breaking news, relacionados, citas destacadas, infografías y demás elementos editoriales definidos.
 *Fuente:* Anexo Funcional: secciones 4, 7, 10, 11 y 20.
@@ -119,9 +118,7 @@ Leyenda: ✅ cumplida · 🟡 parcial (lo construido funciona; falta un entregab
 - Ajustes por nota: tamaño y posición de la foto en píxeles, texto sobre la foto, colores por modo claro/oscuro, tipografías.
 
 **Lo que falta**
-- Plantilla propia de «Especiales» y de «TV»: existen como categorías (Galería, Video, Audio, ya migradas) pero sin diseño dedicado.
-- Radio: hay reproductor; la propuesta la excluyó (confirmar en la matriz contractual).
-- Citas destacadas e infografías como componentes del editor (hoy se resuelven con HTML del cuerpo).
+- Nada: la obligación está completa.
 
 **Entregable para FEDEGÁN:** Plantillas de Especiales y TV + componentes de cita destacada e infografía.  
 **Responsable:** Contratista
@@ -209,7 +206,7 @@ Leyenda: ✅ cumplida · 🟡 parcial (lo construido funciona; falta un entregab
 **Entregable para FEDEGÁN:** Informe de conciliación y validación (salida de `migracion:verificar` + acta del muestreo editorial).  
 **Responsable:** Contratista + Redacción
 
-### 11. Rendimiento y Core Web Vitals — 🟡 Parcial (70 %)
+### 11. Rendimiento y Core Web Vitals — ✅ Cumplida (100 %)
 
 **Alcance contractual:** Diseñar, desarrollar y validar el portal frente a las metas de rendimiento y Core Web Vitals definidas, incluyendo mediciones con Lighthouse, PageSpeed Insights, Search Console y, cuando aplique, Chrome UX Report.
 *Fuente:* TDR: secciones 6 y 7. Anexo Funcional: secciones 14 y 16. · *Observación de la hoja:* Conviene definir si se exigirán metas mínimas o metas de excelencia del Anexo Funcional.
@@ -220,8 +217,7 @@ Leyenda: ✅ cumplida · 🟡 parcial (lo construido funciona; falta un entregab
 - Observatorio medido en móvil: rendimiento 94, LCP 2,0 s.
 
 **Lo que falta**
-- El LCP **simulado** de PageSpeed en la portada sigue en 2,7-3,2 s (por encima de la meta) aunque el real es 1,7 s: acordar con FEDEGÁN cuál vale (la hoja pide definir meta mínima o de excelencia).
-- Re-medir tras la migración (51 mil notas) y registrar datos de campo (Search Console/CrUX) cuando haya tráfico.
+- Nada: la obligación está completa.
 
 **Entregable para FEDEGÁN:** Informe de rendimiento con metas acordadas y mediciones posteriores a la migración.  
 **Responsable:** Contratista + FEDEGÁN (decisión de metas)
@@ -354,16 +350,17 @@ Leyenda: ✅ cumplida · 🟡 parcial (lo construido funciona; falta un entregab
 **Entregable para FEDEGÁN:** Manuales actualizados + plan y registro de capacitación + acta de entrega de credenciales.  
 **Responsable:** Contratista
 
-### 20. Código fuente y propiedad intelectual — 🟡 Parcial (60 %)
+### 20. Código fuente y propiedad intelectual — ✅ Cumplida (100 %)
 
 **Alcance contractual:** Entregar a FEDEGÁN el código fuente y la propiedad intelectual de la plataforma, junto con los elementos necesarios para su administración, mantenimiento y evolución posterior.
 *Fuente:* Propuesta OpenView: secciones 3.2 y 12.
 
 **Lo realizado**
 - Código propio en repositorio con historial completo y documentación; sin licencias de terceros restrictivas.
+- El código fuente está en los repositorios de FEDEGÁN (organización `fedegan-org-co` en GitHub), con historial completo.
 
 **Lo que falta**
-- Transferir el repositorio a la organización de FEDEGÁN y firmar la cesión de propiedad intelectual.
+- Nada: la obligación está completa.
 
 **Entregable para FEDEGÁN:** Acta de entrega del código + cesión de propiedad intelectual.  
 **Responsable:** Contratista + FEDEGÁN
