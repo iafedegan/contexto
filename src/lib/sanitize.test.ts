@@ -21,3 +21,11 @@ test("un audio con dirección https se conserva y uno con javascript: no", () =>
   assert.equal(bueno.includes("onplay"), false);
   assert.equal(sanitizeArticleHtml('<audio src="javascript:alert(1)"></audio>').includes("javascript:"), false);
 });
+
+test("la cita destacada y la infografía del editor sobreviven al saneado; otras clases no", () => {
+  const cita = sanitizeArticleHtml('<blockquote class="cita-destacada otra" onclick="x()"><p>Frase</p><cite>Autor</cite></blockquote>');
+  assert.equal(cita, '<blockquote class="cita-destacada"><p>Frase</p><cite>Autor</cite></blockquote>');
+  const info = sanitizeArticleHtml('<figure class="infografia rara"><img src="https://x.co/a.png" alt="Pie" loading="lazy" /><figcaption>Pie</figcaption></figure>');
+  assert.match(info, /^<figure class="infografia"><img src="https:\/\/x\.co\/a\.png" alt="Pie" loading="lazy" \/><figcaption>Pie<\/figcaption><\/figure>$/);
+  assert.equal(sanitizeArticleHtml('<blockquote class="peligrosa"><p>x</p></blockquote>'), "<blockquote><p>x</p></blockquote>");
+});

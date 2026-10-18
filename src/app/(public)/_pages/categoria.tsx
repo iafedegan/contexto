@@ -3,6 +3,8 @@ import { categoryLabel, localePath, t, type Locale } from "@/lib/i18n";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { SectionGrid, SectionHeader } from "@/components/section/section-layout";
+import { FormatoDeSeccion } from "@/components/section/formatos-seccion";
+import { formatoDeSeccion } from "@/lib/formato-seccion";
 import { AdsBanner } from "@/components/ads-banner";
 import { JsonLd } from "@/components/json-ld";
 import { breadcrumbJsonLd, collectionJsonLd } from "@/lib/seo";
@@ -318,7 +320,11 @@ async function CategoryPage({ params, searchParams, locale }: PageProps & { loca
       ) : (
         <>
           <AdsBanner zone="section_top" className="mx-auto mb-10" />
-          <SectionGrid theme={site.parts.body} items={items} locale={locale} />
+          {/* TV, Radio y Especiales (y sus subsecciones) tienen formato propio; el resto, la cuadrícula de la plantilla. */}
+          {(() => {
+            const formato = formatoDeSeccion(slug, category.parentSlug);
+            return formato ? <FormatoDeSeccion formato={formato} items={items} locale={locale} /> : <SectionGrid theme={site.parts.body} items={items} locale={locale} />;
+          })()}
         </>
       )}
 

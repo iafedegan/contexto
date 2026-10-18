@@ -1,7 +1,7 @@
 "use client";
 
 import { useLayoutEffect, useRef, useState } from "react";
-import { Bold, Heading2, Italic, Link2, List, ListOrdered, Quote, Redo2, RemoveFormatting, Undo2 } from "lucide-react";
+import { BarChart3, Bold, Heading2, Italic, Link2, List, ListOrdered, MessageSquareQuote, Quote, Redo2, RemoveFormatting, Undo2 } from "lucide-react";
 import { decodeSpec, renderChartSvg, svgDataUri } from "@/lib/chart-svg";
 import { escapeHtml } from "@/lib/escape";
 
@@ -106,6 +106,8 @@ export function EditorCuerpo({
   const rango = useRef<Range | null>(null);
   const [activos, setActivos] = useState<{ bold: boolean; italic: boolean; ul: boolean; ol: boolean; h2: boolean; quote: boolean }>({ bold: false, italic: false, ul: false, ol: false, h2: false, quote: false });
   const [enlace, setEnlace] = useState<string | null>(null);
+  // Infografía: dirección de la imagen y su pie (se piden en línea, como el enlace).
+  const [infografia, setInfografia] = useState<{ url: string; pie: string } | null>(null);
 
   useLayoutEffect(() => {
     const el = caja.current;
@@ -152,6 +154,32 @@ export function EditorCuerpo({
     const clave = tag === "h2" ? activos.h2 : activos.quote;
     orden("formatBlock", clave ? "p" : tag);
   };
+  // Cita destacada: el texto seleccionado (o una frase de ejemplo) en un bloque grande, con su autor debajo.
+  const citaDestacada = () => {
+    const sel = window.getSelection();
+    const texto = sel && caja.current?.contains(sel.anchorNode) ? sel.toString().trim() : "";
+    orden("insertHTML", `<blockquote class="cita-destacada"><p>${escapeHtml(texto || "Escribe aquí la frase destacada")}</p><cite>Nombre de quien lo dice</cite></blockquote><p><br></p>`);
+  };
+  // Guarda dónde está el cursor y pide los datos de la infografía.
+  const abrirInfografia = () => {
+    const sel = window.getSelection();
+    rango.current = sel && sel.rangeCount && caja.current?.contains(sel.anchorNode) ? sel.getRangeAt(0).cloneRange() : null;
+    setInfografia({ url: "https://", pie: "" });
+  };
+  // Inserta la infografía (imagen a todo el ancho, ampliable, con su pie y fuente) donde estaba el cursor.
+  const aplicarInfografia = () => {
+    const datos = infografia;
+    setInfografia(null);
+    if (!datos || !/^https:\/\/\S+$/i.test(datos.url.trim())) return;
+    caja.current?.focus();
+    const sel = window.getSelection();
+    if (rango.current && sel) {
+      sel.removeAllRanges();
+      sel.addRange(rango.current);
+    }
+    const pie = escapeHtml(datos.pie.trim() || "Infografía");
+    orden("insertHTML", `<figure class="infografia"><img src="${escapeHtml(datos.url.trim())}" alt="${pie}" loading="lazy"><figcaption>${pie}</figcaption></figure><p><br></p>`);
+  };
   // Guarda la selección antes de pedir la dirección del enlace (el campo le quita el foco al texto).
   const abrirEnlace = () => {
     const sel = window.getSelection();
@@ -182,6 +210,8 @@ export function EditorCuerpo({
         <Boton titulo="Negrita (Ctrl+B)" activo={activos.bold} onClick={() => orden("bold")}><Bold size={15} /></Boton>
         <Boton titulo="Cursiva (Ctrl+I)" activo={activos.italic} onClick={() => orden("italic")}><Italic size={15} /></Boton>
         <Boton titulo="Cita textual" activo={activos.quote} onClick={() => bloque("blockquote")}><Quote size={15} /></Boton>
+        <Boton titulo="Cita destacada (frase grande con su autor)" onClick={citaDestacada}><MessageSquareQuote size={15} /></Boton>
+        <Boton titulo="Infografía (imagen a todo el ancho con su pie)" onClick={abrirInfografia}><BarChart3 size={15} /></Boton>
         <span aria-hidden className="mx-1 h-5 w-px bg-[var(--border)]" />
         <Boton titulo="Lista con viñetas" activo={activos.ul} onClick={() => orden("insertUnorderedList")}><List size={16} /></Boton>
         <Boton titulo="Lista numerada" activo={activos.ol} onClick={() => orden("insertOrderedList")}><ListOrdered size={16} /></Boton>
@@ -204,6 +234,33 @@ export function EditorCuerpo({
               className="w-56 rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs outline-none focus:border-[var(--accent)]"
             />
             <button type="button" onClick={aplicarEnlace} className="lx-link text-xs font-semibold">Aplicar</button>
+          </span>
+        )}
+        {infografia !== null && (
+          <span className="ml-1 flex flex-wrap items-center gap-1">
+            <input
+              autoFocus
+              value={infografia.url}
+              onChange={(e) => setInfografia({ ...infografia, url: e.target.value })}
+              aria-label="Dirección de la imagen de la infografía"
+              placeholder="https://… (imagen)"
+              className="w-52 rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs outline-none focus:border-[var(--accent)]"
+            />
+            <input
+              value={infografia.pie}
+              onChange={(e) => setInfografia({ ...infografia, pie: e.target.value })}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  aplicarInfografia();
+                }
+                if (e.key === "Escape") setInfografia(null);
+              }}
+              aria-label="Pie y fuente de la infografía"
+              placeholder="Pie y fuente"
+              className="w-44 rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs outline-none focus:border-[var(--accent)]"
+            />
+            <button type="button" onClick={aplicarInfografia} className="lx-link text-xs font-semibold">Insertar</button>
           </span>
         )}
         {resumen && <span className="ml-auto pr-1 text-xs tabular-nums text-[var(--fg-muted)]">{resumen}</span>}

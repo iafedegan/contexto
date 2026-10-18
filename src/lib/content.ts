@@ -166,7 +166,8 @@ export type CategoryFilters = {
 
 // Resultado de leer una categoría: su ficha, subcategorías, notas de la página y total.
 type ListadoCategoria = {
-  category: { name: string; description: string | null } | null;
+  /** `parentSlug`: la sección madre (decide el formato de TV, Radio y Especiales en sus subsecciones). */
+  category: { name: string; description: string | null; parentSlug?: string | null } | null;
   subcategories: { slug: string; name: string }[];
   items: ArticleListItem[];
   total: number;
@@ -191,11 +192,12 @@ const leerCategoria = cachear(
   const { limit = 20, offset = 0, subcategorySlug, dateFrom, dateTo, authorSlug, regionSlug, departamentoSlug } = filters;
 
   const [cat] = await db
-    .select({ id: categories.id, name: categories.name, description: categories.description })
+    .select({ id: categories.id, name: categories.name, description: categories.description, parentId: categories.parentId })
     .from(categories)
     .where(eq(categories.slug, categorySlug))
     .limit(1);
   if (!cat) return { category: null, subcategories: [], items: [], total: 0 };
+  const [madre] = cat.parentId ? await db.select({ slug: categories.slug }).from(categories).where(eq(categories.id, cat.parentId)).limit(1) : [];
 
   const children = await db
     .select({ id: categories.id, slug: categories.slug, name: categories.name })
@@ -248,7 +250,7 @@ const leerCategoria = cachear(
   ]);
 
   return {
-    category: { name: cat.name, description: cat.description },
+    category: { name: cat.name, description: cat.description, parentSlug: madre?.slug ?? null },
     subcategories: children,
     items,
     total: count,
