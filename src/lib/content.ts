@@ -2,7 +2,7 @@ import "server-only";
 import { cache } from "react";
 import { departamentoPorSlug, regionPorSlug } from "@/lib/regiones-colombia";
 import { and, desc, eq, gt, gte, inArray, isNull, lte, or, sql, type SQL } from "drizzle-orm";
-import { db } from "@/db";
+import { db, rowsOf } from "@/db";
 import {
   articles,
   articleViewsDaily,
@@ -171,7 +171,16 @@ type ListadoCategoria = {
   subcategories: { slug: string; name: string }[];
   items: ArticleListItem[];
   total: number;
+  /** El total es un mínimo («más de N»): con filtro de región o departamento no se cuentan todas las coincidencias (ver TOPE_CONTEO_TEXTO). */
+  totalAproximado?: boolean;
 };
+
+/**
+ * Con filtro de región o departamento la coincidencia se busca en el texto de cada nota: traer las 24 de la página es rápido (se recorren
+ * por fecha y se para al tener suficientes), pero CONTARLAS todas obligaba a leer las 51 mil notas en cada visita sin caché (7,5 s en
+ * «Caribe»). Se cuenta como mucho hasta este tope y la página dice «más de N».
+ */
+const TOPE_CONTEO_TEXTO = 1200;
 
 /**
  * Condición «la nota es de una de estas categorías o aparece en una de estas secciones». La categoría principal de cada nota es una sola,
@@ -246,7 +255,9 @@ const leerCategoria = cachear(
           .offset(offset),
     categoryIds.length === 0
       ? Promise.resolve([{ count: 0 }])
-      : db.select({ count: sql<number>`count(*)::int` }).from(articles).where(where),
+      : region || depto
+        ? db.execute(sql`select count(*)::int as count from (select 1 from ${articles} where ${where} limit ${TOPE_CONTEO_TEXTO}) t`).then((r) => rowsOf<{ count: number }>(r).map((x) => ({ count: Number(x.count) })))
+        : db.select({ count: sql<number>`count(*)::int` }).from(articles).where(where),
   ]);
 
   return {
@@ -254,6 +265,7 @@ const leerCategoria = cachear(
     subcategories: children,
     items,
     total: count,
+    totalAproximado: Boolean(region || depto) && count >= TOPE_CONTEO_TEXTO,
   };
   },
   { tags: [TAG_CONTENIDO], segundos: 120 },

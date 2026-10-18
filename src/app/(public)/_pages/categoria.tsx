@@ -82,7 +82,7 @@ async function CategoryPage({ params, searchParams, locale }: PageProps & { loca
   const depto = slug === "regiones" ? departamentoPorSlug(q.depto)?.slug : undefined;
   const page = Math.max(1, Number(pagina) || 1);
 
-  const { category, subcategories, items, total } = await getArticlesByCategory(slug, {
+  const { category, subcategories, items, total, totalAproximado } = await getArticlesByCategory(slug, {
     limit: PAGE_SIZE,
     offset: (page - 1) * PAGE_SIZE,
     subcategorySlug: subcategoria || undefined,
@@ -91,7 +91,7 @@ async function CategoryPage({ params, searchParams, locale }: PageProps & { loca
     authorSlug: autor,
     regionSlug: region,
     departamentoSlug: depto,
-  }).catch(() => ({ category: null, subcategories: [], items: [], total: 0 }));
+  }).catch(() => ({ category: null, subcategories: [], items: [], total: 0, totalAproximado: false }));
   if (!category) notFound();
 
   const conAutor = SECCIONES_CON_AUTOR.has(slug);
@@ -248,7 +248,7 @@ async function CategoryPage({ params, searchParams, locale }: PageProps & { loca
         chips={
           <>
             <span className="lx-chip border-[var(--border-strong)] text-[var(--accent)]">
-              {total} {t(locale, "section.count")}
+              {totalAproximado ? `+${total.toLocaleString("es-CO")}` : total} {t(locale, "section.count")}
             </span>
             <span className="lx-chip max-sm:hidden">{t(locale, "section.live")}</span>
             {(pos === "cabecera" || pos === "barra") && filters}
@@ -334,7 +334,7 @@ async function CategoryPage({ params, searchParams, locale }: PageProps & { loca
         <nav className="mt-14 flex flex-col items-center gap-4" aria-label="paginación">
           <p className="lx-ui text-xs uppercase tracking-[0.16em] text-[var(--fg-muted)]">
             {t(locale, "section.showing")} {(page - 1) * PAGE_SIZE + 1}–
-            {Math.min(page * PAGE_SIZE, total)} {t(locale, "section.of")} {total}
+            {Math.min(page * PAGE_SIZE, total)} {t(locale, "section.of")} {totalAproximado ? `más de ${total.toLocaleString("es-CO")}` : total}
           </p>
 
           {paginas > 1 && (
