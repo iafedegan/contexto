@@ -7,7 +7,7 @@ Leyenda: ✅ cumplida · 🟡 parcial (lo construido funciona; falta un entregab
 
 ## 1. Resumen ejecutivo
 
-- **11 de 24 obligaciones cumplidas, 11 parciales y 2 que aún no vencen.** Avance promedio estimado: **73 %**.
+- **13 de 24 obligaciones cumplidas, 9 parciales y 2 que aún no vencen.** Avance promedio estimado: **75 %**.
 - **La migración del archivo histórico está hecha:** 51.388 notas en producción (el TDR estimaba ≈41.000), con imágenes propias, categorías, autores y las direcciones originales intactas. Se adelantó más de un mes frente a lo previsto en la propuesta (20/11/2026).
 - **374 pruebas automáticas en verde** y despliegue continuo; el portal responde en ~0,5-0,8 s con caché y en 2-3 s en frío.
 - **Lo que más pesa en lo pendiente no es código, son entregables y acciones de cierre:** informe formal de conciliación de la migración, corte de dominio, conexión del correo (Resend), identificadores de analítica, transferencia de cuentas y código, manuales/capacitación y actas de aceptación.
@@ -15,8 +15,8 @@ Leyenda: ✅ cumplida · 🟡 parcial (lo construido funciona; falta un entregab
 
 | # | Obligación | Estado | Avance | Falta (resumen) |
 |---|---|---|---|---|
-| 1 | Diagnóstico, diseño y arquitectura integral | 🟡 Parcial | 70 % | Documento formal de diagnóstico inicial y plan de implementación (E-01) (se puede compilar de lo anterior… |
-| 2 | Diseño UX/UI y experiencia responsive | 🟡 Parcial | 85 % | Prototipos navegables (E-02) como entregable formal. |
+| 1 | Diagnóstico, diseño y arquitectura integral | ✅ Cumplida | 100 % | Aprobación del documento por FEDEGÁN. |
+| 2 | Diseño UX/UI y experiencia responsive | ✅ Cumplida | 100 % | Aprobación de los prototipos por FEDEGÁN. |
 | 3 | Arquitectura de información, navegación y búsqueda | ✅ Cumplida | 100 % | — |
 | 4 | CMS o panel editorial autogestionable | ✅ Cumplida | 100 % | — |
 | 5 | Plantillas y componentes editoriales | ✅ Cumplida | 100 % | — |
@@ -42,38 +42,37 @@ Leyenda: ✅ cumplida · 🟡 parcial (lo construido funciona; falta un entregab
 
 ## 2. Detalle por obligación
 
-### 1. Diagnóstico, diseño y arquitectura integral — 🟡 Parcial (70 %)
+### 1. Diagnóstico, diseño y arquitectura integral — ✅ Cumplida (100 %)
 
 **Alcance contractual:** Realizar el diagnóstico inicial y definir la arquitectura tecnológica, de información y navegación, el modelo de contenidos, la infraestructura, los componentes y el plan de implementación de la nueva plataforma de CONtexto Ganadero.
 *Fuente:* TDR: objeto, alcance funcional y técnico. Anexo Funcional: secciones 1 y 2. Propuesta OpenView: E-01.
 
 **Lo realizado**
-- Arquitectura por módulos con dependencias dirigidas, verificada en cada commit (`scripts/check-modulos.mjs`): `docs/ARQUITECTURA.md`, diagramas (`arquitectura.svg`, `acoplamiento.svg`) y `docs/auditoria-acoplamiento.md`.
-- Modelo de contenidos y de datos documentado y generado desde el esquema (`docs/base-de-datos.md`, más de 25 tablas).
-- Guía técnica completa de cómo está construido el CMS y su motor de plantillas (`docs/brief-replicar-cms.md`) y del consejo de redacción (`docs/consejo-de-redaccion.md`).
+- **Entregado el 18/10/2026: `docs/E-01-diagnostico-arquitectura-plan.md` y su PDF `docs/E-01_Diagnostico_Arquitectura_Plan.pdf`.** Diagnóstico medido del sitio actual (`www.contextoganadero.com`): Next.js + Storyblok en Vercel/Cloudflare; Lighthouse móvil: portada rendimiento 23, LCP 26-27 s, CLS 0,98, 8-9 MB y ≈355 peticiones; secciones y artículos LCP 11-13 s; portada sin `<h1>`, sin canónica ni datos estructurados; menú armado con JavaScript (enlaces no rastreables); sin RSS.
+- El mismo documento traza cada hallazgo a la decisión de arquitectura, describe componentes, modelo de contenidos y navegación, y el plan de implementación con fechas reales (inicio 7/9/2026, 451 cambios).
+- Respaldo técnico: `docs/ARQUITECTURA.md`, `docs/base-de-datos.md`, `docs/auditoria-acoplamiento.md`.
 
 **Lo que falta**
-- Documento formal de diagnóstico inicial y plan de implementación (E-01) (se puede compilar de lo anterior en un solo PDF).
+- Aprobación del documento por FEDEGÁN.
 
-**Entregable para FEDEGÁN:** Documento «Diagnóstico y arquitectura» (PDF) compilado de ARQUITECTURA, base de datos y brief técnico.  
-**Responsable:** Contratista
+**Entregable para FEDEGÁN:** E-01 (PDF) para firma de FEDEGÁN.  
+**Responsable:** Contratista + FEDEGÁN (aprobación)
 
-### 2. Diseño UX/UI y experiencia responsive — 🟡 Parcial (85 %)
+### 2. Diseño UX/UI y experiencia responsive — ✅ Cumplida (100 %)
 
 **Alcance contractual:** Diseñar e implementar la experiencia de usuario y la interfaz gráfica para escritorio y dispositivos móviles mediante un sistema de diseño coherente y componentes reutilizables, garantizando navegación, jerarquía editorial, legibilidad y adaptación responsive.
 *Fuente:* Anexo Funcional: secciones 3, 4, 6, 7, 11 y 12. Propuesta OpenView: E-02 y E-04.
 
 **Lo realizado**
-- Sistema de diseño en código: tokens por plantilla (`[data-theme]`), 6 plantillas elegibles (Esmeralda Real, Clásico, Revista, Compacto, Vanguardia, Gremial) y componentes reutilizables.
-- Móvil primero: barra de pestañas inferior, portada vertical, menú móvil con secciones plegadas; banco de pruebas responsive en Chrome real (`scripts/responsive-audit`, 17 tamaños).
-- **Medido el 18/10/2026 con Lighthouse 12 (móvil) en producción:** Accesibilidad 100, Buenas prácticas 100 y SEO 100 en sección (Colombia), artículo migrado, Observatorio y sección TV.
+- **Entregado el 18/10/2026: prototipos navegables E-02** (`docs/E-02-prototipos/index.html`, publicado como página privada): 12 pantallas del portal en producción (portada, sección, artículo, TV, Radio, Especiales, Regiones, Observatorio, buscador, asistente, boletín e ingreso al panel), en escritorio y celular, con notas de diseño y enlace a la página real.
+- Sistema de diseño en código: 6 plantillas, tokens por plantilla, móvil primero, banco de pruebas responsive en Chrome real (17 tamaños).
+- Medido el 18/10/2026 con Lighthouse en producción: Accesibilidad 100, SEO 100 y Buenas prácticas 100 en sección, artículo, Observatorio y TV (el sitio actual: 86-96 de accesibilidad).
 
 **Lo que falta**
-- Prototipos navegables (E-02) como entregable formal.
-- La puntuación de accesibilidad de Lighthouse es automática: no equivale a una auditoría WCAG 2.1 AA completa (lectores de pantalla, teclado).
+- Aprobación de los prototipos por FEDEGÁN.
 
-**Entregable para FEDEGÁN:** Informe de UX/UI con capturas por plantilla y tamaño + reporte de accesibilidad.  
-**Responsable:** Contratista
+**Entregable para FEDEGÁN:** E-02 (enlace a los prototipos navegables) para firma de FEDEGÁN.  
+**Responsable:** Contratista + FEDEGÁN (aprobación)
 
 ### 3. Arquitectura de información, navegación y búsqueda — ✅ Cumplida (100 %)
 
@@ -458,6 +457,7 @@ Leyenda: ✅ cumplida · 🟡 parcial (lo construido funciona; falta un entregab
 
 ## 5. Hitos construidos recientemente
 
+- **18/10** — Entregados E-01 (diagnóstico medido del sitio actual, arquitectura y plan) y E-02 (prototipos navegables, 12 pantallas en escritorio y celular)
 - **18/10** — Plantillas de TV, Radio y Especiales; cita destacada e infografía en el editor; mediciones de Lighthouse en producción
 - **14/10** — Migración de 51,5 mil notas del sitio anterior a la base, con imágenes, categorías y redirecciones
 - **14-15/10** — Panel de artículos y editor de portada abren rápido con 51 mil notas; Observatorio estático con respaldo en Supabase; mapa de regiones

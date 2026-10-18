@@ -1,0 +1,123 @@
+<title>Prototipos CONtexto Ganadero</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Source+Sans+3:wght@400;600;700&display=swap">
+<style>
+/* Visor de prototipos navegables: índice de pantallas a la izquierda, pantalla real al centro, notas de diseño a la derecha. Paleta de la plantilla Esmeralda Real. */
+:root {
+  --bg: #f4f6f2; --panel: #ffffff; --fg: #142019; --muted: #56655b; --line: #d5ddd6;
+  --accent: #14472d; --gold: #9a7a2a; --chip: #e7efe9;
+  --display: "Playfair Display", Georgia, serif;
+  --body: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #071009; --panel: #0d1a12; --fg: #eef2ec; --muted: #9fb0a4; --line: #23362a;
+  --accent: #d8b558; --gold: #d8b558; --chip: #15281c; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #071009; --panel: #0d1a12; --fg: #eef2ec; --muted: #9fb0a4; --line: #23362a;
+  --accent: #d8b558; --gold: #d8b558; --chip: #15281c; color-scheme: dark }
+* { box-sizing: border-box }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.5 var(--body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 18px 28px }
+header { max-width: 1400px; margin: 0 auto 16px; display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 12px }
+h1 { font: 700 clamp(1.5rem, 1.1rem + 1.6vw, 2.2rem)/1.1 var(--display); margin: 0; text-wrap: balance }
+.sub { color: var(--muted); margin: 4px 0 0; max-width: 70ch }
+.toggle { display: inline-flex; gap: 4px; padding: 4px; border: 1px solid var(--line); border-radius: 999px; background: var(--panel) }
+.toggle button { border: 0; background: none; color: var(--muted); font: 600 0.85rem var(--body); padding: 7px 14px; border-radius: 999px; cursor: pointer }
+.toggle button[aria-pressed="true"] { background: var(--accent); color: var(--panel) }
+main { max-width: 1400px; margin: 0 auto; display: grid; grid-template-columns: 240px minmax(0, 1fr) 280px; gap: 18px; align-items: start }
+nav ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px }
+nav button { width: 100%; text-align: left; display: flex; gap: 10px; align-items: baseline; border: 0; background: none; color: var(--fg); font: 600 0.95rem var(--body); padding: 8px 10px; border-radius: 8px; cursor: pointer }
+nav button span { color: var(--muted); font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; min-width: 4.5em }
+nav button[aria-current="true"] { background: var(--chip); color: var(--accent) }
+nav button:focus-visible, .toggle button:focus-visible, .pager button:focus-visible, a:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px }
+.stage { min-width: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px; display: flex; flex-direction: column; gap: 12px }
+.frame { display: grid; place-items: center; background: var(--chip); border-radius: 10px; padding: 14px; overflow: auto; max-height: 76vh }
+.frame img { display: block; width: 100%; height: auto; border-radius: 6px; box-shadow: 0 10px 30px -14px rgb(0 0 0 / 0.45) }
+.frame.movil img { width: min(360px, 100%) }
+.pager { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap }
+.pager button { border: 1px solid var(--line); background: var(--panel); color: var(--fg); font: 600 0.9rem var(--body); padding: 8px 14px; border-radius: 999px; cursor: pointer }
+.pager .pos { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 0.85rem }
+aside { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 10px }
+aside h2 { font: 700 1.3rem/1.2 var(--display); margin: 0; text-wrap: balance }
+aside .k { font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold); font-weight: 700 }
+aside ul { margin: 0; padding-left: 18px; color: var(--fg); display: flex; flex-direction: column; gap: 6px }
+aside a { color: var(--accent); font-weight: 600 }
+.url { font-family: ui-monospace, Menlo, monospace; font-size: 0.8rem; color: var(--muted); word-break: break-all }
+@media (max-width: 1050px) { main { grid-template-columns: 200px minmax(0, 1fr) } aside { grid-column: 1 / -1 } }
+@media (max-width: 720px) { main { grid-template-columns: minmax(0, 1fr) } nav ol { flex-direction: row; overflow-x: auto; padding-bottom: 4px } nav button { white-space: nowrap } nav button span { display: none } }
+@media (prefers-reduced-motion: no-preference) { .frame img { transition: opacity .2s } }
+</style>
+
+<header>
+  <div>
+    <h1>Prototipos navegables · CONtexto Ganadero</h1>
+    <p class="sub">Entregable E-02. Doce pantallas del portal en producción, en escritorio y celular, capturadas el 18 de octubre de 2026. Cada pantalla enlaza a la página real.</p>
+  </div>
+  <div class="toggle" role="group" aria-label="Dispositivo">
+    <button type="button" id="b-esc" aria-pressed="true">Escritorio</button>
+    <button type="button" id="b-cel" aria-pressed="false">Celular</button>
+  </div>
+</header>
+
+<main>
+  <nav aria-label="Pantallas"><ol id="lista"></ol></nav>
+  <section class="stage" aria-live="polite">
+    <div class="frame" id="frame"><img id="shot" alt=""></div>
+    <div class="pager">
+      <button type="button" id="prev">← Anterior</button>
+      <span class="pos" id="pos"></span>
+      <button type="button" id="next">Siguiente →</button>
+    </div>
+  </section>
+  <aside id="notas"></aside>
+</main>
+
+<script>
+const BASE = "https://contexto-olive.vercel.app";
+const P = [
+  ["portada", "Inicio", "Portada", "/", ["Apertura con la nota principal y texto sobre la foto; insignia de Última hora en la esquina.", "Cintillo de titulares e indicadores configurable desde el panel.", "En celular: barra de pestañas inferior con el asistente al centro."]],
+  ["seccion", "Sección", "Sección Colombia", "/categoria/colombia", ["Encabezado con migas, título, descripción y conteo.", "Filtros plegados (subsección y fechas) y paginación numérica enlazable.", "Cuadrícula según la plantilla activa del sitio."]],
+  ["articulo", "Artículo", "Artículo migrado", "/regiones/combaten-desempleo-punta-de-teletrabajo", ["Nota del archivo servida en su dirección original, sin redirección.", "Lectura con progreso, capitular, compartir y relacionados.", "Datos estructurados NewsArticle y canónica propia."]],
+  ["tv", "Formato", "TV", "/categoria/tv", ["Formato propio: pantalla grande con botón de reproducir.", "Videos en 16:9 con su botón; lo heredan las subsecciones (Video)."]],
+  ["radio", "Formato", "Radio", "/categoria/radio", ["Último programa destacado con botón Escuchar.", "Lista de episodios con miniatura, fecha y autor."]],
+  ["especiales", "Formato", "Especiales", "/categoria/especiales", ["Dossier: apertura a todo el ancho y piezas grandes en dos columnas.", "Lo heredan las subsecciones (Galería)."]],
+  ["regiones", "Sección", "Regiones", "/categoria/regiones", ["Mapa interactivo por región y departamento.", "Filtro de notas por región o departamento."]],
+  ["observatorio", "Datos", "Observatorio", "/observatorio", ["Cifras oficiales de FEDEGÁN: precios, inventario por departamento, producción, consumo, internacional y costos.", "Cifras clave, hallazgos automáticos y mapa de calor."]],
+  ["buscar", "Servicio", "Buscador", "/buscar?q=ganado", ["Búsqueda indexada sobre las 51 mil notas, con sugerencias."]],
+  ["asistente", "Servicio", "Asistente", "/asistente", ["Responde con citas del archivo y del Observatorio; si no hay fuentes, no responde."]],
+  ["boletin", "Servicio", "Boletín", "/boletin", ["Alta con doble confirmación, temas de interés y ciudad."]],
+  ["panel", "Panel", "Ingreso al panel", "/panel/login", ["Ingreso con contraseña y segundo factor obligatorio, o con passkey."]],
+];
+let i = 0, disp = "escritorio";
+const $ = (id) => document.getElementById(id);
+const lista = $("lista");
+P.forEach(([, tipo, nombre], k) => {
+  const li = document.createElement("li");
+  const b = document.createElement("button");
+  b.type = "button";
+  b.innerHTML = `<span>${tipo}</span>${nombre}`;
+  b.addEventListener("click", () => { i = k; pintar(); });
+  li.appendChild(b); lista.appendChild(li);
+});
+function pintar() {
+  const [id, tipo, nombre, ruta, notas] = P[i];
+  $("shot").src = `img/${id}-${disp}.jpg`;
+  $("shot").alt = `${nombre}, vista de ${disp}`;
+  $("frame").classList.toggle("movil", disp === "celular");
+  $("pos").textContent = `${i + 1} de ${P.length}`;
+  [...lista.querySelectorAll("button")].forEach((b, k) => b.setAttribute("aria-current", String(k === i)));
+  $("notas").innerHTML = `<p class="k">${tipo}</p><h2>${nombre}</h2><ul>${notas.map((n) => `<li>${n}</li>`).join("")}</ul>
+    <p><a href="${BASE}${ruta}" target="_blank" rel="noopener">Abrir la página real ↗</a></p><p class="url">${BASE}${ruta}</p>`;
+  try { localStorage.setItem("e02", JSON.stringify({ i, disp })); } catch {}
+}
+function ir(d) { i = (i + d + P.length) % P.length; pintar(); }
+$("prev").addEventListener("click", () => ir(-1));
+$("next").addEventListener("click", () => ir(1));
+document.addEventListener("keydown", (e) => { if (e.key === "ArrowRight") ir(1); if (e.key === "ArrowLeft") ir(-1); });
+function setDisp(d) { disp = d; $("b-esc").setAttribute("aria-pressed", String(d === "escritorio")); $("b-cel").setAttribute("aria-pressed", String(d === "celular")); pintar(); }
+$("b-esc").addEventListener("click", () => setDisp("escritorio"));
+$("b-cel").addEventListener("click", () => setDisp("celular"));
+try { const g = JSON.parse(localStorage.getItem("e02") || "null"); if (g) { i = Math.min(g.i ?? 0, P.length - 1); disp = g.disp === "celular" ? "celular" : "escritorio"; } } catch {}
+setDisp(disp);
+</script>
