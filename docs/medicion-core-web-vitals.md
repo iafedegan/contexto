@@ -72,3 +72,28 @@ npx lighthouse http://localhost:3999/ --only-categories=performance --throttling
   --throttling.rttMs=150 --throttling.requestLatencyMs=562.5 --throttling.downloadThroughputKbps=1474.56 \
   --throttling.uploadThroughputKbps=675 --throttling.cpuSlowdownMultiplier=4
 ```
+
+## 7. Tercera medición (18 de octubre de 2026, producción, tras la migración de 51 mil notas)
+
+Lighthouse 12, móvil simulado (mismo modo que PageSpeed Insights), Chrome sin interfaz, contra `contexto-olive.vercel.app`. Cada fila es una corrida real.
+
+| Página | Corrida | Rendimiento | Accesibilidad | LCP | CLS | TBT |
+|---|---|---|---|---|---|---|
+| Portada | 1 | 85 | — | 3.41 s | 0.000 | 51 ms |
+| Portada | 2 | 99 | — | 1.91 s | 0.000 | 73 ms |
+| Portada | 3 | 100 | — | 1.74 s | 0.000 | 24 ms |
+| Portada | 4 | 99 | — | 1.84 s | 0.000 | 10 ms |
+| Portada | 5 | 100 | — | 1.61 s | 0.000 | 11 ms |
+| Portada | 6 | 100 | — | 1.47 s | 0.000 | 2 ms |
+| Portada | 7 | 100 | — | 1.49 s | 0.000 | 19 ms |
+| Portada | 8 | 100 | — | 1.64 s | 0.000 | 2 ms |
+| Sección Colombia | 1 | 95 | 100 | 2.80 s | 0.000 | 4 ms |
+| Sección Colombia | 2 | 100 | 100 | 1.48 s | 0.000 | 5 ms |
+| Artículo migrado | 1 | 89 | 100 | 2.09 s | 0.000 | 29 ms |
+| Artículo migrado | 2 | 100 | 100 | 1.45 s | 0.000 | 7 ms |
+| Observatorio | 1 | 99 | 100 | 1.61 s | 0.014 | 35 ms |
+| Observatorio | 2 | 99 | 100 | 1.63 s | 0.015 | 48 ms |
+| Sección TV | 1 | 91 | 100 | 2.93 s | 0.000 | 4 ms |
+| Sección TV | 2 | 99 | 100 | 1.55 s | 0.000 | 3 ms |
+
+**Lectura.** Portada: mediana LCP 1,69 s y 7 de 8 corridas ≤ 2,5 s. La primera corrida de cada página (servidor en frío) es la que sale alta (2,8–3,4 s); las siguientes, 1,45–1,9 s. En la corrida lenta de la portada el desglose del LCP fue TTFB 0,79 s, retraso de carga 1,83 s, carga 0,12 s y retraso de pintado 0,67 s, y la portada llega sin caché de borde (`x-vercel-cache: MISS` en cada petición, pese a la cabecera `Vercel-CDN-Cache-Control` que pone `src/proxy.ts`). Siguiente paso: hacer que la caché de borde funcione y volver a medir.
