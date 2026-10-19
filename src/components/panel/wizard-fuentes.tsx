@@ -145,7 +145,7 @@ export function PantallaIdeas({
         <Carrusel
           etiqueta="Preguntas para la IA"
           items={PREGUNTAS_SECCION.filter((q) => q.clave !== "temas" && q.clave !== "escritorId")}
-          filas={filasListas(alto, 90, 205, 1, 2)}
+          filas={filasListas(alto, 0, 190, 1, 2)}
           anchoMinimo={200}
           maxColumnas={5}
           render={(q) => <PreguntaIdea q={q} brief={brief} onBrief={onBrief} />}
