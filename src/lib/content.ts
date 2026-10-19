@@ -228,17 +228,11 @@ const leerCategoria = cachear(
   if (dateFrom) conditions.push(gte(articles.publishedAt, sql`${dateFrom}::date`));
   if (dateTo) conditions.push(lte(articles.publishedAt, sql`(${dateTo}::date + interval '1 day')`));
   if (authorSlug) conditions.push(sql`${articles.authorId} in (select id from authors where slug = ${authorSlug})`);
+  // La región que fija el editor al clasificar la nota (`secciones`) manda; si no, vale la que reconoció la base en su texto (`zonas`, con índice).
   const region = regionPorSlug(regionSlug);
-  if (region) {
-    const texto = sql`translate(lower(${articles.title} || ' ' || ${articles.excerpt} || ' ' || ${articles.tags}::text), 'áéíóúñ', 'aeioun')`;
-    // La región que fija el editor al clasificar la nota manda; si no, se reconoce por lo que menciona el texto.
-    conditions.push(or(sql`${articles.secciones} ? ${`region-${region.slug}`}`, ...region.terminos.map((t) => sql`${texto} like ${`%${t}%`}`)) as SQL);
-  }
+  if (region) conditions.push(sql`(${articles.secciones} ? ${`region-${region.slug}`} or ${articles.zonas} ? ${`region-${region.slug}`})`);
   const depto = departamentoPorSlug(departamentoSlug);
-  if (depto) {
-    const texto = sql`translate(lower(${articles.title} || ' ' || ${articles.excerpt} || ' ' || ${articles.tags}::text), 'áéíóúñ', 'aeioun')`;
-    conditions.push(or(sql`${articles.secciones} ? ${`depto-${depto.slug}`}`, ...depto.terminos.map((t) => sql`${texto} like ${`%${t}%`}`)) as SQL);
-  }
+  if (depto) conditions.push(sql`(${articles.secciones} ? ${`depto-${depto.slug}`} or ${articles.zonas} ? ${`depto-${depto.slug}`})`);
   const where = and(...conditions);
 
   const [items, [{ count }]] = await Promise.all([

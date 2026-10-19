@@ -234,6 +234,9 @@ export const articles = pgTable(
     // Secciones del sitio donde aparece la nota además de su categoría principal (slugs de categoría): una nota de
     // «Regiones» puede salir también en «Gremialidad». Las páginas de categoría la incluyen por aquí.
     secciones: jsonb("secciones").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+    // Regiones y departamentos que menciona el texto (`region-caribe`, `depto-cordoba`): los calcula un disparador de la base a partir de
+    // título, resumen y etiquetas (migración 0023) para filtrar «Regiones» con un índice en vez de leer el texto de 51 mil notas.
+    zonas: jsonb("zonas").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
     // Metadatos SEO opcionales; si están vacíos se derivan de title/excerpt.
     metaTitle: text("meta_title"),
     metaDescription: text("meta_description"),
@@ -271,6 +274,7 @@ export const articles = pgTable(
     // Listado de una categoría (archivo de decenas de miles de notas): filtra por categoría y ordena por fecha sin ordenar en memoria.
     index("articles_category_published_idx").on(t.categoryId, t.publishedAt),
     index("articles_secciones_idx").using("gin", t.secciones),
+    index("articles_zonas_idx").using("gin", t.zonas),
     // Listado del panel (51 mil notas): «última edición» y «fecha de publicación» recorren el índice en vez de ordenar toda la tabla (3 s → ms).
     // Notas de un autor (página de la firma, filtro del panel) y las que creó una cuenta («mis notas»): sin índice recorrían las 51 mil filas.
     index("articles_author_idx").on(t.authorId, t.publishedAt.desc()),
