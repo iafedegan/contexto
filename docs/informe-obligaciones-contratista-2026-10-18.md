@@ -202,9 +202,9 @@ Leyenda: ✅ cumplida · 🟡 parcial (lo construido funciona; falta un entregab
 - Herramienta `migracion:verificar` y 375 pruebas automáticas en verde.
 
 **Lo que falta**
-- **438 notas con 535 imágenes dentro del texto que siguen en el servidor del sitio anterior** (y 99 con enlaces): se romperán al cancelarlo; hay que repetir el paso de imágenes para esas notas.
-- 7.391 notas (14 %) con título SEO distinto del titular que mostraba el sitio actual: decisión de FEDEGÁN.
-- 2.911 notas sin imagen de portada (confirmar que ya carecían de ella) y 7 notas de la muestra con un párrafo distinto.
+- **438 notas con 535 imágenes dentro del texto que siguen en el servidor del sitio anterior** (y 99 con enlaces): se romperán al cancelarlo. Storyblok hoy responde 403 a esas imágenes, así que no se pudieron copiar; script `reparar-imagenes.ts` listo para repetir la copia cuando respondan (no cancelar el sitio anterior antes).
+- 7.391 notas (14 %) con título SEO distinto del titular que mostraba el sitio actual: respaldo y SQL listos (`docs/sql-titulo-seo.sql`), falta ejecutarlo y la decisión de FEDEGÁN.
+- 2.911 notas sin portada: 2.670 son columnas (el sitio actual usa el logo); las otras 241 se recuperan con el script cuando Storyblok responda. Las «7 notas con un párrafo distinto» eran texto ajeno a la nota (falso positivo).
 - Revisión editorial por muestreo con una persona de la redacción (acta) y cobertura de indexación en Search Console tras el corte de dominio.
 
 **Entregable para FEDEGÁN:** Informe de validación `docs/validacion-migracion-2026-10-19.md` + acta del muestreo editorial.  

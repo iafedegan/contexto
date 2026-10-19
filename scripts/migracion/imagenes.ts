@@ -61,6 +61,13 @@ export class CopiadorDeImagenes {
     }
   }
 
+  /** Olvida lo que falló (403/404 de entonces) para volver a intentarlo: sirve cuando el origen vuelve a dar las imágenes. */
+  olvidarFallidas(): number {
+    let n = 0;
+    for (const [origen, e] of this.registro) if (!e.url) { this.registro.delete(origen); n++; }
+    return n;
+  }
+
   /** Dirección pública nueva de un archivo ya copiado (null si no se pudo copiar o aún no se intentó). */
   conocida(origen: string): string | null | undefined {
     const e = this.registro.get(origen);
