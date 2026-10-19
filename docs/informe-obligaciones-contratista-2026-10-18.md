@@ -9,7 +9,7 @@ Leyenda: ✅ cumplida · 🟡 parcial (lo construido funciona; falta un entregab
 
 - **13 de 24 obligaciones cumplidas, 9 parciales y 2 que aún no vencen.** Avance promedio estimado: **75 %**.
 - **La migración del archivo histórico está hecha:** 51.388 notas en producción (el TDR estimaba ≈41.000), con imágenes propias, categorías, autores y las direcciones originales intactas. Se adelantó más de un mes frente a lo previsto en la propuesta (20/11/2026).
-- **374 pruebas automáticas en verde** y despliegue continuo; el portal responde en ~0,5-0,8 s con caché y en 2-3 s en frío.
+- **375 pruebas automáticas en verde** y despliegue continuo; el portal responde en ~0,5-0,8 s con caché y en 2-3 s en frío.
 - **Lo que más pesa en lo pendiente no es código, son entregables y acciones de cierre:** informe formal de conciliación de la migración, corte de dominio, conexión del correo (Resend), identificadores de analítica, transferencia de cuentas y código, manuales/capacitación y actas de aceptación.
 - **Riesgo contractual:** la integración con Portal FEDEGÁN y SuperApp (obligación 24) no figura en la propuesta de OpenView y está en una fase inicial; requiere acordar alcance, plazo y costo.
 
@@ -65,13 +65,14 @@ Leyenda: ✅ cumplida · 🟡 parcial (lo construido funciona; falta un entregab
 
 **Lo realizado**
 - **Entregado el 18/10/2026: prototipos navegables E-02** (`docs/E-02-prototipos/index.html`, publicado como página privada): 12 pantallas del portal en producción (portada, sección, artículo, TV, Radio, Especiales, Regiones, Observatorio, buscador, asistente, boletín e ingreso al panel), en escritorio y celular, con notas de diseño y enlace a la página real.
+- Las 24 capturas (12 pantallas × escritorio y celular) también están en un archivo de Figma (imágenes, no capas editables) y en un PDF de entrega.
 - Sistema de diseño en código: 6 plantillas, tokens por plantilla, móvil primero, banco de pruebas responsive en Chrome real (17 tamaños).
 - Medido el 18/10/2026 con Lighthouse en producción: Accesibilidad 100, SEO 100 y Buenas prácticas 100 en sección, artículo, Observatorio y TV (el sitio actual: 86-96 de accesibilidad).
 
 **Lo que falta**
 - Aprobación de los prototipos por FEDEGÁN.
 
-**Entregable para FEDEGÁN:** E-02 (enlace a los prototipos navegables) para firma de FEDEGÁN.  
+**Entregable para FEDEGÁN:** E-02 (PDF de 14 páginas `docs/E-02_Prototipos_CONtexto_Ganadero.pdf`, enlace al visor navegable y archivo de Figma) para firma de FEDEGÁN.  
 **Responsable:** Contratista + FEDEGÁN (aprobación)
 
 ### 3. Arquitectura de información, navegación y búsqueda — ✅ Cumplida (100 %)
@@ -196,7 +197,7 @@ Leyenda: ✅ cumplida · 🟡 parcial (lo construido funciona; falta un entregab
 
 **Lo realizado**
 - Herramienta de verificación hecha (`migracion:verificar`): conciliación completa origen-destino y muestra de URLs reales contra el sitio desplegado.
-- Comprobaciones hechas: 51.388 notas en los mapas del sitio, enlaces internos reescritos, redirecciones sobrantes limpiadas, 374 pruebas automáticas en verde.
+- Comprobaciones hechas: 51.388 notas en los mapas del sitio, enlaces internos reescritos, redirecciones sobrantes limpiadas, 375 pruebas automáticas en verde.
 - Búsqueda y listados probados con el volumen completo.
 
 **Lo que falta**
@@ -219,6 +220,7 @@ Leyenda: ✅ cumplida · 🟡 parcial (lo construido funciona; falta un entregab
 
 **Lo que falta**
 - **La primera visita tras un rato sin tráfico (servidor en frío) supera la meta:** 2,8–3,4 s en portada, Colombia y TV. Las siguientes cumplen (1,45–1,9 s). Causa medida: la portada no queda guardada en la red de Vercel (cada respuesta llega `x-vercel-cache: MISS`), así que el primer visitante espera al servidor.
+- **Regiones (`/categoria/regiones?region=…`) sigue lenta en la primera visita:** medido en producción tras limitar el conteo, 4,1–6,6 s sin caché (antes ≈10–11 s); la meta fijada es 2,2 s. La corrección de fondo (región y departamento calculados por la base con índice) está construida y probada en local (migración 0023), pero NO está aplicada en producción ni medida: falta ejecutar `docs/supabase-zonas.sql` y publicar el código.
 - Corregir la caché de borde de la portada y las secciones y volver a medir.
 - Datos de campo (Search Console/CrUX) cuando haya tráfico; acordar con FEDEGÁN si la meta se mide en laboratorio o en campo.
 
@@ -328,7 +330,7 @@ Leyenda: ✅ cumplida · 🟡 parcial (lo construido funciona; falta un entregab
 *Fuente:* Anexo Funcional: sección 19. Propuesta OpenView: E-10.
 
 **Lo realizado**
-- **374 pruebas automáticas en verde** (permisos, 2FA, claves, límites, boletín, migración, búsqueda, «Más leídas», asistente, plantillas) con base PGlite en memoria; CI en cada cambio; banco responsive en Chrome real; mediciones de Lighthouse.
+- **375 pruebas automáticas en verde** (permisos, 2FA, claves, límites, boletín, migración, búsqueda, «Más leídas», asistente, plantillas) con base PGlite en memoria; CI en cada cambio; banco responsive en Chrome real; mediciones de Lighthouse.
 
 **Lo que falta**
 - Acta de pruebas de aceptación por criterio (arquitectura, home, categorías, artículo, móvil, publicidad, CMS, SEO, rendimiento, seguridad).
@@ -457,6 +459,7 @@ Leyenda: ✅ cumplida · 🟡 parcial (lo construido funciona; falta un entregab
 
 ## 5. Hitos construidos recientemente
 
+- **18/10** — PDF de entrega del prototipo E-02 y archivo de Figma con las 24 capturas; Regiones: marca de región/departamento con índice construida (pendiente de aplicar en producción)
 - **18/10** — Entregados E-01 (diagnóstico medido del sitio actual, arquitectura y plan) y E-02 (prototipos navegables, 12 pantallas en escritorio y celular)
 - **18/10** — Plantillas de TV, Radio y Especiales; cita destacada e infografía en el editor; mediciones de Lighthouse en producción
 - **14/10** — Migración de 51,5 mil notas del sitio anterior a la base, con imágenes, categorías y redirecciones
