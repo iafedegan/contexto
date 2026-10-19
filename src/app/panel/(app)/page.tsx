@@ -23,6 +23,7 @@ import { Card } from "@/components/ui";
 import { pctChange, siteDailySeries, siteWeekTotals } from "@/lib/article-stats";
 import { AreaChart, Donut } from "@/components/panel/dash-charts";
 import { nfCO as nf } from "@/lib/format";
+import { cachear, TAG_CONTENIDO } from "@/lib/data-cache";
 
 // Estado de la lista de artículos al que lleva cada indicador.
 const ESTADO_URL: Record<string, string> = { Publicados: "publicado", "En revisión": "en_revision", Programados: "programado", Borradores: "borrador" };
@@ -30,20 +31,30 @@ const ESTADO_URL: Record<string, string> = { Publicados: "publicado", "En revisi
 // Se calcula en cada petición, nunca durante la compilación.
 export const dynamic = "force-dynamic";
 
-// Resumen del panel: notas por estado, borradores pendientes, consultas del asistente, tendencia de lecturas, suscriptores y notas más leídas.
-export default async function PanelHome() {
-  const [session, byStatus, queries7d, week, trend, top] = await Promise.all([
-    auth(),
-    db.select({ status: articles.status, n: sql<number>`count(*)::int` }).from(articles).groupBy(articles.status),
-    db.select({ n: sql<number>`count(*)::int` }).from(assistantQueries).where(sql`${assistantQueries.createdAt} > now() - interval '7 days'`),
-    siteWeekTotals(),
-    siteDailySeries(7),
+// Los dos cálculos pesados del resumen (contar 51 mil notas por estado y ordenar las del mes por lecturas) se guardan un minuto: el panel
+// abre en milisegundos y publicar o programar los invalida al instante (TAG_CONTENIDO).
+const notasPorEstado = cachear("panel-notas-por-estado", () => db.select({ status: articles.status, n: sql<number>`count(*)::int` }).from(articles).groupBy(articles.status), { tags: [TAG_CONTENIDO], segundos: 60 });
+const masLeidasDelMes = cachear(
+  "panel-mas-leidas-mes",
+  () =>
     db
       .select({ id: articles.id, slug: articles.slug, title: articles.title, views: articles.views })
       .from(articles)
       .where(sql`${articles.status} = 'publicado' and ${articles.publishedAt} > now() - interval '30 days'`)
       .orderBy(sql`${articles.views} desc`)
       .limit(5),
+  { tags: [TAG_CONTENIDO], segundos: 60 },
+);
+
+// Resumen del panel: notas por estado, borradores pendientes, consultas del asistente, tendencia de lecturas, suscriptores y notas más leídas.
+export default async function PanelHome() {
+  const [session, byStatus, queries7d, week, trend, top] = await Promise.all([
+    auth(),
+    notasPorEstado(),
+    db.select({ n: sql<number>`count(*)::int` }).from(assistantQueries).where(sql`${assistantQueries.createdAt} > now() - interval '7 days'`),
+    siteWeekTotals(),
+    siteDailySeries(7),
+    masLeidasDelMes(),
   ]);
 
   const st = Object.fromEntries(byStatus.map((r) => [r.status, r.n])) as Record<string, number>;
