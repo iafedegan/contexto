@@ -7,8 +7,8 @@ Leyenda: ✅ cumplida · 🟡 parcial (lo construido funciona; falta un entregab
 
 ## 1. Resumen ejecutivo
 
-- **13 de 24 obligaciones cumplidas, 9 parciales y 2 que aún no vencen.** Avance promedio estimado: **75 %**.
-- **La migración del archivo histórico está hecha:** 51.388 notas en producción (el TDR estimaba ≈41.000), con imágenes propias, categorías, autores y las direcciones originales intactas. Se adelantó más de un mes frente a lo previsto en la propuesta (20/11/2026).
+- **13 de 24 obligaciones cumplidas, 9 parciales y 2 que aún no vencen.** Avance promedio estimado: **76 %**.
+- **La migración del archivo histórico está hecha:** 51.382 notas en producción (el TDR estimaba ≈41.000), con imágenes propias, categorías, autores y las direcciones originales intactas. Se adelantó más de un mes frente a lo previsto en la propuesta (20/11/2026).
 - **375 pruebas automáticas en verde** y despliegue continuo; el portal responde en ~0,5-0,8 s con caché y en 2-3 s en frío.
 - **Lo que más pesa en lo pendiente no es código, son entregables y acciones de cierre:** informe formal de conciliación de la migración, corte de dominio, conexión del correo (Resend), identificadores de analítica, transferencia de cuentas y código, manuales/capacitación y actas de aceptación.
 - **Riesgo contractual:** la integración con Portal FEDEGÁN y SuperApp (obligación 24) no figura en la propuesta de OpenView y está en una fase inicial; requiere acordar alcance, plazo y costo.
@@ -24,7 +24,7 @@ Leyenda: ✅ cumplida · 🟡 parcial (lo construido funciona; falta un entregab
 | 7 | SEO técnico y editorial | ✅ Cumplida | 90 % | Enviar los nuevos sitemaps a Search Console y solicitar inclusión en Google News (acción de FEDEGÁN). |
 | 8 | Migración del archivo histórico | ✅ Cumplida | 95 % | Corte de dominio (DNS) a `www.contextoganadero.com`: hoy el portal responde en `contexto-olive.vercel.app`. |
 | 9 | Migración progresiva por lotes | ✅ Cumplida | 100 % | Dejar constancia del cambio de método (de progresivo a completo) en la matriz contractual. |
-| 10 | Validación e integridad de la migración | 🟡 Parcial | 60 % | Ejecutar la verificación contra producción y archivar su informe (conciliación por sección, URLs,… |
+| 10 | Validación e integridad de la migración | 🟡 Parcial | 85 % | **438 notas con 535 imágenes dentro del texto que siguen en el servidor del sitio anterior** (y 99 con… |
 | 11 | Rendimiento y Core Web Vitals | 🟡 Parcial | 85 % | **La primera visita tras un rato sin tráfico (servidor en frío) supera la meta:** 2,8–3,4 s en portada,… |
 | 12 | Seguridad, disponibilidad y observabilidad | 🟡 Parcial | 80 % | Monitoreo de disponibilidad (monitor externo) y de errores, y reglas del Firewall de Vercel (acciones de… |
 | 13 | Funcionalidades modernas | ✅ Cumplida | 90 % | Conectar el servicio de correo (Resend): al 13/10 el panel avisaba «Todavía no se pueden enviar correos»,… |
@@ -146,7 +146,7 @@ Leyenda: ✅ cumplida · 🟡 parcial (lo construido funciona; falta un entregab
 *Fuente:* TDR: sección 8. Anexo Funcional: sección 17. Propuesta OpenView: E-06.
 
 **Lo realizado**
-- `sitemap.xml` como índice (`/sitemaps/paginas.xml` + 6 archivos de notas): **51.388 notas en producción**; `news-sitemap.xml`, `robots.txt`, canónicas, NewsArticle y breadcrumbs JSON-LD, Open Graph, Twitter Cards, RSS (`/feed.xml`).
+- `sitemap.xml` como índice (`/sitemaps/paginas.xml` + 6 archivos de notas): **51.382 notas en producción**; `news-sitemap.xml`, `robots.txt`, canónicas, NewsArticle y breadcrumbs JSON-LD, Open Graph, Twitter Cards, RSS (`/feed.xml`).
 - Las direcciones de las notas antiguas se conservan exactamente (`legacy_path`), con 301 para las páginas institucionales y de columnistas del sitio anterior.
 
 **Lo que falta**
@@ -162,7 +162,7 @@ Leyenda: ✅ cumplida · 🟡 parcial (lo construido funciona; falta un entregab
 *Fuente:* TDR: sección 9. Propuesta OpenView: E-05 y E-11. · *Observación de la hoja:* El TDR exige migración integral del archivo histórico; la propuesta de OpenView plantea un esquema progresivo por lotes.
 
 **Lo realizado**
-- **Migradas 51.388 notas a la base de producción** (el TDR estimaba ≈41.000): cuerpo, autor, categorías (y 4 nuevas: Galería, Video, Audio, Seguridad), etiquetas, fecha original, SEO, galerías, videos y audios.
+- **Migradas 51.382 notas a la base de producción** (el TDR estimaba ≈41.000): cuerpo, autor, categorías (y 4 nuevas: Galería, Video, Audio, Seguridad), etiquetas, fecha original, SEO, galerías, videos y audios.
 - Imágenes copiadas al almacenamiento propio (≈39.500 archivos, ≈9 GB, máx. 1.600 px): el sitio nuevo ya no depende de Storyblok.
 - Procesos automatizados y repetibles sin duplicar: `scripts/migracion/{descargar,cargar,verificar}.ts`; runbook en `docs/migracion-sitio-anterior.md` (51.527 de 51.535 direcciones descargadas; las 8 restantes dan 404/500 también en el sitio original).
 - Cada nota se sirve en su dirección original (sin redirección) y con canónica a sí misma.
@@ -190,22 +190,24 @@ Leyenda: ✅ cumplida · 🟡 parcial (lo construido funciona; falta un entregab
 **Entregable para FEDEGÁN:** Acta de cambio de método de migración, firmada por FEDEGÁN.  
 **Responsable:** FEDEGÁN + Contratista
 
-### 10. Validación e integridad de la migración — 🟡 Parcial (60 %)
+### 10. Validación e integridad de la migración — 🟡 Parcial (85 %)
 
 **Alcance contractual:** Verificar la totalidad de contenidos migrados, integridad de campos y metadatos, URLs y redirecciones, indexación, enlaces internos, recursos multimedia, revisión editorial por muestreo y conciliación entre origen y destino.
 *Fuente:* TDR: sección 9, validación previa a producción.
 
 **Lo realizado**
-- Herramienta de verificación hecha (`migracion:verificar`): conciliación completa origen-destino y muestra de URLs reales contra el sitio desplegado.
-- Comprobaciones hechas: 51.388 notas en los mapas del sitio, enlaces internos reescritos, redirecciones sobrantes limpiadas, 375 pruebas automáticas en verde.
-- Búsqueda y listados probados con el volumen completo.
+- **Validación ejecutada el 19/10/2026** (informe `docs/validacion-migracion-2026-10-19.md`), sitio actual contra portal nuevo: 51.536 direcciones del sitio actual; las 51.535 notas responden; 51.381 migradas + 154 repetidas en dos secciones que redirigen a su copia (154 de 154 llegan a 200); 0 errores 404/500.
+- Muestreo de 150 notas al azar: titular y fecha idénticos en 150 de 150; 99,4 % de los párrafos del cuerpo presentes (143 de 150 notas completas).
+- Base de producción: 100 % con dirección original, categoría, autor, fecha y resumen; 0 portadas apuntando al servidor anterior.
+- Herramienta `migracion:verificar` y 375 pruebas automáticas en verde.
 
 **Lo que falta**
-- Ejecutar la verificación contra producción y archivar su informe (conciliación por sección, URLs, imágenes, enlaces rotos).
-- Revisión editorial por muestreo con una persona de la redacción (acta).
-- Medir cobertura de indexación en Search Console tras el corte de dominio.
+- **438 notas con 535 imágenes dentro del texto que siguen en el servidor del sitio anterior** (y 99 con enlaces): se romperán al cancelarlo; hay que repetir el paso de imágenes para esas notas.
+- 7.391 notas (14 %) con título SEO distinto del titular que mostraba el sitio actual: decisión de FEDEGÁN.
+- 2.911 notas sin imagen de portada (confirmar que ya carecían de ella) y 7 notas de la muestra con un párrafo distinto.
+- Revisión editorial por muestreo con una persona de la redacción (acta) y cobertura de indexación en Search Console tras el corte de dominio.
 
-**Entregable para FEDEGÁN:** Informe de conciliación y validación (salida de `migracion:verificar` + acta del muestreo editorial).  
+**Entregable para FEDEGÁN:** Informe de validación `docs/validacion-migracion-2026-10-19.md` + acta del muestreo editorial.  
 **Responsable:** Contratista + Redacción
 
 ### 11. Rendimiento y Core Web Vitals — 🟡 Parcial (85 %)
@@ -471,7 +473,7 @@ Leyenda: ✅ cumplida · 🟡 parcial (lo construido funciona; falta un entregab
 
 ## 6. Qué no se pudo verificar desde el código
 
-- Contenido de la base de producción más allá de lo visible en el sitio (el conteo de 51.388 sale de los mapas del sitio).
+- Contenido de la base de producción más allá de lo visible en el sitio (el conteo de 51.382 sale de los mapas del sitio).
 - Configuración de cuentas externas: Resend, Search Console, GA4/GTM, Google Ad Manager, monitoreo y Firewall.
 - Entrega real de notificaciones push y de correos.
 - Datos de campo de rendimiento (Search Console/CrUX).
