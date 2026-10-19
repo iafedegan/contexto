@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { ArrowRight, Check, Link2, Lightbulb, Loader2, Mic, Search, Sparkles, TrendingUp } from "lucide-react";
 import type { NewsItem, TopicIdea } from "@/app/panel/(app)/articulos/ai-actions";
-import { Carrusel } from "@/components/panel/carrusel";
+import { Carrusel, filasListas, useAltoVentana } from "@/components/panel/carrusel";
 import { AreaVoz, InputVoz } from "@/components/panel/campo-voz";
 import { ALCANCES, AUDIENCIAS, GENEROS, PALABRAS_OPCIONES, PREGUNTAS_SECCION, TONOS, respondidas, type BriefSeccion, type Genero } from "@/lib/consejo/plan";
 import { ParticipantesForm, participantesListos } from "@/components/panel/entrevista-editor";
@@ -115,6 +115,8 @@ export function PantallaIdeas({
   const [verPreguntas, setVerPreguntas] = useState(true);
   const mostrar = verPreguntas || !ideas;
   const tema = brief.temas ?? "";
+  // Las 9 preguntas se ven juntas en el espacio libre: hasta 5 columnas y, si la ventana lo permite, 2 filas (sin páginas ni desplazamiento).
+  const alto = useAltoVentana();
   return (
     <div className="flex min-h-0 flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2">
@@ -143,9 +145,9 @@ export function PantallaIdeas({
         <Carrusel
           etiqueta="Preguntas para la IA"
           items={PREGUNTAS_SECCION.filter((q) => q.clave !== "temas" && q.clave !== "escritorId")}
-          filas={1}
-          anchoMinimo={260}
-          maxColumnas={4}
+          filas={filasListas(alto, 90, 205, 1, 2)}
+          anchoMinimo={200}
+          maxColumnas={5}
           render={(q) => <PreguntaIdea q={q} brief={brief} onBrief={onBrief} />}
         />
       )}
