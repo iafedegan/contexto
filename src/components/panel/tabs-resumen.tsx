@@ -26,12 +26,12 @@ export function TabsResumen({ activa, analitica, parametros = "" }: { activa: Pe
   if (!analitica) return null; // sin permiso de análisis no hay nada que alternar
   return (
     <nav aria-label="Resumen y análisis" className="-mx-1 overflow-x-auto px-1 pb-1">
-      <ul className="inline-flex rounded-full border border-[var(--border-strong)] bg-[var(--surface)] p-0.5 shadow-[var(--shadow)]">
+      <ul className="flex w-full rounded-full sm:inline-flex sm:w-auto border border-[var(--border-strong)] bg-[var(--surface)] p-0.5 shadow-[var(--shadow)]">
         {pestanas.map(({ id, t, Icono, href }) => (
-          <li key={id}>
+          <li key={id} className="min-w-0 flex-1 sm:flex-none">
             <Link href={href} aria-current={activa === id ? "page" : undefined}
-              className={`inline-flex min-h-10 items-center gap-2 whitespace-nowrap rounded-full px-4 text-sm font-semibold transition ${activa === id ? "bg-[var(--accent)] text-[var(--accent-fg)]" : "text-[var(--fg-muted)] hover:text-[var(--fg)]"}`}>
-              <Icono size={15} aria-hidden /> {t}
+              className={`inline-flex min-h-10 w-full items-center justify-center gap-2 whitespace-nowrap rounded-full px-2.5 text-[0.8125rem] sm:w-auto sm:px-4 sm:text-sm font-semibold transition ${activa === id ? "bg-[var(--accent)] text-[var(--accent-fg)]" : "text-[var(--fg-muted)] hover:text-[var(--fg)]"}`}>
+              <Icono size={15} aria-hidden className="hidden min-[430px]:block" /> {t}
             </Link>
           </li>
         ))}

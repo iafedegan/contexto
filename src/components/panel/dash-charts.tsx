@@ -1,16 +1,25 @@
 import { cn } from "@/lib/utils";
 import { nfCO as nf } from "@/lib/format";
 
-/** Gráfica de área suavizada (SVG puro, sin JS): línea, relleno degradado, rejilla y etiquetas de día. */
+/**
+ * Gráfica de área suavizada (SVG puro, sin JS): línea, relleno degradado, rejilla y etiquetas de día. En teléfono se dibuja una versión más
+ * angosta (el mismo SVG de 640 px se encogía a la mitad y dejaba las cifras en 5 px): textos a tamaño real y el día en dos líneas.
+ */
 export function AreaChart({ labels, values, className }: { labels: string[]; values: number[]; className?: string }) {
-  const W = 640;
-  const H = 220;
-  const padL = 34;
-  const padB = 28;
+  return (
+    <>
+      <AreaSvg id="dash-area" W={640} H={220} padL={34} padR={26} labels={labels} values={values} className={cn("hidden sm:block", className)} />
+      <AreaSvg id="dash-area-m" W={340} H={230} padL={30} padR={16} compact labels={labels} values={values} className={cn("sm:hidden", className)} />
+    </>
+  );
+}
+
+function AreaSvg({ id, W, H, padL, padR, compact, labels, values, className }: { id: string; W: number; H: number; padL: number; padR: number; compact?: boolean; labels: string[]; values: number[]; className?: string }) {
+  const padB = compact ? 40 : 28;
   const padT = 30;
   const max = Math.max(4, ...values);
   const top = Math.ceil(max / 4) * 4;
-  const innerW = W - padL - 26;
+  const innerW = W - padL - padR;
   const innerH = H - padB - padT;
   // Posición horizontal del punto i.
   const x = (i: number) => padL + (values.length === 1 ? innerW / 2 : (i / (values.length - 1)) * innerW);
@@ -35,9 +44,9 @@ export function AreaChart({ labels, values, className }: { labels: string[]; val
   // Día con más lecturas: se resalta.
   const maxIdx = values.indexOf(Math.max(...values));
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Lecturas diarias: ${values.map((v) => nf.format(v)).join(", ")}`} className={cn("block h-auto w-full", className)}>
+    <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Lecturas diarias: ${values.map((v) => nf.format(v)).join(", ")}`} className={cn("h-auto w-full", className)}>
       <defs>
-        <linearGradient id="dash-area" x1="0" x2="0" y1="0" y2="1">
+        <linearGradient id={id} x1="0" x2="0" y1="0" y2="1">
           <stop offset="0%" stopColor="var(--accent)" stopOpacity="0.38" />
           <stop offset="100%" stopColor="var(--accent)" stopOpacity="0" />
         </linearGradient>
@@ -45,10 +54,10 @@ export function AreaChart({ labels, values, className }: { labels: string[]; val
       {ticks.map((t) => (
         <g key={t}>
           <line x1={padL} x2={W - 8} y1={y(t)} y2={y(t)} stroke="var(--border)" strokeDasharray={t === 0 ? undefined : "3 5"} />
-          <text x={padL - 8} y={y(t) + 4} textAnchor="end" fontSize="11" fill="var(--fg-muted)">{nf.format(Math.round(t))}</text>
+          <text x={padL - 6} y={y(t) + 4} textAnchor="end" fontSize="11" fill="var(--fg-muted)">{nf.format(Math.round(t))}</text>
         </g>
       ))}
-      <path d={area} fill="url(#dash-area)" />
+      <path d={area} fill={`url(#${id})`} />
       <path d={path} fill="none" stroke="var(--accent)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
       {pts.map((p, i) => (
         <g key={i}>
@@ -56,19 +65,28 @@ export function AreaChart({ labels, values, className }: { labels: string[]; val
           <circle cx={p[0]} cy={p[1]} r={i === pts.length - 1 ? 5 : 3.5} fill="var(--bg)" stroke="var(--accent)" strokeWidth="2.5" />
           {/* Valor sobre cada punto (pocos días): se lee sin buscar el eje. */}
           {values.length <= 14 && (
-            <text x={p[0]} y={p[1] - 12} textAnchor="middle" fontSize="12" fontWeight={i === maxIdx ? 700 : 500} fill={i === maxIdx ? "var(--accent)" : "var(--fg)"}>{nf.format(values[i])}</text>
+            <text x={p[0]} y={p[1] - 12} textAnchor="middle" fontSize={compact ? 11 : 12} fontWeight={i === maxIdx ? 700 : 500} fill={i === maxIdx ? "var(--accent)" : "var(--fg)"}>{nf.format(values[i])}</text>
           )}
         </g>
       ))}
       {last && <circle cx={last[0]} cy={last[1]} r="11" fill="var(--accent)" opacity="0.15" />}
-      {labels.map((l, i) => (
-        <text key={i} x={x(i)} y={H - 8} textAnchor={i === labels.length - 1 && l.length > 3 ? "end" : "middle"} fontSize="11" fill="var(--fg-muted)">{l}</text>
-      ))}
+      {labels.map((l, i) => {
+        if (compact) {
+          // «lun 12» → «lun» sobre «12».
+          const [dia, num] = l.split(" ");
+          return (
+            <text key={i} x={x(i)} textAnchor="middle" fontSize="11" fill="var(--fg-muted)">
+              <tspan x={x(i)} y={H - 20}>{dia}</tspan>
+              <tspan x={x(i)} y={H - 6} fontWeight="600" fill="var(--fg)">{num}</tspan>
+            </text>
+          );
+        }
+        return <text key={i} x={x(i)} y={H - 8} textAnchor={i === labels.length - 1 && l.length > 3 ? "end" : "middle"} fontSize="11" fill="var(--fg-muted)">{l}</text>;
+      })}
     </svg>
   );
 }
 
-/** Anillo de reparto (SVG puro) con el total al centro. */
 export function Donut({ parts, total, label }: { parts: { label: string; value: number; color: string }[]; total: number; label: string }) {
   const R = 52;
   const C = 2 * Math.PI * R;

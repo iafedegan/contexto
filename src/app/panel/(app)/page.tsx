@@ -110,8 +110,8 @@ export default async function PanelHome() {
       )}
 
       {/* Fila de indicadores: tarjeta oscura destacada + 3 claras (como un cuadro de mando) */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <div className="relative overflow-hidden rounded-[var(--radius-lg)] bg-[linear-gradient(135deg,color-mix(in_srgb,var(--accent)_70%,#000),var(--accent)_65%,color-mix(in_srgb,var(--accent)_75%,#fff))] p-5 text-white shadow-[var(--shadow)] sm:col-span-2 xl:col-span-1">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4 xl:grid-cols-4">
+        <div className="relative overflow-hidden rounded-[var(--radius-lg)] bg-[linear-gradient(135deg,color-mix(in_srgb,var(--accent)_70%,#000),var(--accent)_65%,color-mix(in_srgb,var(--accent)_75%,#fff))] p-5 text-white shadow-[var(--shadow)] sm:col-span-3 xl:col-span-1">
           <span aria-hidden className="absolute -right-8 -top-10 size-36 rounded-full bg-white/10 blur-2xl" />
           <div className="flex items-center justify-between">
             <p className="lx-kicker text-white/70">Lecturas · 7 días</p>
@@ -162,8 +162,9 @@ export default async function PanelHome() {
         <Card className="lx-shine p-5 sm:p-6">
           <p className="lx-kicker text-[var(--fg-muted)]">Contenido</p>
           <h2 className="lx-display mt-1 text-xl font-semibold">Estado de las notas</h2>
-          <div className="mt-4"><Donut parts={parts} total={total} label="Notas" /></div>
-          <ul className="mt-4 flex flex-col gap-2 text-sm">
+          <div className="mt-4 sm:grid sm:grid-cols-2 sm:items-center sm:gap-8 lg:block">
+          <Donut parts={parts} total={total} label="Notas" />
+          <ul className="mt-4 flex flex-col gap-2 text-sm sm:mt-0 lg:mt-4">
             {parts.map((p) => (
               <li key={p.label}>
                 <Link href={`/panel/articulos?estado=${ESTADO_URL[p.label]}`} className="-mx-2 flex items-center justify-between gap-3 rounded-lg px-2 py-1.5 transition hover:bg-[var(--surface-2)]">
@@ -173,6 +174,7 @@ export default async function PanelHome() {
               </li>
             ))}
           </ul>
+          </div>
         </Card>
       </div>
 
@@ -217,13 +219,13 @@ function Kpi({ label, value, total, color, icon, href }: { label: string; value:
   const pct = total > 0 ? Math.round((value / total) * 100) : 0;
   return (
     <Link href={href} className="group block rounded-[var(--radius-lg)] focus-visible:outline-2 focus-visible:outline-offset-2" aria-label={`${label}: ${value}. Ver la lista`}>
-      <Card className="lx-shine h-full p-5 transition group-hover:border-[var(--border-strong)]">
+      <Card className="lx-shine h-full p-4 transition group-hover:border-[var(--border-strong)] sm:p-5">
         <div className="flex items-center justify-between gap-2">
           <p className="lx-kicker text-[var(--fg-muted)]">{label}</p>
           <span className="grid size-9 place-items-center rounded-xl" style={{ background: `color-mix(in srgb, ${color} 15%, transparent)`, color }}>{icon}</span>
         </div>
-        <p className="lx-display mt-3 text-4xl font-semibold tabular-nums">{value}</p>
-        <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-[var(--surface-2)]" aria-hidden>
+        <p className="lx-display mt-2 text-3xl font-semibold tabular-nums sm:mt-3 sm:text-4xl">{value}</p>
+        <div className="mt-2 h-1.5 sm:mt-3 overflow-hidden rounded-full bg-[var(--surface-2)]" aria-hidden>
           <div className="h-full rounded-full" style={{ width: `${pct}%`, background: color }} />
         </div>
         <p className="mt-1.5 flex items-center justify-between text-xs text-[var(--fg-muted)]">
