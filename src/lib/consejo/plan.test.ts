@@ -66,3 +66,19 @@ test("con un solo tema el lunes, la pauta tiene una pieza el lunes y no cinco", 
   // Dos temas sin día: las dos primeras casillas libres.
   assert.equal(ajustarParrillaATemas(parrilla, [{ ...tema, id: "a", dia: undefined }, { ...tema, id: "b", dia: undefined }]).length, 2);
 });
+
+test("la pieza abre con las respuestas del consejo y lo que ya traía su ficha", async () => {
+  const { briefDePieza } = await import("@/lib/consejo/plan");
+  const tema = { id: "t", texto: "Vacunación de aftosa", seccion: "ganaderia", prioridad: 2 as const, origen: "manual" as const, dia: 1, brief: { lugares: "Meta, Casanare", audiencia: "Productores ganaderos" as const } };
+  const b = briefDePieza(tema, { tono: "Técnico y de datos" as const, evitar: "Mitos sobre la vacuna" }, { palabras: 600, genero: "analisis" as never, conGrafica: true, porQueAhora: "Arranca el ciclo el 27 de octubre.", fuentes: [{ nombre: "ICA" }, { nombre: "FEDEGÁN" }] as never, riesgos: ["Cifras en disputa"] }, "Segundo ciclo contra la aftosa");
+  assert.equal(b.temas, "Vacunación de aftosa");
+  assert.equal(b.lugares, "Meta, Casanare");
+  assert.equal(b.palabras, 600);
+  assert.deepEqual(b.generos, ["analisis"]);
+  assert.equal(b.grafica, "si");
+  assert.equal(b.agenda, "Arranca el ciclo el 27 de octubre.");
+  assert.equal(b.fuentes, "ICA, FEDEGÁN");
+  assert.equal(b.evitar, "Mitos sobre la vacuna"); // lo que el consejo escribió manda sobre los riesgos de la ficha
+  // Sin tema ni brief: al menos el título de la pieza.
+  assert.equal(briefDePieza(undefined, undefined, undefined, "Título de la pieza").temas, "Título de la pieza");
+});

@@ -393,6 +393,27 @@ function briefsSaneados(input: unknown): Record<string, BriefSeccion> | undefine
 /** Cuántas de las preguntas de la sección están respondidas. */
 export const respondidas = (b: BriefSeccion | undefined) => PREGUNTAS_SECCION.filter((q) => { const v = b?.[q.clave]; return Array.isArray(v) ? v.length > 0 : !!v; }).length;
 
+/**
+ * Las respuestas con las que se escribe una pieza: lo que el consejo contestó para su tema (y, debajo, lo de su sección), completado con lo que
+ * ya quedó en su ficha de pauta (extensión, género, gráfica, fuentes previstas, riesgos, por qué ahora). Así el asistente de redacción abre con
+ * esos campos llenos en vez de vacíos.
+ */
+export function briefDePieza(tema: TemaConsejo | undefined, briefSeccion: BriefSeccion | undefined, ficha: FichaPauta | undefined, tituloPieza: string): BriefSeccion {
+  const b: BriefSeccion = { ...briefSeccion, ...tema?.brief };
+  const f = ficha ?? {};
+  const unir = (xs: (string | undefined)[], sep: string) => xs.filter(Boolean).join(sep) || undefined;
+  return sanearBrief({
+    ...b,
+    temas: tema?.texto || tituloPieza,
+    palabras: b.palabras ?? f.palabras,
+    generos: b.generos?.length ? b.generos : f.genero ? [f.genero] : undefined,
+    grafica: b.grafica ?? (f.conGrafica ? "si" : undefined),
+    agenda: b.agenda ?? unir([f.porQueAhora, f.novedad], " "),
+    fuentes: b.fuentes ?? unir((f.fuentes ?? []).map((x) => x.nombre), ", "),
+    evitar: b.evitar ?? unir(f.riesgos ?? [], "; "),
+  });
+}
+
 /** Las respuestas convertidas en texto para la IA (vacío si no hay ninguna). */
 export function briefParaPrompt(seccion: string, b: BriefSeccion | undefined): string {
   if (!b || !respondidas({ ...b, escritorId: undefined })) return "";

@@ -2,6 +2,7 @@ import "server-only";
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { categories, editorialPlans, editorialSlots } from "@/db/schema";
+import { briefDePieza, diaSemanaCO, sanearConfig } from "@/lib/consejo/plan";
 
 /** Piezas del consejo que todavía esperan algo de quien las escribe (todo menos lo ya programado, publicado u omitido). */
 const POR_HACER = ["planificada", "redactando", "revision", "fallida"];
@@ -69,17 +70,28 @@ export async function marcarVistas(userId: string): Promise<void> {
   if (ids.length) await db.update(editorialSlots).set({ responsableVistoAt: sql`now()` }).where(inArray(editorialSlots.id, ids.map((x) => x.id)));
 }
 
-/** Una pieza que le toca a esta persona (o cualquiera si es administrador), con lo necesario para escribirla en el asistente de artículos. */
+/** Una pieza que le toca a esta persona (o cualquiera si es administrador), con lo necesario para escribirla en el asistente de artículos, incluidas las respuestas del consejo. */
 export async function piezaParaEscribir(user: { id: string; role: string }, slotId: string) {
   if (!/^[0-9a-f-]{36}$/i.test(slotId)) return null;
   const [f] = await db
-    .select({ id: editorialSlots.id, tema: editorialSlots.topic, enfoque: editorialSlots.angle, encargo: editorialSlots.brief, slug: editorialSlots.sectionSlug, categoryId: categories.id, articleId: editorialSlots.articleId })
+    .select({
+      id: editorialSlots.id, tema: editorialSlots.topic, enfoque: editorialSlots.angle, encargo: editorialSlots.brief, slug: editorialSlots.sectionSlug,
+      categoryId: categories.id, articleId: editorialSlots.articleId, ficha: editorialSlots.ficha, publicaEn: editorialSlots.publishAt,
+      config: editorialPlans.config, temas: editorialPlans.temas,
+    })
     .from(editorialSlots)
     .innerJoin(editorialPlans, eq(editorialPlans.id, editorialSlots.planId))
     .leftJoin(categories, eq(categories.slug, editorialSlots.sectionSlug))
     .where(and(eq(editorialSlots.id, slotId), user.role === "administrador" ? undefined : asignadaA(user.id)))
     .limit(1);
-  return f ?? null;
+  if (!f) return null;
+  // El tema de la pieza: el de su sección que sale ese día (cada tema tiene su día); si no, el primero de la sección.
+  const dia = diaSemanaCO(f.publicaEn);
+  const deLaSeccion = (f.temas ?? []).filter((t) => t.seccion === f.slug);
+  const tema = deLaSeccion.find((t) => t.dia === dia) ?? deLaSeccion[0];
+  const cfg = sanearConfig(f.config);
+  const brief = briefDePieza(tema, cfg.briefs?.[f.slug], f.ficha, f.tema);
+  return { id: f.id, tema: f.tema, enfoque: f.enfoque, encargo: f.encargo, slug: f.slug, categoryId: f.categoryId, articleId: f.articleId, brief };
 }
 
 /** Enlaza la nota que se está escribiendo con su pieza del consejo: queda «redactando» (la IA no la escribe sola) hasta que se envíe a revisión. */

@@ -138,7 +138,7 @@ export function ArticleWizard({
   /** Artículo ya guardado que se reabre en el asistente. */
   initial?: WizardInitial;
   /** Tarea del consejo de redacción que se escribe: trae el tema y la sección; la nota queda enlazada a su pieza. */
-  pieza?: { id: string; tema: string; categoryId: string | null };
+  pieza?: { id: string; tema: string; categoryId: string | null; brief?: BriefSeccion };
   /** Paso por el que se abre (clave de STEPS). */
   startStep?: string;
   /** Cabecera, pie y tema del sitio para la vista previa de escritorio. */
@@ -179,7 +179,8 @@ export function ArticleWizard({
   const alto = useAltoVentana();
   // Fuente cuya pantalla está abierta en el primer paso (null = la pantalla base) y, aparte, la grabación o enlace que se
   // está revisando (-1 = el último cargado, para abrir la revisión justo al terminar de transcribir).
-  const [fuente, setFuente] = useState<Fuente | null>(null);
+  // Una tarea del consejo abre en «Ideas de la IA» con las preguntas ya contestadas por el consejo.
+  const [fuente, setFuente] = useState<Fuente | null>(pieza?.brief ? "ideas" : null);
   const [revisando, setRevisando] = useState<number | null>(null);
   const [progAbierto, setProgAbierto] = useState(false);
   const [progFecha, setProgFecha] = useState("");
@@ -197,7 +198,7 @@ export function ArticleWizard({
   const [sceneTxt, setSceneTxt] = useState("");
   const [imgError, setImgError] = useState("");
   const [genImg, startImg] = useTransition();
-  const [ideasBrief, setIdeasBrief] = useState<BriefSeccion>({});
+  const [ideasBrief, setIdeasBrief] = useState<BriefSeccion>(pieza?.brief ?? {});
   const [llenandoIdeas, startLlenar] = useTransition();
   const [searchingIdeas, startIdeas] = useTransition();
   const [pickedContext, setPickedContext] = useState<number | null>(null);

@@ -105,7 +105,7 @@ export default async function ArticleEditorPage({
           authors={auths}
           miAutorId={miAutorId}
           mode={modo}
-          pieza={p ? { id: p.id, tema: [p.tema, p.enfoque, p.encargo].filter(Boolean).join(". ").slice(0, 600), categoryId: p.categoryId } : undefined}
+          pieza={p ? { id: p.id, tema: [p.tema, p.enfoque, p.encargo].filter(Boolean).join(". ").slice(0, 600), categoryId: p.categoryId, brief: p.brief } : undefined}
           site={await siteChrome()}
           canPublish={canPublish(session!.user.role)}
           canPortada={await tienePermiso(session!.user.id, session!.user.role, "portada")}
