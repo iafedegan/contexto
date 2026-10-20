@@ -7,7 +7,7 @@ Leyenda: ✅ cumplida · 🟡 parcial (lo construido funciona; falta un entregab
 
 ## 1. Resumen ejecutivo
 
-- **13 de 24 obligaciones cumplidas, 9 parciales y 2 que aún no vencen.** Avance promedio estimado: **76 %**.
+- **13 de 24 obligaciones cumplidas, 9 parciales y 2 que aún no vencen.** Avance promedio estimado: **77 %**.
 - **La migración del archivo histórico está hecha:** 51.382 notas en producción (el TDR estimaba ≈41.000), con imágenes propias, categorías, autores y las direcciones originales intactas. Se adelantó más de un mes frente a lo previsto en la propuesta (20/11/2026).
 - **375 pruebas automáticas en verde** y despliegue continuo; el portal responde en ~0,5-0,8 s con caché y en 2-3 s en frío.
 - **Lo que más pesa en lo pendiente no es código, son entregables y acciones de cierre:** informe formal de conciliación de la migración, corte de dominio, conexión del correo (Resend), identificadores de analítica, transferencia de cuentas y código, manuales/capacitación y actas de aceptación.
@@ -33,7 +33,7 @@ Leyenda: ✅ cumplida · 🟡 parcial (lo construido funciona; falta un entregab
 | 16 | Gobernanza de inteligencia artificial | ✅ Cumplida | 90 % | Dejar visible, en cada nota con IA, el editor responsable (revisar que el dato salga en el artículo). |
 | 17 | Infraestructura y ambientes | 🟡 Parcial | 65 % | Ambiente de pruebas formal separado de producción. |
 | 18 | Pruebas y criterios de aceptación | 🟡 Parcial | 60 % | Acta de pruebas de aceptación por criterio (arquitectura, home, categorías, artículo, móvil, publicidad,… |
-| 19 | Documentación, capacitación y transferencia | 🟡 Parcial | 60 % | Actualizar los manuales con lo construido desde el 6/10 (editor de portada, newsletter por pasos, consejo… |
+| 19 | Documentación, capacitación y transferencia | 🟡 Parcial | 85 % | **Entrega efectiva de credenciales y contraseñas:** exige a FEDEGÁN la bóveda, dos custodios y la… |
 | 20 | Código fuente y propiedad intelectual | 🟡 Parcial | 70 % | Confirmar con FEDEGÁN que la cuenta `iafedegan` es de su propiedad (o transferir el repositorio a su… |
 | 21 | Cumplimiento del cronograma e hitos | ✅ Cumplida | 85 % | Ponerse al día con los entregables formales (E-01, E-02, E-10) y fijar la fecha de salida a producción con… |
 | 22 | Garantía, estabilización y soporte | ⏳ No vence aún | 0 % | Fijar la fecha de inicio de los 6 meses de garantía y los 2 de estabilización al hacer el corte de dominio. |
@@ -341,21 +341,22 @@ Leyenda: ✅ cumplida · 🟡 parcial (lo construido funciona; falta un entregab
 **Entregable para FEDEGÁN:** Acta de pruebas y aceptación firmada.  
 **Responsable:** Contratista + FEDEGÁN
 
-### 19. Documentación, capacitación y transferencia — 🟡 Parcial (60 %)
+### 19. Documentación, capacitación y transferencia — 🟡 Parcial (85 %)
 
 **Alcance contractual:** Entregar documentación de base de datos, documentación técnica, manual editorial, manual de administración, credenciales y contraseñas, y realizar capacitación diferenciada para redactores, editores y administradores.
 *Fuente:* Anexo Funcional: sección 20. Propuesta OpenView: E-10 y sección 12.
 
 **Lo realizado**
-- Documentación: arquitectura, base de datos (generada), manual editorial, manual de administración, seguridad, migración, consejo de redacción, medición de rendimiento y guía técnica del CMS.
+- **Paquete de 9 documentos controlados emitido el 19/10/2026** (`docs/obligacion-19/`, PDF con huellas SHA-256): índice y trazabilidad (CG-DOC-00), documentación técnica (01), documentación de la base de datos con diccionario de las 26 tablas y volúmenes reales de producción (02), manual editorial (03), manual de administración (04), seguridad con matriz de 39 controles y su evidencia (05), operación, continuidad y recuperación con 12 procedimientos (06), inventario de cuentas y credenciales con acta de entrega firmable (07) y plan de capacitación diferenciada con guías rápidas, ejercicios y formatos de asistencia y evaluación (08).
+- Manuales actualizados con lo construido desde el 6/10: editor de portada, newsletter por pasos, consejo de redacción (temas, tareas del equipo, mis pendientes, escribir una tarea), «Más leídas», panel por plantilla.
 
 **Lo que falta**
-- Actualizar los manuales con lo construido desde el 6/10 (editor de portada, newsletter por pasos, consejo de redacción, «Más leídas», panel por plantilla).
-- Capacitación diferenciada (redactores, editores, administradores): sesiones y grabaciones.
-- Entrega formal de credenciales y contraseñas.
+- **Entrega efectiva de credenciales y contraseñas:** exige a FEDEGÁN la bóveda, dos custodios y la transferencia de titularidad de Vercel, Supabase y GitHub; después el contratista rota los secretos y se firma el acta (CG-DOC-07).
+- **Dictar las tres capacitaciones** (redactores, editores y administradores) y firmar los registros de asistencia, evaluación y acta (CG-DOC-08).
+- Aprobación de los documentos por FEDEGÁN y confirmación de los puntos «a confirmar» (plan de Vercel y Supabase, reglas del Firewall, política de respaldos). Hallazgo abierto H-D1: cifrar el secreto TOTP de `users`.
 
-**Entregable para FEDEGÁN:** Manuales actualizados + plan y registro de capacitación + acta de entrega de credenciales.  
-**Responsable:** Contratista
+**Entregable para FEDEGÁN:** Paquete `Obligacion_19_Documentacion` (9 PDF + huellas) + actas firmadas de capacitación y de entrega de credenciales.  
+**Responsable:** Contratista + FEDEGÁN
 
 ### 20. Código fuente y propiedad intelectual — 🟡 Parcial (70 %)
 
