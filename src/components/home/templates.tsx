@@ -394,11 +394,21 @@ export function EsmeraldaTemplate({
     </EditableCard>
   );
   const aside = [second, ...rail].filter((a): a is ArticleListItem => Boolean(a));
+  // La lista de la derecha es más larga que la nota principal: en pantallas anchas el hueco bajo la principal se rellena con las siguientes notas
+  // (las primeras de «Lo más reciente», que en esas pantallas no se repiten abajo).
+  const relleno = Math.min(river.length, Math.max(0, Math.round((aside.length - 2) * 1.3)));
 
   return (
     <div className="flex flex-col gap-10 sm:gap-16">
       <section className="grid grid-cols-1 gap-7 sm:gap-8 xl:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
-        {wrap(lead, <ArticleCard a={lead} locale={locale} variant="lead" priority={interactive} />)}
+        <div className="flex min-w-0 flex-col gap-7 sm:gap-8">
+          {wrap(lead, <ArticleCard a={lead} locale={locale} variant="lead" priority={interactive} />)}
+          {relleno > 0 && (
+            <div className="hidden grid-cols-2 gap-x-6 gap-y-8 xl:grid">
+              {river.slice(0, relleno).map((a) => wrap(a, <ArticleCard a={a} locale={locale} compact />))}
+            </div>
+          )}
+        </div>
         <aside>
           <p className="lx-kicker text-[var(--accent)]">{t(locale, "home.cover")}</p>
           <h2 className="lx-display mt-2 text-2xl font-semibold tracking-tight md:text-3xl">
@@ -425,7 +435,7 @@ export function EsmeraldaTemplate({
               return wrap(
                 a,
                 <ArticleCard a={a} locale={locale} compact={!ancha} />,
-                cn(ancha && "max-sm:col-span-2", a.homeStyle?.span === 2 && "sm:col-span-2"),
+                cn(ancha && "max-sm:col-span-2", a.homeStyle?.span === 2 && "sm:col-span-2", i < relleno && "xl:hidden"),
               );
             })}
           </div>
