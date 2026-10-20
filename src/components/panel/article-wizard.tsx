@@ -646,13 +646,12 @@ export function ArticleWizard({
   // Usa una noticia como tema de la nota. En una tarea del consejo NO reemplaza el tema ni lo que el consejo ya contestó: la noticia se suma al contexto.
   function elegirNoticiaComoTema(n: NewsItem) {
     const textoNoticia = `${n.title}. ${n.summary} (Fuente: ${n.outlet}${n.date ? `, ${n.date}` : ""}).`;
-    // En una tarea la noticia se suma a «Hechos, fechas y cifras clave» (el tema y las demás respuestas del consejo quedan como están).
-    if (pieza) setIdeasBrief((b) => ((b.agenda ?? "").includes(n.title) ? b : { ...b, agenda: [b.agenda?.trim(), `Noticia relacionada: ${textoNoticia}`].filter(Boolean).join("\n") }));
+    // En una tarea la noticia se SUMA al texto del tema (no lo reemplaza) y se vuelve a esa pantalla.
+    if (pieza) setTopic((t) => (t.includes(n.title) ? t : `${t.trim()}\n\nNoticia relacionada: ${textoNoticia}`.trim()));
     else setTopic(textoNoticia);
     setOptions(null);
     setRefs((r) => (r.some((x) => x.url === n.url) ? r : [...r, n]));
-    // En una tarea se vuelve a «Ideas de la IA», con las preguntas del consejo y la noticia ya sumada.
-    setFuente(pieza ? "ideas" : null);
+    setFuente(null);
     // Se lee la página de la noticia como material: así la nota se escribe SOBRE ella y puede citar sus palabras textuales.
     if (n.type !== "video") {
       void leerEnlaces({ urls: n.url }).then((res) => {
@@ -958,7 +957,9 @@ export function ArticleWizard({
                 ideas={ideas}
                 picked={ideaElegida}
                 onPick={(i) => {
-                  setTopic(`${i.title}. ${i.angle}`);
+                  // En una tarea del consejo la idea se suma al tema; si no, lo reemplaza.
+                  if (pieza) setTopic((t) => (t.includes(i.title) ? t : `${t.trim()}\n\nIdea sugerida: ${i.title}. ${i.angle}`.trim()));
+                  else setTopic(`${i.title}. ${i.angle}`);
                   setIdeaElegida(i.title);
                   setOptions(null);
                   setFuente(null);
