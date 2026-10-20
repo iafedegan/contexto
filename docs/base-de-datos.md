@@ -99,10 +99,12 @@ Módulo dueño: **contenido** · variable en el esquema: `articles`
 | `cover_image_url` | text |  |
 | `cover_image_alt` | text |  |
 | `cover_image_caption` | text |  |
+| `legacy_path` | text |  |
 | `category_id` | uuid | → categories.id |
 | `author_id` | uuid | → authors.id |
 | `status` | editorialStatus | obligatorio |
 | `secciones` | jsonb | obligatorio |
+| `zonas` | jsonb | obligatorio |
 | `meta_title` | text |  |
 | `meta_description` | text |  |
 | `tags` | jsonb | obligatorio |
@@ -352,6 +354,46 @@ Módulo dueño: **portada-tema / configuración** · variable en el esquema: `si
 |---|---|---|
 | `key` | text | PK |
 | `value` | jsonb | obligatorio |
+| `updated_at` | timestamp | obligatorio |
+
+## `editorial_plans`
+
+Módulo dueño: **—** · variable en el esquema: `editorialPlans`
+
+| Columna | Tipo | Notas |
+|---|---|---|
+| `id` | uuid | PK |
+| `title` | text | obligatorio |
+| `week_start` | date | obligatorio |
+| `status` | text | obligatorio |
+| `config` | jsonb | obligatorio |
+| `temas` | jsonb | obligatorio |
+| `created_by` | uuid | → users.id |
+| `activated_by` | uuid | → users.id |
+| `created_at` | timestamp | obligatorio |
+| `updated_at` | timestamp | obligatorio |
+
+## `editorial_slots`
+
+Módulo dueño: **—** · variable en el esquema: `editorialSlots`
+
+| Columna | Tipo | Notas |
+|---|---|---|
+| `id` | uuid | PK |
+| `plan_id` | uuid |  |
+| `publish_at` | timestamp | obligatorio |
+| `section_slug` | text | obligatorio |
+| `topic` | text | obligatorio |
+| `angle` | text | obligatorio |
+| `brief` | text | obligatorio |
+| `ficha` | jsonb | obligatorio |
+| `priority` | smallint | obligatorio |
+| `approval` | text | obligatorio |
+| `status` | text | obligatorio |
+| `article_id` | uuid | → articles.id |
+| `error` | text |  |
+| `responsable_visto_at` | timestamp |  |
+| `created_at` | timestamp | obligatorio |
 | `updated_at` | timestamp | obligatorio |
 
 ## `contact_messages`
