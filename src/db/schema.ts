@@ -162,6 +162,35 @@ export const passkeys = pgTable(
   (t) => [index("passkeys_user_id_idx").on(t.userId)],
 );
 
+/**
+ * Sesiones locales de quien entra desde la SuperApp de FEDEGÁN (MiniApp «Contexto Ganadero»). La persona llega con un cupón de un solo uso que el
+ * servidor canjea; aquí queda la sesión que Contexto mantiene por su cuenta. Se guarda solo lo necesario: la pareja audience + subject, el nivel y los
+ * permisos que comunicó FEDEGÁN, la referencia de la sesión de origen (CIFRADA, para consultar su vigencia) y los vencimientos. **No** se guardan
+ * documento ni correo. La cookie lleva un token aleatorio; aquí solo está su huella.
+ */
+export const superappSesiones = pgTable(
+  "superapp_sesiones",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tokenHash: text("token_hash").notNull().unique(),
+    audience: text("audience").notNull(),
+    subject: text("subject").notNull(),
+    /** Referencia de la sesión de origen (`srs_…`), cifrada con la clave de secretos. */
+    sessionReference: text("session_reference").notNull(),
+    assuranceLevel: integer("assurance_level").notNull().default(0),
+    capabilities: jsonb("capabilities").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+    issuedAt: timestamp("issued_at", { withTimezone: true }).notNull(),
+    /** Vencimiento comunicado por FEDEGÁN: la sesión local nunca dura más. */
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    /** Última vez que FEDEGÁN confirmó que la sesión sigue vigente. */
+    validatedAt: timestamp("validated_at", { withTimezone: true }),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    correlationId: text("correlation_id"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("superapp_sesiones_vence_idx").on(t.expiresAt)],
+);
+
 // Tablas mínimas requeridas por @auth/drizzle-adapter (sesiones JWT no las usan,
 // pero se dejan para permitir SSO futuro sin migración).
 export const sessions = pgTable("sessions", {

@@ -4,6 +4,7 @@ import { aplicarRetencion, type ResultadoRetencion } from "@/lib/newsletter/rete
 import { limpiarMediaHuerfana, type ResultadoLimpieza } from "@/lib/media-limpieza";
 import { purgarLecturas } from "@/lib/lectores-registro";
 import { purgarVinculosDeBajas } from "@/lib/lectores-suscriptor";
+import { purgarSesionesSuperApp } from "@/lib/superapp/sesion";
 
 /**
  * Mantenimiento diario de datos: lo que debe borrarse porque venció. Lo ejecuta el cron de `publish-scheduled` (el plan
@@ -21,6 +22,7 @@ export type ResultadoMantenimiento = {
   medios: ResultadoLimpieza | { error: string };
   lecturas: number | "off" | { error: string };
   vinculos: number | { error: string };
+  sesionesSuperApp: number | { error: string };
 };
 
 export async function purgarVencidos(): Promise<ResultadoMantenimiento> {
@@ -34,12 +36,13 @@ export async function purgarVencidos(): Promise<ResultadoMantenimiento> {
   const cfg = (process.env.RETENCION_LECTORES ?? "").trim().toLowerCase();
   const diasLecturas = Number(cfg);
   const lecturasTarea: Promise<number | "off"> = cfg === "off" ? Promise.resolve("off" as const) : purgarLecturas(Number.isFinite(diasLecturas) && diasLecturas >= 30 ? Math.floor(diasLecturas) : 400);
-  const [limitesBorrados, boletin, medios, lecturas, vinculos] = await Promise.all([
+  const [limitesBorrados, boletin, medios, lecturas, vinculos, sesionesSuperApp] = await Promise.all([
     purgarLimitesVencidos(),
     aislar("la retención de datos del boletín", aplicarRetencion()),
     aislar("la limpieza de medios", limpiarMediaHuerfana()),
     aislar("la retención de lecturas", lecturasTarea),
     aislar("el borrado de vínculos de lectura de quienes se dieron de baja", purgarVinculosDeBajas()),
+    aislar("la purga de sesiones vencidas de la SuperApp", purgarSesionesSuperApp()),
   ]);
-  return { limitesBorrados, boletin, medios, lecturas, vinculos };
+  return { limitesBorrados, boletin, medios, lecturas, vinculos, sesionesSuperApp };
 }

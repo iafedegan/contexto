@@ -176,6 +176,13 @@
       "when": 1792456494033,
       "tag": "0024_aviso_de_tarea_nueva",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1792507275259,
+      "tag": "0025_sesiones_de_la_superapp",
+      "breakpoints": true
     }
   ]
 }

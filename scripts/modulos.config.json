@@ -30,7 +30,10 @@
       "titulo": "Usuarios y acceso",
       "rutas": [
         "^lib/(auth|passkey|passkey-hosts|totp|permisos|permisos-server|secrets|login-log|user-authors)\\.ts$",
-        "^app/api/auth/"
+        "^app/api/auth/",
+        "^lib/superapp/",
+        "^app/superapp/",
+        "^app/api/superapp/"
       ],
       "puedeUsar": [
         "infra"

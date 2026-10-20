@@ -19,7 +19,7 @@ export default async function robots(): Promise<MetadataRoute.Robots> {
   if (!anfitrionIndexable(host, siteUrl("/"))) return { rules: [{ userAgent: "*", disallow: "/" }] };
 
   // `/vista-previa` lleva además `noindex`: son borradores con enlace firmado.
-  const disallow = ["/panel", "/api/", "/buscar", "/vista-previa", "/vista-portada"];
+  const disallow = ["/panel", "/api/", "/buscar", "/vista-previa", "/vista-portada", "/superapp/"];
 
   return {
     rules: [
