@@ -4,6 +4,7 @@ import { CalendarClock, ChevronRight, ClipboardList } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { Card } from "@/components/ui";
 import { MarcarVistos } from "@/components/panel/marcar-vistos";
+import { sincronizarCasillas } from "@/lib/ai/consejo-ejecucion";
 import { contarMisPendientes, misPendientes } from "./consultas";
 
 export const dynamic = "force-dynamic";
@@ -21,6 +22,7 @@ const cuando = (d: Date) => new Intl.DateTimeFormat("es-CO", { weekday: "long", 
 export default async function MisPendientes() {
   const session = await auth();
   if (!session?.user) redirect("/panel/login?motivo=sesion");
+  await sincronizarCasillas().catch(() => {});
   const [lista, { nuevas }] = await Promise.all([misPendientes(session.user.id), contarMisPendientes(session.user.id)]);
   const paraRevisar = lista.filter((p) => p.estado === "revision").length;
   return (

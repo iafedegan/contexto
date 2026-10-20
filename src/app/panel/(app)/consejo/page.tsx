@@ -10,6 +10,7 @@ import { lunesDe, sumarDias } from "@/lib/consejo/plan";
 import { TabsConsejo } from "@/components/panel/tabs-consejo";
 import { TareasEquipo } from "@/components/panel/tareas-equipo";
 import { tareasDelEquipo } from "./tareas";
+import { sincronizarCasillas } from "@/lib/ai/consejo-ejecucion";
 
 export const metadata = { title: "Consejo de redacción" };
 export const dynamic = "force-dynamic";
@@ -21,6 +22,8 @@ export default async function ConsejosPage({ searchParams }: { searchParams: Pro
   await requirePermiso("articulos");
   const { tab, editor = "", estado = "" } = await searchParams;
   const verTareas = tab === "tareas";
+  // Pone al día el estado de las piezas según el de su nota (publicada, programada, en revisión) antes de listarlas.
+  await sincronizarCasillas().catch(() => {});
   const tareas = await tareasDelEquipo();
   const abiertas = tareas.filter((t) => t.estado !== "publicada").length;
   const hoy = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Bogota" }).format(new Date());

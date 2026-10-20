@@ -21,6 +21,14 @@ export type TareaEquipo = {
   enlacePublico: string | null;
 };
 
+// El estado de la pieza puede ir un paso atrás del de su nota (se sincroniza por pasadas): lo que se ve sigue a la nota.
+function estadoReal(estadoPieza: string, estadoNota: string | null): string {
+  if (estadoNota === "publicado") return "publicada";
+  if (estadoNota === "programado") return "programada";
+  if (estadoNota === "en_revision" && estadoPieza === "redactando") return "revision";
+  return estadoPieza;
+}
+
 /** Las piezas de los consejos activos o cerrados con quién las tiene a cargo (el escritor de la pieza o, si no, el del consejo) y el enlace de su nota. */
 export async function tareasDelEquipo(): Promise<TareaEquipo[]> {
   const [filas, escritores] = await Promise.all([
@@ -52,7 +60,7 @@ export async function tareasDelEquipo(): Promise<TareaEquipo[]> {
   ]);
   const nombre = new Map(escritores.map((e) => [e.id, e.nombre]));
   return filas.map((f) => ({
-    id: f.id, planId: f.planId, plan: f.plan, tema: f.tema, seccion: f.seccion ?? f.slug, publicaEn: f.publicaEn, estado: f.estado, error: f.error,
+    id: f.id, planId: f.planId, plan: f.plan, tema: f.tema, seccion: f.seccion ?? f.slug, publicaEn: f.publicaEn, estado: estadoReal(f.estado, f.articuloEstado), error: f.error,
     editorId: f.editorId, editor: f.editorId ? nombre.get(f.editorId) ?? "Sin identificar" : "Sin asignar", articleId: f.articleId,
     enlacePublico: f.articuloEstado === "publicado" && f.articuloSlug ? rutaDeNota({ slug: f.articuloSlug, legacyPath: f.articuloRuta }) : null,
   }));

@@ -1,7 +1,7 @@
 import "server-only";
-import { and, asc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, notInArray, or, isNull, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { categories, editorialPlans, editorialSlots } from "@/db/schema";
+import { articles, categories, editorialPlans, editorialSlots } from "@/db/schema";
 import { briefDePieza, diaSemanaCO, sanearConfig } from "@/lib/consejo/plan";
 
 /** Piezas del consejo que todavía esperan algo de quien las escribe (todo menos lo ya programado, publicado u omitido). */
@@ -9,6 +9,9 @@ const POR_HACER = ["planificada", "redactando", "revision", "fallida"];
 
 // A quién le toca la pieza: el escritor de su ficha o, si no tiene, el del consejo (igual que en el editor del consejo).
 const asignadaA = (userId: string) => sql`coalesce(${editorialSlots.ficha}->>'escritorId', ${editorialPlans.config}->>'escritorId') = ${userId}`;
+
+// La tarea terminó para quien escribe cuando su nota ya salió o está programada: aunque el estado de la pieza aún no se haya sincronizado, no cuenta como pendiente.
+const notaSinCerrar = or(isNull(articles.status), notInArray(articles.status, ["publicado", "programado", "archivado"]));
 
 export type Pendiente = {
   id: string;
@@ -40,7 +43,8 @@ export async function misPendientes(userId: string): Promise<Pendiente[]> {
     .from(editorialSlots)
     .innerJoin(editorialPlans, eq(editorialPlans.id, editorialSlots.planId))
     .leftJoin(categories, eq(categories.slug, editorialSlots.sectionSlug))
-    .where(and(eq(editorialPlans.status, "activo"), inArray(editorialSlots.status, POR_HACER), asignadaA(userId)))
+    .leftJoin(articles, eq(articles.id, editorialSlots.articleId))
+    .where(and(eq(editorialPlans.status, "activo"), inArray(editorialSlots.status, POR_HACER), asignadaA(userId), notaSinCerrar))
     .orderBy(asc(editorialSlots.publishAt))
     .limit(200);
   return filas.map((f) => ({ id: f.id, planId: f.planId, plan: f.plan, tema: f.tema, seccion: f.seccion ?? f.slug, publicaEn: f.publicaEn, estado: f.estado, articleId: f.articleId, error: f.error }));
@@ -53,7 +57,8 @@ export async function contarMisPendientes(userId: string): Promise<{ total: numb
       .select({ total: sql<number>`count(*)::int`, nuevas: sql<number>`count(*) filter (where ${editorialSlots.responsableVistoAt} is null)::int` })
       .from(editorialSlots)
       .innerJoin(editorialPlans, eq(editorialPlans.id, editorialSlots.planId))
-      .where(and(eq(editorialPlans.status, "activo"), inArray(editorialSlots.status, POR_HACER), asignadaA(userId)));
+      .leftJoin(articles, eq(articles.id, editorialSlots.articleId))
+      .where(and(eq(editorialPlans.status, "activo"), inArray(editorialSlots.status, POR_HACER), asignadaA(userId), notaSinCerrar));
     return { total: r?.total ?? 0, nuevas: r?.nuevas ?? 0 };
   } catch {
     return { total: 0, nuevas: 0 };

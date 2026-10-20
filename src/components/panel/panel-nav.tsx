@@ -138,7 +138,7 @@ export function PanelSidebarNav({ role, permisos, pendientes = 0 }: { role: stri
                   >
                     {current && <span aria-hidden className="absolute -left-1.5 top-2 bottom-2 w-1 rounded-full bg-[var(--accent)]" />}
                     <Icon size={20} className={`shrink-0 ${current ? "text-[var(--accent)]" : "opacity-80 group-hover:text-[var(--accent)]"}`} aria-hidden />
-                    {i.badge ? <span aria-hidden className="absolute left-7 top-1 grid min-w-4 place-items-center rounded-full bg-red-600 px-1 text-[0.625rem] font-bold leading-4 text-white group-hover/sb:hidden">{i.badge > 9 ? "9+" : i.badge}</span> : null}
+                    {i.badge ? <span aria-hidden className="absolute left-7 top-1 grid min-w-4 place-items-center rounded-full bg-red-600 px-1 text-[0.625rem] font-bold leading-4 text-white group-hover/sb:hidden group-focus-within/sb:hidden">{i.badge > 9 ? "9+" : i.badge}</span> : null}
                     <span className="whitespace-nowrap opacity-0 transition-opacity duration-150 group-hover/sb:opacity-100 group-focus-within/sb:opacity-100">{i.label}</span>
                     {i.badge ? <span aria-label={`${i.badge} pendientes`} className="ml-auto hidden rounded-full bg-red-600 px-2 text-xs font-bold leading-5 text-white group-hover/sb:inline group-focus-within/sb:inline">{i.badge}</span> : null}
                   </Link>
