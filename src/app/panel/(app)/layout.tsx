@@ -41,7 +41,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
   // Por id y, si el id de la sesión no aparece, por correo (como requireRole):
   // sin esto una sesión con id desfasado se saltaba la exigencia de 2FA.
   // La cuenta y los ajustes de permisos se piden a la vez (y la cuenta ya viene resuelta de la sesión: no es otro viaje).
-  const [yoPorId, ajustes, cabeceras, sitio, plazos, pendientes] = await Promise.all([cuentaPorId(session.user.id), getAjustes(), headers(), getSiteTheme(), getPlazos2fa(), contarMisPendientes(session.user.id)]);
+  const [yoPorId, ajustes, cabeceras, sitio, plazos, misTareas] = await Promise.all([cuentaPorId(session.user.id), getAjustes(), headers(), getSiteTheme(), getPlazos2fa(), contarMisPendientes(session.user.id)]);
   // La barra lleva el color principal de la plantilla que usa el sitio (se cambia en Portada y plantillas).
   const marca = colorPanel(sitio.theme);
   const estiloMarca = { "--accent": marca.acento, "--accent-2": marca.acento, "--border-strong": marca.acento, "--link": marca.acento, "--accent-fg": "#101611",
@@ -130,7 +130,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
             <p className="truncate text-xs capitalize text-[var(--fg-muted)]">{session.user.role}</p>
           </div>
         </div>
-        {!debeActivar2fa && <PanelSidebarNav role={session.user.role} permisos={permisos} pendientes={pendientes} />}
+        {!debeActivar2fa && <PanelSidebarNav role={session.user.role} permisos={permisos} pendientes={misTareas.total} />}
         <div className="mt-auto flex items-center justify-between gap-2 whitespace-nowrap border-t border-white/10 pt-4 text-sm opacity-0 transition-opacity duration-150 group-hover/sb:opacity-100 group-focus-within/sb:opacity-100">
           <Link href="/" className="font-medium text-[var(--fg-muted)] transition hover:text-white">Ver sitio</Link>
           <form action={async () => { "use server"; await signOut({ redirectTo: "/panel/login" }); }}>
@@ -163,7 +163,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
           </Link>
 
           {!debeActivar2fa && (
-            <PanelNav role={session.user.role} permisos={permisos} pendientes={pendientes}>
+            <PanelNav role={session.user.role} permisos={permisos} pendientes={misTareas.total}>
               {cuenta}
             </PanelNav>
           )}
@@ -196,7 +196,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
             </p>
           )}
           {bloqueado ? <IrASeguridad href={`${RUTA_SEGURIDAD}#seguridad`} /> : children}
-          {!debeActivar2fa && !bloqueado && <AvisoTareas pendientes={pendientes} usuarioId={session.user.id} />}
+          {!debeActivar2fa && !bloqueado && <AvisoTareas pendientes={misTareas.total} nuevas={misTareas.nuevas} />}
         </div>
       </main>
 

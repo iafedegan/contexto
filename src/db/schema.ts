@@ -683,6 +683,8 @@ export const editorialSlots = pgTable(
     status: text("status").notNull().default("planificada"),
     articleId: uuid("article_id").references(() => articles.id, { onDelete: "set null" }),
     error: text("error"),
+    /** Cuándo vio el responsable que la pieza le llegó (null = tarea nueva: sale el aviso y la insignia «nueva»). */
+    responsableVistoAt: timestamp("responsable_visto_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },

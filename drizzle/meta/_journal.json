@@ -169,6 +169,13 @@
       "when": 1792368300812,
       "tag": "0023_zonas_de_las_notas",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1792456494033,
+      "tag": "0024_aviso_de_tarea_nueva",
+      "breakpoints": true
     }
   ]
 }

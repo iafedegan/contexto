@@ -3,7 +3,8 @@ import { redirect } from "next/navigation";
 import { CalendarClock, ChevronRight, ClipboardList } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { Card } from "@/components/ui";
-import { misPendientes } from "./consultas";
+import { MarcarVistos } from "@/components/panel/marcar-vistos";
+import { contarMisPendientes, misPendientes } from "./consultas";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Mis pendientes" };
@@ -20,10 +21,11 @@ const cuando = (d: Date) => new Intl.DateTimeFormat("es-CO", { weekday: "long", 
 export default async function MisPendientes() {
   const session = await auth();
   if (!session?.user) redirect("/panel/login?motivo=sesion");
-  const lista = await misPendientes(session.user.id);
+  const [lista, { nuevas }] = await Promise.all([misPendientes(session.user.id), contarMisPendientes(session.user.id)]);
   const paraRevisar = lista.filter((p) => p.estado === "revision").length;
   return (
     <div className="flex flex-col gap-5 sm:gap-6">
+      <MarcarVistos hayNuevas={nuevas > 0} />
       <header>
         <p className="lx-kicker text-[var(--accent)]">Consejo de redacción</p>
         <h1 className="lx-display mt-1 text-3xl font-semibold tracking-tight sm:text-4xl">Mis pendientes</h1>
