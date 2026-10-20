@@ -1,6 +1,5 @@
 import { t, type Locale } from "@/lib/i18n";
 import type { Metadata } from "next";
-import Link from "next/link";
 import { AssistantChat } from "@/components/assistant-chat";
 import { SiteShell } from "@/components/site-shell";
 import { getSiteTheme } from "@/lib/site-theme";
@@ -30,7 +29,6 @@ async function AssistantPage({ locale }: { locale: Locale }) {
         <p className="mx-auto mt-5 max-w-xl text-sm leading-relaxed text-[var(--fg-muted)]">
           {t(locale, "assistant.blurb")}
         </p>
-        <Link href="/toro-ar" className="lx-chip mx-auto mt-4 inline-flex border-[var(--border-strong)] hover:text-[var(--accent)]">Ver a Toro en realidad aumentada (AR)</Link>
       </header>
 
       <div className="mt-12">
