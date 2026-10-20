@@ -64,7 +64,9 @@ async function generateMetadataImpl({ params, desdeOriginal }: Params): Promise<
 // Página de una nota publicada: cuerpo saneado, autor, relacionados y datos estructurados; 404 si no existe.
 async function ArticlePage({ params, locale }: Params & { locale: Locale }) {
   const { slug } = await params;
-  const a = await getPublishedArticleBySlug(slug).catch(() => null);
+  // Sin `.catch`: si la base falla, la página FALLA (Next conserva la versión guardada y no cachea nada) en vez de responder 404 a una nota que existe.
+  // `null` solo significa que la nota de verdad no existe.
+  const a = await getPublishedArticleBySlug(slug);
   if (!a) notFound();
 
   const [related, site, enBarra] = await Promise.all([
