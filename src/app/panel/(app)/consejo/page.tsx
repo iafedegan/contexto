@@ -7,6 +7,9 @@ import { requirePermiso } from "@/lib/auth";
 import { ConsejoNuevo } from "@/components/panel/consejo-nuevo";
 import { ConsejoBorrar } from "@/components/panel/consejo-borrar";
 import { lunesDe, sumarDias } from "@/lib/consejo/plan";
+import { TabsConsejo } from "@/components/panel/tabs-consejo";
+import { TareasEquipo } from "@/components/panel/tareas-equipo";
+import { tareasDelEquipo } from "./tareas";
 
 export const metadata = { title: "Consejo de redacción" };
 export const dynamic = "force-dynamic";
@@ -14,8 +17,12 @@ export const dynamic = "force-dynamic";
 const ESTADO = { borrador: "Borrador", activo: "Activo", cerrado: "Cerrado" } as const;
 
 /** Lista de consejos de redacción y alta de uno nuevo. */
-export default async function ConsejosPage() {
+export default async function ConsejosPage({ searchParams }: { searchParams: Promise<{ tab?: string; editor?: string; estado?: string }> }) {
   await requirePermiso("articulos");
+  const { tab, editor = "", estado = "" } = await searchParams;
+  const verTareas = tab === "tareas";
+  const tareas = await tareasDelEquipo();
+  const abiertas = tareas.filter((t) => t.estado !== "publicada").length;
   const hoy = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Bogota" }).format(new Date());
   const proximoLunes = sumarDias(lunesDe(hoy), 7);
   const planes = await db
@@ -38,8 +45,10 @@ export default async function ConsejosPage() {
         <h1 className="lx-display mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">Consejo de redacción</h1>
         <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[var(--fg-muted)]">Como en una sala de redacción: se planea la semana (temas, cuántas notas por día y sección, horas de publicación y quién aprueba), y la IA redacta cada pieza a su tiempo. Nada sale sin que un editor lo haya autorizado.</p>
       </div>
-      <ConsejoNuevo proximoLunes={proximoLunes} />
-      {planes.length > 0 && (
+      <TabsConsejo activa={verTareas ? "tareas" : "consejos"} abiertas={abiertas} />
+      {verTareas && <TareasEquipo tareas={tareas} editor={editor} estado={estado} />}
+      {!verTareas && <ConsejoNuevo proximoLunes={proximoLunes} />}
+      {!verTareas && planes.length > 0 && (
         <ul className="flex flex-col gap-3">
           {planes.map((p) => (
             <li key={p.id} className="flex items-center gap-2">
