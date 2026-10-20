@@ -643,9 +643,11 @@ export function ArticleWizard({
   function toggleRef(n: NewsItem) {
     setRefs((r) => (r.some((x) => x.url === n.url) ? r.filter((x) => x.url !== n.url) : [...r, n]));
   }
-  // Usa una noticia como tema de la nota.
+  // Usa una noticia como tema de la nota. En una tarea del consejo NO reemplaza el tema ni lo que el consejo ya contestó: la noticia se suma al contexto.
   function elegirNoticiaComoTema(n: NewsItem) {
-    setTopic(`${n.title}. ${n.summary} (Fuente: ${n.outlet}${n.date ? `, ${n.date}` : ""}).`);
+    const textoNoticia = `${n.title}. ${n.summary} (Fuente: ${n.outlet}${n.date ? `, ${n.date}` : ""}).`;
+    if (pieza) setTopic((t) => (t.includes(n.title) ? t : `${t.trim()}\n\nNoticia relacionada: ${textoNoticia}`.trim()));
+    else setTopic(textoNoticia);
     setOptions(null);
     setRefs((r) => (r.some((x) => x.url === n.url) ? r : [...r, n]));
     setFuente(null);
