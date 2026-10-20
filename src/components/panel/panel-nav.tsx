@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CalendarRange, Inbox, KeyRound, LayoutDashboard, LayoutTemplate, Mail, Newspaper, Settings, Users, Circle } from "lucide-react";
+import { CalendarRange, ClipboardList, Inbox, KeyRound, LayoutDashboard, LayoutTemplate, Mail, Newspaper, Settings, Users, Circle } from "lucide-react";
 import type { PermisoId } from "@/lib/permisos";
 import { PanelMobileMenu } from "@/components/panel/panel-mobile-menu";
 
@@ -15,6 +15,8 @@ type Item = {
   permiso?: PermisoId;
   /** Cómo la ve quien no es administrador (si sigue viéndola, con otro texto). */
   paraOtros?: { label: string; hint: string };
+  /** Número que se muestra en una insignia junto al nombre (p. ej. las piezas que te asignaron). */
+  badge?: number;
 };
 // Grupo de elementos del menú.
 type Group = { id: string; label: string; items: Item[] };
@@ -43,6 +45,7 @@ const GROUPS: Group[] = [
     items: [
       { href: "/panel", label: "Resumen", hint: "Estado editorial, audiencia y suscriptores" },
       { href: "/panel/articulos", label: "Artículos", hint: "Crear, editar y programar", permiso: "articulos" },
+      { href: "/panel/pendientes", label: "Mis pendientes", hint: "Piezas del consejo que te asignaron" },
       { href: "/panel/consejo", label: "Consejo de redacción", hint: "Planear la semana con IA", permiso: "articulos" },
       { href: "/panel/newsletter", label: "Newsletter", hint: "Configurar y enviar el boletín", permiso: "newsletter" },
     ],
@@ -83,14 +86,15 @@ const GROUPS: Group[] = [
 ];
 
 // Grupos y elementos que la persona puede ver según su rol y permisos.
-function gruposVisibles(role: string, permisos: string[]) {
+function gruposVisibles(role: string, permisos: string[], pendientes = 0) {
   const esAdmin = role === "administrador";
   // Lo que el rol no puede usar ni se muestra (el servidor además lo exige).
   return GROUPS.map((g) => ({
     ...g,
     items: g.items
       .filter((i) => !i.permiso || permisos.includes(i.permiso))
-      .map((i) => (esAdmin || !i.paraOtros ? i : { ...i, ...i.paraOtros })),
+      .map((i) => (esAdmin || !i.paraOtros ? i : { ...i, ...i.paraOtros }))
+      .map((i) => (i.href === "/panel/pendientes" && pendientes > 0 ? { ...i, badge: pendientes } : i)),
   })).filter((g) => g.items.length > 0);
 }
 
@@ -100,6 +104,7 @@ const ICONOS: Record<string, typeof Circle> = {
   "/panel/portada": LayoutTemplate,
   "/panel/articulos": Newspaper,
   "/panel/consejo": CalendarRange,
+  "/panel/pendientes": ClipboardList,
   "/panel/newsletter": Mail,
   "/panel/configuracion": Settings,
   "/panel/newsletter?tab=suscriptores": Users,
@@ -108,8 +113,8 @@ const ICONOS: Record<string, typeof Circle> = {
 };
 
 /** Barra lateral de escritorio (≥ lg): navegación vertical agrupada, con la sección activa resaltada. */
-export function PanelSidebarNav({ role, permisos }: { role: string; permisos: string[] }) {
-  const groups = gruposVisibles(role, permisos);
+export function PanelSidebarNav({ role, permisos, pendientes = 0 }: { role: string; permisos: string[]; pendientes?: number }) {
+  const groups = gruposVisibles(role, permisos, pendientes);
   const pathname = usePathname();
   return (
     <nav aria-label="Secciones del panel" className="flex flex-col gap-6">
@@ -133,7 +138,9 @@ export function PanelSidebarNav({ role, permisos }: { role: string; permisos: st
                   >
                     {current && <span aria-hidden className="absolute -left-1.5 top-2 bottom-2 w-1 rounded-full bg-[var(--accent)]" />}
                     <Icon size={20} className={`shrink-0 ${current ? "text-[var(--accent)]" : "opacity-80 group-hover:text-[var(--accent)]"}`} aria-hidden />
+                    {i.badge ? <span aria-hidden className="absolute left-7 top-1 grid min-w-4 place-items-center rounded-full bg-red-600 px-1 text-[0.625rem] font-bold leading-4 text-white group-hover/sb:hidden">{i.badge > 9 ? "9+" : i.badge}</span> : null}
                     <span className="whitespace-nowrap opacity-0 transition-opacity duration-150 group-hover/sb:opacity-100 group-focus-within/sb:opacity-100">{i.label}</span>
+                    {i.badge ? <span aria-label={`${i.badge} pendientes`} className="ml-auto hidden rounded-full bg-red-600 px-2 text-xs font-bold leading-5 text-white group-hover/sb:inline group-focus-within/sb:inline">{i.badge}</span> : null}
                   </Link>
                 </li>
               );
@@ -146,13 +153,13 @@ export function PanelSidebarNav({ role, permisos }: { role: string; permisos: st
 }
 
 // Menú lateral del panel, filtrado por rol y permisos.
-export function PanelNav({ role, permisos, children }: { role: string; permisos: string[]; children?: React.ReactNode }) {
-  const groups = gruposVisibles(role, permisos);
+export function PanelNav({ role, permisos, pendientes = 0, children }: { role: string; permisos: string[]; pendientes?: number; children?: React.ReactNode }) {
+  const groups = gruposVisibles(role, permisos, pendientes);
 
   return (
     <>
     {/* Debajo de `lg` los tres desplegables no caben: menú móvil con todas las secciones y la cuenta. */}
-    <PanelMobileMenu groups={groups}>{children}</PanelMobileMenu>
+    <PanelMobileMenu groups={groups} alerta={pendientes > 0}>{children}</PanelMobileMenu>
     </>
   );
 }

@@ -8,6 +8,8 @@ import { LogoMark } from "@/components/logo-mark";
 import { users } from "@/db/schema";
 import { auth, cuentaPorId, signOut } from "@/lib/auth";
 import { PanelNav, PanelSidebarNav } from "@/components/panel/panel-nav";
+import { AvisoTareas } from "@/components/panel/aviso-tareas";
+import { contarMisPendientes } from "./pendientes/consultas";
 import { HeaderHeightVar } from "@/components/panel/header-height";
 import { IrASeguridad } from "@/components/panel/ir-a-seguridad";
 import { efectivos, enPlazoDosPasos, exige2fa } from "@/lib/permisos";
@@ -39,7 +41,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
   // Por id y, si el id de la sesión no aparece, por correo (como requireRole):
   // sin esto una sesión con id desfasado se saltaba la exigencia de 2FA.
   // La cuenta y los ajustes de permisos se piden a la vez (y la cuenta ya viene resuelta de la sesión: no es otro viaje).
-  const [yoPorId, ajustes, cabeceras, sitio, plazos] = await Promise.all([cuentaPorId(session.user.id), getAjustes(), headers(), getSiteTheme(), getPlazos2fa()]);
+  const [yoPorId, ajustes, cabeceras, sitio, plazos, pendientes] = await Promise.all([cuentaPorId(session.user.id), getAjustes(), headers(), getSiteTheme(), getPlazos2fa(), contarMisPendientes(session.user.id)]);
   // La barra lleva el color principal de la plantilla que usa el sitio (se cambia en Portada y plantillas).
   const marca = colorPanel(sitio.theme);
   const estiloMarca = { "--accent": marca.acento, "--accent-2": marca.acento, "--border-strong": marca.acento, "--link": marca.acento, "--accent-fg": "#101611",
@@ -128,7 +130,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
             <p className="truncate text-xs capitalize text-[var(--fg-muted)]">{session.user.role}</p>
           </div>
         </div>
-        {!debeActivar2fa && <PanelSidebarNav role={session.user.role} permisos={permisos} />}
+        {!debeActivar2fa && <PanelSidebarNav role={session.user.role} permisos={permisos} pendientes={pendientes} />}
         <div className="mt-auto flex items-center justify-between gap-2 whitespace-nowrap border-t border-white/10 pt-4 text-sm opacity-0 transition-opacity duration-150 group-hover/sb:opacity-100 group-focus-within/sb:opacity-100">
           <Link href="/" className="font-medium text-[var(--fg-muted)] transition hover:text-white">Ver sitio</Link>
           <form action={async () => { "use server"; await signOut({ redirectTo: "/panel/login" }); }}>
@@ -161,7 +163,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
           </Link>
 
           {!debeActivar2fa && (
-            <PanelNav role={session.user.role} permisos={permisos}>
+            <PanelNav role={session.user.role} permisos={permisos} pendientes={pendientes}>
               {cuenta}
             </PanelNav>
           )}
@@ -194,6 +196,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
             </p>
           )}
           {bloqueado ? <IrASeguridad href={`${RUTA_SEGURIDAD}#seguridad`} /> : children}
+          {!debeActivar2fa && !bloqueado && <AvisoTareas pendientes={pendientes} usuarioId={session.user.id} />}
         </div>
       </main>
 

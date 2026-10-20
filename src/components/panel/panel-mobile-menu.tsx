@@ -9,7 +9,7 @@ import { Menu, X } from "lucide-react";
 export type MenuGroup = {
   id: string;
   label: string;
-  items: { href: string; label: string; hint: string }[];
+  items: { href: string; label: string; hint: string; badge?: number }[];
 };
 
 /**
@@ -22,7 +22,7 @@ export type MenuGroup = {
  * posiciona contra la `<header>` (que es `sticky`), así que el botón y la hoja
  * no ocupan alto cuando el menú está cerrado.
  */
-export function PanelMobileMenu({ groups, children }: { groups: MenuGroup[]; children: React.ReactNode }) {
+export function PanelMobileMenu({ groups, alerta = false, children }: { groups: MenuGroup[]; alerta?: boolean; children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
   const sheet = useRef<HTMLDivElement>(null);
@@ -65,9 +65,10 @@ export function PanelMobileMenu({ groups, children }: { groups: MenuGroup[]; chi
         aria-expanded={open}
         aria-controls="panel-menu-movil"
         aria-label={open ? "Cerrar el menú del panel" : "Abrir el menú del panel"}
-        className="ml-auto grid size-11 shrink-0 place-items-center rounded-full border border-[var(--border-strong)] text-[var(--fg)] transition active:scale-95 hover:border-[var(--accent)] lg:hidden"
+        className="relative ml-auto grid size-11 shrink-0 place-items-center rounded-full border border-[var(--border-strong)] text-[var(--fg)] transition active:scale-95 hover:border-[var(--accent)] lg:hidden"
       >
         {open ? <X size={20} /> : <Menu size={20} />}
+        {alerta && !open && <span aria-hidden className="absolute right-1.5 top-1.5 size-2.5 rounded-full bg-red-600 ring-2 ring-[var(--bg)]" />}
       </button>
 
       {open && (
@@ -94,6 +95,7 @@ export function PanelMobileMenu({ groups, children }: { groups: MenuGroup[]; chi
                           }`}
                         >
                           <span className="text-[0.95rem] font-medium">{item.label}</span>
+                          {item.badge ? <span aria-label={`${item.badge} pendientes`} className="ml-auto rounded-full bg-red-600 px-2 text-xs font-bold leading-5 text-white">{item.badge}</span> : null}
                           <span className="text-xs text-[var(--fg-muted)]">{item.hint}</span>
                         </Link>
                       </li>
