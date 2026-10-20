@@ -10,7 +10,7 @@ import { tienePermiso } from "@/lib/permisos-server";
 import { armarPautaCore, autollenarPreguntasCore, completarFichaCore, proponerTemasConsejoCore } from "@/lib/ai/consejo-ia";
 import { bloqueDeEscritor, escritoresParaElegir } from "@/lib/ai/estilo";
 import { aprobarCasilla, procesarConsejo, sincronizarCasillas } from "@/lib/ai/consejo-ejecucion";
-import { CONFIG_BASE, briefParaPrompt, respondidas, sanearBrief, construirParrilla, lunesDe, sanearConfig, sanearFicha, type BriefSeccion, type ConfigConsejo, type FichaPauta, type TemaConsejo } from "@/lib/consejo/plan";
+import { CONFIG_BASE, briefParaPrompt, respondidas, sanearBrief, ajustarParrillaATemas, construirParrilla, lunesDe, sanearConfig, sanearFicha, type BriefSeccion, type ConfigConsejo, type FichaPauta, type TemaConsejo } from "@/lib/consejo/plan";
 
 /**
  * Acciones del consejo de redacción. Todo exige el permiso de redacción; activar un plan con casillas «automáticas» y aprobar piezas
@@ -99,7 +99,7 @@ export async function armarPauta(id: string, enfoque?: string): Promise<Res<{ ca
   if (!plan) return { ok: false, message: "El plan ya no existe." };
   const cfg = sanearConfig(plan.config);
   if (!cfg.cuotas.length) return { ok: false, message: "Indica cuántas notas por día quieres en al menos una sección." };
-  const parrilla = construirParrilla(plan.weekStart, cfg);
+  const parrilla = ajustarParrillaATemas(construirParrilla(plan.weekStart, cfg), plan.temas ?? []);
   if (!parrilla.length) return { ok: false, message: "Esa semana ya pasó: crea el consejo para una semana que no haya terminado." };
   const fmt = new Intl.DateTimeFormat("es-CO", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit", timeZone: "America/Bogota" });
   // Cada tema puede tener su escritor: se agrupan los temas por escritor y se le da a la IA el estilo de cada uno.

@@ -88,7 +88,7 @@ export async function armarPautaCore(
   if (!cuota.ok) return { ok: false, error: cuota.message };
 
   const hoy = new Intl.DateTimeFormat("es-CO", { dateStyle: "long", timeZone: "America/Bogota" }).format(new Date());
-  const temas = input.temas.map((t, n) => `${n + 1}. ${t.texto}${t.seccion ? ` [sección: ${t.seccion}]` : ""}${t.angulo ? ` — enfoque: ${t.angulo}` : ""}${t.prioridad === 1 ? " (PRIORITARIO)" : ""}${t.dia ? ` (DÍA FIJO: ${["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"][t.dia - 1]})` : ""}${t.brief && respondidas({ ...t.brief, escritorId: undefined }) ? `\n   ${briefParaPrompt(t.texto, t.brief).split("\n").slice(1).join("\n   ")}` : ""}`).join("\n");
+  const temas = input.temas.map((t, n) => `${n + 1}. ${t.texto}${t.seccion ? ` [sección: ${t.seccion}]` : ""}${t.dia ? ` [día fijo: ${["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"][t.dia - 1]}]` : ""}${t.angulo ? ` — enfoque: ${t.angulo}` : ""}${t.prioridad === 1 ? " (PRIORITARIO)" : ""}${t.dia ? ` (DÍA FIJO: ${["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"][t.dia - 1]})` : ""}${t.brief && respondidas({ ...t.brief, escritorId: undefined }) ? `\n   ${briefParaPrompt(t.texto, t.brief).split("\n").slice(1).join("\n   ")}` : ""}`).join("\n");
   const sistema =
     "Eres el editor jefe de CONtexto Ganadero, un medio colombiano del sector ganadero y agropecuario, y diriges el consejo de redacción semanal. " +
     "Tu trabajo es repartir la cobertura de la semana: qué se publica en cada casilla (día, hora y sección ya definidos), con qué enfoque y con qué encargo para quien redacta. " +

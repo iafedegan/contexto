@@ -62,7 +62,6 @@ export function ConsejoEditor({ plan, casillas: casillasProp, secciones, puedePu
   const [arrastrando, setArrastrando] = useState<string | null>(null);
   const [sobre, setSobre] = useState<string | null>(null);
   const casillas = useMemo(() => casillasProp.map((c) => (movidas[c.id] ? { ...c, publishAt: movidas[c.id] } : c)), [casillasProp, movidas]);
-  const [coberturaAbierta, setCoberturaAbierta] = useState(false);
   const [paso, setPasoEstado] = useState(Math.min(PASOS.length - 1, Math.max(0, pasoInicial)));
   const [cfg, setCfg] = useState<ConfigConsejo>(plan.config);
   const [titulo, setTitulo] = useState(plan.title);
@@ -72,8 +71,6 @@ export function ConsejoEditor({ plan, casillas: casillasProp, secciones, puedePu
   const [avisoLlenar, setAvisoLlenar] = useState<{ slug: string; ok: boolean; texto: string } | null>(null);
   const [cargando, setCargando] = useState<string | null>(null);
   // Panel de preguntas de cada sección: abierto mientras no se haya respondido nada.
-  const [filtroSec, setFiltroSec] = useState("");
-  const [gruposAbiertos, setGruposAbiertos] = useState<Record<string, boolean>>({});
   const [temaAbierto, setTemaAbierto] = useState<Record<string, boolean>>({});
   const [seccionNueva, setSeccionNueva] = useState("");
   const [diaNuevo, setDiaNuevo] = useState<number | undefined>(undefined);
@@ -127,11 +124,15 @@ export function ConsejoEditor({ plan, casillas: casillasProp, secciones, puedePu
     if (texto.length < 4) return;
     const resto: BriefSeccion = { ...b };
     delete resto.temas;
+    // Se pueden crear tantos temas como se quiera: si ya no caben a razón de las notas por día de la sección, esta sube para que cada tema sea una nota.
     const q = cuota(slug);
-    if (!q) ponerCuota(slug, 1);
     const dias = q ? diasDeCuota(q, cfg) : cfg.dias;
-    const ocupados = temas.filter((t) => t.seccion === slug).map((t) => t.dia);
-    const dia = diaNuevo ?? dias.find((d) => !ocupados.includes(d)) ?? dias[0];
+    const propios = temas.filter((t) => t.seccion === slug);
+    const necesarias = Math.ceil((propios.length + 1) / Math.max(1, dias.length));
+    if (!q) ponerCuota(slug, Math.max(1, necesarias));
+    else if (q.porDia < necesarias) ponerCuota(slug, necesarias, q.aprobacion, q.dias);
+    const cuenta = (d: number) => propios.filter((t) => t.dia === d).length;
+    const dia = diaNuevo ?? [...dias].sort((x, y) => cuenta(x) - cuenta(y))[0];
     setTemas((l) => [...l, { id: crypto.randomUUID(), texto, seccion: slug, prioridad: 2 as const, origen: "manual" as const, ...(dia ? { dia } : {}), ...(respondidas(resto) ? { brief: resto } : {}) }].slice(0, 60));
     setBorrador((d) => ({ ...d, nuevo: {} }));
     setDiaNuevo(undefined);
@@ -254,6 +255,12 @@ export function ConsejoEditor({ plan, casillas: casillasProp, secciones, puedePu
                   </select></label>
                 {seccionNueva && (
                   <>
+                    <div className="flex flex-wrap items-center gap-2 text-sm font-semibold" role="group" aria-label="Cómo sale">¿Cómo sale?
+                      {([["manual", "🖐 Con aprobación de un editor"], ["auto", "⚡ Automática"]] as const).map(([v, etq]) => {
+                        const actual = cuota(seccionNueva)?.aprobacion ?? cfg.aprobacion;
+                        return <button key={v} type="button" disabled={!editable || (v === "auto" && !puedePublicar)} aria-pressed={actual === v} onClick={() => ponerCuota(seccionNueva, cuota(seccionNueva)?.porDia ?? 1, v, cuota(seccionNueva)?.dias)} className={`min-h-9 rounded-full border px-3 text-xs font-semibold transition disabled:opacity-40 ${actual === v ? "border-transparent bg-[var(--accent)] !text-white" : "border-[var(--border-strong)] bg-white text-[#0b0b0b]"}`}>{etq}</button>;
+                      })}
+                    </div>
                     <label className="flex items-center gap-2 text-sm font-semibold">¿Qué día sale este tema?
                       <select value={diaNuevo ?? ""} onChange={(e) => setDiaNuevo(e.target.value ? Number(e.target.value) : undefined)} className="rounded-[var(--radius)] border border-[var(--border-strong)] bg-white px-3 py-2 text-sm font-normal text-[#0b0b0b]">
                         <option value="">El primer día libre</option>
@@ -274,61 +281,15 @@ export function ConsejoEditor({ plan, casillas: casillasProp, secciones, puedePu
             </PreguntasSeccion>
           )}
 
-          {/* Cobertura de todas las secciones de una vez (opcional): plegada. */}
-          <section className="flex flex-col gap-3 rounded-[var(--radius-lg)] border border-[var(--border)] p-4">
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="min-w-0 flex-1"><span className="lx-kicker text-[var(--fg-muted)]">Cobertura de la semana</span>
-                <p className="text-sm">{cfg.cuotas.length === 0 ? "Aún no hay secciones: se agregan al guardar el primer tema." : `${cfg.cuotas.length} ${cfg.cuotas.length === 1 ? "sección" : "secciones"} · ${cfg.cuotas.reduce((t, q) => t + q.porDia, 0)} notas por día`}</p></div>
-              <button type="button" onClick={() => setCoberturaAbierta((v) => !v)} aria-expanded={coberturaAbierta} className={secundario}>{coberturaAbierta ? "Ocultar cobertura" : "Ver y cambiar toda la cobertura"}</button>
-            </div>
-            {coberturaAbierta && (
-              <div className="flex flex-col gap-3">
-          <div className="flex flex-wrap items-center gap-3 rounded-[var(--radius)] bg-[var(--surface-2)] px-4 py-3 text-sm">
-            <InputVoz value={filtroSec} onValue={setFiltroSec} placeholder="Buscar sección…" aria-label="Buscar sección" className="min-h-10 w-full rounded-full border border-[var(--border-strong)] bg-white px-4 text-sm text-[#0b0b0b]" />
-            {cfg.cuotas.length > 0 && <button type="button" disabled={!editable} onClick={() => setCfg((c) => ({ ...c, cuotas: [] }))} className={secundario}>Quitar todas</button>}
-          </div>
-          <div className="grid items-start gap-3 lg:grid-cols-2">
-            {secciones.filter((x) => !x.name.includes(" › ")).map((padre) => {
-              const hijas = secciones.filter((x) => x.name.startsWith(`${padre.name} › `));
-              const visibles = [padre, ...hijas].filter((x) => !filtroSec.trim() || x.name.toLowerCase().includes(filtroSec.trim().toLowerCase()));
-              if (!visibles.length) return null;
-              const activas = [padre, ...hijas].filter((x) => cuota(x.slug)).length;
-              const notasGrupo = [padre, ...hijas].reduce((t, x) => t + (cuota(x.slug)?.porDia ?? 0), 0);
-              const abierto = !!gruposAbiertos[padre.slug] || !!filtroSec.trim();
-              return (
-                <section key={padre.slug} className={`overflow-hidden rounded-[var(--radius)] border-2 transition-colors ${activas ? "border-[var(--accent)]" : "border-[var(--border)]"}`}>
-                  <button type="button" onClick={() => setGruposAbiertos((g) => ({ ...g, [padre.slug]: !g[padre.slug] }))} aria-expanded={abierto} className={`flex w-full items-center gap-2 px-3 py-2 text-left transition-colors ${activas ? "bg-[var(--accent)] text-[var(--accent-fg,#fff)]" : "bg-[var(--surface-2)]"}`}>
-                    <ChevronRight size={16} className={`shrink-0 transition-transform ${abierto ? "rotate-90" : ""}`} aria-hidden />
-                    <h3 className="lx-display min-w-0 flex-1 text-sm font-semibold">{padre.name}</h3>
-                    <span className={`text-xs ${activas ? "font-semibold" : "text-[var(--fg-muted)]"}`}>{activas ? `${activas} activa${activas === 1 ? "" : "s"} · ${notasGrupo} por día` : `${hijas.length + 1} opciones`}</span>
-                  </button>
-                  {abierto && (
-                    <ul className="flex flex-col divide-y divide-[var(--border)]">
-                      {visibles.map((x) => (
-                        <FilaCobertura key={x.slug} nombre={x.name.includes(" › ") ? x.name.split(" › ").slice(1).join(" › ") : "Toda la sección"} sub={x.name.includes(" › ")} cuota={cuota(x.slug)} defecto={cfg.aprobacion} editable={editable} puedePublicar={puedePublicar} diasConsejo={cfg.dias} onCambiar={(n, ap, dias) => ponerCuota(x.slug, n, ap, dias)} />
-                      ))}
-                    </ul>
-                  )}
-                </section>
-              );
-            })}
-          </div>
-              </div>
-            )}
-          </section>
           {porSeccion.length === 0 && <p className="rounded-[var(--radius)] border border-dashed border-[var(--border-strong)] p-6 text-center text-sm text-[var(--fg-muted)]">Guarda tu primer tema y aparecerá aquí, agrupado por sección.</p>}
           {porSeccion.map((sec) => {
-            const faltan = Math.max(0, sec.necesita - sec.propios.length);
-            const completo = faltan === 0;
             return (
-              <div key={sec.slug} className={`flex flex-col gap-3 rounded-[var(--radius-lg)] border p-4 ${completo ? "border-emerald-600/60" : "border-[var(--border)]"}`}>
+              <div key={sec.slug} className="flex flex-col gap-3 rounded-[var(--radius-lg)] border border-[var(--border)] p-4">
                 <div className="flex flex-wrap items-center gap-3">
                   <div className="flex flex-col"><span className="lx-kicker text-[var(--fg-muted)]">{sec.name.includes(" › ") ? "Subsección" : "Sección"}</span><h3 className="lx-display text-lg font-semibold">{sec.name.split(" › ").join(" / ")}</h3></div>
-                  <span className={`rounded-full px-3 py-1 text-xs font-semibold ${completo ? "bg-emerald-600/15 text-emerald-700" : "bg-[var(--surface-2)] text-[var(--fg-muted)]"}`}>{completo ? <><Check size={12} className="mr-1 inline" />Completa</> : `Faltan ${faltan}`} · {sec.propios.length} de {sec.necesita} temas</span>
+                  <span className="rounded-full bg-[var(--surface-2)] px-3 py-1 text-xs font-semibold text-[var(--fg-muted)]">{sec.propios.length} {sec.propios.length === 1 ? "tema" : "temas"}</span>
                   <span className="text-xs text-[var(--fg-muted)]">{sec.porDia} por día × {sec.dias} {sec.dias === 1 ? "día" : "días"}</span>
                 </div>
-                <div className="h-1.5 overflow-hidden rounded-full bg-[var(--surface-2)]" aria-hidden><div className="h-full rounded-full bg-[var(--accent)] transition-all" style={{ width: `${Math.min(100, (sec.propios.length / Math.max(1, sec.necesita)) * 100)}%` }} /></div>
-                {faltan > 0 && <p className="text-xs text-[var(--fg-muted)]">Faltan {faltan} {faltan === 1 ? "tema" : "temas"} para esta sección: créalos arriba, en «Nuevo tema», eligiendo esta sección.</p>}
                 {sec.propios.length > 0 && (
                   <ul className="flex flex-col divide-y divide-[var(--border)] rounded-[var(--radius)] border border-[var(--border)]">
                     {sec.propios.map((t) => (
@@ -545,40 +506,6 @@ const textoAFuentes = (t: string): FuentePrevista[] =>
   });
 const lineas = (t: string) => t.split("\n").map((l) => l.trim()).filter(Boolean);
 
-// Una fila de la cobertura: nombre, notas por día con atajos 0–3 y cómo sale (con aprobación o automática).
-function FilaCobertura({ nombre, sub, cuota, defecto, diasConsejo, editable, puedePublicar, onCambiar }: { nombre: string; sub: boolean; cuota?: { porDia: number; aprobacion?: Aprobacion; dias?: number[] }; defecto: Aprobacion; diasConsejo: number[]; editable: boolean; puedePublicar: boolean; onCambiar: (porDia: number, ap?: Aprobacion, dias?: number[]) => void }) {
-  const n = cuota?.porDia ?? 0;
-  const ap = cuota?.aprobacion ?? defecto;
-  return (
-    <li className={`flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-1 ${n ? "bg-[var(--accent)]/5" : ""} ${sub ? "pl-6" : ""}`}>
-      <span className={`min-w-0 flex-1 basis-28 text-[0.82rem] leading-tight ${n ? "font-semibold" : "text-[var(--fg-muted)]"}`}>{sub && <span aria-hidden className="mr-1 text-[var(--fg-muted)]">↳</span>}{nombre}</span>
-      <div className="flex items-center gap-1" role="group" aria-label={`Notas por día: ${nombre}`}>
-        {[0, 1, 2, 3].map((v) => (
-          <button key={v} type="button" disabled={!editable} aria-pressed={n === v} onClick={() => onCambiar(v, cuota?.aprobacion, cuota?.dias)} className={`grid size-8 place-items-center rounded-full border text-xs font-semibold tabular-nums ${n === v ? "border-transparent bg-[var(--accent)] text-[var(--accent-fg,#fff)]" : "border-[var(--border-strong)] hover:bg-[var(--surface-2)]"}`}>{v}</button>
-        ))}
-        <button type="button" disabled={!editable || n >= 6} onClick={() => onCambiar(Math.max(4, n + 1), cuota?.aprobacion, cuota?.dias)} aria-label="Más de tres por día" className={`grid h-8 min-w-8 place-items-center rounded-full border px-2 text-xs font-semibold ${n > 3 ? "border-transparent bg-[var(--accent)] text-[var(--accent-fg,#fff)]" : "border-[var(--border-strong)] hover:bg-[var(--surface-2)]"}`}>{n > 3 ? n : "+"}</button>
-      </div>
-      <div className={`flex overflow-hidden rounded-full border border-[var(--border-strong)] text-xs font-semibold ${n ? "" : "invisible"}`} role="group" aria-label={`Cómo sale: ${nombre}`}>
-        <button type="button" disabled={!editable || !n} aria-pressed={ap === "manual"} onClick={() => onCambiar(n, "manual", cuota?.dias)} className={`min-h-8 px-2.5 ${ap === "manual" ? "bg-[var(--accent)] text-[var(--accent-fg,#fff)]" : ""}`}>✋ Aprobar</button>
-        <button type="button" disabled={!editable || !n || !puedePublicar} aria-pressed={ap === "auto"} onClick={() => onCambiar(n, "auto", cuota?.dias)} className={`min-h-8 px-2.5 disabled:opacity-40 ${ap === "auto" ? "bg-[var(--accent)] text-[var(--accent-fg,#fff)]" : ""}`}>⚡ Automática</button>
-      </div>
-      {n > 0 && (
-        <div className="flex basis-full flex-wrap items-center gap-1 text-xs" role="group" aria-label={`Días que publica: ${nombre}`}>
-          <span className="mr-1 text-[var(--fg-muted)]">Días:</span>
-          {DIAS.map(([d, etq]) => {
-            const elegidos = cuota?.dias ?? [];
-            const on = elegidos.includes(d);
-            return (
-              <button key={d} type="button" disabled={!editable} aria-pressed={on} onClick={() => { const nuevo = on ? elegidos.filter((x) => x !== d) : [...elegidos, d].sort(); onCambiar(n, cuota?.aprobacion, nuevo.length ? nuevo : undefined); }} className={`min-h-8 min-w-10 rounded-full border px-2 font-semibold ${on ? "border-transparent bg-[var(--accent)] text-[var(--accent-fg,#fff)]" : "border-[var(--border-strong)] text-[var(--fg-muted)] hover:bg-[var(--surface-2)]"}`}>{etq}</button>
-            );
-          })}
-          <span className="ml-1 text-[var(--fg-muted)]">{cuota?.dias?.length ? `${cuota.dias.length} ${cuota.dias.length === 1 ? "día" : "días"} × ${n} = ${cuota.dias.length * n} ${cuota.dias.length * n === 1 ? "tema" : "temas"}` : `Sin marcar: publica los ${diasConsejo.length} días del consejo`}</span>
-        </div>
-      )}
-    </li>
-  );
-}
-
 // Una pregunta de la sección: texto, campo y ayuda.
 function Caja({ clave, children }: { clave: keyof BriefSeccion; children: React.ReactNode }) {
   const q = PREGUNTAS_SECCION.find((p) => p.clave === clave)!;
@@ -604,8 +531,8 @@ function PreguntasSeccion({ nombre, titulo, escritores, yoId, encabezado, childr
               <select disabled={!editable} value={valor?.escritorId ?? ""} onChange={(e) => onChange({ escritorId: e.target.value || undefined })} className={sel}><option value="">El predeterminado ({escritores.find((e) => e.id === yoId)?.nombre ?? "yo"})</option>{[...escritores].sort((a, b) => Number(b.conDiagnostico) - Number(a.conDiagnostico) || a.nombre.localeCompare(b.nombre)).map((e) => <option key={e.id} value={e.id}>{e.nombre}{e.id === yoId ? " (yo)" : ""}{e.tipo === "externo" ? " · externo" : ""}{e.conDiagnostico ? "" : " · sin estilo aprendido"}</option>)}</select>
               <span className="text-xs text-[var(--fg-muted)]">Sus temas, la pauta y la nota usan su diagnóstico de estilo.</span></label>
           )}
-          <div className="sm:col-span-2"><Caja clave="temas"><AreaVoz rows={2} disabled={!editable} value={valor?.temas ?? ""} onValue={(v) => onChange({ temas: v })} placeholder="Ej.: sequía y pasturas, precio del novillo, ciclo de vacunación contra la aftosa" className={sel} /></Caja></div>
-          <div className="sm:col-span-2"><Caja clave="agenda"><AreaVoz rows={2} disabled={!editable} value={valor?.agenda ?? ""} onValue={(v) => onChange({ agenda: v })} placeholder="Ej.: Feria de Montería del 15 al 18; el DANE publica el sacrificio el jueves" className={sel} /></Caja></div>
+          <div className="sm:col-span-2"><Caja clave="temas"><AreaVoz autoAjustar rows={2} disabled={!editable} value={valor?.temas ?? ""} onValue={(v) => onChange({ temas: v })} placeholder="Ej.: sequía y pasturas, precio del novillo, ciclo de vacunación contra la aftosa" className={sel} /></Caja></div>
+          <div className="sm:col-span-2"><Caja clave="agenda"><AreaVoz autoAjustar rows={2} disabled={!editable} value={valor?.agenda ?? ""} onValue={(v) => onChange({ agenda: v })} placeholder="Ej.: Feria de Montería del 15 al 18; el DANE publica el sacrificio el jueves" className={sel} /></Caja></div>
           <Caja clave="audiencia"><select disabled={!editable} value={valor?.audiencia ?? ""} onChange={(e) => onChange({ audiencia: (e.target.value || undefined) as BriefSeccion["audiencia"] })} className={sel}><option value="">Sin definir</option>{AUDIENCIAS.map((a) => <option key={a} value={a}>{a}</option>)}</select></Caja>
           <Caja clave="palabras"><select disabled={!editable} value={valor?.palabras ?? ""} onChange={(e) => onChange({ palabras: e.target.value ? Number(e.target.value) : undefined })} className={sel}><option value="">Sin definir</option>{PALABRAS_OPCIONES.map((p) => <option key={p} value={p}>Unas {p} palabras</option>)}</select></Caja>
           <div className="sm:col-span-2">
@@ -616,7 +543,7 @@ function PreguntasSeccion({ nombre, titulo, escritores, yoId, encabezado, childr
           <Caja clave="lugares"><InputVoz disabled={!editable} value={valor?.lugares ?? ""} onValue={(v) => onChange({ lugares: v })} placeholder="Ej.: Caribe, Meta, Brasil" className={sel} /></Caja>
           <Caja clave="tono"><select disabled={!editable} value={valor?.tono ?? ""} onChange={(e) => onChange({ tono: (e.target.value || undefined) as BriefSeccion["tono"] })} className={sel}><option value="">Sin definir</option>{TONOS.map((t) => <option key={t} value={t}>{t}</option>)}</select></Caja>
           <Caja clave="fuentes"><InputVoz disabled={!editable} value={valor?.fuentes ?? ""} onValue={(v) => onChange({ fuentes: v })} placeholder="Ej.: ICA, FEDEGAN, DANE" className={sel} /></Caja>
-          <div className="sm:col-span-2"><Caja clave="evitar"><AreaVoz rows={2} disabled={!editable} value={valor?.evitar ?? ""} onValue={(v) => onChange({ evitar: v })} placeholder="Ej.: no repetir la sequía de la semana pasada; evitar cifras sin fuente" className={sel} /></Caja></div>
+          <div className="sm:col-span-2"><Caja clave="evitar"><AreaVoz autoAjustar rows={2} disabled={!editable} value={valor?.evitar ?? ""} onValue={(v) => onChange({ evitar: v })} placeholder="Ej.: no repetir la sequía de la semana pasada; evitar cifras sin fuente" className={sel} /></Caja></div>
           {children}
         </div>
       )}

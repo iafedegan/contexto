@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Mic, Square } from "lucide-react";
 
 /**
@@ -68,11 +68,19 @@ export function InputVoz({ value, onValue, className = "", ...rest }: Comunes & 
   );
 }
 
-export function AreaVoz({ value, onValue, className = "", ...rest }: Comunes & Omit<React.TextareaHTMLAttributes<HTMLTextAreaElement>, "value" | "onChange">) {
+export function AreaVoz({ value, onValue, className = "", autoAjustar, ...rest }: Comunes & Omit<React.TextareaHTMLAttributes<HTMLTextAreaElement>, "value" | "onChange"> & { autoAjustar?: boolean }) {
   const d = useDictado(value, onValue);
+  const caja = useRef<HTMLTextAreaElement>(null);
+  // Con `autoAjustar` la caja crece con lo que se escribe (o con lo que trae la IA) en vez de esconderlo tras una barra.
+  useEffect(() => {
+    const el = caja.current;
+    if (!autoAjustar || !el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight + 2}px`;
+  }, [value, autoAjustar]);
   return (
     <div className="relative">
-      <textarea {...rest} value={value} onChange={(e) => onValue(e.target.value)} className={`${className} ${d.soporta ? "pr-12" : ""}`} />
+      <textarea {...rest} ref={caja} value={value} onChange={(e) => onValue(e.target.value)} className={`${className} ${d.soporta ? "pr-12" : ""}`} />
       <Micro {...d} deshabilitado={rest.disabled} arriba />
     </div>
   );

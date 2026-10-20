@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { CONFIG_BASE, construirParrilla, lunesDe, notasPorSemana, sanearConfig, sumarDias, tocaRedactar } from "@/lib/consejo/plan";
+import { CONFIG_BASE, ajustarParrillaATemas, construirParrilla, lunesDe, notasPorSemana, sanearConfig, sumarDias, tocaRedactar } from "@/lib/consejo/plan";
 
 const cfg = sanearConfig({ ...CONFIG_BASE, cuotas: [{ seccion: "ganaderia", porDia: 2 }, { seccion: "economia", porDia: 1, aprobacion: "auto" }] });
 const pasado = new Date("2026-01-01T00:00:00Z");
@@ -50,4 +50,19 @@ test("cada sección puede publicar solo en sus días", () => {
   assert.equal(p.filter((x) => x.seccion === "ganaderia").length, 2); // martes y jueves
   assert.equal(p.filter((x) => x.seccion === "economia").length, 5); // los días del consejo
   assert.equal(p.length, notasPorSemana(c));
+});
+
+test("con un solo tema el lunes, la pauta tiene una pieza el lunes y no cinco", async () => {
+  const cfg = sanearConfig({ ...CONFIG_BASE, dias: [1, 2, 3, 4, 5], cuotas: [{ seccion: "ganaderia", porDia: 1 }] });
+  const antes = new Date("2026-10-19T00:00:00-05:00");
+  const parrilla = construirParrilla("2026-10-26", cfg, antes);
+  assert.equal(parrilla.length, 5);
+  const tema = { id: "t1", texto: "Vacunación de aftosa", seccion: "ganaderia", prioridad: 2 as const, origen: "manual" as const, dia: 1 };
+  const ajustada = ajustarParrillaATemas(parrilla, [tema]);
+  assert.equal(ajustada.length, 1);
+  assert.equal(ajustada[0].publicaEn.getTime(), parrilla[0].publicaEn.getTime());
+  // Una sección sin temas conserva toda su cuota.
+  assert.equal(ajustarParrillaATemas(parrilla, []).length, 5);
+  // Dos temas sin día: las dos primeras casillas libres.
+  assert.equal(ajustarParrillaATemas(parrilla, [{ ...tema, id: "a", dia: undefined }, { ...tema, id: "b", dia: undefined }]).length, 2);
 });

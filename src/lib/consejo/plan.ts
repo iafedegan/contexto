@@ -137,6 +137,37 @@ export function construirParrilla(lunes: string, cfg: ConfigConsejo, ahora: Date
   return out.sort((a, b) => a.publicaEn.getTime() - b.publicaEn.getTime() || a.seccion.localeCompare(b.seccion));
 }
 
+/** Día de la semana (1 = lunes … 7 = domingo) de un instante, en hora de Colombia. */
+export function diaSemanaCO(d: Date): number {
+  const fecha = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Bogota" }).format(d);
+  return ((new Date(`${fecha}T12:00:00Z`).getUTCDay() + 6) % 7) + 1;
+}
+
+/**
+ * Ajusta la parrilla a los temas que el editor sí escribió: en una sección con temas, solo quedan tantas casillas como temas hay (cada tema en
+ * su día; los que no tienen día toman las primeras casillas libres). Las secciones sin temas conservan toda su cuota, para que la IA proponga.
+ * Así un solo tema el lunes da UNA pieza el lunes, no cinco.
+ */
+export function ajustarParrillaATemas(parrilla: CasillaBase[], temas: TemaConsejo[]): CasillaBase[] {
+  const quitar = new Set<CasillaBase>();
+  for (const seccion of new Set(parrilla.map((c) => c.seccion))) {
+    const propios = temas.filter((t) => t.seccion === seccion);
+    if (!propios.length) continue;
+    const mias = parrilla.filter((c) => c.seccion === seccion); // ya vienen ordenadas por fecha y hora
+    const elegidas = new Set<CasillaBase>();
+    for (const t of propios.filter((x) => x.dia)) {
+      const c = mias.find((m) => !elegidas.has(m) && diaSemanaCO(m.publicaEn) === t.dia);
+      if (c) elegidas.add(c);
+    }
+    for (let k = propios.filter((x) => !x.dia).length; k > 0; k--) {
+      const c = mias.find((m) => !elegidas.has(m));
+      if (c) elegidas.add(c);
+    }
+    for (const m of mias) if (!elegidas.has(m)) quitar.add(m);
+  }
+  return parrilla.filter((c) => !quitar.has(c));
+}
+
 /** Resumen de cuántas notas lleva una configuración en la semana (para mostrarlo antes de armar la pauta). */
 export const notasPorSemana = (cfg: ConfigConsejo) => cfg.cuotas.reduce((s, q) => s + q.porDia * diasDeCuota(q, cfg).length, 0);
 
@@ -318,17 +349,17 @@ export type BriefSeccion = {
 /** Las preguntas, en orden, con su ayuda. `clave` es el campo de BriefSeccion. */
 export const PREGUNTAS_SECCION: { clave: keyof BriefSeccion; pregunta: string; ayuda: string }[] = [
   { clave: "temas", pregunta: "¿Qué temas o asuntos te interesan esta semana?", ayuda: "Palabras clave, problemas del sector, personas o entidades. Cuanto más concreto, mejores temas." },
-  { clave: "agenda", pregunta: "¿Hay eventos, ferias, decisiones o cifras de la semana que ya conozcas?", ayuda: "Fechas y hechos que la IA no debe perderse (ciclo de vacunación, feria, publicación del DANE…)." },
+  { clave: "agenda", pregunta: "Hechos, fechas y cifras clave del tema", ayuda: "Lo que la IA encuentra en la web (con su entidad y fecha) o lo que ya sabes tú: ferias, ciclos de vacunación, publicaciones del DANE, cifras. La nota no debe perderlo." },
   { clave: "escritorId", pregunta: "¿Quién quieres que la escriba?", ayuda: "La IA escribe las notas de esta sección con el estilo de esa persona." },
   { clave: "audiencia", pregunta: "¿Para quién escribimos?", ayuda: "Cambia el enfoque y el lenguaje de cada nota." },
   { clave: "generos", pregunta: "¿Qué géneros quieres?", ayuda: "Puedes marcar varios: la IA los reparte entre las notas." },
   { clave: "palabras", pregunta: "¿Cuántas palabras por nota?", ayuda: "Una noticia breve ronda 300–450; un análisis, 600–1.000." },
   { clave: "alcance", pregunta: "¿Cuál es el alcance geográfico?", ayuda: "Colombia, una región, el mundo o una mezcla." },
-  { clave: "lugares", pregunta: "¿Regiones, departamentos o países de interés?", ayuda: "Por ejemplo: «Caribe, Meta, Brasil»." },
+  { clave: "lugares", pregunta: "Regiones, departamentos o países de interés", ayuda: "Dónde ocurre o a quién afecta el tema. Por ejemplo: «Caribe, Meta, Brasil»." },
   { clave: "grafica", pregunta: "¿Lleva gráfica de datos?", ayuda: "Si hay cifras con fuente, la IA arma una gráfica y la inserta en la nota." },
   { clave: "tono", pregunta: "¿Qué tono?", ayuda: "Se combina con el estilo del escritor elegido." },
-  { clave: "fuentes", pregunta: "¿Qué fuentes prefieres que se consulten?", ayuda: "Entidades, gremios o medios de confianza (ICA, FEDEGAN, DANE…)." },
-  { clave: "evitar", pregunta: "¿Qué debe evitar la IA?", ayuda: "Enfoques agotados, términos sensibles, temas que ya cubrieron otros." },
+  { clave: "fuentes", pregunta: "Fuentes a consultar", ayuda: "Entidades, documentos o medios de confianza con su enlace (ICA, FEDEGAN, DANE…): la IA cita estas fuentes." },
+  { clave: "evitar", pregunta: "Qué evitar o tratar con cuidado", ayuda: "Mitos, cifras en disputa, términos sensibles, enfoques agotados o temas que ya cubrieron otros." },
 ];
 
 const t = (v: unknown, max: number) => (typeof v === "string" ? v.replace(/[\u0000-\u001f<>]/g, " ").replace(/\s+/g, " ").trim().slice(0, max) : undefined) || undefined;
