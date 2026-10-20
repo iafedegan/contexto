@@ -2,7 +2,7 @@
 import QRCode from "qrcode";
 import { writeFileSync } from "node:fs";
 
-const base = (process.argv[2] ?? process.env.NEXT_PUBLIC_SITE_URL ?? "https://contextoganadero.com").replace(/\/$/, "");
+const base = (process.argv[2] ?? process.env.NEXT_PUBLIC_SITE_URL ?? "https://contexto-olive.vercel.app").replace(/\/$/, "");
 const url = `${base}/toro-ar?utm_source=qr`;
 const opts = { errorCorrectionLevel: "M", margin: 2, color: { dark: "#101611", light: "#ffffff" } };
 
