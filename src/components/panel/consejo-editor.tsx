@@ -254,9 +254,6 @@ export function ConsejoEditor({ plan, casillas: casillasProp, secciones, puedePu
                   </select></label>
                 {seccionNueva && (
                   <>
-                    <ul className="overflow-hidden rounded-[var(--radius)] border border-[var(--border)]">
-                      <FilaCobertura nombre="Notas por día · cómo sale · días" sub={false} cuota={cuota(seccionNueva)} defecto={cfg.aprobacion} editable={editable} puedePublicar={puedePublicar} diasConsejo={cfg.dias} onCambiar={(n, ap, dias) => ponerCuota(seccionNueva, n, ap, dias)} />
-                    </ul>
                     <label className="flex items-center gap-2 text-sm font-semibold">¿Qué día sale este tema?
                       <select value={diaNuevo ?? ""} onChange={(e) => setDiaNuevo(e.target.value ? Number(e.target.value) : undefined)} className="rounded-[var(--radius)] border border-[var(--border-strong)] bg-white px-3 py-2 text-sm font-normal text-[#0b0b0b]">
                         <option value="">El primer día libre</option>
@@ -268,7 +265,7 @@ export function ConsejoEditor({ plan, casillas: casillasProp, secciones, puedePu
             )} titulo="Nuevo tema" nombre="este tema" escritores={escritores} yoId={yoId} valor={borrador.nuevo} onChange={(c) => setBorrador((d) => ({ ...d, nuevo: { ...d.nuevo, ...c } }))} editable={editable} abierto={preguntasAbiertas.nuevo !== false} onToggle={() => setPreguntasAbiertas((p) => ({ ...p, nuevo: p.nuevo === false }))}>
               <div className="flex flex-wrap items-center justify-between gap-2 sm:col-span-2">
                 <span className="text-xs text-[var(--fg-muted)]">Describe un solo tema en la primera pregunta.</span>
-                {(llenando === "nuevo" || avisoLlenar?.slug === "nuevo") && <p role="status" className={`w-full text-sm font-medium ${llenando === "nuevo" ? "text-[var(--fg-muted)]" : avisoLlenar?.ok ? "text-emerald-700" : "text-red-600"}`}>{llenando === "nuevo" ? "La IA está contestando las preguntas…" : avisoLlenar?.texto}</p>}
+                {(llenando === "nuevo" || avisoLlenar?.slug === "nuevo") && <p role="status" className={`w-full text-sm font-medium ${llenando === "nuevo" ? "text-[var(--fg-muted)]" : avisoLlenar?.ok ? "text-emerald-700" : "text-red-600"}`}>{llenando === "nuevo" ? "La IA está investigando el tema en la web y llenando las preguntas (puede tardar hasta un minuto)…" : avisoLlenar?.texto}</p>}
                 <div className="flex flex-wrap gap-2">
                   <button type="button" disabled={!editable || !!llenando || !seccionNueva || (borrador.nuevo?.temas ?? "").trim().length < 4} onClick={() => autollenar(seccionNueva, "nuevo")} className={secundario}>{llenando === "nuevo" ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />} Autollenar el resto con IA</button>
                   <button type="button" disabled={!editable || !seccionNueva || (borrador.nuevo?.temas ?? "").trim().length < 4} onClick={guardarTemaDelFormulario} className={primario}><Check size={15} /> Guardar tema</button>

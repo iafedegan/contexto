@@ -201,39 +201,50 @@ Llena la ficha de pauta.`,
 }
 
 const esquemaPreguntas = z.object({
-  agenda: z.string().describe("Eventos, ferias, decisiones o cifras de la semana ligados al tema, SOLO si el tema los menciona; si no, cadena vacía"),
+  agenda: z.string().describe("Hechos, fechas, eventos, decisiones y cifras vigentes ligados al tema, TAL COMO constan en el dossier (con fecha y entidad que los publica), en 3 a 6 frases cortas; si no hay dossier, solo lo que diga el tema"),
   audiencia: z.enum(AUDIENCIAS), palabras: z.number().describe("300, 450, 600, 800 o 1000"),
   generos: z.array(z.enum(Object.keys(GENEROS) as [Genero, ...Genero[]])).describe("1 a 2 géneros"),
-  alcance: z.enum(ALCANCES), lugares: z.string().describe("Regiones, departamentos o países, solo si el tema los menciona; si no, cadena vacía"),
+  alcance: z.enum(ALCANCES), lugares: z.string().describe("Regiones, departamentos o países que el dossier o el tema señalan como afectados o relevantes, separados por comas"),
   grafica: z.enum(["si", "no"]).describe("«si» solo si el tema se presta a cifras con fuente que se puedan graficar (precios, volúmenes, series)"),
-  tono: z.enum(TONOS), fuentes: z.string().describe("Entidades o medios de confianza a consultar (ICA, FEDEGAN, DANE…), sin enlaces inventados"),
-  evitar: z.string().describe("Enfoques o errores a evitar con este tema, breve"),
+  tono: z.enum(TONOS), fuentes: z.string().describe("Entidades, documentos o medios que el dossier cita y conviene consultar (ICA, FEDEGAN, DANE…), con su enlace solo si consta en el dossier"),
+  evitar: z.string().describe("Errores, mitos, cifras en disputa o enfoques ya agotados que el dossier muestra y hay que evitar o tratar con cuidado"),
 });
 
-/** Contesta las preguntas de un tema a partir de su descripción, para que el editor solo corrija. No investiga ni inventa hechos: lo que el tema no dice queda vacío. */
+/**
+ * Contesta las preguntas de un tema para que el editor solo corrija. Primero INVESTIGA el tema en la web (con fuentes) y llena los campos con lo que
+ * consta en ese dossier: hechos y fechas, lugares, fuentes a consultar y qué evitar. Sin investigación posible (sin proveedor con búsqueda o sin
+ * resultados) vuelve a contestar solo con lo que dice el tema, sin inventar hechos. `fuentes` indica cuántas fuentes web se consultaron.
+ */
 export async function autollenarPreguntasCore(
   userId: string,
   input: { tema: string; seccion: string; estilo?: string },
-): Promise<{ ok: true; brief: BriefSeccion } | { ok: false; error: string }> {
+): Promise<{ ok: true; brief: BriefSeccion; fuentes: number } | { ok: false; error: string }> {
   const model = await getAiModel();
   if (!model) return { ok: false, error: "Falta la clave del modelo de IA (la conecta un administrador en Configuración → Asistente)." };
   const cuota = await verificarCuotaIA(userId);
   if (!cuota.ok) return { ok: false, error: cuota.message };
   try {
+    // Investigación primero: si falla o no hay fuentes, se sigue sin ella (no se inventa nada).
+    const inv = await investigarTema(userId, input.tema.slice(0, 400), "", input.seccion).catch(() => null);
+    const dossier = inv && inv.sources.length ? inv : null;
     const { object, usage } = await generateObject({
       model,
       schema: esquemaPreguntas,
-      temperature: 0.3,
-      abortSignal: AbortSignal.timeout(45_000),
+      temperature: 0.2,
+      abortSignal: AbortSignal.timeout(60_000),
       system:
         "Eres el editor jefe de CONtexto Ganadero (medio colombiano del sector ganadero y agropecuario). Un editor te describe un tema y tú contestas las preguntas previas del consejo de redacción: " +
-        "para quién se escribe, extensión, género, alcance, tono, fuentes a consultar y qué evitar. No inventes hechos, cifras, fechas ni enlaces: lo que el tema no menciona va vacío. Español de Colombia." +
+        "qué hechos, fechas y cifras hay, para quién se escribe, extensión, género, alcance, lugares, tono, fuentes a consultar y qué evitar. " +
+        (dossier
+          ? "Recibes un DOSSIER de búsqueda web con fuentes: llena los campos con la mayor profundidad posible, usando SOLO lo que consta en el dossier (hechos con su fecha y entidad, lugares, fuentes con su enlace, disputas o mitos a evitar). No inventes cifras, fechas, cargos, nombres ni enlaces; lo que el dossier no responde va vacío. "
+          : "No hay dossier: no inventes hechos, cifras, fechas ni enlaces; lo que el tema no menciona va vacío. ") +
+        "Español de Colombia." +
         (input.estilo ? `\n\nLa nota la escribirá este escritor; el tono y el género deben encajar con su voz:\n${input.estilo}` : ""),
-      prompt: `SECCIÓN: ${input.seccion}\nTEMA: ${input.tema.slice(0, 400)}`,
+      prompt: `SECCIÓN: ${input.seccion}\nTEMA: ${input.tema.slice(0, 400)}${dossier ? `\n\nDOSSIER (fuentes: ${dossier.sources.map((x) => `${x.outlet} ${x.url}`).join("; ")}):\n${dossier.text.slice(0, 9000)}` : ""}`,
     });
     await registrarUsoIA(userId, usage);
     const b = sanearBrief({ ...object, palabras: PALABRAS_OPCIONES.reduce((a, x) => (Math.abs(x - object.palabras) < Math.abs(a - object.palabras) ? x : a), PALABRAS_OPCIONES[0]) });
-    return { ok: true, brief: b };
+    return { ok: true, brief: b, fuentes: dossier?.sources.length ?? 0 };
   } catch (err) {
     console.error("autollenarPreguntasCore:", err);
     const detalle = err && typeof err === "object" && "message" in err ? String((err as Error).message) : "";

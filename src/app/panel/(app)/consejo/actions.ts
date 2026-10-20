@@ -89,7 +89,7 @@ export async function autollenarTema(planId: string, seccion: string, tema: stri
   const estilo = await bloqueDeEscritor(cfg.briefs?.[seccion]?.escritorId ?? cfg.escritorId);
   const r = await autollenarPreguntasCore(user.id, { tema, seccion: cat?.name ?? seccion, estilo: estilo || undefined });
   if (!r.ok) return { ok: false, message: r.error };
-  return { ok: true, brief: r.brief, message: "Listo: revisa y corrige lo que quieras." };
+  return { ok: true, brief: r.brief, message: r.fuentes > 0 ? `Listo: la IA investigó el tema en ${r.fuentes} ${r.fuentes === 1 ? "fuente" : "fuentes"} de la web. Revisa y corrige lo que quieras.` : "Listo: no encontró fuentes en la web, así que solo contestó con lo que dice el tema. Revisa y corrige lo que quieras." };
 }
 
 /** Arma la pauta: construye la parrilla con las cuotas y la IA llena el tema, enfoque y encargo de cada casilla. Reemplaza las casillas aún sin redactar. */

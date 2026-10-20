@@ -337,7 +337,7 @@ const t = (v: unknown, max: number) => (typeof v === "string" ? v.replace(/[\u00
 export function sanearBrief(input: unknown): BriefSeccion {
   const b = (input && typeof input === "object" ? input : {}) as Record<string, unknown>;
   const out: BriefSeccion = {
-    temas: t(b.temas, 500), agenda: t(b.agenda, 500), lugares: t(b.lugares, 160), evitar: t(b.evitar, 400), fuentes: t(b.fuentes, 200),
+    temas: t(b.temas, 500), agenda: t(b.agenda, 1000), lugares: t(b.lugares, 200), evitar: t(b.evitar, 600), fuentes: t(b.fuentes, 400),
     escritorId: typeof b.escritorId === "string" && /^[0-9a-f-]{36}$/i.test(b.escritorId) ? b.escritorId : undefined,
     grafica: b.grafica === "si" || b.grafica === "no" ? b.grafica : undefined,
     audiencia: AUDIENCIAS.find((x) => x === b.audiencia), alcance: ALCANCES.find((x) => x === b.alcance), tono: TONOS.find((x) => x === b.tono),
