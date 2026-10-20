@@ -179,8 +179,8 @@ export function ArticleWizard({
   const alto = useAltoVentana();
   // Fuente cuya pantalla está abierta en el primer paso (null = la pantalla base) y, aparte, la grabación o enlace que se
   // está revisando (-1 = el último cargado, para abrir la revisión justo al terminar de transcribir).
-  // Una tarea del consejo abre en «Ideas de la IA» con las preguntas ya contestadas por el consejo.
-  const [fuente, setFuente] = useState<Fuente | null>(pieza?.brief ? "ideas" : null);
+  // Una tarea del consejo abre en «Tema, título y contexto» con el tema ya escrito; las respuestas del consejo van cargadas en «Ideas de la IA» y se usan al proponer títulos.
+  const [fuente, setFuente] = useState<Fuente | null>(null);
   const [revisando, setRevisando] = useState<number | null>(null);
   const [progAbierto, setProgAbierto] = useState(false);
   const [progFecha, setProgFecha] = useState("");
