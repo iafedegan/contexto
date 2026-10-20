@@ -57,7 +57,9 @@ function LoginForm() {
       setError(
         e instanceof Error && e.name === "NotAllowedError"
           ? "Cancelaste el ingreso con passkey."
-          : "Este navegador o dispositivo no soporta passkeys.",
+          : typeof window !== "undefined" && !window.PublicKeyCredential
+            ? "Este navegador o dispositivo no soporta passkeys."
+            : "No se pudo completar el ingreso con passkey. Inténtalo de nuevo o entra con tu contraseña.",
       );
     } finally {
       setPendingPasskey(false);
