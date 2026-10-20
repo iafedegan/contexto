@@ -120,6 +120,7 @@ export function ArticleWizard({
   miAutorId = null,
   mode = "manual",
   initial,
+  pieza,
   startStep,
   site,
   status,
@@ -136,6 +137,8 @@ export function ArticleWizard({
   mode?: "manual" | "ia";
   /** Artículo ya guardado que se reabre en el asistente. */
   initial?: WizardInitial;
+  /** Tarea del consejo de redacción que se escribe: trae el tema y la sección; la nota queda enlazada a su pieza. */
+  pieza?: { id: string; tema: string; categoryId: string | null };
   /** Paso por el que se abre (clave de STEPS). */
   startStep?: string;
   /** Cabecera, pie y tema del sitio para la vista previa de escritorio. */
@@ -153,14 +156,14 @@ export function ArticleWizard({
   /** Resultado del último guardado (?guardado=…), para confirmarlo. */
   savedAs?: string;
 }) {
-  const heading = mode === "ia" ? "Nuevo artículo con IA" : "Nuevo artículo";
+  const heading = pieza ? "Tarea del consejo · artículo con IA" : mode === "ia" ? "Nuevo artículo con IA" : "Nuevo artículo";
   const STEPS: readonly { key: StepKey; label: string }[] = mode === "ia" ? STEPS_IA : STEPS_MANUAL;
   const [step, setStep] = useState(() => Math.max(0, STEPS.findIndex((x) => x.key === startStep)));
   const [context, setContext] = useState("");
   // Estado del estilo propio: arranca como lo guardó la persona y cambia aquí mismo si lo apaga o lo vuelve a encender.
   const [estiloAhora, setEstiloAhora] = useState<EstadoEstilo>(estilo);
   // Tema -> la IA propone títulos y contextos -> el redactor elige y genera.
-  const [topic, setTopic] = useState("");
+  const [topic, setTopic] = useState(pieza?.tema ?? "");
   const [options, setOptions] = useState<TitleContextOptions | null>(null);
   const [ideas, setIdeas] = useState<{ ideas: TopicIdea[]; sources: { title: string; url: string }[] } | null>(null);
   const [ideasError, setIdeasError] = useState("");
@@ -216,7 +219,7 @@ export function ArticleWizard({
   const [excerpt, setExcerpt] = useState(initial?.excerpt ?? "");
   const [tags, setTags] = useState<string[]>(initial?.tags ?? []);
   const [tagDraft, setTagDraft] = useState("");
-  const [categoryId, setCategoryId] = useState(initial?.categoryId ?? "");
+  const [categoryId, setCategoryId] = useState(initial?.categoryId ?? pieza?.categoryId ?? "");
   const [region, setRegion] = useState(initial?.region ?? "");
   const [depto, setDepto] = useState(initial?.depto ?? "");
   const [authorId] = useState(initial?.authorId ?? miAutorId ?? "");
@@ -288,7 +291,7 @@ export function ArticleWizard({
       setAutoEstado("guardando");
       const enviado = JSON.stringify(snapRef.current);
       try {
-        const res = await autosaveDraft({ id: savedIdRef.current || undefined, ...snapRef.current });
+        const res = await autosaveDraft({ id: savedIdRef.current || undefined, ...snapRef.current, ...(pieza ? { piezaId: pieza.id } : {}) });
         if (res.ok) {
           ultimaFirma.current = enviado;
           if (!savedIdRef.current) {
@@ -311,7 +314,7 @@ export function ArticleWizard({
       }
     }, 1500);
     return () => clearTimeout(t);
-  }, [firma, title, mode]);
+  }, [firma, title, mode, pieza]);
 
   // Recordar el último paso por artículo (en este navegador) para retomar
   // donde se quedó al volver a abrirlo desde la lista.

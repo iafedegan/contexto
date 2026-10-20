@@ -58,3 +58,26 @@ export async function contarMisPendientes(userId: string): Promise<number> {
     return 0;
   }
 }
+
+/** Una pieza que le toca a esta persona (o cualquiera si es administrador), con lo necesario para escribirla en el asistente de artículos. */
+export async function piezaParaEscribir(user: { id: string; role: string }, slotId: string) {
+  if (!/^[0-9a-f-]{36}$/i.test(slotId)) return null;
+  const [f] = await db
+    .select({ id: editorialSlots.id, tema: editorialSlots.topic, enfoque: editorialSlots.angle, encargo: editorialSlots.brief, slug: editorialSlots.sectionSlug, categoryId: categories.id, articleId: editorialSlots.articleId })
+    .from(editorialSlots)
+    .innerJoin(editorialPlans, eq(editorialPlans.id, editorialSlots.planId))
+    .leftJoin(categories, eq(categories.slug, editorialSlots.sectionSlug))
+    .where(and(eq(editorialSlots.id, slotId), user.role === "administrador" ? undefined : asignadaA(user.id)))
+    .limit(1);
+  return f ?? null;
+}
+
+/** Enlaza la nota que se está escribiendo con su pieza del consejo: queda «redactando» (la IA no la escribe sola) hasta que se envíe a revisión. */
+export async function vincularPieza(user: { id: string; role: string }, slotId: string, articleId: string): Promise<void> {
+  const pieza = await piezaParaEscribir(user, slotId);
+  if (!pieza || pieza.articleId) return;
+  await db
+    .update(editorialSlots)
+    .set({ articleId, status: "redactando", error: null, updatedAt: sql`now()` })
+    .where(and(eq(editorialSlots.id, slotId), inArray(editorialSlots.status, ["planificada", "fallida"])));
+}

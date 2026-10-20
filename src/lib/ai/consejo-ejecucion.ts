@@ -8,7 +8,7 @@ import "server-only";
  *  - Casilla «auto»: solo si quien activó el plan puede publicar Y el borrador pasa un control de calidad se PROGRAMA para su hora; el
  *    cron de notas programadas la publica. Si no pasa el control, queda en revisión. Nunca se publica algo que no pasó el control.
  */
-import { and, asc, eq, inArray, lte, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, lte, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { articles, categories, editorialPlans, editorialSlots, users } from "@/db/schema";
 import { generateArticleDraftCore } from "@/lib/ai/borrador";
@@ -168,16 +168,17 @@ export async function sincronizarCasillas(planId?: string): Promise<void> {
     .select({ id: editorialSlots.id, estado: editorialSlots.status, nota: articles.status })
     .from(editorialSlots)
     .innerJoin(articles, eq(editorialSlots.articleId, articles.id))
-    .where(and(inArray(editorialSlots.status, ["revision", "programada"]), filtroPlan));
+    .where(and(inArray(editorialSlots.status, ["revision", "programada", "redactando"]), filtroPlan));
   for (const f of conNota) {
-    const nuevo: EstadoCasilla | null = f.nota === "publicado" ? "publicada" : f.nota === "programado" ? "programada" : f.nota === "archivado" ? "omitida" : f.nota === "en_revision" || f.nota === "borrador" ? (f.estado === "programada" ? "revision" : null) : null;
+    // Una pieza que su responsable escribe a mano pasa a «revisión» cuando envía la nota; mientras sea borrador sigue «redactando».
+    const nuevo: EstadoCasilla | null = f.estado === "redactando" && f.nota === "en_revision" ? "revision" : f.nota === "publicado" ? "publicada" : f.nota === "programado" ? "programada" : f.nota === "archivado" ? "omitida" : f.nota === "en_revision" || f.nota === "borrador" ? (f.estado === "programada" ? "revision" : null) : null;
     if (nuevo && nuevo !== f.estado) await poner(f.id, nuevo);
   }
   // «Redactando» hace más de 6 minutos = la pasada se cortó (la ruta dura 5 como máximo): se libera para reintentar.
   await db
     .update(editorialSlots)
     .set({ status: "planificada", updatedAt: sql`now()` })
-    .where(and(eq(editorialSlots.status, "redactando"), lte(editorialSlots.updatedAt, new Date(Date.now() - 6 * 60_000)), filtroPlan));
+    .where(and(eq(editorialSlots.status, "redactando"), isNull(editorialSlots.articleId), lte(editorialSlots.updatedAt, new Date(Date.now() - 6 * 60_000)), filtroPlan));
 }
 
 /** Aprueba una casilla en revisión: la nota se programa para su hora (o sale ya si la hora pasó). Quien llama debe poder publicar. */

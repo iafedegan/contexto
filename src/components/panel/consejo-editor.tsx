@@ -410,6 +410,7 @@ export function ConsejoEditor({ plan, casillas: casillasProp, secciones, puedePu
                       <div className="flex flex-wrap items-center gap-3">
                         <div className="min-w-0 flex-1 basis-64"><p className="text-sm font-semibold">{c.topic || "Sin tema"}</p><p className="text-xs text-[var(--fg-muted)]">{nombre(c.sectionSlug)} · sale {nombreDia(diaDe(c.publishAt))} {horaDe(c.publishAt)}{escritorDe(c) ? ` · ✍ ${escritores.find((e) => e.id === escritorDe(c))?.nombre ?? ""}` : ""}</p></div>
                         <span className={`rounded-full px-3 py-1 text-xs font-semibold ${ev.lista ? "bg-emerald-600/15 text-emerald-700" : "bg-amber-500/15 text-amber-700"}`}>{ev.lista ? `Lista · ${ev.avance}%` : `Incompleta · ${ev.avance}%`}</span>
+                        <Link href={c.articleId ? `/panel/articulos/${c.articleId}?modo=ia&paso=vista` : `/panel/articulos/nuevo?modo=ia&pieza=${c.id}`} className={primario}><PenLine size={15} /> {c.articleId ? "Seguir con la nota" : "Escribir esta nota"}</Link>
                         <button type="button" onClick={() => setSelId(c.id === selId ? null : c.id)} className={secundario}>{c.id === selId ? "Cerrar" : "Abrir la ficha"}</button>
                       </div>
                       <div className="h-1.5 overflow-hidden rounded-full bg-[var(--surface-2)]" aria-hidden><div className={`h-full rounded-full transition-all ${ev.lista ? "bg-emerald-600" : "bg-amber-500"}`} style={{ width: `${ev.avance}%` }} /></div>

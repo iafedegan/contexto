@@ -40,7 +40,7 @@ export default async function MisPendientes() {
         <ul className="flex flex-col gap-3">
           {lista.map((p) => {
             const e = ESTADO[p.estado] ?? ESTADO.planificada;
-            const href = p.articleId ? `/panel/articulos/${p.articleId}?modo=ia&paso=vista` : `/panel/consejo/${p.planId}?paso=3`;
+            const href = p.articleId ? `/panel/articulos/${p.articleId}?modo=ia&paso=vista` : `/panel/articulos/nuevo?modo=ia&pieza=${p.id}`;
             return (
               <li key={p.id}>
                 <Link href={href} className="group block rounded-[var(--radius-lg)] focus-visible:outline-2 focus-visible:outline-offset-2">
@@ -55,7 +55,7 @@ export default async function MisPendientes() {
                       {p.estado === "fallida" && p.error && <p className="mt-1 text-xs text-red-700">{p.error}</p>}
                     </div>
                     <p className="flex items-center gap-1.5 text-sm text-[var(--fg-muted)]"><CalendarClock size={15} aria-hidden /> Sale <span className="font-medium capitalize text-[var(--fg)]">{cuando(p.publicaEn)}</span></p>
-                    <span className="inline-flex items-center gap-1 text-sm font-semibold text-[var(--accent)]">{p.articleId ? "Abrir la nota" : "Ver en el consejo"} <ChevronRight size={16} aria-hidden className="transition group-hover:translate-x-0.5" /></span>
+                    <span className="inline-flex items-center gap-1 text-sm font-semibold text-[var(--accent)]">{p.articleId ? "Seguir con la nota" : "Escribir esta nota"} <ChevronRight size={16} aria-hidden className="transition group-hover:translate-x-0.5" /></span>
                   </Card>
                 </Link>
               </li>

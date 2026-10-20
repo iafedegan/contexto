@@ -15,6 +15,7 @@ import { tienePermiso } from "@/lib/permisos-server";
 import { avisarSiUltimaHora } from "@/lib/push";
 import { invalidarCache } from "@/lib/data-cache";
 import { esNotaPropia, exigirNotaPropia } from "@/lib/propiedad-notas";
+import { vincularPieza } from "@/app/panel/(app)/pendientes/consultas";
 
 // Variante para las acciones que responden con un mensaje en vez de lanzar.
 const esNotaPropiaSegura = esNotaPropia;
@@ -215,8 +216,12 @@ export type AutosaveResult =
  * Autoguardado del asistente: crea o actualiza el BORRADOR a cada paso, sin redirigir ni publicar. La lógica está en
  * `guardarBorradorCore` (la comparte el bot de Telegram).
  */
-export async function autosaveDraft(input: BorradorInput): Promise<AutosaveResult> {
+export async function autosaveDraft(input: BorradorInput & { piezaId?: string }): Promise<AutosaveResult> {
   const user = await requirePermiso("articulos");
   if (input.id) await exigirNotaPropia(user, input.id);
-  return guardarBorradorCore(user.id, input);
+  const { piezaId, ...borrador } = input;
+  const r = await guardarBorradorCore(user.id, borrador);
+  // Si la nota se escribe para una pieza del consejo, queda enlazada a ella.
+  if (r.ok && piezaId) await vincularPieza(user, piezaId, r.id).catch(() => {});
+  return r;
 }

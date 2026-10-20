@@ -11,6 +11,7 @@ import { ArticleEditor } from "@/components/article-editor";
 import { ArticleWizard } from "@/components/panel/article-wizard";
 import { getEstilo } from "@/lib/ai/estilo";
 import { esNotaPropia } from "@/lib/propiedad-notas";
+import { piezaParaEscribir } from "@/app/panel/(app)/pendientes/consultas";
 import { siteChrome } from "@/components/panel/site-chrome";
 import { ViewsBarChart } from "@/components/panel/views-chart";
 import { articleSeries, bestDay, pctChange } from "@/lib/article-stats";
@@ -74,11 +75,11 @@ export default async function ArticleEditorPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ modo?: string; paso?: string; desde?: string; guardado?: string }>;
+  searchParams: Promise<{ modo?: string; paso?: string; desde?: string; guardado?: string; pieza?: string }>;
 }) {
   await requirePermiso("articulos");
   const { id } = await params;
-  const { modo, paso, desde, guardado } = await searchParams;
+  const { modo, paso, desde, guardado, pieza: piezaId } = await searchParams;
   const session = await auth();
   const isNew = id === "nuevo";
 
@@ -95,12 +96,16 @@ export default async function ArticleEditorPage({
   // Artículo nuevo: primero se elige cómo crearlo.
   if (isNew) {
     if (modo === "manual" || modo === "ia") {
+      // Tarea del consejo de redacción: el asistente abre con el tema, el enfoque y la sección de la pieza ya cargados.
+      const p = modo === "ia" && piezaId ? await piezaParaEscribir({ id: session!.user.id, role: session!.user.role }, piezaId) : null;
+      if (p?.articleId) redirect(`/panel/articulos/${p.articleId}?modo=ia`);
       return (
         <ArticleWizard
           categories={cats}
           authors={auths}
           miAutorId={miAutorId}
           mode={modo}
+          pieza={p ? { id: p.id, tema: [p.tema, p.enfoque, p.encargo].filter(Boolean).join(". ").slice(0, 600), categoryId: p.categoryId } : undefined}
           site={await siteChrome()}
           canPublish={canPublish(session!.user.role)}
           canPortada={await tienePermiso(session!.user.id, session!.user.role, "portada")}
