@@ -15,7 +15,7 @@ import { tienePermiso } from "@/lib/permisos-server";
 import { avisarSiUltimaHora } from "@/lib/push";
 import { invalidarCache } from "@/lib/data-cache";
 import { esNotaPropia, exigirNotaPropia } from "@/lib/propiedad-notas";
-import { vincularPieza } from "@/app/panel/(app)/pendientes/consultas";
+import { piezaParaEscribir, vincularPieza } from "@/app/panel/(app)/pendientes/consultas";
 
 // Variante para las acciones que responden con un mensaje en vez de lanzar.
 const esNotaPropiaSegura = esNotaPropia;
@@ -220,6 +220,14 @@ export async function autosaveDraft(input: BorradorInput & { piezaId?: string })
   const user = await requirePermiso("articulos");
   if (input.id) await exigirNotaPropia(user, input.id);
   const { piezaId, ...borrador } = input;
+  // Una pieza del consejo que ya tiene nota (se reabrió el enlace): se sigue guardando en esa nota, no se crea otra.
+  if (piezaId && !borrador.id) {
+    const pieza = await piezaParaEscribir(user, piezaId).catch(() => null);
+    if (pieza?.articleId) {
+      await exigirNotaPropia(user, pieza.articleId);
+      borrador.id = pieza.articleId;
+    }
+  }
   const r = await guardarBorradorCore(user.id, borrador);
   // Si la nota se escribe para una pieza del consejo, queda enlazada a ella.
   if (r.ok && piezaId) await vincularPieza(user, piezaId, r.id).catch(() => {});

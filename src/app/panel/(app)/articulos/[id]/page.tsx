@@ -98,7 +98,7 @@ export default async function ArticleEditorPage({
     if (modo === "manual" || modo === "ia") {
       // Tarea del consejo de redacción: el asistente abre con el tema, el enfoque y la sección de la pieza ya cargados.
       const p = modo === "ia" && piezaId ? await piezaParaEscribir({ id: session!.user.id, role: session!.user.role }, piezaId) : null;
-      if (p?.articleId) redirect(`/panel/articulos/${p.articleId}?modo=ia`);
+      // Ojo: aquí NO se redirige si la pieza ya tiene nota. Al elegir el título el autoguardado la enlaza y la pantalla se refresca; redirigir sacaba a la persona del asistente y le borraba lo escrito. Si se reabre el enlace, el autoguardado reutiliza la nota existente.
       return (
         <ArticleWizard
           categories={cats}
