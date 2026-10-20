@@ -61,9 +61,12 @@ type Comunes = { value: string; onValue: (v: string) => void; className?: string
 export function InputVoz({ value, onValue, className = "", ...rest }: Comunes & Omit<React.InputHTMLAttributes<HTMLInputElement>, "value" | "onChange">) {
   const d = useDictado(value, onValue);
   return (
-    <div className="relative min-w-0 flex-1">
-      <input {...rest} value={value} onChange={(e) => onValue(e.target.value)} className={`w-full ${className} ${d.soporta ? "pr-12" : ""}`} />
-      <Micro {...d} deshabilitado={rest.disabled} />
+    // El micrófono se centra en el propio campo (y no en la caja que lo envuelve, que en una columna crece con la ayuda que va debajo).
+    <div className="min-w-0 flex-1">
+      <div className="relative">
+        <input {...rest} value={value} onChange={(e) => onValue(e.target.value)} className={`w-full ${className} ${d.soporta ? "pr-12" : ""}`} />
+        <Micro {...d} deshabilitado={rest.disabled} />
+      </div>
     </div>
   );
 }
