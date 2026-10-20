@@ -12,7 +12,10 @@ export async function GET() {
   try {
     await db.execute(sql`select 1`);
     return NextResponse.json({ ok: true, db: "ok", dbMs: Date.now() - t0, at: new Date().toISOString() }, { headers: { "Cache-Control": "no-store" } });
-  } catch {
+  } catch (e) {
+    // El motivo va SOLO al registro del servidor (Vercel → Logs): sin contraseña ni cadena de conexión, y no se devuelve en la respuesta pública.
+    const err = e as { code?: string; message?: string; cause?: { code?: string; message?: string } };
+    console.error("[health] la base no responde:", err.cause?.code ?? err.code ?? "sin-código", (err.cause?.message ?? err.message ?? "").slice(0, 200));
     return NextResponse.json({ ok: false, db: "error", dbMs: Date.now() - t0, at: new Date().toISOString() }, { status: 503, headers: { "Cache-Control": "no-store" } });
   }
 }
