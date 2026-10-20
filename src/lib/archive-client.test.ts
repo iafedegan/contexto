@@ -40,7 +40,7 @@ const ids = async () => (await bd.db.select({ id: schema.archiveIndex.externalId
 
 beforeEach(async () => {
   process.env.ARCHIVE_API_BASE_URL = "https://origen.example.com/api/v2";
-  delete process.env.OPENAI_API_KEY;
+  delete process.env.OPENAI_API_KEY; delete process.env.EMBEDDING_PROVIDER;
   await bd.db.delete(schema.archiveIndex);
   await bd.db.delete(schema.siteSettings);
   await bd.db.delete(schema.rateLimits); // libera el candado de la sincronización entre pruebas
@@ -178,6 +178,7 @@ test("una caída momentánea del origen (5xx) se reintenta y la pasada termina",
 });
 
 test("los embeddings se piden en lote, no uno por uno", async () => {
+  process.env.EMBEDDING_PROVIDER = "openai";
   process.env.OPENAI_API_KEY = "clave-de-prueba";
   const peticiones: number[] = [];
   const vec = Array.from({ length: schema.EMBEDDING_DIMENSIONS }, (_, i) => (i === 0 ? 1 : 0));
@@ -198,7 +199,7 @@ test("los embeddings se piden en lote, no uno por uno", async () => {
     assert.equal(fila.n, 40);
   } finally {
     m.mock.restore();
-    delete process.env.OPENAI_API_KEY;
+    delete process.env.OPENAI_API_KEY; delete process.env.EMBEDDING_PROVIDER;
   }
 });
 

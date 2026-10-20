@@ -17,12 +17,13 @@ before(async () => {
 function simularEmbeddings() {
   const pedidos: string[] = [];
   const vec = Array.from({ length: schema.EMBEDDING_DIMENSIONS }, (_, i) => (i === 0 ? 1 : 0));
+  process.env.EMBEDDING_PROVIDER = "openai";
   process.env.OPENAI_API_KEY = "clave-de-prueba";
   const m = mock.method(globalThis, "fetch", async (_url: unknown, init?: RequestInit) => {
     pedidos.push(String((JSON.parse(String(init?.body)) as { input: string }).input));
     return new Response(JSON.stringify({ data: [{ embedding: vec }] }), { status: 200, headers: { "content-type": "application/json" } });
   });
-  return { pedidos, restaurar: () => { m.mock.restore(); delete process.env.OPENAI_API_KEY; } };
+  return { pedidos, restaurar: () => { m.mock.restore(); delete process.env.OPENAI_API_KEY; delete process.env.EMBEDDING_PROVIDER; } };
 }
 
 test("el embedding se calcula sobre la pregunta original y no sobre la lista de palabras de la consulta de texto", async () => {
