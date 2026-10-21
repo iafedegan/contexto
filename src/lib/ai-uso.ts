@@ -3,7 +3,7 @@ import { eq, gte, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { assistantQueries, siteSettings } from "@/db/schema";
 import { estimateCostUsd, getLimites } from "@/lib/budget";
-import { getGastos } from "@/lib/ai-cuota";
+import { cuotaDe, getCuotas, getGastos } from "@/lib/ai-cuota";
 import { leerRef } from "@/lib/ai-providers";
 
 /**
@@ -44,17 +44,21 @@ export async function registrarUsoModelo(ref: string, entrada: number, salida: n
   }
 }
 
-/** Resumen del mes para la barra del menú: por modelo, total, presupuesto del asistente público y lo gastado por las personas. */
-export async function resumenUsoIA() {
+/**
+ * Resumen del mes para la barra del menú. Lo ve TODO el equipo: el consumo por modelo (de todos), el total y lo que lleva gastado la propia
+ * persona frente a su cuota. Los administradores ven además el presupuesto del asistente público y lo gastado por todas las personas.
+ */
+export async function resumenUsoIA(userId: string, esAdmin: boolean) {
   const mes = mesActual();
   const inicio = new Date();
   inicio.setUTCDate(1);
   inicio.setUTCHours(0, 0, 0, 0);
 
-  const [fila, limites, gastos, asistente] = await Promise.all([
+  const [fila, limites, gastos, cuotas, asistente] = await Promise.all([
     db.select({ value: siteSettings.value }).from(siteSettings).where(eq(siteSettings.key, usoKey(mes))).limit(1).then((r) => r[0]),
     getLimites(),
     getGastos(),
+    getCuotas(),
     db
       .select({ gasto: sql<string>`coalesce(sum(${assistantQueries.costUsd}), 0)` })
       .from(assistantQueries)
@@ -82,9 +86,16 @@ export async function resumenUsoIA() {
     mes,
     modelos,
     totalUsd: modelos.reduce((s, m) => s + m.usd, 0),
-    presupuestoAsistenteUsd: limites.presupuestoMensualUsd,
-    gastoAsistenteUsd: asistente,
-    gastoPersonasUsd: Object.values(gastos).reduce((s, v) => s + (Number(v) || 0), 0),
+    /** Lo de esta persona: gasto del mes y su cuota (null = sin tope). */
+    yo: { gastoUsd: Number(gastos[userId] ?? 0), cuotaUsd: cuotaDe(cuotas, userId) },
+    /** Solo administradores; el resto recibe null. */
+    admin: esAdmin
+      ? {
+          presupuestoAsistenteUsd: limites.presupuestoMensualUsd,
+          gastoAsistenteUsd: asistente,
+          gastoPersonasUsd: Object.values(gastos).reduce((s, v) => s + (Number(v) || 0), 0),
+        }
+      : null,
   };
 }
 

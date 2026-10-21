@@ -21,7 +21,6 @@ import {
   RotateCcw,
   Save,
   Send,
-  Cpu,
   PenLine,
   Sparkles,
   Trash2,
@@ -61,6 +60,7 @@ import { WizardStepper } from "@/components/panel/wizard-stepper";
 import { BotonVoz } from "@/components/panel/boton-voz";
 import { PanelRelacionadas } from "@/components/panel/panel-relacionadas";
 import { TarjetaEstilo, type EstadoEstilo } from "@/components/panel/tarjeta-estilo";
+import { TarjetaModelo } from "@/components/panel/tarjeta-modelo";
 import { duracionWav, esVideo, ExtraerAudioError, extraerAudioDeVideo, partirWav } from "@/lib/audio-extract";
 import { aplicarTipo, encodeSpec, renderChartSvg, TIPOS_GRAFICA, type ChartSpec, type TipoGrafica } from "@/lib/chart-svg";
 import { InteractiveChart } from "@/components/interactive-chart";
@@ -131,6 +131,7 @@ export function ArticleWizard({
   estiloInfo = null,
   savedAs,
   modelosEditor,
+  esAdmin = false,
 }: {
   categories: (Option & { parentId?: string | null })[];
   authors: Option[];
@@ -156,7 +157,9 @@ export function ArticleWizard({
   /** Datos del diagnóstico de estilo (fecha, notas, palabras) para el aviso del paso 1. */
   estiloInfo?: { generadoEn: string; muestras: number; palabras: number } | null;
   /** Modelos de IA que un administrador habilitó para redactar (con el predeterminado). Con más de uno, quien crea la nota elige cuál usar. */
-  modelosEditor?: { modelos: { ref: string; etiqueta: string }[]; predeterminado: string | null };
+  /** La persona es administradora: puede habilitar más modelos (se lo dice la tarjeta del modelo). */
+  esAdmin?: boolean;
+  modelosEditor?: { modelos: { ref: string; etiqueta: string }[]; predeterminado: string | null; inicial: string | null };
   /** Resultado del último guardado (?guardado=…), para confirmarlo. */
   savedAs?: string;
 }) {
@@ -178,7 +181,7 @@ export function ArticleWizard({
   const [refs, setRefs] = useState<NewsItem[]>([]);
   const [newsFiltro, setNewsFiltro] = useState<"todo" | NewsItem["type"]>("todo");
   // Modelo de IA con el que se redacta esta nota: arranca en el predeterminado y se puede cambiar mientras haya más de uno habilitado.
-  const [modelo, setModelo] = useState(modelosEditor?.predeterminado ?? "");
+  const [modelo, setModelo] = useState(modelosEditor?.inicial ?? modelosEditor?.predeterminado ?? "");
   const [searchingNews, startNews] = useTransition();
   const [enOpciones, setEnOpciones] = useState(false);
   // Alto de la ventana: decide cuántas filas de cada lista caben por página del carrusel.
@@ -1089,6 +1092,7 @@ export function ArticleWizard({
                     enlaces: material.some((m) => m.kind === "enlace") ? `${material.filter((m) => m.kind === "enlace").length} cargados` : undefined,
                   }}
                 />
+                {mode === "ia" && modelosEditor && <TarjetaModelo modelos={modelosEditor.modelos} valor={modelo} onCambiar={setModelo} esAdmin={esAdmin} deshabilitado={generating} />}
                 {mode === "ia" && <TarjetaEstilo estado={estiloAhora} info={estiloInfo} alCambiar={setEstiloAhora} />}
                 </div>
               </div>
@@ -1667,20 +1671,6 @@ export function ArticleWizard({
           </button>
         ) : (
           <span />
-        )}
-        {/* Modelo de IA con el que se redacta (solo si un administrador habilitó más de uno). */}
-        {current.key === "tema" && !generated && modelosEditor && modelosEditor.modelos.length > 1 && (
-          <label className="flex min-w-0 items-center gap-1.5 text-xs text-[var(--fg-muted)]" title="Modelo de IA con el que se redacta esta nota">
-            <Cpu size={14} className="shrink-0" />
-            <span className="sr-only sm:not-sr-only">Modelo</span>
-            <select value={modelo} onChange={(e) => setModelo(e.target.value)} disabled={generating} className="lx-input lx-mono max-w-[11rem] py-1.5 text-xs sm:max-w-[16rem]">
-              {modelosEditor.modelos.map((m) => (
-                <option key={m.ref} value={m.ref}>
-                  {m.etiqueta}
-                </option>
-              ))}
-            </select>
-          </label>
         )}
         {/* Qué falta para seguir (o cómo va): evita que un botón apagado parezca roto. */}
         <p className="hidden min-w-0 flex-1 truncate text-center text-xs text-[var(--fg-muted)] sm:block" aria-live="polite">

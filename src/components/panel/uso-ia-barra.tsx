@@ -16,8 +16,8 @@ const NOMBRE: Record<string, string> = { google: "Gemini", anthropic: "Claude" }
 const colorBarra = (pct: number) => (pct >= 90 ? "bg-red-500" : pct >= 70 ? "bg-amber-400" : "bg-[var(--accent-2)]");
 
 /**
- * «Uso de IA»: barra desplegable con lo gastado en el mes por cada modelo, sumando a todos los usuarios y al asistente público, y lo que queda del
- * presupuesto del asistente. Solo administradores. En el menú lateral (`variante="lateral"`) sigue el despliegue del riel; en el celular va a ancho
+ * «Uso de IA»: barra desplegable que ve TODO el equipo, con lo gastado en el mes por cada modelo (sumando a todos), lo que lleva gastado la propia
+ * persona frente a su cuota y, solo para administradores, el presupuesto del asistente público. En el menú lateral (`variante="lateral"`) sigue el despliegue del riel; en el celular va a ancho
  * completo. Los costos son estimados por tokens: el saldo real está en el panel de cada proveedor.
  */
 export function UsoIaBarra({ variante = "lateral" }: { variante?: "lateral" | "movil" }) {
@@ -47,8 +47,12 @@ export function UsoIaBarra({ variante = "lateral" }: { variante?: "lateral" | "m
   const lateral = variante === "lateral";
   // En el riel lateral el texto solo se ve con el menú desplegado, igual que el resto de elementos.
   const soloDesplegado = lateral ? "opacity-0 transition-opacity duration-150 group-hover/sb:opacity-100 group-focus-within/sb:opacity-100" : "";
-  const pct = datos && datos.presupuestoAsistenteUsd > 0 ? Math.min(100, (datos.gastoAsistenteUsd / datos.presupuestoAsistenteUsd) * 100) : 0;
-  const quedan = datos ? Math.max(0, datos.presupuestoAsistenteUsd - datos.gastoAsistenteUsd) : 0;
+  // La barra cerrada resume lo que importa a cada quien: el administrador, el presupuesto del asistente; el resto, su propia cuota.
+  const pctAsistente = datos?.admin && datos.admin.presupuestoAsistenteUsd > 0 ? Math.min(100, (datos.admin.gastoAsistenteUsd / datos.admin.presupuestoAsistenteUsd) * 100) : 0;
+  const cuota = datos?.yo.cuotaUsd ?? null;
+  const pctYo = datos && cuota !== null && cuota > 0 ? Math.min(100, (datos.yo.gastoUsd / cuota) * 100) : 0;
+  const pct = datos?.admin ? pctAsistente : pctYo;
+  const hayGasto = datos ? (datos.admin ? datos.admin.gastoAsistenteUsd : datos.yo.gastoUsd) > 0 : false;
   const maxUsd = datos ? Math.max(0.0001, ...datos.modelos.map((m) => m.usd)) : 1;
 
   return (
@@ -68,7 +72,7 @@ export function UsoIaBarra({ variante = "lateral" }: { variante?: "lateral" | "m
           <span className="block">Uso de IA</span>
           {datos && (
             <span className="mt-1 block h-1.5 w-full overflow-hidden rounded-full bg-white/15" aria-hidden>
-              <span className={`block h-full rounded-full ${colorBarra(pct)}`} style={{ width: `${Math.max(pct, datos.gastoAsistenteUsd > 0 ? 3 : 0)}%` }} />
+              <span className={`block h-full rounded-full ${colorBarra(pct)}`} style={{ width: `${Math.max(pct, hayGasto ? 3 : 0)}%` }} />
             </span>
           )}
         </span>
@@ -83,17 +87,36 @@ export function UsoIaBarra({ variante = "lateral" }: { variante?: "lateral" | "m
             <>
               <div>
                 <p className="flex items-baseline justify-between gap-2 font-semibold text-white">
-                  <span>Asistente público</span>
-                  <span className="lx-mono">{usd(datos.gastoAsistenteUsd)} / {usd(datos.presupuestoAsistenteUsd)}</span>
+                  <span>Mi consumo</span>
+                  <span className="lx-mono">{cuota !== null ? `${usd(datos.yo.gastoUsd)} / ${usd(cuota)}` : usd(datos.yo.gastoUsd)}</span>
                 </p>
-                <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-white/15">
-                  <div className={`h-full rounded-full ${colorBarra(pct)}`} style={{ width: `${Math.max(pct, datos.gastoAsistenteUsd > 0 ? 3 : 0)}%` }} />
-                </div>
-                <p className="mt-1">Quedan {usd(quedan)} del presupuesto del mes{pct >= 100 ? ": el asistente responde solo en modo búsqueda." : "."}</p>
+                {cuota !== null ? (
+                  <>
+                    <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-white/15">
+                      <div className={`h-full rounded-full ${colorBarra(pctYo)}`} style={{ width: `${Math.max(pctYo, datos.yo.gastoUsd > 0 ? 3 : 0)}%` }} />
+                    </div>
+                    <p className="mt-1">Te quedan {usd(Math.max(0, cuota - datos.yo.gastoUsd))} de tu cuota del mes{pctYo >= 100 ? ": ya no puedes generar con IA hasta el mes siguiente." : "."}</p>
+                  </>
+                ) : (
+                  <p className="mt-1">Sin tope mensual: tu cuenta no tiene una cuota de IA fijada.</p>
+                )}
               </div>
 
+              {datos.admin && (
+                <div>
+                  <p className="flex items-baseline justify-between gap-2 font-semibold text-white">
+                    <span>Asistente público</span>
+                    <span className="lx-mono">{usd(datos.admin.gastoAsistenteUsd)} / {usd(datos.admin.presupuestoAsistenteUsd)}</span>
+                  </p>
+                  <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-white/15">
+                    <div className={`h-full rounded-full ${colorBarra(pctAsistente)}`} style={{ width: `${Math.max(pctAsistente, datos.admin.gastoAsistenteUsd > 0 ? 3 : 0)}%` }} />
+                  </div>
+                  <p className="mt-1">Quedan {usd(Math.max(0, datos.admin.presupuestoAsistenteUsd - datos.admin.gastoAsistenteUsd))} del presupuesto del mes{pctAsistente >= 100 ? ": el asistente responde solo en modo búsqueda." : "."}</p>
+                </div>
+              )}
+
               <div>
-                <p className="font-semibold text-white">Por modelo · {datos.mes}</p>
+                <p className="font-semibold text-white">Por modelo · todo el equipo · {datos.mes}</p>
                 {datos.modelos.length === 0 ? (
                   <p className="mt-1">Todavía no hay consumo este mes.</p>
                 ) : (
@@ -117,9 +140,15 @@ export function UsoIaBarra({ variante = "lateral" }: { variante?: "lateral" | "m
               </div>
 
               <p className="flex items-baseline justify-between gap-2">
-                <span>Total (todos los usuarios)</span>
+                <span>Total del equipo</span>
                 <span className="lx-mono font-semibold text-white">{usd(datos.totalUsd)}</span>
               </p>
+              {datos.admin && (
+                <p className="flex items-baseline justify-between gap-2">
+                  <span>Gastado por las personas</span>
+                  <span className="lx-mono">{usd(datos.admin.gastoPersonasUsd)}</span>
+                </p>
+              )}
               <p className="leading-relaxed opacity-80">Costos estimados por tokens. El saldo real de cada proveedor está en su propio panel; aquí se ve lo que se consumió desde este sitio.</p>
             </>
           )}

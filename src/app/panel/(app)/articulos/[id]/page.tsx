@@ -108,7 +108,8 @@ export default async function ArticleEditorPage({
           mode={modo}
           pieza={p ? { id: p.id, tema: [p.tema, p.enfoque, p.encargo].filter(Boolean).join(". ").slice(0, 600), categoryId: p.categoryId, brief: p.brief } : undefined}
           site={await siteChrome()}
-          modelosEditor={await getModelosEditor()}
+          modelosEditor={await getModelosEditor(session!.user.id)}
+          esAdmin={session!.user.role === "administrador"}
           canPublish={canPublish(session!.user.role)}
           canPortada={await tienePermiso(session!.user.id, session!.user.role, "portada")}
           estilo={estilo}
@@ -162,7 +163,8 @@ export default async function ArticleEditorPage({
           mode={modo}
           startStep={paso}
           site={await siteChrome()}
-          modelosEditor={await getModelosEditor()}
+          modelosEditor={await getModelosEditor(session!.user.id)}
+          esAdmin={session!.user.role === "administrador"}
           status={row.status}
           canPublish={canPublish(session!.user.role)}
           canPortada={await tienePermiso(session!.user.id, session!.user.role, "portada")}

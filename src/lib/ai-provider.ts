@@ -8,6 +8,7 @@ import { db } from "@/db";
 import { siteSettings } from "@/db/schema";
 import { decryptSecret, maskSecret } from "@/lib/secrets";
 import { registrarUsoModelo } from "@/lib/ai-uso";
+import { getModeloFavorito } from "@/lib/ai-preferencia";
 import {
   AI_PROVIDERS,
   DEFAULT_AI_SETTINGS,
@@ -18,7 +19,6 @@ import {
   providerMeta,
   type AiProviderId,
   type AiSettings,
-  type KeyStatus,
   type RolIA,
 } from "@/lib/ai-providers";
 
@@ -105,8 +105,11 @@ export async function getModelo(rol: "editor" | "asistente" | "videoEntender", e
   return principal ?? (rol === "editor" ? null : await crearModelo(settings, modeloDe(settings, "editor")));
 }
 
-/** Los modelos que se pueden elegir al crear una nota y el predeterminado (solo los que tienen clave). */
-export async function getModelosEditor(): Promise<{ modelos: { ref: string; etiqueta: string }[]; predeterminado: string | null }> {
+/**
+ * Los modelos que se pueden elegir al crear una nota (solo los que tienen clave), el predeterminado del administrador y el que arranca marcado: el
+ * favorito de esa persona si sigue habilitado y, si no, el predeterminado.
+ */
+export async function getModelosEditor(userId?: string): Promise<{ modelos: { ref: string; etiqueta: string }[]; predeterminado: string | null; inicial: string | null }> {
   const settings = await readSettings();
   const { habilitados, predeterminado } = listaEditor(settings);
   const conClave: string[] = [];
@@ -118,25 +121,12 @@ export async function getModelosEditor(): Promise<{ modelos: { ref: string; etiq
     const r = leerRef(ref)!;
     return `${r.model} · ${r.provider === "google" ? "Gemini" : "Claude"}`;
   };
+  const pred = conClave.includes(predeterminado) ? predeterminado : (conClave[0] ?? null);
+  const favorito = userId ? await getModeloFavorito(userId) : null;
   return {
     modelos: conClave.map((ref) => ({ ref, etiqueta: etiqueta(ref) })),
-    predeterminado: conClave.includes(predeterminado) ? predeterminado : (conClave[0] ?? null),
-  };
-}
-
-/** Estado para la pantalla de configuración: nunca devuelve la clave entera. */
-export async function getKeyStatus(): Promise<KeyStatus> {
-  const settings = await readSettings();
-  const { key, source } = await resolveKey(settings);
-  return {
-    provider: settings.provider,
-    model: settings.model,
-    chartModel: settings.chartModel ?? "",
-    imageModel: settings.imageModel ?? "",
-    models: settings.models?.[settings.provider] ?? [],
-    present: Boolean(key),
-    source,
-    masked: key ? maskSecret(key) : null,
+    predeterminado: pred,
+    inicial: favorito && conClave.includes(favorito) ? favorito : pred,
   };
 }
 

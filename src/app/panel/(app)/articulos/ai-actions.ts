@@ -5,6 +5,8 @@
  * para poder usarla también desde el bot de Telegram, que no tiene sesión de navegador.
  */
 import { requirePermiso } from "@/lib/auth";
+import { getModelosEditor } from "@/lib/ai-provider";
+import { setModeloFavorito } from "@/lib/ai-preferencia";
 import { autollenarPreguntasCore } from "@/lib/ai/consejo-ia";
 import {
   generateArticleDraftCore,
@@ -116,4 +118,13 @@ export async function leerEnlaces(...args: Parameters<typeof leerEnlacesCore> ex
 export async function buscarRelacionadas(...args: Parameters<typeof buscarRelacionadasCore> extends [string, ...infer R] ? R : never) {
   const user = await requirePermiso("articulos");
   return buscarRelacionadasCore(user.id, ...args);
+}
+
+/** Guarda con qué IA le gusta más redactar a esta persona; solo vale uno de los modelos que un administrador habilitó para los editores. */
+export async function guardarModeloFavorito(ref: string): Promise<{ ok: boolean; message: string }> {
+  const user = await requirePermiso("articulos");
+  const { modelos } = await getModelosEditor(user.id);
+  if (!modelos.some((m) => m.ref === ref)) return { ok: false, message: "Ese modelo no está habilitado para redactar." };
+  await setModeloFavorito(user.id, ref);
+  return { ok: true, message: "Guardado como tu IA favorita." };
 }
