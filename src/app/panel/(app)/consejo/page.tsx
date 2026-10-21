@@ -3,7 +3,7 @@ import { desc, eq, sql } from "drizzle-orm";
 import { ArrowLeft, CalendarRange, ChevronRight } from "lucide-react";
 import { db } from "@/db";
 import { editorialPlans, editorialSlots } from "@/db/schema";
-import { requirePermiso } from "@/lib/auth";
+import { requireRole } from "@/lib/auth";
 import { ConsejoNuevo } from "@/components/panel/consejo-nuevo";
 import { ConsejoBorrar } from "@/components/panel/consejo-borrar";
 import { lunesDe, sumarDias } from "@/lib/consejo/plan";
@@ -19,7 +19,7 @@ const ESTADO = { borrador: "Borrador", activo: "Activo", cerrado: "Cerrado" } as
 
 /** Lista de consejos de redacción y alta de uno nuevo. */
 export default async function ConsejosPage({ searchParams }: { searchParams: Promise<{ tab?: string; editor?: string; estado?: string }> }) {
-  await requirePermiso("articulos");
+  await requireRole("administrador");
   const { tab, editor = "", estado = "" } = await searchParams;
   const verTareas = tab === "tareas";
   // Pone al día el estado de las piezas según el de su nota (publicada, programada, en revisión) antes de listarlas.

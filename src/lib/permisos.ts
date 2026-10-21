@@ -23,7 +23,7 @@ export const PERMISOS = [
   { id: "borradores_ia", label: "Borradores de IA", hint: "Revisar, aprobar y descartar lo que propone la IA", min: "editor" },
   { id: "avisos", label: "Avisos", hint: "Crear y retirar avisos del sitio", min: "editor" },
   { id: "mensajes", label: "Mensajes recibidos", hint: "Leer contacto y solicitudes de pauta", min: "editor" },
-  { id: "portada", label: "Portada, plantillas y secciones", hint: "Diseño del sitio, orden y menú de secciones", min: "editor" },
+  { id: "portada", label: "Portada, plantillas y secciones", hint: "Diseño del sitio, orden y menú de secciones", min: "administrador" },
   { id: "newsletter", label: "Newsletter", hint: "Ediciones, envíos y suscriptores", min: "editor" },
   { id: "analitica", label: "Centro de análisis", hint: "Qué leen, cuándo, desde dónde, y cómo crece la base de suscriptores", min: "editor" },
   { id: "api", label: "API pública", hint: "Claves para terceros", min: "administrador" },

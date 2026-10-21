@@ -13,6 +13,8 @@ type Item = {
   hint: string;
   /** Permiso que hace falta para verla (ver src/lib/permisos.ts). */
   permiso?: PermisoId;
+  /** Solo lo ve y lo usa un administrador (el servidor además lo exige). */
+  soloAdmin?: boolean;
   /** Cómo la ve quien no es administrador (si sigue viéndola, con otro texto). */
   paraOtros?: { label: string; hint: string };
   /** Número que se muestra en una insignia junto al nombre (p. ej. las piezas que te asignaron). */
@@ -46,7 +48,7 @@ const GROUPS: Group[] = [
       { href: "/panel", label: "Resumen", hint: "Estado editorial, audiencia y suscriptores" },
       { href: "/panel/articulos", label: "Artículos", hint: "Crear, editar y programar", permiso: "articulos" },
       { href: "/panel/pendientes", label: "Mis pendientes", hint: "Piezas del consejo que te asignaron" },
-      { href: "/panel/consejo", label: "Consejo de redacción", hint: "Planear la semana con IA", permiso: "articulos" },
+      { href: "/panel/consejo", label: "Consejo de redacción", hint: "Planear la semana con IA", permiso: "articulos", soloAdmin: true },
       { href: "/panel/newsletter", label: "Newsletter", hint: "Configurar y enviar el boletín", permiso: "newsletter" },
     ],
   },
@@ -92,7 +94,7 @@ function gruposVisibles(role: string, permisos: string[], pendientes = 0) {
   return GROUPS.map((g) => ({
     ...g,
     items: g.items
-      .filter((i) => !i.permiso || permisos.includes(i.permiso))
+      .filter((i) => (!i.soloAdmin || esAdmin) && (!i.permiso || permisos.includes(i.permiso)))
       .map((i) => (esAdmin || !i.paraOtros ? i : { ...i, ...i.paraOtros }))
       .map((i) => (i.href === "/panel/pendientes" && pendientes > 0 ? { ...i, badge: pendientes } : i)),
   })).filter((g) => g.items.length > 0);

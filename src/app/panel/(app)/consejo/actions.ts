@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import { categories, editorialPlans, editorialSlots } from "@/db/schema";
-import { canPublish, requirePermiso } from "@/lib/auth";
+import { canPublish, requirePermiso, requireRole } from "@/lib/auth";
 import { tienePermiso } from "@/lib/permisos-server";
 import { armarPautaCore, autollenarPreguntasCore, completarFichaCore, proponerTemasConsejoCore } from "@/lib/ai/consejo-ia";
 import { bloqueDeEscritor, escritoresParaElegir } from "@/lib/ai/estilo";
@@ -29,7 +29,7 @@ async function puedePublicar(user: { id: string; role: Parameters<typeof canPubl
 
 /** Crea un plan en borrador para la semana de una fecha. */
 export async function crearPlan(input: { fecha: string; titulo?: string; escritorId?: string }): Promise<Res<{ id: string }>> {
-  const user = await requirePermiso("articulos");
+  const user = await requireRole("administrador");
   if (!/^\d{4}-\d{2}-\d{2}$/.test(input.fecha)) return { ok: false, message: "Elige una fecha válida." };
   const lunes = lunesDe(input.fecha);
   // Solo se acepta un escritor que esta persona pueda elegir.
@@ -44,7 +44,7 @@ export async function crearPlan(input: { fecha: string; titulo?: string; escrito
 
 /** Guarda la configuración y los temas del plan (solo en borrador o activo). */
 export async function guardarPlan(id: string, input: { titulo?: string; config: ConfigConsejo; temas: TemaConsejo[] }): Promise<Res> {
-  const user = await requirePermiso("articulos");
+  const user = await requireRole("administrador");
   const temas = (Array.isArray(input.temas) ? input.temas : [])
     .map((t) => ({ id: typeof t.id === "string" && t.id ? t.id.slice(0, 60) : randomUUID(), texto: String(t.texto ?? "").trim().slice(0, 200), seccion: t.seccion && /^[\w-]{1,80}$/.test(t.seccion) ? t.seccion : undefined, prioridad: (t.prioridad === 1 || t.prioridad === 3 ? t.prioridad : 2) as 1 | 2 | 3, origen: t.origen === "ia" ? ("ia" as const) : ("manual" as const), angulo: t.angulo ? String(t.angulo).slice(0, 400) : undefined, dia: Number.isInteger(t.dia) && (t.dia as number) >= 1 && (t.dia as number) <= 7 ? t.dia : undefined, brief: t.brief && respondidas(sanearBrief(t.brief)) ? sanearBrief(t.brief) : undefined }))
     .filter((t) => t.texto.length >= 4)
@@ -58,7 +58,7 @@ export async function guardarPlan(id: string, input: { titulo?: string; config: 
 
 /** La IA propone los temas de UNA sección (hasta `cantidad`, con búsqueda y fuentes). Son sugerencias: no entran al plan hasta que se añadan. */
 export async function proponerTemas(id: string, opciones: { seccion?: string; cantidad?: number; enfoque?: string } = {}): Promise<Res<{ temas: TemaConsejo[]; fuentes: { title: string; url: string }[] }>> {
-  const user = await requirePermiso("articulos");
+  const user = await requireRole("administrador");
   const [plan] = await db.select().from(editorialPlans).where(eq(editorialPlans.id, id)).limit(1);
   if (!plan) return { ok: false, message: "El plan ya no existe." };
   let seccion: { slug: string; name: string } | undefined;
@@ -80,7 +80,7 @@ export async function proponerTemas(id: string, opciones: { seccion?: string; ca
 
 /** La IA contesta las preguntas de un tema a partir de su descripción (con el estilo del escritor de esa sección si hay). */
 export async function autollenarTema(planId: string, seccion: string, tema: string): Promise<Res<{ brief: BriefSeccion }>> {
-  const user = await requirePermiso("articulos");
+  const user = await requireRole("administrador");
   if (tema.trim().length < 4) return { ok: false, message: "Describe primero el tema." };
   const [plan] = await db.select({ config: editorialPlans.config }).from(editorialPlans).where(eq(editorialPlans.id, planId)).limit(1);
   if (!plan) return { ok: false, message: "El plan ya no existe." };
@@ -94,7 +94,7 @@ export async function autollenarTema(planId: string, seccion: string, tema: stri
 
 /** Arma la pauta: construye la parrilla con las cuotas y la IA llena el tema, enfoque y encargo de cada casilla. Reemplaza las casillas aún sin redactar. */
 export async function armarPauta(id: string, enfoque?: string): Promise<Res<{ casillas: number }>> {
-  const user = await requirePermiso("articulos");
+  const user = await requireRole("administrador");
   const [plan] = await db.select().from(editorialPlans).where(eq(editorialPlans.id, id)).limit(1);
   if (!plan) return { ok: false, message: "El plan ya no existe." };
   const cfg = sanearConfig(plan.config);
@@ -136,7 +136,7 @@ export async function armarPauta(id: string, enfoque?: string): Promise<Res<{ ca
 
 /** Edita una casilla (tema, enfoque, encargo, hora, sección, prioridad, aprobación). Solo si aún no se redactó. */
 export async function guardarCasilla(slotId: string, d: { topic: string; angle: string; brief: string; sectionSlug: string; publishAt: string; priority: number; approval: "manual" | "auto"; ficha?: FichaPauta }): Promise<Res> {
-  const user = await requirePermiso("articulos");
+  const user = await requireRole("administrador");
   const [c] = await db.select().from(editorialSlots).where(eq(editorialSlots.id, slotId)).limit(1);
   if (!c) return { ok: false, message: "La casilla ya no existe." };
   if (c.status !== "planificada" && c.status !== "fallida") return { ok: false, message: "Esta pieza ya se redactó: edítala desde Artículos." };
@@ -159,7 +159,7 @@ export async function guardarCasilla(slotId: string, d: { topic: string; angle: 
 
 /** Quita una casilla que aún no se redactó. */
 export async function quitarCasilla(slotId: string): Promise<Res> {
-  await requirePermiso("articulos");
+  await requireRole("administrador");
   const [c] = await db.select().from(editorialSlots).where(eq(editorialSlots.id, slotId)).limit(1);
   if (!c) return { ok: true };
   if (c.status === "redactando" || c.status === "programada" || c.status === "publicada") return { ok: false, message: "Esta pieza ya está en marcha." };
@@ -170,7 +170,7 @@ export async function quitarCasilla(slotId: string): Promise<Res> {
 
 /** Activa el plan: desde ahora se redacta cada casilla a su tiempo. Con piezas automáticas exige poder publicar. */
 export async function activarPlan(id: string): Promise<Res> {
-  const user = await requirePermiso("articulos");
+  const user = await requireRole("administrador");
   const casillas = await db.select().from(editorialSlots).where(and(eq(editorialSlots.planId, id), eq(editorialSlots.status, "planificada")));
   const conTema = casillas.filter((c) => c.topic.trim().length >= 8);
   if (!conTema.length) return { ok: false, message: "Arma la pauta primero: no hay casillas con tema." };
@@ -184,7 +184,7 @@ export async function activarPlan(id: string): Promise<Res> {
 
 /** Pausa o cierra el plan (no se redacta nada más; lo ya programado sigue su curso). */
 export async function cambiarEstadoPlan(id: string, estado: "borrador" | "cerrado"): Promise<Res> {
-  await requirePermiso("articulos");
+  await requireRole("administrador");
   await db.update(editorialPlans).set({ status: estado, updatedAt: new Date() }).where(eq(editorialPlans.id, id));
   rev(id);
   return { ok: true };
@@ -192,7 +192,7 @@ export async function cambiarEstadoPlan(id: string, estado: "borrador" | "cerrad
 
 /** Redacta ahora las casillas que ya toca (sin esperar al cron). */
 export async function redactarAhora(id: string): Promise<Res<{ redactadas: number }>> {
-  await requirePermiso("articulos");
+  await requireRole("administrador");
   const [plan] = await db.select({ status: editorialPlans.status }).from(editorialPlans).where(eq(editorialPlans.id, id)).limit(1);
   if (plan?.status !== "activo") return { ok: false, message: "Activa el plan primero." };
   const r = await procesarConsejo({ max: 1 });
@@ -212,7 +212,7 @@ export async function aprobar(slotId: string): Promise<Res> {
 
 /** Estado al día de las casillas de un plan (lo llama la pantalla al abrirse). */
 export async function refrescarPlan(id: string): Promise<void> {
-  await requirePermiso("articulos");
+  await requireRole("administrador");
   await sincronizarCasillas(id);
 }
 
@@ -221,7 +221,7 @@ export async function refrescarPlan(id: string): Promise<void> {
  * programadas). Solo lo borra quien lo creó o un editor.
  */
 export async function borrarPlan(id: string): Promise<Res> {
-  const user = await requirePermiso("articulos");
+  const user = await requireRole("administrador");
   const [plan] = await db.select({ createdBy: editorialPlans.createdBy }).from(editorialPlans).where(eq(editorialPlans.id, id)).limit(1);
   if (!plan) return { ok: true, message: "Ya no existe." };
   if (plan.createdBy !== user.id && !canPublish(user.role)) return { ok: false, message: "Solo quien creó el consejo o un editor puede borrarlo." };
@@ -232,7 +232,7 @@ export async function borrarPlan(id: string): Promise<Res> {
 
 /** El «editor jefe» completa la ficha de una casilla con investigación real (con fuentes y enlaces). Respeta lo que ya se escribió. */
 export async function completarFicha(slotId: string, actual: FichaPauta): Promise<Res<{ ficha: FichaPauta }>> {
-  const user = await requirePermiso("articulos");
+  const user = await requireRole("administrador");
   const [c] = await db.select().from(editorialSlots).where(eq(editorialSlots.id, slotId)).limit(1);
   if (!c) return { ok: false, message: "La casilla ya no existe." };
   if (c.status !== "planificada" && c.status !== "fallida") return { ok: false, message: "Esta pieza ya se redactó." };
@@ -249,7 +249,7 @@ export async function completarFicha(slotId: string, actual: FichaPauta): Promis
 
 /** Mueve una pieza a otro día u hora (arrastrándola en el calendario). Solo piezas aún sin redactar y a una hora futura. */
 export async function moverCasilla(slotId: string, publishAtIso: string): Promise<Res> {
-  await requirePermiso("articulos");
+  await requireRole("administrador");
   const cuando = new Date(publishAtIso);
   if (Number.isNaN(cuando.getTime())) return { ok: false, message: "La fecha y hora no son válidas." };
   if (cuando.getTime() <= Date.now()) return { ok: false, message: "Esa hora ya pasó: elige una hora futura." };

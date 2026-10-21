@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { asc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { categories, editorialPlans, editorialSlots } from "@/db/schema";
-import { canPublish, requirePermiso } from "@/lib/auth";
+import { canPublish, requireRole } from "@/lib/auth";
 import { tienePermiso } from "@/lib/permisos-server";
 import { sincronizarCasillas } from "@/lib/ai/consejo-ejecucion";
 import { escritoresParaElegir } from "@/lib/ai/estilo";
@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
 
 /** Un consejo de redacción: semana, temas, pauta con calendario y puesta en marcha. */
 export default async function ConsejoPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ paso?: string }> }) {
-  const user = await requirePermiso("articulos");
+  const user = await requireRole("administrador");
   const { id } = await params;
   const { paso } = await searchParams;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
