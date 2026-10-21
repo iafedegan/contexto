@@ -65,7 +65,7 @@ Las fuentes no traen una "hoja de pauta" estándar; se reconstruye de varias pr�
 
 | Práctica de la sala de redacción | En la aplicación |
 |---|---|
-| Reunión semanal de planificación | Asistente de 4 pasos: Semana → Temas → Pauta → Poner en marcha |
+| Reunión semanal de planificación | Asistente de 4 pasos: Semana → Temas → Parrilla → Poner en marcha |
 | Presupuesto de historias con día, hora, sección y responsable | Parrilla (calendario) que construye el **código**, no el modelo: días × horas × cuotas por sección |
 | Editor de sección decide su presupuesto | Cuota por sección (notas por día) y temas por sección, con cuántos faltan |
 | Quién preside propone temas y todos aportan | Temas escritos por el equipo + sugerencias de la IA con fuentes, que se **añaden una a una** |

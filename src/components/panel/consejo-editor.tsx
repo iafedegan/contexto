@@ -18,7 +18,7 @@ const DIAS = [[1, "Lun"], [2, "Mar"], [3, "Mié"], [4, "Jue"], [5, "Vie"], [6, "
 const PASOS = [
   { titulo: "Semana", sub: "Cuándo se publica" },
   { titulo: "Temas", sub: "Cobertura, temas y responsable" },
-  { titulo: "Pauta", sub: "Calendario con horas" },
+  { titulo: "Parrilla", sub: "Calendario con horas" },
   { titulo: "Poner en marcha", sub: "Revisar y activar" },
 ] as const;
 const COLOR: Record<EstadoCasilla, string> = {
@@ -50,8 +50,8 @@ function Paso({ n, titulo, ayuda, children }: { n: number; titulo: string; ayuda
 }
 
 /**
- * Consejo de redacción como paso a paso: 1 Semana, 2 Temas (cobertura, temas y quién escribe), 3 Pauta (calendario con horas) y 4 Poner en marcha. Cada paso
- * es una pantalla; la barra de abajo guarda y avanza. La IA propone temas y arma la pauta; nada sale sin autorización de un editor.
+ * Consejo de redacción como paso a paso: 1 Semana, 2 Temas (cobertura, temas y quién escribe), 3 Parrilla (calendario con horas) y 4 Poner en marcha. Cada paso
+ * es una pantalla; la barra de abajo guarda y avanza. La IA propone temas y arma la parrilla; nada sale sin autorización de un editor.
  */
 export function ConsejoEditor({ plan, casillas: casillasProp, secciones, puedePublicar, escritores, yoId, pasoInicial = 0 }: { plan: { id: string; title: string; weekStart: string; status: EstadoPlan; config: ConfigConsejo; temas: TemaConsejo[] }; casillas: CasillaVista[]; secciones: Seccion[]; puedePublicar: boolean; escritores: EscritorOpcion[]; yoId: string; pasoInicial?: number }) {
   const router = useRouter();
@@ -164,7 +164,7 @@ export function ConsejoEditor({ plan, casillas: casillasProp, secciones, puedePu
 
   // ¿Qué pasos ya están listos? (el ✓ de la barra)
   const listo = [cfg.dias.length > 0 && cfg.horas.length > 0, cfg.cuotas.length > 0 && temas.length > 0, activas.length > 0, plan.status === "activo"];
-  // Lo que hace «Siguiente» en cada paso: guarda y avanza; en Temas arma la pauta si aún no hay.
+  // Lo que hace «Siguiente» en cada paso: guarda y avanza; en Temas arma la parrilla si aún no hay.
   const siguiente = () => {
     if (paso === 0) return hacer(guardar, () => irA(1));
     if (paso === 1) {
@@ -173,7 +173,7 @@ export function ConsejoEditor({ plan, casillas: casillasProp, secciones, puedePu
     }
     return irA(paso + 1);
   };
-  const textoSiguiente = paso === 1 && activas.length === 0 ? "Armar la pauta con IA" : paso === 0 ? "Siguiente · Temas" : paso === 1 ? "Siguiente · Pauta" : "Siguiente · Poner en marcha";
+  const textoSiguiente = paso === 1 && activas.length === 0 ? "Armar la parrilla con IA" : paso === 0 ? "Siguiente · Temas" : paso === 1 ? "Siguiente · Parrilla" : "Siguiente · Poner en marcha";
   const bloqueoSiguiente = paso === 1 && cfg.cuotas.length === 0 ? "Elige al menos una sección con notas por día" : "";
 
   return (
@@ -322,13 +322,13 @@ export function ConsejoEditor({ plan, casillas: casillasProp, secciones, puedePu
       )}
 
       {paso === 2 && (
-        <Paso n={3} titulo="Pauta de la semana" ayuda="Así reparte la IA las notas por día, hora y sección. Toca una pieza para cambiar el tema, la hora o cómo sale.">
+        <Paso n={3} titulo="Parrilla de la semana" ayuda="Así reparte la IA las notas por día, hora y sección. Toca una pieza para cambiar el tema, la hora o cómo sale.">
           <div className="flex flex-wrap items-center gap-3">
-            <button type="button" disabled={pend || !editable} onClick={() => hacer(async () => { await guardar(); return armarPauta(plan.id); })} className={secundario}>{pend ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />} {activas.length ? "Rearmar la pauta con IA" : "Armar la pauta con IA"}</button>
+            <button type="button" disabled={pend || !editable} onClick={() => hacer(async () => { await guardar(); return armarPauta(plan.id); })} className={secundario}>{pend ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />} {activas.length ? "Rearmar la parrilla con IA" : "Armar la parrilla con IA"}</button>
             {activas.length > 0 && <p className="text-xs text-[var(--fg-muted)]">{activas.length} piezas · {activas.filter((c) => c.approval === "auto").length} automáticas · ✋ con aprobación · ⚡ automática · <strong>arrastra una pieza a otro día u hora</strong></p>}
           </div>
           {activas.length === 0 ? (
-            <p className="rounded-[var(--radius)] border border-dashed border-[var(--border-strong)] p-8 text-center text-sm text-[var(--fg-muted)]">Todavía no hay pauta. Pulsa «Armar la pauta con IA».</p>
+            <p className="rounded-[var(--radius)] border border-dashed border-[var(--border-strong)] p-8 text-center text-sm text-[var(--fg-muted)]">Todavía no hay parrilla. Pulsa «Armar la parrilla con IA».</p>
           ) : (
             <>
               <div className="hidden overflow-x-auto md:block">
@@ -418,7 +418,7 @@ export function ConsejoEditor({ plan, casillas: casillasProp, secciones, puedePu
             {editable && <button type="button" disabled={pend} onClick={() => hacer(() => cambiarEstadoPlan(plan.id, "cerrado"))} className={secundario}>Cerrar el consejo</button>}
             <ConsejoBorrar id={plan.id} titulo={titulo} piezas={activas.length} activo={plan.status === "activo"} volverA="/panel/consejo" etiqueta />
           </div>
-          {activas.length === 0 && <p className="text-sm text-amber-600">Antes de activar necesitas una pauta: vuelve al paso 3.</p>}
+          {activas.length === 0 && <p className="text-sm text-amber-600">Antes de activar necesitas una parrilla: vuelve al paso 3.</p>}
         </Paso>
       )}
 
@@ -481,7 +481,7 @@ function PreguntasSeccion({ nombre, titulo, escritores, yoId, encabezado, childr
           {escritores && yoId && (
             <label className="flex flex-col gap-1 text-sm sm:col-span-2"><span className="flex items-center gap-1.5 font-semibold"><PenLine size={14} aria-hidden /> ¿Quién la escribe?</span>
               <select disabled={!editable} value={valor?.escritorId ?? ""} onChange={(e) => onChange({ escritorId: e.target.value || undefined })} className={sel}><option value="">El predeterminado ({escritores.find((e) => e.id === yoId)?.nombre ?? "yo"})</option>{[...escritores].sort((a, b) => Number(b.conDiagnostico) - Number(a.conDiagnostico) || a.nombre.localeCompare(b.nombre)).map((e) => <option key={e.id} value={e.id}>{e.nombre}{e.id === yoId ? " (yo)" : ""}{e.tipo === "externo" ? " · externo" : ""}{e.conDiagnostico ? "" : " · sin estilo aprendido"}</option>)}</select>
-              <span className="text-xs text-[var(--fg-muted)]">Sus temas, la pauta y la nota usan su diagnóstico de estilo.</span></label>
+              <span className="text-xs text-[var(--fg-muted)]">Sus temas, la parrilla y la nota usan su diagnóstico de estilo.</span></label>
           )}
           <div className="sm:col-span-2"><Caja clave="temas"><AreaVoz autoAjustar rows={2} disabled={!editable} value={valor?.temas ?? ""} onValue={(v) => onChange({ temas: v })} placeholder="Ej.: sequía y pasturas, precio del novillo, ciclo de vacunación contra la aftosa" className={sel} /></Caja></div>
           <div className="sm:col-span-2"><Caja clave="agenda"><AreaVoz autoAjustar rows={2} disabled={!editable} value={valor?.agenda ?? ""} onValue={(v) => onChange({ agenda: v })} placeholder="Ej.: Feria de Montería del 15 al 18; el DANE publica el sacrificio el jueves" className={sel} /></Caja></div>
