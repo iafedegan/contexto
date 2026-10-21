@@ -4,6 +4,7 @@ import { attachDatabasePool } from "@vercel/functions";
 import { drizzle as drizzlePg, type NodePgDatabase } from "drizzle-orm/node-postgres";
 import { drizzle as drizzlePglite, type PgliteDatabase } from "drizzle-orm/pglite";
 import * as schema from "./schema";
+import { ajustarPooler } from "./pooler";
 
 /**
  * Selección de driver:
@@ -49,7 +50,8 @@ function connectionString(): string | null {
   ];
   for (const c of candidatas) {
     const v = c?.trim();
-    if (v) return v;
+    // Pooler de Supabase en modo transacción (6543): ver `src/db/pooler.ts`.
+    if (v) return ajustarPooler(v);
   }
   return null;
 }
