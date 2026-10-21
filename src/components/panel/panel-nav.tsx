@@ -126,7 +126,7 @@ export function PanelSidebarNav({ role, permisos, pendientes = 0 }: { role: stri
         const abiertoG = abierto(g.id);
         return (
           <div key={g.id}>
-            {/* Cada grupo es un desplegable (como «Uso de IA»): el encabezado lo abre y lo cierra. Con el menú recogido no se ve el texto, solo los íconos de los abiertos. */}
+            {/* Cada grupo es un desplegable (como «Uso de IA»): el encabezado lo abre y lo cierra. Con el menú recogido no se ve el texto, solo los íconos de todos los grupos. */}
             <button
               type="button"
               aria-expanded={abiertoG}
@@ -137,7 +137,8 @@ export function PanelSidebarNav({ role, permisos, pendientes = 0 }: { role: stri
               <span>{g.label}</span>
               <ChevronDown size={14} aria-hidden className={`shrink-0 transition-transform ${abiertoG ? "rotate-180" : ""}`} />
             </button>
-            <ul id={`menu-grupo-${g.id}`} hidden={!abiertoG} className="mt-1 flex flex-col gap-1">
+            {/* Con el menú recogido (solo íconos) se ven TODOS los íconos; abrir o cerrar un grupo solo cuenta con el menú desplegado. */}
+            <ul id={`menu-grupo-${g.id}`} className={`mt-1 flex flex-col gap-1 ${abiertoG ? "" : "group-hover/sb:hidden group-focus-within/sb:hidden"}`}>
               {g.items.map((i) => {
                 const base = i.href.split(/[#?]/)[0];
                 const current = i.href.includes("?") ? false : pathname === base || (base !== "/panel" && pathname.startsWith(`${base}/`)) || (base === "/panel" && pathname.startsWith("/panel/analitica"));
