@@ -1,4 +1,4 @@
-import { esModeloDeImagen, esModeloDeTexto, esModeloDeVideo, leerRef, refModelo, type AiProviderId, type AiRoles, type AiSettings } from "@/lib/ai-providers";
+import { esModeloDeImagen, esModeloDeTexto, esModeloDeVideo, leerRef, providerMeta, refModelo, type AiProviderId, type AiRoles, type AiSettings } from "@/lib/ai-providers";
 
 /**
  * Valida y normaliza los modelos por función que llegan del formulario, contra lo que cada proveedor ofrece de verdad (catálogo guardado al validar
@@ -16,7 +16,7 @@ export function validarRoles(
   const revisar = (ref: string, etiqueta: string, tipo: "texto" | "imagen" | "video" | "gemini-texto"): string | null => {
     const r = leerRef(ref);
     if (!r) return `${etiqueta}: modelo no válido.`;
-    if (!conClave.includes(r.provider)) return `${etiqueta}: falta la clave de ${r.provider === "google" ? "Google (Gemini)" : "Anthropic (Claude)"}. Guárdala primero en «Claves».`;
+    if (!conClave.includes(r.provider)) return `${etiqueta}: falta la clave de ${providerMeta(r.provider).label}. Guárdala primero en «Claves».`;
     const cat = catalogos[r.provider] ?? [];
     if (cat.length > 0 && !cat.includes(r.model)) return `${etiqueta}: tu cuenta no ofrece «${r.model}».`;
     if (tipo === "imagen" && (r.provider !== "google" || !esModeloDeImagen(r.model))) return `${etiqueta}: elige un modelo de imagen de Gemini.`;

@@ -3,6 +3,7 @@ import { cache } from "react";
 import { eq } from "drizzle-orm";
 import { wrapLanguageModel, type LanguageModelMiddleware } from "ai";
 import { createAnthropic } from "@ai-sdk/anthropic";
+import { createOpenAI } from "@ai-sdk/openai";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { db } from "@/db";
 import { siteSettings } from "@/db/schema";
@@ -75,6 +76,9 @@ export async function claveEfectiva(provider: AiProviderId): Promise<string | nu
 /** Clave efectiva del proveedor principal. */
 const resolveKey = (settings: AiSettings) => claveDe(settings, settings.provider);
 
+/** Nombre corto del proveedor para etiquetas («modelo · Gemini»). */
+const NOMBRE_CORTO: Record<AiProviderId, string> = { google: "Gemini", anthropic: "Claude", openai: "ChatGPT" };
+
 /** Anota los tokens reales de cada llamada al modelo (para la barra «Uso de IA»); no cambia nada de lo que el modelo responde. */
 const medirUso = (ref: string): LanguageModelMiddleware => ({
   wrapGenerate: async ({ doGenerate }) => {
@@ -90,7 +94,8 @@ async function crearModelo(settings: AiSettings, ref: string | null) {
   if (!r) return null;
   const { key } = await claveDe(settings, r.provider);
   if (!key) return null;
-  const modelo = r.provider === "google" ? createGoogleGenerativeAI({ apiKey: key })(r.model) : createAnthropic({ apiKey: key })(r.model);
+  const modelo =
+    r.provider === "google" ? createGoogleGenerativeAI({ apiKey: key })(r.model) : r.provider === "openai" ? createOpenAI({ apiKey: key })(r.model) : createAnthropic({ apiKey: key })(r.model);
   return wrapLanguageModel({ model: modelo, middleware: medirUso(`${r.provider}:${r.model}`) });
 }
 
@@ -119,7 +124,7 @@ export async function getModelosEditor(userId?: string): Promise<{ modelos: { re
   }
   const etiqueta = (ref: string) => {
     const r = leerRef(ref)!;
-    return `${r.model} · ${r.provider === "google" ? "Gemini" : "Claude"}`;
+    return `${r.model} · ${NOMBRE_CORTO[r.provider]}`;
   };
   const pred = conClave.includes(predeterminado) ? predeterminado : (conClave[0] ?? null);
   const favorito = userId ? await getModeloFavorito(userId) : null;

@@ -30,6 +30,7 @@
   "dependencies": {
     "@ai-sdk/anthropic": "^4.0.60",
     "@ai-sdk/google": "^4.0.79",
+    "@ai-sdk/openai": "^4.0.99",
     "@ai-sdk/react": "^4.0.96",
     "@auth/drizzle-adapter": "^1.11.3",
     "@electric-sql/pglite": "^0.2.17",

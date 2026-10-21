@@ -16,6 +16,7 @@ import { UserRow } from "@/components/panel/user-row";
 import { AddUserForm } from "@/components/panel/add-user-form";
 import { MiPerfilForm } from "@/components/panel/mi-perfil-form";
 import { getConfigIA } from "@/lib/ai-provider";
+import { resumenUsoIA } from "@/lib/ai-uso";
 import { IaConfig } from "@/components/panel/ia-config";
 import { MfaForm } from "@/components/panel/mfa-form";
 import { PasskeyForm } from "@/components/panel/passkey-form";
@@ -38,10 +39,12 @@ export default async function ConfiguracionPage() {
   const isAdmin = session?.user?.role === "administrador";
   const limites = await getLimites();
 
-  const [identity, configIA, analytics, people, misPasskeys, miEstilo] = await Promise.all([
+  const [identity, configIA, usoIA, analytics, people, misPasskeys, miEstilo] = await Promise.all([
     getSiteIdentity(),
     // La clave y la analítica del portal son solo de administradores: a las demás personas ni se les consulta ni se les muestra.
     isAdmin ? getConfigIA() : null,
+    // El consumo del mes por proveedor y modelo (solo administradores; el resumen lee dos registros pequeños y una suma).
+    isAdmin && session?.user ? resumenUsoIA(session.user.id, true).catch(() => null) : null,
     isAdmin ? getAnalyticsStatus() : null,
     db
       .select({
@@ -410,6 +413,7 @@ export default async function ConfiguracionPage() {
       >
         <IaConfig
           config={configIA}
+          uso={usoIA}
           canManage={isAdmin}
           limites={
             <div>

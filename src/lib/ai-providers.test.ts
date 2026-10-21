@@ -64,3 +64,16 @@ test("leerRef y los filtros de tipo de modelo", () => {
   assert.equal(esModeloDeTexto("gemini-3.8-flash"), true);
   for (const n of ["gemini-nano-banana-2.1", "veo-3", "text-embedding-004", "gemini-2.5-flash-preview-tts"]) assert.equal(esModeloDeTexto(n), false, n);
 });
+
+test("del catálogo de ChatGPT solo se ofrecen los modelos de chat, no voz, imágenes, vectores ni los viejos", () => {
+  for (const ok of ["gpt-5", "gpt-5-mini", "gpt-4.1", "gpt-4o", "o3", "o4-mini", "chatgpt-4o-latest"]) assert.equal(esModeloDeTexto(ok), true, ok);
+  for (const no of ["gpt-image-1", "dall-e-3", "whisper-1", "tts-1", "text-embedding-3-small", "gpt-4o-transcribe", "gpt-4o-realtime-preview", "gpt-4o-audio-preview", "gpt-4o-search-preview", "omni-moderation-latest", "davinci-002", "babbage-002", "gpt-3.5-turbo-instruct", "sora-2"]) {
+    assert.equal(esModeloDeTexto(no), false, no);
+  }
+});
+
+test("ChatGPT está entre los proveedores y se identifica como «openai:modelo»", async () => {
+  const { AI_PROVIDERS, leerRef: leer } = await import("./ai-providers");
+  assert.ok(AI_PROVIDERS.some((p) => p.id === "openai" && p.envVar === "OPENAI_API_KEY"));
+  assert.deepEqual(leer("openai:gpt-5"), { provider: "openai", model: "gpt-5" });
+});

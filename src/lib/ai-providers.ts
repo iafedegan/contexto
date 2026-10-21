@@ -17,6 +17,14 @@ export const AI_PROVIDERS = [
     docs: "https://console.anthropic.com/settings/keys",
   },
   {
+    id: "openai",
+    label: "OpenAI (ChatGPT)",
+    envVar: "OPENAI_API_KEY",
+    defaultModel: "gpt-5",
+    keyHint: "sk-",
+    docs: "https://platform.openai.com/api-keys",
+  },
+  {
     id: "google",
     label: "Google (Gemini)",
     envVar: "GOOGLE_GENERATIVE_AI_API_KEY",
@@ -89,6 +97,9 @@ export function esModeloDeVideo(nombre: string): boolean {
 
 /** ¿Sirve para escribir y razonar con texto? Excluye los de imagen, video, voz y vectores. */
 export function esModeloDeTexto(nombre: string): boolean {
+  // OpenAI lista en el mismo catálogo voz, imágenes, moderación y modelos viejos de completado: de ahí solo sirven los de chat (gpt-…, o1/o3/o4…).
+  if (/^(gpt|o\d|chatgpt)/i.test(nombre) && /image|audio|realtime|transcribe|tts|search|instruct|codex|moderation|embed/i.test(nombre)) return false;
+  if (/^(whisper|dall-e|davinci|babbage|text-|omni-moderation|sora)/i.test(nombre)) return false;
   return !esModeloDeImagen(nombre) && !esModeloDeVideo(nombre) && !/embed|tts|aqa|imagen-|live|audio|robotics|computer-use/i.test(nombre);
 }
 

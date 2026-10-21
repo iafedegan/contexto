@@ -10,7 +10,7 @@ type Resumen = Awaited<ReturnType<typeof usoIAResumen>>;
 const tokens = (n: number) => (n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1).replace(".", ",")} M` : n >= 1_000 ? `${Math.round(n / 1_000)} k` : String(Math.round(n)));
 // Dólares: dos decimales por debajo de 10 y enteros por encima.
 const usd = (n: number) => `US$ ${n.toFixed(n < 10 ? 2 : 0).replace(".", ",")}`;
-const NOMBRE: Record<string, string> = { google: "Gemini", anthropic: "Claude" };
+const NOMBRE: Record<string, string> = { google: "Gemini", anthropic: "Claude", openai: "ChatGPT" };
 
 /** Color de la barra según cuánto del presupuesto se ha gastado. */
 const colorBarra = (pct: number) => (pct >= 90 ? "bg-red-500" : pct >= 70 ? "bg-amber-400" : "bg-[var(--accent-2)]");

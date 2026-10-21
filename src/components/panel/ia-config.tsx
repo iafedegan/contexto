@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { Bot, Clapperboard, ImageIcon, KeyRound, PenLine, RefreshCw, Trash2, TriangleAlert, X, Star, Gauge } from "lucide-react";
 import { esModeloDeImagen, esModeloDeTexto, esModeloDeVideo, leerRef, type AiProviderId } from "@/lib/ai-providers";
 import type { ConfigIA } from "@/lib/ai-provider";
+import type { ResumenUsoIA } from "@/lib/ai-uso";
 import { actualizarCatalogoIA, eliminarClaveIA, guardarClaveIA, guardarModelosIA } from "@/app/panel/(app)/configuracion/actions";
 
 type Pestana = "claves" | "editores" | "vaca" | "imagenes" | "videos" | "limites";
@@ -17,7 +18,7 @@ const PESTANAS: { id: Pestana; label: string; icon: React.ReactNode }[] = [
   { id: "limites", label: "Límites", icon: <Gauge size={14} /> },
 ];
 
-const NOMBRE_PROVEEDOR: Record<AiProviderId, string> = { google: "Gemini", anthropic: "Claude" };
+const NOMBRE_PROVEEDOR: Record<AiProviderId, string> = { google: "Gemini", anthropic: "Claude", openai: "ChatGPT" };
 
 /** Rótulo corto de un modelo «proveedor:modelo» para chips y listas. */
 const etiqueta = (ref: string) => {
@@ -29,7 +30,7 @@ const etiqueta = (ref: string) => {
  * Inteligencia artificial del panel, ordenada por función: claves de cada proveedor, y un modelo propio para los editores (varios, a elegir al
  * crear la nota), el agente de la vaca, las imágenes y los videos. Los límites de gasto van en su propia pestaña.
  */
-export function IaConfig({ config, canManage, limites }: { config: ConfigIA; canManage: boolean; limites: React.ReactNode }) {
+export function IaConfig({ config, uso = null, canManage, limites }: { config: ConfigIA; uso?: ResumenUsoIA | null; canManage: boolean; limites: React.ReactNode }) {
   const [pestana, setPestana] = useState<Pestana>("claves");
   const [aviso, setAviso] = useState<{ tipo: "ok" | "error"; texto: string } | null>(null);
   const [pending, start] = useTransition();
@@ -118,13 +119,13 @@ export function IaConfig({ config, canManage, limites }: { config: ConfigIA; can
 
         {/* ---------------------------------------------------------------- Claves */}
         {pestana === "claves" && (
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 2xl:grid-cols-3">
             {config.proveedores.map((p) => (
-              <ClaveProveedor key={p.id} p={p} canManage={canManage} onAviso={setAviso} />
+              <ClaveProveedor key={p.id} p={p} uso={uso} canManage={canManage} onAviso={setAviso} />
             ))}
             <p className="text-xs leading-relaxed text-[var(--fg-muted)] lg:col-span-2">
-              Cada proveedor guarda su clave cifrada (AES-256-GCM) y nunca se devuelve al navegador. Puedes conectar los dos y usar el modelo que mejor
-              sirva en cada función. Si una clave viene del despliegue (variable de entorno), aquí no se puede cambiar.
+              Cada proveedor guarda su clave cifrada (AES-256-GCM) y nunca se devuelve al navegador. Puedes conectar varios y usar el modelo que mejor
+              sirva en cada función (Gemini, Claude y ChatGPT). Si una clave viene del despliegue (variable de entorno), aquí no se puede cambiar.
             </p>
           </div>
         )}
@@ -282,10 +283,12 @@ function SinModelos() {
 /** Tarjeta de un proveedor: estado de la clave, pegarla o cambiarla, actualizar su lista de modelos y quitarla. */
 function ClaveProveedor({
   p,
+  uso,
   canManage,
   onAviso,
 }: {
   p: ConfigIA["proveedores"][number];
+  uso: ResumenUsoIA | null;
   canManage: boolean;
   onAviso: (a: { tipo: "ok" | "error"; texto: string } | null) => void;
 }) {
@@ -372,6 +375,53 @@ function ClaveProveedor({
           </div>
         </div>
       )}
+      <ConsumoProveedor proveedor={p.id} uso={uso} />
+    </div>
+  );
+}
+
+// Tokens en forma corta: 1,2 M · 850 k · 320.
+const tokens = (n: number) => (n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1).replace(".", ",")} M` : n >= 1_000 ? `${Math.round(n / 1_000)} k` : String(Math.round(n)));
+const usd = (n: number) => `US$ ${n.toFixed(n < 10 ? 2 : 0).replace(".", ",")}`;
+
+/** Consumo del mes de un proveedor (todos los usuarios): total, tokens y los modelos que más gastan. Estimado por tokens. */
+function ConsumoProveedor({ proveedor, uso }: { proveedor: AiProviderId; uso: ResumenUsoIA | null }) {
+  if (!uso) return null;
+  const modelos = uso.modelos.filter((m) => m.proveedor === proveedor);
+  const total = modelos.reduce((s, m) => s + m.usd, 0);
+  const entrada = modelos.reduce((s, m) => s + m.entrada, 0);
+  const salida = modelos.reduce((s, m) => s + m.salida, 0);
+  const llamadas = modelos.reduce((s, m) => s + m.llamadas, 0);
+  const max = Math.max(0.0001, ...modelos.map((m) => m.usd));
+  return (
+    <div className="mt-4 border-t border-[var(--border)] pt-3">
+      <p className="flex items-baseline justify-between gap-2 text-xs font-semibold">
+        <span>Consumo de {uso.mes}</span>
+        <span className="lx-mono">{usd(total)}</span>
+      </p>
+      {modelos.length === 0 ? (
+        <p className="mt-1 text-xs text-[var(--fg-muted)]">Sin consumo este mes.</p>
+      ) : (
+        <>
+          <p className="mt-0.5 text-xs text-[var(--fg-muted)]">
+            {tokens(entrada)} entrada · {tokens(salida)} salida · {llamadas} {llamadas === 1 ? "llamada" : "llamadas"} · todos los usuarios
+          </p>
+          <ul className="mt-2 space-y-1.5">
+            {modelos.slice(0, 5).map((m) => (
+              <li key={m.ref}>
+                <p className="flex items-baseline justify-between gap-2 text-xs">
+                  <span className="lx-mono min-w-0 truncate" title={m.ref}>{m.modelo}</span>
+                  <span className="lx-mono shrink-0 text-[var(--fg-muted)]">{usd(m.usd)} · {tokens(m.entrada + m.salida)}</span>
+                </p>
+                <div className="mt-0.5 h-1 overflow-hidden rounded-full bg-[var(--surface-2)]">
+                  <div className="h-full rounded-full bg-[var(--accent)]" style={{ width: `${Math.max(4, (m.usd / max) * 100)}%` }} />
+                </div>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+      <p className="mt-2 text-[0.7rem] leading-snug text-[var(--fg-muted)]">Costo estimado por tokens; el saldo real está en el panel de {proveedor === "google" ? "Google AI Studio" : proveedor === "openai" ? "OpenAI" : "Anthropic"}.</p>
     </div>
   );
 }

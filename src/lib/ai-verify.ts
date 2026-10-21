@@ -24,10 +24,15 @@ export async function verifyApiKey(
             `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(key)}`,
             { signal: AbortSignal.timeout(12_000) },
           )
-        : await fetch("https://api.anthropic.com/v1/models?limit=20", {
-            headers: { "x-api-key": key, "anthropic-version": "2023-06-01" },
-            signal: AbortSignal.timeout(12_000),
-          });
+        : provider === "openai"
+          ? await fetch("https://api.openai.com/v1/models", {
+              headers: { Authorization: `Bearer ${key}` },
+              signal: AbortSignal.timeout(12_000),
+            })
+          : await fetch("https://api.anthropic.com/v1/models?limit=20", {
+              headers: { "x-api-key": key, "anthropic-version": "2023-06-01" },
+              signal: AbortSignal.timeout(12_000),
+            });
 
     if (!res.ok) {
       // Google devuelve 400 (API_KEY_INVALID) y Anthropic 401: en vez de
