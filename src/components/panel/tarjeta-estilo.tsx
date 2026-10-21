@@ -56,22 +56,18 @@ export function TarjetaEstilo({
   const boton = "lx-btn !px-3 !py-1.5 text-xs";
 
   if (estado === "activo") {
+    // Estado normal, así que va discreto: una sola línea de texto pequeño, sin tarjeta ni botones grandes (la cabecera del asistente ya dice «Escribiendo con tu estilo»).
     return (
-      <div role="status" className={`${marco} border-[var(--accent)]/40 bg-[var(--accent)]/8`}>
-        <p className="flex items-start gap-2 text-sm font-semibold">
-          <CheckCircle2 size={16} aria-hidden className="mt-0.5 shrink-0 text-[var(--accent)]" />
-          <span>Se está usando tu estilo propio de escritura</span>
-        </p>
-        <p className="text-xs leading-snug text-[var(--fg-muted)]">
-          La IA propondrá los títulos y redactará la nota como tú{info ? `, según el diagnóstico del ${fecha(info.generadoEn)} (${info.muestras} notas)` : ""}.
-        </p>
-        <div className="flex flex-wrap gap-2">
-          <a href="/panel/configuracion#estilo" target="_blank" rel="noopener" className={boton}>Ver o actualizar mi estilo</a>
-          <button type="button" disabled={pendiente} onClick={() => cambiar(false)} className={boton}>
-            {pendiente && <Loader2 size={13} className="animate-spin" />} Apagar
+      <div role="status" className="flex flex-wrap items-center gap-x-2 gap-y-1 px-1 text-xs text-[var(--fg-muted)]">
+        <CheckCircle2 size={13} aria-hidden className="shrink-0 text-[var(--accent)]" />
+        <span className="min-w-0 flex-1">Con tu estilo de escritura{info ? ` · diagnóstico del ${fecha(info.generadoEn)} (${info.muestras} notas)` : ""}</span>
+        <span className="flex shrink-0 items-center gap-3">
+          <a href="/panel/configuracion#estilo" target="_blank" rel="noopener" className="lx-link">Ver</a>
+          <button type="button" disabled={pendiente} onClick={() => cambiar(false)} className="lx-link inline-flex items-center gap-1">
+            {pendiente && <Loader2 size={11} className="animate-spin" />} Apagar
           </button>
-        </div>
-        {error && <p className="text-xs text-[var(--danger)]">{error}</p>}
+        </span>
+        {error && <span className="basis-full text-[var(--danger)]">{error}</span>}
       </div>
     );
   }
