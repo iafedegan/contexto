@@ -67,4 +67,4 @@ async function main() {
   console.log(`${APLICAR ? "Listo" : "Simulación"}: ${hechas} notas, ~${Math.round(tokens / 1000)}k tokens, ~US$${((tokens / 1e6) * USD_POR_MILLON).toFixed(3)}, fallidas ${falladas}.`);
   process.exit(0);
 }
-main().catch((e) => { console.error((e as Error).message); process.exit(1); });
+main().catch((e) => { const c = (e as { cause?: { message?: string } }).cause; console.error((e as Error).message.split("\n")[0], c?.message ? `\nCausa: ${c.message}` : ""); process.exit(1); });

@@ -45,11 +45,25 @@ async function main() {
   const copiador = APLICAR ? new CopiadorDeImagenes(4) : null;
   if (copiador) console.log(`Intentos fallidos anteriores olvidados: ${copiador.olvidarFallidas()}`);
 
-  const notas = await db
-    .select({ id: articles.id, legacy: articles.legacyPath, body: articles.body })
-    .from(articles)
-    .where(sql`${articles.body} ~ '(src|href)="(https?:)?/{2,3}a\\.storyblok\\.com'`)
-    .limit(LIMITE);
+  // La tabla es grande y la expresión regular recorre cada cuerpo: una sola consulta pasa del tiempo máximo de la conexión. Se lee por rangos de
+  // `id` (256 tandas por el primer byte del uuid; cada una usa el índice de la llave primaria y trae unas 200 filas).
+  const rangos = Array.from({ length: 256 }, (_, i) => {
+    const h = (n: number) => n.toString(16).padStart(2, "0");
+    return { desde: `${h(i)}000000-0000-0000-0000-000000000000`, hasta: i < 255 ? `${h(i + 1)}000000-0000-0000-0000-000000000000` : null };
+  });
+  const enRango = (r: { desde: string; hasta: string | null }) => (r.hasta ? sql`${articles.id} >= ${r.desde}::uuid and ${articles.id} < ${r.hasta}::uuid` : sql`${articles.id} >= ${r.desde}::uuid`);
+
+  const notas: { id: string; legacy: string | null; body: string }[] = [];
+  for (const r of rangos) {
+    if (notas.length >= LIMITE) break;
+    notas.push(
+      ...(await db
+        .select({ id: articles.id, legacy: articles.legacyPath, body: articles.body })
+        .from(articles)
+        .where(sql`${enRango(r)} and ${articles.body} ~ '(src|href)="(https?:)?/{2,3}a\\.storyblok\\.com'`)
+        .limit(LIMITE - notas.length)),
+    );
+  }
   console.log(`Notas con imágenes aún en Storyblok: ${notas.length}`);
 
   // Sondeo: ¿Storyblok entrega hoy alguna?
@@ -74,11 +88,17 @@ async function main() {
   console.log(`Notas reparadas: ${reparadas} de ${notas.length} · ${JSON.stringify(copiador.estadisticas)}`);
 
   if (PORTADAS) {
-    const sinPortada = await db
-      .select({ id: articles.id, legacy: articles.legacyPath })
-      .from(articles)
-      .where(sql`${articles.legacyPath} is not null and (${articles.coverImageUrl} is null or ${articles.coverImageUrl} = '') and ${articles.legacyPath} not like '/columna/%'`)
-      .limit(LIMITE);
+    const sinPortada: { id: string; legacy: string | null }[] = [];
+    for (const r of rangos) {
+      if (sinPortada.length >= LIMITE) break;
+      sinPortada.push(
+        ...(await db
+          .select({ id: articles.id, legacy: articles.legacyPath })
+          .from(articles)
+          .where(sql`${enRango(r)} and ${articles.legacyPath} is not null and (${articles.coverImageUrl} is null or ${articles.coverImageUrl} = '') and ${articles.legacyPath} not like '/columna/%'`)
+          .limit(LIMITE - sinPortada.length)),
+      );
+    }
     let puestas = 0;
     for (const n of sinPortada) {
       const pagina = await pedir(`https://www.contextoganadero.com${n.legacy}`, { intentos: 2 }).then((r) => (r.ok ? r.text() : "")).catch(() => "");
