@@ -131,9 +131,14 @@ export default async function PanelLayout({ children }: { children: React.ReactN
             <p className="truncate text-xs capitalize text-[var(--fg-muted)]">{session.user.role}</p>
           </div>
         </div>
-        {!debeActivar2fa && <PanelSidebarNav role={session.user.role} permisos={permisos} pendientes={misTareas.total} />}
-        {!debeActivar2fa && <div className="mt-auto"><UsoIaBarra variante="lateral" /></div>}
-        <div className={`${!debeActivar2fa ? "" : "mt-auto "}flex items-center justify-between gap-2 whitespace-nowrap border-t border-white/10 pt-4 text-sm opacity-0 transition-opacity duration-150 group-hover/sb:opacity-100 group-focus-within/sb:opacity-100`}>
+        {/* «Uso de IA» va justo debajo del grupo Configuración (último del menú); el pie (Ver sitio / Salir) se queda al fondo. */}
+        {!debeActivar2fa && (
+          <div className="flex flex-col gap-3">
+            <PanelSidebarNav role={session.user.role} permisos={permisos} pendientes={misTareas.total} />
+            <UsoIaBarra variante="lateral" />
+          </div>
+        )}
+        <div className="mt-auto flex items-center justify-between gap-2 whitespace-nowrap border-t border-white/10 pt-4 text-sm opacity-0 transition-opacity duration-150 group-hover/sb:opacity-100 group-focus-within/sb:opacity-100">
           <Link href="/" className="font-medium text-[var(--fg-muted)] transition hover:text-white">Ver sitio</Link>
           <form action={async () => { "use server"; await signOut({ redirectTo: "/panel/login" }); }}>
             <button className="rounded-lg border border-white/25 px-3 py-1.5 font-medium transition hover:border-[var(--accent)] hover:text-[var(--accent)]">Salir</button>
