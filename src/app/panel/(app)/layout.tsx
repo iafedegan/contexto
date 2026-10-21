@@ -120,11 +120,11 @@ export default async function PanelLayout({ children }: { children: React.ReactN
     <div data-theme="panel" className="lx-shell">
       {/* Barra lateral (escritorio): con el color de la plantilla activa, la navegación agrupada y la cuenta al pie. */}
       <aside data-theme="panel-header" style={{ ...estiloMarca, backgroundImage: `linear-gradient(180deg, ${marca.desde}, ${marca.hasta})` }} className="peer/sb group/sb fixed inset-y-0 left-0 z-50 hidden w-16 flex-col gap-6 overflow-y-auto overflow-x-hidden px-3 py-6 text-[var(--fg)] shadow-[8px_0_30px_-18px_rgba(0,0,0,0.6)] transition-[width] duration-200 ease-out hover:w-64 focus-within:w-64 lg:flex">
-        <Link href="/panel" className="flex items-center gap-3 rounded-xl px-1">
+        <Link href="/panel" className="flex shrink-0 items-center gap-3 rounded-xl px-1">
           <span className="shrink-0"><LogoMark size={36} /></span>
           <span className="lx-display whitespace-nowrap text-base font-semibold leading-tight opacity-0 transition-opacity duration-150 group-hover/sb:opacity-100 group-focus-within/sb:opacity-100">Panel editorial</span>
         </Link>
-        <div className="flex items-center gap-3 overflow-hidden rounded-2xl p-0 transition-[padding,background-color] group-hover/sb:bg-white/8 group-hover/sb:p-3 group-focus-within/sb:bg-white/8 group-focus-within/sb:p-3">
+        <div className="flex shrink-0 items-center gap-3 overflow-hidden rounded-2xl p-0 transition-[padding,background-color] group-hover/sb:bg-white/8 group-hover/sb:p-3 group-focus-within/sb:bg-white/8 group-focus-within/sb:p-3">
           <span className="grid size-10 shrink-0 place-items-center rounded-full bg-[var(--accent)] text-lg font-bold text-[var(--accent-fg)]">{inicial}</span>
           <div className="min-w-0 opacity-0 transition-opacity duration-150 group-hover/sb:opacity-100 group-focus-within/sb:opacity-100">
             <p className="truncate text-sm font-semibold">{session.user.name}</p>
@@ -133,12 +133,12 @@ export default async function PanelLayout({ children }: { children: React.ReactN
         </div>
         {/* «Uso de IA» va justo debajo del grupo Configuración (último del menú); el pie (Ver sitio / Salir) se queda al fondo. */}
         {!debeActivar2fa && (
-          <div className="flex flex-col gap-3">
+          <div className="flex shrink-0 flex-col gap-3">
             <PanelSidebarNav role={session.user.role} permisos={permisos} pendientes={misTareas.total} />
             <UsoIaBarra variante="lateral" />
           </div>
         )}
-        <div className="mt-auto flex items-center justify-between gap-2 whitespace-nowrap border-t border-white/10 pt-4 text-sm opacity-0 transition-opacity duration-150 group-hover/sb:opacity-100 group-focus-within/sb:opacity-100">
+        <div className="mt-auto flex shrink-0 items-center justify-between gap-2 whitespace-nowrap border-t border-white/10 pt-4 text-sm opacity-0 transition-opacity duration-150 group-hover/sb:opacity-100 group-focus-within/sb:opacity-100">
           <Link href="/" className="font-medium text-[var(--fg-muted)] transition hover:text-white">Ver sitio</Link>
           <form action={async () => { "use server"; await signOut({ redirectTo: "/panel/login" }); }}>
             <button className="rounded-lg border border-white/25 px-3 py-1.5 font-medium transition hover:border-[var(--accent)] hover:text-[var(--accent)]">Salir</button>
