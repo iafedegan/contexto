@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CalendarRange, ClipboardList, Inbox, KeyRound, LayoutDashboard, LayoutTemplate, Mail, Newspaper, Settings, Users, Circle } from "lucide-react";
+import { grupoDe, useGruposMenu } from "@/components/panel/grupos-menu";
+import { CalendarRange, ChevronDown, ClipboardList, Inbox, KeyRound, LayoutDashboard, LayoutTemplate, Mail, Newspaper, Settings, Users, Circle } from "lucide-react";
 import type { PermisoId } from "@/lib/permisos";
 import { PanelMobileMenu } from "@/components/panel/panel-mobile-menu";
 
@@ -118,38 +119,52 @@ const ICONOS: Record<string, typeof Circle> = {
 export function PanelSidebarNav({ role, permisos, pendientes = 0 }: { role: string; permisos: string[]; pendientes?: number }) {
   const groups = gruposVisibles(role, permisos, pendientes);
   const pathname = usePathname();
+  const { abierto, alternar } = useGruposMenu(grupoDe(groups, pathname));
   return (
-    <nav aria-label="Secciones del panel" className="flex flex-col gap-6">
-      {groups.map((g) => (
-        <div key={g.id}>
-          <p className="whitespace-nowrap px-3 text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-[var(--ink-faint)] opacity-0 transition-opacity duration-150 group-hover/sb:opacity-100 group-focus-within/sb:opacity-100">{g.label}</p>
-          <ul className="mt-2 flex flex-col gap-1">
-            {g.items.map((i) => {
-              const base = i.href.split(/[#?]/)[0];
-              const current = i.href.includes("?") ? false : pathname === base || (base !== "/panel" && pathname.startsWith(`${base}/`)) || (base === "/panel" && pathname.startsWith("/panel/analitica"));
-              const Icon = ICONOS[i.href] ?? Circle;
-              return (
-                <li key={i.href}>
-                  <Link
-                    href={i.href}
-                    title={i.hint}
-                    aria-current={current ? "page" : undefined}
-                    className={`group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
-                      current ? "bg-white/12 text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]" : "text-[var(--fg-muted)] hover:bg-white/8 hover:text-white"
-                    }`}
-                  >
-                    {current && <span aria-hidden className="absolute -left-1.5 top-2 bottom-2 w-1 rounded-full bg-[var(--accent)]" />}
-                    <Icon size={20} className={`shrink-0 ${current ? "text-[var(--accent)]" : "opacity-80 group-hover:text-[var(--accent)]"}`} aria-hidden />
-                    {i.badge ? <span aria-hidden className="absolute left-7 top-1 grid min-w-4 place-items-center rounded-full bg-red-600 px-1 text-[0.625rem] font-bold leading-4 text-white group-hover/sb:hidden group-focus-within/sb:hidden">{i.badge > 9 ? "9+" : i.badge}</span> : null}
-                    <span className="whitespace-nowrap opacity-0 transition-opacity duration-150 group-hover/sb:opacity-100 group-focus-within/sb:opacity-100">{i.label}</span>
-                    {i.badge ? <span aria-label={`${i.badge} pendientes`} className="ml-auto hidden rounded-full bg-red-600 px-2 text-xs font-bold leading-5 text-white group-hover/sb:inline group-focus-within/sb:inline">{i.badge}</span> : null}
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      ))}
+    <nav aria-label="Secciones del panel" className="flex flex-col gap-3">
+      {groups.map((g) => {
+        const abiertoG = abierto(g.id);
+        return (
+          <div key={g.id}>
+            {/* Cada grupo es un desplegable (como «Uso de IA»): el encabezado lo abre y lo cierra. Con el menú recogido no se ve el texto, solo los íconos de los abiertos. */}
+            <button
+              type="button"
+              aria-expanded={abiertoG}
+              aria-controls={`menu-grupo-${g.id}`}
+              onClick={() => alternar(g.id)}
+              className="flex w-full items-center justify-between gap-2 whitespace-nowrap rounded-lg px-3 py-1.5 text-left text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-[var(--ink-faint)] opacity-0 transition hover:bg-white/8 hover:text-white group-hover/sb:opacity-100 group-focus-within/sb:opacity-100"
+            >
+              <span>{g.label}</span>
+              <ChevronDown size={14} aria-hidden className={`shrink-0 transition-transform ${abiertoG ? "rotate-180" : ""}`} />
+            </button>
+            <ul id={`menu-grupo-${g.id}`} hidden={!abiertoG} className="mt-1 flex flex-col gap-1">
+              {g.items.map((i) => {
+                const base = i.href.split(/[#?]/)[0];
+                const current = i.href.includes("?") ? false : pathname === base || (base !== "/panel" && pathname.startsWith(`${base}/`)) || (base === "/panel" && pathname.startsWith("/panel/analitica"));
+                const Icon = ICONOS[i.href] ?? Circle;
+                return (
+                  <li key={i.href}>
+                    <Link
+                      href={i.href}
+                      title={i.hint}
+                      aria-current={current ? "page" : undefined}
+                      className={`group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
+                        current ? "bg-white/12 text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]" : "text-[var(--fg-muted)] hover:bg-white/8 hover:text-white"
+                      }`}
+                    >
+                      {current && <span aria-hidden className="absolute -left-1.5 top-2 bottom-2 w-1 rounded-full bg-[var(--accent)]" />}
+                      <Icon size={20} className={`shrink-0 ${current ? "text-[var(--accent)]" : "opacity-80 group-hover:text-[var(--accent)]"}`} aria-hidden />
+                      {i.badge ? <span aria-hidden className="absolute left-7 top-1 grid min-w-4 place-items-center rounded-full bg-red-600 px-1 text-[0.625rem] font-bold leading-4 text-white group-hover/sb:hidden group-focus-within/sb:hidden">{i.badge > 9 ? "9+" : i.badge}</span> : null}
+                      <span className="whitespace-nowrap opacity-0 transition-opacity duration-150 group-hover/sb:opacity-100 group-focus-within/sb:opacity-100">{i.label}</span>
+                      {i.badge ? <span aria-label={`${i.badge} pendientes`} className="ml-auto hidden rounded-full bg-red-600 px-2 text-xs font-bold leading-5 text-white group-hover/sb:inline group-focus-within/sb:inline">{i.badge}</span> : null}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        );
+      })}
     </nav>
   );
 }

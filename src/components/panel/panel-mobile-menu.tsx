@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, X } from "lucide-react";
+import { ChevronDown, Menu, X } from "lucide-react";
+import { grupoDe, useGruposMenu } from "@/components/panel/grupos-menu";
 
 // Grupo de enlaces del menú del celular.
 export type MenuGroup = {
@@ -25,6 +26,7 @@ export type MenuGroup = {
 export function PanelMobileMenu({ groups, alerta = false, children }: { groups: MenuGroup[]; alerta?: boolean; children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
+  const { abierto, alternar } = useGruposMenu(grupoDe(groups, pathname));
   const sheet = useRef<HTMLDivElement>(null);
   const button = useRef<HTMLButtonElement>(null);
 
@@ -79,9 +81,19 @@ export function PanelMobileMenu({ groups, alerta = false, children }: { groups: 
         >
           <nav aria-label="Secciones del panel" className="flex flex-col">
             {groups.map((g) => (
-              <div key={g.id} className="border-b border-[var(--border)] py-2 last:border-b-0">
-                <p className="lx-kicker px-1 pb-1 pt-2 text-[var(--accent)]">{g.label}</p>
-                <ul>
+              <div key={g.id} className="border-b border-[var(--border)] py-1 last:border-b-0">
+                {/* Cada grupo es un desplegable: el encabezado lo abre y lo cierra (se recuerda). */}
+                <button
+                  type="button"
+                  aria-expanded={abierto(g.id)}
+                  aria-controls={`menu-movil-grupo-${g.id}`}
+                  onClick={() => alternar(g.id)}
+                  className="lx-kicker flex min-h-11 w-full items-center justify-between gap-2 px-1 text-left text-[var(--accent)]"
+                >
+                  <span>{g.label}</span>
+                  <ChevronDown size={16} aria-hidden className={`shrink-0 transition-transform ${abierto(g.id) ? "rotate-180" : ""}`} />
+                </button>
+                <ul id={`menu-movil-grupo-${g.id}`} hidden={!abierto(g.id)}>
                   {g.items.map((item) => {
                     const base = item.href.split(/[#?]/)[0];
                     const current = pathname === base || (base !== "/panel" && pathname.startsWith(`${base}/`)) || (base === "/panel" && pathname.startsWith("/panel/analitica"));
