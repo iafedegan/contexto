@@ -15,7 +15,7 @@ type Msg = {
   sources?: Source[];
 };
 
-// Preguntas de ejemplo para empezar.
+// Preguntas de ejemplo para empezar (de respaldo: las que siguen los temas del momento llegan de /api/assistant/sugerencias).
 const EJEMPLOS = [
   "¿Cómo se comportó el precio del novillo gordo?",
   "¿Qué avances hay en sistemas silvopastoriles?",
@@ -39,6 +39,8 @@ export function AssistantChat({ compact = false }: { compact?: boolean }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [espera, setEspera] = useState(0);
+  // Preguntas de ejemplo: arrancan con las de respaldo y se reemplazan por las de los temas del momento cuando llegan.
+  const [ejemplos, setEjemplos] = useState<string[]>(EJEMPLOS);
   const finRef = useRef<HTMLDivElement>(null);
   const voz = useVoz();
   // Si la pregunta se dictó, la respuesta se lee en voz alta (se puede apagar con el altavoz).
@@ -49,6 +51,20 @@ export function AssistantChat({ compact = false }: { compact?: boolean }) {
     if (calentado) return;
     calentado = true;
     void fetch("/api/assistant", { cache: "no-store" }).catch(() => {});
+  }, []);
+  // Trae las preguntas de ejemplo según los temas del momento; si falla, quedan las de respaldo.
+  useEffect(() => {
+    let vigente = true;
+    fetch("/api/assistant/sugerencias")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j: { preguntas?: unknown } | null) => {
+        const p = Array.isArray(j?.preguntas) ? j.preguntas.filter((x): x is string => typeof x === "string" && x.length > 0).slice(0, 3) : [];
+        if (vigente && p.length) setEjemplos(p);
+      })
+      .catch(() => {});
+    return () => {
+      vigente = false;
+    };
   }, []);
   // Cambia el mensaje de espera según pasa el tiempo.
   useEffect(() => {
@@ -118,7 +134,7 @@ export function AssistantChat({ compact = false }: { compact?: boolean }) {
             Ganadero. Cada respuesta cita sus fuentes; si no hay fuentes, el asistente no responde.
           </p>
           <div className="mt-6 flex flex-wrap justify-center gap-2">
-            {EJEMPLOS.map((e) => (
+            {ejemplos.map((e) => (
               <button
                 key={e}
                 type="button"
