@@ -15,8 +15,8 @@ import { getSiteIdentity } from "@/lib/site-identity";
 import { UserRow } from "@/components/panel/user-row";
 import { AddUserForm } from "@/components/panel/add-user-form";
 import { MiPerfilForm } from "@/components/panel/mi-perfil-form";
-import { getKeyStatus } from "@/lib/ai-provider";
-import { ApiKeyForm } from "@/components/panel/api-key-form";
+import { getConfigIA } from "@/lib/ai-provider";
+import { IaConfig } from "@/components/panel/ia-config";
 import { MfaForm } from "@/components/panel/mfa-form";
 import { PasskeyForm } from "@/components/panel/passkey-form";
 import { listarPasskeys } from "./passkey-actions";
@@ -38,10 +38,10 @@ export default async function ConfiguracionPage() {
   const isAdmin = session?.user?.role === "administrador";
   const limites = await getLimites();
 
-  const [identity, keyStatus, analytics, people, misPasskeys, miEstilo] = await Promise.all([
+  const [identity, configIA, analytics, people, misPasskeys, miEstilo] = await Promise.all([
     getSiteIdentity(),
     // La clave y la analítica del portal son solo de administradores: a las demás personas ni se les consulta ni se les muestra.
-    isAdmin ? getKeyStatus() : null,
+    isAdmin ? getConfigIA() : null,
     isAdmin ? getAnalyticsStatus() : null,
     db
       .select({
@@ -96,7 +96,7 @@ export default async function ConfiguracionPage() {
           ...(isAdmin
             ? [
                 { id: "analitica", label: "Analítica y SEO", icon: <BarChart3 size={13} /> },
-                { id: "asistente", label: "Asistente y agentes de IA", icon: <Sparkles size={13} /> },
+                { id: "asistente", label: "Inteligencia artificial", icon: <Sparkles size={13} /> },
               ]
             : []),
           { id: "telegram", label: "Telegram", icon: <Send size={13} /> },
@@ -401,33 +401,32 @@ export default async function ConfiguracionPage() {
       </Section>
 
       {/* ------------------------------------------------ Asistente / agentes (solo administradores) */}
-      {isAdmin && keyStatus && (
+      {isAdmin && configIA && (
       <Section
         id="asistente"
         icon={<Sparkles size={14} />}
-        title="Asistente y agentes de IA"
-        hint="La clave de la API se puede guardar aquí, cifrada"
+        title="Inteligencia artificial"
+        hint="Claves de cada proveedor y un modelo por función"
       >
-        <ApiKeyForm status={keyStatus} canManage={isAdmin} />
-
-        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <Stat
-            label="Origen de la clave"
-            value={keyStatus.source ? `Desde ${keyStatus.source}` : "Sin configurar"}
-            ok={keyStatus.present}
-          />
-          <Stat label="Modelo" value={keyStatus.model} />
-          <Stat label="Presupuesto mensual" value={`US$ ${limites.presupuestoMensualUsd}`} />
-          <Stat label="Tope por sesión" value={`${limites.topePorSesion} consultas`} />
-          <Stat label="Borradores de IA por día" value={`${limites.topeBorradoresDia}`} />
-        </div>
-        {isAdmin && <LimitesAsistenteForm presupuesto={limites.presupuestoMensualUsd} tope={limites.topePorSesion} borradores={limites.topeBorradoresDia} />}
-        <p className="mt-4 flex items-start gap-2 rounded-[var(--radius)] bg-[var(--surface-2)] p-3 text-xs leading-relaxed text-[var(--fg-muted)]">
-          <ShieldCheck size={14} className="mt-px shrink-0 text-[var(--accent-2)]" />
-          Sin clave, el asistente responde en modo búsqueda (recupera y cita fuentes, sin generar) y
-          la redacción asistida entrega un esqueleto en vez de inventar hechos. Ningún contenido de
-          IA se publica sin la aprobación de un editor.
-        </p>
+        <IaConfig
+          config={configIA}
+          canManage={isAdmin}
+          limites={
+            <div>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <Stat label="Presupuesto mensual" value={`US$ ${limites.presupuestoMensualUsd}`} />
+                <Stat label="Tope por sesión" value={`${limites.topePorSesion} consultas`} />
+                <Stat label="Borradores de IA por día" value={`${limites.topeBorradoresDia}`} />
+              </div>
+              <LimitesAsistenteForm presupuesto={limites.presupuestoMensualUsd} tope={limites.topePorSesion} borradores={limites.topeBorradoresDia} />
+              <p className="mt-4 flex items-start gap-2 rounded-[var(--radius)] bg-[var(--surface-2)] p-3 text-xs leading-relaxed text-[var(--fg-muted)]">
+                <ShieldCheck size={14} className="mt-px shrink-0 text-[var(--accent-2)]" />
+                Sin clave, el asistente responde en modo búsqueda (recupera y cita fuentes, sin generar) y la redacción asistida entrega un esqueleto en vez de inventar
+                hechos. Ningún contenido de IA se publica sin la aprobación de un editor.
+              </p>
+            </div>
+          }
+        />
       </Section>
       )}
       </ConfigTabs>

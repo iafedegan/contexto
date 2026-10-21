@@ -66,6 +66,8 @@ export async function generateArticleDraftCore(userId: string, input: {
   ficha?: string;
   /** Escritor cuyo estilo se imita (por defecto, el de quien pide el borrador). */
   estiloDe?: string;
+  /** Modelo con el que redactar, elegido al crear la nota («proveedor:modelo»); solo vale si un administrador lo habilitó para editores. */
+  modelo?: string;
 }): Promise<GenerateResult> {
 
   const tema = input.title.trim();
@@ -76,14 +78,14 @@ export async function generateArticleDraftCore(userId: string, input: {
   }
 
   const refs = (input.references ?? []).filter((r) => /^https?:\/\//i.test(r.url)).slice(0, 8);
-  const model = await getAiModel();
+  const model = await getAiModel(input.modelo);
   if (!model) {
     return {
       ok: true,
       mode: "esquema",
       note:
         "Sin clave del modelo: no se redacta la noticia (sería inventar hechos). " +
-        "Un administrador puede añadirla en Configuración → Asistente. " +
+        "Un administrador puede añadirla en Configuración → Inteligencia artificial. " +
         "Este es el esqueleto con su ficha de posicionamiento para que escribas encima.",
       draft: scaffold(tema, encargo, input.section),
     };
@@ -295,10 +297,12 @@ export async function regenerateDraftPartCore(userId: string, input: {
   instrucciones?: string;
   /** Entrevista o texto de enlaces del que sale la nota (para citar y no salirse del tema). */
   material?: Material[];
+  /** Modelo elegido al crear la nota (ver `generateArticleDraftCore`). */
+  modelo?: string;
 }): Promise<RegenerateResult> {
-  const model = await getAiModel();
+  const model = await getAiModel(input.modelo);
   if (!model) {
-    return { ok: false, error: "Para regenerar hace falta la clave del modelo (la conecta un administrador en Configuración → Asistente)." };
+    return { ok: false, error: "Para regenerar hace falta la clave del modelo (la conecta un administrador en Configuración → Inteligencia artificial)." };
   }
   try {
     const cuotaIA = await verificarCuotaIA(userId);

@@ -32,7 +32,7 @@ export async function redactarMensajeConIA(slugs: string[]): Promise<{ ok: boole
   const limite = await hit(`newsletter-ia:${user.id}`, 30, 3600);
   if (!limite.allowed) return { ok: false, message: "Hiciste muchas peticiones seguidas. Espera un rato e inténtalo de nuevo." };
   const model = await getAiModel();
-  if (!model) return { ok: false, message: "Falta conectar el modelo de IA (lo hace un administrador en Configuración → Asistente de IA)." };
+  if (!model) return { ok: false, message: "Falta conectar el modelo de IA (lo hace un administrador en Configuración → Inteligencia artificial)." };
   const cuota = await verificarCuotaIA(user.id);
   if (!cuota.ok) return { ok: false, message: cuota.message };
 

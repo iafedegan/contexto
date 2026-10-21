@@ -39,6 +39,8 @@ export type AiSettings = {
   imageModel?: string;
   /** Claves cifradas, una por proveedor. */
   keys: Partial<Record<AiProviderId, string>>;
+  /** Modelo propio por función (editores, agente de la vaca, imágenes, videos). Vacío = todo usa el modelo principal de arriba. */
+  roles?: AiRoles;
   /**
    * Modelos que el proveedor listó la última vez que se validó la clave.
    * Se guardan para poder ofrecer un desplegable real en vez de un nombre
@@ -46,6 +48,85 @@ export type AiSettings = {
    */
   models?: Partial<Record<AiProviderId, string[]>>;
 };
+
+/**
+ * Un modelo se identifica como «proveedor:modelo» (p. ej. `google:gemini-3.8-flash`): así una función puede usar Gemini y otra Claude. Los ajustes
+ * viejos (`provider` + `model`) siguen valiendo como «modelo principal».
+ */
+export type ModeloRef = string;
+
+/** Funciones de IA que tienen modelo propio. */
+export type RolIA = "editor" | "asistente" | "imagen" | "videoEntender" | "videoGenerar";
+
+/** Modelo por función. `editor` es una LISTA: el administrador habilita varios y quien crea la nota elige cuál usar. */
+export type AiRoles = {
+  editor?: { habilitados: ModeloRef[]; predeterminado?: ModeloRef };
+  /** Agente de la vaca: el asistente público del sitio. */
+  asistente?: ModeloRef;
+  /** Fotos de portada (solo Gemini). */
+  imagen?: ModeloRef;
+  /** Leer y transcribir videos que sube el editor (solo Gemini). */
+  videoEntender?: ModeloRef;
+  /** Generar videos con IA (solo Gemini/Veo). */
+  videoGenerar?: ModeloRef;
+};
+
+export const refModelo = (provider: AiProviderId, modelo: string): ModeloRef => `${provider}:${modelo}`;
+
+/** Separa «proveedor:modelo». `null` si no tiene esa forma o el proveedor no existe. */
+export function leerRef(ref: string | undefined | null): { provider: AiProviderId; model: string } | null {
+  const i = (ref ?? "").indexOf(":");
+  if (i < 1) return null;
+  const provider = ref!.slice(0, i) as AiProviderId;
+  const model = ref!.slice(i + 1).trim();
+  return AI_PROVIDERS.some((p) => p.id === provider) && model ? { provider, model } : null;
+}
+
+/** ¿Es un modelo que genera video (familia Veo)? */
+export function esModeloDeVideo(nombre: string): boolean {
+  return /veo/i.test(nombre);
+}
+
+/** ¿Sirve para escribir y razonar con texto? Excluye los de imagen, video, voz y vectores. */
+export function esModeloDeTexto(nombre: string): boolean {
+  return !esModeloDeImagen(nombre) && !esModeloDeVideo(nombre) && !/embed|tts|aqa|imagen-|live|audio|robotics|computer-use/i.test(nombre);
+}
+
+/**
+ * Qué modelo usa cada función, ya resuelto contra los ajustes. Puro (sin base de datos) para poder probarlo.
+ * - editor: la lista habilitada (si no hay, solo el principal) y el predeterminado; `elegido` solo vale si está en la lista.
+ * - asistente: el suyo o, si no hay, el principal.
+ * - imagen: el suyo, el viejo `imageModel` o el modelo de imagen por defecto (siempre Gemini).
+ * - videoEntender: el suyo o, si el principal es Gemini, el principal.
+ * - videoGenerar: solo si se eligió uno.
+ */
+export function modeloDe(settings: AiSettings, rol: RolIA, elegido?: string | null): ModeloRef | null {
+  const principal = refModelo(settings.provider, settings.model);
+  const r = settings.roles ?? {};
+  switch (rol) {
+    case "editor": {
+      const lista = listaEditor(settings);
+      return elegido && lista.habilitados.includes(elegido) ? elegido : lista.predeterminado;
+    }
+    case "asistente":
+      return r.asistente || principal;
+    case "imagen":
+      return r.imagen || refModelo("google", settings.imageModel || DEFAULT_IMAGE_MODEL);
+    case "videoEntender":
+      return r.videoEntender || (settings.provider === "google" ? principal : null);
+    case "videoGenerar":
+      return r.videoGenerar || null;
+  }
+}
+
+/** Los modelos que un editor puede elegir al crear una nota, y el que va marcado de entrada. Nunca vacía. */
+export function listaEditor(settings: AiSettings): { habilitados: ModeloRef[]; predeterminado: ModeloRef } {
+  const principal = refModelo(settings.provider, settings.model);
+  const e = settings.roles?.editor;
+  const habilitados = [...new Set((e?.habilitados ?? []).filter((x) => leerRef(x)))];
+  if (habilitados.length === 0) return { habilitados: [principal], predeterminado: principal };
+  return { habilitados, predeterminado: e?.predeterminado && habilitados.includes(e.predeterminado) ? e.predeterminado : habilitados[0] };
+}
 
 // Estado de una clave para la pantalla de Configuración: sin revelarla, solo si existe y qué modelos permite.
 export type KeyStatus = {

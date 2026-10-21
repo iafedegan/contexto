@@ -50,7 +50,7 @@ export type GenerateResult =
  * completo (fuente → borrador → verificación → cola) queda igual de demostrable.
  */
 export async function generateDraft(source: StructuredSource): Promise<GenerateResult> {
-  // Tope diario de borradores: lo fija un administrador en Configuración → Asistente (por defecto, el del entorno).
+  // Tope diario de borradores: lo fija un administrador en Configuración → Inteligencia artificial (por defecto, el del entorno).
   const DAILY_LIMIT = (await getLimites()).topeBorradoresDia;
   const startOfDay = new Date();
   startOfDay.setUTCHours(0, 0, 0, 0);

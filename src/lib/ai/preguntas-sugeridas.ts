@@ -1,6 +1,6 @@
 import "server-only";
 import { generateText } from "ai";
-import { getAiModel } from "@/lib/ai-provider";
+import { getModelo } from "@/lib/ai-provider";
 import { getMostReadArticles, getRecentArticles } from "@/lib/content";
 import { cachear } from "@/lib/data-cache";
 
@@ -38,7 +38,7 @@ export function limpiarPreguntas(texto: string): string[] {
 // Pide al modelo tres preguntas sobre lo que hoy está en la conversación del sitio (lo más leído y lo más reciente). Sin proveedor o ante un error: respaldo.
 async function generar(): Promise<string[]> {
   try {
-    const model = await getAiModel();
+    const model = await getModelo("asistente");
     if (!model) return PREGUNTAS_POR_DEFECTO;
     const [masLeidas, recientes] = await Promise.all([getMostReadArticles(5).catch(() => []), getRecentArticles(8).catch(() => [])]);
     const titulares = [...new Map([...masLeidas, ...recientes].map((a) => [a.slug, a])).values()].slice(0, 10).map((a) => `- ${a.title}${a.categoryName ? ` (${a.categoryName})` : ""}`);

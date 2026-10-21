@@ -8,6 +8,7 @@ import { LogoMark } from "@/components/logo-mark";
 import { users } from "@/db/schema";
 import { auth, cuentaPorId, signOut } from "@/lib/auth";
 import { PanelNav, PanelSidebarNav } from "@/components/panel/panel-nav";
+import { UsoIaBarra } from "@/components/panel/uso-ia-barra";
 import { AvisoTareas } from "@/components/panel/aviso-tareas";
 import { contarMisPendientes } from "./pendientes/consultas";
 import { HeaderHeightVar } from "@/components/panel/header-height";
@@ -131,7 +132,8 @@ export default async function PanelLayout({ children }: { children: React.ReactN
           </div>
         </div>
         {!debeActivar2fa && <PanelSidebarNav role={session.user.role} permisos={permisos} pendientes={misTareas.total} />}
-        <div className="mt-auto flex items-center justify-between gap-2 whitespace-nowrap border-t border-white/10 pt-4 text-sm opacity-0 transition-opacity duration-150 group-hover/sb:opacity-100 group-focus-within/sb:opacity-100">
+        {!debeActivar2fa && session.user.role === "administrador" && <div className="mt-auto"><UsoIaBarra variante="lateral" /></div>}
+        <div className={`${session.user.role === "administrador" && !debeActivar2fa ? "" : "mt-auto "}flex items-center justify-between gap-2 whitespace-nowrap border-t border-white/10 pt-4 text-sm opacity-0 transition-opacity duration-150 group-hover/sb:opacity-100 group-focus-within/sb:opacity-100`}>
           <Link href="/" className="font-medium text-[var(--fg-muted)] transition hover:text-white">Ver sitio</Link>
           <form action={async () => { "use server"; await signOut({ redirectTo: "/panel/login" }); }}>
             <button className="rounded-lg border border-white/25 px-3 py-1.5 font-medium transition hover:border-[var(--accent)] hover:text-[var(--accent)]">Salir</button>
@@ -164,6 +166,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
 
           {!debeActivar2fa && (
             <PanelNav role={session.user.role} permisos={permisos} pendientes={misTareas.total}>
+              {session.user.role === "administrador" && <UsoIaBarra variante="movil" />}
               {cuenta}
             </PanelNav>
           )}

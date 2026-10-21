@@ -131,7 +131,7 @@ export async function generarDiagnostico(escritorId?: string): Promise<EstiloRes
     return nueva(e, `Para un diagnóstico fiable carga al menos ${ESTILO_LIMITES.minimoMuestras} notas tuyas (y unas ${ESTILO_LIMITES.minimoPalabras.toLocaleString("es-CO")} palabras en total). Tienes ${e.fuentes.length} y ${palabras.toLocaleString("es-CO")} palabras.`, false);
   }
   const model = await getAiModel();
-  if (!model) return nueva(e, "Falta la clave del modelo de IA (la conecta un administrador en Configuración → Asistente).", false);
+  if (!model) return nueva(e, "Falta la clave del modelo de IA (la conecta un administrador en Configuración → Inteligencia artificial).", false);
   const cuota = await verificarCuotaIA(user.id);
   if (!cuota.ok) return nueva(e, cuota.message, false);
   try {

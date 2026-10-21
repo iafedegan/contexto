@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { sql } from "drizzle-orm";
 import { getObservatorio } from "@/lib/observatorio-fedegan";
-import { getAiModel } from "@/lib/ai-provider";
+import { getModelo } from "@/lib/ai-provider";
 import { generateText } from "ai";
 import { db } from "@/db";
 import { assistantQueries } from "@/db/schema";
@@ -37,7 +37,7 @@ function conPlazo<T>(promesa: Promise<T>, ms: number, alternativa: T): Promise<T
  * (conexión a la base, ajustes del modelo y cifras del Observatorio). Solo lee; no cuesta nada de IA.
  */
 export async function GET() {
-  await Promise.allSettled([db.execute(sql`select 1`), getAiModel(), conPlazo(getObservatorio(), 2_500, null)]);
+  await Promise.allSettled([db.execute(sql`select 1`), getModelo("asistente"), conPlazo(getObservatorio(), 2_500, null)]);
   return new NextResponse(null, { status: 204, headers: { "Cache-Control": "no-store" } });
 }
 
@@ -86,7 +86,7 @@ export async function POST(req: Request) {
   const [hits, delObservatorio, model] = await Promise.all([
     hybridSearch(q, 8).catch(() => []),
     conPlazo(buscarEnObservatorio(q, 4), PLAZO_OBSERVATORIO_MS, []),
-    getAiModel(),
+    getModelo("asistente"),
   ]);
   const sources = [...hits, ...delObservatorio].map((h, i) => ({
     n: i + 1,

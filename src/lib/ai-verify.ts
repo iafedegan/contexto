@@ -48,9 +48,9 @@ export async function verifyApiKey(
     };
 
     // Google devuelve también modelos de embeddings y de imagen: solo sirven
-    // los que soportan generateContent.
+    // los que soportan generateContent, y los de video (Veo), que se piden como operación larga.
     const google = (data.models ?? [])
-      .filter((m) => (m.supportedGenerationMethods ?? ["generateContent"]).includes("generateContent"))
+      .filter((m) => (m.supportedGenerationMethods ?? ["generateContent"]).some((x) => x === "generateContent" || x === "predictLongRunning"))
       .map((m) => (m.name ?? "").replace(/^models\//, ""));
     // Ids de los modelos que devuelve la cuenta de Anthropic.
     const anthropic = (data.data ?? []).map((m) => m.id ?? "");

@@ -10,6 +10,7 @@ import { ArrowLeft, PenLine, Sparkles } from "lucide-react";
 import { ArticleEditor } from "@/components/article-editor";
 import { ArticleWizard } from "@/components/panel/article-wizard";
 import { getEstilo } from "@/lib/ai/estilo";
+import { getModelosEditor } from "@/lib/ai-provider";
 import { esNotaPropia } from "@/lib/propiedad-notas";
 import { piezaParaEscribir } from "@/app/panel/(app)/pendientes/consultas";
 import { siteChrome } from "@/components/panel/site-chrome";
@@ -107,6 +108,7 @@ export default async function ArticleEditorPage({
           mode={modo}
           pieza={p ? { id: p.id, tema: [p.tema, p.enfoque, p.encargo].filter(Boolean).join(". ").slice(0, 600), categoryId: p.categoryId, brief: p.brief } : undefined}
           site={await siteChrome()}
+          modelosEditor={await getModelosEditor()}
           canPublish={canPublish(session!.user.role)}
           canPortada={await tienePermiso(session!.user.id, session!.user.role, "portada")}
           estilo={estilo}
@@ -160,6 +162,7 @@ export default async function ArticleEditorPage({
           mode={modo}
           startStep={paso}
           site={await siteChrome()}
+          modelosEditor={await getModelosEditor()}
           status={row.status}
           canPublish={canPublish(session!.user.role)}
           canPortada={await tienePermiso(session!.user.id, session!.user.role, "portada")}

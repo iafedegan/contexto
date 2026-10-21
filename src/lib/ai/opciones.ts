@@ -36,14 +36,16 @@ export async function suggestTitlesAndContextsCore(userId: string, input: {
   topic: string;
   section?: string;
   material?: Material[];
+  /** Modelo elegido al crear la nota («proveedor:modelo»); solo vale si un administrador lo habilitó para editores. */
+  modelo?: string;
 }): Promise<SuggestResult> {
   const topic = input.topic.trim();
   const mat = materialParaPrompt(input.material, 30_000);
   if (topic.length < 10 && !mat) return { ok: false, error: "Cuéntame el tema con un poco más de detalle (mínimo 10 caracteres)." };
 
-  const model = await getAiModel();
+  const model = await getAiModel(input.modelo);
   if (!model) {
-    return { ok: false, error: "Para proponer opciones hace falta la clave del modelo (la conecta un administrador en Configuración → Asistente)." };
+    return { ok: false, error: "Para proponer opciones hace falta la clave del modelo (la conecta un administrador en Configuración → Inteligencia artificial)." };
   }
   try {
     const cuotaIA = await verificarCuotaIA(userId);

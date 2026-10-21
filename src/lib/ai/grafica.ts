@@ -38,9 +38,9 @@ export async function generateChartCore(userId: string, input: { topic: string; 
   if (topic.length < 10) return { ok: false, error: "Describe qué quieres graficar (mínimo 10 caracteres)." };
 
   const ai = await getGroundedAi();
-  if (!ai) return { ok: false, error: "Falta la clave del modelo (la conecta un administrador en Configuración → Asistente)." };
+  if (!ai) return { ok: false, error: "Falta la clave del modelo (la conecta un administrador en Configuración → Inteligencia artificial)." };
   if (ai === "otro-proveedor") {
-    return { ok: false, error: "Las gráficas con datos reales usan Gemini: pídele a un administrador que elija Google (Gemini) en Configuración → Asistente." };
+    return { ok: false, error: "Las gráficas con datos reales usan Gemini: pídele a un administrador que elija Google (Gemini) en Configuración → Inteligencia artificial." };
   }
 
   try {

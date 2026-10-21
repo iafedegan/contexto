@@ -82,7 +82,7 @@ export async function armarPautaCore(
   input: { lunes: string; casillas: CasillaParaIa[]; temas: TemaConsejo[]; enfoque?: string; /** Respuestas del consejo a las preguntas de cada sección, ya en texto, por slug. */ briefs?: Record<string, string>; /** Diagnóstico de estilo por sección (slug): quién escribe y cómo. */ estilos?: Record<string, string> },
 ): Promise<{ ok: true; pauta: PautaCasilla[] } | { ok: false; error: string }> {
   const model = await getAiModel();
-  if (!model) return { ok: false, error: "Falta la clave del modelo de IA (la conecta un administrador en Configuración → Asistente)." };
+  if (!model) return { ok: false, error: "Falta la clave del modelo de IA (la conecta un administrador en Configuración → Inteligencia artificial)." };
   if (!input.casillas.length) return { ok: false, error: "La parrilla está vacía: elige días, horas y cuántas notas por sección." };
   const cuota = await verificarCuotaIA(userId);
   if (!cuota.ok) return { ok: false, error: cuota.message };
@@ -163,7 +163,7 @@ export async function completarFichaCore(
   input: { tema: string; angulo?: string; encargo?: string; seccion?: string; existente?: FichaPauta; estilo?: string },
 ): Promise<{ ok: true; ficha: FichaPauta } | { ok: false; error: string }> {
   const model = await getAiModel();
-  if (!model) return { ok: false, error: "Falta la clave del modelo de IA (la conecta un administrador en Configuración → Asistente)." };
+  if (!model) return { ok: false, error: "Falta la clave del modelo de IA (la conecta un administrador en Configuración → Inteligencia artificial)." };
   const cuota = await verificarCuotaIA(userId);
   if (!cuota.ok) return { ok: false, error: cuota.message };
   try {
@@ -220,7 +220,7 @@ export async function autollenarPreguntasCore(
   input: { tema: string; seccion: string; estilo?: string },
 ): Promise<{ ok: true; brief: BriefSeccion; fuentes: number } | { ok: false; error: string }> {
   const model = await getAiModel();
-  if (!model) return { ok: false, error: "Falta la clave del modelo de IA (la conecta un administrador en Configuración → Asistente)." };
+  if (!model) return { ok: false, error: "Falta la clave del modelo de IA (la conecta un administrador en Configuración → Inteligencia artificial)." };
   const cuota = await verificarCuotaIA(userId);
   if (!cuota.ok) return { ok: false, error: cuota.message };
   try {

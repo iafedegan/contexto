@@ -30,9 +30,9 @@ export async function generateCoverImageCore(userId: string, input: {
     return { ok: false, error: "Escribe primero el título de la nota (o describe la escena) para generar la imagen." };
   }
   const imageModel = await getImageAi();
-  if (!imageModel) return { ok: false, error: "Falta la clave del modelo (la conecta un administrador en Configuración → Asistente)." };
+  if (!imageModel) return { ok: false, error: "Falta la clave del modelo (la conecta un administrador en Configuración → Inteligencia artificial)." };
   if (imageModel === "otro-proveedor") {
-    return { ok: false, error: "Las imágenes se generan con Gemini: pídele a un administrador que elija Google (Gemini) en Configuración → Asistente." };
+    return { ok: false, error: "Las imágenes se generan con Gemini: pídele a un administrador que elija Google (Gemini) en Configuración → Inteligencia artificial." };
   }
   const text = await getAiModel();
   try {

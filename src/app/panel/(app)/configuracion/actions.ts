@@ -11,16 +11,18 @@ import { DOS_PASOS, PERMISO_IDS, porDefecto, type PermisoId } from "@/lib/permis
 import { PERMISOS_KEY, type MapaAjustes } from "@/lib/permisos-server";
 import { auth, requireRole } from "@/lib/auth";
 import { SITE_IDENTITY_KEY, type SiteIdentity } from "@/lib/site-identity";
-import { SECRETS_KEY } from "@/lib/ai-provider";
+import { SECRETS_KEY, claveEfectiva } from "@/lib/ai-provider";
 import { ANALYTICS_KEY, GA4_ID_RE, GTM_ID_RE, type AnalyticsSettings } from "@/lib/analytics";
 import { readAnalytics } from "@/lib/analytics-server";
 import {
   AI_PROVIDERS,
+  esModeloDeTexto,
   providerMeta,
   type AiProviderId,
   type AiSettings,
 } from "@/lib/ai-providers";
 import { verifyApiKey } from "@/lib/ai-verify";
+import { aplicarRoles, validarRoles } from "@/lib/ai-roles";
 import { encryptSecret } from "@/lib/secrets";
 import { invalidarCache } from "@/lib/data-cache";
 import { ROLES } from "@/lib/permisos";
@@ -282,110 +284,99 @@ export async function actualizarMiPerfil(_prev: MiPerfilState, formData: FormDat
   return { ok: true, message: "Datos actualizados." };
 }
 
-/**
- * Guarda proveedor, modelo y —si se envía— la clave, CIFRADA
- * (AES-256-GCM, ver `src/lib/secrets.ts`). La clave no vuelve nunca al
- * navegador: la pantalla solo muestra una máscara.
- *
- * Las claves de cada proveedor se conservan por separado, así cambiar de
- * Claude a Gemini y volver no obliga a reintroducirlas.
- */
-export async function saveAiSettings(formData: FormData) {
-  await requireRole("administrador");
+/** Lee los ajustes de IA guardados (o vacíos). */
+async function leerAjustesIA(): Promise<Partial<AiSettings>> {
+  const [row] = await db.select({ value: siteSettings.value }).from(siteSettings).where(eq(siteSettings.key, SECRETS_KEY)).limit(1);
+  return (row?.value as Partial<AiSettings> | undefined) ?? {};
+}
 
-  const provider = String(formData.get("provider") ?? "anthropic") as AiProviderId;
-  if (!AI_PROVIDERS.some((p) => p.id === provider)) {
-    throw new Error("Proveedor no reconocido.");
-  }
-  const meta = providerMeta(provider);
-  const model = String(formData.get("model") ?? "").trim();
-  const chartModel = String(formData.get("chartModel") ?? "").trim();
-  const imageModel = String(formData.get("imageModel") ?? "").trim();
-  const raw = String(formData.get("apiKey") ?? "").trim();
-
-  const [row] = await db
-    .select({ value: siteSettings.value })
-    .from(siteSettings)
-    .where(eq(siteSettings.key, SECRETS_KEY))
-    .limit(1);
-  const current = (row?.value as Partial<AiSettings> | undefined) ?? {};
-  const keys = { ...(current.keys ?? {}) };
-  const models = { ...(current.models ?? {}) };
-
-  if (raw) {
-    // Se pregunta al proveedor en vez de adivinar por el prefijo: Google emite
-    // varios formatos de clave y rechazar por forma bloquea claves válidas.
-    if (/\s/.test(raw) || raw.length < 20) {
-      throw new Error("La clave parece incompleta o trae espacios al pegarla.");
-    }
-    const check = await verifyApiKey(provider, raw);
-    if (!check.ok) throw new Error(check.error);
-
-    keys[provider] = encryptSecret(raw);
-    // Se guarda el catálogo real de la cuenta para ofrecerlo como desplegable:
-    // los nombres de modelo caducan y adivinarlos rompe la generación.
-    if (check.models.length > 0) models[provider] = check.models;
-  }
-
-  const catalogo = models[provider] ?? [];
-  const modeloFinal = model || catalogo[0] || meta.defaultModel;
-  if (!modeloFinal) {
-    throw new Error("Elige un modelo. Guarda primero la clave para ver los disponibles.");
-  }
-  if (catalogo.length > 0 && !catalogo.includes(modeloFinal)) {
-    throw new Error(
-      `${meta.label} no ofrece «${modeloFinal}». Disponibles, por ejemplo: ${catalogo.slice(0, 4).join(", ")}.`,
-    );
-  }
-
-  if (chartModel && catalogo.length > 0 && !catalogo.includes(chartModel)) {
-    throw new Error(`${meta.label} no ofrece «${chartModel}» para las gráficas.`);
-  }
-  if (imageModel && catalogo.length > 0 && !catalogo.includes(imageModel)) {
-    throw new Error(`${meta.label} no ofrece «${imageModel}» para las imágenes.`);
-  }
-  const value: AiSettings = {
-    provider,
-    model: modeloFinal,
-    ...(provider === "google" && chartModel ? { chartModel } : {}),
-    ...(provider === "google" && imageModel ? { imageModel } : {}),
-    keys,
-    models,
-  };
-  await db
-    .insert(siteSettings)
-    .values({ key: SECRETS_KEY, value })
-    .onConflictDoUpdate({ target: siteSettings.key, set: { value, updatedAt: sql`now()` } });
-
+/** Guarda los ajustes de IA completos (un solo registro en `site_settings`). */
+async function escribirAjustesIA(value: AiSettings) {
+  await db.insert(siteSettings).values({ key: SECRETS_KEY, value }).onConflictDoUpdate({ target: siteSettings.key, set: { value, updatedAt: sql`now()` } });
   revalidatePath("/panel/configuracion");
 }
 
-/** Borra la clave guardada del proveedor activo (la del entorno no se toca). */
-export async function deleteApiKey(provider: AiProviderId) {
+/**
+ * Guarda la clave de UN proveedor, CIFRADA (AES-256-GCM, ver `src/lib/secrets.ts`), después de comprobarla con el propio proveedor y de leer su
+ * catálogo real de modelos. La clave no vuelve nunca al navegador: la pantalla solo muestra una máscara. Cada proveedor conserva la suya.
+ */
+export async function guardarClaveIA(provider: AiProviderId, clave: string): Promise<{ ok: boolean; message: string }> {
   await requireRole("administrador");
+  if (!AI_PROVIDERS.some((p) => p.id === provider)) return { ok: false, message: "Proveedor no reconocido." };
+  const raw = String(clave ?? "").trim();
+  // Se pregunta al proveedor en vez de adivinar por el prefijo: Google emite varios formatos de clave y rechazar por forma bloquea claves válidas.
+  if (/\s/.test(raw) || raw.length < 20) return { ok: false, message: "La clave parece incompleta o trae espacios al pegarla." };
+  const check = await verifyApiKey(provider, raw);
+  if (!check.ok) return { ok: false, message: check.error };
 
-  const [row] = await db
-    .select({ value: siteSettings.value })
-    .from(siteSettings)
-    .where(eq(siteSettings.key, SECRETS_KEY))
-    .limit(1);
-  const current = (row?.value as Partial<AiSettings> | undefined) ?? {};
-  const keys = { ...(current.keys ?? {}) };
+  const actual = await leerAjustesIA();
+  const meta = providerMeta(provider);
+  const modelos = { ...(actual.models ?? {}), ...(check.models.length > 0 ? { [provider]: check.models } : {}) };
+  // Primera clave guardada: ese proveedor pasa a ser el principal, con su primer modelo de texto, para que el sistema ya funcione.
+  const primera = !actual.keys || Object.keys(actual.keys).length === 0;
+  const modeloInicial = check.models.find(esModeloDeTexto) ?? meta.defaultModel;
+  await escribirAjustesIA({
+    provider: primera ? provider : (actual.provider ?? provider),
+    model: primera ? modeloInicial : (actual.model ?? modeloInicial),
+    ...(actual.chartModel ? { chartModel: actual.chartModel } : {}),
+    ...(actual.imageModel ? { imageModel: actual.imageModel } : {}),
+    ...(actual.roles ? { roles: actual.roles } : {}),
+    keys: { ...(actual.keys ?? {}), [provider]: encryptSecret(raw) },
+    models: modelos,
+  });
+  return { ok: true, message: `Clave de ${meta.label} guardada. Modelos disponibles en tu cuenta: ${check.models.length}.` };
+}
+
+/** Vuelve a leer del proveedor la lista de modelos de la cuenta, con la clave que ya hay (del entorno o guardada). */
+export async function actualizarCatalogoIA(provider: AiProviderId): Promise<{ ok: boolean; message: string }> {
+  await requireRole("administrador");
+  const key = await claveEfectiva(provider);
+  if (!key) return { ok: false, message: "Este proveedor no tiene clave." };
+  const check = await verifyApiKey(provider, key);
+  if (!check.ok) return { ok: false, message: check.error };
+  const actual = await leerAjustesIA();
+  await escribirAjustesIA({
+    provider: actual.provider ?? provider,
+    model: actual.model ?? (check.models.find(esModeloDeTexto) ?? providerMeta(provider).defaultModel),
+    ...(actual.chartModel ? { chartModel: actual.chartModel } : {}),
+    ...(actual.imageModel ? { imageModel: actual.imageModel } : {}),
+    ...(actual.roles ? { roles: actual.roles } : {}),
+    keys: actual.keys ?? {},
+    models: { ...(actual.models ?? {}), [provider]: check.models },
+  });
+  return { ok: true, message: `${check.models.length} modelos disponibles en tu cuenta.` };
+}
+
+/** Borra la clave guardada de un proveedor (la del entorno no se toca) y conserva todo lo demás. */
+export async function eliminarClaveIA(provider: AiProviderId): Promise<{ ok: boolean; message: string }> {
+  await requireRole("administrador");
+  const actual = await leerAjustesIA();
+  const keys = { ...(actual.keys ?? {}) };
   delete keys[provider];
-
-  const value: AiSettings = {
-    provider: current.provider ?? "anthropic",
-    model: current.model ?? providerMeta(provider).defaultModel,
-    ...(current.chartModel ? { chartModel: current.chartModel } : {}),
-    ...(current.imageModel ? { imageModel: current.imageModel } : {}),
+  await escribirAjustesIA({
+    provider: actual.provider ?? "anthropic",
+    model: actual.model ?? providerMeta(provider).defaultModel,
+    ...(actual.chartModel ? { chartModel: actual.chartModel } : {}),
+    ...(actual.imageModel ? { imageModel: actual.imageModel } : {}),
+    ...(actual.roles ? { roles: actual.roles } : {}),
     keys,
-  };
-  await db
-    .insert(siteSettings)
-    .values({ key: SECRETS_KEY, value })
-    .onConflictDoUpdate({ target: siteSettings.key, set: { value, updatedAt: sql`now()` } });
+    models: actual.models ?? {},
+  });
+  return { ok: true, message: "Clave eliminada." };
+}
 
-  revalidatePath("/panel/configuracion");
+/**
+ * Guarda el modelo de cada función: la LISTA de modelos de los editores (con su predeterminado), el agente de la vaca, las imágenes y los dos de
+ * videos. Se valida contra el catálogo de cada proveedor y contra las claves guardadas (o del entorno).
+ */
+export async function guardarModelosIA(entrada: unknown): Promise<{ ok: boolean; message: string }> {
+  await requireRole("administrador");
+  const actual = await leerAjustesIA();
+  const conClave = AI_PROVIDERS.filter((p) => Boolean(actual.keys?.[p.id]) || Boolean(process.env[p.envVar])).map((p) => p.id);
+  const v = validarRoles(entrada, actual.models ?? {}, conClave);
+  if (!v.ok) return { ok: false, message: v.error };
+  await escribirAjustesIA(aplicarRoles(actual, v));
+  return { ok: true, message: "Modelos guardados." };
 }
 
 /**

@@ -21,6 +21,7 @@ import {
   RotateCcw,
   Save,
   Send,
+  Cpu,
   PenLine,
   Sparkles,
   Trash2,
@@ -129,6 +130,7 @@ export function ArticleWizard({
   estilo = "sin",
   estiloInfo = null,
   savedAs,
+  modelosEditor,
 }: {
   categories: (Option & { parentId?: string | null })[];
   authors: Option[];
@@ -153,6 +155,8 @@ export function ArticleWizard({
   estilo?: EstadoEstilo;
   /** Datos del diagnóstico de estilo (fecha, notas, palabras) para el aviso del paso 1. */
   estiloInfo?: { generadoEn: string; muestras: number; palabras: number } | null;
+  /** Modelos de IA que un administrador habilitó para redactar (con el predeterminado). Con más de uno, quien crea la nota elige cuál usar. */
+  modelosEditor?: { modelos: { ref: string; etiqueta: string }[]; predeterminado: string | null };
   /** Resultado del último guardado (?guardado=…), para confirmarlo. */
   savedAs?: string;
 }) {
@@ -173,6 +177,8 @@ export function ArticleWizard({
   const [newsError, setNewsError] = useState("");
   const [refs, setRefs] = useState<NewsItem[]>([]);
   const [newsFiltro, setNewsFiltro] = useState<"todo" | NewsItem["type"]>("todo");
+  // Modelo de IA con el que se redacta esta nota: arranca en el predeterminado y se puede cambiar mientras haya más de uno habilitado.
+  const [modelo, setModelo] = useState(modelosEditor?.predeterminado ?? "");
   const [searchingNews, startNews] = useTransition();
   const [enOpciones, setEnOpciones] = useState(false);
   // Alto de la ventana: decide cuántas filas de cada lista caben por página del carrusel.
@@ -433,6 +439,7 @@ export function ArticleWizard({
         references: refs.map((r) => ({ title: r.title, outlet: r.outlet, url: r.url, videoId: r.videoId })),
         material,
         instrucciones,
+        modelo: modelo || undefined,
       });
       if (!res.ok) return setError(res.error);
       const d = res.draft;
@@ -681,6 +688,7 @@ export function ArticleWizard({
         topic: [topic.trim(), briefParaPrompt("", { ...ideasBrief, temas: undefined }).split("\n").slice(1).join("; ")].filter(Boolean).join("\n"),
         section: categories.find((c) => c.id === categoryId)?.name,
         material,
+        modelo: modelo || undefined,
       });
       if (!res.ok) return setError(res.error);
       setOptions({ titles: res.titles, contexts: res.contexts });
@@ -717,6 +725,7 @@ export function ArticleWizard({
         section: categories.find((c) => c.id === categoryId)?.name,
         instrucciones,
         material,
+        modelo: modelo || undefined,
       });
       if (!res.ok) return setError(res.error);
       const v = res.value;
@@ -1658,6 +1667,20 @@ export function ArticleWizard({
           </button>
         ) : (
           <span />
+        )}
+        {/* Modelo de IA con el que se redacta (solo si un administrador habilitó más de uno). */}
+        {current.key === "tema" && !generated && modelosEditor && modelosEditor.modelos.length > 1 && (
+          <label className="flex min-w-0 items-center gap-1.5 text-xs text-[var(--fg-muted)]" title="Modelo de IA con el que se redacta esta nota">
+            <Cpu size={14} className="shrink-0" />
+            <span className="sr-only sm:not-sr-only">Modelo</span>
+            <select value={modelo} onChange={(e) => setModelo(e.target.value)} disabled={generating} className="lx-input lx-mono max-w-[11rem] py-1.5 text-xs sm:max-w-[16rem]">
+              {modelosEditor.modelos.map((m) => (
+                <option key={m.ref} value={m.ref}>
+                  {m.etiqueta}
+                </option>
+              ))}
+            </select>
+          </label>
         )}
         {/* Qué falta para seguir (o cómo va): evita que un botón apagado parezca roto. */}
         <p className="hidden min-w-0 flex-1 truncate text-center text-xs text-[var(--fg-muted)] sm:block" aria-live="polite">

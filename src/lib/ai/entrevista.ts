@@ -7,7 +7,7 @@ import "server-only";
 
 import { generateObject, generateText } from "ai";
 import { z } from "zod";
-import { getAiModel, getImageAi } from "@/lib/ai-provider";
+import { getModelo } from "@/lib/ai-provider";
 import { descargarSeguro } from "@/lib/safe-fetch";
 import { FORMATOS_MEDIA, esMimeVideo, mimeMedia } from "@/lib/media-mime";
 import { SIN_IDENTIFICAR, parseTiempo, textoDeSegmentos, type Material, type Participante, type Segmento } from "@/lib/material-types";
@@ -107,7 +107,7 @@ function indicacionesContexto(c: ContextoEntrevista): string {
 // Transcribe dividiendo por intervenciones; devuelve null si el modelo no entrega nada utilizable.
 async function transcribirPorIntervenciones(
   userId: string,
-  model: NonNullable<Awaited<ReturnType<typeof getAiModel>>>,
+  model: NonNullable<Awaited<ReturnType<typeof getModelo>>>,
   bytes: Uint8Array,
   mime: string,
   nombre: string,
@@ -151,11 +151,11 @@ async function transcribirPorIntervenciones(
 
 // Transcribe audio o video con Gemini (solo cuenta lo que se oye), comprueba la cuota y registra el gasto.
 async function transcribir(userId: string, bytes: Uint8Array, mime: string, nombre: string, contexto?: ContextoEntrevista | null): Promise<MaterialResult> {
-  const model = await getAiModel();
-  if (!model) return { ok: false, error: "Falta la clave del modelo (la conecta un administrador en Configuración → Asistente)." };
-  const settingsOk = await getImageAi(); // solo para distinguir proveedor: «otro-proveedor» = no es Google
-  if (settingsOk === "otro-proveedor") {
-    return { ok: false, error: "Transcribir audio o video usa Gemini: pídele a un administrador que elija Google (Gemini) en Configuración → Asistente." };
+  // El modelo de «Videos → Entender» (o, si no hay, el principal): solo Gemini lee audio y video.
+  const model = await getModelo("videoEntender");
+  if (!model) return { ok: false, error: "Falta la clave del modelo (la conecta un administrador en Configuración → Inteligencia artificial)." };
+  if (!/google/i.test(model.provider)) {
+    return { ok: false, error: "Transcribir audio o video usa Gemini: pídele a un administrador que conecte Google (Gemini) y elija el modelo en Configuración → Inteligencia artificial → Videos." };
   }
   const cuota = await verificarCuotaIA(userId);
   if (!cuota.ok) return { ok: false, error: cuota.message };
