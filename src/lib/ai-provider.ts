@@ -114,7 +114,7 @@ export async function getModelo(rol: "editor" | "asistente" | "videoEntender", e
  * Los modelos que se pueden elegir al crear una nota (solo los que tienen clave), el predeterminado del administrador y el que arranca marcado: el
  * favorito de esa persona si sigue habilitado y, si no, el predeterminado.
  */
-export async function getModelosEditor(userId?: string): Promise<{ modelos: { ref: string; etiqueta: string }[]; predeterminado: string | null; inicial: string | null }> {
+export async function getModelosEditor(userId?: string): Promise<{ modelos: { ref: string; etiqueta: string }[]; predeterminado: string | null; inicial: string | null; sinClave: string[] }> {
   const settings = await readSettings();
   const { habilitados, predeterminado } = listaEditor(settings);
   const conClave: string[] = [];
@@ -128,7 +128,11 @@ export async function getModelosEditor(userId?: string): Promise<{ modelos: { re
   };
   const pred = conClave.includes(predeterminado) ? predeterminado : (conClave[0] ?? null);
   const favorito = userId ? await getModeloFavorito(userId) : null;
+  // Proveedores todavía sin clave: la tarjeta de la nota los muestra apagados para que se vea qué IAs hay y qué falta para usarlas.
+  const sinClave: string[] = [];
+  for (const p of AI_PROVIDERS) if (!(await claveDe(settings, p.id)).key) sinClave.push(p.label);
   return {
+    sinClave,
     modelos: conClave.map((ref) => ({ ref, etiqueta: etiqueta(ref) })),
     predeterminado: pred,
     inicial: favorito && conClave.includes(favorito) ? favorito : pred,

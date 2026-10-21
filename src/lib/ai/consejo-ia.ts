@@ -217,9 +217,10 @@ const esquemaPreguntas = z.object({
  */
 export async function autollenarPreguntasCore(
   userId: string,
-  input: { tema: string; seccion: string; estilo?: string },
+  input: { tema: string; seccion: string; estilo?: string; modelo?: string },
 ): Promise<{ ok: true; brief: BriefSeccion; fuentes: number } | { ok: false; error: string }> {
-  const model = await getAiModel();
+  // `modelo`: la IA que eligió quien crea la nota (solo vale si un administrador la habilitó para redactar).
+  const model = await getAiModel(input.modelo);
   if (!model) return { ok: false, error: "Falta la clave del modelo de IA (la conecta un administrador en Configuración → Inteligencia artificial)." };
   const cuota = await verificarCuotaIA(userId);
   if (!cuota.ok) return { ok: false, error: cuota.message };

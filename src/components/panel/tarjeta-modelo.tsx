@@ -5,17 +5,20 @@ import { Cpu, Loader2 } from "lucide-react";
 import { guardarModeloFavorito } from "@/app/panel/(app)/articulos/ai-actions";
 
 /**
- * «Con qué IA quieres redactar»: el modelo con el que la IA propone títulos y escribe esta nota. Con varios habilitados la persona elige y la
- * elección se recuerda como su favorita para las próximas notas; con uno solo se muestra cuál es y se explica cómo habilitar más.
+ * «Con qué IA quieres redactar»: el modelo con el que la IA propone títulos, escribe la nota y rehace sus partes. La persona elige de la lista y la
+ * elección se recuerda como su favorita para las próximas notas. Las IAs que todavía no tienen clave salen apagadas, con el motivo, para que se vea
+ * qué más se puede conectar; un administrador las habilita en Configuración → Inteligencia artificial.
  */
 export function TarjetaModelo({
   modelos,
+  sinClave = [],
   valor,
   onCambiar,
   esAdmin,
   deshabilitado = false,
 }: {
   modelos: { ref: string; etiqueta: string }[];
+  sinClave?: string[];
   valor: string;
   onCambiar: (ref: string) => void;
   esAdmin: boolean;
@@ -44,27 +47,37 @@ export function TarjetaModelo({
         <Cpu size={16} aria-hidden className="mt-0.5 shrink-0 text-[var(--accent)]" />
         <span>Con qué IA quieres redactar</span>
       </p>
-      {modelos.length > 1 ? (
-        <>
-          <select value={valor} onChange={(e) => elegir(e.target.value)} disabled={deshabilitado} aria-label="Modelo de IA para redactar" className="lx-input lx-mono text-xs">
-            {modelos.map((m) => (
-              <option key={m.ref} value={m.ref}>
-                {m.etiqueta}
+      <select value={valor} onChange={(e) => elegir(e.target.value)} disabled={deshabilitado} aria-label="Modelo de IA para redactar" className="lx-input lx-mono text-xs">
+        <optgroup label="Disponibles">
+          {modelos.map((m) => (
+            <option key={m.ref} value={m.ref}>
+              {m.etiqueta}
+            </option>
+          ))}
+        </optgroup>
+        {sinClave.length > 0 && (
+          <optgroup label="Sin conectar">
+            {sinClave.map((nombre) => (
+              <option key={nombre} disabled>
+                {nombre} · falta la clave
               </option>
             ))}
-          </select>
-          <p className="text-xs leading-snug text-[var(--fg-muted)]">La IA propone los títulos y escribe la nota con el modelo que elijas. Se recuerda como tu favorita para las próximas.</p>
-        </>
-      ) : (
-        <p className="text-xs leading-snug text-[var(--fg-muted)]">
-          Se redacta con <strong className="lx-mono text-[var(--fg)]">{modelos[0].etiqueta}</strong>.{" "}
-          {esAdmin ? (
-            <a href="/panel/configuracion#asistente" target="_blank" rel="noopener" className="lx-link">Habilita más modelos en Configuración → Inteligencia artificial</a>
-          ) : (
-            "Si quieres poder elegir otra IA, pídele a un administrador que habilite más modelos."
-          )}
-        </p>
-      )}
+          </optgroup>
+        )}
+      </select>
+      <p className="text-xs leading-snug text-[var(--fg-muted)]">
+        La IA que elijas propone los títulos, escribe la nota y rehace sus partes; queda como tu favorita para las próximas.
+        {(modelos.length < 2 || sinClave.length > 0) && (
+          <>
+            {" "}
+            {esAdmin ? (
+              <a href="/panel/configuracion#asistente" target="_blank" rel="noopener" className="lx-link">Conecta más IAs y habilita modelos en Configuración → Inteligencia artificial.</a>
+            ) : (
+              "Para poder elegir otras IAs, pídele a un administrador que las conecte."
+            )}
+          </>
+        )}
+      </p>
       {(pendiente || aviso) && (
         <p className={`flex items-center gap-1.5 text-xs ${aviso && !aviso.ok ? "text-[var(--danger)]" : "text-[var(--accent-2)]"}`} role="status">
           {pendiente ? <Loader2 size={12} className="animate-spin" /> : null}

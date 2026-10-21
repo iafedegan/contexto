@@ -159,7 +159,7 @@ export function ArticleWizard({
   /** Modelos de IA que un administrador habilitó para redactar (con el predeterminado). Con más de uno, quien crea la nota elige cuál usar. */
   /** La persona es administradora: puede habilitar más modelos (se lo dice la tarjeta del modelo). */
   esAdmin?: boolean;
-  modelosEditor?: { modelos: { ref: string; etiqueta: string }[]; predeterminado: string | null; inicial: string | null };
+  modelosEditor?: { modelos: { ref: string; etiqueta: string }[]; predeterminado: string | null; inicial: string | null; sinClave: string[] };
   /** Resultado del último guardado (?guardado=…), para confirmarlo. */
   savedAs?: string;
 }) {
@@ -957,7 +957,7 @@ export function ArticleWizard({
                 onBrief={(c) => { setIdeasBrief((b) => ({ ...b, ...c })); if (c.temas !== undefined) { setTopic(c.temas); setIdeaElegida(null); setOptions(null); } }}
                 llenando={llenandoIdeas}
                 onAutollenar={() => startLlenar(async () => {
-                  const r = await autollenarPreguntas({ tema: ideasBrief.temas ?? "", seccion: categories.find((c) => c.id === categoryId)?.name });
+                  const r = await autollenarPreguntas({ tema: ideasBrief.temas ?? "", seccion: categories.find((c) => c.id === categoryId)?.name, modelo: modelo || undefined });
                   if (!r.ok) return setIdeasError(r.error);
                   setIdeasError("");
                   setIdeasBrief((b) => ({ ...r.brief, temas: b.temas }));
@@ -1092,7 +1092,7 @@ export function ArticleWizard({
                     enlaces: material.some((m) => m.kind === "enlace") ? `${material.filter((m) => m.kind === "enlace").length} cargados` : undefined,
                   }}
                 />
-                {mode === "ia" && modelosEditor && <TarjetaModelo modelos={modelosEditor.modelos} valor={modelo} onCambiar={setModelo} esAdmin={esAdmin} deshabilitado={generating} />}
+                {mode === "ia" && modelosEditor && <TarjetaModelo modelos={modelosEditor.modelos} sinClave={modelosEditor.sinClave} valor={modelo} onCambiar={setModelo} esAdmin={esAdmin} deshabilitado={generating} />}
                 {mode === "ia" && <TarjetaEstilo estado={estiloAhora} info={estiloInfo} alCambiar={setEstiloAhora} />}
                 </div>
               </div>

@@ -72,10 +72,10 @@ export async function suggestTopicIdeas(...args: Parameters<typeof suggestTopicI
 }
 
 // La IA contesta las preguntas previas de un tema (para quién, palabras, géneros, alcance, tono, fuentes y qué evitar) a partir de su descripción.
-export async function autollenarPreguntas(input: { tema: string; seccion?: string }) {
+export async function autollenarPreguntas(input: { tema: string; seccion?: string; modelo?: string }) {
   const user = await requirePermiso("articulos");
   if (input.tema.trim().length < 4) return { ok: false as const, error: "Describe primero el tema." };
-  return autollenarPreguntasCore(user.id, { tema: input.tema, seccion: input.seccion ?? "General" });
+  return autollenarPreguntasCore(user.id, { tema: input.tema, seccion: input.seccion ?? "General", modelo: input.modelo });
 }
 
 // Busca noticias sobre un tema. Exige el permiso «articulos» y delega en la función núcleo, que descuenta la cuota de IA.
