@@ -120,14 +120,21 @@ export async function POST(req: Request) {
   // nada, y casi no gasta (solo la expansión y la selección, con un modelo barato). `ASISTENTE_MODO=resumen` devuelve el resumen redactado con citas.
   // Se registra como consulta sin generación (`semantico_degradado`): no hubo texto generado ni gasto de redacción.
   if (process.env.ASISTENTE_MODO !== "resumen") {
-    const elegidas = await conPlazo(elegirNotas(q, sources.slice(0, 12)), PLAZO_SELECCION_MS, null as number[] | null);
+    // Las cifras del Observatorio que coinciden con la pregunta van SIEMPRE, primero y completas: son la respuesta; el modelo barato solo
+    // filtra las notas (si las descartara, el lector se quedaría con notas de opinión y sin el dato que pidió).
+    const cifras = sources.filter((s) => s.kind === "observatorio").map((s) => ({ ...s, summary: s.summary.length > 420 ? `${s.summary.slice(0, 420).replace(/[;,]?\s*\S*$/, "")}…` : s.summary }));
+    const notas = sources.filter((s) => s.kind !== "observatorio");
+    const elegidas = await conPlazo(elegirNotas(q, notas.slice(0, 12)), PLAZO_SELECCION_MS, null as number[] | null);
     const sinCoincidencia = elegidas !== null && elegidas.length === 0;
-    const lista = sinCoincidencia ? sources.slice(0, 3) : elegidas === null ? sources.slice(0, MAX_NOTAS) : elegidas.map((n) => sources[n - 1]).filter(Boolean);
+    const deNotas = sinCoincidencia ? (cifras.length ? [] : notas.slice(0, 3)) : elegidas === null ? notas.slice(0, MAX_NOTAS) : elegidas.map((n) => notas[n - 1]).filter(Boolean);
+    const lista = [...cifras.slice(0, 3), ...deNotas];
     const mostrar = lista.map((s, i) => ({ ...s, n: i + 1 }));
     await log(sessionId, q, "semantico_degradado", toCited(mostrar), true, 0, 0);
     return responder({
       mode: "articulos",
-      answer: sinCoincidencia
+      answer: cifras.length
+        ? "Esto dice el Observatorio" + (deNotas.length ? ", y estas notas lo acompañan:" : ":")
+        : sinCoincidencia
         ? "No encontré una nota que responda eso exactamente. Estas son las más cercanas:"
         : mostrar.length === 1
           ? "Encontré esta nota sobre tu pregunta:"

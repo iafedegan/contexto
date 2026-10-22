@@ -97,7 +97,9 @@ const raiz = (t: string) => t.replace(/(es|s)$/, "").slice(0, 7);
 
 /** Las palabras que cuentan de una pregunta, ya con su raíz. */
 export function palabrasClave(pregunta: string): string[] {
-  return [...new Set(limpiar(pregunta).split(/\s+/).filter((t) => t.length >= 3 && !VACIAS.has(t)).map(raiz))];
+  // Quien pregunta por «ciudad», «municipio» o «región» se refiere a lo que el Observatorio llama departamento.
+  const claves = limpiar(pregunta).split(/\s+/).filter((t) => t.length >= 3 && !VACIAS.has(t)).map((t) => (/^(ciudad|ciudades|municipio|municipios|region|regiones|zona|zonas)$/.test(t) ? "departamento" : t));
+  return [...new Set(claves.map(raiz))];
 }
 
 /**

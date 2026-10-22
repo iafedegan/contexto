@@ -166,7 +166,8 @@ export async function hybridSearch(query: string, limit = 20, opciones: { semant
     )
     SELECT kind, id, title, summary, url, published_at, image, category_slug, category_name, score
     FROM fused
-    ORDER BY score DESC
+    -- Las notas recientes pesan más: a igual coincidencia, la de hace un mes gana a la de hace diez años (hasta +80 %, decayendo con los años).
+    ORDER BY score * (1 + 0.8 / (1 + coalesce(extract(epoch FROM now() - published_at), 0) / 31557600.0)) DESC
     LIMIT ${limit}
   `));
 
