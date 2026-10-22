@@ -43,7 +43,7 @@ const instrucciones = (cat: string) =>
 export type EstadoConsulta = "sin-modelo" | "ninguna" | "rechazada" | "error-modelo" | "error-sql" | "vacio" | "ok";
 
 /** La sentencia que escribe la IA para la pregunta, ya validada, o por qué no hay (para saber qué falló sin ver al modelo). */
-export async function sentenciaParaPregunta(pregunta: string): Promise<{ sentencia: string | null; estado: EstadoConsulta }> {
+export async function sentenciaParaPregunta(pregunta: string): Promise<{ sentencia: string | null; estado: EstadoConsulta; detalle?: string }> {
   try {
     const model = await getModelo("busqueda");
     if (!model) return { sentencia: null, estado: "sin-modelo" };
@@ -60,8 +60,8 @@ export async function sentenciaParaPregunta(pregunta: string): Promise<{ sentenc
     if (/^\s*NINGUNA/i.test(text)) return { sentencia: null, estado: "ninguna" };
     const sentencia = validarSelect(text);
     return sentencia ? { sentencia, estado: "ok" } : { sentencia: null, estado: "rechazada" };
-  } catch {
-    return { sentencia: null, estado: "error-modelo" };
+  } catch (e) {
+    return { sentencia: null, estado: "error-modelo", detalle: String(e instanceof Error ? e.message : e).replace(/\s+/g, " ").slice(0, 140) };
   }
 }
 
@@ -110,9 +110,9 @@ export function filasAFuentes(filas: Array<Record<string, unknown>>): FuenteCons
 }
 
 /** Pregunta → sentencia (IA) → filas → fuentes. Sin fuentes si algo no aplica o falla; `estado` dice qué pasó. */
-export async function consultarConIA(pregunta: string): Promise<{ fuentes: FuenteConsulta[]; estado: EstadoConsulta }> {
-  const { sentencia, estado } = await sentenciaParaPregunta(pregunta);
-  if (!sentencia) return { fuentes: [], estado };
+export async function consultarConIA(pregunta: string): Promise<{ fuentes: FuenteConsulta[]; estado: EstadoConsulta; detalle?: string }> {
+  const { sentencia, estado, detalle } = await sentenciaParaPregunta(pregunta);
+  if (!sentencia) return { fuentes: [], estado, detalle };
   try {
     const fuentes = filasAFuentes(await ejecutarSelect(sentencia));
     return { fuentes, estado: fuentes.length ? "ok" : "vacio" };

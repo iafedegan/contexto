@@ -60,10 +60,12 @@ export async function POST(req: Request) {
   const sesion = sesionAsistente(req.headers.get("cookie")?.match(new RegExp(`(?:^|;\\s*)${SESION_ASISTENTE_COOKIE}=([^;]+)`))?.[1]);
   // Toda respuesta pasa por aquí para que la sesión nueva llegue como cookie.
   let estadoConsulta = "no-aplica";
+  let detalleConsulta = "";
   const responder = (cuerpo: unknown, init?: ResponseInit) => {
     const r = NextResponse.json(cuerpo, init);
     // Cómo salió la consulta SQL de la IA (solo una palabra: sirve para saber qué falló sin ver el contenido).
     r.headers.set("x-consulta", estadoConsulta);
+    if (detalleConsulta) r.headers.set("x-consulta-detalle", encodeURIComponent(detalleConsulta));
     if (sesion.nueva) {
       r.cookies.set(SESION_ASISTENTE_COOKIE, sesion.valor, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/api/assistant", maxAge: 30 * 24 * 3600 });
     }
@@ -95,12 +97,13 @@ export async function POST(req: Request) {
     conPlazo(buscarEnObservatorio(q, 4), PLAZO_OBSERVATORIO_MS, []),
     getModelo("asistente"),
     // Una IA barata escribe la consulta SQL (solo lectura, solo notas y cifras) y trae directamente la nota o la cifra que se pidió.
-    conPlazo(consultarConIA(q), PLAZO_SQL_MS, { fuentes: [], estado: "error-modelo" as const }),
+    conPlazo(consultarConIA(q), PLAZO_SQL_MS, { fuentes: [], estado: "error-modelo" as const, detalle: "plazo" }),
   ]);
   let hits = await hybridSearch(q, 8, { terminosExtra: terminos }).catch(() => []);
   // Sin resultados casi siempre es un error de escritura: se busca por parecido de letras en los títulos.
   if (hits.length === 0 && delObservatorio.length === 0) hits = await buscarParecidas(q, 8).catch(() => []);
   estadoConsulta = porSql.estado;
+  detalleConsulta = porSql.detalle ?? "";
   const sqlNotas = porSql.fuentes.filter((f) => f.kind === "articulo").map((f) => ({ ...f, id: f.url, score: 1 }));
   const sqlCifras = porSql.fuentes.filter((f) => f.kind === "observatorio").map((f) => ({ ...f, id: f.url, score: 1 }));
   const yaEstan = new Set(sqlNotas.map((n) => n.url));
