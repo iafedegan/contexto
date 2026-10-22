@@ -147,8 +147,11 @@ export function modeloBarato(modelos: Partial<Record<AiProviderId, string[]>> | 
   for (const [proveedor, patrones] of reglas) {
     const catalogo = (modelos?.[proveedor] ?? []).filter(esModeloDeTexto);
     for (const patron of patrones) {
-      // Entre varios, el de nombre más corto suele ser la versión estable (sin «preview» ni fechas).
-      const candidato = catalogo.filter((m) => patron.test(m) && !/preview|exp|latest/i.test(m)).sort((a, b) => a.length - b.length)[0] ?? catalogo.filter((m) => patron.test(m)).sort((a, b) => a.length - b.length)[0];
+      // Entre varios, el de versión más nueva (los viejos dejan de ofrecerse a cuentas nuevas: «gemini-2.5-flash-lite» ya no responde) y, a igual versión, el
+      // de nombre más corto, que suele ser la versión estable (sin «preview» ni fechas).
+      const version = (m: string) => Number(m.match(/(\d+(?:\.\d+)?)/)?.[1] ?? 0);
+      const orden = (a: string, b: string) => version(b) - version(a) || a.length - b.length;
+      const candidato = catalogo.filter((m) => patron.test(m) && !/preview|exp|latest|transcribe/i.test(m)).sort(orden)[0] ?? catalogo.filter((m) => patron.test(m)).sort(orden)[0];
       if (candidato) return refModelo(proveedor, candidato);
     }
   }

@@ -82,6 +82,8 @@ import { modeloBarato } from "./ai-providers";
 
 test("el modelo barato de búsqueda prefiere la línea lite/nano/mini/haiku y es estable", () => {
   assert.equal(modeloBarato({ google: ["gemini-3.8-pro", "gemini-3.8-flash", "gemini-3.8-flash-lite", "gemini-3.8-flash-lite-preview-09", "gemini-nano-banana-2.1"] }), "google:gemini-3.8-flash-lite");
+  // El catálogo de la cuenta puede traer modelos ya retirados: se prefiere la versión más nueva, no el nombre más corto.
+  assert.equal(modeloBarato({ google: ["gemini-2.5-flash-lite", "gemini-3.1-flash-lite", "gemini-3.5-flash-lite", "gemini-3.8-flash-lite-tts", "gemini-3.5-flash"] }), "google:gemini-3.5-flash-lite");
   assert.equal(modeloBarato({ google: ["gemini-3.8-pro", "gemini-3.8-flash", "gemini-3.8-flash-image"] }), "google:gemini-3.8-flash");
   assert.equal(modeloBarato({ openai: ["gpt-5", "gpt-5-mini", "gpt-5-nano"] }), "openai:gpt-5-nano");
   assert.equal(modeloBarato({ anthropic: ["claude-sonnet-5", "claude-haiku-4"] }), "anthropic:claude-haiku-4");
