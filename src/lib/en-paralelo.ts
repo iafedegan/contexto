@@ -22,3 +22,12 @@ export function limitador(max: number): <R>(tarea: () => Promise<R>) => Promise<
     }
   };
 }
+
+/** Espera `promesa` como mucho `ms`; si tarda más (o falla) devuelve `alternativa`. Lo que se hacía con `promesa` sigue por su cuenta. */
+export function conPlazo<T>(promesa: Promise<T>, ms: number, alternativa: T): Promise<T> {
+  let reloj: ReturnType<typeof setTimeout>;
+  const limite = new Promise<T>((ok) => {
+    reloj = setTimeout(() => ok(alternativa), ms);
+  });
+  return Promise.race([promesa.catch(() => alternativa), limite]).finally(() => clearTimeout(reloj));
+}

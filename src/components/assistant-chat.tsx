@@ -201,7 +201,7 @@ export function AssistantChat({ compact = false }: { compact?: boolean }) {
                               {[s.kind === "archivo" ? "Archivo" : s.kind === "observatorio" ? "Observatorio" : s.categoryName, s.publishedAt ? fechaCorta(s.publishedAt) : null].filter(Boolean).join(" · ")}
                             </span>
                             <span className="mt-0.5 block text-[0.95rem] font-semibold leading-snug group-hover/n:underline">{s.title}</span>
-                            {s.summary && <span className="mt-1 line-clamp-2 block text-xs leading-snug text-[var(--fg-muted)]">{s.summary}</span>}
+                            {s.summary && <span className={`mt-1 block ${s.kind === "observatorio" ? "" : "line-clamp-2"} text-xs leading-snug text-[var(--fg-muted)]`}>{s.summary}</span>}
                           </span>
                           <ArrowUpRight size={16} aria-hidden className="mt-0.5 shrink-0 text-[var(--fg-muted)] transition group-hover/n:text-[var(--accent)]" />
                         </a>

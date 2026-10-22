@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { sql } from "drizzle-orm";
 import { getObservatorio } from "@/lib/observatorio-fedegan";
+import { conPlazo } from "@/lib/en-paralelo";
 import { getModelo } from "@/lib/ai-provider";
 import { generateText } from "ai";
 import { db } from "@/db";
 import { assistantQueries } from "@/db/schema";
-import { hybridSearch } from "@/lib/search";
+import { buscarParecidas, hybridSearch } from "@/lib/search";
 import { expandirConsulta } from "@/lib/ai/expansion-busqueda";
 import { elegirNotas } from "@/lib/ai/seleccion-notas";
 import { COSTO_EMBEDDING_USD, SESION_ASISTENTE_COOKIE, estimateCostUsd, liquidarGeneracion, reservarGeneracion, sesionAsistente } from "@/lib/budget";
@@ -30,15 +31,6 @@ const PLAZO_SELECCION_MS = 3_500;
 const MAX_NOTAS = 6;
 /** Tope de la generación: pasado esto se responde en modo búsqueda en vez de dejar que la plataforma corte la función a los 30 s. */
 const PLAZO_GENERACION_MS = 20_000;
-
-// Espera `promesa` como mucho `ms`; si tarda más (o falla) devuelve `alternativa`.
-function conPlazo<T>(promesa: Promise<T>, ms: number, alternativa: T): Promise<T> {
-  let reloj: ReturnType<typeof setTimeout>;
-  const limite = new Promise<T>((ok) => {
-    reloj = setTimeout(() => ok(alternativa), ms);
-  });
-  return Promise.race([promesa.catch(() => alternativa), limite]).finally(() => clearTimeout(reloj));
-}
 
 /**
  * Calienta la función: el chat lo pide al abrirse, mientras la persona escribe, y así la primera pregunta no paga el arranque en frío
@@ -97,7 +89,9 @@ export async function POST(req: Request) {
     conPlazo(buscarEnObservatorio(q, 4), PLAZO_OBSERVATORIO_MS, []),
     getModelo("asistente"),
   ]);
-  const hits = await hybridSearch(q, 8, { terminosExtra: terminos }).catch(() => []);
+  let hits = await hybridSearch(q, 8, { terminosExtra: terminos }).catch(() => []);
+  // Sin resultados casi siempre es un error de escritura: se busca por parecido de letras en los títulos.
+  if (hits.length === 0 && delObservatorio.length === 0) hits = await buscarParecidas(q, 8).catch(() => []);
   const sources = [...hits, ...delObservatorio].map((h, i) => ({
     n: i + 1,
     title: h.title,

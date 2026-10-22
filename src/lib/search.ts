@@ -218,3 +218,36 @@ export async function relatedContent(
   }
   return out;
 }
+
+/**
+ * Último recurso cuando el texto completo no encuentra nada, casi siempre por un error de escritura («vaxunacion» por «vacunación»):
+ * se comparan las palabras de la pregunta con los títulos por parecido de letras (pg_trgm). Solo se usa sin resultados: recorre los títulos.
+ */
+export async function buscarParecidas(query: string, limit = 8): Promise<SearchHit[]> {
+  const palabras = toOrQuery(query).split(" or ").filter(Boolean).slice(0, 3);
+  if (!palabras.length) return [];
+  const rows = rowsOf(await db.execute(sql`
+    SELECT a.id::text AS id, a.title, a.excerpt AS summary, coalesce(a.legacy_path, '/articulo/' || a.slug) AS url,
+           a.published_at, a.cover_image_url AS image, c.slug AS category_slug, c.name AS category_name,
+           max(word_similarity(w, translate(lower(a.title), 'áéíóúü', 'aeiouu'))) AS score
+    FROM articles a
+    LEFT JOIN categories c ON c.id = a.category_id
+    CROSS JOIN unnest(${palabras}::text[]) AS w
+    WHERE a.status = 'publicado' AND word_similarity(w, translate(lower(a.title), 'áéíóúü', 'aeiouu')) >= 0.5
+    GROUP BY a.id, a.title, a.excerpt, a.legacy_path, a.slug, a.published_at, a.cover_image_url, c.slug, c.name
+    ORDER BY score DESC, a.published_at DESC NULLS LAST
+    LIMIT ${limit}
+  `));
+  return (rows as unknown as Array<Record<string, unknown>>).map((r) => ({
+    kind: "articulo" as const,
+    id: String(r.id),
+    title: String(r.title),
+    summary: String(r.summary ?? ""),
+    url: String(r.url),
+    publishedAt: r.published_at ? new Date(r.published_at as string).toISOString() : null,
+    image: (r.image as string | null) ?? null,
+    categorySlug: (r.category_slug as string | null) ?? null,
+    categoryName: (r.category_name as string | null) ?? null,
+    score: Number(r.score),
+  }));
+}
