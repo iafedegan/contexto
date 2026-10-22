@@ -58,7 +58,7 @@ const STOPWORDS = new Set(
  * los precios del novillo en Medellín?" recupera artículos que contengan
  * cualquiera de los términos significativos.
  */
-function toOrQuery(input: string): string {
+export function toOrQuery(input: string): string {
   const words = input
     .toLowerCase()
     .normalize("NFD")
@@ -70,8 +70,10 @@ function toOrQuery(input: string): string {
 }
 
 // Búsqueda híbrida: mezcla similitud vectorial y texto completo en español sobre las notas propias y el archivo histórico, en una sola consulta SQL.
-export async function hybridSearch(query: string, limit = 20, opciones: { semantico?: boolean } = {}): Promise<SearchHit[]> {
-  const q = toOrQuery(query);
+export async function hybridSearch(query: string, limit = 20, opciones: { semantico?: boolean; terminosExtra?: string[] } = {}): Promise<SearchHit[]> {
+  // `terminosExtra`: sinónimos y términos del sector que una IA barata propone para la pregunta (ver `expandirConsulta`): se suman a las palabras de la
+  // pregunta SOLO en la parte de texto completo, así una nota que dice «ganado gordo» aparece aunque el lector escribiera «novillo».
+  const q = toOrQuery([query, ...(opciones.terminosExtra ?? [])].join(" "));
   if (!q) return [];
 
   // El embedding se calcula sobre la pregunta ORIGINAL, no sobre `q`: la lista «palabra or palabra» sin acentos ni palabras

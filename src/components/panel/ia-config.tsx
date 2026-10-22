@@ -39,6 +39,7 @@ export function IaConfig({ config, uso = null, canManage, limites }: { config: C
   const [habilitados, setHabilitados] = useState<string[]>(config.editor.habilitados);
   const [predeterminado, setPredeterminado] = useState(config.editor.predeterminado);
   const [asistente, setAsistente] = useState(config.asistente ?? "");
+  const [busqueda, setBusqueda] = useState(config.busqueda ?? "");
   const [imagen, setImagen] = useState(config.imagen ?? "");
   const [videoEntender, setVideoEntender] = useState(config.videoEntender ?? "");
   const [videoGenerar, setVideoGenerar] = useState(config.videoGenerar ?? "");
@@ -60,7 +61,7 @@ export function IaConfig({ config, uso = null, canManage, limites }: { config: C
 
   const guardar = () =>
     start(async () => {
-      const r = await guardarModelosIA({ editor: { habilitados, predeterminado }, asistente, imagen, videoEntender, videoGenerar });
+      const r = await guardarModelosIA({ editor: { habilitados, predeterminado }, asistente, busqueda, imagen, videoEntender, videoGenerar });
       setAviso({ tipo: r.ok ? "ok" : "error", texto: r.message });
       if (r.ok) setSucio(false);
     });
@@ -214,6 +215,16 @@ export function IaConfig({ config, uso = null, canManage, limites }: { config: C
               <label className="mt-4 block">
                 <span className="mb-1.5 block text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-[var(--fg-muted)]">Modelo</span>
                 {selector(asistente, cambia(setAsistente), modelosDe(esModeloDeTexto), "Igual que el predeterminado de los editores")}
+              </label>
+            )}
+            {hayCatalogo && (
+              <label className="mt-5 block">
+                <span className="mb-1.5 block text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-[var(--fg-muted)]">Modelo de búsqueda (barato)</span>
+                {selector(busqueda, cambia(setBusqueda), modelosDe(esModeloDeTexto), "El más barato de tu cuenta (automático)")}
+                <span className="mt-1.5 block text-xs leading-relaxed text-[var(--fg-muted)]">
+                  Antes de buscar, este modelo traduce la pregunta del lector a sinónimos y términos del sector, para encontrar notas aunque usen otras palabras. Gasta unos
+                  180 tokens por pregunta (centavos por miles). Elige uno «lite», «mini», «nano» o «haiku».
+                </span>
               </label>
             )}
             {pie(hayCatalogo)}

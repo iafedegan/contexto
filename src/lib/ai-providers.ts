@@ -64,13 +64,15 @@ export type AiSettings = {
 export type ModeloRef = string;
 
 /** Funciones de IA que tienen modelo propio. */
-export type RolIA = "editor" | "asistente" | "imagen" | "videoEntender" | "videoGenerar";
+export type RolIA = "editor" | "asistente" | "busqueda" | "imagen" | "videoEntender" | "videoGenerar";
 
 /** Modelo por función. `editor` es una LISTA: el administrador habilita varios y quien crea la nota elige cuál usar. */
 export type AiRoles = {
   editor?: { habilitados: ModeloRef[]; predeterminado?: ModeloRef };
   /** Agente de la vaca: el asistente público del sitio. */
   asistente?: ModeloRef;
+  /** Modelo BARATO que traduce la pregunta a términos de búsqueda antes de buscar (ver `expandirConsulta`). Vacío = el más barato de la cuenta. */
+  busqueda?: ModeloRef;
   /** Fotos de portada (solo Gemini). */
   imagen?: ModeloRef;
   /** Leer y transcribir videos que sube el editor (solo Gemini). */
@@ -121,6 +123,8 @@ export function modeloDe(settings: AiSettings, rol: RolIA, elegido?: string | nu
     }
     case "asistente":
       return r.asistente || principal;
+    case "busqueda":
+      return r.busqueda || modeloBarato(settings.models) || r.asistente || principal;
     case "imagen":
       return r.imagen || refModelo("google", settings.imageModel || DEFAULT_IMAGE_MODEL);
     case "videoEntender":
@@ -128,6 +132,27 @@ export function modeloDe(settings: AiSettings, rol: RolIA, elegido?: string | nu
     case "videoGenerar":
       return r.videoGenerar || null;
   }
+}
+
+/**
+ * El modelo más barato disponible para tareas cortas (traducir la pregunta a términos de búsqueda): por proveedor prefiere la línea «lite»/«nano»/
+ * «mini»/«haiku» y, si no hay, la «flash». Recorre Gemini, ChatGPT y Claude en ese orden; `null` si no hay catálogo de ninguno.
+ */
+export function modeloBarato(modelos: Partial<Record<AiProviderId, string[]>> | undefined): ModeloRef | null {
+  const reglas: [AiProviderId, RegExp[]][] = [
+    ["google", [/flash-lite/i, /flash(?!.*(image|live|tts))/i]],
+    ["openai", [/nano/i, /mini/i]],
+    ["anthropic", [/haiku/i]],
+  ];
+  for (const [proveedor, patrones] of reglas) {
+    const catalogo = (modelos?.[proveedor] ?? []).filter(esModeloDeTexto);
+    for (const patron of patrones) {
+      // Entre varios, el de nombre más corto suele ser la versión estable (sin «preview» ni fechas).
+      const candidato = catalogo.filter((m) => patron.test(m) && !/preview|exp|latest/i.test(m)).sort((a, b) => a.length - b.length)[0] ?? catalogo.filter((m) => patron.test(m)).sort((a, b) => a.length - b.length)[0];
+      if (candidato) return refModelo(proveedor, candidato);
+    }
+  }
+  return null;
 }
 
 /** Los modelos que un editor puede elegir al crear una nota, y el que va marcado de entrada. Nunca vacía. */

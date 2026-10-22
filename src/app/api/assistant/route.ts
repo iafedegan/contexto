@@ -6,6 +6,7 @@ import { generateText } from "ai";
 import { db } from "@/db";
 import { assistantQueries } from "@/db/schema";
 import { hybridSearch } from "@/lib/search";
+import { expandirConsulta } from "@/lib/ai/expansion-busqueda";
 import { COSTO_EMBEDDING_USD, SESION_ASISTENTE_COOKIE, estimateCostUsd, liquidarGeneracion, reservarGeneracion, sesionAsistente } from "@/lib/budget";
 import { ASSISTANT_SYSTEM } from "@/agents/prompts";
 import { clientIp, hit } from "@/lib/rate-limit";
@@ -20,6 +21,8 @@ export const maxDuration = 30;
 
 /** Lo que se espera a las cifras del Observatorio: si la caché está fría y el origen es lento, el asistente sigue con las notas. */
 const PLAZO_OBSERVATORIO_MS = 3_000;
+/** Tope de la expansión de la pregunta (un modelo barato, normalmente < 1 s): pasado esto se busca solo con las palabras de la pregunta. */
+const PLAZO_EXPANSION_MS = 3_000;
 /** Tope de la generación: pasado esto se responde en modo búsqueda en vez de dejar que la plataforma corte la función a los 30 s. */
 const PLAZO_GENERACION_MS = 20_000;
 
@@ -83,11 +86,13 @@ export async function POST(req: Request) {
 
   // Notas y archivo, y además lo que hay en el Observatorio (cifras y documentos): el asistente responde a todo lo que el lector ve allí.
   // El modelo se pide a la vez (sus ajustes están en la base): así no suma otra espera después de la búsqueda.
-  const [hits, delObservatorio, model] = await Promise.all([
-    hybridSearch(q, 8).catch(() => []),
+  // La pregunta se traduce a términos de búsqueda con un modelo barato (sinónimos y términos del sector) para encontrar por significado sin vectores.
+  const [terminos, delObservatorio, model] = await Promise.all([
+    conPlazo(expandirConsulta(q), PLAZO_EXPANSION_MS, [] as string[]),
     conPlazo(buscarEnObservatorio(q, 4), PLAZO_OBSERVATORIO_MS, []),
     getModelo("asistente"),
   ]);
+  const hits = await hybridSearch(q, 8, { terminosExtra: terminos }).catch(() => []);
   const sources = [...hits, ...delObservatorio].map((h, i) => ({
     n: i + 1,
     title: h.title,

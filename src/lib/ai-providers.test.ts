@@ -77,3 +77,15 @@ test("ChatGPT está entre los proveedores y se identifica como «openai:modelo»
   assert.ok(AI_PROVIDERS.some((p) => p.id === "openai" && p.envVar === "OPENAI_API_KEY"));
   assert.deepEqual(leer("openai:gpt-5"), { provider: "openai", model: "gpt-5" });
 });
+
+import { modeloBarato } from "./ai-providers";
+
+test("el modelo barato de búsqueda prefiere la línea lite/nano/mini/haiku y es estable", () => {
+  assert.equal(modeloBarato({ google: ["gemini-3.8-pro", "gemini-3.8-flash", "gemini-3.8-flash-lite", "gemini-3.8-flash-lite-preview-09", "gemini-nano-banana-2.1"] }), "google:gemini-3.8-flash-lite");
+  assert.equal(modeloBarato({ google: ["gemini-3.8-pro", "gemini-3.8-flash", "gemini-3.8-flash-image"] }), "google:gemini-3.8-flash");
+  assert.equal(modeloBarato({ openai: ["gpt-5", "gpt-5-mini", "gpt-5-nano"] }), "openai:gpt-5-nano");
+  assert.equal(modeloBarato({ anthropic: ["claude-sonnet-5", "claude-haiku-4"] }), "anthropic:claude-haiku-4");
+  assert.equal(modeloBarato({}), null);
+  assert.equal(modeloBarato(undefined), null);
+  assert.equal(modeloBarato({ anthropic: ["claude-sonnet-5"] }), null);
+});

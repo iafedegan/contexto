@@ -73,3 +73,20 @@ test("con más de 50 coincidencias devuelve las mejores, en orden de relevancia"
   // La nota con más repeticiones está entre las primeras: antes el recorte a 50 podía dejarla fuera.
   assert.ok(hits.slice(0, 5).some((h) => h.url === "/articulo/novillo-60"), "la más relevante debe estar arriba");
 });
+
+test("los términos extra de la IA permiten encontrar una nota que usa otras palabras que la pregunta", async () => {
+  await bd.db.insert(schema.articles).values({
+    slug: "ganado-gordo-sube", title: "El ganado gordo sube de precio por kilo en las subastas", excerpt: "Precio por kilo en pie del ganado de ceba.",
+    body: "<p>El ganado gordo cerró la semana al alza en las subastas ganaderas.</p>", status: "publicado", publishedAt: new Date(),
+  });
+  // Sin términos extra, «novillo» no aparece en la nota: la búsqueda por palabras no la encuentra.
+  const sin = await search.hybridSearch("cómo va el novillo", 8, { semantico: false });
+  assert.ok(!sin.some((h) => h.url.includes("ganado-gordo-sube")));
+  // Con los términos que propondría la IA (sinónimos del sector), sí.
+  const con = await search.hybridSearch("cómo va el novillo", 8, { semantico: false, terminosExtra: ["ganado gordo", "precio por kilo", "subasta ganadera"] });
+  assert.ok(con.some((h) => h.url.includes("ganado-gordo-sube")));
+});
+
+test("toOrQuery junta pregunta y términos extra sin repetir ni dejar palabras vacías", () => {
+  assert.equal(search.toOrQuery("¿Cómo va el novillo? ganado gordo, novillo"), "novillo or ganado or gordo");
+});

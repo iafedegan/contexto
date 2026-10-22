@@ -177,7 +177,7 @@ export function AssistantChat({ compact = false }: { compact?: boolean }) {
                   >
                     <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-4 py-2.5 marker:hidden [&::-webkit-details-marker]:hidden">
                       <span className="lx-kicker text-[var(--accent)]">
-                        Fuentes ({m.sources.length}){m.mode === "degraded" ? " · búsqueda semántica" : ""}
+                        Fuentes ({m.sources.length}){m.mode === "degraded" ? " · notas relacionadas" : ""}
                       </span>
                       <ChevronDown size={16} aria-hidden className="shrink-0 text-[var(--fg-muted)] transition group-open/f:rotate-180" />
                     </summary>

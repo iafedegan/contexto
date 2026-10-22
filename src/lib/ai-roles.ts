@@ -39,6 +39,7 @@ export function validarRoles(
   const roles: AiRoles = { editor: { habilitados, predeterminado } };
   const unicos: [keyof Omit<AiRoles, "editor">, string, "texto" | "imagen" | "video" | "gemini-texto"][] = [
     ["asistente", "Agente de la vaca", "texto"],
+    ["busqueda", "Modelo de búsqueda", "texto"],
     ["imagen", "Imágenes", "imagen"],
     ["videoEntender", "Videos (entender)", "gemini-texto"],
     ["videoGenerar", "Videos (generar)", "video"],

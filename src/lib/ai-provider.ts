@@ -103,11 +103,12 @@ async function crearModelo(settings: AiSettings, ref: string | null) {
  * El modelo de texto de una función: `editor` (con el que eligió quien crea la nota, si está habilitado), `asistente` (el agente de la vaca) o
  * `videoEntender` (leer videos). `null` si no hay clave del proveedor de ese modelo: quien llama decide qué hacer sin él.
  */
-export async function getModelo(rol: "editor" | "asistente" | "videoEntender", elegido?: string | null) {
+export async function getModelo(rol: "editor" | "asistente" | "busqueda" | "videoEntender", elegido?: string | null) {
   const settings = await readSettings();
   const principal = await crearModelo(settings, modeloDe(settings, rol, elegido));
   // Si el modelo propio de la función no tiene clave, se cae al principal en vez de dejar la función sin IA.
-  return principal ?? (rol === "editor" ? null : await crearModelo(settings, modeloDe(settings, "editor")));
+  // La búsqueda es una tarea corta y barata: sin su modelo no se cae a uno caro, simplemente no se expande la pregunta.
+  return principal ?? (rol === "editor" || rol === "busqueda" ? null : await crearModelo(settings, modeloDe(settings, "editor")));
 }
 
 /**
@@ -203,6 +204,7 @@ export async function getConfigIA() {
     proveedores,
     editor: lista,
     asistente: modeloDe(settings, "asistente"),
+    busqueda: modeloDe(settings, "busqueda"),
     imagen: modeloDe(settings, "imagen"),
     videoEntender: modeloDe(settings, "videoEntender"),
     videoGenerar: modeloDe(settings, "videoGenerar"),
