@@ -8,6 +8,7 @@ import { db } from "@/db";
 import { assistantQueries } from "@/db/schema";
 import { buscarParecidas, hybridSearch } from "@/lib/search";
 import { expandirConsulta } from "@/lib/ai/expansion-busqueda";
+import { consultarConIA } from "@/lib/ai/consulta-sql";
 import { elegirNotas } from "@/lib/ai/seleccion-notas";
 import { COSTO_EMBEDDING_USD, SESION_ASISTENTE_COOKIE, estimateCostUsd, liquidarGeneracion, reservarGeneracion, sesionAsistente } from "@/lib/budget";
 import { ASSISTANT_SYSTEM } from "@/agents/prompts";
@@ -29,6 +30,8 @@ const PLAZO_EXPANSION_MS = 3_000;
 const PLAZO_SELECCION_MS = 3_500;
 /** Cuántas notas se muestran como máximo en la respuesta. */
 const MAX_NOTAS = 6;
+/** Tiempo máximo para que la IA escriba la consulta SQL y se ejecute; pasado esto se sigue con la búsqueda de siempre. */
+const PLAZO_SQL_MS = 6_000;
 /** Tope de la generación: pasado esto se responde en modo búsqueda en vez de dejar que la plataforma corte la función a los 30 s. */
 const PLAZO_GENERACION_MS = 20_000;
 
@@ -84,15 +87,20 @@ export async function POST(req: Request) {
   // Notas y archivo, y además lo que hay en el Observatorio (cifras y documentos): el asistente responde a todo lo que el lector ve allí.
   // El modelo se pide a la vez (sus ajustes están en la base): así no suma otra espera después de la búsqueda.
   // La pregunta se traduce a términos de búsqueda con un modelo barato (sinónimos y términos del sector) para encontrar por significado sin vectores.
-  const [terminos, delObservatorio, model] = await Promise.all([
+  const [terminos, delObservatorio, model, porSql] = await Promise.all([
     conPlazo(expandirConsulta(q), PLAZO_EXPANSION_MS, [] as string[]),
     conPlazo(buscarEnObservatorio(q, 4), PLAZO_OBSERVATORIO_MS, []),
     getModelo("asistente"),
+    // Una IA barata escribe la consulta SQL (solo lectura, solo notas y cifras) y trae directamente la nota o la cifra que se pidió.
+    conPlazo(consultarConIA(q), PLAZO_SQL_MS, []),
   ]);
   let hits = await hybridSearch(q, 8, { terminosExtra: terminos }).catch(() => []);
   // Sin resultados casi siempre es un error de escritura: se busca por parecido de letras en los títulos.
   if (hits.length === 0 && delObservatorio.length === 0) hits = await buscarParecidas(q, 8).catch(() => []);
-  const sources = [...hits, ...delObservatorio].map((h, i) => ({
+  const sqlNotas = porSql.filter((f) => f.kind === "articulo").map((f) => ({ ...f, id: f.url, score: 1 }));
+  const sqlCifras = porSql.filter((f) => f.kind === "observatorio").map((f) => ({ ...f, id: f.url, score: 1 }));
+  const yaEstan = new Set(sqlNotas.map((n) => n.url));
+  const sources = [...sqlCifras, ...sqlNotas, ...hits.filter((h) => !yaEstan.has(h.url)), ...delObservatorio].map((h, i) => ({
     n: i + 1,
     title: h.title,
     url: h.url,
