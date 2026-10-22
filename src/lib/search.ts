@@ -59,14 +59,21 @@ const STOPWORDS = new Set(
  * cualquiera de los términos significativos.
  */
 export function toOrQuery(input: string): string {
-  const words = input
+  const sinTilde = (t: string) => t.normalize("NFD").replace(/\p{Diacritic}/gu, "");
+  const palabras = input
     .toLowerCase()
-    .normalize("NFD")
-    .replace(/\p{Diacritic}/gu, "")
-    .replace(/[^a-z0-9ñ\s]/g, " ")
+    .replace(/[^a-z0-9ñáéíóúü\s]/g, " ")
     .split(/\s+/)
-    .filter((w) => w.length >= 3 && !STOPWORDS.has(w));
-  return [...new Set(words)].join(" or ");
+    .filter((w) => w.length >= 3 && !STOPWORDS.has(sinTilde(w)));
+  // El diccionario en español solo reduce bien a su raíz las palabras CON tilde («vacunación» → «vacun»; «vacunacion» se queda entera y no
+  // encuentra nada): quien escribe sin tildes (o con un error) recibe también la forma con tilde de las terminaciones habituales.
+  const salida = new Set<string>();
+  for (const w of palabras) {
+    salida.add(w);
+    if (/[a-z]ion$/.test(w)) salida.add(w.replace(/ion$/, "ión"));
+    if (/[a-z](ia|io)$/.test(w)) salida.add(w.replace(/(ia|io)$/, (m) => (m === "ia" ? "ía" : "ío")));
+  }
+  return [...salida].join(" or ");
 }
 
 // Búsqueda híbrida: mezcla similitud vectorial y texto completo en español sobre las notas propias y el archivo histórico, en una sola consulta SQL.
