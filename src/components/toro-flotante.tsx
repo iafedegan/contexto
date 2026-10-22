@@ -250,7 +250,7 @@ export function ToroFlotante() {
             <LogoMark size={26} />
             <div className="min-w-0 flex-1">
               <p className="text-sm font-semibold leading-tight">{en ? "Archive assistant" : "Asistente del archivo"}</p>
-              <p className="truncate text-[0.72rem] text-[var(--fg-muted)]">{en ? "Answers with cited sources" : "Respuestas con fuente citada"}</p>
+              <p className="truncate text-[0.72rem] text-[var(--fg-muted)]">{en ? "Notes and links from the archive" : "Notas y enlaces del archivo"}</p>
             </div>
             {guardadaAhora && (
               <button type="button" onClick={() => guardar(null)} aria-label={en ? "Back to the corner" : "Volver a la esquina"} title={en ? "Back to the corner" : "Volver a la esquina"} className="grid size-9 place-items-center rounded-full border border-[var(--border)] transition hover:bg-[var(--surface-2)]">

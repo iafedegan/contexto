@@ -1,17 +1,30 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ChevronDown, Mic, Square, Volume2, VolumeX } from "lucide-react";
+import { ArrowUpRight, ChevronDown, Mic, Square, Volume2, VolumeX } from "lucide-react";
 import { LogoMark } from "@/components/logo-mark";
 import { useVoz } from "@/components/voz-asistente";
 
 // Fuente que respalda una respuesta.
-type Source = { n: number; title: string; url: string; kind: "articulo" | "archivo" | "observatorio"; summary: string };
+type Source = {
+  n: number;
+  title: string;
+  url: string;
+  kind: "articulo" | "archivo" | "observatorio";
+  summary: string;
+  /** Para mostrar la nota como tarjeta (solo las notas propias traen miniatura, sección y fecha). */
+  image?: string | null;
+  publishedAt?: string | null;
+  categoryName?: string | null;
+};
+
+// Fecha corta de una nota («12 oct 2026»), en hora de Colombia.
+const fechaCorta = (iso: string) => new Intl.DateTimeFormat("es-CO", { day: "numeric", month: "short", year: "numeric", timeZone: "America/Bogota" }).format(new Date(iso));
 // Mensaje de la conversación: de la persona o del asistente, con su modo y fuentes.
 type Msg = {
   role: "user" | "assistant";
   text: string;
-  mode?: "declined" | "degraded" | "generativo";
+  mode?: "declined" | "degraded" | "generativo" | "articulos";
   sources?: Source[];
 };
 
@@ -131,7 +144,7 @@ export function AssistantChat({ compact = false }: { compact?: boolean }) {
         <div className={compact ? "lx-card lx-glass p-4 text-center" : "lx-card lx-glass p-7 text-center"}>
           <p className="text-sm leading-relaxed text-[var(--fg-muted)]">
             Pregunta sobre precios, regiones, normativa o cualquier tema cubierto por CONtexto
-            Ganadero. Cada respuesta cita sus fuentes; si no hay fuentes, el asistente no responde.
+            Ganadero. Te traigo las notas del archivo que tratan tu pregunta, con su enlace; si no hay notas, no invento una respuesta.
           </p>
           <div className="mt-6 flex flex-wrap justify-center gap-2">
             {ejemplos.map((e) => (
@@ -168,8 +181,37 @@ export function AssistantChat({ compact = false }: { compact?: boolean }) {
                 </div>
                 <p className="whitespace-pre-wrap text-[15px] leading-[1.75]">{m.text}</p>
 
+                {/* Modo por defecto: las notas y sus enlaces, como tarjetas (sin resumen redactado). */}
+                {m.mode === "articulos" && m.sources && m.sources.length > 0 && (
+                  <ul className="flex flex-col gap-2.5">
+                    {m.sources.map((s) => (
+                      <li key={s.n}>
+                        <a
+                          href={s.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="lx-card lx-glass group/n flex gap-3 p-3 transition hover:border-[var(--accent)]"
+                        >
+                          {s.image && (
+                            // eslint-disable-next-line @next/next/no-img-element -- miniatura remota de la nota; el chat no necesita optimizarla
+                            <img src={s.image} alt="" loading="lazy" className="size-[4.5rem] shrink-0 rounded-[var(--radius)] object-cover" />
+                          )}
+                          <span className="min-w-0 flex-1">
+                            <span className="lx-kicker block truncate text-[0.68rem] text-[var(--accent)]">
+                              {[s.kind === "archivo" ? "Archivo" : s.kind === "observatorio" ? "Observatorio" : s.categoryName, s.publishedAt ? fechaCorta(s.publishedAt) : null].filter(Boolean).join(" · ")}
+                            </span>
+                            <span className="mt-0.5 block text-[0.95rem] font-semibold leading-snug group-hover/n:underline">{s.title}</span>
+                            {s.summary && <span className="mt-1 line-clamp-2 block text-xs leading-snug text-[var(--fg-muted)]">{s.summary}</span>}
+                          </span>
+                          <ArrowUpRight size={16} aria-hidden className="mt-0.5 shrink-0 text-[var(--fg-muted)] transition group-hover/n:text-[var(--accent)]" />
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
                 {/* Las fuentes van en una lista cerrada: pueden ser muchas y la respuesta es lo primero que se lee. */}
-                {m.sources && m.sources.length > 0 && (
+                {m.mode !== "articulos" && m.sources && m.sources.length > 0 && (
                   <details
                     className="lx-card lx-glass group/f text-sm"
                     // En el cuadro flotante, al abrirla se baja hasta el final para que la lista se vea entera.

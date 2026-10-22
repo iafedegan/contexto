@@ -7,6 +7,7 @@ import { db } from "@/db";
 import { assistantQueries } from "@/db/schema";
 import { hybridSearch } from "@/lib/search";
 import { expandirConsulta } from "@/lib/ai/expansion-busqueda";
+import { elegirNotas } from "@/lib/ai/seleccion-notas";
 import { COSTO_EMBEDDING_USD, SESION_ASISTENTE_COOKIE, estimateCostUsd, liquidarGeneracion, reservarGeneracion, sesionAsistente } from "@/lib/budget";
 import { ASSISTANT_SYSTEM } from "@/agents/prompts";
 import { clientIp, hit } from "@/lib/rate-limit";
@@ -23,6 +24,10 @@ export const maxDuration = 30;
 const PLAZO_OBSERVATORIO_MS = 3_000;
 /** Tope de la expansión de la pregunta (un modelo barato, normalmente < 1 s): pasado esto se busca solo con las palabras de la pregunta. */
 const PLAZO_EXPANSION_MS = 3_000;
+/** Tope de la selección de notas por un modelo barato (solo lee títulos): pasado esto se muestran los primeros resultados del buscador. */
+const PLAZO_SELECCION_MS = 3_500;
+/** Cuántas notas se muestran como máximo en la respuesta. */
+const MAX_NOTAS = 6;
 /** Tope de la generación: pasado esto se responde en modo búsqueda en vez de dejar que la plataforma corte la función a los 30 s. */
 const PLAZO_GENERACION_MS = 20_000;
 
@@ -99,6 +104,10 @@ export async function POST(req: Request) {
     url: h.url,
     kind: h.kind,
     summary: h.summary,
+    // Para mostrar cada nota como tarjeta (miniatura, sección y fecha); el Observatorio y el archivo histórico no las traen.
+    image: "image" in h ? h.image : null,
+    publishedAt: "publishedAt" in h ? h.publishedAt : null,
+    categoryName: "categoryName" in h ? h.categoryName : null,
   }));
 
   // 1. Sin fuentes -> declina (criterio de aceptación: 0 respuestas sin cita).
@@ -110,6 +119,26 @@ export async function POST(req: Request) {
         "No encontré fuentes en CONtexto Ganadero para responder eso con seguridad. " +
         "Prueba a reformular la pregunta o a usar otros términos.",
       sources: [],
+    });
+  }
+
+  // Modo por defecto: TRAER LAS NOTAS Y SUS ENLACES, sin redactar un resumen: es lo que pide el lector, no hay marcas [n] ni texto que pueda inventar
+  // nada, y casi no gasta (solo la expansión y la selección, con un modelo barato). `ASISTENTE_MODO=resumen` devuelve el resumen redactado con citas.
+  // Se registra como consulta sin generación (`semantico_degradado`): no hubo texto generado ni gasto de redacción.
+  if (process.env.ASISTENTE_MODO !== "resumen") {
+    const elegidas = await conPlazo(elegirNotas(q, sources.slice(0, 12)), PLAZO_SELECCION_MS, null as number[] | null);
+    const sinCoincidencia = elegidas !== null && elegidas.length === 0;
+    const lista = sinCoincidencia ? sources.slice(0, 3) : elegidas === null ? sources.slice(0, MAX_NOTAS) : elegidas.map((n) => sources[n - 1]).filter(Boolean);
+    const mostrar = lista.map((s, i) => ({ ...s, n: i + 1 }));
+    await log(sessionId, q, "semantico_degradado", toCited(mostrar), true, 0, 0);
+    return responder({
+      mode: "articulos",
+      answer: sinCoincidencia
+        ? "No encontré una nota que responda eso exactamente. Estas son las más cercanas:"
+        : mostrar.length === 1
+          ? "Encontré esta nota sobre tu pregunta:"
+          : `Encontré ${mostrar.length} notas sobre tu pregunta:`,
+      sources: mostrar,
     });
   }
 
