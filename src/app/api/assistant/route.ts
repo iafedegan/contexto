@@ -6,7 +6,7 @@ import { getModelo } from "@/lib/ai-provider";
 import { generateText } from "ai";
 import { db } from "@/db";
 import { assistantQueries } from "@/db/schema";
-import { buscarParecidas, hybridSearch } from "@/lib/search";
+import { buscarParecidas, buscarRecientes, hybridSearch } from "@/lib/search";
 import { expandirConsulta } from "@/lib/ai/expansion-busqueda";
 import { consultarConIA } from "@/lib/ai/consulta-sql";
 import { elegirNotas } from "@/lib/ai/seleccion-notas";
@@ -92,12 +92,14 @@ export async function POST(req: Request) {
   // Notas y archivo, y además lo que hay en el Observatorio (cifras y documentos): el asistente responde a todo lo que el lector ve allí.
   // El modelo se pide a la vez (sus ajustes están en la base): así no suma otra espera después de la búsqueda.
   // La pregunta se traduce a términos de búsqueda con un modelo barato (sinónimos y términos del sector) para encontrar por significado sin vectores.
-  const [terminos, delObservatorio, model, porSql] = await Promise.all([
+  const [terminos, delObservatorio, model, porSql, recientes] = await Promise.all([
     conPlazo(expandirConsulta(q), PLAZO_EXPANSION_MS, [] as string[]),
     conPlazo(buscarEnObservatorio(q, 4), PLAZO_OBSERVATORIO_MS, []),
     getModelo("asistente"),
     // Una IA barata escribe la consulta SQL (solo lectura, solo notas y cifras) y trae directamente la nota o la cifra que se pidió.
     conPlazo(consultarConIA(q), PLAZO_SQL_MS, { fuentes: [], estado: "error-modelo" as const, detalle: "plazo" }),
+    // Por palabra clave, de lo más nuevo a lo más viejo: no depende de la IA (si falla, «ciclo vacunas» sigue trayendo lo de esta semana).
+    buscarRecientes(q, MAX_NOTAS).catch(() => []),
   ]);
   let hits = await hybridSearch(q, 8, { terminosExtra: terminos }).catch(() => []);
   // Sin resultados casi siempre es un error de escritura: se busca por parecido de letras en los títulos.
@@ -106,8 +108,10 @@ export async function POST(req: Request) {
   detalleConsulta = porSql.detalle ?? "";
   const sqlNotas = porSql.fuentes.filter((f) => f.kind === "articulo").map((f) => ({ ...f, id: f.url, score: 1 }));
   const sqlCifras = porSql.fuentes.filter((f) => f.kind === "observatorio").map((f) => ({ ...f, id: f.url, score: 1 }));
-  const yaEstan = new Set(sqlNotas.map((n) => n.url));
-  const sources = [...sqlCifras, ...sqlNotas, ...hits.filter((h) => !yaEstan.has(h.url)), ...delObservatorio].map((h, i) => ({
+  // Primero lo que trajo la consulta de la IA; si no hubo, las más recientes con todas las palabras de la pregunta.
+  const delBuscador = sqlNotas.length ? sqlNotas : recientes;
+  const yaEstan = new Set(delBuscador.map((n) => n.url));
+  const sources = [...sqlCifras, ...delBuscador, ...hits.filter((h) => !yaEstan.has(h.url)), ...delObservatorio].map((h, i) => ({
     n: i + 1,
     title: h.title,
     url: h.url,
@@ -137,7 +141,25 @@ export async function POST(req: Request) {
   if (process.env.ASISTENTE_MODO !== "resumen") {
     // Las cifras del Observatorio que coinciden con la pregunta van SIEMPRE, primero y completas: son la respuesta; el modelo barato solo
     // filtra las notas (si las descartara, el lector se quedaría con notas de opinión y sin el dato que pidió).
+    // Si la pregunta se resolvió con las cifras del Observatorio (la consulta SQL trajo datos), la respuesta es PUNTUAL: la cifra y su fuente, sin notas.
+    if (sqlCifras.length) {
+      const c = sqlCifras[0];
+      const filas = c.summary.split("; ");
+      const mostrar = [{ ...c, n: 1, id: c.url }];
+      await log(sessionId, q, "semantico_degradado", toCited(mostrar), true, 0, 0);
+      return responder({
+        mode: "articulos",
+        answer: `Según el Observatorio de FEDEGÁN, ${c.title.replace(/^Observatorio · /, "").toLowerCase()}: ${filas[0]}${filas.length > 1 ? ` (y ${filas.length - 1} más abajo)` : ""}.`,
+        sources: mostrar,
+      });
+    }
     const cifras = sources.filter((s) => s.kind === "observatorio").map((s) => ({ ...s, summary: s.summary.length > 420 ? `${s.summary.slice(0, 420).replace(/[;,]?\s*\S*$/, "")}…` : s.summary }));
+    // Sin consulta SQL pero con cifras del Observatorio que coinciden con la pregunta: también solo las cifras, sin notas.
+    if (cifras.length) {
+      const mostrar = cifras.slice(0, 2).map((s, i) => ({ ...s, n: i + 1 }));
+      await log(sessionId, q, "semantico_degradado", toCited(mostrar), true, 0, 0);
+      return responder({ mode: "articulos", answer: "Esto dice el Observatorio de FEDEGÁN:", sources: mostrar });
+    }
     const notas = sources.filter((s) => s.kind !== "observatorio" && !yaEstan.has(s.url));
     // Las notas que trajo la consulta SQL van tal cual, en el orden de la consulta (más recientes primero): el modelo barato no las reordena
     // ni las descarta. Solo si son pocas se completa con las del buscador, ya filtradas.

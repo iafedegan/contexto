@@ -53,8 +53,7 @@ export async function sentenciaParaPregunta(pregunta: string): Promise<{ sentenc
       system: instrucciones(cat),
       prompt: pregunta.slice(0, 300),
       temperature: 0,
-      maxOutputTokens: 350,
-      providerOptions: { google: { thinkingConfig: { thinkingBudget: 0 } } },
+      maxOutputTokens: 700,
       abortSignal: AbortSignal.timeout(5_000),
     });
     if (/^\s*NINGUNA/i.test(text)) return { sentencia: null, estado: "ninguna" };

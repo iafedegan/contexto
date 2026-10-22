@@ -53,8 +53,7 @@ async function generar(): Promise<string[]> {
         `Escribe ${CANTIDAD} preguntas cortas (máximo 90 caracteres cada una) que un lector le haría al asistente sobre los temas del momento. ` +
         "Una por línea, sin numerar, en español, empezando con «¿» y terminando con «?». Cada una debe tratar un tema distinto. No inventes cifras ni hechos.",
       temperature: 0.7,
-      maxOutputTokens: 400,
-      providerOptions: { google: { thinkingConfig: { thinkingBudget: 0 } } },
+      maxOutputTokens: 700,
       abortSignal: AbortSignal.timeout(15_000),
     });
     return limpiarPreguntas(text);

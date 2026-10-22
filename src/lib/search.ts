@@ -259,3 +259,39 @@ export async function buscarParecidas(query: string, limit = 8): Promise<SearchH
     score: Number(r.score),
   }));
 }
+
+/**
+ * Búsqueda por palabra clave, de lo más NUEVO a lo más viejo: las notas publicadas que contienen TODAS las palabras de la consulta (con su
+ * forma con tilde, ver `toOrQuery`), ordenadas por fecha. Es determinista y no depende de ninguna IA: «ciclo vacunas» trae primero el ciclo
+ * de vacunación de esta semana. Si la consulta tiene más de 5 palabras (una pregunta larga, no una palabra clave) o ninguna nota las tiene todas,
+ * devuelve `[]` y manda el buscador por relevancia.
+ */
+export async function buscarRecientes(query: string, limit = 6): Promise<SearchHit[]> {
+  const grupos = toOrQuery(query).split(" or ");
+  // Cada palabra con su variante con tilde forma un grupo «a or b»; los grupos se unen con AND.
+  const palabras = [...new Set(query.toLowerCase().normalize("NFD").replace(/\p{Diacritic}/gu, "").replace(/[^a-z0-9ñ\s]/g, " ").split(/\s+/).filter((w) => w.length >= 3))].filter((w) => grupos.some((g) => g.normalize("NFD").replace(/\p{Diacritic}/gu, "") === w));
+  if (!palabras.length || palabras.length > 5) return [];
+  // Solo letras y números (sin operadores): se arma con la sintaxis de `to_tsquery`, donde «&» une las palabras y «|» sus variantes.
+  const consulta = palabras.map((w) => `(${toOrQuery(w).split(" or ").join(" | ")})`).join(" & ");
+  const rows = rowsOf(await db.execute(sql`
+    SELECT a.id::text AS id, a.title, a.excerpt AS summary, coalesce(a.legacy_path, '/articulo/' || a.slug) AS url,
+           a.published_at, a.cover_image_url AS image, c.slug AS category_slug, c.name AS category_name
+    FROM articles a
+    LEFT JOIN categories c ON c.id = a.category_id
+    WHERE a.status = 'publicado' AND a.search_vec @@ to_tsquery('spanish', ${consulta})
+    ORDER BY a.published_at DESC NULLS LAST
+    LIMIT ${limit}
+  `));
+  return (rows as unknown as Array<Record<string, unknown>>).map((r) => ({
+    kind: "articulo" as const,
+    id: String(r.id),
+    title: String(r.title),
+    summary: String(r.summary ?? ""),
+    url: String(r.url),
+    publishedAt: r.published_at ? new Date(r.published_at as string).toISOString() : null,
+    image: (r.image as string | null) ?? null,
+    categorySlug: (r.category_slug as string | null) ?? null,
+    categoryName: (r.category_name as string | null) ?? null,
+    score: 1,
+  }));
+}
