@@ -59,8 +59,11 @@ export async function POST(req: Request) {
   // La sesión la emite el servidor (cookie firmada): lo que mande el navegador como `sessionId` se ignora (H-07).
   const sesion = sesionAsistente(req.headers.get("cookie")?.match(new RegExp(`(?:^|;\\s*)${SESION_ASISTENTE_COOKIE}=([^;]+)`))?.[1]);
   // Toda respuesta pasa por aquí para que la sesión nueva llegue como cookie.
+  let estadoConsulta = "no-aplica";
   const responder = (cuerpo: unknown, init?: ResponseInit) => {
     const r = NextResponse.json(cuerpo, init);
+    // Cómo salió la consulta SQL de la IA (solo una palabra: sirve para saber qué falló sin ver el contenido).
+    r.headers.set("x-consulta", estadoConsulta);
     if (sesion.nueva) {
       r.cookies.set(SESION_ASISTENTE_COOKIE, sesion.valor, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/api/assistant", maxAge: 30 * 24 * 3600 });
     }
@@ -92,13 +95,14 @@ export async function POST(req: Request) {
     conPlazo(buscarEnObservatorio(q, 4), PLAZO_OBSERVATORIO_MS, []),
     getModelo("asistente"),
     // Una IA barata escribe la consulta SQL (solo lectura, solo notas y cifras) y trae directamente la nota o la cifra que se pidió.
-    conPlazo(consultarConIA(q), PLAZO_SQL_MS, []),
+    conPlazo(consultarConIA(q), PLAZO_SQL_MS, { fuentes: [], estado: "error-modelo" as const }),
   ]);
   let hits = await hybridSearch(q, 8, { terminosExtra: terminos }).catch(() => []);
   // Sin resultados casi siempre es un error de escritura: se busca por parecido de letras en los títulos.
   if (hits.length === 0 && delObservatorio.length === 0) hits = await buscarParecidas(q, 8).catch(() => []);
-  const sqlNotas = porSql.filter((f) => f.kind === "articulo").map((f) => ({ ...f, id: f.url, score: 1 }));
-  const sqlCifras = porSql.filter((f) => f.kind === "observatorio").map((f) => ({ ...f, id: f.url, score: 1 }));
+  estadoConsulta = porSql.estado;
+  const sqlNotas = porSql.fuentes.filter((f) => f.kind === "articulo").map((f) => ({ ...f, id: f.url, score: 1 }));
+  const sqlCifras = porSql.fuentes.filter((f) => f.kind === "observatorio").map((f) => ({ ...f, id: f.url, score: 1 }));
   const yaEstan = new Set(sqlNotas.map((n) => n.url));
   const sources = [...sqlCifras, ...sqlNotas, ...hits.filter((h) => !yaEstan.has(h.url)), ...delObservatorio].map((h, i) => ({
     n: i + 1,
@@ -131,10 +135,15 @@ export async function POST(req: Request) {
     // Las cifras del Observatorio que coinciden con la pregunta van SIEMPRE, primero y completas: son la respuesta; el modelo barato solo
     // filtra las notas (si las descartara, el lector se quedaría con notas de opinión y sin el dato que pidió).
     const cifras = sources.filter((s) => s.kind === "observatorio").map((s) => ({ ...s, summary: s.summary.length > 420 ? `${s.summary.slice(0, 420).replace(/[;,]?\s*\S*$/, "")}…` : s.summary }));
-    const notas = sources.filter((s) => s.kind !== "observatorio");
-    const elegidas = await conPlazo(elegirNotas(q, notas.slice(0, 12)), PLAZO_SELECCION_MS, null as number[] | null);
-    const sinCoincidencia = elegidas !== null && elegidas.length === 0;
-    const deNotas = sinCoincidencia ? (cifras.length ? [] : notas.slice(0, 3)) : elegidas === null ? notas.slice(0, MAX_NOTAS) : elegidas.map((n) => notas[n - 1]).filter(Boolean);
+    const notas = sources.filter((s) => s.kind !== "observatorio" && !yaEstan.has(s.url));
+    // Las notas que trajo la consulta SQL van tal cual, en el orden de la consulta (más recientes primero): el modelo barato no las reordena
+    // ni las descarta. Solo si son pocas se completa con las del buscador, ya filtradas.
+    const deLaConsulta = sources.filter((s) => s.kind !== "observatorio" && yaEstan.has(s.url)).slice(0, MAX_NOTAS);
+    const completar = deLaConsulta.length < 3;
+    const elegidas = completar ? await conPlazo(elegirNotas(q, notas.slice(0, 12)), PLAZO_SELECCION_MS, null as number[] | null) : [];
+    const sinCoincidencia = completar && elegidas !== null && elegidas.length === 0 && !deLaConsulta.length;
+    const extra = !completar ? [] : sinCoincidencia ? (cifras.length ? [] : notas.slice(0, 3)) : elegidas === null ? notas.slice(0, MAX_NOTAS) : elegidas.map((n) => notas[n - 1]).filter(Boolean);
+    const deNotas = [...deLaConsulta, ...extra].slice(0, MAX_NOTAS);
     const lista = [...cifras.slice(0, 3), ...deNotas];
     const mostrar = lista.map((s, i) => ({ ...s, n: i + 1 }));
     await log(sessionId, q, "semantico_degradado", toCited(mostrar), true, 0, 0);
