@@ -1724,6 +1724,7 @@ html[data-cg-overlay] .cg-consent { display: none; }
 .gn-idea { opacity: 0; transform-box: fill-box; transform-origin: 50% 100%; }
 @keyframes gn-respira { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(1.012); } }
 @keyframes gn-saludo { 0% { transform: rotate(0); } 14% { transform: rotate(-150deg); } 24%, 44%, 64%, 84% { transform: rotate(-136deg); } 34%, 54%, 74% { transform: rotate(-166deg); } 100% { transform: rotate(0); } }
+@keyframes gn-explica { 0% { transform: rotate(0); } 18% { transform: rotate(-70deg); } 30%, 54%, 78% { transform: rotate(-84deg); } 42%, 66% { transform: rotate(-64deg); } 100% { transform: rotate(0); } }
 @keyframes gn-sombrero { 0%, 100% { transform: none; } 25%, 70% { transform: translate(-6px, -16px) rotate(-12deg); } }
 @keyframes gn-lazo { 0% { transform: rotate(0); } 100% { transform: rotate(720deg); } }
 @keyframes gn-idea { 0%, 100% { opacity: 0; transform: scale(0.4); } 20%, 75% { opacity: 1; transform: scale(1); } }
@@ -1733,6 +1734,7 @@ html[data-cg-overlay] .cg-consent { display: none; }
 @keyframes toro-cabeceo { 0%, 100% { transform: rotate(0); } 20% { transform: rotate(-9deg); } 40% { transform: rotate(9deg); } 60% { transform: rotate(-7deg); } 80% { transform: rotate(5deg); } }
 @keyframes toro-salto { 0%, 100% { transform: translateY(0) scale(1, 1); } 20% { transform: translateY(0) scale(1.06, 0.92); } 50% { transform: translateY(-30px) scale(0.96, 1.06); } 80% { transform: translateY(0) scale(1.05, 0.94); } }
 [data-gesto="saludo"] .gn-brazo { animation: gn-saludo 2.8s ease-in-out 1; }
+[data-gesto="explica"] .gn-brazo { animation: gn-explica 3.2s ease-in-out 1; }
 [data-gesto="sombrero"] .gn-sombrero { animation: gn-sombrero 2.4s ease-in-out 1; }
 [data-gesto="lazo"] .gn-lazo { animation: gn-lazo 2.2s ease-in-out 1; }
 [data-gesto="idea"] .gn-idea { animation: gn-idea 3.2s ease-in-out 1; }

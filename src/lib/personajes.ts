@@ -38,6 +38,7 @@ export const PERSONAJES: Record<PersonajeId, Personaje> = {
       { id: "sombrero", es: "Un saludo desde el campo.", en: "Greetings from the countryside." },
       { id: "lazo", es: "¡A lazar las noticias del sector!", en: "Let's lasso the sector's news!" },
       { id: "idea", es: "Pregúntame por el precio del novillo gordo.", en: "Ask me about the price of fattened cattle." },
+      { id: "explica", es: "Déjeme le explico: pregunte sin pena.", en: "Let me explain: just ask." },
     ],
   },
 };

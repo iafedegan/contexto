@@ -7,7 +7,8 @@
  * Es un personaje ilustrado del asistente virtual, no una persona real que hable: lo que responde es siempre el asistente con IA.
  */
 const T = "#3b2a1a"; // trazo
-const PIEL = "#f1c9a0";
+const PIEL = "#e3b389"; // piel trigueña
+const PELO = "#2a1f1a"; // pelo oscuro
 
 export function PersonajeGanadero({ gesto, label }: { gesto?: string | null; label: string }) {
   return (
@@ -23,7 +24,7 @@ export function PersonajeGanadero({ gesto, label }: { gesto?: string | null; lab
           <path d="M64 204 L136 204 L134 296 L106 296 L100 238 L94 296 L66 296 Z" fill="#cdb98a" stroke={T} strokeWidth="3.5" strokeLinejoin="round" />
           <path d="M100 238 L100 206" stroke={T} strokeWidth="2.5" />
           {/* cuello y camisa */}
-          <rect x="90" y="114" width="20" height="16" fill="#e3b88e" stroke={T} strokeWidth="3" />
+          <rect x="90" y="118" width="20" height="16" fill="#d3a17a" stroke={T} strokeWidth="3" />
           <path d="M60 142 C60 130 78 124 100 124 C122 124 140 130 140 142 L138 202 L62 202 Z" fill="#8fb8d8" stroke={T} strokeWidth="3.5" strokeLinejoin="round" />
           <path d="M100 134 L100 200" stroke={T} strokeWidth="2" opacity="0.7" />
           <circle cx="100" cy="152" r="2.2" fill={T} />
@@ -58,38 +59,44 @@ export function PersonajeGanadero({ gesto, label }: { gesto?: string | null; lab
             <circle cx="152" cy="209" r="9.5" fill={PIEL} stroke={T} strokeWidth="3" />
           </g>
 
-          {/* cabeza grande de caricatura */}
+          {/* cabeza grande de caricatura: rostro alargado, pelo oscuro peinado hacia atrás con raya, cejas gruesas, mirada seria, sin bigote */}
           <g className="gn-cabeza">
-            <ellipse cx="55" cy="86" rx="7.5" ry="11.5" fill={PIEL} stroke={T} strokeWidth="3" />
-            <ellipse cx="145" cy="86" rx="7.5" ry="11.5" fill={PIEL} stroke={T} strokeWidth="3" />
-            <path d="M56 78 C56 42 144 42 144 78 C144 112 124 130 100 130 C76 130 56 112 56 78Z" fill={PIEL} stroke={T} strokeWidth="3.5" strokeLinejoin="round" />
-            {/* canas */}
-            <path d="M57 64 C47 73 49 95 58 101 C62 90 60 75 57 64Z" fill="#f4f4f1" stroke={T} strokeWidth="2.5" strokeLinejoin="round" />
-            <path d="M143 64 C153 73 151 95 142 101 C138 90 140 75 143 64Z" fill="#f4f4f1" stroke={T} strokeWidth="2.5" strokeLinejoin="round" />
-            <circle cx="73" cy="102" r="6.5" fill="#e58f86" opacity="0.45" />
-            <circle cx="127" cy="102" r="6.5" fill="#e58f86" opacity="0.45" />
-            {/* cejas pobladas */}
-            <path d="M69 73 C77 65 90 66 96 72" fill="none" stroke="#c9c9c4" strokeWidth="6" strokeLinecap="round" />
-            <path d="M104 72 C110 66 123 65 131 73" fill="none" stroke="#c9c9c4" strokeWidth="6" strokeLinecap="round" />
-            {/* ojos */}
-            <ellipse cx="82" cy="83" rx="8.8" ry="9.8" fill="#fff" stroke={T} strokeWidth="2.6" />
-            <ellipse cx="118" cy="83" rx="8.8" ry="9.8" fill="#fff" stroke={T} strokeWidth="2.6" />
+            <ellipse cx="55" cy="88" rx="7.5" ry="12" fill={PIEL} stroke={T} strokeWidth="3" />
+            <ellipse cx="145" cy="88" rx="7.5" ry="12" fill={PIEL} stroke={T} strokeWidth="3" />
+            <path d="M56 76 C56 40 144 40 144 76 C144 114 130 138 100 138 C70 138 56 114 56 76Z" fill={PIEL} stroke={T} strokeWidth="3.5" strokeLinejoin="round" />
+            {/* patillas y pelo oscuro */}
+            <path d="M57 62 C50 72 51 92 58 100 C61 90 61 74 57 62Z" fill={PELO} stroke={T} strokeWidth="2.5" strokeLinejoin="round" />
+            <path d="M143 62 C150 72 149 92 142 100 C139 90 139 74 143 62Z" fill={PELO} stroke={T} strokeWidth="2.5" strokeLinejoin="round" />
+            <path d="M58 64 C72 76 90 68 98 62 C108 70 128 78 142 64 L142 56 L58 56Z" fill={PELO} stroke={T} strokeWidth="2.5" strokeLinejoin="round" />
+            <path d="M80 66 C84 62 92 62 98 62" fill="none" stroke="#6a5648" strokeWidth="2" strokeLinecap="round" />
+            {/* mejillas y pómulos */}
+            <circle cx="72" cy="104" r="6.5" fill="#d98a7a" opacity="0.4" />
+            <circle cx="128" cy="104" r="6.5" fill="#d98a7a" opacity="0.4" />
+            {/* cejas gruesas y oscuras, algo fruncidas (gesto serio) */}
+            <path d="M68 76 C76 70 90 71 97 77" fill="none" stroke={PELO} strokeWidth="7" strokeLinecap="round" />
+            <path d="M103 77 C110 71 124 70 132 76" fill="none" stroke={PELO} strokeWidth="7" strokeLinecap="round" />
+            {/* ojos algo entrecerrados */}
+            <ellipse cx="82" cy="87" rx="9" ry="8" fill="#fff" stroke={T} strokeWidth="2.6" />
+            <ellipse cx="118" cy="87" rx="9" ry="8" fill="#fff" stroke={T} strokeWidth="2.6" />
             <g className="gn-parpadeo">
-              <g className="gn-pupila"><circle cx="83" cy="85" r="4.8" fill="#2a1a0e" /><circle cx="84.8" cy="83" r="1.6" fill="#fff" /></g>
+              <g className="gn-pupila"><circle cx="83" cy="88" r="4.6" fill="#2a1a0e" /><circle cx="84.8" cy="86.4" r="1.5" fill="#fff" /></g>
             </g>
             <g className="gn-parpadeo gn-ojo-d">
-              <g className="gn-pupila"><circle cx="119" cy="85" r="4.8" fill="#2a1a0e" /><circle cx="120.8" cy="83" r="1.6" fill="#fff" /></g>
+              <g className="gn-pupila"><circle cx="119" cy="88" r="4.6" fill="#2a1a0e" /><circle cx="120.8" cy="86.4" r="1.5" fill="#fff" /></g>
             </g>
-            {/* nariz y bigote */}
-            <path d="M100 86 C91 98 91 106 100 108 C109 106 109 98 100 86Z" fill="#e9b58a" stroke={T} strokeWidth="2.6" strokeLinejoin="round" />
-            <path d="M69 111 C77 100 92 102 100 107 C108 102 123 100 131 111 C125 122 110 119 100 114 C90 119 75 122 69 111Z" fill="#f7f7f4" stroke={T} strokeWidth="2.6" strokeLinejoin="round" />
-            <path d="M89 124 C96 130 104 130 111 124" fill="none" stroke={T} strokeWidth="3" strokeLinecap="round" />
+            <path d="M73 82 C78 79 86 79 91 82 M109 82 C114 79 122 79 127 82" fill="none" stroke={T} strokeWidth="2.4" strokeLinecap="round" />
+            {/* nariz recta y largo */}
+            <path d="M100 88 C97 100 94 106 92 109 C96 113 104 113 108 109 C106 106 103 100 100 88Z" fill="#cf9a6e" stroke={T} strokeWidth="2.4" strokeLinejoin="round" />
+            {/* surcos y boca seria con media sonrisa */}
+            <path d="M80 104 C78 112 80 120 86 124 M120 104 C122 112 120 120 114 124" fill="none" stroke={T} strokeWidth="2" strokeLinecap="round" opacity="0.5" />
+            <path d="M88 124 C95 127 106 127 113 122" fill="none" stroke={T} strokeWidth="3.2" strokeLinecap="round" />
+            <path d="M92 128 C97 131 104 131 109 128" fill="none" stroke="#b9786a" strokeWidth="2.4" strokeLinecap="round" opacity="0.7" />
             {/* sombrero aguadeño */}
             <g className="gn-sombrero">
-              <ellipse cx="100" cy="55" rx="68" ry="15" fill="#f3e6c0" stroke={T} strokeWidth="3.5" />
-              <path d="M64 53 C62 14 138 14 136 53Z" fill="#f3e6c0" stroke={T} strokeWidth="3.5" strokeLinejoin="round" />
-              <path d="M64.5 47 C80 55 120 55 135.5 47 L136 54 C120 63 80 63 64 54Z" fill="#2a2a2a" stroke={T} strokeWidth="2" strokeLinejoin="round" />
-              <path d="M88 27 C96 33 104 33 112 27" fill="none" stroke={T} strokeWidth="2.6" strokeLinecap="round" />
+              <ellipse cx="100" cy="53" rx="68" ry="15" fill="#f3e6c0" stroke={T} strokeWidth="3.5" />
+              <path d="M64 51 C62 12 138 12 136 51Z" fill="#f3e6c0" stroke={T} strokeWidth="3.5" strokeLinejoin="round" />
+              <path d="M64.5 45 C80 53 120 53 135.5 45 L136 52 C120 61 80 61 64 52Z" fill="#2a2a2a" stroke={T} strokeWidth="2" strokeLinejoin="round" />
+              <path d="M88 25 C96 31 104 31 112 25" fill="none" stroke={T} strokeWidth="2.6" strokeLinecap="round" />
             </g>
           </g>
           {/* bombillo de la idea */}
