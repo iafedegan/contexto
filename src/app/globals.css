@@ -1713,6 +1713,42 @@ html[data-cg-overlay] .cg-consent { display: none; }
   .toro-q:first-child { opacity: 1; }
 }
 
+/* ===== Gestos tipo «Clippy» del asistente: las pupilas siguen el cursor (--mx / --my los pone el avatar) y cada gesto (data-gesto) dura una sola vez ===== */
+.toro-pupila, .gn-pupila { transform: translate(calc(var(--mx, 0) * 4px), calc(var(--my, 0) * 4px)); transition: transform 0.12s linear; }
+.gn-cuerpo { animation: gn-respira 4.2s ease-in-out infinite; transform-box: view-box; transform-origin: 100px 320px; }
+.gn-parpadeo { animation: toro-blink 5.2s infinite; transform-box: fill-box; transform-origin: 50% 50%; }
+.gn-cabeza { transform-box: view-box; transform-origin: 100px 124px; }
+.gn-brazo { transform-box: view-box; transform-origin: 138px 146px; }
+.gn-lazo { transform-box: view-box; transform-origin: 48px 232px; }
+.gn-sombrero { transform-box: view-box; transform-origin: 100px 56px; }
+.gn-idea { opacity: 0; transform-box: fill-box; transform-origin: 50% 100%; }
+@keyframes gn-respira { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(1.012); } }
+@keyframes gn-saludo { 0% { transform: rotate(0); } 14% { transform: rotate(-150deg); } 24%, 44%, 64%, 84% { transform: rotate(-136deg); } 34%, 54%, 74% { transform: rotate(-166deg); } 100% { transform: rotate(0); } }
+@keyframes gn-sombrero { 0%, 100% { transform: none; } 25%, 70% { transform: translate(-6px, -16px) rotate(-12deg); } }
+@keyframes gn-lazo { 0% { transform: rotate(0); } 100% { transform: rotate(720deg); } }
+@keyframes gn-idea { 0%, 100% { opacity: 0; transform: scale(0.4); } 20%, 75% { opacity: 1; transform: scale(1); } }
+@keyframes gn-inclina { 0%, 100% { transform: none; } 25%, 75% { transform: rotate(-5deg); } }
+@keyframes gn-guino { 0%, 100% { transform: scaleY(1); } 30%, 70% { transform: scaleY(0.08); } }
+@keyframes toro-guino { 0%, 100% { transform: scaleY(1); } 30%, 75% { transform: scaleY(0.08); } }
+@keyframes toro-cabeceo { 0%, 100% { transform: rotate(0); } 20% { transform: rotate(-9deg); } 40% { transform: rotate(9deg); } 60% { transform: rotate(-7deg); } 80% { transform: rotate(5deg); } }
+@keyframes toro-salto { 0%, 100% { transform: translateY(0) scale(1, 1); } 20% { transform: translateY(0) scale(1.06, 0.92); } 50% { transform: translateY(-30px) scale(0.96, 1.06); } 80% { transform: translateY(0) scale(1.05, 0.94); } }
+[data-gesto="saludo"] .gn-brazo { animation: gn-saludo 2.8s ease-in-out 1; }
+[data-gesto="sombrero"] .gn-sombrero { animation: gn-sombrero 2.4s ease-in-out 1; }
+[data-gesto="lazo"] .gn-lazo { animation: gn-lazo 2.2s ease-in-out 1; }
+[data-gesto="idea"] .gn-idea { animation: gn-idea 3.2s ease-in-out 1; }
+[data-gesto="idea"] .gn-cabeza { animation: gn-inclina 3.2s ease-in-out 1; }
+[data-gesto="guino"] .toro-ojo-d { animation: toro-guino 1.5s ease-in-out 1; }
+[data-gesto="cabeceo"] .toro-bob { animation: toro-cabeceo 1.8s ease-in-out 1; }
+[data-gesto="resoplido"] .toro-steam { animation: toro-steam 0.9s ease-out 3; }
+[data-gesto="salto"] .toro-bob { animation: toro-salto 1.3s ease-in-out 1; }
+@media (prefers-reduced-motion: reduce) {
+  .gn-cuerpo, .gn-parpadeo, .gn-brazo, .gn-lazo, .gn-sombrero, .gn-idea, .gn-cabeza, .toro-ojo-d, .toro-bob, .toro-steam { animation: none !important; }
+  .toro-pupila, .gn-pupila { transform: none; transition: none; }
+}
+
+.toro-globo { animation: toro-globo 0.28s ease-out; }
+@keyframes toro-globo { from { opacity: 0; transform: translateY(6px) scale(0.96); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .toro-globo { animation: none; } }
 .toro-float { animation: toro-float 4.5s ease-in-out infinite; filter: drop-shadow(0 8px 10px rgba(0, 0, 0, 0.28)); }
 @keyframes toro-float { 0%, 100% { translate: 0 0; } 50% { translate: 0 -8px; } }
 @media (prefers-reduced-motion: reduce) { .toro-float { animation: none; } }

@@ -1,9 +1,9 @@
 /**
  * Toro asistente: caricatura animada en SVG + CSS (sin JS ni imágenes). Parpadea, mueve las orejas,
- * respira y «sopla» vaho; en el globo rota por ejemplos de preguntas. Con `prefers-reduced-motion`
+ * respira y «sopla» vaho; las pupilas siguen el cursor y, cada tanto, hace un gesto (`gesto`: guiño, cabeceo, resoplido, salto); en el globo rota por ejemplos de preguntas. Con `prefers-reduced-motion`
  * queda quieto y muestra solo la primera pregunta.
  */
-export function ToroBot({ questions = [], label, bubble = true }: { questions?: string[]; label: string; bubble?: boolean }) {
+export function ToroBot({ questions = [], label, bubble = true, gesto = null }: { questions?: string[]; label: string; bubble?: boolean; gesto?: string | null }) {
   return (
     <div className="relative mx-auto w-full select-none" role="img" aria-label={label}>
       {/* Globo de diálogo */}
@@ -14,7 +14,7 @@ export function ToroBot({ questions = [], label, bubble = true }: { questions?: 
         <span aria-hidden className="absolute -bottom-2 left-1/2 size-3.5 -translate-x-1/2 rotate-45 border-b border-r border-[var(--border-strong)] bg-[var(--bg-2)]" />
       </div>}
 
-      <svg viewBox="0 0 240 230" className="block h-auto w-full overflow-visible" aria-hidden>
+      <svg viewBox="0 0 240 230" className="block h-auto w-full overflow-visible" aria-hidden data-gesto={gesto ?? ""}>
         <ellipse cx="120" cy="222" rx="70" ry="6" fill="#000" opacity="0.18" />
         <g className="toro-bob">
           {/* cuernos */}
@@ -32,8 +32,8 @@ export function ToroBot({ questions = [], label, bubble = true }: { questions?: 
           <g>
             <ellipse cx="94" cy="100" rx="15" ry="17" fill="#fff" stroke="#3b2a1a" strokeWidth="3.5" />
             <ellipse cx="146" cy="100" rx="15" ry="17" fill="#fff" stroke="#3b2a1a" strokeWidth="3.5" />
-            <g className="toro-blink"><circle cx="97" cy="102" r="8" fill="#2a1a0e" /><circle cx="100" cy="98" r="2.8" fill="#fff" /></g>
-            <g className="toro-blink"><circle cx="143" cy="102" r="8" fill="#2a1a0e" /><circle cx="146" cy="98" r="2.8" fill="#fff" /></g>
+            <g className="toro-blink"><g className="toro-pupila"><circle cx="97" cy="102" r="8" fill="#2a1a0e" /><circle cx="100" cy="98" r="2.8" fill="#fff" /></g></g>
+            <g className="toro-blink toro-ojo-d"><g className="toro-pupila"><circle cx="143" cy="102" r="8" fill="#2a1a0e" /><circle cx="146" cy="98" r="2.8" fill="#fff" /></g></g>
           </g>
           <path d="M78 80 C86 74 98 74 108 80" fill="none" stroke="#3b2a1a" strokeWidth="4.5" strokeLinecap="round" />
           <path d="M132 80 C142 74 154 74 162 80" fill="none" stroke="#3b2a1a" strokeWidth="4.5" strokeLinecap="round" />

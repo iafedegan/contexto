@@ -2,11 +2,13 @@
 
 import { useEffect, useRef, useState, useSyncExternalStore, type PointerEvent as EventoPuntero } from "react";
 import { usePathname } from "next/navigation";
-import { RotateCcw, X } from "lucide-react";
+import { Repeat, RotateCcw, X } from "lucide-react";
 import { ToroBot } from "@/components/toro-bot";
+import { PersonajeGanadero } from "@/components/personaje-ganadero";
 import { AssistantChat } from "@/components/assistant-chat";
 import { LogoMark } from "@/components/logo-mark";
 import { limitarPosicion, ubicarDialogo, type Lado, type Posicion } from "@/lib/toro-posicion";
+import { PERSONAJES, esperaDeGesto, personajeValido, siguienteGesto, siguientePersonaje, type PersonajeId } from "@/lib/personajes";
 
 /**
  * Avatar flotante del asistente: el toro de caricatura, fijo en la esquina inferior derecha de todo el
@@ -18,9 +20,10 @@ import { limitarPosicion, ubicarDialogo, type Lado, type Posicion } from "@/lib/
  * soltó, también en la próxima visita, y nunca se sale de la pantalla. Con el foco en el toro, Alt + flechas lo mueve.
  */
 const CLAVE = "cg_toro_pos";
-// Tamaño del toro: `w-[5.25rem]` y `sm:w-28`; el alto sale de la proporción de su dibujo (240 × 230).
-const ancho = (anchoPantalla: number) => (anchoPantalla >= 640 ? 112 : 84);
-const alto = (anchoPantalla: number) => Math.round((ancho(anchoPantalla) * 230) / 240);
+// Ancho del avatar (84 px en pantallas chicas y 112 px en las grandes); el alto sale de la proporción del dibujo de cada personaje. El ganadero es de
+// cuerpo completo y más alto, así que se dibuja un poco más angosto para no tapar tanto la página.
+const ancho = (anchoPantalla: number, personaje: PersonajeId = "toro") => Math.round((anchoPantalla >= 640 ? 112 : 84) * (personaje === "ganadero" ? 0.82 : 1));
+const alto = (anchoPantalla: number, personaje: PersonajeId = "toro") => Math.round((ancho(anchoPantalla, personaje) * PERSONAJES[personaje].alto) / PERSONAJES[personaje].ancho);
 
 // Lugar guardado del toro (`null`: su esquina de siempre). Se lee una vez y se avisa a los suscritos al cambiar.
 let guardada: Posicion | null | undefined;
@@ -49,6 +52,34 @@ function guardar(p: Posicion | null) {
 const suscribirGuardada = (f: () => void) => {
   oyentes.add(f);
   return () => void oyentes.delete(f);
+};
+
+// Personaje elegido (el toro de siempre o el ganadero): se recuerda en este navegador y se avisa a los suscritos al cambiar.
+const CLAVE_PERSONAJE = "cg_personaje";
+let personajeGuardado: PersonajeId | undefined;
+const oyentesPersonaje = new Set<() => void>();
+function leerPersonaje(): PersonajeId {
+  if (personajeGuardado === undefined) {
+    try {
+      personajeGuardado = personajeValido(localStorage.getItem(CLAVE_PERSONAJE));
+    } catch {
+      personajeGuardado = "toro";
+    }
+  }
+  return personajeGuardado;
+}
+function guardarPersonaje(p: PersonajeId) {
+  personajeGuardado = p;
+  try {
+    localStorage.setItem(CLAVE_PERSONAJE, p);
+  } catch {
+    // Sin almacenamiento: vale para esta visita.
+  }
+  oyentesPersonaje.forEach((f) => f());
+}
+const suscribirPersonaje = (f: () => void) => {
+  oyentesPersonaje.add(f);
+  return () => void oyentesPersonaje.delete(f);
 };
 
 // Tamaño de la ventana; el objeto no cambia mientras no cambie el tamaño (lo exige `useSyncExternalStore`).
@@ -88,12 +119,65 @@ export function ToroFlotante() {
     return () => document.removeEventListener("keydown", onKey);
   }, [abierto]);
 
+  const personaje = useSyncExternalStore(suscribirPersonaje, leerPersonaje, () => "toro" as PersonajeId);
+  const [accion, setAccion] = useState<{ id: string; texto: string } | null>(null);
+  const enIdioma = pathname === "/en" || pathname.startsWith("/en/");
+
+  // Gestos al estilo del Clippy: de vez en cuando el personaje hace algo y suelta una frase corta. No con el chat abierto, ni con la pestaña oculta,
+  // ni si la persona pidió menos movimiento.
+  useEffect(() => {
+    if (abierto || oculto || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    let espera: ReturnType<typeof setTimeout>;
+    let cierre: ReturnType<typeof setTimeout>;
+    let ultimo: string | null = null;
+    const programar = (ms: number) => {
+      espera = setTimeout(() => {
+        if (document.visibilityState === "visible") {
+          const g = siguienteGesto(personaje, ultimo);
+          ultimo = g.id;
+          setAccion({ id: g.id, texto: enIdioma ? g.en : g.es });
+          cierre = setTimeout(() => setAccion(null), 6500);
+        }
+        programar(esperaDeGesto());
+      }, ms);
+    };
+    programar(6000);
+    return () => {
+      clearTimeout(espera);
+      clearTimeout(cierre);
+      setAccion(null);
+    };
+  }, [personaje, abierto, oculto, enIdioma]);
+
+  // Las pupilas siguen el cursor: se calcula el desvío (de -1 a 1) hacia el puntero y se deja en variables CSS del avatar, sin renderizar de nuevo.
+  useEffect(() => {
+    if (oculto || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    let cuadro = 0;
+    const alMover = (e: PointerEvent) => {
+      cancelAnimationFrame(cuadro);
+      cuadro = requestAnimationFrame(() => {
+        const el = envoltura.current;
+        if (!el) return;
+        const r = el.getBoundingClientRect();
+        const dx = (e.clientX - (r.left + r.width / 2)) / 320;
+        const dy = (e.clientY - (r.top + r.height * 0.3)) / 320;
+        el.style.setProperty("--mx", String(Math.max(-1, Math.min(1, dx))));
+        el.style.setProperty("--my", String(Math.max(-1, Math.min(1, dy))));
+      });
+    };
+    window.addEventListener("pointermove", alMover, { passive: true });
+    return () => {
+      window.removeEventListener("pointermove", alMover);
+      cancelAnimationFrame(cuadro);
+    };
+  }, [oculto]);
+
   const en = pathname === "/en" || pathname.startsWith("/en/");
   if (oculto || /\/asistente(\/|$)/.test(pathname)) return null;
   const etiqueta = en ? "Ask the archive assistant" : "Pregúntale al asistente";
 
-  const W = ancho(vp.w);
-  const H = alto(vp.w);
+  const W = ancho(vp.w, personaje);
+  const H = alto(vp.w, personaje);
   // Tamaño del cuadro del chat cuando el toro no está en su esquina (en la esquina lo fijan las clases de abajo).
   const cuadro = { w: Math.min(416, vp.w - 24), h: Math.min(544, vp.h - 16) };
   // Dónde está el toro ahora: el arrastre en curso, o lo guardado ajustado a la ventana de hoy (puede haberse hecho más pequeña).
@@ -152,7 +236,7 @@ export function ToroFlotante() {
           role="dialog"
           aria-label={en ? "Archive assistant" : "Asistente del archivo"}
           hidden={!abierto}
-          style={dialogo ? { left: dialogo.x, top: dialogo.y, right: "auto", bottom: "auto", width: cuadro.w, height: cuadro.h } : undefined}
+          style={dialogo ? { left: dialogo.x, top: dialogo.y, right: "auto", bottom: "auto", width: cuadro.w, height: cuadro.h } : personaje === "ganadero" ? { bottom: `calc(${H}px + 2rem)` } : undefined}
           className="toro-dialogo max-md:hidden fixed bottom-[max(9rem,calc(env(safe-area-inset-bottom)+8.5rem))] right-[max(0.75rem,env(safe-area-inset-right))] z-30 flex h-[min(34rem,calc(100dvh-11.5rem))] w-[min(26rem,calc(100vw-1.5rem))] flex-col overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border-strong)] bg-[var(--bg)] text-[var(--fg)] shadow-[0_24px_60px_-20px_rgba(0,0,0,0.55)] print:hidden"
         >
           <div
@@ -188,6 +272,21 @@ export function ToroFlotante() {
       className="toro-wrap pointer-events-none max-md:hidden fixed bottom-[max(1rem,env(safe-area-inset-bottom))] right-[max(0.75rem,env(safe-area-inset-right))] z-30 print:hidden"
     >
       <div className="group pointer-events-auto relative">
+        {accion && !abierto && (
+          <div role="status" className="toro-globo pointer-events-none absolute bottom-full right-0 z-20 mb-2 w-52 rounded-2xl border border-[var(--border-strong)] bg-[var(--bg-2)] px-3 py-2 text-xs font-medium leading-snug text-[var(--fg)] shadow-[var(--shadow)]">
+            {accion.texto}
+            <span aria-hidden className="absolute -bottom-1.5 right-8 size-3 rotate-45 border-b border-r border-[var(--border-strong)] bg-[var(--bg-2)]" />
+          </div>
+        )}
+        <button
+          type="button"
+          onClick={() => guardarPersonaje(siguientePersonaje(personaje))}
+          aria-label={en ? `Change character (now: ${PERSONAJES[personaje].nombre.en})` : `Cambiar personaje (ahora: ${PERSONAJES[personaje].nombre.es})`}
+          title={en ? "Change character" : "Cambiar personaje"}
+          className="absolute -left-1 -top-1 z-10 grid size-7 place-items-center rounded-full border border-[var(--border-strong)] bg-[var(--bg-2)] text-[var(--fg-muted)] opacity-90 shadow transition hover:text-[var(--fg)] pointer-fine:size-5 pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100 pointer-fine:focus-visible:opacity-100"
+        >
+          <Repeat size={12} />
+        </button>
         <button
           type="button"
           onClick={() => setOculto(true)}
@@ -216,9 +315,10 @@ export function ToroFlotante() {
           aria-expanded={abierto}
           aria-controls="toro-dialogo"
           aria-keyshortcuts="Alt+ArrowLeft Alt+ArrowRight Alt+ArrowUp Alt+ArrowDown"
-          className="toro-float block w-[5.25rem] cursor-grab touch-none transition-transform hover:scale-110 active:cursor-grabbing sm:w-28"
+          style={{ width: W }}
+          className="toro-float block cursor-grab touch-none transition-transform hover:scale-110 active:cursor-grabbing"
         >
-          <ToroBot bubble={false} label={etiqueta} />
+          {personaje === "ganadero" ? <PersonajeGanadero label={etiqueta} gesto={accion?.id ?? null} /> : <ToroBot bubble={false} label={etiqueta} gesto={accion?.id ?? null} />}
         </button>
         <span className="pointer-events-none absolute bottom-full right-0 mb-1 hidden whitespace-nowrap rounded-full border border-[var(--border-strong)] bg-[var(--bg-2)] px-3 py-1 text-xs font-medium text-[var(--fg)] opacity-0 shadow transition group-hover:opacity-100 pointer-fine:block">
           {etiqueta}
