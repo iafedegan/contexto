@@ -2,6 +2,7 @@ import "server-only";
 import { eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { siteSettings } from "@/db/schema";
+import { guardarCifrasPrecios } from "@/lib/observatorio-tablas";
 import { cachear } from "@/lib/data-cache";
 import { descargarSeguro } from "@/lib/safe-fetch";
 import { parsearCsvIndicador, rangoDeMeses, type SerieCsv } from "@/lib/indicadores-csv";
@@ -129,6 +130,7 @@ export async function refrescarIndicadores(): Promise<boolean> {
 // Guarda la lectura completa como copia en la base.
 async function guardarSnapshot(valor: Indicador[]) {
   await db.insert(siteSettings).values({ key: SNAPSHOT_KEY, value: valor }).onConflictDoUpdate({ target: siteSettings.key, set: { value: valor, updatedAt: sql`now()` } });
+  await guardarCifrasPrecios(valor).catch((e) => console.error("indicadores: no se pudieron guardar las cifras en tablas", e));
 }
 
 // Orden: copia en la base (una consulta, instantánea) -> si no hay o es muy vieja, el origen. Con el origen caído se prefiere la copia vieja.

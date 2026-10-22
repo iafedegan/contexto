@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { siteSettings } from "@/db/schema";
 import { cachear } from "@/lib/data-cache";
 import { descargarSeguro } from "@/lib/safe-fetch";
+import { guardarCifrasObservatorio } from "@/lib/observatorio-tablas";
 import { limitador } from "@/lib/en-paralelo";
 import { parsearBibliotecas, parsearCsvGeneral, rangoDeMeses, type BibliotecaFuente, type SerieCsv } from "@/lib/indicadores-csv";
 import type { Formato } from "@/lib/graficas";
@@ -211,6 +212,8 @@ async function leerSnapshot(): Promise<{ valor: Observatorio; en: number } | nul
 // Guarda la lectura completa del origen como copia en la base.
 async function guardarSnapshot(valor: Observatorio) {
   await db.insert(siteSettings).values({ key: SNAPSHOT_KEY, value: valor }).onConflictDoUpdate({ target: siteSettings.key, set: { value: valor, updatedAt: sql`now()` } });
+  // Y las mismas cifras en tablas, para poder consultarlas con SQL (no debe impedir guardar la copia si la tabla aún no existe).
+  await guardarCifrasObservatorio(valor).catch((e) => console.error("observatorio: no se pudieron guardar las cifras en tablas", e));
 }
 
 /**

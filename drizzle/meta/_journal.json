@@ -183,6 +183,13 @@
       "when": 1792507275259,
       "tag": "0025_sesiones_de_la_superapp",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1792637354993,
+      "tag": "0026_cifras_del_observatorio",
+      "breakpoints": true
     }
   ]
 }

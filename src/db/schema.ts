@@ -16,9 +16,11 @@ import type { TextosCabecera } from "@/lib/textos-cabecera";
 import type { MenuNavbar } from "@/lib/menu-navbar";
 import type { ConfigConsejo, FichaPauta, TemaConsejo } from "@/lib/consejo/plan";
 import {
+  bigserial,
   boolean,
   customType,
   date,
+  doublePrecision,
   index,
   integer,
   jsonb,
@@ -29,6 +31,7 @@ import {
   smallint,
   text,
   timestamp,
+  unique,
   uniqueIndex,
   uuid,
   vector,
@@ -862,3 +865,30 @@ export const pushSubscriptions = pgTable("push_subscriptions", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+/**
+ * Las cifras del Observatorio en formato largo: una fila por tema, indicador, serie y periodo (p. ej. inventario · bovinos · Antioquia · 2025).
+ * Es una copia que se reescribe cada vez que se refrescan las lecturas del sistema de estadísticas de FEDEGÁN (`observatorio_snapshot` e
+ * `indicadores_snapshot` siguen siendo lo que dibuja las gráficas). Existe para poder consultarlas con SQL: el asistente la lee con una consulta
+ * generada por IA y validada (solo SELECT, solo esta tabla y `articles`).
+ */
+export const observatorioDatos = pgTable(
+  "observatorio_datos",
+  {
+    id: bigserial("id", { mode: "number" }).primaryKey(),
+    tema: text("tema").notNull(), // precios | inventario | hato | produccion | consumo | internacional | costos
+    indicador: text("indicador").notNull(), // clave del indicador (p. ej. «bovinos», «sacrificio»)
+    titulo: text("titulo").notNull(),
+    unidad: text("unidad").notNull().default(""),
+    fuente: text("fuente").notNull().default(""),
+    serie: text("serie").notNull(), // departamento, región, país o categoría
+    periodo: text("periodo").notNull(), // tal como lo da el origen: «2025», «sep/2026»
+    fecha: date("fecha"), // primer día del periodo, si se pudo interpretar
+    valor: doublePrecision("valor").notNull(),
+    actualizadoEn: timestamp("actualizado_en", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    unique("observatorio_datos_unico").on(t.tema, t.indicador, t.serie, t.periodo),
+    index("observatorio_datos_consulta_idx").on(t.tema, t.indicador, t.fecha),
+  ],
+);
