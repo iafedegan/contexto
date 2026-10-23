@@ -684,7 +684,9 @@ a {
 .lx-aurora::before {
   content: "";
   position: absolute;
-  inset: -20% -10% auto -10%;
+  /* En vh, no en %: un % se mide sobre la altura de la página, que salta al
+     cargar el contenido y desplazaba el halo entero (CLS ≈ 0,5). */
+  inset: -20vh -10% auto -10%;
   height: 120vh;
   z-index: -1;
   pointer-events: none;
