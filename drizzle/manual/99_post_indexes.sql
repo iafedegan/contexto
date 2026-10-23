@@ -22,3 +22,7 @@ CREATE INDEX IF NOT EXISTS archive_fts_es
 -- Trigram para autocompletar / búsquedas tolerantes a errores de tipeo.
 CREATE INDEX IF NOT EXISTS articles_title_trgm
   ON articles USING gin (title gin_trgm_ops);
+
+-- Listados de sección (p. ej. Regiones): categoría + estado + fecha. Idempotente.
+CREATE INDEX IF NOT EXISTS articles_category_status_published_idx
+  ON articles (category_id, status, published_at DESC);

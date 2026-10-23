@@ -68,6 +68,24 @@ const nextConfig: NextConfig = {
         ],
       },
       {
+        // Portada y secciones (p. ej. Regiones) son `force-dynamic` a propósito
+        // (no se prerenderizan en el build ni pueden leer searchParams con ISR),
+        // y por eso la CDN nunca las guardaba: cada visita daba MISS y volvía a
+        // consultar Supabase. Esta cabecera deja que el borde las sirva desde
+        // caché 5 min (y siga sirviéndolas mientras se refrescan en segundo
+        // plano). Cada combinación de filtros/paginación es una URL propia.
+        source: "/:locale(en)?",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=0, s-maxage=300, stale-while-revalidate=3600" },
+        ],
+      },
+      {
+        source: "/:locale(en)?/categoria/:slug",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=0, s-maxage=300, stale-while-revalidate=3600" },
+        ],
+      },
+      {
         // El Service Worker debe revalidarse siempre: nunca servir una versión
         // vieja de la lógica de caché offline desde un CDN/browser cache.
         source: "/sw.js",

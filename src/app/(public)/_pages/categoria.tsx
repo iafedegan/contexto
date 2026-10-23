@@ -8,7 +8,7 @@ import { JsonLd } from "@/components/json-ld";
 import { breadcrumbJsonLd, collectionJsonLd } from "@/lib/seo";
 import { SiteShell } from "@/components/site-shell";
 import { getSiteTheme } from "@/lib/site-theme";
-import { getArticlesByCategory } from "@/lib/content";
+import { getArticlesByCategory, getCategoryMeta } from "@/lib/content";
 import { siteUrl } from "@/lib/utils";
 
 /** Sección — plantilla «Cobre & Obsidiana». */
@@ -32,9 +32,7 @@ export async function generateStaticParams() {
 
 async function generateMetadataImpl({ params }: Params): Promise<Metadata> {
   const { slug } = await params;
-  const { category } = await getArticlesByCategory(slug, { limit: 1 }).catch(() => ({
-    category: null,
-  }));
+  const category = await getCategoryMeta(slug).catch(() => null);
   if (!category) return { title: "Sección no encontrada", robots: { index: false } };
   return {
     title: category.name,

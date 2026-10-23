@@ -210,6 +210,8 @@ export const articles = pgTable(
   (t) => [
     index("articles_status_published_idx").on(t.status, t.publishedAt),
     index("articles_category_idx").on(t.categoryId),
+    // Listados de sección: filtra por categoría+estado y ordena por fecha.
+    index("articles_category_status_published_idx").on(t.categoryId, t.status, t.publishedAt),
     index("articles_scheduled_idx").on(t.scheduledFor),
     index("articles_home_position_idx").on(t.homePosition),
     index("articles_views_idx").on(t.views),

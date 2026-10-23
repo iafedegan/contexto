@@ -128,6 +128,16 @@ export type CategoryFilters = {
   dateTo?: string;
 };
 
+/** Solo nombre y descripción de la sección (metadatos): sin listado ni count(*). */
+export const getCategoryMeta = cache(async (slug: string) => {
+  const [cat] = await db
+    .select({ name: categories.name, description: categories.description })
+    .from(categories)
+    .where(eq(categories.slug, slug))
+    .limit(1);
+  return cat ?? null;
+});
+
 export async function getArticlesByCategory(
   categorySlug: string,
   filters: CategoryFilters = {},
