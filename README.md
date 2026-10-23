@@ -326,13 +326,13 @@ verificable). Tope diario configurable. Encolados vía Inngest
 
 ## Tareas programadas y el plan de Vercel
 
-`vercel.json` declara dos crons con **frecuencia diaria**, que es el máximo que
-permite el plan Hobby (y solo admite dos):
+`vercel.json` declara tres crons (el plan Pro permite más de dos y cadencias de minutos):
 
 | Cron | Qué hace |
 |---|---|
+| `/api/cron/publish-scheduled?solo=programados` (cada 5 min) | Solo publica las notas y boletines programados que ya llegaron a su hora y redacta las piezas del consejo; no toca indicadores ni mantenimiento. |
 | `/api/cron/publish-scheduled` (11:00 UTC) | Publica las notas programadas que ya llegaron a su hora **y revalida el sitio** (`procesarProgramadas`, `src/lib/scheduled.ts`); refresca TRM/petróleo; y hace el **mantenimiento diario** (`src/lib/mantenimiento.ts`): purga la tabla `rate_limits`, aplica la retención de datos de suscriptores y borra los medios huérfanos. |
-| `/api/cron/sync-archive` (07:00 UTC) | Sincroniza el índice del archivo histórico. Es **reanudable**: guarda el cursor tras cada página, así que la carga completa de ~41.000 notas se completa en varias ejecuciones (`?full=1` para forzarla, `?reiniciar=1` para empezar de cero). |
+| `/api/cron/sync-archive` (cada 6 h) | Sincroniza el índice del archivo histórico. Es **reanudable**: guarda el cursor tras cada página, así que la carga completa de ~41.000 notas se completa en varias ejecuciones (`?full=1` para forzarla, `?reiniciar=1` para empezar de cero). |
 
 Para que una nota programada salga a su hora sin esperar al cron del día, el
 navegador de cualquier visitante avisa a `/api/programadas` (como mucho una vez
@@ -341,9 +341,4 @@ cada cinco minutos por navegador y una pasada por minuto en todo el sitio;
 externo (p. ej. Supabase `pg_cron`) se puede llamar cada minuto a
 `/api/cron/publish-scheduled?solo=programados` con `Authorization: Bearer $CRON_SECRET`.
 
-En cuanto el proyecto pase a Pro conviene devolver los crons a su cadencia real:
-
-```json
-{ "path": "/api/cron/publish-scheduled", "schedule": "*/5 * * * *" }
-{ "path": "/api/cron/sync-archive",      "schedule": "0 */6 * * *" }
-```
+Si se bajara a Hobby, Vercel rechazaría el despliegue (solo admite dos crons diarios).
