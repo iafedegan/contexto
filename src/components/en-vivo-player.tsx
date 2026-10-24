@@ -85,7 +85,9 @@ export function EnVivoPlayer({ videoId, titulo, url, children }: { videoId: stri
         />
       </div>
 
-      <aside aria-label="Herramientas del video" className={`flex flex-col gap-5 ${cine ? "lg:grid lg:grid-cols-3" : ""}`}>
+      {/* Con el video al lado, el panel mide lo mismo que el video y se desplaza por dentro: la página queda quieta. */}
+      <aside aria-label="Herramientas del video" className={cine ? "" : "lg:relative"}>
+        <div className={`flex flex-col gap-5 ${cine ? "lg:grid lg:grid-cols-3" : "lg:absolute lg:inset-0 lg:overflow-y-auto lg:overscroll-contain lg:pr-2"}`}>
         <section className="flex flex-col gap-3">
           <h2 className="lx-kicker text-[var(--accent)]">Reproducción</h2>
           <div className="grid grid-cols-2 gap-2">
@@ -159,6 +161,7 @@ export function EnVivoPlayer({ videoId, titulo, url, children }: { videoId: stri
         </section>
 
         {children}
+        </div>
       </aside>
     </div>
   );

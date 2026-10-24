@@ -10,6 +10,7 @@ import { getEnVivo } from "@/lib/en-vivo";
 import { getRecentArticles } from "@/lib/content";
 import { rutaDeNota } from "@/lib/ruta-nota";
 import { EnVivoPlayer } from "@/components/en-vivo-player";
+import { SectionHeader } from "@/components/section/section-layout";
 import { DEFAULT_LOCALE } from "@/lib/i18n";
 import { siteUrl } from "@/lib/utils";
 
@@ -33,54 +34,52 @@ export default async function EnVivoPage() {
   const titulo = en.titulo || "Transmisión en vivo";
 
   return (
-    <SiteShell theme={site.theme} style={site.style} locale={DEFAULT_LOCALE} variant="institucional">
-      <article className="mx-auto max-w-6xl">
-        <nav className="lx-ui mb-6 flex items-center gap-2 text-[0.72rem] uppercase tracking-[0.2em] text-[var(--fg-muted)]">
-          <Link href="/" className="lx-link">
-            Inicio
-          </Link>
-          <span aria-hidden className="text-[var(--accent-2)]">
-            /
-          </span>
-          <span className="text-[var(--accent)]">En vivo</span>
-        </nav>
+    <SiteShell theme={site.theme} style={site.style} locale={DEFAULT_LOCALE} variant="seccion">
+      <SectionHeader
+        theme={site.parts.body}
+        kicker="Transmisión"
+        title={titulo}
+        description="Sigue la transmisión en directo de CONtexto Ganadero."
+        breadcrumb={
+          /* Miga solo para lectores de pantalla, como en las secciones. */
+          <nav aria-label="breadcrumb" className="sr-only">
+            <Link href="/">Inicio</Link> / En vivo
+          </nav>
+        }
+        chips={
+          <>
+            <LiveBadge locale={DEFAULT_LOCALE} />
+            <a
+              href={`https://www.youtube.com/watch?v=${en.videoId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="lx-chip inline-flex items-center gap-1.5 hover:border-[var(--accent)] hover:text-[var(--accent)]"
+            >
+              <ExternalLink size={12} aria-hidden /> Ver en YouTube
+            </a>
+            <Link href="/" className="lx-chip hover:border-[var(--accent)] hover:text-[var(--accent)]">
+              ← Portada
+            </Link>
+          </>
+        }
+      />
 
-        <div className="mb-4 flex flex-wrap items-center gap-3">
-          <LiveBadge locale={DEFAULT_LOCALE} />
-          <h1 className="lx-display min-w-0 text-3xl font-semibold leading-tight tracking-tight md:text-4xl">{titulo}</h1>
-        </div>
-
-        <EnVivoPlayer videoId={en.videoId} titulo={titulo} url={siteUrl("/en-vivo")}>
-          {recientes.length > 0 && (
-            <section className="flex flex-col gap-3">
-              <h2 className="lx-kicker text-[var(--accent)]">Mientras tanto, lee</h2>
-              <ul className="flex flex-col divide-y divide-[var(--border)] border-y border-[var(--border)]">
-                {recientes.map((n) => (
-                  <li key={n.slug}>
-                    <Link href={rutaDeNota(n)} className="lx-display block py-2.5 text-[0.95rem] leading-snug hover:text-[var(--accent)]">
-                      {n.title}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
-        </EnVivoPlayer>
-
-        <div className="lx-ui mt-5 flex flex-wrap items-center gap-4 text-sm">
-          <a
-            href={`https://www.youtube.com/watch?v=${en.videoId}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 rounded-full border border-[var(--border-strong)] px-4 py-2 font-semibold text-[var(--accent)] transition hover:bg-[var(--surface-2)]"
-          >
-            <ExternalLink size={15} aria-hidden /> Ver en YouTube
-          </a>
-          <Link href="/" className="lx-link text-[var(--fg-muted)]">
-            ← Volver a la portada
-          </Link>
-        </div>
-      </article>
+      <EnVivoPlayer videoId={en.videoId} titulo={titulo} url={siteUrl("/en-vivo")}>
+        {recientes.length > 0 && (
+          <section className="flex flex-col gap-3">
+            <h2 className="lx-kicker text-[var(--accent)]">Mientras tanto, lee</h2>
+            <ul className="flex flex-col divide-y divide-[var(--border)] border-y border-[var(--border)]">
+              {recientes.map((n) => (
+                <li key={n.slug}>
+                  <Link href={rutaDeNota(n)} className="lx-display block py-2.5 text-[0.95rem] leading-snug hover:text-[var(--accent)]">
+                    {n.title}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+      </EnVivoPlayer>
     </SiteShell>
   );
 }
