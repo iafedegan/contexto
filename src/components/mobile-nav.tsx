@@ -103,7 +103,7 @@ export function MobileNav({
   // El enlace mide 44 px de alto (el texto solo mide ~22); el nombre se recorta dentro con «…».
   const logo = (cls: string) => (
     <Link href={localePath(locale, "/")} className={`flex min-h-11 min-w-0 items-center ${cls.includes("text-center") ? "justify-center" : ""} ${cls}`}>
-      <span className="truncate">{name}</span>
+      <span className="lx-foil truncate">{name}</span>
     </Link>
   );
 
