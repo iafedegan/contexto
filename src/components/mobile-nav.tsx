@@ -46,6 +46,7 @@ export function MobileNav({
   locale,
   radioStreamUrl,
   tagline,
+  fecha,
 }: {
   look: MobileLook;
   name: string;
@@ -55,6 +56,8 @@ export function MobileNav({
   radioStreamUrl?: string | null;
   /** Lema bajo el nombre. Si viene (cabecera «masthead»), el nombre se pinta como en la web: dorado con brillo, con filetes y lema. */
   tagline?: string;
+  /** Fecha de hoy bajo el nombre (como en la cabecera de escritorio); solo con cabecera «masthead». */
+  fecha?: string;
 }) {
   const [open, setOpen] = useState(false);
   // Sección cuyas subsecciones están desplegadas (ninguna al abrir el menú).
@@ -109,12 +112,13 @@ export function MobileNav({
 
   // El nombre como en la web (MastheadHeader de site-header.tsx): dorado con el brillo que lo recorre, filetes que se
   // desvanecen a los lados y el lema debajo. `lx-kicker` no sirve aquí: su tamaño sin capa le gana a las utilidades.
-  const escaparate = tagline ? (
+  const escaparate = tagline || fecha ? (
     <div className="flex min-w-0 items-center justify-center gap-4 px-2 py-2.5">
       <span aria-hidden className="h-px flex-1 bg-gradient-to-r from-transparent to-[var(--border-strong)]" />
       <Link href={localePath(locale, "/")} className="block min-w-0 text-center">
         <span className="lx-display lx-foil block whitespace-nowrap text-[clamp(1.4rem,7.2vw,1.9rem)] font-semibold leading-tight tracking-tight">{name}</span>
-        <span className="lx-ui mt-1.5 block whitespace-nowrap text-[clamp(0.55rem,2.6vw,0.7rem)] font-semibold uppercase leading-none tracking-[0.16em] text-[var(--fg-muted)]">{tagline}</span>
+        {tagline && <span className="lx-ui mt-1.5 block whitespace-nowrap text-[clamp(0.55rem,2.6vw,0.7rem)] font-semibold uppercase leading-none tracking-[0.16em] text-[var(--fg-muted)]">{tagline}</span>}
+        {fecha && <span className="lx-ui mt-1.5 block whitespace-nowrap text-[0.62rem] font-medium uppercase leading-none tracking-[0.18em] text-[var(--fg-muted)]/80">{fecha}</span>}
       </Link>
       <span aria-hidden className="h-px flex-1 bg-gradient-to-l from-transparent to-[var(--border-strong)]" />
     </div>
