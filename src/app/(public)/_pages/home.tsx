@@ -18,6 +18,8 @@ import { duracionDelCintillo, piezasDelCintillo, sanitizeTicker } from "@/lib/ci
 import { DEFAULT_HOME_LAYOUT, splitHomeSlots } from "@/lib/home-layout";
 import { getSiteTheme } from "@/lib/site-theme";
 import { getSiteIdentity } from "@/lib/site-identity";
+import { getEnVivo } from "@/lib/en-vivo";
+import { EnVivoBlock } from "@/components/home/en-vivo-block";
 import { formatMarketValue, getMarketTicker } from "@/lib/market-data";
 
 /**
@@ -58,7 +60,7 @@ async function HomePage({ locale }: { locale: Locale }) {
   const { lead, second, rail, river } = splitHomeSlots(articles);
   // Cuerpo de la plantilla compuesta; la paleta sigue siendo `templateId`.
   // Se toma de getSiteTheme (misma fuente que el resto del portal).
-  const [site, identity] = await Promise.all([getSiteTheme(), getSiteIdentity()]);
+  const [site, identity, enVivo] = await Promise.all([getSiteTheme(), getSiteIdentity(), getEnVivo()]);
   const body = site.parts.body;
 
   const opinion = articles.find((a) => a.categorySlug === "opinion");
@@ -156,6 +158,8 @@ async function HomePage({ locale }: { locale: Locale }) {
           {/* Cada plantilla se referencia por su nombre en el JSX (y no por un
               mapa indexado en runtime) para no perder el límite cliente/servidor
               que Next resuelve de forma estática. */}
+          {/* Con una transmisión encendida en /panel/en-vivo, el video toma el lugar principal y la nota destacada baja. */}
+          <EnVivoBlock config={enVivo} locale={locale} />
           {body === "revista" ? (
             <RevistaTemplate {...props} />
           ) : body === "compacto" ? (
