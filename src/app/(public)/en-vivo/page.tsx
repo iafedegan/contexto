@@ -7,6 +7,9 @@ import { SiteShell } from "@/components/site-shell";
 import { LiveBadge } from "@/components/live-badge";
 import { getSiteTheme } from "@/lib/site-theme";
 import { getEnVivo } from "@/lib/en-vivo";
+import { getRecentArticles } from "@/lib/content";
+import { rutaDeNota } from "@/lib/ruta-nota";
+import { EnVivoPlayer } from "@/components/en-vivo-player";
 import { DEFAULT_LOCALE } from "@/lib/i18n";
 import { siteUrl } from "@/lib/utils";
 
@@ -25,13 +28,13 @@ export async function generateMetadata(): Promise<Metadata> {
 
 // Reproductor grande de YouTube con el título, y enlaces para verlo en YouTube o volver a la portada.
 export default async function EnVivoPage() {
-  const [en, site] = await Promise.all([getEnVivo(), getSiteTheme()]);
+  const [en, site, recientes] = await Promise.all([getEnVivo(), getSiteTheme(), getRecentArticles(5).catch(() => [])]);
   if (!en.activo) redirect("/");
   const titulo = en.titulo || "Transmisión en vivo";
 
   return (
     <SiteShell theme={site.theme} style={site.style} locale={DEFAULT_LOCALE} variant="institucional">
-      <article className="mx-auto max-w-5xl">
+      <article className="mx-auto max-w-6xl">
         <nav className="lx-ui mb-6 flex items-center gap-2 text-[0.72rem] uppercase tracking-[0.2em] text-[var(--fg-muted)]">
           <Link href="/" className="lx-link">
             Inicio
@@ -47,16 +50,22 @@ export default async function EnVivoPage() {
           <h1 className="lx-display min-w-0 text-3xl font-semibold leading-tight tracking-tight md:text-4xl">{titulo}</h1>
         </div>
 
-        <div className="aspect-video w-full overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border)] bg-black">
-          <iframe
-            src={`https://www.youtube-nocookie.com/embed/${en.videoId}?rel=0&modestbranding=1&iv_load_policy=3&playsinline=1&autoplay=1`}
-            title={titulo}
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-            referrerPolicy="strict-origin-when-cross-origin"
-            allowFullScreen
-            className="size-full border-0"
-          />
-        </div>
+        <EnVivoPlayer videoId={en.videoId} titulo={titulo} url={siteUrl("/en-vivo")}>
+          {recientes.length > 0 && (
+            <section className="flex flex-col gap-3">
+              <h2 className="lx-kicker text-[var(--accent)]">Mientras tanto, lee</h2>
+              <ul className="flex flex-col divide-y divide-[var(--border)] border-y border-[var(--border)]">
+                {recientes.map((n) => (
+                  <li key={n.slug}>
+                    <Link href={rutaDeNota(n)} className="lx-display block py-2.5 text-[0.95rem] leading-snug hover:text-[var(--accent)]">
+                      {n.title}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+        </EnVivoPlayer>
 
         <div className="lx-ui mt-5 flex flex-wrap items-center gap-4 text-sm">
           <a
