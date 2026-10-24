@@ -181,7 +181,7 @@ export function MobileNav({
             {menuButton}
             <Link href={localePath(locale, "/")} className="flex min-w-0 items-center justify-center gap-2">
               <LogoMark size={32} />
-              <span className="lx-display truncate text-sm uppercase tracking-[0.22em]">{name}</span>
+              <span className="lx-display lx-foil truncate text-sm uppercase tracking-[0.22em]">{name}</span>
             </Link>
             {searchLink}
           </div>
@@ -203,7 +203,7 @@ export function MobileNav({
           className="fixed inset-0 z-[100] flex flex-col bg-[var(--bg)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] text-[var(--fg)]"
         >
           <div className="flex items-center justify-between gap-3 border-b border-[var(--border)] px-4 pb-2 pt-[max(0.5rem,env(safe-area-inset-top))]">
-            <Link href={localePath(locale, "/")} onClick={() => setOpen(false)} className="lx-display min-w-0 truncate text-lg font-semibold">
+            <Link href={localePath(locale, "/")} onClick={() => setOpen(false)} className="lx-display lx-foil min-w-0 truncate text-lg font-semibold">
               {name}
             </Link>
             <button ref={closeRef} type="button" onClick={() => setOpen(false)} aria-label={label.close} className={btn}>
