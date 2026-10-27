@@ -206,7 +206,6 @@ export function MobileNav({
     <header data-region="navbar" className="relative z-40 bg-[var(--nav-bg)] pt-[env(safe-area-inset-top)] text-[var(--fg)] md:sticky md:top-0 lg:hidden">
       {bar}
       {/* En el celular el menú y la lupa viven en la barra de abajo y esta queda con solo el nombre: el modo claro/oscuro va aquí, a la vista. */}
-      <ThemeToggle locale={locale} className="absolute right-1 top-[calc(env(safe-area-inset-top)+0.125rem)] md:hidden" />
 
       <div className="flex flex-col items-center pb-1">
         <button
