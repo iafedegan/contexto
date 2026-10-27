@@ -9,6 +9,7 @@ import { invalidarCache } from "@/lib/data-cache";
 import { EN_VIVO_KEY } from "@/lib/en-vivo";
 import { sanitizeEnVivo } from "@/lib/en-vivo-types";
 import { enviarAviso } from "@/lib/push";
+import { getSiteIdentity } from "@/lib/site-identity";
 import { siteUrl } from "@/lib/utils";
 
 // Estado que se devuelve al formulario: si salió bien y el mensaje.
@@ -42,8 +43,8 @@ export async function guardarEnVivo(_prev: EnVivoState, formData: FormData): Pro
   let aviso = "";
   if (config.activo && !(antes.activo && antes.videoId === config.videoId)) {
     const res = await enviarAviso({
-      titulo: "🔴 Estamos en vivo",
-      cuerpo: config.titulo || "Sigue la transmisión en CONtexto Ganadero.",
+      titulo: `🔴 Estamos en vivo desde ${(await getSiteIdentity().catch(() => ({ name: "CONtexto Ganadero" }))).name}`,
+      cuerpo: config.titulo || "Sigue la transmisión ahora.",
       url: `${siteUrl("/en-vivo")}?utm_source=push&utm_medium=notificacion&utm_campaign=en-vivo`,
       tag: "en-vivo",
       urgente: true,
