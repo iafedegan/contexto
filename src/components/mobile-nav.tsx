@@ -138,7 +138,7 @@ export function MobileNav({
     case "masthead":
       // Diario: menú a la izquierda, cabecera centrada, buscar a la derecha.
       bar = (
-        <div className="grid grid-cols-[2.75rem_1fr_2.75rem] items-center border-b border-[var(--border)] px-2 py-1 max-md:grid-cols-1">
+        <div className="grid grid-cols-[2.75rem_1fr_2.75rem] items-center px-2 py-1 max-md:grid-cols-1">
           {menuButton}
           {escaparate ?? logo("lx-display text-center text-[1.35rem] font-semibold leading-none tracking-tight")}
           {searchLink}
@@ -208,13 +208,13 @@ export function MobileNav({
       {/* En el celular el menú y la lupa viven en la barra de abajo y esta queda con solo el nombre: el modo claro/oscuro va aquí, a la vista. */}
       <ThemeToggle locale={locale} className="absolute right-1 top-[calc(env(safe-area-inset-top)+0.125rem)] md:hidden" />
 
-      <div className="flex flex-col items-center border-b border-[var(--border)] pb-2">
+      <div className="flex flex-col items-center pb-1">
         <button
           type="button"
           onClick={() => setMore((v) => !v)}
           aria-expanded={more}
           aria-label={es ? "Más opciones" : "More options"}
-          className="grid h-8 w-16 place-items-center rounded-full border border-[var(--border-strong)] text-[var(--accent)]"
+          className="grid h-8 w-16 place-items-center text-[var(--accent)]"
         >
           <ChevronDown size={18} className={`transition ${more ? "rotate-180" : ""}`} />
         </button>
