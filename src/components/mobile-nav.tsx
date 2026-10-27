@@ -2,8 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ChevronDown, ChevronRight, Menu, Search, X } from "lucide-react";
-import { LocaleSwitch } from "@/components/locale-switch";
+import { ChevronDown, ChevronRight, Menu, Moon, Search, UserCircle, X } from "lucide-react";
 import { LogoMark } from "@/components/logo-mark";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { RadioPlayer } from "@/components/radio-player";
@@ -62,9 +61,18 @@ export function MobileNav({
   const [open, setOpen] = useState(false);
   // Sección cuyas subsecciones están desplegadas (ninguna al abrir el menú).
   const [desplegada, setDesplegada] = useState<string | null>(null);
+  const [more, setMore] = useState(false);
   const closeRef = useRef<HTMLButtonElement>(null);
   const label = LABELS[locale === "en" ? "en" : "es"];
   const all = [...nav, ...extra];
+  const es = locale !== "en";
+  const toggleTheme = () => {
+    const d = document.documentElement.dataset.dark;
+    const dark = d === "1" || (d !== "0" && ["home", "esmeralda", "revista", "vanguardia"].includes(document.querySelector("[data-site-root]")?.getAttribute("data-theme") ?? ""));
+    const nuevo = !dark;
+    document.documentElement.dataset.dark = nuevo ? "1" : "0";
+    try { localStorage.setItem("cg-modo", nuevo ? "oscuro" : "claro"); } catch { /* sin almacenamiento */ }
+  };
 
   // La pestaña «Secciones» de la barra inferior pide abrir este mismo menú (src/components/mobile-tab-bar.tsx).
   useEffect(() => {
@@ -200,6 +208,30 @@ export function MobileNav({
       {/* En el celular el menú y la lupa viven en la barra de abajo y esta queda con solo el nombre: el modo claro/oscuro va aquí, a la vista. */}
       <ThemeToggle locale={locale} className="absolute right-1 top-[calc(env(safe-area-inset-top)+0.125rem)] md:hidden" />
 
+      <div className="flex flex-col items-center border-b border-[var(--border)] pb-2">
+        <button
+          type="button"
+          onClick={() => setMore((v) => !v)}
+          aria-expanded={more}
+          aria-label={es ? "Más opciones" : "More options"}
+          className="grid h-8 w-16 place-items-center rounded-full border border-[var(--border-strong)] text-[var(--accent)]"
+        >
+          <ChevronDown size={18} className={`transition ${more ? "rotate-180" : ""}`} />
+        </button>
+        {more && (
+          <div className="mt-2 w-[min(18rem,90%)] rounded-2xl border border-[var(--border-strong)] bg-[var(--surface-2)] p-2">
+            <button type="button" onClick={toggleTheme} className="flex min-h-12 w-full items-center gap-3 rounded-xl px-2 text-left text-base font-semibold">
+              <span className="grid size-10 place-items-center rounded-full border border-[var(--border-strong)] text-[var(--accent)]"><Moon size={18} /></span>
+              {es ? "Tono claro / oscuro" : "Light / dark"}
+            </button>
+            <Link href="/panel/login" className="flex min-h-12 items-center gap-3 rounded-xl px-2 text-base font-semibold text-[var(--accent)]">
+              <span className="grid size-10 place-items-center rounded-full border border-[var(--border-strong)]"><UserCircle size={18} /></span>
+              {es ? "Iniciar sesión" : "Sign in"}
+            </Link>
+          </div>
+        )}
+      </div>
+
       {open && (
         <div
           id="mobile-menu"
@@ -278,7 +310,6 @@ export function MobileNav({
           </nav>
 
           <div className="flex flex-wrap items-center gap-3 border-t border-[var(--border)] px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3">
-            <LocaleSwitch locale={locale} />
             <ThemeToggle locale={locale} />
             {radioStreamUrl && <RadioPlayer src={radioStreamUrl} locale={locale} />}
             <span className="ml-auto"><InstalarApp locale={locale} /></span>
