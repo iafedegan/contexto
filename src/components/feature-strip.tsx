@@ -41,7 +41,7 @@ export function FeatureStrip({ locale = DEFAULT_LOCALE, items }: { locale?: Loca
           </Link>
           <div className="min-w-0">
             <span className="kicker">{label}</span>
-            <h3 className="entry-title mt-1 text-[1.05rem] leading-snug">
+            <h3 className="entry-title mt-1 text-[1.125rem] leading-snug">
               <Link href={hrefNota(locale, a)} className="hover:underline">
                 {a.title}
               </Link>

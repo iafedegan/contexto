@@ -162,6 +162,8 @@ export type CategoryFilters = {
   regionSlug?: string;
   /** Departamento (ver regiones-colombia.ts): notas que lo mencionan o su capital. */
   departamentoSlug?: string;
+  /** C-11: `recientes` (por defecto) o `leidos` (más vistas primero). */
+  sort?: "recientes" | "leidos";
 };
 
 /** Solo nombre y descripción de la sección (metadatos): sin listado ni count(*). */
@@ -208,7 +210,7 @@ export function enCategorias(ids: string[], slugs: string[]): SQL {
 const leerCategoria = cachear(
   "categoria",
   async (categorySlug: string, filters: CategoryFilters): Promise<ListadoCategoria> => {
-  const { limit = 20, offset = 0, subcategorySlug, dateFrom, dateTo, authorSlug, regionSlug, departamentoSlug } = filters;
+  const { limit = 20, offset = 0, subcategorySlug, dateFrom, dateTo, authorSlug, regionSlug, departamentoSlug, sort = "recientes" } = filters;
 
   const [cat] = await db
     .select({ id: categories.id, name: categories.name, description: categories.description, parentId: categories.parentId })
@@ -254,7 +256,7 @@ const leerCategoria = cachear(
           .leftJoin(categories, eq(articles.categoryId, categories.id))
           .leftJoin(authors, eq(articles.authorId, authors.id))
           .where(where)
-          .orderBy(desc(articles.publishedAt))
+          .orderBy(...(sort === "leidos" ? [desc(articles.views), desc(articles.publishedAt)] : [desc(articles.publishedAt)]))
           .limit(limit)
           .offset(offset),
     categoryIds.length === 0

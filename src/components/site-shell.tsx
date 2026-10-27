@@ -2,6 +2,7 @@ import { getBreakingArticle, getNavChildren, getTopLevelCategories } from "@/lib
 import { getSiteIdentity } from "@/lib/site-identity";
 import { getSiteTheme } from "@/lib/site-theme";
 import { getSitePopup } from "@/lib/popup";
+import { BackToTop } from "@/components/back-to-top";
 import { SitePopupDiferido } from "@/components/site-popup-diferido";
 import { ReadingProgress } from "@/components/reading-progress";
 import { AdsBanner } from "@/components/ads-banner";
@@ -134,6 +135,7 @@ export async function SiteShell({
       </div>
       {/* Popup diseñado en /panel/portada (si está activo). */}
       {popup.enabled && <SitePopupDiferido config={popup} />}
+      <BackToTop locale={locale} />
       <SiteFooter theme={theme} nav={nav} locale={locale} identity={identity} variant={site.parts.footer} />
       {/* Barra de pestañas del celular: DENTRO del contenedor con `data-theme`, para heredar la paleta de la plantilla. */}
       <MobileTabBar />

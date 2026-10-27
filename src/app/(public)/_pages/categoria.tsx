@@ -22,7 +22,7 @@ export const revalidate = 600;
 // Parámetros de la ruta: la dirección de la sección.
 type Params = { params: Promise<{ slug: string }> };
 /** Filtros de la sección: subcategoría, rango de fechas y página. */
-type Query = Promise<{ subcategoria?: string; desde?: string; hasta?: string; pagina?: string; autor?: string; anio?: string; mes?: string; region?: string; depto?: string }>;
+type Query = Promise<{ subcategoria?: string; desde?: string; hasta?: string; pagina?: string; autor?: string; anio?: string; mes?: string; region?: string; depto?: string; orden?: string }>;
 // Parámetros de la ruta y filtros de la dirección.
 type PageProps = Params & { searchParams?: Query };
 
@@ -79,6 +79,7 @@ async function CategoryPage({ params, searchParams, locale }: PageProps & { loca
   const region = slug === "regiones" ? regionPorSlug(q.region)?.slug : undefined;
   const depto = slug === "regiones" ? departamentoPorSlug(q.depto)?.slug : undefined;
   const page = Math.max(1, Number(pagina) || 1);
+  const sort = q.orden === "leidos" ? "leidos" : "recientes";
 
   const { category, subcategories, items, total, totalAproximado } = await getArticlesByCategory(slug, {
     limit: PAGE_SIZE,
@@ -89,6 +90,7 @@ async function CategoryPage({ params, searchParams, locale }: PageProps & { loca
     authorSlug: autor,
     regionSlug: region,
     departamentoSlug: depto,
+    sort,
   }).catch(() => ({ category: null, subcategories: [], items: [], total: 0, totalAproximado: false }));
   if (!category) notFound();
 
@@ -118,6 +120,7 @@ async function CategoryPage({ params, searchParams, locale }: PageProps & { loca
     if (depto) sp.set("depto", depto);
     if (anio) sp.set("anio", String(anio));
     if (mes) sp.set("mes", String(mes));
+    if (sort === "leidos") sp.set("orden", sort);
     if (n > 1) sp.set("pagina", String(n));
     const qs = sp.toString();
     return localePath(locale, `/categoria/${slug}${qs ? `?${qs}` : ""}`);
@@ -249,6 +252,30 @@ async function CategoryPage({ params, searchParams, locale }: PageProps & { loca
               {totalAproximado ? `+${total.toLocaleString("es-CO")}` : total} {t(locale, "section.count")}
             </span>
             <span className="lx-chip max-sm:hidden">{t(locale, "section.live")}</span>
+            {/* Orden (C-11): enlaces con su propia URL; conservan los filtros activos. */}
+            {(["recientes", "leidos"] as const).map((o) => {
+              const sp = new URLSearchParams();
+              if (subcategoria) sp.set("subcategoria", subcategoria);
+              if (q.desde && !anio) sp.set("desde", q.desde);
+              if (q.hasta && !anio) sp.set("hasta", q.hasta);
+              if (autor) sp.set("autor", autor);
+              if (region) sp.set("region", region);
+              if (depto) sp.set("depto", depto);
+              if (anio) sp.set("anio", String(anio));
+              if (mes) sp.set("mes", String(mes));
+              if (o === "leidos") sp.set("orden", o);
+              const qs = sp.toString();
+              return (
+                <Link
+                  key={o}
+                  href={localePath(locale, `/categoria/${slug}${qs ? `?${qs}` : ""}`)}
+                  aria-current={sort === o ? "true" : undefined}
+                  className={`lx-chip min-h-10 items-center ${sort === o ? "border-[var(--accent)] text-[var(--accent)]" : "hover:text-[var(--accent)]"}`}
+                >
+                  {t(locale, o === "leidos" ? "section.sortRead" : "section.sortRecent")}
+                </Link>
+              );
+            })}
             {(pos === "cabecera" || pos === "barra") && filters}
           </>
         }
