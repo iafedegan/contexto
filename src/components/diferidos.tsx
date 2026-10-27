@@ -7,3 +7,4 @@ export const ToroFlotanteDiferido = diferido(() => import("@/components/toro-flo
 export const MedicionConsentDiferido = diferido(() => import("@/components/medicion-consent").then((m) => m.MedicionConsent));
 export const LocationConsentDiferido = diferido(() => import("@/components/location-consent").then((m) => m.LocationConsent));
 export const PwaAvisosDiferido = diferido(() => import("@/components/pwa-avisos").then((m) => m.PwaAvisos));
+export const EnVivoAvisoDiferido = diferido(() => import("@/components/en-vivo-aviso").then((m) => m.EnVivoAviso));

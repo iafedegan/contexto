@@ -6,7 +6,7 @@ import { organizationJsonLd } from "@/lib/seo";
 import { siteUrl } from "@/lib/utils";
 import { getSiteIdentity } from "@/lib/site-identity";
 import { getSearchConsoleToken } from "@/lib/analytics-server";
-import { PwaAvisosDiferido } from "@/components/diferidos";
+import { EnVivoAvisoDiferido, PwaAvisosDiferido } from "@/components/diferidos";
 import { PwaRegister } from "@/components/pwa-register";
 import { ProgramadasTick } from "@/components/programadas-tick";
 import "./globals.css";
@@ -111,6 +111,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <JsonLd data={organizationJsonLd()} />
         <PwaRegister />
         <PwaAvisosDiferido />
+        <EnVivoAvisoDiferido />
         <ProgramadasTick />
         {children}
       </body>
