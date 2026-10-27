@@ -50,7 +50,8 @@ function sanitizeEstilo(input: unknown): EstiloMenu | undefined {
 export function menuNavCss(menu: MenuNavbar | undefined, scope = "[data-site-root]"): string {
   const e = menu?.estilo;
   if (!e) return "";
-  const nav = `${scope} [data-region="navbar"] nav`;
+  // El menú a pantalla completa del móvil (#mobile-menu) tiene su propia tipografía: el estilo es solo de la barra.
+  const nav = `${scope} [data-region="navbar"] nav:not(#mobile-menu nav)`;
   const enlaces = `${nav} a:not([role="menuitem"])`;
   const nd: string[] = [];
   const ld: string[] = [];
