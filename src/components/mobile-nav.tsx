@@ -291,6 +291,11 @@ export function MobileNav({
                             <Link href={localePath(locale, h.href)} onClick={() => setOpen(false)} className="lx-ui flex min-h-11 items-center text-[0.95rem] text-[var(--fg-muted)] active:text-[var(--accent)]">
                               {h.label}
                             </Link>
+                            {(h.children ?? []).map((g) => (
+                              <Link key={g.href} href={localePath(locale, g.href)} onClick={() => setOpen(false)} className="lx-ui flex min-h-10 items-center pl-4 text-[0.88rem] text-[var(--fg-muted)] active:text-[var(--accent)]">
+                                {g.label}
+                              </Link>
+                            ))}
                           </li>
                         ))}
                       </ul>

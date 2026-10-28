@@ -169,7 +169,11 @@ export async function navItems(locale: Locale = DEFAULT_LOCALE): Promise<NavItem
         href: `/categoria/${c.slug}`,
         label: categoryLabel(locale, c.slug, c.name),
         // Subsecciones que se despliegan bajo la sección en la barra de navegación.
-        children: (hijas[c.slug] ?? []).map((h) => ({ href: `/categoria/${h.slug}`, label: categoryLabel(locale, h.slug, h.name) })),
+        children: (hijas[c.slug] ?? []).map((h) => ({
+          href: `/categoria/${h.slug}`,
+          label: categoryLabel(locale, h.slug, h.name),
+          children: (h.children ?? []).map((n) => ({ href: `/categoria/${n.slug}`, label: categoryLabel(locale, n.slug, n.name) })),
+        })),
       })),
       // El Observatorio (indicadores y mapa) es una página fija del sitio, no una sección: va aparte del límite N-04.
       { href: "/observatorio", label: t(locale, "nav.observatory") },

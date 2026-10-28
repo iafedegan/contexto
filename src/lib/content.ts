@@ -436,19 +436,32 @@ const leerCategoriasPrincipales = cachear(
 /** Solo las categorías de primer nivel (sin padre) — para el navbar. */
 export const getTopLevelCategories = cache(() => leerCategoriasPrincipales());
 
+/** Subsección del menú; `children` son las de tercer nivel (por ejemplo, los países de Sur América). */
+export type NavHija = { slug: string; name: string; children?: { slug: string; name: string }[] };
+
 // Subsecciones de cada sección de primer nivel (por slug del padre), en su orden, leídas de la caché de datos (5 minutos).
 const leerHijasDelMenu = cachear(
   "menu-hijas",
-  async (): Promise<Record<string, { slug: string; name: string }[]>> => {
+  async (): Promise<Record<string, NavHija[]>> => {
     const filas = await db
       .select({ id: categories.id, slug: categories.slug, name: categories.name, parentId: categories.parentId })
       .from(categories)
       .orderBy(categories.sortOrder, categories.name);
-    const slugDe = new Map(filas.map((f) => [f.id, f.slug]));
-    const salida: Record<string, { slug: string; name: string }[]> = {};
+    const porId = new Map(filas.map((f) => [f.id, f]));
+    const salida: Record<string, NavHija[]> = {};
+    const hijaDe = new Map<string, NavHija>();
+    // Primero las subsecciones (nivel 2) bajo su sección principal; luego las de tercer nivel, dentro de su subsección.
     for (const f of filas) {
-      const padre = f.parentId ? slugDe.get(f.parentId) : undefined;
-      if (padre) (salida[padre] ??= []).push({ slug: f.slug, name: f.name });
+      const padre = f.parentId ? porId.get(f.parentId) : undefined;
+      if (padre && !padre.parentId) {
+        const h: NavHija = { slug: f.slug, name: f.name, children: [] };
+        hijaDe.set(f.id, h);
+        (salida[padre.slug] ??= []).push(h);
+      }
+    }
+    for (const f of filas) {
+      const h = f.parentId ? hijaDe.get(f.parentId) : undefined;
+      if (h) h.children!.push({ slug: f.slug, name: f.name });
     }
     return salida;
   },

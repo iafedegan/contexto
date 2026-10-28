@@ -99,6 +99,7 @@ export function SectionTree({ sections, onSaved }: { sections: SectionNode[]; on
   const more = tree.slice(NAV_VISIBLE);
 
   // Dibuja una sección principal con sus subsecciones.
+  const nietosDe = (id: string) => sections.filter((s) => s.parentId === id);
   const renderBranch = ({ node, kids }: Branch, pos: number | null) => {
     const isOpen = open.has(node.id);
     return (
@@ -138,8 +139,18 @@ export function SectionTree({ sections, onSaved }: { sections: SectionNode[]; on
                   }}
                   className="inline-block"
                 >
-                  <NodePill s={k} level={2} active={selected === k.id} onClick={() => setSelected(k.id)} />
+                  <NodePill s={k} level={2} active={selected === k.id} onClick={() => setSelected(k.id)} extra={nietosDe(k.id).length ? `${nietosDe(k.id).length} sub` : undefined} />
                 </div>
+                {nietosDe(k.id).length > 0 && (
+                  <ul className="ml-[0.7rem] mt-1 border-l-2 border-[var(--border)] pl-0">
+                    {nietosDe(k.id).map((n) => (
+                      <li key={n.id} className="relative pl-5 pt-1">
+                        <span aria-hidden className="absolute left-0 top-[0.95rem] h-0.5 w-5 bg-[var(--border)]" />
+                        <NodePill s={n} level={2} active={selected === n.id} onClick={() => setSelected(n.id)} />
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </li>
             ))}
           </ul>
@@ -199,7 +210,7 @@ export function SectionTree({ sections, onSaved }: { sections: SectionNode[]; on
       </div>
 
       <p className="text-xs text-[var(--fg-muted)]">
-        Arrastra una sección sobre otra para colgarla de ella, o sobre «Barra del sitio» para volverla principal (queda al final: en «Más» si ya hay {NAV_VISIBLE}). El menú tiene dos niveles: una sección con subsecciones no puede colgar de otra.
+        Arrastra una sección sobre otra para colgarla de ella, o sobre «Barra del sitio» para volverla principal (queda al final: en «Más» si ya hay {NAV_VISIBLE}). El menú admite tres niveles: sección, subsección y sub-subsección.
       </p>
       <NewSection padreId={null} label="Nueva sección principal" run={run} busy={busy} />
       {msg && <Msg r={msg} />}
@@ -283,7 +294,12 @@ function Detail({
 }) {
   const parent = sel.parentId ? sections.find((s) => s.id === sel.parentId) : null;
   const kids = sections.filter((s) => s.parentId === sel.id);
-  const tops = tree.map((b) => b.node).filter((n) => n.id !== sel.id);
+  // Padres posibles: secciones principales y subsecciones (el menú admite tres niveles); nunca ella misma ni sus descendientes.
+  const descendientes = new Set<string>([sel.id]);
+  for (let i = 0; i < 3; i++) for (const s of sections) if (s.parentId && descendientes.has(s.parentId)) descendientes.add(s.id);
+  const tops = sections.filter((n) => !descendientes.has(n.id));
+  const nivelDe = (n: SectionNode) => (!n.parentId ? 1 : sections.find((x) => x.id === n.parentId)?.parentId ? 3 : 2);
+  const puedeTenerHijas = nivelDe(sel) < 3;
   return (
     <div className="flex flex-col gap-3 rounded-[var(--radius)] border border-[var(--border)] bg-white p-3">
       <div>
@@ -298,18 +314,17 @@ function Detail({
         <span className="mb-1 block text-[0.72rem] font-semibold uppercase tracking-[0.14em] text-[var(--fg-muted)]">Depende de</span>
         <select
           value={sel.parentId ?? ""}
-          disabled={busy || (kids.length > 0)}
+          disabled={busy}
           onChange={(e) => run(() => moverSeccion(sel.id, e.target.value || null))}
           className="w-full rounded-[var(--radius)] border border-[var(--border)] bg-white px-3 py-2 text-sm disabled:opacity-60"
         >
           <option value="">— Ninguna (sección principal del menú)</option>
           {tops.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.name}
+            <option key={t.id} value={t.id} disabled={nivelDe(t) >= 3}>
+              {nivelDe(t) === 1 ? t.name : `${nivelDe(t) === 2 ? "\u00a0\u00a0↳ " : ""}${t.name}`}
             </option>
           ))}
         </select>
-        {kids.length > 0 && <span className="mt-1 block text-xs text-[var(--fg-muted)]">Tiene subsecciones, así que no puede colgar de otra.</span>}
       </label>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -322,7 +337,7 @@ function Detail({
         </button>
       </div>
 
-      {!sel.parentId && (
+      {puedeTenerHijas && (
         <div>
           <p className="mb-1 text-xs font-semibold">Subsecciones ({kids.length})</p>
           {kids.length > 0 && (
@@ -430,7 +445,13 @@ function WideTree({
     label: pos ? `${pos} · ${br.node.name}` : br.node.name,
     kind,
     section: br.node,
-    kids: br.kids.map((k) => ({ key: k.id, label: k.name, kind: "sub" as const, section: k, kids: [] })),
+    kids: br.kids.map((k) => ({
+      key: k.id,
+      label: k.name,
+      kind: "sub" as const,
+      section: k,
+      kids: sections.filter((n) => n.parentId === k.id).map((n) => ({ key: n.id, label: n.name, kind: "sub" as const, section: n, kids: [] })),
+    })),
   });
   const bar = tree.slice(0, NAV_VISIBLE);
   const more = tree.slice(NAV_VISIBLE);

@@ -33,6 +33,14 @@ export async function SiteSidebar({ locale }: { locale: Locale }) {
             {t(locale, "sidebar.column")}
           </h2>
           <Link href={hrefNota(locale, columna)} className="group mt-3 block">
+            {columna.authorAvatarUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={columna.authorAvatarUrl}
+                alt={columna.authorName ?? ""}
+                className="mb-3 size-20 rounded-full border border-[var(--border-strong)] object-cover"
+              />
+            )}
             <span className="lx-display block text-[1.15rem] leading-snug transition-colors group-hover:text-[var(--accent)]">
               {columna.title}
             </span>

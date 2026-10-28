@@ -120,15 +120,28 @@ export function NavMenuItem({ item, locale, className }: { item: ItemMenu; local
               {t(locale, "nav.seeAll")} {item.label}
             </Link>
             {hijas.map((h) => (
-              <Link
-                key={h.href}
-                role="menuitem"
-                href={localePath(locale, h.href)}
-                onClick={() => setAbierto(false)}
-                className="lx-ui block px-4 py-2 text-[0.8rem] transition hover:bg-[var(--surface-2)] hover:text-[var(--accent)]"
-              >
-                {h.label}
-              </Link>
+              <div key={h.href}>
+                <Link
+                  role="menuitem"
+                  href={localePath(locale, h.href)}
+                  onClick={() => setAbierto(false)}
+                  className="lx-ui block px-4 py-2 text-[0.8rem] transition hover:bg-[var(--surface-2)] hover:text-[var(--accent)]"
+                >
+                  {h.label}
+                </Link>
+                {/* Tercer nivel (p. ej. los países de Sur América), con sangría. */}
+                {(h.children ?? []).map((n) => (
+                  <Link
+                    key={n.href}
+                    role="menuitem"
+                    href={localePath(locale, n.href)}
+                    onClick={() => setAbierto(false)}
+                    className="lx-ui block py-1.5 pl-8 pr-4 text-[0.75rem] text-[var(--fg-muted)] transition hover:bg-[var(--surface-2)] hover:text-[var(--accent)]"
+                  >
+                    {n.label}
+                  </Link>
+                ))}
+              </div>
             ))}
           </div>
         </div>

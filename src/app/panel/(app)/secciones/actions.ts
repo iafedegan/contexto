@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { eq, isNull } from "drizzle-orm";
+import { eq, inArray, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { articles, categories } from "@/db/schema";
 import { requirePermiso } from "@/lib/auth";
@@ -102,9 +102,18 @@ export async function moverSeccion(id: string, nuevoPadreId: string | null): Pro
     if (nuevoPadreId === id) return { ok: false, message: "Una sección no puede depender de sí misma." };
     const [p] = await db.select().from(categories).where(eq(categories.id, nuevoPadreId)).limit(1);
     if (!p) return { ok: false, message: "La sección elegida ya no existe." };
-    if (p.parentId) return { ok: false, message: "Solo se puede colgar de una sección principal (el menú tiene dos niveles)." };
+    // El menú tiene tres niveles: sección, subsección y, dentro de ésta, otra subsección (por ejemplo Mundo › Sur América › Perú).
+    const nivelPadre = p.parentId ? ((await db.select({ parentId: categories.parentId }).from(categories).where(eq(categories.id, p.parentId)).limit(1))[0]?.parentId ? 3 : 2) : 1;
     const [hijo] = await db.select({ id: categories.id }).from(categories).where(eq(categories.parentId, id)).limit(1);
-    if (hijo) return { ok: false, message: "Esta sección tiene subsecciones: muévelas primero para poder colgarla de otra." };
+    const hijos = hijo ? await db.select({ id: categories.id }).from(categories).where(inArray(categories.parentId, (await db.select({ id: categories.id }).from(categories).where(eq(categories.parentId, id))).map((x) => x.id))) : [];
+    const altura = hijo ? (hijos.length ? 2 : 1) : 0;
+    if (nivelPadre + 1 + altura > 3) return { ok: false, message: "El menú tiene tres niveles como máximo: sección, subsección y sub-subsección." };
+    // No se puede colgar una sección de una de sus propias descendientes.
+    let cursor: string | null = p.parentId;
+    while (cursor) {
+      if (cursor === id) return { ok: false, message: "Una sección no puede depender de una de sus propias subsecciones." };
+      cursor = (await db.select({ parentId: categories.parentId }).from(categories).where(eq(categories.id, cursor)).limit(1))[0]?.parentId ?? null;
+    }
   }
 
   const dest = await hermanas(nuevoPadreId);
@@ -142,7 +151,10 @@ export async function crearSeccion(nombre: string, padreId: string | null): Prom
   if (padreId) {
     const [p] = await db.select({ parentId: categories.parentId }).from(categories).where(eq(categories.id, padreId)).limit(1);
     if (!p) return { ok: false, message: "La sección padre ya no existe." };
-    if (p.parentId) return { ok: false, message: "Solo se pueden crear subsecciones bajo una sección principal." };
+    if (p.parentId) {
+      const [abuelo] = await db.select({ parentId: categories.parentId }).from(categories).where(eq(categories.id, p.parentId)).limit(1);
+      if (abuelo?.parentId) return { ok: false, message: "El menú tiene tres niveles como máximo." };
+    }
   }
 
   const base = slugify(name) || "seccion";
