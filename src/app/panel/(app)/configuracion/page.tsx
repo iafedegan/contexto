@@ -185,7 +185,7 @@ export default async function ConfiguracionPage() {
         id="usuarios"
         icon={<Users size={14} />}
         title={isAdmin ? "Personas y roles" : "Mis datos"}
-        hint={isAdmin ? `${people.length} cuentas · redactor < editor < administrador` : "Tu nombre, correo y contraseña"}
+        hint={isAdmin ? `${people.length} cuentas · redactor · diseñador < editor < administrador` : "Tu nombre, correo y contraseña"}
       >
         {yoMismo && <MiPerfilForm name={yoMismo.name} email={yoMismo.email} />}
 

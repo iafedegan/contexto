@@ -11,10 +11,10 @@ import type { UserRole } from "@/db/schema";
  * que siempre tiene todos los permisos y no se puede restringir.
  */
 
-export const RANGO: Record<UserRole, number> = { redactor: 1, editor: 2, administrador: 3 };
+export const RANGO: Record<UserRole, number> = { redactor: 1, disenador: 1, editor: 2, administrador: 3 };
 
 // Roles que se pueden asignar a una cuenta, de menor a mayor.
-export const ROLES: UserRole[] = ["redactor", "editor", "administrador"];
+export const ROLES: UserRole[] = ["redactor", "disenador", "editor", "administrador"];
 
 // Catálogo de permisos con el rol mínimo que los tiene por defecto.
 export const PERMISOS = [
@@ -51,6 +51,8 @@ export function exige2fa(role: UserRole, ajustes: Ajustes | undefined): boolean 
 /** Lo que el rol da sin ajustes. */
 export function porDefecto(role: UserRole, id: PermisoId): boolean {
   const p = PERMISOS.find((x) => x.id === id)!;
+  // El diseñador tiene el rango de un redactor, pero además toca la portada, las plantillas y las secciones.
+  if (role === "disenador" && id === "portada") return true;
   return RANGO[role] >= RANGO[p.min];
 }
 

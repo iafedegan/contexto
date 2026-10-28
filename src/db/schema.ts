@@ -99,7 +99,7 @@ export type HomeStyle = {
 
 // --- Enums -----------------------------------------------------------------
 
-export const userRole = pgEnum("user_role", ["redactor", "editor", "administrador"]);
+export const userRole = pgEnum("user_role", ["redactor", "disenador", "editor", "administrador"]);
 
 export const editorialStatus = pgEnum("editorial_status", [
   "borrador",

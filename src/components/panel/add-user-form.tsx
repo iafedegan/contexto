@@ -79,7 +79,7 @@ export function AddUserForm() {
           >
             {ROLES.map((r) => (
               <option key={r} value={r}>
-                {r}
+                {r === "disenador" ? "diseñador" : r}
               </option>
             ))}
           </select>
