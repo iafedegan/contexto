@@ -1,7 +1,7 @@
 import "server-only";
 import { cache } from "react";
 import { departamentoPorSlug, regionPorSlug } from "@/lib/regiones-colombia";
-import { and, desc, eq, gt, gte, inArray, isNull, lte, or, sql, type SQL } from "drizzle-orm";
+import { and, desc, eq, gt, gte, ilike, inArray, isNull, lte, or, sql, type SQL } from "drizzle-orm";
 import { db, rowsOf } from "@/db";
 import {
   articles,
@@ -473,6 +473,23 @@ export const getBreakingArticle = cachear(
     return row ?? null;
   },
   { tags: [TAG_CONTENIDO], segundos: 60 },
+);
+
+/** Última nota publicada del Dr. Lafaurie: la columna que la portada fija arriba de la barra lateral. */
+export const getUltimaColumnaLafaurie = cachear(
+  "ultima-columna-lafaurie",
+  async (): Promise<ArticleListItem | null> => {
+    const [row] = await db
+      .select(listSelection)
+      .from(articles)
+      .innerJoin(authors, eq(articles.authorId, authors.id))
+      .leftJoin(categories, eq(articles.categoryId, categories.id))
+      .where(and(publishedCondition, ilike(authors.name, "%lafaurie%")))
+      .orderBy(desc(articles.publishedAt))
+      .limit(1);
+    return row ?? null;
+  },
+  { tags: [TAG_CONTENIDO], segundos: 300 },
 );
 
 /** Cuántas notas muestra la portada: 1 principal, 1 secundaria, 4 «en breve» y el resto en el río (los cortes de `splitHomeSlots`). */

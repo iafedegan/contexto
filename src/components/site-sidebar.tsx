@@ -3,7 +3,7 @@ import { FacebookIcon, InstagramIcon, LinkedinIcon, YoutubeIcon } from "@/compon
 import { AdsBanner } from "@/components/ads-banner";
 import { NewsletterForm } from "@/components/newsletter-form";
 import { PushToggle } from "@/components/push-toggle";
-import { getMostReadArticles } from "@/lib/content";
+import { getMostReadArticles, getUltimaColumnaLafaurie } from "@/lib/content";
 import { t, type Locale } from "@/lib/i18n";
 import { hrefNota } from "@/lib/ruta-nota";
 
@@ -19,10 +19,28 @@ const VAPID_PUBLIC = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? "";
 
 // Barra lateral: notas más leídas, anuncios, boletín, avisos y redes sociales.
 export async function SiteSidebar({ locale }: { locale: Locale }) {
-  const masLeidas = await getMostReadArticles(5).catch(() => []);
+  const [masLeidas, columna] = await Promise.all([
+    getMostReadArticles(5).catch(() => []),
+    getUltimaColumnaLafaurie().catch(() => null),
+  ]);
 
   return (
     <aside className="flex flex-col gap-8" aria-label={t(locale, "sidebar.mostRead")}>
+      {/* La columna del Dr. Lafaurie va siempre primero, antes de las más leídas. */}
+      {columna && (
+        <section>
+          <h2 className="lx-kicker border-b border-[var(--border)] pb-2 text-[var(--accent)]">
+            {t(locale, "sidebar.column")}
+          </h2>
+          <Link href={hrefNota(locale, columna)} className="group mt-3 block">
+            <span className="lx-display block text-[1.15rem] leading-snug transition-colors group-hover:text-[var(--accent)]">
+              {columna.title}
+            </span>
+            {columna.excerpt && <span className="mt-2 block text-sm leading-relaxed text-[var(--fg-muted)]">{columna.excerpt}</span>}
+          </Link>
+        </section>
+      )}
+
       {masLeidas.length > 0 && (
         <section>
           <h2 className="lx-kicker border-b border-[var(--border)] pb-2 text-[var(--accent)]">
