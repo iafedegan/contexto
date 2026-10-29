@@ -1,14 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { db } from "@/db";
-import { siteSettings, users, type UserRole } from "@/db/schema";
+import { siteSettings, userPermissionOverrides, users, type UserRole } from "@/db/schema";
 import { CUOTAS_KEY, type Cuotas } from "@/lib/ai-cuota";
 import { LIMITES_KEY } from "@/lib/budget";
 import { DOS_PASOS, PERMISO_IDS, porDefecto, type PermisoId } from "@/lib/permisos";
-import { PERMISOS_KEY, type MapaAjustes } from "@/lib/permisos-server";
 import { auth, requireRole } from "@/lib/auth";
 import { SITE_IDENTITY_KEY, type SiteIdentity } from "@/lib/site-identity";
 import { SECRETS_KEY, claveEfectiva } from "@/lib/ai-provider";
@@ -94,23 +93,9 @@ export async function deleteUser(userId: string): Promise<{ ok: boolean; message
 
   const borrados = await db.delete(users).where(eq(users.id, userId)).returning({ id: users.id });
   if (borrados.length === 0) return { ok: false, message: "Esa cuenta ya no existe." };
-  await guardarAjustes((m) => {
-    delete m[userId];
-  });
+  // Sus permisos y su plazo de 2FA se borran solos con la cuenta (clave foránea en cascada).
   revalidatePath("/panel/configuracion");
   return { ok: true, message: "Cuenta eliminada." };
-}
-
-/** Lee, modifica y guarda el mapa de ajustes por persona (site_settings). */
-async function guardarAjustes(mut: (m: MapaAjustes) => void) {
-  const [row] = await db.select({ value: siteSettings.value }).from(siteSettings).where(eq(siteSettings.key, PERMISOS_KEY)).limit(1);
-  const v = row?.value;
-  const mapa: MapaAjustes = v && typeof v === "object" && !Array.isArray(v) ? { ...(v as MapaAjustes) } : {};
-  mut(mapa);
-  await db
-    .insert(siteSettings)
-    .values({ key: PERMISOS_KEY, value: mapa })
-    .onConflictDoUpdate({ target: siteSettings.key, set: { value: mapa, updatedAt: sql`now()` } });
 }
 
 /**
@@ -128,14 +113,14 @@ export async function setUserPermission(userId: string, permiso: string, valor: 
   if (u.role === "administrador") return { ok: false, message: "Un administrador siempre tiene todos los permisos." };
 
   const id = permiso as PermisoId;
-  await guardarAjustes((m) => {
-    const a = { ...(m[userId] ?? {}) } as Record<string, boolean>;
-    const base = permiso === DOS_PASOS ? true : porDefecto(u.role, id);
-    if (valor === base) delete a[permiso];
-    else a[permiso] = valor;
-    if (Object.keys(a).length === 0) delete m[userId];
-    else m[userId] = a;
-  });
+  const base = permiso === DOS_PASOS ? true : porDefecto(u.role, id);
+  if (valor === base) await db.delete(userPermissionOverrides).where(and(eq(userPermissionOverrides.userId, userId), eq(userPermissionOverrides.permiso, permiso)));
+  else {
+    await db
+      .insert(userPermissionOverrides)
+      .values({ userId, permiso, valor })
+      .onConflictDoUpdate({ target: [userPermissionOverrides.userId, userPermissionOverrides.permiso], set: { valor, updatedAt: sql`now()` } });
+  }
   revalidatePath("/panel", "layout");
   return { ok: true, message: "Permiso guardado." };
 }
@@ -156,9 +141,7 @@ export async function resetUserTotp(userId: string): Promise<{ ok: boolean; mess
 /** Vuelve a los permisos que da el rol, sin ajustes. */
 export async function resetUserPermissions(userId: string): Promise<void> {
   await requireRole("administrador");
-  await guardarAjustes((m) => {
-    delete m[userId];
-  });
+  await db.delete(userPermissionOverrides).where(eq(userPermissionOverrides.userId, userId));
   revalidatePath("/panel", "layout");
 }
 
