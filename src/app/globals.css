@@ -1799,3 +1799,233 @@ main > div:has([data-asistente]) { max-width: none; }
 /* Ancho del menú lateral del panel (cerrado o desplegado): lo usan las pantallas que ocupan todo el ancho, como el editor de portada. */
 .lx-shell { --sb-w: 4rem; }
 .lx-shell:has(> aside:hover), .lx-shell:has(> aside:focus-within) { --sb-w: 16rem; }
+
+/* Carrusel de notas de la portada (todas las plantillas). Variables y datos los fija `CarruselPortada`. */
+.cg-car {
+  --car-fg: var(--fg);
+  --car-ac: var(--accent);
+  margin-bottom: 2.5rem;
+  color: var(--car-fg);
+}
+.cg-car[data-fondo] {
+  background: var(--car-bg);
+  padding: 1.25rem;
+  border-radius: calc(var(--car-rad) + 6px);
+}
+.cg-car-titulo {
+  margin-bottom: 0.9rem;
+  color: var(--car-ac);
+}
+.cg-car-marco {
+  position: relative;
+}
+.cg-car-pista {
+  display: flex;
+  gap: var(--car-gap);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+.cg-car-pista::-webkit-scrollbar {
+  display: none;
+}
+.cg-car-item {
+  flex: 0 0 calc((100% - (var(--car-v) - 1) * var(--car-gap)) / var(--car-v));
+  min-width: 0;
+  scroll-snap-align: start;
+}
+/* Fundido: todas las tarjetas se apilan y solo la activa se ve. */
+.cg-car-fundido {
+  display: grid;
+  overflow: hidden;
+  gap: 0;
+}
+.cg-car-fundido .cg-car-item {
+  grid-area: 1 / 1;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--car-dur) ease;
+}
+.cg-car-fundido .cg-car-item[data-activa] {
+  opacity: 1;
+  pointer-events: auto;
+}
+.cg-car-tarjeta {
+  display: block;
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--car-rad);
+  height: 100%;
+  color: inherit;
+  text-decoration: none;
+}
+.cg-car-img {
+  display: block;
+  position: relative;
+  aspect-ratio: var(--car-ratio);
+  overflow: hidden;
+  border-radius: var(--car-rad);
+  background: var(--surface-2);
+}
+.cg-car-sinfoto {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2, var(--accent)));
+  opacity: 0.55;
+}
+.cg-car-img img {
+  transition: transform 0.7s var(--ease-lux, ease);
+}
+@media (hover: hover) {
+  .cg-car-tarjeta:hover .cg-car-img img {
+    transform: scale(1.05);
+  }
+}
+.cg-car-texto {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.cg-car-cat {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--car-ac);
+}
+.cg-car-tit {
+  font-size: var(--car-tit);
+  line-height: 1.15;
+  font-weight: 700;
+}
+.cg-car-res {
+  font-size: 0.9rem;
+  line-height: 1.45;
+  opacity: 0.8;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.cg-car-meta {
+  font-size: 0.75rem;
+  opacity: 0.7;
+}
+/* Estilo «debajo»: la imagen arriba y el texto debajo. */
+.cg-car[data-estilo="debajo"] .cg-car-texto {
+  padding: 0.8rem 0.15rem 0;
+}
+/* Estilo «superpuesta»: el texto sobre la imagen, con un degradado para que se lea. */
+.cg-car[data-estilo="superpuesta"] .cg-car-texto,
+.cg-car[data-estilo="solo-imagen"] .cg-car-texto {
+  position: absolute;
+  inset: auto 0 0 0;
+  padding: 2.5rem 1rem 1rem;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.82), rgba(0, 0, 0, 0));
+  color: #fff;
+}
+.cg-car[data-estilo="superpuesta"] .cg-car-cat,
+.cg-car[data-estilo="solo-imagen"] .cg-car-cat {
+  color: #fff;
+}
+/* «Solo imagen»: el texto aparece al pasar el puntero (en táctil, siempre). */
+@media (hover: hover) {
+  .cg-car[data-estilo="solo-imagen"] .cg-car-texto {
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  .cg-car[data-estilo="solo-imagen"] .cg-car-tarjeta:hover .cg-car-texto,
+  .cg-car[data-estilo="solo-imagen"] .cg-car-tarjeta:focus-visible .cg-car-texto {
+    opacity: 1;
+  }
+}
+.cg-car-flecha {
+  position: absolute;
+  top: 50%;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  width: 2.6rem;
+  height: 2.6rem;
+  transform: translateY(-50%);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.62);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  transition: opacity 0.25s ease, background 0.2s ease;
+}
+.cg-car-flecha:hover:not(:disabled) {
+  background: var(--car-ac);
+}
+.cg-car-flecha:disabled {
+  opacity: 0.25;
+}
+.cg-car-prev {
+  left: 0.6rem;
+}
+.cg-car-next {
+  right: 0.6rem;
+}
+@media (hover: hover) {
+  .cg-car[data-flechas="hover"] .cg-car-flecha {
+    opacity: 0;
+  }
+  .cg-car[data-flechas="hover"] .cg-car-marco:hover .cg-car-flecha,
+  .cg-car[data-flechas="hover"] .cg-car-flecha:focus-visible {
+    opacity: 1;
+  }
+}
+.cg-car-ind {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.45rem;
+  margin-top: 0.9rem;
+  font-size: 0.8rem;
+}
+.cg-car-ind button {
+  height: 0.55rem;
+  width: 0.55rem;
+  border-radius: 999px;
+  background: currentColor;
+  opacity: 0.25;
+  transition: opacity 0.2s ease, width 0.3s ease;
+}
+.cg-car-ind[data-tipo="barras"] button {
+  width: 1.6rem;
+  height: 0.28rem;
+  border-radius: 2px;
+}
+.cg-car-ind button[aria-current="true"] {
+  opacity: 1;
+  background: var(--car-ac);
+  width: 1.4rem;
+}
+.cg-car-ind[data-tipo="barras"] button[aria-current="true"] {
+  width: 2.6rem;
+}
+.cg-car-prog {
+  height: 3px;
+  margin-top: 0.7rem;
+  overflow: hidden;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--car-fg) 15%, transparent);
+}
+.cg-car-prog span {
+  display: block;
+  height: 100%;
+  background: var(--car-ac);
+  transform-origin: left;
+  animation: cg-car-llenar linear forwards;
+}
+@keyframes cg-car-llenar {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}

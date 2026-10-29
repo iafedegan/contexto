@@ -65,70 +65,112 @@ export function MfaForm({ activo }: { activo: boolean }) {
     );
   }
 
+  const paso = !setup ? 1 : 2;
   return (
-    <div className="rounded-[var(--radius)] border border-[var(--border)] p-4">
+    <div className="rounded-[var(--radius)] border border-[var(--border)] p-4 sm:p-5">
       <p className="flex items-center gap-2 text-sm font-semibold">
         <ShieldCheck size={15} className="text-[var(--accent)]" /> Verificación en dos pasos
       </p>
       <p className="mt-1.5 text-xs leading-relaxed text-[var(--fg-muted)]">
-        Añade un código temporal además de la contraseña. Funciona con Google Authenticator, 1Password,
-        Authy o cualquier aplicación TOTP.
+        Además de tu contraseña, el panel te pide un código de 6 dígitos que cambia cada 30 segundos. Son tres pasos y toma unos dos minutos.
       </p>
 
-      {!setup ? (
-        <button
-          type="button"
-          disabled={cargando}
-          onClick={() => iniciar(async () => setSetup(await iniciarMfa()))}
-          className="mt-3 inline-flex min-h-10 items-center gap-1.5 rounded-full bg-[var(--accent)] px-4 text-xs font-semibold text-[var(--accent-fg)] transition hover:opacity-90 disabled:opacity-60"
-        >
-          {cargando && <Loader2 size={13} className="animate-spin" />}
-          Activar
-        </button>
-      ) : (
-        <div className="mt-4 flex flex-wrap items-start gap-5">
-          <Image
-            src={setup.qr}
-            alt="Código QR para la aplicación de autenticación"
-            width={150}
-            height={150}
-            unoptimized
-            className="rounded-[var(--radius)] border border-[var(--border)] bg-white p-1"
-          />
+      <ol className="mt-4 grid gap-2 sm:grid-cols-3" aria-label="Pasos">
+        {["Instala la aplicación", "Escanea el código", "Escribe los 6 dígitos"].map((t, i) => (
+          <li
+            key={t}
+            aria-current={i + 1 === paso ? "step" : undefined}
+            className={`flex items-center gap-2.5 rounded-lg border px-3 py-2 text-xs ${i + 1 === paso || (setup && i + 1 === 3) ? "border-[var(--accent)] bg-[var(--surface-2)] font-semibold" : "border-[var(--border)] text-[var(--fg-muted)]"}`}
+          >
+            <span className={`grid size-6 shrink-0 place-items-center rounded-full text-[0.7rem] font-bold ${i + 1 <= paso || (setup && i + 1 === 3) ? "bg-[var(--accent)] text-[var(--accent-fg)]" : "bg-[var(--surface-2)]"}`}>{i + 1}</span>
+            {t}
+          </li>
+        ))}
+      </ol>
 
-          <form action={accionAlta} className="flex min-w-[14rem] flex-1 flex-col gap-2">
-            <input type="hidden" name="secret" value={setup.secret} />
-            <p className="text-xs leading-relaxed text-[var(--fg-muted)]">
-              Escanea el código o introduce esta clave a mano:
+      {!setup ? (
+        <div className="mt-5">
+          <p className="text-sm font-semibold">Paso 1 · Instala una aplicación de autenticación en tu celular</p>
+          <p className="mt-1 text-xs leading-relaxed text-[var(--fg-muted)]">Si ya tienes una, salta al botón de abajo. Estas son gratis y sirven igual:</p>
+          <ul className="mt-3 grid gap-2 sm:grid-cols-3">
+            {[
+              { n: "Google Authenticator", d: "La más usada. Android y iPhone.", u: "https://support.google.com/accounts/answer/1066447" },
+              { n: "Microsoft Authenticator", d: "Android y iPhone.", u: "https://www.microsoft.com/security/mobile-authenticator-app" },
+              { n: "Authy", d: "Guarda copia si cambias de celular.", u: "https://authy.com/download/" },
+            ].map((a) => (
+              <li key={a.n} className="rounded-lg border border-[var(--border)] p-3">
+                <p className="text-sm font-semibold">{a.n}</p>
+                <p className="mt-0.5 text-xs text-[var(--fg-muted)]">{a.d}</p>
+                <a href={a.u} target="_blank" rel="noopener noreferrer" className="mt-1.5 inline-block text-xs font-semibold text-[var(--accent)] hover:underline">
+                  Cómo instalarla →
+                </a>
+              </li>
+            ))}
+          </ul>
+          <button
+            type="button"
+            disabled={cargando}
+            onClick={() => iniciar(async () => setSetup(await iniciarMfa()))}
+            className="mt-4 inline-flex min-h-11 items-center gap-1.5 rounded-full bg-[var(--accent)] px-5 text-sm font-semibold text-[var(--accent-fg)] transition hover:opacity-90 disabled:opacity-60"
+          >
+            {cargando && <Loader2 size={14} className="animate-spin" />}
+            Ya la tengo, mostrar el código QR
+          </button>
+        </div>
+      ) : (
+        <div className="mt-5 grid gap-6 sm:grid-cols-[auto_1fr]">
+          <div>
+            <p className="text-sm font-semibold">Paso 2 · Escanea este código</p>
+            <p className="mt-1 max-w-[15rem] text-xs leading-relaxed text-[var(--fg-muted)]">
+              Abre la aplicación, toca <strong>«+»</strong> o <strong>«Agregar cuenta»</strong> y apunta la cámara aquí.
             </p>
-            <code className="lx-mono block break-all rounded-[var(--radius)] bg-[var(--surface-2)] px-2.5 py-1.5 text-xs">
-              {setup.secret}
-            </code>
-            <label className="mt-1 flex flex-col gap-1">
-              <span className="text-[0.72rem] uppercase tracking-[0.14em] text-[var(--fg-muted)]">
-                Código de la aplicación
-              </span>
-              <input
-                name="token"
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                maxLength={6}
-                required
-                placeholder="000000"
-                className="lx-mono w-32 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] px-3 py-2 text-sm tracking-[0.3em] outline-none focus:border-[var(--accent)]"
-              />
-            </label>
+            <Image
+              src={setup.qr}
+              alt="Código QR para la aplicación de autenticación"
+              width={190}
+              height={190}
+              unoptimized
+              className="mt-3 rounded-[var(--radius)] border border-[var(--border)] bg-white p-1.5"
+            />
+            <details className="mt-2 max-w-[15rem] text-xs text-[var(--fg-muted)]">
+              <summary className="cursor-pointer font-medium text-[var(--accent)]">¿No puedes escanear? Escribe la clave</summary>
+              <code className="lx-mono mt-1.5 block break-all rounded-[var(--radius)] bg-[var(--surface-2)] px-2.5 py-1.5 text-xs text-[var(--fg)]">{setup.secret}</code>
+            </details>
+          </div>
+
+          <form action={accionAlta} className="flex flex-col gap-3">
+            <input type="hidden" name="secret" value={setup.secret} />
+            <div>
+              <p className="text-sm font-semibold">Paso 3 · Escribe el código que te muestra la aplicación</p>
+              <p className="mt-1 text-xs leading-relaxed text-[var(--fg-muted)]">
+                Son 6 números y cambian cada 30 segundos. Si te dice que es inválido, espera al siguiente y escríbelo de nuevo.
+              </p>
+            </div>
+            <input
+              name="token"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              maxLength={6}
+              required
+              autoFocus
+              aria-label="Código de 6 dígitos"
+              placeholder="000000"
+              className="lx-mono w-44 rounded-[var(--radius)] border-2 border-[var(--border-strong)] bg-[var(--bg-2)] px-3 py-3 text-center text-xl tracking-[0.4em] outline-none focus:border-[var(--accent)]"
+            />
             <div className="flex flex-wrap items-center gap-3">
               <button
                 type="submit"
                 disabled={pendienteAlta}
-                className="inline-flex min-h-10 items-center gap-1.5 rounded-full bg-[var(--accent)] px-4 text-xs font-semibold text-[var(--accent-fg)] transition hover:opacity-90 disabled:opacity-60"
+                className="inline-flex min-h-11 items-center gap-1.5 rounded-full bg-[var(--accent)] px-5 text-sm font-semibold text-[var(--accent-fg)] transition hover:opacity-90 disabled:opacity-60"
               >
-                {pendienteAlta && <Loader2 size={13} className="animate-spin" />}
+                {pendienteAlta && <Loader2 size={14} className="animate-spin" />}
                 Confirmar y activar
               </button>
-              <Aviso estado={alta} />
+              <button type="button" onClick={() => setSetup(null)} className="text-xs font-medium text-[var(--fg-muted)] hover:text-[var(--fg)] hover:underline">
+                Volver al paso 1
+              </button>
             </div>
+            <Aviso estado={alta} />
           </form>
         </div>
       )}

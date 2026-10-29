@@ -106,6 +106,9 @@ export function summarizeChanges(
   if (stable(bl.textos) !== stable(cl.textos)) {
     out.push({ id: "textos", text: "Título, subtítulo o fecha de la cabecera" });
   }
+  if (stable(bl.carrusel) !== stable(cl.carrusel)) {
+    out.push({ id: "carrusel", text: "Carrusel de notas (contenido, estilo o movimiento)" });
+  }
   if (stable(bl.ticker) !== stable(cl.ticker)) {
     out.push({ id: "cintillo", text: "Cintillo de titulares (contenido o velocidad)" });
   }

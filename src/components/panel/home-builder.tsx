@@ -21,6 +21,8 @@ import { SectionTree, type SectionNode } from "@/components/panel/section-tree";
 import { PartsEditor } from "@/components/panel/parts-editor";
 import { PopupEditor } from "@/components/panel/popup-editor";
 import { CintilloEditor } from "@/components/panel/cintillo-editor";
+import { CarruselEditor } from "@/components/panel/carrusel-editor";
+import { resumenCarrusel } from "@/lib/carrusel";
 import { PreviewFrame, type Zoom } from "@/components/panel/preview-frame";
 import { PortadaToolbar, type Viewport } from "@/components/panel/portada-toolbar";
 import { PortadaToast, type ToastData } from "@/components/panel/portada-toast";
@@ -494,7 +496,7 @@ export function HomeBuilder({
   }
 
   // Elige una plantilla.
-  function pickTemplate(config: Omit<Layout, "ticker" | "textos" | "menuNav">) {
+  function pickTemplate(config: Omit<Layout, "ticker" | "carrusel" | "textos" | "menuNav">) {
     const teniaComposicion = Object.values(layout.parts ?? {}).some(Boolean);
     patchLayout({ ...config, parts: {}, sectionFilters: layout.sectionFilters });
     if (teniaComposicion) {
@@ -1005,6 +1007,17 @@ export function HomeBuilder({
                   router.refresh();
                 }}
               />
+            </Bloque>
+
+            <Bloque
+              id="carrusel"
+              titulo="Carrusel de notas"
+              resumen={layout.carrusel?.activo ? `Activado · ${resumenCarrusel(layout.carrusel)}` : "Apagado"}
+              icono={<TextCursorInput size={13} />}
+              abierto={!!openBlocks.carrusel}
+              onToggle={toggle("carrusel")}
+            >
+              <CarruselEditor value={layout.carrusel} onChange={(carrusel) => patchLayout({ carrusel })} secciones={sections.map((n) => ({ slug: n.slug, name: n.name }))} />
             </Bloque>
 
             <Bloque

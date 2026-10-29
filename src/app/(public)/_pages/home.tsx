@@ -1,4 +1,4 @@
-import { t, type Locale } from "@/lib/i18n";
+import { INTL_LOCALE, t, type Locale } from "@/lib/i18n";
 import {
   ClasicoTemplate,
   CompactoTemplate,
@@ -13,7 +13,11 @@ import { CardSlugsProvider } from "@/components/home/card-styles";
 import { blockStylesCss } from "@/lib/home-style";
 import { SiteSidebar } from "@/components/site-sidebar";
 import { SiteShell } from "@/components/site-shell";
-import { getArticlesByCategory, getHomeLayoutConfig, getHomepageArticles, getRecentArticles, PORTADA_NOTAS } from "@/lib/content";
+import { getArticlesByCategory, getHomeLayoutConfig, getHomepageArticles, getMostReadArticles, getRecentArticles, PORTADA_NOTAS } from "@/lib/content";
+import { CarruselPortada, type NotaCarrusel } from "@/components/home/carrusel-portada";
+import { sanitizeCarrusel } from "@/lib/carrusel";
+import { hrefNota } from "@/lib/ruta-nota";
+import { formatDate } from "@/lib/utils";
 import { duracionDelCintillo, piezasDelCintillo, sanitizeTicker } from "@/lib/cintillo";
 import { DEFAULT_HOME_LAYOUT, splitHomeSlots } from "@/lib/home-layout";
 import { getSiteTheme } from "@/lib/site-theme";
@@ -92,6 +96,35 @@ async function HomePage({ locale }: { locale: Locale }) {
         notas: notasCintillo,
       })
     : [];
+  // Carrusel de notas (todas las plantillas): de dónde salen, cuántas y dónde se pone se decide en /panel/portada.
+  const car = sanitizeCarrusel(layout.carrusel);
+  let carrusel: React.ReactNode = null;
+  if (car.activo) {
+    const pedir = car.cantidad * 2;
+    const fuente =
+      car.fuente === "recientes"
+        ? await getRecentArticles(pedir).catch(() => [])
+        : car.fuente === "masleidas"
+          ? await getMostReadArticles(pedir).catch(() => [])
+          : car.fuente === "seccion" && car.seccion
+            ? await getArticlesByCategory(car.seccion, { limit: pedir }).then((r) => r.items).catch(() => [])
+            : articles;
+    const notasCar: NotaCarrusel[] = fuente
+      .filter((a) => !car.soloConFoto || a.coverImageUrl)
+      .slice(0, car.cantidad)
+      .map((a) => ({
+        slug: a.slug,
+        href: hrefNota(locale, a),
+        title: a.title,
+        excerpt: a.excerpt,
+        image: a.coverImageUrl,
+        imageAlt: a.coverImageAlt ?? a.title,
+        categoria: a.categoryName,
+        autor: a.authorName,
+        fecha: a.publishedAt ? formatDate(a.publishedAt, INTL_LOCALE[locale]) : null,
+      }));
+    carrusel = notasCar.length ? <CarruselPortada config={car} notas={notasCar} /> : null;
+  }
   const cintillo =
     piezas.length > 0 ? (
       <div className="mb-2 overflow-hidden border-b border-[var(--border)] py-2.5 sm:mb-3 sm:border-y">
@@ -122,7 +155,12 @@ async function HomePage({ locale }: { locale: Locale }) {
       theme={site.theme}
       style={site.style}
       locale={locale} variant="portada"
-      aboveMain={cintillo}
+      aboveMain={
+        <>
+          {cintillo}
+          {car.posicion === "arriba" && <div className="mt-4">{carrusel}</div>}
+        </>
+      }
     >
       {/* La portada no tenía ningún <h1>: la estructura de encabezados
           saltaba directo a los <h2> de cada sección ("Lo último"…), lo que
@@ -174,6 +212,8 @@ async function HomePage({ locale }: { locale: Locale }) {
             <EsmeraldaTemplate {...props} />
           )}
 
+          {car.posicion === "tras-principal" && <div className="mt-12">{carrusel}</div>}
+
           {/* Billboard entre el bloque destacado y el resto (§9.1). */}
           <AdsBanner zone="home_billboard" className="mx-auto mt-14" />
         </div>
@@ -181,6 +221,8 @@ async function HomePage({ locale }: { locale: Locale }) {
         <SiteSidebar locale={locale} />
       </div>
       </CardSlugsProvider>
+
+      {car.posicion === "abajo" && <div className="mt-12">{carrusel}</div>}
 
       <AdsBanner zone="home_bottom" className="mx-auto mt-14" />
 

@@ -12,6 +12,7 @@ import type { HomeTitleFont } from "@/lib/home-fonts";
 import type { RegionStyles } from "@/lib/home-regions";
 import type { TemplateParts } from "@/lib/template-parts";
 import type { TickerConfig } from "@/lib/cintillo";
+import type { CarruselConfig } from "@/lib/carrusel";
 import type { TextosCabecera } from "@/lib/textos-cabecera";
 import type { MenuNavbar } from "@/lib/menu-navbar";
 import type { ConfigConsejo, FichaPauta, TemaConsejo } from "@/lib/consejo/plan";
@@ -799,6 +800,8 @@ export type HomeLayoutConfig = {
   parts?: TemplateParts;
   /** Cintillo de titulares: qué lleva y a qué velocidad (ver src/lib/cintillo.ts). */
   ticker?: TickerConfig;
+  /** Carrusel de notas de la portada, en todas las plantillas (ver src/lib/carrusel.ts). */
+  carrusel?: CarruselConfig;
   /** Título, subtítulo y fecha de la cabecera (ver src/lib/textos-cabecera.ts). */
   textos?: TextosCabecera;
   /** Secciones visibles, enlaces propios y submenús de la barra (ver src/lib/menu-navbar.ts). */

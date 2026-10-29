@@ -24,6 +24,8 @@ import { AdsPanel } from "@/components/panel/ads-panel";
 import { NotasLista } from "@/components/panel/notas-lista";
 import { SectionTree, type SectionNode } from "@/components/panel/section-tree";
 import { CintilloEditor } from "@/components/panel/cintillo-editor";
+import { CarruselEditor } from "@/components/panel/carrusel-editor";
+import { resumenCarrusel } from "@/lib/carrusel";
 import { PopupEditor } from "@/components/panel/popup-editor";
 import { PartsEditor } from "@/components/panel/parts-editor";
 import { resumenCintillo } from "@/lib/cintillo";
@@ -630,6 +632,9 @@ export function PreviewChrome({
                         router.refresh();
                       }}
                     />
+                  </Bloque>
+                  <Bloque titulo="Carrusel de notas" resumen={layout.carrusel?.activo ? `Activado · ${resumenCarrusel(layout.carrusel)}` : "Apagado"}>
+                    <CarruselEditor value={layout.carrusel} onChange={(carrusel) => editLayout({ ...layout, carrusel })} secciones={sections.map((n) => ({ slug: n.slug, name: n.name }))} />
                   </Bloque>
                   <Bloque titulo="Cintillo de titulares" resumen={layout.ticker?.activo === false ? "Apagado" : `Activado · ${resumenCintillo(layout.ticker)}`}>
                     <CintilloEditor value={layout.ticker} onChange={(ticker) => editLayout({ ...layout, ticker })} secciones={sections.map((n) => ({ slug: n.slug, name: n.name }))} />

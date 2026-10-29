@@ -1,4 +1,5 @@
 import { DEFAULT_TICKER } from "@/lib/cintillo";
+import { DEFAULT_CARRUSEL } from "@/lib/carrusel";
 import type { HomeLayoutConfig } from "@/db/schema";
 
 /**
@@ -18,6 +19,7 @@ export const DEFAULT_HOME_LAYOUT: Required<HomeLayoutConfig> = {
   sectionEls: {},
   zones: {},
   ticker: DEFAULT_TICKER,
+  carrusel: DEFAULT_CARRUSEL,
   textos: {},
   menuNav: {},
 };
@@ -30,8 +32,8 @@ export type HomeTemplate = {
   id: HomeTemplateId;
   name: string;
   description: string;
-  /** Sin `ticker` ni `textos`: elegir una plantilla no debe borrar el cintillo ni los textos de la cabecera que el editor configuró. */
-  config: Omit<Required<HomeLayoutConfig>, "ticker" | "textos" | "menuNav">;
+  /** Sin `ticker` ni `textos`: elegir una plantilla no debe borrar el cintillo, el carrusel ni los textos de la cabecera que el editor configuró. */
+  config: Omit<Required<HomeLayoutConfig>, "ticker" | "carrusel" | "textos" | "menuNav">;
 };
 
 /**
