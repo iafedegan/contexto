@@ -153,7 +153,7 @@ export function ArticleDocument({
         </nav>
           }
           byline={
-        <div className="flex flex-wrap items-center gap-4">
+        <div data-el="n-byline" className="flex flex-wrap items-center gap-4">
           <span className="lx-display grid size-11 place-items-center rounded-full bg-[var(--accent)] text-base text-[var(--accent-fg)]">
             {(a.authorName ?? "C").charAt(0)}
           </span>
@@ -194,7 +194,7 @@ export function ArticleDocument({
           }
           cover={
         // Una columna lleva el retrato del columnista, casi siempre pequeño: a todo el ancho se pixela, así que va chico y centrado.
-        <figure className={esColumna ? "lx-media relative mx-auto mt-10 aspect-square w-48 overflow-hidden rounded-full sm:w-56" : "lx-media lx-card mt-10 aspect-[16/9] w-full"}>
+        <figure data-el="n-photo" className={esColumna ? "lx-media relative mx-auto mt-10 aspect-square w-48 overflow-hidden rounded-full sm:w-56" : "lx-media lx-card mt-10 aspect-[16/9] w-full"}>
           {/* «Última hora»: la insignia va en la esquina de la imagen, no en una franja. */}
           {ultimaHora && <BreakingBadge locale={locale} className="absolute left-3 top-3 z-[5] shadow-lg" />}
           {a.coverImageUrl ? (
@@ -229,10 +229,12 @@ export function ArticleDocument({
         {!preview && <AdsBanner zone="article_top" className="mx-auto mt-10" />}
 
         {/* El cuerpo llega como HTML ya sanitizado en el panel editorial. */}
-        <ArticleBody
-          className={ARTICLE_BODY_CLASS[theme] ?? "prose prose-drop mt-12 !max-w-none"}
-          html={sanitizeArticleHtml(a.body)}
-        />
+        <div data-el="n-body">
+          <ArticleBody
+            className={ARTICLE_BODY_CLASS[theme] ?? "prose prose-drop mt-12 !max-w-none"}
+            html={sanitizeArticleHtml(a.body)}
+          />
+        </div>
 
         {/* Zona comercial del artículo. La plantilla es de una sola columna, así
             que la creatividad de 300×250 va tras el cuerpo, antes de los temas;

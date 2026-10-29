@@ -79,7 +79,7 @@ export function PreviewChrome({
   const [region, setRegion] = useState<RegionId>("navbar");
   const [foco, setFoco] = useState<Foco>(null);
   const [flash, setFlash] = useState(0);
-  const [secEl, setSecEl] = useState<SectionElId>("title");
+  const [secEl, setSecEl] = useState<SectionElId>(enNota ? "n-title" : "title");
   const [items, setItems] = useState<PortadaDraft["items"]>(draft?.items ?? []);
   const [adDrafts, setAdDrafts] = useState<Record<string, AdDraft>>(draft?.adDrafts ?? {});
   const adDraftsRef = useRef(adDrafts);
@@ -492,7 +492,7 @@ export function PreviewChrome({
             return;
           }
           const r = el.closest("[data-region]")?.getAttribute("data-region") as RegionId | null;
-          if (r && (!seccion || r === "encabezado" || r === "body")) {
+          if (r && (!(seccion || enNota) || r === "encabezado" || r === "body")) {
             setRegion(r);
             elegir("parte");
           }
@@ -518,9 +518,15 @@ export function PreviewChrome({
               >
                 <GripHorizontal size={14} className="text-[var(--fg-muted)]" />
                 <p className="text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-[var(--fg-muted)]">
-                  {seccion ? `Editar sección · ${seccion.name}` : "Editar esta página"}
+                  {seccion ? `Editar sección · ${seccion.name}` : enNota ? "Editar esta nota" : "Editar esta página"}
                 </p>
               </div>
+
+              {enNota && (
+                <button type="button" onClick={() => router.push("/panel/portada?vista=1")} className="self-start text-xs font-semibold text-[var(--accent)]">
+                  ← Volver a la portada
+                </button>
+              )}
 
               {seccion && (
                 <div>
@@ -542,7 +548,7 @@ export function PreviewChrome({
                 </div>
               )}
 
-              {seccion ? (
+              {seccion || enNota ? (
                 <SectionPanel
                   layout={layout}
                   onChange={(partial) => editLayout({ ...layout, ...partial })}
@@ -550,6 +556,7 @@ export function PreviewChrome({
                   onRegion={setRegion}
                   el={secEl}
                   onEl={setSecEl}
+                  nota={enNota}
                   ads={{ zones: adsZones, canManage: canManagePauta, drafts: adDrafts, onDraft: editAd }}
                   block={
                     selSlug

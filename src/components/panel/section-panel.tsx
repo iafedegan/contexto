@@ -28,6 +28,7 @@ export function SectionPanel({
   onRegion,
   el,
   onEl,
+  nota = false,
   block,
   ads,
 }: {
@@ -37,6 +38,8 @@ export function SectionPanel({
   onRegion: (r: RegionId) => void;
   el: SectionElId;
   onEl: (e: SectionElId) => void;
+  /** Se edita una nota: las piezas son las del artículo, no las del encabezado de sección. */
+  nota?: boolean;
   /** Bloque (nota) seleccionado en la página, si lo hay. */
   /** Publicidad de la página (si se pasa, aparece la pestaña «Publicidad»). */
   ads?: { zones: AdsZoneRow[]; canManage: boolean; drafts: Record<string, AdDraft>; onDraft: (key: string, d: AdDraft) => void } | null;
@@ -108,7 +111,7 @@ export function SectionPanel({
           <div>
             <p className="mb-1.5 text-[0.95rem] font-extrabold text-[#0b0b0b]">Elige una pieza (o púlsala en la página)</p>
             <div className="flex flex-wrap gap-1.5">
-              {SECTION_ELS.map((x) => (
+              {SECTION_ELS.filter((x) => (x.group === "nota") === nota).map((x) => (
                 <button
                   key={x.id}
                   type="button"

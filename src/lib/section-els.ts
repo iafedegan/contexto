@@ -10,13 +10,18 @@ import { acotar, colorHex as hex } from "@/lib/validate";
  * src/components/section/section-layout.tsx); aquí solo se genera la hoja CSS.
  * Todo valor se valida antes de convertirse en CSS.
  */
-export const SECTION_ELS: Array<{ id: SectionElId; label: string; hint: string; gradient: boolean }> = [
+export const SECTION_ELS: Array<{ id: SectionElId; label: string; hint: string; gradient: boolean; /** Dónde vive: el encabezado de una sección o una nota. */ group?: "nota" }> = [
   { id: "breadcrumb", label: "Migas", hint: "Inicio / Sección", gradient: false },
   { id: "kicker", label: "Etiqueta", hint: "La palabra «Sección» sobre el título", gradient: true },
   { id: "title", label: "Título", hint: "El nombre de la sección", gradient: true },
   { id: "description", label: "Descripción", hint: "La frase bajo el título", gradient: true },
   { id: "chips", label: "Datos", hint: "Publicaciones · actualizado", gradient: false },
   { id: "filters", label: "Filtros", hint: "Atajos de fecha y subsección", gradient: false },
+  { id: "n-title", label: "Titular", hint: "El título de la nota", gradient: true, group: "nota" },
+  { id: "n-excerpt", label: "Resumen", hint: "La frase bajo el titular", gradient: true, group: "nota" },
+  { id: "n-byline", label: "Autor y fecha", hint: "Quién firma, fecha y minutos de lectura", gradient: false, group: "nota" },
+  { id: "n-photo", label: "Foto", hint: "La foto de la nota: el tamaño es su ancho en px", gradient: false, group: "nota" },
+  { id: "n-body", label: "Texto de la nota", hint: "El cuerpo del artículo", gradient: false, group: "nota" },
 ];
 
 // Rangos permitidos (tamaño y espaciado entre letras) de los textos del encabezado de sección.
@@ -76,6 +81,11 @@ export function sectionElsCss(input: unknown, scope = "[data-site-root]"): strin
     if (!s) continue;
     const sel = `${scope} [data-el="${id}"]`;
     const all = `${sel},${sel} *`;
+    // La foto no lleva letras: «tamaño» es su ancho.
+    if (id === "n-photo") {
+      if (s.size !== undefined) rules.push(`${sel}{width:${s.size}px!important;max-width:100%!important;margin-inline:auto!important}`);
+      continue;
+    }
     const d: string[] = [];
     const family = homeFontFamily(s.font);
     if (family) d.push(`font-family:${family}!important`);

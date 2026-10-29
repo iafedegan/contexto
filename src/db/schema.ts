@@ -745,7 +745,7 @@ export type HomeBackground = {
 export type Gradient = { from: string; to: string; angle: number };
 
 /** Cada elemento suelto del encabezado de una sección que se puede estilar por separado. */
-export type SectionElId = "breadcrumb" | "kicker" | "title" | "description" | "chips" | "filters";
+export type SectionElId = "breadcrumb" | "kicker" | "title" | "description" | "chips" | "filters" | "n-title" | "n-excerpt" | "n-byline" | "n-photo" | "n-body";
 
 export type SectionElStyle = {
   font?: HomeTitleFont;

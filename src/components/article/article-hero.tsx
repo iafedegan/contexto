@@ -27,9 +27,9 @@ export function ArticleHero(p: Parts) {
           {p.live && <div className="mt-4 flex justify-center">{p.live}</div>}
           <div className="mx-auto mt-6 max-w-5xl border-y-4 border-double border-[var(--fg)] py-8">
             {p.kicker && <p className="lx-kicker text-[var(--accent)]">{p.kicker}</p>}
-            <h1 className="break-words lx-display mt-3 text-[2.2rem] font-black leading-[1.02] tracking-tight md:text-[4.2rem]">{p.title}</h1>
+            <h1 data-el="n-title" className="break-words lx-display mt-3 text-[2.2rem] font-black leading-[1.02] tracking-tight md:text-[4.2rem]">{p.title}</h1>
           </div>
-          <p className="mx-auto mt-6 max-w-3xl font-serif text-xl italic leading-relaxed text-[var(--fg-muted)]">{p.excerpt}</p>
+          <p data-el="n-excerpt" className="mx-auto mt-6 max-w-3xl font-serif text-xl italic leading-relaxed text-[var(--fg-muted)]">{p.excerpt}</p>
           <div className="mt-6 flex justify-center">{p.byline}</div>
           <div className="mt-6 flex justify-center">{p.actions}</div>
           <div className="mt-10 border-t border-[var(--border)] pt-6">{p.cover}</div>
@@ -50,11 +50,11 @@ export function ArticleHero(p: Parts) {
             <div className="relative self-end p-5 text-white sm:p-8 md:p-12">
               {p.live}
               {p.kicker && <p className="lx-kicker text-[#e8cf9a]">{p.kicker}</p>}
-              <h1 className="break-words lx-display mt-3 max-w-5xl text-[2rem] font-light italic leading-[1.02] sm:text-[2.6rem] md:text-[3.4rem] lg:text-[4.4rem]">{p.title}</h1>
+              <h1 data-el="n-title" className="break-words lx-display mt-3 max-w-5xl text-[2rem] font-light italic leading-[1.02] sm:text-[2.6rem] md:text-[3.4rem] lg:text-[4.4rem]">{p.title}</h1>
             </div>
           </div>
           <div className="mt-8 grid grid-cols-1 gap-8 md:grid-cols-[2fr_1fr]">
-            <p className="text-2xl leading-relaxed text-[var(--fg-muted)]">{p.excerpt}</p>
+            <p data-el="n-excerpt" className="text-2xl leading-relaxed text-[var(--fg-muted)]">{p.excerpt}</p>
             <div className="flex flex-col gap-5 border-l border-[var(--border-strong)] pl-6">
               {p.byline}
               {p.actions}
@@ -73,8 +73,8 @@ export function ArticleHero(p: Parts) {
               {p.kicker && (
                 <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-[var(--accent)]">{p.kicker}</p>
               )}
-              <h1 className="break-words mt-2 text-[2rem] font-extrabold leading-[1.08] tracking-tight md:text-[3rem]">{p.title}</h1>
-              <p className="mt-4 text-lg leading-relaxed text-[var(--fg-muted)]">{p.excerpt}</p>
+              <h1 data-el="n-title" className="break-words mt-2 text-[2rem] font-extrabold leading-[1.08] tracking-tight md:text-[3rem]">{p.title}</h1>
+              <p data-el="n-excerpt" className="mt-4 text-lg leading-relaxed text-[var(--fg-muted)]">{p.excerpt}</p>
             </div>
             <aside className="flex flex-col gap-4 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface-2)] p-4 text-sm">
               {p.byline}
@@ -95,10 +95,10 @@ export function ArticleHero(p: Parts) {
               <div>
                 {p.breadcrumb}
                 {p.live && <div className="mt-4">{p.live}</div>}
-                <h1 className="break-words mt-6 bg-gradient-to-r from-[var(--fg)] via-[var(--accent)] to-[var(--accent-2)] bg-clip-text text-[2.2rem] font-black leading-[1.02] tracking-tight text-transparent md:text-[3.8rem]">
+                <h1 data-el="n-title" className="break-words mt-6 bg-gradient-to-r from-[var(--fg)] via-[var(--accent)] to-[var(--accent-2)] bg-clip-text text-[2.2rem] font-black leading-[1.02] tracking-tight text-transparent md:text-[3.8rem]">
                   {p.title}
                 </h1>
-                <p className="mt-5 text-lg text-[var(--fg-muted)]">{p.excerpt}</p>
+                <p data-el="n-excerpt" className="mt-5 text-lg text-[var(--fg-muted)]">{p.excerpt}</p>
                 <div className="mt-6">{p.byline}</div>
                 <div className="mt-6">{p.actions}</div>
               </div>
@@ -113,10 +113,10 @@ export function ArticleHero(p: Parts) {
         <header>
           {p.breadcrumb}
           {p.live && <div className="mt-6">{p.live}</div>}
-          <h1 className="break-words lx-display mt-6 text-[2rem] font-semibold leading-[1.06] tracking-tight sm:text-[2.4rem] md:text-[3.4rem]">
+          <h1 data-el="n-title" className="break-words lx-display mt-6 text-[2rem] font-semibold leading-[1.06] tracking-tight sm:text-[2.4rem] md:text-[3.4rem]">
             {p.title}
           </h1>
-          <p className="mt-5 text-xl leading-relaxed text-[var(--fg-muted)] md:text-[1.35rem]">{p.excerpt}</p>
+          <p data-el="n-excerpt" className="mt-5 text-xl leading-relaxed text-[var(--fg-muted)] md:text-[1.35rem]">{p.excerpt}</p>
           <hr className="lx-rule my-8" />
           {p.byline}
           <div className="mt-8">{p.actions}</div>
