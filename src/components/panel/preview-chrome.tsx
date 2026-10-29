@@ -309,7 +309,7 @@ export function PreviewChrome({
     // Tras la hidratación: tocar el DOM antes provocaría errores.
     let limpiar: (() => void) | null = null;
     const id = setTimeout(() => {
-      limpiar = installCanvasHints(document, labels);
+      limpiar = installCanvasHints(document, labels, "clic para editar · doble clic para abrir la nota");
     }, 1500);
     return () => {
       clearTimeout(id);
@@ -440,6 +440,15 @@ export function PreviewChrome({
       <div
         ref={contentRef}
         className="absolute inset-x-0 bottom-0 top-14 overflow-y-auto"
+        onDoubleClickCapture={(e) => {
+          // Doble clic sobre una nota: lleva a la nota (en esta misma pestaña, para que no la capture la app instalada). Un solo clic edita.
+          const el = e.target as HTMLElement;
+          const enlace = el.closest("a") ?? el.closest("[data-bslug],[data-bs-root]")?.querySelector("a[href]");
+          const href = enlace?.getAttribute("href");
+          if (!href || href.startsWith("#")) return;
+          e.preventDefault();
+          window.location.assign(new URL(href, window.location.origin).toString());
+        }}
         onClickCapture={(e) => {
           // Los enlaces de la vista previa no navegan: llevarían a la página publicada.
           const el = e.target as HTMLElement;

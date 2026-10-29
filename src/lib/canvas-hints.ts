@@ -28,7 +28,7 @@ const LABEL_ID = "cg-hint";
 type Target = { el: HTMLElement; text: string };
 
 // Instala en el documento del lienzo las ayudas de edición: resalta con línea discontinua el bloque bajo el cursor y muestra una etiqueta. Devuelve la función que las retira.
-export function installCanvasHints(doc: Document, labels: HintLabels): () => void {
+export function installCanvasHints(doc: Document, labels: HintLabels, accion = "clic para editar"): () => void {
   if (!doc.getElementById(STYLE_ID)) {
     const st = doc.createElement("style");
     st.id = STYLE_ID;
@@ -89,7 +89,7 @@ export function installCanvasHints(doc: Document, labels: HintLabels): () => voi
       t.el.setAttribute("data-cg-hover", "");
       current = t.el;
     }
-    tag.textContent = `${t.text} · clic para editar`;
+    tag.textContent = `${t.text} · ${accion}`;
     tag.setAttribute("data-on", "");
     const r = t.el.getBoundingClientRect();
     const h = tag.getBoundingClientRect().height || 24;
