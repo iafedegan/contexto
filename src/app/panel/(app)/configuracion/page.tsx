@@ -93,7 +93,8 @@ export default async function ConfiguracionPage() {
         tabs={[
           // La identidad del sitio es solo de administradores: a las demás personas ni se les muestra.
           ...(isAdmin ? [{ id: "sitio", label: "Identidad del sitio", icon: <Globe size={13} /> }] : []),
-          { id: "usuarios", label: isAdmin ? "Personas y roles" : "Mis datos", icon: <Users size={13} /> },
+          { id: "usuarios", label: isAdmin ? "Personas" : "Mis datos", icon: <Users size={13} /> },
+          ...(isAdmin ? [{ id: "roles", label: "Roles y cuota de IA", icon: <ShieldCheck size={13} /> }] : []),
           { id: "estilo", label: isAdmin ? "Estilos de escritura" : "Mi estilo de escritura", icon: <PenLine size={13} /> },
           { id: "seguridad", label: "Seguridad de mi cuenta", icon: <ShieldCheck size={13} /> },
           ...(isAdmin
@@ -184,11 +185,62 @@ export default async function ConfiguracionPage() {
       <Section
         id="usuarios"
         icon={<Users size={14} />}
-        title={isAdmin ? "Personas y roles" : "Mis datos"}
-        hint={isAdmin ? `${people.length} cuentas · redactor · diseñador < editor < administrador` : "Tu nombre, correo y contraseña"}
+        title={isAdmin ? "Personas" : "Mis datos"}
+        hint={isAdmin ? `${people.length} cuentas · crea una nueva y mira los accesos` : "Tu nombre, correo y contraseña"}
       >
         {yoMismo && <MiPerfilForm name={yoMismo.name} email={yoMismo.email} />}
 
+        {isAdmin && (
+          <div className="mb-6">
+            <AddUserForm />
+          </div>
+        )}
+
+        {isAdmin && (
+          <div className="mt-6 rounded-[var(--radius)] border border-[var(--border)]">
+            <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-[var(--border)] bg-[var(--surface-2)] px-4 py-3">
+              <p className="text-sm font-semibold">Accesos al panel</p>
+              <p className="text-xs text-[var(--fg-muted)]">Últimos {accesos.length} · hora de Colombia</p>
+            </div>
+            {accesos.length === 0 ? (
+              <p className="px-4 py-5 text-sm text-[var(--fg-muted)]">Aún no hay accesos registrados: aparecerán a partir del próximo inicio de sesión de cada persona.</p>
+            ) : (
+              <div className="max-h-96 overflow-auto">
+                <table className="w-full min-w-[40rem] text-sm">
+                  <thead>
+                    <tr className="text-left text-xs text-[var(--fg-muted)]">
+                      {["Fecha y hora", "Persona", "Cómo entró", "Dispositivo", "IP"].map((h) => (
+                        <th key={h} className="sticky top-0 bg-[var(--bg-2)] px-4 py-2 font-medium">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {accesos.map((a, i) => (
+                      <tr key={a.at + a.userId + i} className="border-t border-[var(--border)]">
+                        <td className="whitespace-nowrap px-4 py-2 tabular-nums">{fmtHora(a.at)}</td>
+                        <td className="px-4 py-2"><span className="font-medium">{a.name}</span> <span className="text-xs text-[var(--fg-muted)]">{a.email}</span></td>
+                        <td className="px-4 py-2">{a.metodo === "passkey" ? "Passkey" : "Contraseña + 2FA"}</td>
+                        <td className="whitespace-nowrap px-4 py-2">{a.dispositivo}</td>
+                        <td className="whitespace-nowrap px-4 py-2 tabular-nums text-[var(--fg-muted)]">{a.ip || "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+      </Section>
+
+      {/* ------------------------------------- Roles y cuota de IA (solo administradores) */}
+      {isAdmin && (
+        <Section
+          id="roles"
+          icon={<ShieldCheck size={14} />}
+          title="Roles y cuota de IA"
+          hint="redactor · diseñador < editor < administrador · permisos y tope de gasto en IA por persona"
+        >
         {isAdmin && cuotas && <CuotaIaPredeterminada valor={cuotas.predeterminada} />}
 
         {isAdmin && (
@@ -230,47 +282,8 @@ export default async function ConfiguracionPage() {
         </div>
         )}
 
-        {isAdmin && (
-          <div className="mt-6 rounded-[var(--radius)] border border-[var(--border)]">
-            <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-[var(--border)] bg-[var(--surface-2)] px-4 py-3">
-              <p className="text-sm font-semibold">Accesos al panel</p>
-              <p className="text-xs text-[var(--fg-muted)]">Últimos {accesos.length} · hora de Colombia</p>
-            </div>
-            {accesos.length === 0 ? (
-              <p className="px-4 py-5 text-sm text-[var(--fg-muted)]">Aún no hay accesos registrados: aparecerán a partir del próximo inicio de sesión de cada persona.</p>
-            ) : (
-              <div className="max-h-96 overflow-auto">
-                <table className="w-full min-w-[40rem] text-sm">
-                  <thead>
-                    <tr className="text-left text-xs text-[var(--fg-muted)]">
-                      {["Fecha y hora", "Persona", "Cómo entró", "Dispositivo", "IP"].map((h) => (
-                        <th key={h} className="sticky top-0 bg-[var(--bg-2)] px-4 py-2 font-medium">{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {accesos.map((a, i) => (
-                      <tr key={a.at + a.userId + i} className="border-t border-[var(--border)]">
-                        <td className="whitespace-nowrap px-4 py-2 tabular-nums">{fmtHora(a.at)}</td>
-                        <td className="px-4 py-2"><span className="font-medium">{a.name}</span> <span className="text-xs text-[var(--fg-muted)]">{a.email}</span></td>
-                        <td className="px-4 py-2">{a.metodo === "passkey" ? "Passkey" : "Contraseña + 2FA"}</td>
-                        <td className="whitespace-nowrap px-4 py-2">{a.dispositivo}</td>
-                        <td className="whitespace-nowrap px-4 py-2 tabular-nums text-[var(--fg-muted)]">{a.ip || "—"}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        )}
-
-        {isAdmin && (
-          <div className="mt-4">
-            <AddUserForm />
-          </div>
-        )}
-      </Section>
+        </Section>
+      )}
 
 
       {/* --------------------------------------------- Seguridad de mi cuenta */}
