@@ -73,7 +73,7 @@ function PieSegunPlantilla({
 }) {
   const LEGAL = legalLinks(locale);
   const TOOLS = toolLinks(locale);
-  const ARCHIVE_NOTE = t(locale, "footer.archiveNote");
+  const ARCHIVE_NOTE = "";
   const props = { nav, theme, locale, LEGAL, TOOLS, ARCHIVE_NOTE, SITE_NAME: identity.name };
   switch (variant) {
     case "grand":
@@ -166,7 +166,7 @@ function GrandFooter({ nav, theme, locale, LEGAL, TOOLS, ARCHIVE_NOTE, SITE_NAME
         </div>
         <div className="mt-14 flex flex-wrap items-center justify-between gap-4 border-t border-[var(--border)] pt-6 text-xs text-[var(--fg-muted)]">
           <p>
-            © {YEAR} {SITE_NAME}. {ARCHIVE_NOTE}
+            © {YEAR} {SITE_NAME}.{ARCHIVE_NOTE}
           </p>
           <Signature theme={theme} locale={locale} />
         </div>
@@ -207,7 +207,7 @@ function GremialFooter({ nav, theme, locale, LEGAL, TOOLS, ARCHIVE_NOTE, SITE_NA
         </div>
         <div className="mt-14 flex flex-wrap items-center justify-between gap-4 border-t border-[var(--border)] pt-6 text-xs text-[var(--fg-muted)]">
           <p>
-            © {YEAR} {SITE_NAME}. {ARCHIVE_NOTE}
+            © {YEAR} {SITE_NAME}.{ARCHIVE_NOTE}
           </p>
           <Signature theme={theme} locale={locale} />
         </div>
@@ -288,7 +288,7 @@ function ColophonFooter({ theme, locale, LEGAL, ARCHIVE_NOTE, SITE_NAME }: Foote
           ))}
         </ul>
         <p className="mt-8 text-xs leading-relaxed text-[var(--fg-muted)]">
-          © {YEAR} {SITE_NAME}. {ARCHIVE_NOTE}
+          © {YEAR} {SITE_NAME}.{ARCHIVE_NOTE}
         </p>
         <div className="mt-3">
           <Signature theme={theme} locale={locale} />
@@ -338,7 +338,7 @@ function CopperFooter({ nav, theme, locale, LEGAL, ARCHIVE_NOTE, SITE_NAME }: Fo
         </div>
         <div className="mt-12 flex flex-wrap items-center justify-between gap-3 border-t border-[var(--border)] pt-6 text-xs text-[var(--fg-muted)]">
           <p>
-            © {YEAR} {SITE_NAME}. {ARCHIVE_NOTE}
+            © {YEAR} {SITE_NAME}.{ARCHIVE_NOTE}
           </p>
           <Signature theme={theme} locale={locale} />
         </div>
@@ -372,7 +372,7 @@ function AtelierFooter({ theme, locale, LEGAL, ARCHIVE_NOTE, SITE_NAME }: Footer
           ))}
         </ul>
         <p className="mt-8 text-xs text-[var(--fg-muted)]">
-          © {YEAR} {SITE_NAME}. {ARCHIVE_NOTE}
+          © {YEAR} {SITE_NAME}.{ARCHIVE_NOTE}
         </p>
         <div className="mt-3">
           <Signature theme={theme} locale={locale} />
