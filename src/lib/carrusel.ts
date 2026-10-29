@@ -51,6 +51,10 @@ export type CarruselConfig = {
   visiblesEscritorio?: number;
   visiblesTableta?: number;
   visiblesCelular?: number;
+  /** Ancho máximo del carrusel en px (480-1800); centrado. */
+  ancho?: number;
+  /** Desenfoque de los extremos en px (0 = sin desenfoque, hasta 24). */
+  desenfoqueBordes?: number;
   /** Separación entre tarjetas en px (0-40). */
   separacion?: number;
   /** Proporción de la imagen. */
@@ -103,6 +107,8 @@ export const DEFAULT_CARRUSEL: Required<CarruselConfig> = {
   visiblesEscritorio: 3,
   visiblesTableta: 2,
   visiblesCelular: 1,
+  ancho: 1100,
+  desenfoqueBordes: 8,
   separacion: 16,
   aspecto: "16:9",
   estilo: "superpuesta",
@@ -173,6 +179,8 @@ export function sanitizeCarrusel(input: unknown): Required<CarruselConfig> {
     visiblesEscritorio: entero(c.visiblesEscritorio, 1, 5, d.visiblesEscritorio),
     visiblesTableta: entero(c.visiblesTableta, 1, 3, d.visiblesTableta),
     visiblesCelular: entero(c.visiblesCelular, 1, 2, d.visiblesCelular),
+    ancho: entero(c.ancho, 480, 1800, d.ancho),
+    desenfoqueBordes: entero(c.desenfoqueBordes, 0, 24, d.desenfoqueBordes),
     separacion: entero(c.separacion, 0, 40, d.separacion),
     aspecto: uno(c.aspecto, ["21:9", "16:9", "3:2", "4:3", "1:1"] as const, d.aspecto),
     estilo: uno(c.estilo, ["superpuesta", "debajo", "solo-imagen"] as const, d.estilo),

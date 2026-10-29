@@ -1817,6 +1817,33 @@ main > div:has([data-asistente]) { max-width: none; }
   margin-bottom: 2.5rem;
   color: var(--car-fg);
 }
+.cg-car {
+  max-width: var(--car-ancho, 1100px);
+  margin-inline: auto;
+}
+/* Extremos desenfocados: una franja con desenfoque que se desvanece hacia dentro, para que las tarjetas «se pierdan» en los bordes. */
+.cg-car[data-bordes] .cg-car-marco::before,
+.cg-car[data-bordes] .cg-car-marco::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 2;
+  width: clamp(36px, 7%, 96px);
+  pointer-events: none;
+  backdrop-filter: blur(var(--car-blur));
+  -webkit-backdrop-filter: blur(var(--car-blur));
+}
+.cg-car[data-bordes] .cg-car-marco::before {
+  left: 0;
+  -webkit-mask-image: linear-gradient(to right, #000, transparent);
+  mask-image: linear-gradient(to right, #000, transparent);
+}
+.cg-car[data-bordes] .cg-car-marco::after {
+  right: 0;
+  -webkit-mask-image: linear-gradient(to left, #000, transparent);
+  mask-image: linear-gradient(to left, #000, transparent);
+}
 .cg-car[data-fondo] {
   background: var(--car-bg);
   padding: 1.25rem;

@@ -91,6 +91,8 @@ export function CarruselEditor({
           <Deslizador etiqueta="En computador" valor={v.visiblesEscritorio} min={1} max={5} texto={String(v.visiblesEscritorio)} onChange={(visiblesEscritorio) => set({ visiblesEscritorio })} />
           <Deslizador etiqueta="En tableta" valor={v.visiblesTableta} min={1} max={3} texto={String(v.visiblesTableta)} onChange={(visiblesTableta) => set({ visiblesTableta })} />
           <Deslizador etiqueta="En celular" valor={v.visiblesCelular} min={1} max={2} texto={String(v.visiblesCelular)} onChange={(visiblesCelular) => set({ visiblesCelular })} />
+          <Deslizador etiqueta="Ancho máximo del carrusel" valor={v.ancho} min={480} max={1800} step={20} texto={`${v.ancho} px`} onChange={(ancho) => set({ ancho })} />
+          <Deslizador etiqueta="Desenfoque de los extremos" valor={v.desenfoqueBordes} min={0} max={24} texto={v.desenfoqueBordes === 0 ? "sin desenfoque" : `${v.desenfoqueBordes} px`} onChange={(desenfoqueBordes) => set({ desenfoqueBordes })} />
           <Deslizador etiqueta="Separación entre tarjetas" valor={v.separacion} min={0} max={40} texto={`${v.separacion} px`} onChange={(separacion) => set({ separacion })} />
         </Grupo>
 

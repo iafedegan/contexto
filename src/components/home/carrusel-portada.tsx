@@ -112,6 +112,8 @@ export function CarruselPortada({ config: c, notas }: { config: Required<Carruse
   const pagina = Math.max(0, posiciones.findIndex((p) => p >= idx));
   const vars = {
     "--car-gap": `${c.separacion}px`,
+    "--car-ancho": `${c.ancho}px`,
+    "--car-blur": `${c.desenfoqueBordes}px`,
     "--car-v": visibles,
     "--car-rad": `${c.redondeo}px`,
     "--car-ratio": c.aspecto.replace(":", " / "),
@@ -130,6 +132,7 @@ export function CarruselPortada({ config: c, notas }: { config: Required<Carruse
       data-estilo={c.estilo}
       data-flechas={c.flechas}
       data-fondo={c.colorFondo ? "propio" : undefined}
+      data-bordes={c.desenfoqueBordes > 0 ? "" : undefined}
       style={vars}
       onMouseEnter={() => setPausa(true)}
       onMouseLeave={() => setPausa(false)}
