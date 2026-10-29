@@ -1,4 +1,5 @@
 -- Título SEO de las notas migradas: vuelve al titular, que es lo que mostraba el sitio actual en la pestaña y en Google.
+-- Si el respaldo ya se archivó (docs/sql-limpieza-post-aceptacion.sql, paso 1), la tabla está en `archivo.articles_meta_title_respaldo`.
 -- El respaldo `articles_meta_title_respaldo` (7.391 filas) YA está creado en producción: sirve para deshacerlo.
 -- Se ejecuta por tandas (una sola sentencia supera el tiempo máximo del editor). Repetir cambiando el dígito: '0123', '4567', '89ab', 'cdef'.
 

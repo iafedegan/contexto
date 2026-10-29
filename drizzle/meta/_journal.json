@@ -232,6 +232,13 @@
       "when": 1794241114335,
       "tag": "0032_etiquetas_de_suscriptores",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1794327514335,
+      "tag": "0033_restricciones_y_tablas_de_acceso",
+      "breakpoints": true
     }
   ]
 }

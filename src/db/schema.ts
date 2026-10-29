@@ -21,6 +21,7 @@ import {
   type AnyPgColumn,
   bigserial,
   boolean,
+  check,
   customType,
   date,
   doublePrecision,
@@ -131,19 +132,75 @@ export const assistantMode = pgEnum("assistant_mode", ["generativo", "semantico_
 
 // --- Usuarios y autenticación (panel editorial) --------------------------
 
-export const users = pgTable("users", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  email: text("email").notNull().unique(),
-  name: text("name").notNull(),
-  passwordHash: text("password_hash"), // credenciales locales
-  role: userRole("role").notNull().default("redactor"),
-  // Segundo factor (TOTP)
-  totpSecret: text("totp_secret"),
-  totpEnabled: boolean("totp_enabled").notNull().default(false),
-  active: boolean("active").notNull().default(true),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+export const users = pgTable(
+  "users",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    email: text("email").notNull().unique(),
+    name: text("name").notNull(),
+    passwordHash: text("password_hash"), // credenciales locales
+    role: userRole("role").notNull().default("redactor"),
+    // Segundo factor (TOTP)
+    totpSecret: text("totp_secret"),
+    totpEnabled: boolean("totp_enabled").notNull().default(false),
+    active: boolean("active").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  // `email` es único con distinción de mayúsculas: sin esta regla «Ana@x.co» y «ana@x.co» serían dos cuentas.
+  (t) => [check("users_email_minusculas", sql`${t.email} = lower(${t.email})`)],
+);
+
+/**
+ * Cambios de permisos por persona: la diferencia entre lo que da el rol y lo que un administrador fijó para UNA cuenta
+ * (`avisos`, `portada`, `publicar`… o `exigir_2fa`). Antes vivían en un JSON de `site_settings`, sin clave foránea: una cuenta
+ * eliminada dejaba su entrada huérfana. Aquí se borran en cascada con la cuenta.
+ */
+export const userPermissionOverrides = pgTable(
+  "user_permission_overrides",
+  {
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    permiso: text("permiso").notNull(),
+    valor: boolean("valor").notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.permiso] })],
+);
+
+/** Plazo de gracia del segundo factor por cuenta: hasta esa fecha puede entrar sin 2FA; después la exigencia vuelve sola. */
+export const user2faGrace = pgTable("user_2fa_grace", {
+  userId: uuid("user_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  until: timestamp("until", { withTimezone: true }).notNull(),
 });
+
+/**
+ * Bitácora de accesos al panel (antes, un arreglo JSON de `site_settings`). Una fila por inicio de sesión. Guarda una copia del
+ * nombre, el correo y el rol de ese momento: la bitácora debe sobrevivir a la cuenta (`user_id` pasa a null al eliminarla). La IP
+ * es un dato personal (Ley 1581), por eso se depura por antigüedad (`RETENCION_ACCESOS_DIAS` en `src/lib/login-log.ts`).
+ */
+export const loginEvents = pgTable(
+  "login_events",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    at: timestamp("at", { withTimezone: true }).notNull().defaultNow(),
+    userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
+    name: text("name").notNull(),
+    email: text("email").notNull(),
+    role: text("role").notNull(),
+    metodo: text("metodo").notNull(),
+    ip: text("ip").notNull().default(""),
+    dispositivo: text("dispositivo").notNull().default(""),
+  },
+  (t) => [
+    index("login_events_at_idx").on(t.at.desc()),
+    index("login_events_user_idx").on(t.userId),
+    check("login_events_metodo", sql`${t.metodo} in ('contraseña', 'passkey')`),
+  ],
+);
 
 /**
  * Passkeys (WebAuthn) — alternativa sin escribir nada al TOTP: el navegador
@@ -367,6 +424,12 @@ export const articles = pgTable(
     index("articles_home_position_idx").on(t.homePosition),
     index("articles_views_idx").on(t.views),
     index("articles_breaking_idx").on(t.isBreaking),
+    // Reglas que antes solo cumplía la aplicación: la base las exige aunque alguien escriba por otro camino (script, SQL a mano).
+    check("articles_views_no_negativas", sql`${t.views} >= 0`),
+    check("articles_slug_formato", sql`${t.slug} ~ '^[a-z0-9]+(-[a-z0-9]+)*$'`),
+    check("articles_titulo_no_vacio", sql`btrim(${t.title}) <> ''`),
+    check("articles_publicada_con_fecha", sql`${t.status} <> 'publicado' or ${t.publishedAt} is not null`),
+    check("articles_posicion_portada", sql`${t.homePosition} is null or ${t.homePosition} >= 0`),
     // Índice vectorial HNSW (coseno). Se crea en migración manual porque
     // drizzle-kit aún no emite `USING hnsw` de forma estable.
   ],
@@ -387,6 +450,7 @@ export const articleViewsDaily = pgTable(
   (t) => [
     primaryKey({ columns: [t.articleId, t.day] }),
     index("article_views_daily_day_idx").on(t.day),
+    check("article_views_daily_no_negativas", sql`${t.views} >= 0`),
   ],
 );
 
@@ -640,7 +704,12 @@ export const redirects = pgTable(
     hits: integer("hits").notNull().default(0),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [uniqueIndex("redirects_from_idx").on(t.fromPath)],
+  // `from_path` ya es la clave primaria: el índice único `redirects_from_idx` duplicaba su índice (migración 0024 lo quita).
+  (t) => [
+    check("redirects_codigo", sql`${t.statusCode} in (301, 302, 307, 308)`),
+    check("redirects_sin_bucle", sql`${t.fromPath} <> ${t.toPath}`),
+    check("redirects_origen_absoluto", sql`${t.fromPath} like '/%'`),
+  ],
 );
 
 // --- Boletín: ediciones ------------------------------------------------
@@ -678,7 +747,11 @@ export const newsletterEditions = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index("newsletter_editions_status_idx").on(t.status, t.createdAt)],
+  (t) => [
+    index("newsletter_editions_status_idx").on(t.status, t.createdAt),
+    check("newsletter_editions_estado", sql`${t.status} in ('borrador', 'programada', 'enviando', 'enviada')`),
+    check("newsletter_editions_cuentas", sql`${t.total} >= 0 and ${t.delivered} >= 0 and ${t.failed} >= 0`),
+  ],
 );
 
 // --- API pública para terceros ------------------------------------------
@@ -701,7 +774,7 @@ export const apiClients = pgTable(
     createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index("api_clients_active_idx").on(t.active)],
+  (t) => [index("api_clients_active_idx").on(t.active), check("api_clients_limite_positivo", sql`${t.requestsPerHour} > 0`)],
 );
 
 export type ApiClient = typeof apiClients.$inferSelect;
@@ -766,7 +839,13 @@ export const editorialSlots = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index("editorial_slots_plan_idx").on(t.planId, t.publishAt), index("editorial_slots_pendientes_idx").on(t.status, t.publishAt)],
+  (t) => [
+    index("editorial_slots_plan_idx").on(t.planId, t.publishAt),
+    index("editorial_slots_pendientes_idx").on(t.status, t.publishAt),
+    check("editorial_slots_aprobacion", sql`${t.approval} in ('manual', 'auto')`),
+    check("editorial_slots_estado", sql`${t.status} in ('planificada', 'redactando', 'revision', 'programada', 'publicada', 'fallida', 'omitida')`),
+    check("editorial_slots_prioridad", sql`${t.priority} >= 0`),
+  ],
 );
 
 /**
