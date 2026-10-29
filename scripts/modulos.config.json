@@ -29,7 +29,7 @@
     "acceso": {
       "titulo": "Usuarios y acceso",
       "rutas": [
-        "^lib/(auth|passkey|passkey-hosts|totp|permisos|permisos-server|secrets|login-log|user-authors)\\.ts$",
+        "^lib/(auth|passkey|passkey-hosts|totp|totp-secreto|permisos|permisos-server|secrets|login-log|user-authors)\\.ts$",
         "^app/api/auth/",
         "^lib/superapp/",
         "^app/superapp/",

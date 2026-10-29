@@ -18,20 +18,23 @@ import { users } from "@/db/schema";
 import { auth, requireRole } from "@/lib/auth";
 import { getSiteIdentity } from "@/lib/site-identity";
 import { codigoTotpValido, verificarCodigoTotp } from "@/lib/totp";
+import { abrirSecretoTotp, altaTotpValida, firmarAltaTotp, sellarSecretoTotp } from "@/lib/totp-secreto";
 
 // Datos para activar el segundo factor: secreto, código QR y enlace.
-export type MfaSetup = { secret: string; qr: string; uri: string };
+export type MfaSetup = { secret: string; qr: string; uri: string; firma: string };
 
 /** Genera un secreto nuevo y su código QR, sin tocar todavía la cuenta. */
 export async function iniciarMfa(): Promise<MfaSetup> {
   const session = await auth();
   if (!session?.user?.email) throw new Error("NO_AUTENTICADO");
+  const me = await requireRole("redactor");
 
   const { name } = await getSiteIdentity();
   const secret = generateSecret();
   const uri = generateURI({ secret, label: session.user.email, issuer: name });
   const qr = await QRCode.toDataURL(uri, { margin: 1, width: 240 });
-  return { secret, qr, uri };
+  // La firma demuestra, al confirmar, que este servidor generó ese secreto para esta persona (src/lib/totp-secreto.ts).
+  return { secret, qr, uri, firma: firmarAltaTotp(me.id, secret) };
 }
 
 // Estado que se devuelve al formulario: si salió bien y el mensaje.
@@ -41,9 +44,13 @@ export type MfaState = { ok: boolean; message: string } | null;
 export async function confirmarMfa(_prev: MfaState, formData: FormData): Promise<MfaState> {
   const me = await requireRole("redactor");
   const secret = String(formData.get("secret") ?? "");
+  const firma = String(formData.get("firma") ?? "");
   const token = String(formData.get("token") ?? "").replace(/\s/g, "");
 
   if (!secret || !token) return { ok: false, message: "Falta el código de verificación." };
+  if (!altaTotpValida(me.id, secret, firma)) {
+    return { ok: false, message: "La configuración caducó. Empieza de nuevo para generar otro código QR." };
+  }
   // Solo demuestra que la aplicación ya tiene el secreto: no se gasta el código (ver `codigoTotpValido`).
   if (!codigoTotpValido(secret, token)) {
     return { ok: false, message: "El código no coincide. Comprueba la hora del teléfono e inténtalo otra vez." };
@@ -51,7 +58,7 @@ export async function confirmarMfa(_prev: MfaState, formData: FormData): Promise
 
   await db
     .update(users)
-    .set({ totpSecret: secret, totpEnabled: true, updatedAt: new Date() })
+    .set({ totpSecret: sellarSecretoTotp(secret), totpEnabled: true, updatedAt: new Date() })
     .where(eq(users.id, me.id));
 
   revalidatePath("/panel/configuracion");
@@ -70,7 +77,9 @@ export async function desactivarMfa(_prev: MfaState, formData: FormData): Promis
     .limit(1);
 
   if (!u?.totpSecret) return { ok: false, message: "La cuenta no tiene verificación en dos pasos." };
-  const verificacion = await verificarCodigoTotp(me.id, u.totpSecret, token);
+  const { secreto } = abrirSecretoTotp(u.totpSecret);
+  if (!secreto) return { ok: false, message: "No se pudo leer el secreto guardado. Pide a un administrador que restablezca tu verificación." };
+  const verificacion = await verificarCodigoTotp(me.id, secreto, token);
   if (!verificacion.ok) {
     return {
       ok: false,

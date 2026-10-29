@@ -12,6 +12,7 @@ import { verifyHuman } from "@/lib/turnstile";
 import { dispositivoDe, enmascararCorreo, registrarAcceso } from "@/lib/login-log";
 import { consumirTokenPasskey } from "@/lib/passkey";
 import { verificarCodigoTotp } from "@/lib/totp";
+import { abrirSecretoTotp, sellarSecretoTotp } from "@/lib/totp-secreto";
 import { tienePermiso } from "@/lib/permisos-server";
 import { RANGO, type PermisoId } from "@/lib/permisos";
 
@@ -144,10 +145,14 @@ export const { handlers, signIn, signOut, auth: authSinCache } = NextAuth({
           if (!u.totpSecret) return rechazar("2FA activado pero sin secreto guardado");
           if (!totp) return rechazar("falta el código de verificación (2FA)");
           // Tolerancia de un paso de reloj y código de un solo uso (ver src/lib/totp.ts).
-          const segundoFactor = await verificarCodigoTotp(u.id, u.totpSecret, totp);
+          const { secreto, heredado } = abrirSecretoTotp(u.totpSecret);
+          if (!secreto) return rechazar("no se pudo descifrar el secreto del 2FA");
+          const segundoFactor = await verificarCodigoTotp(u.id, secreto, totp);
           if (!segundoFactor.ok) {
             return rechazar(segundoFactor.motivo === "reutilizado" ? "código de verificación ya utilizado" : "código de verificación incorrecto");
           }
+          // Secreto guardado antes sin cifrar: ya demostró que lo tiene, así que se cifra ahora (src/lib/totp-secreto.ts).
+          if (heredado) await db.update(users).set({ totpSecret: sellarSecretoTotp(secreto) }).where(eq(users.id, u.id));
         }
 
         await clearHits(`login:email:${email}`);
