@@ -27,6 +27,8 @@ export const SECTION_ELS: Array<{ id: SectionElId; label: string; hint: string; 
 // Rangos permitidos (tamaño y espaciado entre letras) de los textos del encabezado de sección.
 export const EL_RANGES = {
   size: { min: 8, max: 220 },
+  // Ancho de la foto de la nota, en px.
+  photo: { min: 80, max: 1400 },
   tracking: { min: -2, max: 20 },
 } as const;
 
@@ -59,7 +61,7 @@ export function sanitizeSectionEls(input: unknown): Partial<Record<SectionElId, 
     const weight = typeof r.weight === "number" && (WEIGHTS as readonly number[]).includes(r.weight) ? r.weight : undefined;
     const s: SectionElStyle = {
       font: HOME_FONTS.some((f) => f.id === r.font) ? (r.font as HomeTitleFont) : undefined,
-      size: clamp(r.size, EL_RANGES.size.min, EL_RANGES.size.max),
+      size: id === "n-photo" ? clamp(r.size, EL_RANGES.photo.min, EL_RANGES.photo.max) : clamp(r.size, EL_RANGES.size.min, EL_RANGES.size.max),
       weight,
       color: hex(r.color),
       gradient: gradient ? sanitizeGradient(r.gradient) : undefined,

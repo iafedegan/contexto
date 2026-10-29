@@ -12,7 +12,7 @@ import { PublicarControles } from "@/components/panel/portada-publicar";
 import type { Anterior } from "@/components/panel/portada-types";
 import { REGIONS, type RegionId } from "@/lib/home-regions";
 import { HOME_TEMPLATES } from "@/lib/home-layout";
-import { SECTION_ELS } from "@/lib/section-els";
+import { SECTION_ELS, sectionElsCss } from "@/lib/section-els";
 import type { HomeStyle, SectionElId } from "@/db/schema";
 import { cleanupBlocks, enhanceBlocks, measureZone, type ZoneMapData } from "@/lib/block-tools";
 import { installCanvasHints, type HintLabels } from "@/lib/canvas-hints";
@@ -440,6 +440,8 @@ export function PreviewChrome({
       {selSlug && /^[\w-]+$/.test(selSlug) && (
         <style>{`[data-bslug="${selSlug}"],[data-bs-root="${selSlug}"]:not([data-bslug] *){outline:3px solid #84a21f!important;outline-offset:2px}`}</style>
       )}
+      {/* Los ajustes de piezas se ven al instante (el servidor los repinta después de guardar el borrador). */}
+      {layout?.sectionEls && Object.keys(layout.sectionEls).length > 0 && <style>{sectionElsCss(layout.sectionEls)}</style>}
       <div
         ref={contentRef}
         className="absolute inset-x-0 bottom-0 top-14 overflow-y-auto"

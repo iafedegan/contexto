@@ -128,6 +128,44 @@ export function SectionPanel({
             <p className="mt-1.5 truncate text-xs text-[var(--fg-muted)]" title={meta.hint}>{meta.hint}</p>
           </div>
 
+          {el === "n-photo" ? (
+            <div className="flex flex-col gap-3 rounded-[var(--radius)] border border-[var(--border)] bg-white p-3">
+              <div className="flex items-center gap-2">
+                <span className="w-24 shrink-0 text-xs text-[var(--fg-muted)]">Ancho (px)</span>
+                <input
+                  type="number"
+                  min={EL_RANGES.photo.min}
+                  max={EL_RANGES.photo.max}
+                  step={10}
+                  value={style.size ?? ""}
+                  placeholder="Automático"
+                  onChange={(e) => patchEl({ size: e.target.value === "" ? undefined : Number(e.target.value) })}
+                  className="w-28 rounded-lg border border-[var(--border-strong)] bg-[var(--surface-2)] px-2 py-1.5 text-sm tabular-nums"
+                />
+                {style.size !== undefined && (
+                  <button type="button" onClick={() => patchEl({ size: undefined })} className="ml-auto text-[var(--fg-muted)] hover:text-[var(--accent)]" aria-label="Ancho automático">
+                    <RotateCcw size={12} />
+                  </button>
+                )}
+              </div>
+              <input
+                type="range"
+                min={EL_RANGES.photo.min}
+                max={EL_RANGES.photo.max}
+                step={10}
+                value={style.size ?? 224}
+                onChange={(e) => patchEl({ size: Number(e.target.value) })}
+                aria-label="Ancho de la foto en píxeles"
+                className="w-full accent-[var(--accent)]"
+              />
+              <p className="text-xs text-[var(--fg-muted)]">En el celular la foto nunca pasa del ancho de la pantalla.</p>
+              {els[el] && (
+                <button type="button" onClick={() => onChange({ sectionEls: Object.fromEntries(Object.entries(els).filter(([k]) => k !== el)) })} className="inline-flex items-center gap-1.5 self-start rounded-full border border-[var(--border)] px-3 py-1.5 text-xs font-medium hover:border-[var(--accent)] hover:text-[var(--accent)]">
+                  <RotateCcw size={12} /> Restablecer foto
+                </button>
+              )}
+            </div>
+          ) : (
           <div className="flex flex-col gap-3 rounded-[var(--radius)] border border-[var(--border)] bg-white p-3">
             <FontSelect label="Fuente" value={style.font} onChange={(font) => patchEl({ font })} />
 
@@ -231,6 +269,7 @@ export function SectionPanel({
               </button>
             )}
           </div>
+          )}
 
           <Group title="Fondo y espacio del encabezado">
             <RegionEditor value={layout.regions ?? {}} active="encabezado" onActive={onRegion} onChange={(regions) => onChange({ regions })} only={["encabezado"]} hideTabs />
