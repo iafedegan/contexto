@@ -2029,3 +2029,36 @@ main > div:has([data-asistente]) { max-width: none; }
     transform: scaleX(1);
   }
 }
+
+/* Salida del asistente flotante: el ganadero se va caminando hacia la izquierda y después cruza la vaca, que se esconde por la derecha. */
+@keyframes toro-camina {
+  from { transform: translateX(0); }
+  to { transform: translateX(var(--sale-izq)); }
+}
+@keyframes toro-trote {
+  from { transform: translateX(var(--sale-izq)); }
+  to { transform: translateX(var(--sale-der)); }
+}
+@keyframes toro-bob {
+  0%, 100% { transform: translateY(0) rotate(-2.5deg); }
+  50% { transform: translateY(-7px) rotate(2.5deg); }
+}
+.toro-wrap[data-salida="ganadero"] {
+  animation: toro-camina 3.2s ease-in forwards;
+}
+.toro-wrap[data-salida="vaca"] {
+  animation: toro-trote 2.4s ease-in-out forwards;
+}
+/* Va hacia la izquierda: el dibujo se voltea hacia donde camina. */
+.toro-wrap[data-salida="ganadero"] .toro-paso {
+  transform: scaleX(-1);
+}
+.toro-wrap[data-salida] .toro-bob {
+  animation: toro-bob 0.42s ease-in-out infinite;
+}
+.toro-wrap[data-salida="vaca"] .toro-bob {
+  animation-duration: 0.3s;
+}
+.toro-wrap[data-salida] .toro-float {
+  transform: none !important;
+}

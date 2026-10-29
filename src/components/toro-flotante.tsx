@@ -100,6 +100,9 @@ type Gesto = { id: number; x0: number; y0: number; ox: number; oy: number; activ
 export function ToroFlotante() {
   const pathname = usePathname() ?? "";
   const [oculto, setOculto] = useState(false);
+  // Salida animada al ocultarlo: el ganadero se va caminando y después cruza la vaca hasta esconderse por la derecha.
+  const [salida, setSalida] = useState<"ganadero" | "vaca" | null>(null);
+  const [recorrido, setRecorrido] = useState<{ izq: number; der: number }>({ izq: -600, der: 600 });
   const [abierto, setAbierto] = useState(false);
   const [montado, setMontado] = useState(false);
   const [arrastre, setArrastre] = useState<Posicion | null>(null);
@@ -173,6 +176,24 @@ export function ToroFlotante() {
   }, [oculto]);
 
   const en = pathname === "/en" || pathname.startsWith("/en/");
+  // Oculta al personaje: con movimiento, se va caminando (el ganadero) o trotando (la vaca); con «menos movimiento», de golpe.
+  function ocultar() {
+    const el = envoltura.current;
+    if (!el || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return setOculto(true);
+    const r = el.getBoundingClientRect();
+    setRecorrido({ izq: -(r.left + r.width + 40), der: window.innerWidth - r.left + 40 });
+    setAbierto(false);
+    setAccion(null);
+    setSalida(personaje === "ganadero" ? "ganadero" : "vaca");
+  }
+  // Termina cada tramo de la salida: tras el ganadero entra la vaca; al acabar la vaca ya no queda nadie.
+  function terminoSalida() {
+    if (salida === "ganadero") setSalida("vaca");
+    else {
+      setSalida(null);
+      setOculto(true);
+    }
+  }
   if (oculto || /\/asistente(\/|$)/.test(pathname)) return null;
   const etiqueta = en ? "Ask the archive assistant" : "Pregúntale al asistente";
 
@@ -268,10 +289,12 @@ export function ToroFlotante() {
       )}
     <div
       ref={envoltura}
-      style={pos ? { left: pos.x, top: pos.y, right: "auto", bottom: "auto" } : undefined}
+      style={{ ...(pos ? { left: pos.x, top: pos.y, right: "auto", bottom: "auto" } : {}), "--sale-izq": `${recorrido.izq}px`, "--sale-der": `${recorrido.der}px` } as React.CSSProperties}
+      onAnimationEnd={(e) => e.target === e.currentTarget && salida && terminoSalida()}
+      data-salida={salida ?? undefined}
       className="toro-wrap pointer-events-none max-md:hidden fixed bottom-[max(1rem,env(safe-area-inset-bottom))] right-[max(0.75rem,env(safe-area-inset-right))] z-30 print:hidden"
     >
-      <div className="group pointer-events-auto relative">
+      <div className={`group relative ${salida ? "pointer-events-none" : "pointer-events-auto"}`}>
         {accion && !abierto && (
           <div role="status" className="toro-globo pointer-events-none absolute bottom-full right-0 z-20 mb-2 w-52 rounded-2xl border border-[var(--border-strong)] bg-[var(--bg-2)] px-3 py-2 text-xs font-medium leading-snug text-[var(--fg)] shadow-[var(--shadow)]">
             {accion.texto}
@@ -289,7 +312,7 @@ export function ToroFlotante() {
         </button>
         <button
           type="button"
-          onClick={() => setOculto(true)}
+          onClick={ocultar}
           aria-label={en ? "Hide the assistant" : "Ocultar el asistente"}
           className="absolute -right-1 -top-1 z-10 grid size-7 place-items-center rounded-full border border-[var(--border-strong)] bg-[var(--bg-2)] text-[var(--fg-muted)] opacity-90 shadow transition hover:text-[var(--fg)] pointer-fine:size-5 pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100 pointer-fine:focus-visible:opacity-100"
         >
@@ -318,7 +341,11 @@ export function ToroFlotante() {
           style={{ width: W }}
           className="toro-float block cursor-grab touch-none transition-transform hover:scale-110 active:cursor-grabbing"
         >
-          {personaje === "ganadero" ? <PersonajeGanadero label={etiqueta} gesto={accion?.id ?? null} /> : <ToroBot bubble={false} label={etiqueta} gesto={accion?.id ?? null} />}
+          <span className="toro-paso block">
+            <span className="toro-bob block">
+              {(salida ? salida === "ganadero" : personaje === "ganadero") ? <PersonajeGanadero label={etiqueta} gesto={accion?.id ?? null} /> : <ToroBot bubble={false} label={etiqueta} gesto={accion?.id ?? null} />}
+            </span>
+          </span>
         </button>
         <span className="pointer-events-none absolute bottom-full right-0 mb-1 hidden whitespace-nowrap rounded-full border border-[var(--border-strong)] bg-[var(--bg-2)] px-3 py-1 text-xs font-medium text-[var(--fg)] opacity-0 shadow transition group-hover:opacity-100 pointer-fine:block">
           {etiqueta}
