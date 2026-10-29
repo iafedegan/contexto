@@ -309,7 +309,7 @@ export function PreviewChrome({
     // Tras la hidratación: tocar el DOM antes provocaría errores.
     let limpiar: (() => void) | null = null;
     const id = setTimeout(() => {
-      limpiar = installCanvasHints(document, labels);
+      limpiar = installCanvasHints(document, labels, "doble clic para editar");
     }, 1500);
     return () => {
       clearTimeout(id);
@@ -370,6 +370,13 @@ export function PreviewChrome({
     setFoco(kind);
     setFlash((n) => n + 1);
     setPanel(true);
+  }
+
+  // Como `elegir`, pero desde un clic en la vista previa: solo abre el editor si `abrir`.
+  function elegirClic(kind: Foco, abrir: boolean) {
+    setFoco(kind);
+    setFlash((n) => n + 1);
+    if (abrir) setPanel(true);
   }
 
   // Elige una nota desde la lista del panel: se marca en la página y se lleva a la vista.
@@ -443,6 +450,8 @@ export function PreviewChrome({
         onClickCapture={(e) => {
           // Los enlaces de la vista previa no navegan: llevarían a la página publicada.
           const el = e.target as HTMLElement;
+          // Un clic solo marca la parte; el editor se abre con doble clic (o si ya está abierto).
+          const abrir = panel || e.detail >= 2;
           const link = el.closest("a");
           if (link) {
             e.preventDefault();
@@ -463,7 +472,7 @@ export function PreviewChrome({
           if (piece) {
             setSecEl(piece);
             setRegion("encabezado");
-            elegir("parte");
+            elegirClic("parte", abrir);
             return;
           }
           const blockEl = el.closest<HTMLElement>("[data-bslug],[data-bs-root]");
@@ -472,13 +481,13 @@ export function PreviewChrome({
             setSelSlug(slug);
             setSelTitle(blockEl?.querySelector("h1,h2,h3")?.textContent?.trim() ?? slug);
             setRegion("body");
-            elegir("nota");
+            elegirClic("nota", abrir);
             return;
           }
           const r = el.closest("[data-region]")?.getAttribute("data-region") as RegionId | null;
           if (r && (!seccion || r === "encabezado" || r === "body")) {
             setRegion(r);
-            elegir("parte");
+            elegirClic("parte", abrir);
           }
         }}
       >
