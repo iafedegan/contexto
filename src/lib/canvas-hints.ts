@@ -89,7 +89,7 @@ export function installCanvasHints(doc: Document, labels: HintLabels): () => voi
       t.el.setAttribute("data-cg-hover", "");
       current = t.el;
     }
-    tag.textContent = `${t.text} · clic para editar · doble clic para abrir`;
+    tag.textContent = `${t.text} · clic para editar`;
     tag.setAttribute("data-on", "");
     const r = t.el.getBoundingClientRect();
     const h = tag.getBoundingClientRect().height || 24;
