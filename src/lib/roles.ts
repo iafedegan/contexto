@@ -58,3 +58,28 @@ export function ajustesDeRol(rol: RolPropio, previos: Ajustes | undefined): Ajus
   }
   return Object.keys(out).length ? (out as Ajustes) : undefined;
 }
+
+// Permisos que un administrador cambió a un rol de siempre (redactor, diseñador, editor), sobre lo que ese rol da de fábrica.
+export const ROLES_INCORPORADOS_KEY = "roles_incorporados";
+// Cambios guardados por rol de siempre.
+export type CambiosRoles = Partial<Record<UserRole, Partial<Record<PermisoId, boolean>>>>;
+
+// Valida los cambios guardados a los roles de siempre (el administrador no se toca).
+export function sanitizeCambiosRoles(input: unknown): CambiosRoles {
+  const out: CambiosRoles = {};
+  if (!input || typeof input !== "object") return out;
+  for (const r of ROLES_BASE) {
+    const raw = (input as Record<string, unknown>)[r];
+    if (!raw || typeof raw !== "object") continue;
+    const perm: Partial<Record<PermisoId, boolean>> = {};
+    for (const p of PERMISO_IDS) {
+      const v = (raw as Record<string, unknown>)[p];
+      if (typeof v === "boolean" && v !== porDefecto(r, p as PermisoId)) perm[p as PermisoId] = v;
+    }
+    if (Object.keys(perm).length) out[r] = perm;
+  }
+  return out;
+}
+
+// Un rol de siempre con sus cambios, con la forma de un rol propio (para reutilizar `ajustesDeRol`).
+export const comoRolPropio = (r: UserRole, cambios: CambiosRoles): RolPropio => ({ id: r, nombre: nombreRol(r), base: r, permisos: cambios[r] ?? {} });

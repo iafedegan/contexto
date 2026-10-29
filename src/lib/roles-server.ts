@@ -3,7 +3,7 @@ import { cache } from "react";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { siteSettings } from "@/db/schema";
-import { ROLES_ASIGNADOS_KEY, ROLES_PROPIOS_KEY, sanitizeRolesPropios, type RolPropio } from "@/lib/roles";
+import { ROLES_ASIGNADOS_KEY, ROLES_INCORPORADOS_KEY, ROLES_PROPIOS_KEY, sanitizeCambiosRoles, sanitizeRolesPropios, type CambiosRoles, type RolPropio } from "@/lib/roles";
 
 // Lee un valor de `site_settings` por clave (o undefined).
 async function leer(key: string): Promise<unknown> {
@@ -25,6 +25,15 @@ export const getRolesAsignados = cache(async (): Promise<Record<string, string>>
   try {
     const v = await leer(ROLES_ASIGNADOS_KEY);
     return v && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, string>) : {};
+  } catch {
+    return {};
+  }
+});
+
+/** Cambios que un administrador hizo a los roles de siempre. */
+export const getCambiosRoles = cache(async (): Promise<CambiosRoles> => {
+  try {
+    return sanitizeCambiosRoles(await leer(ROLES_INCORPORADOS_KEY));
   } catch {
     return {};
   }

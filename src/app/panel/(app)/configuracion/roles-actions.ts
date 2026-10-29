@@ -8,8 +8,8 @@ import { siteSettings, users, type UserRole } from "@/db/schema";
 import { requireRole } from "@/lib/auth";
 import { PERMISO_IDS, ROLES, type PermisoId } from "@/lib/permisos";
 import { PERMISOS_KEY, type MapaAjustes } from "@/lib/permisos-server";
-import { getRolesAsignados, getRolesPropios } from "@/lib/roles-server";
-import { ROLES_ASIGNADOS_KEY, ROLES_BASE, ROLES_PROPIOS_KEY, ajustesDeRol, sanitizeRolesPropios, type RolPropio } from "@/lib/roles";
+import { getCambiosRoles, getRolesAsignados, getRolesPropios } from "@/lib/roles-server";
+import { ROLES_ASIGNADOS_KEY, ROLES_BASE, ROLES_INCORPORADOS_KEY, ROLES_PROPIOS_KEY, ajustesDeRol, comoRolPropio, sanitizeCambiosRoles, sanitizeRolesPropios, type RolPropio } from "@/lib/roles";
 
 type Resultado = { ok: boolean; message: string };
 
@@ -107,12 +107,30 @@ export async function asignarRol(userId: string, valor: string): Promise<Resulta
     delete asignados[userId];
     await guardar(ROLES_ASIGNADOS_KEY, asignados);
     await db.update(users).set({ role: valor as UserRole, updatedAt: new Date() }).where(eq(users.id, userId));
+    // Los permisos del rol de siempre, con los cambios que un administrador le haya hecho.
+    const rolBase = comoRolPropio(valor as UserRole, await getCambiosRoles());
     await conAjustes((m) => {
-      const previo = m[userId];
-      if (previo && typeof previo.exigir_2fa === "boolean") m[userId] = { exigir_2fa: previo.exigir_2fa };
+      const a = valor === "administrador" ? undefined : ajustesDeRol(rolBase, m[userId]);
+      if (a) m[userId] = a;
       else delete m[userId];
     });
   }
   revalidatePath("/panel", "layout");
   return { ok: true, message: "Rol asignado." };
+}
+
+/**
+ * Cambia lo que da un rol de siempre (redactor, diseñador o editor) y lo reaplica a quienes lo tienen sin un rol propio. El
+ * administrador no se puede restringir. `permisos` vacío restablece el rol a su configuración de fábrica.
+ */
+export async function guardarRolIncorporado(rol: string, permisos: Record<string, boolean>): Promise<Resultado> {
+  await requireRole("administrador");
+  if (!ROLES_BASE.includes(rol as UserRole)) return { ok: false, message: "Ese rol no se puede editar." };
+  const todos = sanitizeCambiosRoles({ ...(await getCambiosRoles()), [rol]: permisos });
+  await guardar(ROLES_INCORPORADOS_KEY, todos);
+  const asignados = await getRolesAsignados();
+  const personas = await db.select({ id: users.id }).from(users).where(eq(users.role, rol as UserRole));
+  await aplicarRol(comoRolPropio(rol as UserRole, todos), personas.map((u) => u.id).filter((id) => !asignados[id]));
+  revalidatePath("/panel", "layout");
+  return { ok: true, message: "Rol guardado." };
 }

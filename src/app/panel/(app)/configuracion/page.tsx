@@ -17,7 +17,7 @@ import { AddUserForm } from "@/components/panel/add-user-form";
 import { SubTabs } from "@/components/panel/sub-tabs";
 import { RolesEditor } from "@/components/panel/roles-editor";
 import { CuotaPersonas } from "@/components/panel/cuota-personas";
-import { getRolesAsignados, getRolesPropios } from "@/lib/roles-server";
+import { getCambiosRoles, getRolesAsignados, getRolesPropios } from "@/lib/roles-server";
 import { MiPerfilForm } from "@/components/panel/mi-perfil-form";
 import { getConfigIA } from "@/lib/ai-provider";
 import { resumenUsoIA } from "@/lib/ai-uso";
@@ -79,7 +79,7 @@ export default async function ConfiguracionPage() {
   const ultimo = new Map<string, string>();
   for (const a of accesos) if (!ultimo.has(a.userId)) ultimo.set(a.userId, fmtHora(a.at));
   const ajustes = isAdmin ? await getAjustes() : {};
-  const [rolesPropios, rolesAsignados] = isAdmin ? await Promise.all([getRolesPropios(), getRolesAsignados()]) : [[], {}];
+  const [rolesPropios, rolesAsignados, cambiosRoles] = isAdmin ? await Promise.all([getRolesPropios(), getRolesAsignados(), getCambiosRoles()]) : [[], {}, {}];
   // Personas por rol (propio por su id; de siempre por su nombre), sin listar a nadie.
   const conteoRoles: Record<string, number> = {};
   for (const p of people) {
@@ -294,7 +294,7 @@ export default async function ConfiguracionPage() {
               {
                 id: "roles",
                 label: "Roles",
-                contenido: <RolesEditor propios={rolesPropios} conteo={conteoRoles} />,
+                contenido: <RolesEditor propios={rolesPropios} conteo={conteoRoles} cambios={cambiosRoles} />,
               },
               {
                 id: "cuota",

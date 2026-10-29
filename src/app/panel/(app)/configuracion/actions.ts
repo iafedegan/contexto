@@ -236,7 +236,8 @@ export async function createUser(_prev: CreateUserState, formData: FormData): Pr
 
   const passwordHash = await bcrypt.hash(password, 10);
   const [nueva] = await db.insert(users).values({ name, email, passwordHash, role }).returning({ id: users.id });
-  if (propio && nueva) await asignarRol(nueva.id, `rol:${propio.id}`);
+  // Rol propio, o rol de siempre con los cambios que se le hayan hecho.
+  if (nueva && role !== "administrador") await asignarRol(nueva.id, propio ? `rol:${propio.id}` : role);
 
   revalidatePath("/panel/configuracion");
   return { ok: true, message: `Cuenta creada para ${name}. Comparte la contraseña de forma segura.` };
