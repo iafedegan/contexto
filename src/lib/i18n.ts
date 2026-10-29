@@ -148,7 +148,7 @@ const es: Dict = {
   "footer.editorialPolicy": "Política editorial",
   "footer.panel": "Panel editorial",
   "footer.archiveNote":
-    "El archivo histórico permanece disponible en sus URLs originales, sin migración.",
+    "Más de 50.000 notas del archivo histórico, ahora en este sitio y en sus mismas direcciones.",
   "footer.blurb":
     "Noticias, análisis y datos del sector ganadero colombiano. Verificación humana en cada publicación.",
   "footer.consultArchive": "Consultar el archivo",
@@ -391,7 +391,7 @@ const en: Dict = {
   "footer.editorialPolicy": "Editorial policy",
   "footer.panel": "Newsroom panel",
   "footer.archiveNote":
-    "The historical archive stays available at its original URLs, with no migration.",
+    "More than 50,000 notes from the historical archive, now on this site at their same addresses.",
   "footer.blurb":
     "News, analysis and data from Colombia's cattle sector. Human verification on every story.",
   "footer.consultArchive": "Search the archive",
