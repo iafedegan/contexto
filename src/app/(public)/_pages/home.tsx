@@ -11,7 +11,7 @@ import { FeatureStrip } from "@/components/feature-strip";
 import { AdsBanner } from "@/components/ads-banner";
 import { CardSlugsProvider } from "@/components/home/card-styles";
 import { blockStylesCss } from "@/lib/home-style";
-import { SiteSidebar } from "@/components/site-sidebar";
+import { ColumnaLafaurieSuelta, SiteSidebar } from "@/components/site-sidebar";
 import { SiteShell } from "@/components/site-shell";
 import { getArticlesByCategory, getHomeLayoutConfig, getHomepageArticles, getMostReadArticles, getRecentArticles, PORTADA_NOTAS } from "@/lib/content";
 import { CarruselPortada, type NotaCarrusel } from "@/components/home/carrusel-portada";
@@ -139,6 +139,15 @@ async function HomePage({ locale }: { locale: Locale }) {
     const notasCar = car.propiasPosicion === "antes" ? [...propias, ...delSitio] : [...delSitio, ...propias];
     carrusel = notasCar.length ? <CarruselPortada config={car} notas={notasCar} /> : null;
   }
+  // En el celular la columna del Dr. Lafaurie sube justo debajo del carrusel (en computador sigue en la barra lateral).
+  const carruselConColumna = (
+    <>
+      {carrusel}
+      <div className="mb-10 lg:hidden">
+        <ColumnaLafaurieSuelta locale={locale} />
+      </div>
+    </>
+  );
   const cintillo =
     piezas.length > 0 ? (
       <div className="mb-2 overflow-hidden border-b border-[var(--border)] py-2.5 sm:mb-3 sm:border-y">
@@ -172,7 +181,7 @@ async function HomePage({ locale }: { locale: Locale }) {
       aboveMain={
         <>
           {cintillo}
-          {car.posicion === "arriba" && <div className="mt-4">{carrusel}</div>}
+          {car.posicion === "arriba" && <div className="mt-4">{carruselConColumna}</div>}
         </>
       }
     >
@@ -226,17 +235,17 @@ async function HomePage({ locale }: { locale: Locale }) {
             <EsmeraldaTemplate {...props} />
           )}
 
-          {car.posicion === "tras-principal" && <div className="mt-12">{carrusel}</div>}
+          {car.posicion === "tras-principal" && <div className="mt-12">{carruselConColumna}</div>}
 
           {/* Billboard entre el bloque destacado y el resto (§9.1). */}
           <AdsBanner zone="home_billboard" className="mx-auto mt-14" />
         </div>
 
-        <SiteSidebar locale={locale} />
+        <SiteSidebar locale={locale} columnaEnMovil={false} />
       </div>
       </CardSlugsProvider>
 
-      {car.posicion === "abajo" && <div className="mt-12">{carrusel}</div>}
+      {car.posicion === "abajo" && <div className="mt-12">{carruselConColumna}</div>}
 
       <AdsBanner zone="home_bottom" className="mx-auto mt-14" />
 

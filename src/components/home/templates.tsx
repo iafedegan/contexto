@@ -506,7 +506,7 @@ function GremialThumb({ a, sizes, priority = false }: { a: ArticleListItem; size
     // Miniaturas dentro del editor de portada (sin dominio conocido en build); en el
     // sitio público next/image ya sirve estas mismas URLs en otras plantillas.
     // eslint-disable-next-line @next/next/no-img-element
-    <img src={a.coverImageUrl} alt={a.coverImageAlt ?? a.title} sizes={sizes} className="size-full object-cover" loading={priority ? "eager" : "lazy"} />
+    <img src={a.coverImageUrl} alt={a.coverImageAlt ?? a.title} sizes={sizes} width={640} height={360} className="size-full object-cover" loading={priority ? "eager" : "lazy"} />
   );
 }
 

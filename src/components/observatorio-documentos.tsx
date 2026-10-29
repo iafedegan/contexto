@@ -55,7 +55,7 @@ export function ObservatorioDocumentos({ bibliotecas, etiquetas: L }: { bibliote
       <label className="relative block max-w-md">
         <span className="sr-only">{L.buscar}</span>
         <Search aria-hidden size={16} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--fg-muted)]" />
-        <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder={L.placeholder}
+        <input type="search" name="q" value={q} onChange={(e) => setQ(e.target.value)} placeholder={L.placeholder}
           className="min-h-11 w-full rounded-full border border-[var(--border-strong)] bg-[var(--bg-2)] py-2 pl-10 pr-4 text-base text-[var(--fg)] placeholder:text-[var(--fg-muted)]/70 sm:text-sm" />
       </label>
       {tarjetas.length === 0 ? (

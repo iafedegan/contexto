@@ -92,6 +92,7 @@ function Mes({ etiqueta, valor, periodos, desde, hasta, onChange }: { etiqueta: 
     <label className="flex flex-col gap-1.5">
       <span className="text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-[var(--fg-muted)]">{etiqueta}</span>
       <select
+        name="periodo"
         value={valor}
         onChange={(e) => onChange(Number(e.target.value))}
         className="min-h-11 rounded-[var(--radius)] border border-[var(--border-strong)] bg-[var(--bg)] px-3 text-base text-[var(--fg)] sm:min-h-9 sm:text-sm"

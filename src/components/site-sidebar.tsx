@@ -18,7 +18,7 @@ import { hrefNota } from "@/lib/ruta-nota";
 const VAPID_PUBLIC = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? "";
 
 // Barra lateral: notas más leídas, anuncios, boletín, avisos y redes sociales.
-export async function SiteSidebar({ locale }: { locale: Locale }) {
+export async function SiteSidebar({ locale, columnaEnMovil = true }: { locale: Locale; /** false: en el celular la columna no se repite aquí porque la pantalla ya la pone bajo el carrusel. */ columnaEnMovil?: boolean }) {
   const [masLeidas, columna] = await Promise.all([
     getMostReadArticles(5).catch(() => []),
     getUltimaColumnaLafaurie().catch(() => null),
@@ -26,27 +26,11 @@ export async function SiteSidebar({ locale }: { locale: Locale }) {
 
   return (
     <aside className="flex flex-col gap-8" aria-label={t(locale, "sidebar.mostRead")}>
-      {/* La columna del Dr. Lafaurie va siempre primero, antes de las más leídas. */}
+      {/* La columna del Dr. Lafaurie va siempre primero, antes de las más leídas. En la portada del celular sube bajo el carrusel (ver home.tsx). */}
       {columna && (
-        <section>
-          <h2 className="lx-kicker text-center border-b border-[var(--border)] pb-2 text-[var(--accent)]">
-            {t(locale, "sidebar.column")}
-          </h2>
-          <Link href={hrefNota(locale, columna)} className="group mt-3 block text-center">
-            {columna.authorAvatarUrl && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={columna.authorAvatarUrl}
-                alt={columna.authorName ?? ""}
-                className="mx-auto mb-3 size-24 rounded-full border border-[var(--border-strong)] object-cover"
-              />
-            )}
-            <span className="lx-display block text-[1.15rem] leading-snug transition-colors group-hover:text-[var(--accent)]">
-              {columna.title}
-            </span>
-            {columna.excerpt && <span className="mt-2 block text-sm leading-relaxed text-[var(--fg-muted)]">{columna.excerpt}</span>}
-          </Link>
-        </section>
+        <div className={columnaEnMovil ? undefined : "max-lg:hidden"}>
+          <ColumnaLafaurie locale={locale} columna={columna} />
+        </div>
       )}
 
       {masLeidas.length > 0 && (
@@ -123,3 +107,26 @@ const REDES = [
   { nombre: "YouTube", href: "https://www.youtube.com/@contextoganadero", Icono: YoutubeIcon },
   { nombre: "LinkedIn", href: "https://www.linkedin.com/company/fedegan", Icono: LinkedinIcon },
 ];
+
+/** Última columna del Dr. Lafaurie: su retrato, el título y un resumen pequeño. Se usa en la barra lateral y, en el celular, bajo el carrusel de la portada. */
+export function ColumnaLafaurie({ locale, columna }: { locale: Locale; columna: NonNullable<Awaited<ReturnType<typeof getUltimaColumnaLafaurie>>> }) {
+  return (
+    <section>
+      <h2 className="lx-kicker text-center border-b border-[var(--border)] pb-2 text-[var(--accent)]">{t(locale, "sidebar.column")}</h2>
+      <Link href={hrefNota(locale, columna)} className="group mt-3 block text-center">
+        {columna.authorAvatarUrl && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={columna.authorAvatarUrl} alt={columna.authorName ?? ""} width={96} height={96} className="mx-auto mb-3 size-24 rounded-full border border-[var(--border-strong)] object-cover" />
+        )}
+        <span className="lx-display block text-[1.15rem] leading-snug transition-colors group-hover:text-[var(--accent)]">{columna.title}</span>
+        {columna.excerpt && <span className="mx-auto mt-1.5 line-clamp-2 block max-w-md text-[0.8rem] leading-snug text-[var(--fg-muted)]">{columna.excerpt}</span>}
+      </Link>
+    </section>
+  );
+}
+
+/** La columna ya consultada (con caché) para ponerla donde haga falta fuera de la barra lateral. */
+export async function ColumnaLafaurieSuelta({ locale }: { locale: Locale }) {
+  const columna = await getUltimaColumnaLafaurie().catch(() => null);
+  return columna ? <ColumnaLafaurie locale={locale} columna={columna} /> : null;
+}

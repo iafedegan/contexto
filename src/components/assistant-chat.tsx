@@ -194,7 +194,7 @@ export function AssistantChat({ compact = false }: { compact?: boolean }) {
                         >
                           {s.image && (
                             // eslint-disable-next-line @next/next/no-img-element -- miniatura remota de la nota; el chat no necesita optimizarla
-                            <img src={s.image} alt="" loading="lazy" className="size-[4.5rem] shrink-0 rounded-[var(--radius)] object-cover" />
+                            <img src={s.image} alt="" width={72} height={72} loading="lazy" className="size-[4.5rem] shrink-0 rounded-[var(--radius)] object-cover" />
                           )}
                           <span className="min-w-0 flex-1">
                             <span className="lx-kicker block truncate text-[0.68rem] text-[var(--accent)]">
@@ -291,6 +291,7 @@ export function AssistantChat({ compact = false }: { compact?: boolean }) {
           </button>
         )}
         <input
+          name="pregunta"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder="Escribe tu pregunta…"
