@@ -140,6 +140,7 @@ export function MfaForm({ activo }: { activo: boolean }) {
 
           <form action={accionAlta} className="flex flex-col gap-3">
             <input type="hidden" name="secret" value={setup.secret} />
+            <input type="hidden" name="firma" value={setup.firma} />
             <div>
               <p className="text-sm font-semibold">Paso 3 · Escribe el código que te muestra la aplicación</p>
               <p className="mt-1 text-xs leading-relaxed text-[var(--fg-muted)]">
