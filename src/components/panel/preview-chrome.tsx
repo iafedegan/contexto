@@ -440,6 +440,15 @@ export function PreviewChrome({
       <div
         ref={contentRef}
         className="absolute inset-x-0 bottom-0 top-14 overflow-y-auto"
+        onDoubleClickCapture={(e) => {
+          // Un clic edita; doble clic abre esa nota (o enlace) en el sitio, en otra pestaña.
+          const el = e.target as HTMLElement;
+          const enlace = el.closest("a") ?? el.closest("[data-bslug],[data-bs-root]")?.querySelector("a[href]");
+          const href = enlace?.getAttribute("href");
+          if (!href || href.startsWith("#")) return;
+          e.preventDefault();
+          window.open(new URL(href, window.location.origin).toString(), "_blank", "noopener");
+        }}
         onClickCapture={(e) => {
           // Los enlaces de la vista previa no navegan: llevarían a la página publicada.
           const el = e.target as HTMLElement;
