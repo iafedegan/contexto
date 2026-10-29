@@ -85,6 +85,8 @@ export function PreviewChrome({
   const [selSlug, setSelSlug] = useState<string | null>(null);
   const [selTitle, setSelTitle] = useState("");
   const contentRef = useRef<HTMLDivElement>(null);
+  // Temporizador del clic que abre una nota: el doble clic lo cancela y edita esa parte.
+  const aperturaRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [zoneMap, setZoneMap] = useState<ZoneMapData | null>(null);
   const [zoneUp, setZoneUp] = useState(0);
   // Posición del formulario flotante: arrastrable y recordada entre visitas.
@@ -440,22 +442,21 @@ export function PreviewChrome({
       <div
         ref={contentRef}
         className="absolute inset-x-0 bottom-0 top-14 overflow-y-auto"
-        onDoubleClickCapture={(e) => {
-          // Un clic edita; doble clic abre esa nota (o enlace) en el sitio, en otra pestaña.
-          const el = e.target as HTMLElement;
-          const enlace = el.closest("a") ?? el.closest("[data-bslug],[data-bs-root]")?.querySelector("a[href]");
-          const href = enlace?.getAttribute("href");
-          if (!href || href.startsWith("#")) return;
-          e.preventDefault();
-          window.open(new URL(href, window.location.origin).toString(), "_blank", "noopener");
-        }}
         onClickCapture={(e) => {
           // Los enlaces de la vista previa no navegan: llevarían a la página publicada.
           const el = e.target as HTMLElement;
           const link = el.closest("a");
+          if (aperturaRef.current) clearTimeout(aperturaRef.current);
           if (link) {
             e.preventDefault();
             const url = new URL(link.href, "https://x.invalid");
+            // Un clic abre la nota en el sitio (con una pequeña espera, por si es el primero de un doble clic); el doble clic edita esa parte.
+            const esNota = !/^\/(?:en\/)?categoria\//.test(url.pathname) && url.pathname !== "/" && url.pathname !== "/en";
+            if (esNota && e.detail < 2) {
+              const destino = new URL(link.getAttribute("href") ?? "", window.location.origin).toString();
+              aperturaRef.current = setTimeout(() => window.open(destino, "_blank", "noopener"), 300);
+              return;
+            }
             const sec = url.pathname.match(/^\/(?:en\/)?categoria\/([^/]+)\/?$/);
             if (sec && !el.closest("[data-bslug],[data-bs-root]")) {
               router.push(`/panel/portada?vista=1&seccion=${sec[1]}`);
