@@ -18,11 +18,15 @@ import type { AdDraft } from "@/components/panel/ads-zone-form";
 import { sql } from "drizzle-orm";
 import { seccionesConConteo } from "@/lib/secciones-conteo";
 import { makePage as makeCategoryPage } from "@/app/(public)/_pages/categoria";
+import { makePage as makeArticlePage } from "@/app/(public)/_pages/articulo";
+import { getSlugPorRutaOriginal } from "@/lib/content";
 
 // Página de portada real, reutilizada para la vista previa.
 const Home = makePage("es");
 // Página de sección real, reutilizada para la vista previa.
 const Categoria = makeCategoryPage("es");
+// Página de nota real, reutilizada para la vista previa.
+const Nota = makeArticlePage("es");
 
 /**
  * Vista previa REAL de la portada: la misma página que ve el público, con el
@@ -106,10 +110,12 @@ export async function applyDraftForRequest(opts: { popup?: "auto" | "show" | "hi
 }
 
 // Renderiza la portada o una sección real con el borrador del editor aplicado.
-export async function HomeRealPreview({ seccion }: { seccion?: string } = {}) {
+export async function HomeRealPreview({ seccion, nota, ruta }: { seccion?: string; nota?: string; ruta?: string } = {}) {
   const { draft, changed, lines, anterior } = await applyDraftForRequest();
+  // La nota se puede pedir por su dirección (slug) o por su ruta original del sitio anterior (/seccion/titulo).
+  const slugNota = nota || (ruta ? await getSlugPorRutaOriginal(ruta).catch(() => null) : null);
   let row: { id: string; slug: string; name: string; description: string | null; sortOrder: number; articleCount: number } | null = null;
-  if (seccion) {
+  if (seccion && !slugNota) {
     const [r] = await db
       .select({
         id: categories.id,
@@ -143,12 +149,13 @@ export async function HomeRealPreview({ seccion }: { seccion?: string } = {}) {
       hasDraft={!!draft}
       draft={draft}
       seccion={row}
+      enNota={!!slugNota}
       adsZones={adsZones}
       sections={secciones}
       titles={Object.fromEntries(notas.map((n) => [n.slug, n.title]))}
       canManagePauta={session?.user.role === "administrador"}
     >
-      {row ? <Categoria params={Promise.resolve({ slug: row.slug })} searchParams={Promise.resolve({})} locale="es" /> : <Home locale="es" />}
+      {slugNota ? <Nota params={Promise.resolve({ slug: slugNota })} /> : row ? <Categoria params={Promise.resolve({ slug: row.slug })} searchParams={Promise.resolve({})} locale="es" /> : <Home locale="es" />}
     </PreviewChrome>
   );
 }

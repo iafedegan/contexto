@@ -45,6 +45,7 @@ export function PreviewChrome({
   hasDraft,
   draft,
   seccion = null,
+  enNota = false,
   adsZones = [],
   sections = [],
   titles = {},
@@ -61,6 +62,8 @@ export function PreviewChrome({
   draft?: PortadaDraft | null;
   /** Sección que se está viendo (null = la portada). */
   seccion?: { id: string; slug: string; name: string; description: string | null; sortOrder: number; articleCount: number } | null;
+  /** Se está viendo una nota (no la portada ni una sección). */
+  enNota?: boolean;
   /** Zonas de publicidad (para la pestaña Publicidad del formulario flotante). */
   adsZones?: AdsZoneRow[];
   canManagePauta?: boolean;
@@ -447,7 +450,11 @@ export function PreviewChrome({
           const href = enlace?.getAttribute("href");
           if (!href || href.startsWith("#")) return;
           e.preventDefault();
-          window.location.assign(new URL(href, window.location.origin).toString());
+          // Sigue dentro de la vista previa: la nota se abre con el marco y el panel de estilos, no en el sitio público.
+          const slug = el.closest("[data-bslug],[data-bs-root]")?.getAttribute("data-bslug") ?? el.closest("[data-bslug],[data-bs-root]")?.getAttribute("data-bs-root");
+          const url = new URL(href, window.location.origin);
+          if (url.origin !== window.location.origin) return;
+          router.push(slug ? `/panel/portada?vista=1&nota=${encodeURIComponent(slug)}` : `/panel/portada?vista=1&ruta=${encodeURIComponent(url.pathname)}`);
         }}
         onClickCapture={(e) => {
           // Los enlaces de la vista previa no navegan: llevarían a la página publicada.
@@ -463,7 +470,7 @@ export function PreviewChrome({
             }
             // Desde una sección, el enlace al inicio vuelve a la portada. En la portada es solo
             // otra parte que se puede elegir (no navega: el clic selecciona la parte).
-            if (seccion && (url.pathname === "/" || url.pathname === "/en") && !el.closest("[data-bslug],[data-bs-root]")) {
+            if ((seccion || enNota) && (url.pathname === "/" || url.pathname === "/en") && !el.closest("[data-bslug],[data-bs-root]")) {
               router.push("/panel/portada?vista=1");
               return;
             }
