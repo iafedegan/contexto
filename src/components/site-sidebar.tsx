@@ -29,7 +29,7 @@ export async function SiteSidebar({ locale }: { locale: Locale }) {
       {/* La columna del Dr. Lafaurie va siempre primero, antes de las más leídas. */}
       {columna && (
         <section>
-          <h2 className="lx-kicker border-b border-[var(--border)] pb-2 text-[var(--accent)]">
+          <h2 className="lx-kicker text-center border-b border-[var(--border)] pb-2 text-[var(--accent)]">
             {t(locale, "sidebar.column")}
           </h2>
           <Link href={hrefNota(locale, columna)} className="group mt-3 block text-center">
