@@ -343,7 +343,7 @@ export function ToroFlotante() {
         >
           <span className="toro-paso block">
             <span className="toro-bob block">
-              {(salida ? salida === "ganadero" : personaje === "ganadero") ? <PersonajeGanadero label={etiqueta} gesto={accion?.id ?? null} /> : <ToroBot bubble={false} label={etiqueta} gesto={accion?.id ?? null} />}
+              {(salida ? salida === "ganadero" : personaje === "ganadero") ? <PersonajeGanadero label={etiqueta} gesto={salida === "ganadero" ? "camina" : (accion?.id ?? null)} /> : <ToroBot bubble={false} label={etiqueta} gesto={accion?.id ?? null} />}
             </span>
           </span>
         </button>

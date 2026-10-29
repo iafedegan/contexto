@@ -16,12 +16,17 @@ export function PersonajeGanadero({ gesto, label }: { gesto?: string | null; lab
       <svg viewBox="0 0 200 330" className="block h-auto w-full overflow-visible" aria-hidden data-gesto={gesto ?? ""}>
         <ellipse cx="100" cy="322" rx="58" ry="6" fill="#000" opacity="0.18" />
         <g className="gn-cuerpo">
-          {/* botas */}
-          <path d="M64 290 L94 290 L96 314 C96 318 92 320 88 320 L58 320 C56 312 60 300 64 290Z" fill="#6b4423" stroke={T} strokeWidth="3.5" strokeLinejoin="round" />
-          <path d="M136 290 L106 290 L104 314 C104 318 108 320 112 320 L142 320 C144 312 140 300 136 290Z" fill="#6b4423" stroke={T} strokeWidth="3.5" strokeLinejoin="round" />
-          <path d="M57 316 L96 316 M104 316 L143 316" stroke="#2f1d0e" strokeWidth="4" strokeLinecap="round" />
-          {/* pantalón caqui */}
-          <path d="M64 204 L136 204 L134 296 L106 296 L100 238 L94 296 L66 296 Z" fill="#cdb98a" stroke={T} strokeWidth="3.5" strokeLinejoin="round" />
+          {/* piernas (botas y pantalón caqui): cada una es un grupo para poder dar el paso al caminar */}
+          <g className="gn-pierna gn-pierna-i">
+            <path d="M64 290 L94 290 L96 314 C96 318 92 320 88 320 L58 320 C56 312 60 300 64 290Z" fill="#6b4423" stroke={T} strokeWidth="3.5" strokeLinejoin="round" />
+            <path d="M57 316 L96 316" stroke="#2f1d0e" strokeWidth="4" strokeLinecap="round" />
+            <path d="M64 204 L100 204 L100 238 L94 296 L66 296 Z" fill="#cdb98a" stroke={T} strokeWidth="3.5" strokeLinejoin="round" />
+          </g>
+          <g className="gn-pierna gn-pierna-d">
+            <path d="M136 290 L106 290 L104 314 C104 318 108 320 112 320 L142 320 C144 312 140 300 136 290Z" fill="#6b4423" stroke={T} strokeWidth="3.5" strokeLinejoin="round" />
+            <path d="M104 316 L143 316" stroke="#2f1d0e" strokeWidth="4" strokeLinecap="round" />
+            <path d="M100 204 L136 204 L134 296 L106 296 L100 238 Z" fill="#cdb98a" stroke={T} strokeWidth="3.5" strokeLinejoin="round" />
+          </g>
           <path d="M100 238 L100 206" stroke={T} strokeWidth="2.5" />
           {/* cuello y camisa */}
           <rect x="90" y="118" width="20" height="16" fill="#d3a17a" stroke={T} strokeWidth="3" />
