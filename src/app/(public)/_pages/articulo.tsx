@@ -191,7 +191,8 @@ export function ArticleDocument({
         </div>
           }
           cover={
-        <figure className="lx-media lx-card mt-10 aspect-[16/9] w-full">
+        // Una columna lleva el retrato del columnista, casi siempre pequeño: a todo el ancho se pixela, así que va chico y centrado.
+        <figure className={a.categorySlug === "columnas" ? "lx-media mx-auto mt-10 aspect-square w-48 overflow-hidden rounded-full sm:w-56" : "lx-media lx-card mt-10 aspect-[16/9] w-full"}>
           {/* «Última hora»: la insignia va en la esquina de la imagen, no en una franja. */}
           {ultimaHora && <BreakingBadge locale={locale} className="absolute left-3 top-3 z-[5] shadow-lg" />}
           {a.coverImageUrl ? (
@@ -201,7 +202,7 @@ export function ArticleDocument({
               fill
               priority
               fetchPriority="high"
-              sizes="(min-width: 1280px) 1200px, 100vw"
+              sizes={a.categorySlug === "columnas" ? "224px" : "(min-width: 1280px) 1200px, 100vw"}
               quality={75}
               // Encuadre algo hacia arriba: en una foto vertical (el retrato de un columnista) queda la cara, no el pecho.
               className="object-cover object-[50%_28%]"
