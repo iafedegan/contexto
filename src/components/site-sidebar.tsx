@@ -119,7 +119,7 @@ export function ColumnaLafaurie({ locale, columna }: { locale: Locale; columna: 
           <img src={columna.authorAvatarUrl} alt={columna.authorName ?? ""} width={96} height={96} className="mx-auto mb-3 size-24 rounded-full border border-[var(--border-strong)] object-cover" />
         )}
         <span className="lx-display block text-[1.15rem] leading-snug transition-colors group-hover:text-[var(--accent)]">{columna.title}</span>
-        {columna.excerpt && <span className="mx-auto mt-1.5 line-clamp-2 block max-w-md text-[0.8rem] leading-snug text-[var(--fg-muted)]">{columna.excerpt}</span>}
+        {columna.excerpt && <span className="mx-auto mt-2 line-clamp-4 block max-w-[17rem] text-[0.82rem] leading-snug text-[var(--fg-muted)]">{columna.excerpt}</span>}
       </Link>
     </section>
   );

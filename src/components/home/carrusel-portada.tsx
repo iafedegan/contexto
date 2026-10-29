@@ -151,7 +151,7 @@ export function CarruselPortada({ config: c, notas }: { config: Required<Carruse
               <Tarjeta n={n} oculta={fundido && i !== idx} etiqueta={c.estilo === "solo-imagen" ? n.title : undefined}>
                 <span className="cg-car-img">
                   {n.image ? (
-                    <Image src={n.image} alt={n.imageAlt} fill unoptimized={n.sinOptimizar} sizes={`(min-width:1024px) ${Math.round(1200 / Math.max(1, c.visiblesEscritorio))}px, 100vw`} className="object-cover" />
+                    <Image src={n.image} alt={n.imageAlt} fill unoptimized={n.sinOptimizar} style={{ aspectRatio: c.aspecto.replace(":", " / ") }} sizes={`(min-width:1024px) ${Math.round(1200 / Math.max(1, c.visiblesEscritorio))}px, 100vw`} className="object-cover" />
                   ) : (
                     <span className="cg-car-sinfoto" aria-hidden />
                   )}

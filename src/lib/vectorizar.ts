@@ -22,7 +22,7 @@ export async function vectorizarPendientes(presupuestoMs: number): Promise<Resul
     const [r] = await db.select({ n: sql<number>`count(*)::int` }).from(articles).where(and(eq(articles.status, "publicado"), isNull(articles.embedding)));
     return r?.n ?? 0;
   };
-  if (!embeddingsDisponibles()) return { ok: false, hechas: 0, pendientes: await cuenta(), motivo: "No hay clave del proveedor de embeddings configurada." };
+  if (!(await embeddingsDisponibles())) return { ok: false, hechas: 0, pendientes: await cuenta(), motivo: "No hay clave del proveedor de embeddings configurada." };
 
   const inicio = Date.now();
   let hechas = 0;

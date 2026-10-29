@@ -5,6 +5,8 @@ import { procesarBoletinesProgramados } from "@/lib/newsletter/envio";
 import { avisarSiUltimaHora } from "@/lib/push";
 import { procesarConsejo } from "@/lib/ai/consejo-ejecucion";
 import { hit } from "@/lib/rate-limit";
+import { registrarClaveDeRespaldo } from "@/lib/embeddings";
+import { claveEfectiva } from "@/lib/ai-provider";
 
 /**
  * Cableado de los eventos de dominio: aquí (y solo aquí) se decide quién reacciona a qué. Lo carga
@@ -25,3 +27,6 @@ alOcurrir("programadas.aviso", () => {
     await procesarConsejo({ max: 1 }).catch((e) => console.error("programadas.aviso: falló el consejo de redacción", e));
   });
 });
+
+// Los embeddings usan la clave del entorno y, si no hay, la que el administrador guardó en el panel (sin ella las notas no se vectorizaban).
+registrarClaveDeRespaldo((proveedor) => claveEfectiva(proveedor === "openai" ? "openai" : "google"));

@@ -204,7 +204,7 @@ async function procesarPagina(items: unknown[], pasada: Pasada): Promise<void> {
         .where(inArray(archiveIndex.externalId, ids))
     : [];
   const previo = new Map(existentes.map((e) => [e.id, e]));
-  const puedeEmbeber = embeddingsDisponibles();
+  const puedeEmbeber = await embeddingsDisponibles();
 
   const nuevos: ArchiveApiItem[] = [];
   const iguales: string[] = [];

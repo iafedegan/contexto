@@ -21,7 +21,7 @@
         "^components/ui/",
         "^content/",
         "^components/(logo-mark|social-icons|turnstile|radio-player|interactive-chart|toro-bot|personaje-ganadero|diferido)\\.tsx$",
-        "^lib/(cintillo|carrusel|textos-cabecera|menu-navbar|consejo/plan|gam|regiones-colombia|data-cache|safe-fetch|en-paralelo|toro-posicion|personajes|panel-tema|formato-seccion|rate-limit|claves|env|escape|validate|format|utils|cron-auth|i18n|budget|bots|csp|citas|pestanas|logo-archivos|lectores-ua|lectores-geo|lectores-suscriptor|lectores-filtros|lectores-entrada|medicion-cliente|media-mime|media-upload|media-firma|media-storage|media-limpieza|nav-limits|home-fonts|home-regions|template-parts|home-style|ads-types|home-layout|home-layout-normalize|home-background|section-els|popup-types|site-identity|turnstile|eventos|zones|theme|geo-reverse|embeddings|vectorizar|chart-svg|chart-png)\\.tsx?$",
+        "^lib/(cintillo|carrusel|textos-cabecera|menu-navbar|consejo/plan|gam|regiones-colombia|data-cache|safe-fetch|en-paralelo|toro-posicion|personajes|panel-tema|formato-seccion|rate-limit|claves|env|escape|validate|format|utils|cron-auth|i18n|budget|bots|csp|citas|pestanas|logo-archivos|lectores-ua|lectores-geo|lectores-suscriptor|lectores-filtros|lectores-entrada|medicion-cliente|media-mime|media-upload|media-firma|media-storage|media-limpieza|nav-limits|home-fonts|home-regions|template-parts|home-style|ads-types|home-layout|home-layout-normalize|home-background|section-els|popup-types|site-identity|turnstile|eventos|zones|theme|geo-reverse|embeddings|vectorizar|vectorizar|chart-svg|chart-png)\\.tsx?$",
         "^lib/api/"
       ],
       "puedeUsar": []
@@ -54,7 +54,7 @@
       "rutas": [
         "^components/home/tile-card\\.tsx$",
         "^components/section/",
-        "^lib/(article-ops|article-stats|content|ruta-nota|seo|seo-audit|sanitize|scheduled|redirects|rss|search|estados|embeds|embeddings|preview-token|preview-draft|ubicacion-nota)\\.ts$",
+        "^lib/(article-ops|article-stats|content|ruta-nota|seo|seo-audit|sanitize|scheduled|redirects|rss|search|estados|embeds|embeddings|vectorizar|preview-token|preview-draft|ubicacion-nota)\\.ts$",
         "^components/(article-card|article-body|cover-art|json-ld|share-buttons|reading-progress|reader-mode|listen-article|live-badge|view-counter|programadas-tick)\\.tsx$",
         "^app/api/programadas/",
         "^components/home/(home-card|bento-tile|broadsheet-card)\\.tsx$"

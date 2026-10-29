@@ -21,10 +21,30 @@ const normalizar = (v: number[]) => {
 
 type Peticion = { url: string; headers: Record<string, string>; body: string; leer: (json: unknown) => (number[] | undefined)[] };
 
-function armarPeticion(textos: string[], tarea: "consulta" | "documento"): Peticion | null {
+// Dónde buscar la clave cuando no está en el entorno (la que un administrador guardó en el panel). La conecta `src/lib/oyentes.ts`: este módulo
+// no puede conocer al de IA, así que recibe la función ya hecha.
+type ResolutorClave = (proveedor: "openai" | "gemini") => Promise<string | null>;
+let resolutorDeRespaldo: ResolutorClave | null = null;
+/** Conecta la búsqueda de la clave guardada en el panel (la llama el cableado de arranque). */
+export function registrarClaveDeRespaldo(fn: ResolutorClave) {
+  resolutorDeRespaldo = fn;
+}
+
+/** Clave del proveedor de embeddings: la del entorno o, si no hay, la que un administrador guardó en Configuración › Inteligencia artificial. */
+async function claveEmbeddings(): Promise<string | null> {
+  const delEntorno = proveedor() === "openai" ? process.env.OPENAI_API_KEY : process.env.GOOGLE_GENERATIVE_AI_API_KEY;
+  if (delEntorno) return delEntorno;
+  try {
+    return (await resolutorDeRespaldo?.(proveedor())) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+async function armarPeticion(textos: string[], tarea: "consulta" | "documento"): Promise<Peticion | null> {
+  const key = await claveEmbeddings();
+  if (!key) return null;
   if (proveedor() === "openai") {
-    const key = process.env.OPENAI_API_KEY;
-    if (!key) return null;
     return {
       url: "https://api.openai.com/v1/embeddings",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
@@ -37,8 +57,6 @@ function armarPeticion(textos: string[], tarea: "consulta" | "documento"): Petic
       },
     };
   }
-  const key = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
-  if (!key) return null;
   return {
     url: `https://generativelanguage.googleapis.com/v1beta/models/${modelo()}:batchEmbedContents`,
     headers: { "Content-Type": "application/json", "x-goog-api-key": key },
@@ -61,7 +79,7 @@ function armarPeticion(textos: string[], tarea: "consulta" | "documento"): Petic
  */
 async function pedirEmbeddings(textos: string[], { intentos, timeoutMs, tarea }: { intentos: number; timeoutMs: number; tarea: "consulta" | "documento" }): Promise<(number[] | null)[]> {
   const vacio = textos.map(() => null);
-  const peticion = textos.length ? armarPeticion(textos, tarea) : null;
+  const peticion = textos.length ? await armarPeticion(textos, tarea) : null;
   if (!peticion) return vacio;
 
   for (let intento = 0; intento < intentos; intento++) {
@@ -117,7 +135,7 @@ export async function embedMany(textos: string[]): Promise<(number[] | null)[]> 
 }
 
 /** Indica si hay un proveedor de embeddings configurado. */
-export const embeddingsDisponibles = () => Boolean(proveedor() === "openai" ? process.env.OPENAI_API_KEY : process.env.GOOGLE_GENERATIVE_AI_API_KEY);
+export const embeddingsDisponibles = async () => Boolean(await claveEmbeddings());
 
 /** Formatea un vector JS al literal que pgvector espera: `[0.1,0.2,...]`. */
 export function toVectorLiteral(vec: number[]): string {
