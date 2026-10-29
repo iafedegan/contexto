@@ -67,6 +67,15 @@ export function SectionPanel({
     onChange({ sectionEls: next });
   }
 
+  // Aplica el tamaño escrito al salir del campo (no letra a letra: «5» de 520 se acotaría a 8 y el campo saltaría) y acotado al rango.
+  function commitSize(txt: string) {
+    if (txt.trim() === "") return patchEl({ size: undefined });
+    const n = Number(txt);
+    if (!Number.isFinite(n)) return;
+    const r = el === "n-photo" ? EL_RANGES.photo : EL_RANGES.size;
+    patchEl({ size: Math.min(r.max, Math.max(r.min, Math.round(n))) });
+  }
+
   return (
     <div className="flex flex-col gap-4">
       <div className={`grid gap-1 rounded-lg border border-[var(--border)] p-1 ${ads ? "grid-cols-3" : "grid-cols-2"}`}>
@@ -137,9 +146,11 @@ export function SectionPanel({
                   min={EL_RANGES.photo.min}
                   max={EL_RANGES.photo.max}
                   step={10}
-                  value={style.size ?? ""}
+                  key={style.size ?? "auto"}
+                  defaultValue={style.size ?? ""}
                   placeholder="Automático"
-                  onChange={(e) => patchEl({ size: e.target.value === "" ? undefined : Number(e.target.value) })}
+                  onBlur={(e) => commitSize(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
                   className="w-28 rounded-lg border border-[var(--border-strong)] bg-[var(--surface-2)] px-2 py-1.5 text-sm tabular-nums"
                 />
                 {style.size !== undefined && (
@@ -176,9 +187,11 @@ export function SectionPanel({
                 min={EL_RANGES.size.min}
                 max={EL_RANGES.size.max}
                 step={1}
-                value={style.size ?? ""}
+                key={style.size ?? "auto"}
+                defaultValue={style.size ?? ""}
                 placeholder="Automático"
-                onChange={(e) => patchEl({ size: e.target.value === "" ? undefined : Number(e.target.value) })}
+                onBlur={(e) => commitSize(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
                 className="w-28 rounded-lg border border-[var(--border-strong)] bg-[var(--surface-2)] px-2 py-1.5 text-sm tabular-nums"
               />
               <span className="text-xs text-[var(--fg-muted)]">ej. 12</span>

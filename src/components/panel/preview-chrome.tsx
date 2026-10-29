@@ -143,9 +143,12 @@ export function PreviewChrome({
     draftRef.current = draft;
   });
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Cuándo se tocó algo por última vez aquí: el borrador que vuelve del servidor justo después no debe pisar lo que se está escribiendo.
+  const editadoEn = useRef(0);
 
   // Cada ajuste se guarda en el borrador (y se avisa al editor) y la vista se refresca.
   function persist() {
+    editadoEn.current = Date.now();
     setSaveState("saving");
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(async () => {
@@ -214,7 +217,7 @@ export function PreviewChrome({
 
   // Si el editor cambia el diseño en la otra pestaña, el formulario lo refleja.
   useEffect(() => {
-    if (!timer.current && draft) {
+    if (!timer.current && draft && Date.now() - editadoEn.current > 5000) {
       layoutRef.current = draft.layout;
       itemsRef.current = draft.items;
       adDraftsRef.current = draft.adDrafts;
