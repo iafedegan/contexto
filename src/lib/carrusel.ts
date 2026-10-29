@@ -3,7 +3,7 @@
  * ve en la vista previa, se publica y se deshace igual que el resto. Vale para todas las plantillas. Todo es puro: la portada le pasa
  * las notas ya consultadas y el cliente solo pinta.
  */
-export type CarruselFuente = "portada" | "recientes" | "masleidas" | "seccion";
+export type CarruselFuente = "portada" | "recientes" | "masleidas" | "seccion" | "propias";
 export type CarruselPosicion = "arriba" | "tras-principal" | "abajo";
 export type CarruselEstilo = "superpuesta" | "debajo" | "solo-imagen";
 export type CarruselAspecto = "21:9" | "16:9" | "3:2" | "4:3" | "1:1";
@@ -11,7 +11,28 @@ export type CarruselTransicion = "deslizar" | "fundido";
 export type CarruselFlechas = "siempre" | "hover" | "nunca";
 export type CarruselIndicador = "puntos" | "barras" | "numero" | "ninguno";
 
+/** Diapositiva propia del editor: una foto subida (o una dirección de imagen), con su texto y su enlace opcionales. */
+export type Diapositiva = {
+  id: string;
+  /** Dirección de la imagen (https o de este mismo sitio). */
+  imagen: string;
+  /** Texto pequeño sobre el título (como la sección en una nota). */
+  etiqueta: string;
+  titulo: string;
+  texto: string;
+  /** A dónde lleva al pulsarla (https o de este sitio); vacío = no es un enlace. */
+  enlace: string;
+  /** Abrir el enlace en otra pestaña. */
+  nuevaPestana: boolean;
+};
+
+export const CARRUSEL_MAX_DIAPOSITIVAS = 12;
+
 export type CarruselConfig = {
+  /** Diapositivas propias: fotos con su texto y su enlace, además de (o en lugar de) las notas. */
+  diapositivas?: Diapositiva[];
+  /** Si hay notas y diapositivas propias, cuáles van primero. */
+  propiasPosicion?: "antes" | "despues";
   /** Mostrar el carrusel en la portada. */
   activo?: boolean;
   /** Título sobre el carrusel (vacío = sin título). */
@@ -70,6 +91,8 @@ export type CarruselConfig = {
 };
 
 export const DEFAULT_CARRUSEL: Required<CarruselConfig> = {
+  diapositivas: [],
+  propiasPosicion: "antes",
   activo: false,
   titulo: "Destacados",
   posicion: "arriba",
@@ -110,14 +133,36 @@ const entero = (v: unknown, min: number, max: number, def: number) => {
 };
 const bool = (v: unknown, def: boolean) => (typeof v === "boolean" ? v : def);
 const uno = <T extends string>(v: unknown, opciones: readonly T[], def: T): T => opciones.find((o) => o === v) ?? def;
+// Dirección permitida en una diapositiva: https o ruta de este mismo sitio (nunca `javascript:` ni `data:`).
+const direccion = (v: unknown) => (typeof v === "string" && v.length <= 600 && /^(https:\/\/|\/(?!\/))[^\s"'<>]*$/.test(v.trim()) ? v.trim() : "");
+const texto = (v: unknown, max: number) => (typeof v === "string" ? v.replace(/\s+/g, " ").trim().slice(0, max) : "");
+// Valida las diapositivas propias: solo las que tienen imagen.
+function sanitizeDiapositivas(input: unknown): Diapositiva[] {
+  if (!Array.isArray(input)) return [];
+  const vistos = new Set<string>();
+  const out: Diapositiva[] = [];
+  for (const raw of input) {
+    if (!raw || typeof raw !== "object") continue;
+    const r = raw as Record<string, unknown>;
+    const id = typeof r.id === "string" && /^[a-z0-9-]{3,40}$/.test(r.id) ? r.id : null;
+    const imagen = direccion(r.imagen);
+    if (!id || !imagen || vistos.has(id)) continue;
+    vistos.add(id);
+    out.push({ id, imagen, etiqueta: texto(r.etiqueta, 40), titulo: texto(r.titulo, 120), texto: texto(r.texto, 300), enlace: direccion(r.enlace), nuevaPestana: r.nuevaPestana === true });
+    if (out.length >= CARRUSEL_MAX_DIAPOSITIVAS) break;
+  }
+  return out;
+}
 const color = (v: unknown) => (typeof v === "string" && /^#(?:[\da-f]{3}|[\da-f]{6})$/i.test(v) ? v : "");
 
 /** Valida lo que llegue (acaba en una página pública) y rellena lo que falte con los valores por defecto. */
 export function sanitizeCarrusel(input: unknown): Required<CarruselConfig> {
   const c = (input && typeof input === "object" ? input : {}) as Record<string, unknown>;
   const d = DEFAULT_CARRUSEL;
-  const fuente = uno(c.fuente, ["portada", "recientes", "masleidas", "seccion"] as const, d.fuente);
+  const fuente = uno(c.fuente, ["portada", "recientes", "masleidas", "seccion", "propias"] as const, d.fuente);
   return {
+    diapositivas: sanitizeDiapositivas(c.diapositivas),
+    propiasPosicion: uno(c.propiasPosicion, ["antes", "despues"] as const, d.propiasPosicion),
     activo: bool(c.activo, d.activo),
     titulo: typeof c.titulo === "string" ? c.titulo.replace(/\s+/g, " ").trim().slice(0, 60) : d.titulo,
     posicion: uno(c.posicion, ["arriba", "tras-principal", "abajo"] as const, d.posicion),
@@ -156,6 +201,7 @@ export function sanitizeCarrusel(input: unknown): Required<CarruselConfig> {
 /** Una línea con lo que lleva el carrusel, para verla aunque su bloque del panel esté cerrado. */
 export function resumenCarrusel(c: CarruselConfig | undefined): string {
   const v = sanitizeCarrusel(c);
-  const fuentes: Record<CarruselFuente, string> = { portada: "como la portada", recientes: "las más recientes", masleidas: "las más leídas", seccion: "de una sección" };
-  return `${v.cantidad} notas ${fuentes[v.fuente]} · ${v.visiblesEscritorio} a la vez${v.autoplay ? ` · cada ${v.intervalo} s` : ""}`;
+  const fuentes: Record<CarruselFuente, string> = { portada: "como la portada", recientes: "las más recientes", masleidas: "las más leídas", seccion: "de una sección", propias: "solo diapositivas propias" };
+  const propias = v.diapositivas.length ? ` + ${v.diapositivas.length} propias` : "";
+  return `${v.cantidad} notas ${fuentes[v.fuente]}${propias} · ${v.visiblesEscritorio} a la vez${v.autoplay ? ` · cada ${v.intervalo} s` : ""}`;
 }

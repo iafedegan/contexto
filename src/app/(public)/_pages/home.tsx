@@ -109,7 +109,20 @@ async function HomePage({ locale }: { locale: Locale }) {
           : car.fuente === "seccion" && car.seccion
             ? await getArticlesByCategory(car.seccion, { limit: pedir }).then((r) => r.items).catch(() => [])
             : articles;
-    const notasCar: NotaCarrusel[] = fuente
+    const propias: NotaCarrusel[] = car.diapositivas.map((d) => ({
+      slug: `propia-${d.id}`,
+      href: d.enlace || null,
+      externa: d.nuevaPestana && /^https?:/.test(d.enlace),
+      sinOptimizar: true,
+      title: d.titulo,
+      excerpt: d.texto,
+      image: d.imagen,
+      imageAlt: d.titulo || d.etiqueta || "",
+      categoria: d.etiqueta || null,
+      autor: null,
+      fecha: null,
+    }));
+    const delSitio: NotaCarrusel[] = (car.fuente === "propias" ? [] : fuente)
       .filter((a) => !car.soloConFoto || a.coverImageUrl)
       .slice(0, car.cantidad)
       .map((a) => ({
@@ -123,6 +136,7 @@ async function HomePage({ locale }: { locale: Locale }) {
         autor: a.authorName,
         fecha: a.publishedAt ? formatDate(a.publishedAt, INTL_LOCALE[locale]) : null,
       }));
+    const notasCar = car.propiasPosicion === "antes" ? [...propias, ...delSitio] : [...delSitio, ...propias];
     carrusel = notasCar.length ? <CarruselPortada config={car} notas={notasCar} /> : null;
   }
   const cintillo =

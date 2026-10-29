@@ -1,7 +1,10 @@
 "use client";
 
-import type { ReactNode } from "react";
-import { sanitizeCarrusel, type CarruselConfig } from "@/lib/carrusel";
+import { useState, type ReactNode } from "react";
+import Image from "next/image";
+import { ArrowDown, ArrowUp, ImagePlus, Loader2, Trash2 } from "lucide-react";
+import { subirMedia } from "@/components/panel/subir-media";
+import { CARRUSEL_MAX_DIAPOSITIVAS, sanitizeCarrusel, type CarruselConfig, type Diapositiva } from "@/lib/carrusel";
 
 /**
  * Carrusel de notas de la portada, dentro del editor: de dónde salen las notas, cuántas tarjetas se ven en cada pantalla, el estilo
@@ -43,6 +46,21 @@ export function CarruselEditor({
           />
         </Grupo>
 
+        <Grupo titulo="Diapositivas propias (tus fotos, tu texto, tu enlace)">
+          <Diapositivas lista={v.diapositivas} onChange={(diapositivas) => set({ diapositivas })} />
+          {v.diapositivas.length > 0 && v.fuente !== "propias" && (
+            <Opciones
+              etiqueta="Dónde van respecto a las notas"
+              valor={v.propiasPosicion}
+              opciones={[
+                ["antes", "Primero las mías"],
+                ["despues", "Primero las notas"],
+              ]}
+              onChange={(propiasPosicion) => set({ propiasPosicion })}
+            />
+          )}
+        </Grupo>
+
         <Grupo titulo="Notas">
           <Opciones
             etiqueta="De dónde salen"
@@ -52,6 +70,7 @@ export function CarruselEditor({
               ["recientes", "Las más recientes"],
               ["masleidas", "Las más leídas"],
               ["seccion", "De una sección"],
+              ["propias", "Ninguna: solo mis diapositivas"],
             ]}
             onChange={(fuente) => set({ fuente, ...(fuente === "seccion" && !v.seccion ? { seccion: secciones[0]?.slug ?? "" } : {}) })}
           />
@@ -64,7 +83,7 @@ export function CarruselEditor({
               ))}
             </select>
           )}
-          <Deslizador etiqueta="Cuántas notas" valor={v.cantidad} min={3} max={20} texto={String(v.cantidad)} onChange={(cantidad) => set({ cantidad })} />
+          {v.fuente !== "propias" && <Deslizador etiqueta="Cuántas notas" valor={v.cantidad} min={3} max={20} texto={String(v.cantidad)} onChange={(cantidad) => set({ cantidad })} />}
           <Casilla etiqueta="Solo notas que tengan foto" valor={v.soloConFoto} onChange={(soloConFoto) => set({ soloConFoto })} />
         </Grupo>
 
@@ -242,6 +261,88 @@ function Color({ etiqueta, valor, onChange, vacio }: { etiqueta: string; valor: 
           Quitar
         </button>
       )}
+    </div>
+  );
+}
+
+// Lista de diapositivas propias: subir foto, texto, enlace, orden y borrar. Los textos se guardan al salir del campo (no letra a letra).
+function Diapositivas({ lista, onChange }: { lista: Diapositiva[]; onChange: (d: Diapositiva[]) => void }) {
+  const [subiendo, setSubiendo] = useState<string | null>(null);
+  const [msg, setMsg] = useState("");
+
+  // Cambia un campo de una diapositiva.
+  const cambiar = (id: string, p: Partial<Diapositiva>) => onChange(lista.map((d) => (d.id === id ? { ...d, ...p } : d)));
+  // Mueve una diapositiva una posición.
+  const mover = (i: number, delta: number) => {
+    const j = i + delta;
+    if (j < 0 || j >= lista.length) return;
+    const copia = lista.slice();
+    [copia[i], copia[j]] = [copia[j], copia[i]];
+    onChange(copia);
+  };
+  // Sube una foto: a una diapositiva existente o a una nueva.
+  async function subir(file: File, id?: string) {
+    setMsg("");
+    const marca = id ?? "nueva";
+    setSubiendo(marca);
+    try {
+      const res = await subirMedia(file);
+      if (!res.ok) return setMsg(res.error);
+      if (res.kind !== "imagen") return setMsg("Sube una imagen (JPG, PNG o WebP).");
+      if (id) cambiar(id, { imagen: res.url });
+      else onChange([...lista, { id: `d-${Math.random().toString(36).slice(2, 8)}`, imagen: res.url, etiqueta: "", titulo: "", texto: "", enlace: "", nuevaPestana: false }]);
+    } catch {
+      setMsg("No se pudo subir la foto.");
+    } finally {
+      setSubiendo(null);
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      {lista.map((d, i) => (
+        <div key={d.id} className="rounded-lg border border-[var(--border)] p-2.5">
+          <div className="flex gap-2.5">
+            <div className="relative h-16 w-24 shrink-0 overflow-hidden rounded-md bg-[var(--surface-2)]">
+              <Image src={d.imagen} alt="" fill unoptimized className="object-cover" />
+            </div>
+            <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+              <label className="inline-flex w-fit cursor-pointer items-center gap-1.5 rounded-md border border-[var(--border)] px-2 py-1 text-xs font-medium hover:border-[var(--accent)]">
+                {subiendo === d.id ? <Loader2 size={12} className="animate-spin" /> : <ImagePlus size={12} />}
+                Cambiar foto
+                <input type="file" accept="image/*" className="sr-only" onChange={(e) => e.target.files?.[0] && subir(e.target.files[0], d.id)} />
+              </label>
+              <div className="flex gap-1">
+                <button type="button" onClick={() => mover(i, -1)} disabled={i === 0} aria-label="Subir" className="grid size-7 place-items-center rounded-md border border-[var(--border)] disabled:opacity-30">
+                  <ArrowUp size={12} />
+                </button>
+                <button type="button" onClick={() => mover(i, 1)} disabled={i === lista.length - 1} aria-label="Bajar" className="grid size-7 place-items-center rounded-md border border-[var(--border)] disabled:opacity-30">
+                  <ArrowDown size={12} />
+                </button>
+                <button type="button" onClick={() => onChange(lista.filter((x) => x.id !== d.id))} aria-label="Quitar diapositiva" className="grid size-7 place-items-center rounded-md border border-red-600/40 text-red-700 hover:bg-red-600/10">
+                  <Trash2 size={12} />
+                </button>
+              </div>
+            </div>
+          </div>
+          <div className="mt-2 flex flex-col gap-1.5">
+            <input defaultValue={d.etiqueta} onBlur={(e) => cambiar(d.id, { etiqueta: e.target.value })} maxLength={40} placeholder="Etiqueta pequeña (p. ej. Evento)" className="lx-input !py-1.5 !text-xs" />
+            <input defaultValue={d.titulo} onBlur={(e) => cambiar(d.id, { titulo: e.target.value })} maxLength={120} placeholder="Título" className="lx-input !py-1.5 !text-xs" />
+            <textarea defaultValue={d.texto} onBlur={(e) => cambiar(d.id, { texto: e.target.value })} maxLength={300} rows={2} placeholder="Texto (se ve si activas «Resumen» en la tarjeta)" className="lx-input resize-y !py-1.5 !text-xs" />
+            <input defaultValue={d.enlace} onBlur={(e) => cambiar(d.id, { enlace: e.target.value })} placeholder="Enlace: https://… o /seccion/nota (vacío = sin enlace)" className="lx-input !py-1.5 !text-xs" />
+            <Casilla etiqueta="Abrir el enlace en otra pestaña" valor={d.nuevaPestana} onChange={(nuevaPestana) => cambiar(d.id, { nuevaPestana })} />
+          </div>
+        </div>
+      ))}
+      {lista.length < CARRUSEL_MAX_DIAPOSITIVAS && (
+        <label className="inline-flex w-fit cursor-pointer items-center gap-1.5 rounded-full border border-[var(--accent)] px-3.5 py-1.5 text-xs font-semibold text-[var(--accent)] transition hover:bg-[var(--accent)] hover:text-[var(--accent-fg)]">
+          {subiendo === "nueva" ? <Loader2 size={13} className="animate-spin" /> : <ImagePlus size={13} />}
+          Subir una foto nueva
+          <input type="file" accept="image/*" className="sr-only" onChange={(e) => e.target.files?.[0] && subir(e.target.files[0])} />
+        </label>
+      )}
+      {msg && <p role="alert" className="text-xs text-red-700">{msg}</p>}
+      <p className="text-[11px] text-[var(--fg-muted)]">Hasta {CARRUSEL_MAX_DIAPOSITIVAS} diapositivas. Una enlaza a una nota si pegas su dirección (p. ej. /articulo/mi-nota).</p>
     </div>
   );
 }

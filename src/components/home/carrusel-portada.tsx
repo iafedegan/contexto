@@ -7,7 +7,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { CarruselConfig } from "@/lib/carrusel";
 
 // Una nota lista para pintar en el carrusel.
-export type NotaCarrusel = { slug: string; href: string; title: string; excerpt: string; image: string | null; imageAlt: string; categoria: string | null; autor: string | null; fecha: string | null };
+export type NotaCarrusel = { slug: string; href: string | null; /** Abrir en otra pestaña (diapositivas propias). */ externa?: boolean; /** La imagen es de cualquier sitio: sin optimizar. */ sinOptimizar?: boolean; title: string; excerpt: string; image: string | null; imageAlt: string; categoria: string | null; autor: string | null; fecha: string | null };
 
 // Mueve el desplazamiento de un contenedor con una curva suave y la duración pedida (el `scroll-behavior` nativo no deja fijarla).
 function animarScroll(el: HTMLElement, destino: number, ms: number, alTerminar: () => void) {
@@ -145,10 +145,10 @@ export function CarruselPortada({ config: c, notas }: { config: Required<Carruse
         <ul ref={pista} className={fundido ? "cg-car-pista cg-car-fundido" : "cg-car-pista"} onScroll={alDesplazar}>
           {notas.map((n, i) => (
             <li key={n.slug} className="cg-car-item" data-activa={fundido ? (i === idx ? "" : undefined) : undefined} aria-hidden={fundido && i !== idx ? true : undefined}>
-              <Link href={n.href} className="cg-car-tarjeta" tabIndex={fundido && i !== idx ? -1 : undefined} aria-label={c.estilo === "solo-imagen" ? n.title : undefined}>
+              <Tarjeta n={n} oculta={fundido && i !== idx} etiqueta={c.estilo === "solo-imagen" ? n.title : undefined}>
                 <span className="cg-car-img">
                   {n.image ? (
-                    <Image src={n.image} alt={n.imageAlt} fill sizes={`(min-width:1024px) ${Math.round(1200 / Math.max(1, c.visiblesEscritorio))}px, 100vw`} className="object-cover" />
+                    <Image src={n.image} alt={n.imageAlt} fill unoptimized={n.sinOptimizar} sizes={`(min-width:1024px) ${Math.round(1200 / Math.max(1, c.visiblesEscritorio))}px, 100vw`} className="object-cover" />
                   ) : (
                     <span className="cg-car-sinfoto" aria-hidden />
                   )}
@@ -161,7 +161,7 @@ export function CarruselPortada({ config: c, notas }: { config: Required<Carruse
                     <span className="cg-car-meta">{[c.mostrarAutor ? n.autor : null, c.mostrarFecha ? n.fecha : null].filter(Boolean).join(" · ")}</span>
                   ) : null}
                 </span>
-              </Link>
+              </Tarjeta>
             </li>
           ))}
         </ul>
@@ -195,5 +195,22 @@ export function CarruselPortada({ config: c, notas }: { config: Required<Carruse
         </div>
       )}
     </section>
+  );
+}
+
+// Envoltorio de una tarjeta: enlace (interno o externo) o, si la diapositiva no lleva enlace, un bloque sin más.
+function Tarjeta({ n, oculta, etiqueta, children }: { n: NotaCarrusel; oculta: boolean; etiqueta?: string; children: React.ReactNode }) {
+  if (!n.href) return <div className="cg-car-tarjeta">{children}</div>;
+  if (n.externa) {
+    return (
+      <a href={n.href} target="_blank" rel="noopener noreferrer" className="cg-car-tarjeta" tabIndex={oculta ? -1 : undefined} aria-label={etiqueta}>
+        {children}
+      </a>
+    );
+  }
+  return (
+    <Link href={n.href} className="cg-car-tarjeta" tabIndex={oculta ? -1 : undefined} aria-label={etiqueta}>
+      {children}
+    </Link>
   );
 }
