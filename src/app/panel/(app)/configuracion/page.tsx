@@ -14,6 +14,10 @@ import { CuotaIaPredeterminada } from "@/components/panel/cuota-ia-form";
 import { getSiteIdentity } from "@/lib/site-identity";
 import { UserRow } from "@/components/panel/user-row";
 import { AddUserForm } from "@/components/panel/add-user-form";
+import { SubTabs } from "@/components/panel/sub-tabs";
+import { RolesEditor } from "@/components/panel/roles-editor";
+import { CuotaPersonas } from "@/components/panel/cuota-personas";
+import { getRolesAsignados, getRolesPropios } from "@/lib/roles-server";
 import { MiPerfilForm } from "@/components/panel/mi-perfil-form";
 import { getConfigIA } from "@/lib/ai-provider";
 import { resumenUsoIA } from "@/lib/ai-uso";
@@ -75,6 +79,13 @@ export default async function ConfiguracionPage() {
   const ultimo = new Map<string, string>();
   for (const a of accesos) if (!ultimo.has(a.userId)) ultimo.set(a.userId, fmtHora(a.at));
   const ajustes = isAdmin ? await getAjustes() : {};
+  const [rolesPropios, rolesAsignados] = isAdmin ? await Promise.all([getRolesPropios(), getRolesAsignados()]) : [[], {}];
+  // Personas por rol (propio por su id; de siempre por su nombre), sin listar a nadie.
+  const conteoRoles: Record<string, number> = {};
+  for (const p of people) {
+    const k = rolesAsignados[p.id] && rolesPropios.some((r) => r.id === rolesAsignados[p.id]) ? rolesAsignados[p.id] : p.role;
+    conteoRoles[k] = (conteoRoles[k] ?? 0) + 1;
+  }
   const [cuotas, gastos] = isAdmin ? await Promise.all([getCuotas(), getGastos()]) : [null, null];
   const yoMismo = people.find((p) => p.id === session?.user.id || p.email === session?.user.email);
 
@@ -94,7 +105,6 @@ export default async function ConfiguracionPage() {
           // La identidad del sitio es solo de administradores: a las demás personas ni se les muestra.
           ...(isAdmin ? [{ id: "sitio", label: "Identidad del sitio", icon: <Globe size={13} /> }] : []),
           { id: "usuarios", label: isAdmin ? "Personas" : "Mis datos", icon: <Users size={13} /> },
-          ...(isAdmin ? [{ id: "roles", label: "Roles y cuota de IA", icon: <ShieldCheck size={13} /> }] : []),
           { id: "estilo", label: isAdmin ? "Estilos de escritura" : "Mi estilo de escritura", icon: <PenLine size={13} /> },
           { id: "seguridad", label: "Seguridad de mi cuenta", icon: <ShieldCheck size={13} /> },
           ...(isAdmin
@@ -186,104 +196,122 @@ export default async function ConfiguracionPage() {
         id="usuarios"
         icon={<Users size={14} />}
         title={isAdmin ? "Personas" : "Mis datos"}
-        hint={isAdmin ? `${people.length} cuentas · crea una nueva y mira los accesos` : "Tu nombre, correo y contraseña"}
+        hint={isAdmin ? `${people.length} cuentas · cuentas, roles y cuota de IA` : "Tu nombre, correo y contraseña"}
       >
-        {yoMismo && <MiPerfilForm name={yoMismo.name} email={yoMismo.email} />}
+        {!isAdmin && yoMismo && <MiPerfilForm name={yoMismo.name} email={yoMismo.email} />}
 
         {isAdmin && (
-          <div className="mb-6">
-            <AddUserForm />
-          </div>
-        )}
+          <SubTabs
+            tabs={[
+              {
+                id: "cuentas",
+                label: "Cuentas",
+                contenido: (
+                  <>
+                    {yoMismo && <MiPerfilForm name={yoMismo.name} email={yoMismo.email} />}
+                    <div className="mb-6">
+                      <AddUserForm rolesPropios={rolesPropios.map((r) => ({ id: r.id, nombre: r.nombre }))} />
+                    </div>
+                    {isAdmin && (
+                    <div className="overflow-x-auto rounded-[var(--radius)] border border-[var(--border)]">
+                      <table className="w-full min-w-[34rem] border-separate border-spacing-0 text-sm">
+                        <thead>
+                          <tr>
+                            {["Persona", "Rol", "2FA", "Estado"].map((h) => (
+                              <th
+                                key={h}
+                                className="lx-kicker border-b border-[var(--border)] bg-[var(--surface-2)] px-4 py-3 text-left text-[var(--fg-muted)]"
+                              >
+                                {h}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {people.map((p) => (
+                            <UserRow
+                              key={p.id}
+                              user={p}
+                              canManage={isAdmin && p.id !== session?.user.id}
+                              isSelf={p.id === session?.user.id}
+                              ultimoAcceso={ultimo.get(p.id)}
+                              exige2fa={exige2fa(p.role, ajustes[p.id])}
+                              rolesPropios={rolesPropios.map((r) => ({ id: r.id, nombre: r.nombre }))}
+                              rolId={rolesAsignados[p.id]}
+                              permisos={PERMISOS.map((x) => ({
+                                id: x.id,
+                                label: x.label,
+                                hint: x.hint,
+                                activo: efectivo(p.role, ajustes[p.id], x.id),
+                                porDefecto: porDefecto(p.role, x.id),
+                              }))}
+                            />
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    )}
 
-        {isAdmin && (
-          <div className="mt-6 rounded-[var(--radius)] border border-[var(--border)]">
-            <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-[var(--border)] bg-[var(--surface-2)] px-4 py-3">
-              <p className="text-sm font-semibold">Accesos al panel</p>
-              <p className="text-xs text-[var(--fg-muted)]">Últimos {accesos.length} · hora de Colombia</p>
-            </div>
-            {accesos.length === 0 ? (
-              <p className="px-4 py-5 text-sm text-[var(--fg-muted)]">Aún no hay accesos registrados: aparecerán a partir del próximo inicio de sesión de cada persona.</p>
-            ) : (
-              <div className="max-h-96 overflow-auto">
-                <table className="w-full min-w-[40rem] text-sm">
-                  <thead>
-                    <tr className="text-left text-xs text-[var(--fg-muted)]">
-                      {["Fecha y hora", "Persona", "Cómo entró", "Dispositivo", "IP"].map((h) => (
-                        <th key={h} className="sticky top-0 bg-[var(--bg-2)] px-4 py-2 font-medium">{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {accesos.map((a, i) => (
-                      <tr key={a.at + a.userId + i} className="border-t border-[var(--border)]">
-                        <td className="whitespace-nowrap px-4 py-2 tabular-nums">{fmtHora(a.at)}</td>
-                        <td className="px-4 py-2"><span className="font-medium">{a.name}</span> <span className="text-xs text-[var(--fg-muted)]">{a.email}</span></td>
-                        <td className="px-4 py-2">{a.metodo === "passkey" ? "Passkey" : "Contraseña + 2FA"}</td>
-                        <td className="whitespace-nowrap px-4 py-2">{a.dispositivo}</td>
-                        <td className="whitespace-nowrap px-4 py-2 tabular-nums text-[var(--fg-muted)]">{a.ip || "—"}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        )}
 
+                    {isAdmin && (
+                      <div className="mt-6 rounded-[var(--radius)] border border-[var(--border)]">
+                        <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-[var(--border)] bg-[var(--surface-2)] px-4 py-3">
+                          <p className="text-sm font-semibold">Accesos al panel</p>
+                          <p className="text-xs text-[var(--fg-muted)]">Últimos {accesos.length} · hora de Colombia</p>
+                        </div>
+                        {accesos.length === 0 ? (
+                          <p className="px-4 py-5 text-sm text-[var(--fg-muted)]">Aún no hay accesos registrados: aparecerán a partir del próximo inicio de sesión de cada persona.</p>
+                        ) : (
+                          <div className="max-h-96 overflow-auto">
+                            <table className="w-full min-w-[40rem] text-sm">
+                              <thead>
+                                <tr className="text-left text-xs text-[var(--fg-muted)]">
+                                  {["Fecha y hora", "Persona", "Cómo entró", "Dispositivo", "IP"].map((h) => (
+                                    <th key={h} className="sticky top-0 bg-[var(--bg-2)] px-4 py-2 font-medium">{h}</th>
+                                  ))}
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {accesos.map((a, i) => (
+                                  <tr key={a.at + a.userId + i} className="border-t border-[var(--border)]">
+                                    <td className="whitespace-nowrap px-4 py-2 tabular-nums">{fmtHora(a.at)}</td>
+                                    <td className="px-4 py-2"><span className="font-medium">{a.name}</span> <span className="text-xs text-[var(--fg-muted)]">{a.email}</span></td>
+                                    <td className="px-4 py-2">{a.metodo === "passkey" ? "Passkey" : "Contraseña + 2FA"}</td>
+                                    <td className="whitespace-nowrap px-4 py-2">{a.dispositivo}</td>
+                                    <td className="whitespace-nowrap px-4 py-2 tabular-nums text-[var(--fg-muted)]">{a.ip || "—"}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                  </>
+                ),
+              },
+              {
+                id: "roles",
+                label: "Roles",
+                contenido: <RolesEditor propios={rolesPropios} conteo={conteoRoles} />,
+              },
+              {
+                id: "cuota",
+                label: "Cuota de IA",
+                contenido: (
+                  <>
+                    {cuotas && <CuotaIaPredeterminada valor={cuotas.predeterminada} />}
+                    {cuotas && gastos && (
+                      <CuotaPersonas filas={people.filter((p) => p.role !== "administrador" || true).map((p) => ({ id: p.id, name: p.name, email: p.email, propia: cuotas.personas[p.id] ?? null, efectiva: cuotaDe(cuotas, p.id), gasto: gastos[p.id] ?? 0 }))} />
+                    )}
+                  </>
+                ),
+              },
+            ]}
+          />
+        )}
       </Section>
-
-      {/* ------------------------------------- Roles y cuota de IA (solo administradores) */}
-      {isAdmin && (
-        <Section
-          id="roles"
-          icon={<ShieldCheck size={14} />}
-          title="Roles y cuota de IA"
-          hint="redactor · diseñador < editor < administrador · permisos y tope de gasto en IA por persona"
-        >
-        {isAdmin && cuotas && <CuotaIaPredeterminada valor={cuotas.predeterminada} />}
-
-        {isAdmin && (
-        <div className="overflow-x-auto rounded-[var(--radius)] border border-[var(--border)]">
-          <table className="w-full min-w-[34rem] border-separate border-spacing-0 text-sm">
-            <thead>
-              <tr>
-                {["Persona", "Rol", "2FA", "Estado"].map((h) => (
-                  <th
-                    key={h}
-                    className="lx-kicker border-b border-[var(--border)] bg-[var(--surface-2)] px-4 py-3 text-left text-[var(--fg-muted)]"
-                  >
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {people.map((p) => (
-                <UserRow
-                  key={p.id}
-                  user={p}
-                  canManage={isAdmin && p.id !== session?.user.id}
-                  isSelf={p.id === session?.user.id}
-                  ultimoAcceso={ultimo.get(p.id)}
-                  exige2fa={exige2fa(p.role, ajustes[p.id])}
-                  cuotaIA={cuotas && gastos ? { propia: cuotas.personas[p.id] ?? null, efectiva: cuotaDe(cuotas, p.id), gasto: gastos[p.id] ?? 0 } : undefined}
-                  permisos={PERMISOS.map((x) => ({
-                    id: x.id,
-                    label: x.label,
-                    hint: x.hint,
-                    activo: efectivo(p.role, ajustes[p.id], x.id),
-                    porDefecto: porDefecto(p.role, x.id),
-                  }))}
-                />
-              ))}
-            </tbody>
-          </table>
-        </div>
-        )}
-
-        </Section>
-      )}
 
 
       {/* --------------------------------------------- Seguridad de mi cuenta */}

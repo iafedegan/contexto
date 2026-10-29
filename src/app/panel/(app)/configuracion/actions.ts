@@ -26,6 +26,8 @@ import { aplicarRoles, validarRoles } from "@/lib/ai-roles";
 import { encryptSecret } from "@/lib/secrets";
 import { invalidarCache } from "@/lib/data-cache";
 import { ROLES } from "@/lib/permisos";
+import { asignarRol } from "@/app/panel/(app)/configuracion/roles-actions";
+import { getRolesPropios } from "@/lib/roles-server";
 
 /** Guarda la identidad del sitio y refresca TODO el portal, que la consume. */
 export async function saveSiteIdentity(formData: FormData) {
@@ -219,7 +221,10 @@ export async function createUser(_prev: CreateUserState, formData: FormData): Pr
   const name = String(formData.get("name") ?? "").trim();
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const password = String(formData.get("password") ?? "");
-  const role = String(formData.get("role") ?? "redactor") as UserRole;
+  const pedido = String(formData.get("role") ?? "redactor");
+  // Un rol propio llega como `rol:<id>`: la cuenta nace con su rol base y luego se le aplica la plantilla.
+  const propio = pedido.startsWith("rol:") ? (await getRolesPropios()).find((r) => r.id === pedido.slice(4)) : undefined;
+  const role = (propio ? propio.base : pedido) as UserRole;
 
   if (!name) return { ok: false, message: "Falta el nombre." };
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { ok: false, message: "Correo inválido." };
@@ -230,7 +235,8 @@ export async function createUser(_prev: CreateUserState, formData: FormData): Pr
   if (existente) return { ok: false, message: "Ya existe una cuenta con ese correo." };
 
   const passwordHash = await bcrypt.hash(password, 10);
-  await db.insert(users).values({ name, email, passwordHash, role });
+  const [nueva] = await db.insert(users).values({ name, email, passwordHash, role }).returning({ id: users.id });
+  if (propio && nueva) await asignarRol(nueva.id, `rol:${propio.id}`);
 
   revalidatePath("/panel/configuracion");
   return { ok: true, message: `Cuenta creada para ${name}. Comparte la contraseña de forma segura.` };

@@ -5,7 +5,6 @@ import { Fragment, useState, useTransition } from "react";
 import { ChevronDown } from "lucide-react";
 import type { UserRole } from "@/db/schema";
 import {
-  changeUserRole,
   deleteUser,
   resetUserPermissions,
   resetUserTotp,
@@ -14,6 +13,7 @@ import {
   toggleUserActive,
 } from "@/app/panel/(app)/configuracion/actions";
 import { ROLES } from "@/lib/permisos";
+import { asignarRol } from "@/app/panel/(app)/configuracion/roles-actions";
 
 /**
  * Fila de persona. El cambio de rol se aplica al instante (sin botón de
@@ -30,6 +30,8 @@ export function UserRow({
   permisos = [],
   exige2fa = true,
   cuotaIA,
+  rolesPropios = [],
+  rolId,
   ultimoAcceso,
 }: {
   user: {
@@ -42,6 +44,10 @@ export function UserRow({
   };
   canManage: boolean;
   isSelf: boolean;
+  /** Roles propios del sitio, para el selector de rol. */
+  rolesPropios?: { id: string; nombre: string }[];
+  /** Rol propio que tiene esta persona, si lo tiene. */
+  rolId?: string;
   /** Casillas de permisos de esta persona (solo las ve un administrador). */
   permisos?: PermisoVista[];
   /** ¿Se le exige 2FA? (casilla «Exigir 2FA»). */
@@ -92,19 +98,37 @@ export function UserRow({
       <td className="border-b border-[var(--border)] px-4 py-3">
         {canManage ? (
           <select
-            value={user.role}
+            value={rolId && rolesPropios.some((r) => r.id === rolId) ? `rol:${rolId}` : user.role}
             disabled={pending}
-            onChange={(e) => start(() => changeUserRole(user.id, e.target.value as UserRole))}
+            onChange={(e) => {
+              const v = e.target.value;
+              setError(null);
+              start(async () => {
+                const r = await asignarRol(user.id, v);
+                if (!r.ok) setError(r.message);
+              });
+            }}
             className="lx-input py-1.5 text-xs"
           >
-            {ROLES.map((r) => (
-              <option key={r} value={r}>
-                {r === "disenador" ? "diseñador" : r}
-              </option>
-            ))}
+            <optgroup label="Roles de siempre">
+              {ROLES.map((r) => (
+                <option key={r} value={r}>
+                  {r === "disenador" ? "diseñador" : r}
+                </option>
+              ))}
+            </optgroup>
+            {rolesPropios.length > 0 && (
+              <optgroup label="Roles propios">
+                {rolesPropios.map((r) => (
+                  <option key={r.id} value={`rol:${r.id}`}>
+                    {r.nombre}
+                  </option>
+                ))}
+              </optgroup>
+            )}
           </select>
         ) : (
-          <span className="text-xs">{user.role}</span>
+          <span className="text-xs">{rolId && rolesPropios.find((r) => r.id === rolId)?.nombre || user.role}</span>
         )}
       </td>
 

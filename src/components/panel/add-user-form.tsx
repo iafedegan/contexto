@@ -16,7 +16,7 @@ function passwordTemporal(): string {
 /** Alta de personas nuevas, con contraseña temporal generada en el navegador
  * (visible en claro solo aquí, para que el administrador la copie y la
  * entregue por un canal seguro — no hay envío de correo configurado). */
-export function AddUserForm() {
+export function AddUserForm({ rolesPropios = [] }: { rolesPropios?: { id: string; nombre: string }[] }) {
   const [abierto, setAbierto] = useState(false);
   const [password, setPassword] = useState(passwordTemporal);
   const [state, action, pending] = useActionState<CreateUserState, FormData>(createUser, null);
@@ -80,6 +80,11 @@ export function AddUserForm() {
             {ROLES.map((r) => (
               <option key={r} value={r}>
                 {r === "disenador" ? "diseñador" : r}
+              </option>
+            ))}
+            {rolesPropios.map((r) => (
+              <option key={r.id} value={`rol:${r.id}`}>
+                {r.nombre} (rol propio)
               </option>
             ))}
           </select>
