@@ -5,6 +5,7 @@ import { Bot, Clapperboard, ImageIcon, KeyRound, PenLine, RefreshCw, Trash2, Tri
 import { esModeloDeImagen, esModeloDeTexto, esModeloDeVideo, leerRef, type AiProviderId } from "@/lib/ai-providers";
 import type { ConfigIA } from "@/lib/ai-provider";
 import type { ResumenUsoIA } from "@/lib/ai-uso";
+import { VectorizarAhora } from "@/components/panel/vectorizar-ahora";
 import { actualizarCatalogoIA, eliminarClaveIA, guardarClaveIA, guardarModelosIA } from "@/app/panel/(app)/configuracion/actions";
 
 type Pestana = "claves" | "editores" | "vaca" | "imagenes" | "videos" | "limites";
@@ -124,6 +125,7 @@ export function IaConfig({ config, uso = null, canManage, limites }: { config: C
             {config.proveedores.map((p) => (
               <ClaveProveedor key={p.id} p={p} uso={uso} canManage={canManage} onAviso={setAviso} />
             ))}
+            {canManage && <VectorizarAhora />}
             <p className="text-xs leading-relaxed text-[var(--fg-muted)] lg:col-span-2">
               Cada proveedor guarda su clave cifrada (AES-256-GCM) y nunca se devuelve al navegador. Puedes conectar varios y usar el modelo que mejor
               sirva en cada función (Gemini, Claude y ChatGPT). Si una clave viene del despliegue (variable de entorno), aquí no se puede cambiar.

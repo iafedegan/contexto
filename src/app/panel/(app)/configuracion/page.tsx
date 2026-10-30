@@ -34,6 +34,9 @@ import { EstilosEscritores } from "@/components/panel/estilos-escritores";
 import { EstiloEscritura } from "@/components/panel/estilo-escritura";
 
 // Se calcula en cada petición, nunca durante la compilación.
+// La acción «Vectorizar ahora» corre una tanda de ~45 s dentro de esta ruta.
+export const maxDuration = 90;
+
 export const dynamic = "force-dynamic";
 
 
