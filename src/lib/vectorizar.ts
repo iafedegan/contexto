@@ -2,7 +2,7 @@ import "server-only";
 import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { articles } from "@/db/schema";
-import { embedMany, embeddingsDisponibles } from "@/lib/embeddings";
+import { embedMany, embeddingsDisponibles, ultimoErrorEmbeddings } from "@/lib/embeddings";
 
 /**
  * Vectoriza las notas publicadas que aún no tienen embedding (las ~51.000 del sitio anterior se migraron sin él), de las más recientes a las
@@ -43,7 +43,7 @@ export async function vectorizarPendientes(presupuestoMs: number): Promise<Resul
     }
     hechas += guardadas;
     // Si el proveedor no devolvió nada (cuota, error), se corta: repetir el mismo lote no arregla nada y gastaría tiempo.
-    if (guardadas === 0) return { ok: false, hechas, pendientes: await cuenta(), motivo: "El proveedor no devolvió vectores (cuota o error); se reintenta en la próxima ejecución." };
+    if (guardadas === 0) return { ok: false, hechas, pendientes: await cuenta(), motivo: `El proveedor no devolvió vectores: ${ultimoErrorEmbeddings() ?? "sin detalle"}. Se reintenta en la próxima ejecución.` };
   }
   return { ok: true, hechas, pendientes: await cuenta() };
 }

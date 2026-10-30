@@ -78,6 +78,11 @@ async function armarPeticion(textos: string[], tarea: "consulta" | "documento"):
  * más de un intento, reintenta con espera creciente ante un 429 o un 5xx. Sin clave configurada, o si la API falla, devuelve `null` en cada
  * posición: la búsqueda cae a solo texto y nada se rompe.
  */
+// Último motivo de fallo del proveedor (para que el panel muestre la causa real y no solo «no devolvió vectores»).
+const err = globalThis as { __errorEmbeddings?: string };
+/** Último error del proveedor de embeddings en este proceso, o `undefined`. */
+export const ultimoErrorEmbeddings = () => err.__errorEmbeddings;
+
 async function pedirEmbeddings(textos: string[], { intentos, timeoutMs, tarea }: { intentos: number; timeoutMs: number; tarea: "consulta" | "documento" }): Promise<(number[] | null)[]> {
   const vacio = textos.map(() => null);
   const peticion = textos.length ? await armarPeticion(textos, tarea) : null;
@@ -87,10 +92,13 @@ async function pedirEmbeddings(textos: string[], { intentos, timeoutMs, tarea }:
     try {
       const res = await fetch(peticion.url, { method: "POST", headers: peticion.headers, body: peticion.body, signal: AbortSignal.timeout(timeoutMs) });
       if (res.status === 429 || res.status >= 500) {
-        await esperar(500 * 2 ** intento);
+        err.__errorEmbeddings = `${proveedor()} respondió ${res.status}${res.status === 429 ? " (límite de peticiones o cuota agotada)" : ""}: ${(await res.text().catch(() => "")).replace(/\s+/g, " ").slice(0, 200)}`;
+        // En segundo plano la espera es más larga: un límite por minuto se levanta en segundos.
+        await esperar((tarea === "documento" ? 2000 : 500) * 2 ** intento);
         continue;
       }
       if (!res.ok) {
+        err.__errorEmbeddings = `${proveedor()} respondió ${res.status}: ${(await res.text().catch(() => "")).replace(/\s+/g, " ").slice(0, 200)}`;
         console.error("embeddings: fallo del proveedor", proveedor(), res.status);
         return vacio;
       }
@@ -102,6 +110,7 @@ async function pedirEmbeddings(textos: string[], { intentos, timeoutMs, tarea }:
         return null;
       });
     } catch (e) {
+      err.__errorEmbeddings = `sin respuesta de ${proveedor()} (${(e as Error)?.name ?? "error"})`;
       console.error("embeddings: sin respuesta del proveedor", proveedor(), (e as Error)?.name ?? e);
       await esperar(500 * 2 ** intento);
     }
