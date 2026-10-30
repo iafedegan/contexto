@@ -24,10 +24,11 @@ type Peticion = { url: string; headers: Record<string, string>; body: string; le
 // Dónde buscar la clave cuando no está en el entorno (la que un administrador guardó en el panel). La conecta `src/lib/oyentes.ts`: este módulo
 // no puede conocer al de IA, así que recibe la función ya hecha.
 type ResolutorClave = (proveedor: "openai" | "gemini") => Promise<string | null>;
-let resolutorDeRespaldo: ResolutorClave | null = null;
-/** Conecta la búsqueda de la clave guardada en el panel (la llama el cableado de arranque). */
+// Se guarda en globalThis: Next empaqueta por separado el arranque, las rutas y las Server Actions, y una variable de módulo no se compartiría.
+const g = globalThis as { __claveEmbeddings?: ResolutorClave };
+/** Conecta la búsqueda de la clave guardada en el panel (la llama el cableado de arranque y las acciones que vectorizan). */
 export function registrarClaveDeRespaldo(fn: ResolutorClave) {
-  resolutorDeRespaldo = fn;
+  g.__claveEmbeddings = fn;
 }
 
 /** Clave del proveedor de embeddings: la del entorno o, si no hay, la que un administrador guardó en Configuración › Inteligencia artificial. */
@@ -35,7 +36,7 @@ async function claveEmbeddings(): Promise<string | null> {
   const delEntorno = proveedor() === "openai" ? process.env.OPENAI_API_KEY : process.env.GOOGLE_GENERATIVE_AI_API_KEY;
   if (delEntorno) return delEntorno;
   try {
-    return (await resolutorDeRespaldo?.(proveedor())) ?? null;
+    return (await g.__claveEmbeddings?.(proveedor())) ?? null;
   } catch {
     return null;
   }

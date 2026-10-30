@@ -29,6 +29,7 @@ import { ROLES } from "@/lib/permisos";
 import { asignarRol } from "@/app/panel/(app)/configuracion/roles-actions";
 import { getRolesPropios } from "@/lib/roles-server";
 import { vectorizarPendientes } from "@/lib/vectorizar";
+import { registrarClaveDeRespaldo } from "@/lib/embeddings";
 
 /** Guarda la identidad del sitio y refresca TODO el portal, que la consume. */
 export async function saveSiteIdentity(formData: FormData) {
@@ -453,6 +454,7 @@ export async function saveAnalyticsSettings(formData: FormData) {
 /** Vectoriza ahora un lote de notas sin vector (el mismo trabajo del cron), para ver el avance o el error exacto desde el panel. */
 export async function vectorizarAhora(): Promise<{ ok: boolean; message: string; hechas: number; pendientes: number }> {
   await requireRole("administrador");
+  registrarClaveDeRespaldo((proveedor) => claveEfectiva(proveedor === "openai" ? "openai" : "google"));
   try {
     const r = await vectorizarPendientes(45_000);
     return {
