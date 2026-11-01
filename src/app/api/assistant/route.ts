@@ -6,11 +6,12 @@ import { getModelo } from "@/lib/ai-provider";
 import { generateText } from "ai";
 import { db } from "@/db";
 import { assistantQueries } from "@/db/schema";
-import { buscarParecidas, buscarRecientes, hybridSearch, ultimasNotas } from "@/lib/search";
+import { buscarParecidas, buscarRecientes, hybridSearch, palabrasDeTitulos, ultimasNotas } from "@/lib/search";
 import { expandirConsulta } from "@/lib/ai/expansion-busqueda";
 import { consultarConIA } from "@/lib/ai/consulta-sql";
 import { elegirNotas } from "@/lib/ai/seleccion-notas";
 import { corregirClaves } from "@/lib/ai/correccion-palabras";
+import { RESPUESTA_SISTEMA, preguntaSobreSistema } from "@/lib/ai/preguntas-sistema";
 import { leerPregunta, publicadaDesde, separarPorTema } from "@/lib/ai/lectura-pregunta";
 import { cubrePregunta } from "@/lib/observatorio-fragmentos";
 import { COSTO_EMBEDDING_USD, SESION_ASISTENTE_COOKIE, cupoAsistente, estimateCostUsd, liquidarGeneracion, reservarGeneracion, sesionAsistente } from "@/lib/budget";
@@ -39,16 +40,16 @@ const PLAZO_SQL_MS = 6_000;
 /** Tope del buscador por relevancia (embedding y consulta): pasado esto se sigue con lo que ya trajo la palabra clave. */
 const PLAZO_BUSCADOR_MS = 5_000;
 /** Tope de la corrección de lo mal escrito: pasado esto se busca con las palabras tal como llegaron. */
-const PLAZO_CORRECCION_MS = 2_000;
+const PLAZO_CORRECCION_MS = 3_000;
 /** Tope de la generación: pasado esto se responde en modo búsqueda en vez de dejar que la plataforma corte la función a los 30 s. */
 const PLAZO_GENERACION_MS = 20_000;
 
 /**
  * Calienta la función: el chat lo pide al abrirse, mientras la persona escribe, y así la primera pregunta no paga el arranque en frío
- * (conexión a la base, ajustes del modelo y cifras del Observatorio). Solo lee; no cuesta nada de IA.
+ * (conexión a la base, ajustes del modelo, cifras del Observatorio y palabras para corregir lo mal escrito). Solo lee; no cuesta nada de IA.
  */
 export async function GET() {
-  await Promise.allSettled([db.execute(sql`select 1`), getModelo("asistente"), conPlazo(getObservatorio(), 2_500, null)]);
+  await Promise.allSettled([db.execute(sql`select 1`), getModelo("asistente"), conPlazo(getObservatorio(), 2_500, null), palabrasDeTitulos()]);
   return new NextResponse(null, { status: 204, headers: { "Cache-Control": "no-store" } });
 }
 
@@ -65,12 +66,9 @@ export async function POST(req: Request) {
   // La sesión la emite el servidor (cookie firmada): lo que mande el navegador como `sessionId` se ignora (H-07).
   const sesion = sesionAsistente(req.headers.get("cookie")?.match(new RegExp(`(?:^|;\\s*)${SESION_ASISTENTE_COOKIE}=([^;]+)`))?.[1]);
   // Toda respuesta pasa por aquí para que la sesión nueva llegue como cookie.
-  let estadoConsulta = "no-aplica";
   let aviso = "";
   const responder = (cuerpo: { answer?: string } & Record<string, unknown>, init?: ResponseInit) => {
     const r = NextResponse.json(aviso && cuerpo.answer ? { ...cuerpo, answer: `${aviso} ${cuerpo.answer}` } : cuerpo, init);
-    // Cómo salió la consulta SQL de la IA (solo una palabra: sirve para saber qué falló sin ver el contenido).
-    r.headers.set("x-consulta", estadoConsulta);
     if (sesion.nueva) {
       r.cookies.set(SESION_ASISTENTE_COOKIE, sesion.valor, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/api/assistant", maxAge: 30 * 24 * 3600 });
     }
@@ -95,6 +93,12 @@ export async function POST(req: Request) {
   const limite = await hit(cupo.clave, cupo.maximo, 60 * 60);
   if (!limite.allowed) {
     return responder({ error: "demasiadas consultas" }, { status: 429, headers: { "Retry-After": String(limite.retryAfter) } });
+  }
+
+  // Sobre cómo está hecho el sitio no se contesta nada, y la pregunta no llega a ningún modelo.
+  if (preguntaSobreSistema(q)) {
+    await log(sessionId, q, "semantico_degradado", [], false, 0, 0);
+    return responder({ mode: "declined", answer: RESPUESTA_SISTEMA, sources: [] });
   }
 
   // Qué busca de verdad: sin «noticias» ni «recientes», que como palabras clave traían notas que solo las mencionan; y de qué periodo la quiere.
@@ -125,7 +129,6 @@ export async function POST(req: Request) {
   let hits = bastan ? [] : await conPlazo(hybridSearch(pregunta, 8, { terminosExtra: terminos }), PLAZO_BUSCADOR_MS, [] as Awaited<ReturnType<typeof hybridSearch>>).catch(() => []);
   // Sin resultados casi siempre es un error de escritura: se busca por parecido de letras en los títulos.
   if (hits.length === 0 && recientes.length === 0 && delObservatorio.length === 0) hits = await buscarParecidas(pregunta, 8).catch(() => []);
-  estadoConsulta = porSql.estado;
   if (porSql.detalle) console.error("asistente: consulta SQL", porSql.detalle);
   const sqlNotas = porSql.fuentes.filter((f) => f.kind === "articulo").map((f) => ({ ...f, id: f.url, score: 1 }));
   // Quien pide noticias quiere noticias, aunque el tema tenga cifras.
@@ -225,7 +228,7 @@ export async function POST(req: Request) {
     return responder({
       mode: "degraded",
       reason: "sin_proveedor_ia",
-      answer: "Modo búsqueda (no hay proveedor de IA configurado). Estos son los contenidos del archivo más relevantes:",
+      answer: "Estos son los contenidos del archivo más relevantes:",
       sources,
     });
   }
