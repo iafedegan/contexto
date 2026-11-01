@@ -31,11 +31,11 @@ test("reconoce la palabra con otra terminación, sin buscarla dentro de otras", 
   assert.equal(mencionaClave("¿Quién se comió mi carne?", "vacunación"), false);
 });
 
-test("separa las notas del tema, de la más nueva a la más vieja", () => {
+test("separa las notas del tema y, a igual coincidencia, va primero la más nueva", () => {
   const notas = [
     { title: "¿Quién se comió mi carne?", summary: "El precio", publishedAt: "2026-10-12T00:00:00Z" },
     { title: "Ciclo de vacunación", summary: "", publishedAt: "2026-10-07T00:00:00Z" },
-    { title: "Ganaderos a vacunar", summary: "Viene el segundo ciclo", publishedAt: "2026-10-09T00:00:00Z" },
+    { title: "Segundo ciclo: a vacunar", summary: "", publishedAt: "2026-10-09T00:00:00Z" },
   ];
   const { delTema, resto } = separarPorTema(notas, ["ciclo", "vacunación"]);
   assert.deepEqual(delTema.map((n) => n.publishedAt), ["2026-10-09T00:00:00Z", "2026-10-07T00:00:00Z"]);
