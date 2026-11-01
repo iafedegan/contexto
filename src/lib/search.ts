@@ -1,6 +1,7 @@
 import "server-only";
 import { sql } from "drizzle-orm";
 import { db, rowsOf } from "@/db";
+import { cachear } from "@/lib/data-cache";
 import { embed, toVectorLiteral } from "./embeddings";
 
 /**
@@ -315,6 +316,30 @@ export async function ultimasNotas(limit = 6, desde?: Date): Promise<SearchHit[]
     LIMIT ${limit}
   `));
   return aResultados(rows, () => 1);
+}
+
+/** Las palabras que salen en al menos 3 títulos: lo que se sabe escrito bien. Recorrer los títulos tarda cerca de un segundo y cambia poco: se guarda un día. */
+export const palabrasDeTitulos = cachear(
+  "asistente-palabras-titulos-v1",
+  async (): Promise<Array<{ palabra: string; notas: number }>> => {
+    const filas = rowsOf(await db.execute(sql`
+      SELECT word AS palabra, ndoc AS notas
+      FROM ts_stat($$SELECT to_tsvector('simple', title) FROM articles WHERE status = 'publicado'$$)
+      WHERE ndoc >= 3 AND length(word) >= 4
+    `));
+    return (filas as unknown as Array<{ palabra: string; notas: number }>).map((f) => ({ palabra: String(f.palabra), notas: Number(f.notas) }));
+  },
+  { tags: ["asistente-palabras-titulos"], segundos: 86_400 },
+);
+
+/** En cuántas notas sale la palabra, con un tope: solo interesa si es rara o no. */
+export async function notasConPalabra(palabra: string, tope = 5): Promise<number> {
+  const consulta = toOrQuery(palabra).split(" or ").filter(Boolean).join(" | ");
+  if (!consulta) return 0;
+  const filas = rowsOf(await db.execute(sql`
+    SELECT count(*) AS n FROM (SELECT 1 FROM articles WHERE status = 'publicado' AND search_vec @@ to_tsquery('spanish', ${consulta}) LIMIT ${tope}) x
+  `));
+  return Number((filas[0] as { n?: unknown } | undefined)?.n ?? 0);
 }
 
 function aResultados(rows: unknown, puntaje: (r: Record<string, unknown>) => number): SearchHit[] {

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { leerPregunta, mencionaClave, publicadaDesde, separarPorTema } from "./lectura-pregunta";
+import { corregirPalabra, leerPregunta, mencionaClave, publicadaDesde, separarPorTema } from "./lectura-pregunta";
 
 const AHORA = new Date("2026-10-31T12:00:00Z");
 
@@ -59,4 +59,37 @@ test("filtra por fecha de publicación", () => {
   const notas = [{ publishedAt: "2026-10-30T00:00:00Z" }, { publishedAt: "2026-10-01T00:00:00Z" }, { publishedAt: null }];
   assert.equal(publicadaDesde(notas, new Date("2026-10-24T00:00:00Z")).length, 1);
   assert.equal(publicadaDesde(notas, null).length, 3);
+});
+
+test("distingue si pide una sola nota", () => {
+  assert.equal(leerPregunta("última nota de Lafaurie").unaSola, true);
+  assert.equal(leerPregunta("la columna más reciente de Lafaurie").unaSola, true);
+  assert.equal(leerPregunta("notas de Lafaurie").unaSola, false);
+  assert.deepEqual(leerPregunta("última nota de Lafaurie").claves, ["lafaurie"]);
+});
+
+const CONOCIDAS = [
+  { palabra: "lafaurie", notas: 456 },
+  { palabra: "labor", notas: 90 },
+  { palabra: "vacunación", notas: 340 },
+  { palabra: "brucelosis", notas: 147 },
+  { palabra: "novillo", notas: 30 },
+  { palabra: "fedegán", notas: 1301 },
+  { palabra: "fedegan", notas: 12 },
+  { palabra: "lafarga", notas: 2 },
+];
+
+test("corrige los errores de escritura a la palabra frecuente", () => {
+  assert.equal(corregirPalabra("lafori", CONOCIDAS), "lafaurie");
+  assert.equal(corregirPalabra("vaxunacion", CONOCIDAS), "vacunación");
+  assert.equal(corregirPalabra("bacunacion", CONOCIDAS), "vacunación");
+  assert.equal(corregirPalabra("bruselosis", CONOCIDAS), "brucelosis");
+  assert.equal(corregirPalabra("nobillo", CONOCIDAS), "novillo");
+  assert.equal(corregirPalabra("fedegam", CONOCIDAS), "fedegán");
+});
+
+test("no corrige si no hay una palabra clara", () => {
+  assert.equal(corregirPalabra("hipopótamo", CONOCIDAS), null);
+  assert.equal(corregirPalabra("xyz", CONOCIDAS), null);
+  assert.equal(corregirPalabra("lafarga", CONOCIDAS.filter((c) => c.palabra !== "lafaurie")), null);
 });

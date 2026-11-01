@@ -10,6 +10,7 @@ import { buscarParecidas, buscarRecientes, hybridSearch, ultimasNotas } from "@/
 import { expandirConsulta } from "@/lib/ai/expansion-busqueda";
 import { consultarConIA } from "@/lib/ai/consulta-sql";
 import { elegirNotas } from "@/lib/ai/seleccion-notas";
+import { corregirClaves } from "@/lib/ai/correccion-palabras";
 import { leerPregunta, publicadaDesde, separarPorTema } from "@/lib/ai/lectura-pregunta";
 import { cubrePregunta } from "@/lib/observatorio-fragmentos";
 import { COSTO_EMBEDDING_USD, SESION_ASISTENTE_COOKIE, estimateCostUsd, liquidarGeneracion, reservarGeneracion, sesionAsistente } from "@/lib/budget";
@@ -36,6 +37,8 @@ const MAX_NOTAS = 6;
 const PLAZO_SQL_MS = 6_000;
 /** Tope del buscador por relevancia (embedding y consulta): pasado esto se sigue con lo que ya trajo la palabra clave. */
 const PLAZO_BUSCADOR_MS = 5_000;
+/** Tope de la corrección de lo mal escrito: pasado esto se busca con las palabras tal como llegaron. */
+const PLAZO_CORRECCION_MS = 2_000;
 /** Tope de la generación: pasado esto se responde en modo búsqueda en vez de dejar que la plataforma corte la función a los 30 s. */
 const PLAZO_GENERACION_MS = 20_000;
 
@@ -64,8 +67,9 @@ export async function POST(req: Request) {
   const sesion = sesionAsistente(req.headers.get("cookie")?.match(new RegExp(`(?:^|;\\s*)${SESION_ASISTENTE_COOKIE}=([^;]+)`))?.[1]);
   // Toda respuesta pasa por aquí para que la sesión nueva llegue como cookie.
   let estadoConsulta = "no-aplica";
-  const responder = (cuerpo: unknown, init?: ResponseInit) => {
-    const r = NextResponse.json(cuerpo, init);
+  let aviso = "";
+  const responder = (cuerpo: { answer?: string } & Record<string, unknown>, init?: ResponseInit) => {
+    const r = NextResponse.json(aviso && cuerpo.answer ? { ...cuerpo, answer: `${aviso} ${cuerpo.answer}` } : cuerpo, init);
     // Cómo salió la consulta SQL de la IA (solo una palabra: sirve para saber qué falló sin ver el contenido).
     r.headers.set("x-consulta", estadoConsulta);
     if (sesion.nueva) {
@@ -93,16 +97,20 @@ export async function POST(req: Request) {
 
   // Qué busca de verdad: sin «noticias» ni «recientes», que como palabras clave traían notas que solo las mencionan; y de qué periodo la quiere.
   const lectura = leerPregunta(q);
-  const tema = lectura.claves.join(" ");
+  // Lo mal escrito se corrige antes de buscar, en todas las búsquedas: «lafori» debe encontrar a Lafaurie. Se le dice al lector qué se buscó.
+  const correccion = await conPlazo(corregirClaves(lectura.claves), PLAZO_CORRECCION_MS, { claves: lectura.claves, cambios: [] }).catch(() => ({ claves: lectura.claves, cambios: [] }));
+  const tema = correccion.claves.join(" ");
+  const pregunta = correccion.cambios.reduce((p, c) => p.replace(new RegExp(c.de, "i"), c.a), q);
+  if (correccion.cambios.length) aviso = `Busqué ${correccion.cambios.map((c) => `«${c.a}»`).join(" y ")}.`;
   // Notas y archivo, y además lo que hay en el Observatorio (cifras y documentos): el asistente responde a todo lo que el lector ve allí.
   // El modelo se pide a la vez (sus ajustes están en la base): así no suma otra espera después de la búsqueda.
   // La pregunta se traduce a términos de búsqueda con un modelo barato (sinónimos y términos del sector) para encontrar por significado sin vectores.
   const [terminos, delObservatorio, model, porSql, recientes] = await Promise.all([
-    conPlazo(expandirConsulta(q), PLAZO_EXPANSION_MS, [] as string[]),
-    conPlazo(buscarEnObservatorio(q, 4), PLAZO_OBSERVATORIO_MS, []),
+    conPlazo(expandirConsulta(pregunta), PLAZO_EXPANSION_MS, [] as string[]),
+    conPlazo(buscarEnObservatorio(pregunta, 4), PLAZO_OBSERVATORIO_MS, []),
     getModelo("asistente"),
     // Una IA barata escribe la consulta SQL (solo lectura, solo notas y cifras) y trae directamente la nota o la cifra que se pidió.
-    conPlazo(consultarConIA(q), PLAZO_SQL_MS, { fuentes: [], estado: "error-modelo" as const, detalle: "plazo" }),
+    conPlazo(consultarConIA(pregunta), PLAZO_SQL_MS, { fuentes: [], estado: "error-modelo" as const, detalle: "plazo" }),
     // Por palabra clave, primero las que tratan del tema y de lo más nuevo a lo más viejo: no depende de la IA.
     (async () => {
       if (!tema) return lectura.pideNotas ? ultimasNotas(MAX_NOTAS, lectura.desde ?? undefined) : [];
@@ -112,9 +120,9 @@ export async function POST(req: Request) {
   ]);
   // Con 3 notas del tema ya está la respuesta: no se paga el embedding ni la espera del buscador por relevancia.
   const bastan = process.env.ASISTENTE_MODO !== "resumen" && recientes.filter((r) => r.score > 0).length >= 3;
-  let hits = bastan ? [] : await conPlazo(hybridSearch(q, 8, { terminosExtra: terminos }), PLAZO_BUSCADOR_MS, [] as Awaited<ReturnType<typeof hybridSearch>>).catch(() => []);
+  let hits = bastan ? [] : await conPlazo(hybridSearch(pregunta, 8, { terminosExtra: terminos }), PLAZO_BUSCADOR_MS, [] as Awaited<ReturnType<typeof hybridSearch>>).catch(() => []);
   // Sin resultados casi siempre es un error de escritura: se busca por parecido de letras en los títulos.
-  if (hits.length === 0 && recientes.length === 0 && delObservatorio.length === 0) hits = await buscarParecidas(q, 8).catch(() => []);
+  if (hits.length === 0 && recientes.length === 0 && delObservatorio.length === 0) hits = await buscarParecidas(pregunta, 8).catch(() => []);
   estadoConsulta = porSql.estado;
   if (porSql.detalle) console.error("asistente: consulta SQL", porSql.detalle);
   const sqlNotas = porSql.fuentes.filter((f) => f.kind === "articulo").map((f) => ({ ...f, id: f.url, score: 1 }));
@@ -177,16 +185,18 @@ export async function POST(req: Request) {
     const delPeriodo = publicadaDesde(todas, lectura.desde);
     // Si no hay nada del periodo pedido se dice, y se muestran las más recientes del tema en vez de responder con nada.
     const sinPeriodo = lectura.desde !== null && delPeriodo.length === 0;
-    const { delTema, resto } = separarPorTema(sinPeriodo ? todas : delPeriodo, lectura.claves);
+    const { delTema, resto } = separarPorTema(sinPeriodo ? todas : delPeriodo, correccion.claves);
     // Solo se consulta al modelo barato si faltan notas: las que tienen la palabra en el título o el resumen no necesitan que nadie las confirme.
     const faltan = delTema.length < 3;
     const candidatas = resto.slice(0, 12);
-    const elegidas = faltan ? await conPlazo(elegirNotas(q, candidatas), PLAZO_SELECCION_MS, null as number[] | null) : [];
+    const elegidas = faltan ? await conPlazo(elegirNotas(pregunta, candidatas), PLAZO_SELECCION_MS, null as number[] | null) : [];
     const extra = !faltan ? [] : elegidas === null ? candidatas.slice(0, MAX_NOTAS) : elegidas.map((n) => candidatas[n - 1]).filter(Boolean);
     const elegibles = [...delTema, ...extra].slice(0, MAX_NOTAS);
     // Ninguna nota trata el tema: se dice, con lo más cercano del Observatorio o de las notas.
     const sinCoincidencia = elegibles.length === 0;
-    const cercanas = sinCoincidencia ? (cifras.length ? cifras.slice(0, 2) : resto.slice(0, 3)) : elegibles;
+    // «La última nota» es una sola y la más nueva, aunque otra tenga el tema en el título.
+    const laUltima = lectura.unaSola && delTema.length ? [...delTema].sort((a, b) => (b.publishedAt ?? "").localeCompare(a.publishedAt ?? "")).slice(0, 1) : null;
+    const cercanas = laUltima ?? (sinCoincidencia ? (cifras.length ? cifras.slice(0, 2) : resto.slice(0, 3)) : elegibles);
     const mostrar = cercanas.map((s, i) => ({ ...s, n: i + 1 }));
     await log(sessionId, q, "semantico_degradado", toCited(mostrar), true, 0, 0);
     const periodo = lectura.periodo ?? "";
@@ -198,6 +208,8 @@ export async function POST(req: Request) {
           : "No encontré una nota que responda eso exactamente. Estas son las más cercanas:"
         : sinPeriodo
           ? `No hay notas de ${periodo} sobre eso. Estas son las más recientes:`
+          : laUltima
+            ? "Esta es la nota más reciente:"
           : mostrar.length === 1
             ? `Encontré esta nota${periodo ? ` de ${periodo}` : ""} sobre tu pregunta:`
             : `Encontré ${mostrar.length} notas${periodo ? ` de ${periodo}` : ""} sobre tu pregunta:`,
