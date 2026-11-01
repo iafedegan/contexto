@@ -60,6 +60,17 @@ export async function getLimites(): Promise<LimitesAsistente> {
 }
 
 /** Cookie con la sesión del asistente: la emite el servidor, firmada. Antes la inventaba el navegador y cambiarla evadía el tope por sesión. */
+/** Consultas por IP y hora. El `sessionId` lo manda el cliente y se puede cambiar a voluntad; la IP es el freno real al gasto. */
+export const MAX_POR_IP_HORA = 40;
+/** Consultas por hora de un administrador con sesión en el panel. */
+export const MAX_ADMIN_HORA = 120;
+
+/** Qué contador y qué tope aplican a esta consulta. El administrador cuenta por su cuenta, no por IP: no comparte cupo con quienes estén en su misma red. */
+export function cupoAsistente(ip: string, cuenta?: { id?: string; role?: string } | null): { clave: string; maximo: number } {
+  if (cuenta?.role === "administrador" && cuenta.id) return { clave: `asistente:admin:${cuenta.id}`, maximo: MAX_ADMIN_HORA };
+  return { clave: `asistente:ip:${ip}`, maximo: MAX_POR_IP_HORA };
+}
+
 export const SESION_ASISTENTE_COOKIE = "contexto.asistente";
 
 /**

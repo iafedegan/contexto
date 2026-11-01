@@ -13,8 +13,9 @@ import { elegirNotas } from "@/lib/ai/seleccion-notas";
 import { corregirClaves } from "@/lib/ai/correccion-palabras";
 import { leerPregunta, publicadaDesde, separarPorTema } from "@/lib/ai/lectura-pregunta";
 import { cubrePregunta } from "@/lib/observatorio-fragmentos";
-import { COSTO_EMBEDDING_USD, SESION_ASISTENTE_COOKIE, estimateCostUsd, liquidarGeneracion, reservarGeneracion, sesionAsistente } from "@/lib/budget";
+import { COSTO_EMBEDDING_USD, SESION_ASISTENTE_COOKIE, cupoAsistente, estimateCostUsd, liquidarGeneracion, reservarGeneracion, sesionAsistente } from "@/lib/budget";
 import { ASSISTANT_SYSTEM } from "@/agents/prompts";
+import { auth } from "@/lib/auth";
 import { clientIp, hit } from "@/lib/rate-limit";
 import { analizarCitas, normalizarCitas } from "@/lib/citas";
 import { buscarEnObservatorio } from "@/lib/ai-observatorio";
@@ -58,8 +59,6 @@ type Body = { question: string };
 
 /** Largo máximo de una pregunta: se embebe y se manda al modelo, así que cada carácter cuesta. */
 const MAX_PREGUNTA = 600;
-/** Consultas por IP y hora. El `sessionId` lo manda el cliente y se puede cambiar a voluntad; la IP es el freno real al gasto. */
-const MAX_POR_IP_HORA = 40;
 
 // Responde una pregunta del lector: busca fuentes, comprueba límites, aparta presupuesto, genera con citas o degrada a búsqueda, y registra la consulta.
 export async function POST(req: Request) {
@@ -90,7 +89,10 @@ export async function POST(req: Request) {
   if (!q) return responder({ error: "pregunta vacía" }, { status: 400 });
   if (q.length > MAX_PREGUNTA) return responder({ error: "pregunta demasiado larga" }, { status: 400 });
 
-  const limite = await hit(`asistente:ip:${clientIp(req.headers)}`, MAX_POR_IP_HORA, 60 * 60);
+  // Un fallo al leer la sesión no impide preguntar: se aplica el cupo normal.
+  const cuenta = await auth().catch(() => null);
+  const cupo = cupoAsistente(clientIp(req.headers), cuenta?.user);
+  const limite = await hit(cupo.clave, cupo.maximo, 60 * 60);
   if (!limite.allowed) {
     return responder({ error: "demasiadas consultas" }, { status: 429, headers: { "Retry-After": String(limite.retryAfter) } });
   }

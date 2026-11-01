@@ -97,3 +97,10 @@ test("un valor no numérico en el entorno no desactiva los topes (NaN)", async (
     delete process.env.ASSISTANT_SESSION_QUERY_LIMIT;
   }
 });
+
+test("el cupo de 120 es solo para el administrador y cuenta aparte de su IP", () => {
+  assert.deepEqual(b.cupoAsistente("1.2.3.4", { id: "u1", role: "administrador" }), { clave: "asistente:admin:u1", maximo: 120 });
+  for (const cuenta of [null, undefined, { id: "u2", role: "editor" }, { id: "u3", role: "redactor" }, { role: "administrador" }]) {
+    assert.deepEqual(b.cupoAsistente("1.2.3.4", cuenta), { clave: "asistente:ip:1.2.3.4", maximo: 40 });
+  }
+});
