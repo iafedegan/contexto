@@ -42,6 +42,14 @@ test("separa las notas del tema, de la más nueva a la más vieja", () => {
   assert.deepEqual(resto.map((n) => n.title), ["¿Quién se comió mi carne?"]);
 });
 
+test("la que tiene el tema en el título va antes que una más nueva que solo lo tiene en el resumen", () => {
+  const notas = [
+    { title: "Cinco ganaderías exitosas", summary: "Hablarán de exportaciones de carne", publishedAt: "2026-10-11T00:00:00Z" },
+    { title: "Exportaciones de carne en rojo", summary: "", publishedAt: "2026-09-10T00:00:00Z" },
+  ];
+  assert.deepEqual(separarPorTema(notas, ["exportaciones", "carne"]).delTema.map((n) => n.title), ["Exportaciones de carne en rojo", "Cinco ganaderías exitosas"]);
+});
+
 test("sin palabras clave todas cuentan como del tema", () => {
   const notas = [{ title: "A", summary: "" }];
   assert.deepEqual(separarPorTema(notas, []).delTema, notas);

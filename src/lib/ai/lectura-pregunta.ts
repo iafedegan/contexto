@@ -58,7 +58,8 @@ export function mencionaClave(texto: string, clave: string): boolean {
 }
 
 /**
- * Las notas que tienen TODAS las palabras en el título o el resumen van aparte, de la más nueva a la más vieja: son las que tratan del tema.
+ * Las notas que tienen TODAS las palabras en el título o el resumen van aparte: son las que tratan del tema. Primero las que las tienen en el título
+ * y, dentro de cada grupo, de la más nueva a la más vieja.
  * `resto` conserva el orden del buscador. Sin palabras no hay con qué separar y todas cuentan como del tema.
  */
 export function separarPorTema<T extends { title: string; summary: string; publishedAt?: string | null }>(notas: T[], claves: string[]): { delTema: T[]; resto: T[] } {
@@ -66,7 +67,8 @@ export function separarPorTema<T extends { title: string; summary: string; publi
   const delTema: T[] = [];
   const resto: T[] = [];
   for (const n of notas) (claves.every((c) => mencionaClave(`${n.title} ${n.summary}`, c)) ? delTema : resto).push(n);
-  delTema.sort((a, b) => (b.publishedAt ?? "").localeCompare(a.publishedAt ?? ""));
+  const enTitulo = (n: T) => (claves.every((c) => mencionaClave(n.title, c)) ? 1 : 0);
+  delTema.sort((a, b) => enTitulo(b) - enTitulo(a) || (b.publishedAt ?? "").localeCompare(a.publishedAt ?? ""));
   return { delTema, resto };
 }
 
