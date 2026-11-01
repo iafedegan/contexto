@@ -47,7 +47,12 @@ const tsvector = customType<{ data: string }>({ dataType: () => "tsvector" });
  * Estilo manual de una tarjeta en /panel/portada. Todo opcional: lo que no se
  * fija usa el look por defecto de la sección donde caiga la nota.
  */
+/** Pantallas que se editan por separado en /panel/portada. */
+export type Pantalla = "pc" | "tablet" | "movil";
+
 export type HomeStyle = {
+  /** Ajustes propios de cada pantalla (ver src/lib/pantallas.ts): si una los tiene, mandan sobre los demás campos en esa pantalla. */
+  pantallas?: Partial<Record<Pantalla, HomeStyle>>;
   /** Tamaño del bloque: cuánto texto/imagen se muestra. */
   size?: "sm" | "md" | "lg";
   /** Columnas ocupadas en la cuadrícula "Lo más reciente" (1 o 2). */
@@ -772,12 +777,24 @@ export type ZoneStyle = {
   gap?: number;
   /** Los bloques de los grupos internos pasan a ser celdas de esta cuadrícula. */
   flat?: boolean;
+  /** Ajustada a propósito para el celular: no se apila a una columna (ver src/lib/pantallas.ts). */
+  libreEnMovil?: boolean;
 };
 
 /** Dónde van los filtros (rangos de fecha y subsección) en la página de una sección. */
 export type SectionFiltersPos = "cabecera" | "izquierda" | "centro" | "derecha" | "barra" | "oculto";
 
+/** Lo visual del diseño propio de una pantalla: si falta una parte, esa pantalla usa la general (ver src/lib/pantallas.ts). */
+export type VisualPantalla = {
+  regions?: RegionStyles;
+  zones?: Record<string, ZoneStyle>;
+  sectionEls?: Partial<Record<SectionElId, SectionElStyle>>;
+  menuEstilo?: NonNullable<MenuNavbar["estilo"]>;
+};
+
 export type HomeLayoutConfig = {
+  /** Lo visual por pantalla: computador, tableta y celular se editan por separado. */
+  pantallas?: Partial<Record<Pantalla, VisualPantalla>>;
   /** Posición de los filtros en las páginas de sección. */
   sectionFilters?: SectionFiltersPos;
   /** Estilo por elemento del encabezado de sección (migas, etiqueta, título…). */

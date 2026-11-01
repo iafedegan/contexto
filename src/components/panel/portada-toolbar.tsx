@@ -131,14 +131,14 @@ export function PortadaToolbar(p: Props) {
       </div>
 
       {/* ------------------------------------------------ Dispositivo */}
-      <div role="group" aria-label="Tamaño de pantalla de la vista previa" className="flex items-center gap-0.5 rounded-full border border-[var(--border)] p-0.5">
+      <div role="group" aria-label="Pantalla que se ve y se edita" className="flex items-center gap-0.5 rounded-full border border-[var(--border)] p-0.5">
         {VIEWPORTS.map(([id, Icono, etiqueta]) => (
           <button
             key={id}
             type="button"
             onClick={() => p.onViewport(id)}
             aria-pressed={p.viewport === id}
-            title={`Ver como en ${etiqueta}`}
+            title={`Ver y editar ${etiqueta}: lo visual se ajusta aparte para cada pantalla`}
             className={`inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-semibold transition ${
               p.viewport === id ? "bg-[var(--accent)] text-[var(--accent-fg)]" : "text-[var(--fg-muted)] hover:text-[var(--accent)]"
             }`}

@@ -15,6 +15,7 @@ import {
 import { DEFAULT_HOME_LAYOUT } from "@/lib/home-layout";
 import { posicionesDePortada, type PosicionPortada } from "@/lib/ubicacion-nota";
 import { getPreviewDraft } from "@/lib/preview-draft";
+import type { PortadaDraft } from "@/lib/portada-draft";
 import { cachear, TAG_AJUSTES, TAG_CONTENIDO } from "@/lib/data-cache";
 
 /** Disposición y plantilla de la portada, configuradas en /panel/portada. */
@@ -33,12 +34,13 @@ const leerLayoutHome = cachear(
 );
 
 // Configuración visual de la portada: la del borrador en la vista previa o la guardada (con caché entre peticiones).
-export const getHomeLayoutConfig = cache(async (): Promise<Required<HomeLayoutConfig>> => {
+// La memoria va por borrador: el layout del panel pide el diseño antes de que la vista previa fije el suyo, y sin esto la vista previa pintaba lo publicado.
+const layoutDe = cache(async (draft: PortadaDraft | null): Promise<Required<HomeLayoutConfig>> => {
   // Vista previa del editor: el diseño sin publicar (ver src/lib/preview-draft.ts). Nunca pasa por la caché.
-  const draft = getPreviewDraft();
   if (draft) return { ...DEFAULT_HOME_LAYOUT, ...draft.layout };
   return { ...DEFAULT_HOME_LAYOUT, ...((await leerLayoutHome()) ?? {}) };
 });
+export const getHomeLayoutConfig = () => layoutDe(getPreviewDraft());
 
 /**
  * Consultas de lectura del portal público. Todas filtran por estado "publicado"

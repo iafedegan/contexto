@@ -1,4 +1,4 @@
-import type { HomeLayoutConfig } from "@/db/schema";
+import type { HomeLayoutConfig, VisualPantalla } from "@/db/schema";
 import { HOME_TEMPLATES } from "@/lib/home-layout";
 import { sanitizeRegions } from "@/lib/home-regions";
 import { sanitizeSectionEls } from "@/lib/section-els";
@@ -8,6 +8,24 @@ import { sanitizeCarrusel } from "@/lib/carrusel";
 import { sanitizeTextos } from "@/lib/textos-cabecera";
 import { sanitizeMenuNavbar } from "@/lib/menu-navbar";
 import { BODIES, FOOTERS, NAVBARS } from "@/lib/template-parts";
+import { PANTALLAS } from "@/lib/pantallas";
+
+// Valida lo visual de cada pantalla: acaba en CSS igual que el diseño general.
+function sanitizePantallas(input: unknown): NonNullable<HomeLayoutConfig["pantallas"]> {
+  const out: NonNullable<HomeLayoutConfig["pantallas"]> = {};
+  if (!input || typeof input !== "object") return out;
+  for (const { id } of PANTALLAS) {
+    const r = (input as Record<string, unknown>)[id] as Record<string, unknown> | undefined;
+    if (!r || typeof r !== "object") continue;
+    const v: VisualPantalla = {};
+    if (r.regions !== undefined) v.regions = sanitizeRegions(r.regions);
+    if (r.zones !== undefined) v.zones = sanitizeZones(r.zones);
+    if (r.sectionEls !== undefined) v.sectionEls = sanitizeSectionEls(r.sectionEls);
+    if (r.menuEstilo !== undefined) v.menuEstilo = sanitizeMenuNavbar({ estilo: r.menuEstilo })?.estilo ?? {};
+    out[id] = v;
+  }
+  return out;
+}
 
 /**
  * Valida un diseño de portada antes de guardarlo o de pintarlo: el estilo por
@@ -23,5 +41,5 @@ export function normalizeLayout(input: HomeLayoutConfig): HomeLayoutConfig {
   const templateId = HOME_TEMPLATES.find((t) => t.id === input.templateId)?.id;
   // Posición de los filtros de sección: solo vale una de las seis permitidas.
   const sectionFilters = (["cabecera", "izquierda", "centro", "derecha", "barra", "oculto"] as const).find((p) => p === input.sectionFilters);
-  return { ...input, ...(templateId ? { templateId } : {}), regions: sanitizeRegions(input.regions), parts, sectionFilters: sectionFilters ?? "cabecera", ticker: sanitizeTicker(input.ticker), carrusel: sanitizeCarrusel(input.carrusel), textos: sanitizeTextos(input.textos), menuNav: sanitizeMenuNavbar(input.menuNav), sectionEls: sanitizeSectionEls(input.sectionEls), zones: sanitizeZones(input.zones) };
+  return { ...input, ...(templateId ? { templateId } : {}), regions: sanitizeRegions(input.regions), pantallas: sanitizePantallas(input.pantallas), parts, sectionFilters: sectionFilters ?? "cabecera", ticker: sanitizeTicker(input.ticker), carrusel: sanitizeCarrusel(input.carrusel), textos: sanitizeTextos(input.textos), menuNav: sanitizeMenuNavbar(input.menuNav), sectionEls: sanitizeSectionEls(input.sectionEls), zones: sanitizeZones(input.zones) };
 }

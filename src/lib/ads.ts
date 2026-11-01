@@ -108,14 +108,15 @@ const leerAnunciosActivos = cachear(
 const activeAds = cache(async (): Promise<AdsZoneContent[]> => {
   const rows = await leerAnunciosActivos();
 
-  // Vista previa del editor: los anuncios que se están escribiendo se ven como
-  // si ya estuvieran publicados (aunque falte marcarlos como activos).
+  // Vista previa del editor: cada anuncio del borrador se ve como quedaría al publicarlo: sin marcar «Activa» o fuera de sus fechas no sale.
   const draft = getPreviewDraft();
   if (draft) {
     const merged = new Map(rows.map((r) => [r.key, r as AdsZoneContent]));
+    const ahora = Date.now();
     for (const [key, d] of Object.entries(draft.adDrafts)) {
       if (!positionOf(key)) continue;
-      if (d.html || d.imageUrl) merged.set(key, { key, html: d.html || null, imageUrl: d.imageUrl || null, clickUrl: d.clickUrl || null });
+      const vigente = d.active && (!d.startsAt || new Date(d.startsAt).getTime() <= ahora) && (!d.endsAt || new Date(d.endsAt).getTime() > ahora);
+      if (vigente && (d.html || d.imageUrl)) merged.set(key, { key, html: d.html || null, imageUrl: d.imageUrl || null, clickUrl: d.clickUrl || null });
       else merged.delete(key);
     }
     return [...merged.values()].filter((r) => r.html || r.imageUrl);

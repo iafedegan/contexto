@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import type { ArticleListItem } from "@/lib/content";
-import { homeStyleImageBox, homeStyleTitleCss } from "@/lib/home-style";
+import { estiloFijo, homeStyleImageBox, homeStyleTitleCss } from "@/lib/home-style";
 import { cn, formatDate } from "@/lib/utils";
 import { CoverArt } from "@/components/cover-art";
 import { DEFAULT_LOCALE, INTL_LOCALE, categoryLabel, type Locale } from "@/lib/i18n";
@@ -61,7 +61,7 @@ export function HomeCard({
   className?: string;
 }) {
   const style = a.homeStyle;
-  const size = style?.size ?? null;
+  const size = estiloFijo(style)?.size ?? null;
   // El tamaño fijado a mano manda sobre el look por defecto de la sección,
   // salvo en "lead" (la principal), que siempre muestra imagen y resumen.
   const look = variant !== "lead" && size ? BLOCK_LOOK[size] : null;
@@ -107,7 +107,7 @@ export function HomeCard({
           {a.title}
         </h3>
 
-        {dekClass && <p className={cn("entry-dek mt-2", dekClass)}>{a.excerpt}</p>}
+        {dekClass && <p data-cg-resumen className={cn("entry-dek mt-2", dekClass)}>{a.excerpt}</p>}
 
         <Byline a={a} locale={locale} />
       </Wrapper>

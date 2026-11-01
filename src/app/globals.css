@@ -1383,6 +1383,12 @@ a {
   border: 1px solid var(--border);
 }
 
+/* Etiqueta de las fichas de Vanguardia: toma el acento de su parte si se eligió uno en /panel/portada. */
+.cg-etiqueta-acento {
+  background: var(--acento-region, color-mix(in oklab, var(--surface) 100%, transparent));
+  border-color: var(--acento-region, var(--border));
+}
+
 /* Orbes de gradiente a la deriva (Vanguardia). */
 @keyframes meshDrift {
   0%, 100% { transform: translate(0, 0) scale(1); }

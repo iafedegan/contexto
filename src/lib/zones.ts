@@ -25,6 +25,7 @@ export function sanitizeZones(input: unknown): Record<string, ZoneStyle> {
       tpl: typeof r.tpl === "string" && TPL.test(r.tpl.trim()) ? r.tpl.trim() : undefined,
       gap: clamp(r.gap, 0, 80),
       flat: r.flat === true ? true : undefined,
+      libreEnMovil: r.libreEnMovil === true ? true : undefined,
     };
     const clean = Object.fromEntries(Object.entries(z).filter(([, v]) => v !== undefined)) as ZoneStyle;
     if (Object.keys(clean).length) out[key] = clean;
@@ -68,7 +69,7 @@ export function zonesCss(input: unknown, scope = "[data-site-root]"): string {
         level = `${level}>${nb}${has}`;
       }
     }
-    rules.push(`@media(max-width:640px){${sel}{grid-template-columns:minmax(0,1fr)!important}}`);
+    if (!z.libreEnMovil) rules.push(`@media(max-width:640px){${sel}{grid-template-columns:minmax(0,1fr)!important}}`);
   }
   return rules.join("\n");
 }

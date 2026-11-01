@@ -24,6 +24,12 @@ export function cleanupBlocks(root: ParentNode) {
 }
 
 // Añade a cada bloque del lienzo los controles de edición, entre ellos el asa para cambiar su alto arrastrando.
+/** El bloque de una nota que se ve en esta pantalla: algunas plantillas pintan la misma nota dos veces y ocultan una según el ancho. */
+export function bloqueVisible(root: ParentNode, slug: string): HTMLElement | null {
+  const todos = [...root.querySelectorAll<HTMLElement>(`[data-bslug="${slug}"],[data-bs-root="${slug}"]`)];
+  return todos.find((el) => el.getBoundingClientRect().width > 0) ?? todos[0] ?? null;
+}
+
 export function enhanceBlocks(doc: Document, root: ParentNode, opts: BlockToolsOptions) {
   cleanupBlocks(root);
   if (!doc.getElementById(STYLE_ID)) {

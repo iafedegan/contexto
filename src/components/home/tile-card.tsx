@@ -57,7 +57,7 @@ export function TileCard({
       // Visible desde el HTML del servidor: una animación de entrada dejaba la
       // noticia invisible hasta cargar el JS (mala señal = portada en blanco).
       className={cn("group border border-[var(--rule)] bg-[var(--paper)] transition-colors duration-150", className)}
-      style={{ ["--tile-accent" as string]: accent }}
+      style={{ ["--tile-accent" as string]: `var(--acento-region, ${accent})` }}
     >
       <Wrapper {...wrapperProps} className="block h-full">
         <div className={cn("relative overflow-hidden bg-[var(--paper-2)]", size === "lg" ? "aspect-[16/10]" : "aspect-[4/3]")}>
@@ -77,7 +77,7 @@ export function TileCard({
           )}
           <span
             className="absolute left-0 top-0 max-w-[calc(100%-3rem)] truncate px-2 py-1 text-[0.72rem] font-bold uppercase tracking-[0.06em] text-white"
-            style={{ background: accent }}
+            style={{ background: "var(--tile-accent)" }}
           >
             {categoryLabel(locale, a.categorySlug, a.categoryName ?? "General")}
           </span>
@@ -86,7 +86,7 @@ export function TileCard({
           </span>
           <span
             className="pointer-events-none absolute inset-x-0 bottom-0 h-[3px] scale-x-0 transition-transform duration-150 ease-out group-hover:scale-x-100"
-            style={{ background: accent, transformOrigin: "left" }}
+            style={{ background: "var(--tile-accent)", transformOrigin: "left" }}
             aria-hidden
           />
         </div>

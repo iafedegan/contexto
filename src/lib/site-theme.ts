@@ -1,4 +1,5 @@
 import "server-only";
+import type { HomeLayoutConfig } from "@/db/schema";
 import { cache } from "react";
 import type { CSSProperties } from "react";
 import { getHomeLayoutConfig } from "@/lib/content";
@@ -11,6 +12,22 @@ import { resolveParts, PRESET_PARTS, type TemplateParts } from "@/lib/template-p
 import type { Theme } from "@/lib/theme";
 import type { TextosCabecera } from "@/lib/textos-cabecera";
 import { menuNavCss, type MenuNavbar } from "@/lib/menu-navbar";
+import { cssPorPantalla } from "@/lib/pantallas";
+import { getPreviewDraft } from "@/lib/preview-draft";
+import type { PortadaDraft } from "@/lib/portada-draft";
+
+// La hoja del diseño: cada parte, general o por pantalla según lo que se haya ajustado.
+function disenoCss(layout: HomeLayoutConfig): string {
+  const pant = layout.pantallas ?? {};
+  return [
+    cssPorPantalla(layout.regions, (p) => pant[p]?.regions, (v) => regionsCss(v)),
+    cssPorPantalla(layout.sectionEls, (p) => pant[p]?.sectionEls, (v) => sectionElsCss(v)),
+    cssPorPantalla(layout.zones, (p) => pant[p]?.zones, (v) => zonesCss(v)),
+    cssPorPantalla(layout.menuNav?.estilo, (p) => pant[p]?.menuEstilo, (v) => menuNavCss(v ? { estilo: v } : undefined)),
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
 
 /**
  * Tema activo del sitio = la plantilla elegida en /panel/portada.
@@ -22,8 +39,10 @@ import { menuNavCss, type MenuNavbar } from "@/lib/menu-navbar";
  * `cache()` lo memoiza por render: layout, página y generateMetadata lo piden
  * por separado y solo se paga una consulta.
  */
-export const getSiteTheme = cache(
-  async (): Promise<{ theme: Theme; style?: CSSProperties; css?: string; parts: Required<TemplateParts>; textos?: TextosCabecera; menuNav?: MenuNavbar }> => {
+const temaDe = cache(
+  // El borrador solo separa la memoria: quien lo aplica es getHomeLayoutConfig. Lo pide también el layout del panel, antes de que la vista previa fije el suyo.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  async (_draft: PortadaDraft | null): Promise<{ theme: Theme; style?: CSSProperties; css?: string; parts: Required<TemplateParts>; textos?: TextosCabecera; menuNav?: MenuNavbar }> => {
     try {
       const layout = await getHomeLayoutConfig();
       // Solo en desarrollo: cookie `cg-tema` para revisar cada plantilla sin
@@ -43,7 +62,7 @@ export const getSiteTheme = cache(
         style: homeBackgroundStyle(layout.background),
         textos: layout.textos,
         menuNav: layout.menuNav,
-        css: [regionsCss(layout.regions), sectionElsCss(layout.sectionEls), zonesCss(layout.zones), menuNavCss(layout.menuNav)].filter(Boolean).join("\n"),
+        css: disenoCss(layout),
         // Piezas de la plantilla compuesta (navbar, cuerpo, footer). Con la
         // cookie de desarrollo se ve la plantilla prediseñada entera.
         parts: resolveParts(override || layout.templateId, devParts ?? (override ? undefined : layout.parts)),
@@ -54,3 +73,4 @@ export const getSiteTheme = cache(
     }
   },
 );
+export const getSiteTheme = () => temaDe(getPreviewDraft());

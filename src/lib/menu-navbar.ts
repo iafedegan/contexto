@@ -101,6 +101,12 @@ export function sanitizeMenuNavbar(input: unknown): MenuNavbar | undefined {
   return Object.keys(out).length ? out : undefined;
 }
 
+/** Quita las secciones ocultas de una lista (el menú «Más» no lleva enlaces propios ni desplegables). */
+export function sinOcultas<T extends { href: string }>(items: T[], menu?: MenuNavbar): T[] {
+  const ocultas = new Set(menu?.ocultas ?? []);
+  return ocultas.size ? items.filter((i) => !ocultas.has(i.href.split("/").pop() ?? i.href)) : items;
+}
+
 /** Aplica los ajustes a la lista de la barra (el Observatorio se identifica por su dirección). */
 export function aplicarMenu<T extends { href: string; label: string; children?: T[] }>(items: T[], menu?: MenuNavbar): T[] {
   if (!menu) return items;

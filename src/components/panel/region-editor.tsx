@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AlignCenter, AlignLeft, AlignRight, ChevronDown, EyeOff, RotateCcw } from "lucide-react";
 import { GradientEditor } from "@/components/panel/gradient-editor";
 import { HOME_FONT_GROUPS, HOME_FONTS, type HomeTitleFont } from "@/lib/home-fonts";
 import {
+  EVENTO_MODO_LIENZO,
   RANGES,
   REGIONS,
   type RegionColors,
@@ -47,9 +48,25 @@ export function RegionEditor({
   // Para qué modo del sitio se editan los colores: los dos, solo el claro o solo el oscuro.
   const [modo, setModo] = useState<"ambos" | "claro" | "oscuro">("ambos");
   const colores: RegionColors = modo === "ambos" ? s : (s[modo] ?? {});
+  // Mientras se edita un modo suelto, el lienzo se ve en ese modo: si no, el cambio no se notaría.
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent(EVENTO_MODO_LIENZO, { detail: modo }));
+    return () => {
+      window.dispatchEvent(new CustomEvent(EVENTO_MODO_LIENZO, { detail: "ambos" }));
+    };
+  }, [modo]);
   // Cambia un color: en «los dos modos» va al estilo base; en un modo concreto, solo a ese modo.
   function patchColor(p: Partial<RegionColors>) {
-    if (modo === "ambos") return patch(p);
+    if (modo === "ambos") {
+      // «Los dos modos» manda de verdad: quita ese color de los modos sueltos, que si no lo seguirían pisando.
+      const limpio: Partial<RegionStyle> = { ...p };
+      for (const m of ["claro", "oscuro"] as const) {
+        const c: RegionColors = { ...(s[m] ?? {}) };
+        for (const k of Object.keys(p) as (keyof RegionColors)[]) delete c[k];
+        if (s[m]) limpio[m] = Object.keys(c).length ? c : undefined;
+      }
+      return patch(limpio);
+    }
     const merged: RegionColors = { ...(s[modo] ?? {}), ...p };
     for (const k of Object.keys(merged) as (keyof RegionColors)[]) if (merged[k] === undefined) delete merged[k];
     patch({ [modo]: Object.keys(merged).length ? merged : undefined });
@@ -125,8 +142,8 @@ export function RegionEditor({
             </div>
             <p className="-mt-1 text-[11px] leading-snug text-[var(--fg-muted)]">
               {modo === "ambos"
-                ? "Estos colores valen para el modo claro y el oscuro (salvo donde elijas colores propios de un modo)."
-                : `Solo para quien ve el sitio en modo ${modo}: el otro modo no cambia. Para verlo en el lienzo, cambia de modo con el botón ☀ de la cabecera.`}
+                ? "Estos colores valen para el modo claro y el oscuro."
+                : `Solo para quien ve el sitio en modo ${modo}: el otro modo no cambia. El lienzo se muestra en modo ${modo} mientras lo editas.`}
             </p>
             {has("bg") && <ColorRow label="Fondo" value={colores.bg} onChange={(bg) => patchColor({ bg })} />}
             {has("bgGradient") && <GradientEditor label="Degradado de fondo" value={colores.bgGradient} onChange={(bgGradient) => patchColor({ bgGradient })} />}

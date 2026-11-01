@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import {
   CINTILLO_MAX_TEXTO,
   CINTILLO_MAX_TEXTOS,
@@ -27,6 +27,14 @@ export function CintilloEditor({
 }) {
   const v = sanitizeTicker(value);
   const set = (p: Partial<TickerConfig>) => onChange(sanitizeTicker({ ...v, ...p }));
+  // El campo no se controla para conservar los saltos al escribir: si los mensajes cambian desde fuera (deshacer, descartar), se vuelve a pintar.
+  const mensajes = useRef<HTMLTextAreaElement>(null);
+  const textos = v.textos.join("\n");
+  useEffect(() => {
+    const el = mensajes.current;
+    if (el && sanitizeTicker({ ...v, textos: el.value.split("\n") }).textos.join("\n") !== textos) el.value = textos;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [textos]);
 
   return (
     <div className="flex flex-col gap-4 text-sm">
@@ -94,7 +102,8 @@ export function CintilloEditor({
         <Grupo titulo="Mensajes propios">
           <textarea
             // Una línea por mensaje: se conservan los saltos mientras se escribe y se limpia al guardar.
-            defaultValue={v.textos.join("\n")}
+            ref={mensajes}
+            defaultValue={textos}
             onChange={(e) => set({ textos: e.target.value.split("\n") })}
             rows={3}
             placeholder={"Un mensaje por línea. Salen primero.\nEj.: Feria Ganadera de Montería, 15 al 18 de octubre"}

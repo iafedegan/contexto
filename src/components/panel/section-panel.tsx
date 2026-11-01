@@ -106,14 +106,15 @@ export function SectionPanel({
 
       {tab === "ads" && ads ? (
         <AdsPanel
+          key={nota ? "nota" : "seccion"}
           layout={layout}
           zones={ads.zones}
           canManage={ads.canManage}
           drafts={ads.drafts}
           onDraft={ads.onDraft}
-          view="seccion"
-          views={["seccion"]}
-          only={["section_top", "section_bottom", "footer"]}
+          view={nota ? "nota" : "seccion"}
+          views={[nota ? "nota" : "seccion"]}
+          only={nota ? ["article_top", "article_sidebar", "footer"] : ["section_top", "section_bottom", "footer"]}
         />
       ) : tab === "encabezado" ? (
         <>

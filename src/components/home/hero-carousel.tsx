@@ -7,7 +7,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { ArticleListItem } from "@/lib/content";
 import { formatDate } from "@/lib/utils";
-import { homeStyleImageScale, homeStyleTitleCss } from "@/lib/home-style";
+import { estiloFijo, factorTamano, homeStyleImageScale, homeStyleTitleCss } from "@/lib/home-style";
 import { CoverArt } from "@/components/cover-art";
 import { DEFAULT_LOCALE, INTL_LOCALE, categoryLabel, type Locale } from "@/lib/i18n";
 import { hrefNota } from "@/lib/ruta-nota";
@@ -50,6 +50,7 @@ export function HeroCarousel({
   // Va a la diapositiva indicada, dando la vuelta en los extremos.
   const go = (i: number) => setIndex(((i % count) + count) % count);
   const active = items[index];
+  const fijo = estiloFijo(active?.homeStyle);
   const Wrapper: React.ElementType = interactive ? Link : "div";
 
   return (
@@ -65,11 +66,16 @@ export function HeroCarousel({
           className="relative h-[34dvh] min-h-[220px] overflow-hidden bg-black sm:h-[42dvh] lg:h-[46dvh] lg:max-h-[460px]"
           // "Tamaño de imagen" del panel: encoge la altura del hero (no su
           // ancho, que es a sangre por diseño) conservando la composición.
-          style={
-            homeStyleImageScale(active.homeStyle) === 100
-              ? undefined
-              : { height: `calc(46dvh * ${homeStyleImageScale(active.homeStyle) / 100})` }
-          }
+          // Las medidas exactas mandan sobre el porcentaje; la foto nunca pasa del ancho de la portada.
+          style={{
+            ...(fijo?.imageHeight
+              ? { height: `${fijo.imageHeight}px`, minHeight: 0, maxHeight: "none" }
+              : homeStyleImageScale(fijo) === 100
+                ? {}
+                : { height: `calc(46dvh * ${homeStyleImageScale(fijo) / 100})` }),
+            ...(fijo?.imageWidth ? { width: `${fijo.imageWidth}px`, maxWidth: "100%", marginInline: "auto" } : {}),
+            ...(active.homeStyle?.pantallas ? { ["--cg-hero-foto" as string]: "1" } : {}),
+          }}
           role="region"
           aria-roledescription="carrusel"
           aria-label="Notas destacadas"
@@ -178,12 +184,12 @@ export function HeroCarousel({
                       base del hero (el titular más grande de la portada). */}
                   <h2
                     className="headline text-[1.4rem] leading-[1.08] group-hover:text-[var(--brand-ink)] sm:text-[2.3rem]"
-                    style={homeStyleTitleCss(active.homeStyle, 37, 1.08)}
+                    style={homeStyleTitleCss(active.homeStyle, 37 * factorTamano(active.homeStyle), 1.08)}
                   >
                     {active.title}
                   </h2>
-                  {active.homeStyle?.size !== "sm" && (
-                    <p className="mt-2 hidden max-w-xl font-[family-name:var(--font-serif)] text-[1rem] text-[var(--ink-soft)] sm:block">
+                  {fijo?.size !== "sm" && (
+                    <p data-cg-resumen className="mt-2 hidden max-w-xl font-[family-name:var(--font-serif)] text-[1rem] text-[var(--ink-soft)] sm:block">
                       {active.excerpt}
                     </p>
                   )}

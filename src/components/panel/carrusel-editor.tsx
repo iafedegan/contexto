@@ -328,10 +328,10 @@ function Diapositivas({ lista, onChange }: { lista: Diapositiva[]; onChange: (d:
             </div>
           </div>
           <div className="mt-2 flex flex-col gap-1.5">
-            <input defaultValue={d.etiqueta} onBlur={(e) => cambiar(d.id, { etiqueta: e.target.value })} maxLength={40} placeholder="Etiqueta pequeña (p. ej. Evento)" className="lx-input !py-1.5 !text-xs" />
-            <input defaultValue={d.titulo} onBlur={(e) => cambiar(d.id, { titulo: e.target.value })} maxLength={120} placeholder="Título" className="lx-input !py-1.5 !text-xs" />
-            <textarea defaultValue={d.texto} onBlur={(e) => cambiar(d.id, { texto: e.target.value })} maxLength={300} rows={2} placeholder="Texto (se ve si activas «Resumen» en la tarjeta)" className="lx-input resize-y !py-1.5 !text-xs" />
-            <input defaultValue={d.enlace} onBlur={(e) => cambiar(d.id, { enlace: e.target.value })} placeholder="Enlace: https://… o /seccion/nota (vacío = sin enlace)" className="lx-input !py-1.5 !text-xs" />
+            <input key={`e-${d.etiqueta}`} defaultValue={d.etiqueta} onBlur={(e) => cambiar(d.id, { etiqueta: e.target.value })} maxLength={40} placeholder="Etiqueta pequeña (p. ej. Evento)" className="lx-input !py-1.5 !text-xs" />
+            <input key={`t-${d.titulo}`} defaultValue={d.titulo} onBlur={(e) => cambiar(d.id, { titulo: e.target.value })} maxLength={120} placeholder="Título" className="lx-input !py-1.5 !text-xs" />
+            <textarea key={`x-${d.texto}`} defaultValue={d.texto} onBlur={(e) => cambiar(d.id, { texto: e.target.value })} maxLength={300} rows={2} placeholder="Texto (se ve si activas «Resumen» en la tarjeta)" className="lx-input resize-y !py-1.5 !text-xs" />
+            <input key={`l-${d.enlace}`} defaultValue={d.enlace} onBlur={(e) => cambiar(d.id, { enlace: e.target.value })} placeholder="Enlace: https://… o /seccion/nota (vacío = sin enlace)" className="lx-input !py-1.5 !text-xs" />
             <Casilla etiqueta="Abrir el enlace en otra pestaña" valor={d.nuevaPestana} onChange={(nuevaPestana) => cambiar(d.id, { nuevaPestana })} />
           </div>
         </div>

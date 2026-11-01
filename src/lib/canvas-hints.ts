@@ -28,7 +28,7 @@ const LABEL_ID = "cg-hint";
 type Target = { el: HTMLElement; text: string };
 
 // Instala en el documento del lienzo las ayudas de edición: resalta con línea discontinua el bloque bajo el cursor y muestra una etiqueta. Devuelve la función que las retira.
-export function installCanvasHints(doc: Document, labels: HintLabels, accion = "clic para editar"): () => void {
+export function installCanvasHints(doc: Document, labels: HintLabels, accion = "clic para editar", margenArriba = 0): () => void {
   if (!doc.getElementById(STYLE_ID)) {
     const st = doc.createElement("style");
     st.id = STYLE_ID;
@@ -95,8 +95,9 @@ export function installCanvasHints(doc: Document, labels: HintLabels, accion = "
     const h = tag.getBoundingClientRect().height || 24;
     const vw = doc.documentElement.clientWidth;
     const left = Math.max(4, Math.min(r.left + 4, vw - tag.getBoundingClientRect().width - 4));
-    // Encima del elemento si cabe; si no, dentro, pegada arriba.
-    const top = r.top - h - 4 >= 2 ? r.top - h - 4 : Math.max(2, r.top + 4);
+    // Encima del elemento si cabe; si no, dentro, pegada arriba. `margenArriba`: lo que tapa una barra fija (no debe quedar bajo ni sobre ella).
+    const tope = margenArriba + 2;
+    const top = r.top - h - 4 >= tope ? r.top - h - 4 : Math.max(tope, r.top + 4);
     tag.style.left = `${left}px`;
     tag.style.top = `${top}px`;
   }

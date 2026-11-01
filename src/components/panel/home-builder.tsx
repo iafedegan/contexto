@@ -8,9 +8,11 @@ import type { AdsZoneRow } from "@/lib/ads";
 import { publishHomeDraft, restoreHomeSnapshot, saveHomeDraft } from "@/app/panel/(app)/portada/actions";
 import type { HomeStyle, SectionElId, ZoneStyle } from "@/db/schema";
 import { DEFAULT_HOME_LAYOUT, HOME_TEMPLATES } from "@/lib/home-layout";
-import { REGIONS, type RegionId, type RegionStyles } from "@/lib/home-regions";
+import { PantallaEditada } from "@/components/panel/pantalla-editada";
+import { conCambios, conEstiloEnPantalla, copiarDiseno, copiarEstilo, estiloEnPantalla, layoutDePantalla, type Pantalla } from "@/lib/pantallas";
+import { EVENTO_MODO_LIENZO, REGIONS, type RegionId, type RegionStyles } from "@/lib/home-regions";
 import { SECTION_ELS } from "@/lib/section-els";
-import { enhanceBlocks, measureZone, type ZoneMapData } from "@/lib/block-tools";
+import { bloqueVisible, enhanceBlocks, measureZone, type ZoneMapData } from "@/lib/block-tools";
 import { installCanvasHints, type HintLabels } from "@/lib/canvas-hints";
 import { countChanges, summarizeChanges, type PortadaState } from "@/lib/portada-summary";
 import { SectionPanel } from "@/components/panel/section-panel";
@@ -99,7 +101,10 @@ export function HomeBuilder({
   const [popupPreview, setPopupPreview] = useState(false);
   const [draftReady, setDraftReady] = useState(false);
   const [frameNonce, setFrameNonce] = useState(0);
+  const [notaEnLienzo, setNotaEnLienzo] = useState(true);
   const [viewport, setViewport] = useState<Viewport>("escritorio");
+  // La pantalla que se edita es la que se está viendo.
+  const pantalla: Pantalla = ({ escritorio: "pc", tablet: "tablet", movil: "movil" } as const)[viewport];
   const [zoom, setZoom] = useState<Zoom>("ajustar");
   const [framed, setFramed] = useState(false);
   /** Lienzo ampliado: el menú lateral se oculta y sale como panel flotante con el botón «Opciones». */
@@ -127,6 +132,7 @@ export function HomeBuilder({
   const redoRef = useRef<() => void>(() => {});
   const toastId = useRef(0);
 
+  const layoutVisible = useMemo(() => layoutDePantalla(layout, pantalla), [layout, pantalla]);
   const seccion = previewPath.startsWith("/vista-portada/categoria/")
     ? (sections.find((x) => x.slug === previewPath.split("/").pop()) ?? null)
     : null;
@@ -271,9 +277,31 @@ export function HomeBuilder({
     },
   };
 
+  // Mientras se editan los colores de un solo modo, el lienzo se ve en ese modo.
+  const modoLienzo = useRef<string>("ambos");
+  const aplicarModoLienzo = useCallback((doc: Document | null | undefined) => {
+    const raiz = doc?.documentElement;
+    if (!raiz) return;
+    if (raiz.dataset.cgDarkPropio === undefined) raiz.dataset.cgDarkPropio = raiz.dataset.dark ?? "";
+    const propio = raiz.dataset.cgDarkPropio;
+    if (modoLienzo.current === "claro") raiz.dataset.dark = "0";
+    else if (modoLienzo.current === "oscuro") raiz.dataset.dark = "1";
+    else if (propio) raiz.dataset.dark = propio;
+    else delete raiz.dataset.dark;
+  }, []);
+  useEffect(() => {
+    const oir = (e: Event) => {
+      modoLienzo.current = (e as CustomEvent<string>).detail;
+      aplicarModoLienzo(frameDoc.current);
+    };
+    window.addEventListener(EVENTO_MODO_LIENZO, oir);
+    return () => window.removeEventListener(EVENTO_MODO_LIENZO, oir);
+  }, [aplicarModoLienzo]);
+
   // Se llama cada vez que carga la portada real del lienzo.
   function hookFrame(doc: Document) {
     frameDoc.current = doc;
+    aplicarModoLienzo(doc);
     if (!doc.getElementById("cg-sel")) {
       const st = doc.createElement("style");
       st.id = "cg-sel";
@@ -422,25 +450,26 @@ export function HomeBuilder({
     const id = setTimeout(() => {
       const doc = frameDoc.current;
       if (!doc || !selectedSlug || !/^[\w-]+$/.test(selectedSlug)) return setZoneMap(null);
-      const el = doc.querySelector<HTMLElement>(`[data-bslug="${selectedSlug}"]`) ?? doc.querySelector<HTMLElement>(`[data-bs-root="${selectedSlug}"]`);
+      const el = bloqueVisible(doc, selectedSlug);
+      setNotaEnLienzo(!!el);
       setZoneMap(el ? measureZone(el, zoneUp) : null);
     }, 2200);
     return () => clearTimeout(id);
-  }, [selectedSlug, frameNonce, previewPath, zoneUp]);
+  }, [selectedSlug, frameNonce, previewPath, zoneUp, pantalla]);
 
   // ---------------------------------------------------------------- Ediciones
   function setZone(key: string, z: ZoneStyle | undefined) {
-    const zones = { ...(layout.zones ?? {}) };
+    const zones = { ...(layoutVisible.zones ?? {}) };
     if (z && Object.keys(z).length) zones[key] = z;
     else delete zones[key];
-    patchLayout({ zones });
+    patchVisual({ zones });
   }
   // Reúne los datos de las zonas para el editor.
   const zoneBundle = (): ZoneBundle =>
     zoneMap?.key
       ? {
           map: zoneMap,
-          style: layout.zones?.[zoneMap.key],
+          style: layoutVisible.zones?.[zoneMap.key],
           selectedSlug,
           level: zoneUp,
           onLevel: setZoneUp,
@@ -480,11 +509,7 @@ export function HomeBuilder({
   function patchStyle(index: number, partial: Partial<HomeStyle> | null) {
     setItems((prev) => {
       const next = prev.slice();
-      const merged: HomeStyle | null = partial === null ? null : { ...next[index].homeStyle, ...partial };
-      if (merged) {
-        (Object.keys(merged) as (keyof HomeStyle)[]).forEach((k) => merged[k] === undefined && delete merged[k]);
-      }
-      next[index] = { ...next[index], homeStyle: merged && Object.keys(merged).length > 0 ? merged : null };
+      next[index] = { ...next[index], homeStyle: conEstiloEnPantalla(next[index].homeStyle, pantalla, partial) };
       return next;
     });
     setAuto(false);
@@ -495,10 +520,22 @@ export function HomeBuilder({
     setLayout((prev) => ({ ...prev, ...partial }));
   }
 
-  // Elige una plantilla.
-  function pickTemplate(config: Omit<Layout, "ticker" | "carrusel" | "textos" | "menuNav">) {
+  // Cambia lo visual solo en la pantalla que se está editando (lo común del cambio va a las tres).
+  function patchVisual(partial: Partial<Layout>) {
+    setLayout((prev) => conCambios(prev, pantalla, partial));
+  }
+
+  // Lleva lo visual de esta pantalla (diseño y estilo de las notas) a las otras dos.
+  function copiarAOtrasPantallas() {
+    setLayout((prev) => copiarDiseno(prev, pantalla));
+    setItems((prev) => prev.map((i) => (i.homeStyle ? { ...i, homeStyle: copiarEstilo(i.homeStyle, pantalla) } : i)));
+    showToast({ tone: "info", text: "Las otras dos pantallas quedaron con este diseño.", actions: [{ label: "Deshacer", onClick: () => history.undo() }], ms: 12000 });
+  }
+
+  // Elige una plantilla: parte de cero también en los ajustes por pantalla.
+  function pickTemplate(config: Omit<Layout, "ticker" | "carrusel" | "textos" | "menuNav" | "pantallas">) {
     const teniaComposicion = Object.values(layout.parts ?? {}).some(Boolean);
-    patchLayout({ ...config, parts: {}, sectionFilters: layout.sectionFilters });
+    patchLayout({ ...config, parts: {}, pantallas: {}, sectionFilters: layout.sectionFilters });
     if (teniaComposicion) {
       showToast({
         tone: "info",
@@ -513,7 +550,8 @@ export function HomeBuilder({
   function selectNota(i: number) {
     setSelected(i);
     focusOn("nota");
-    frameDoc.current?.querySelector(`[data-card-index="${i}"]`)?.scrollIntoView({ block: "center", behavior: "smooth" });
+    const slug = items[i]?.slug;
+    if (frameDoc.current && slug && /^[\w-]+$/.test(slug)) bloqueVisible(frameDoc.current, slug)?.scrollIntoView({ block: "center", behavior: "smooth" });
   }
 
   // Cierra el panel de edición del elemento enfocado.
@@ -885,6 +923,8 @@ export function HomeBuilder({
       >
         {guia && !ampliado && <PortadaGuia onClose={cerrarGuia} />}
 
+        <PantallaEditada pantalla={pantalla} onCopiar={copiarAOtrasPantallas} />
+
         {seccion ? (
           <>
             <Bloque
@@ -910,8 +950,8 @@ export function HomeBuilder({
               destacar={flash}
             >
               <SectionPanel
-                layout={layout}
-                onChange={patchLayout}
+                layout={layoutVisible}
+                onChange={patchVisual}
                 region={region}
                 onRegion={setRegion}
                 el={secEl}
@@ -921,7 +961,7 @@ export function HomeBuilder({
                   selected !== null && items[selected]
                     ? {
                         title: items[selected].title,
-                        style: items[selected].homeStyle ?? {},
+                        style: estiloEnPantalla(items[selected].homeStyle, pantalla),
                         onChange: (p) => patchStyle(selected, p),
                         onClear: () => patchStyle(selected, null),
                         zone: zoneBundle(),
@@ -944,12 +984,13 @@ export function HomeBuilder({
               }}
               region={region}
               onRegion={setRegion}
-              layout={layout}
-              onRegions={(regions: RegionStyles) => patchLayout({ regions })}
+              layout={layoutVisible}
+              pantalla={pantalla}
+              onRegions={(regions: RegionStyles) => patchVisual({ regions })}
               onTextos={(textos) => patchLayout({ textos: textos ?? {} })}
-              onMenu={(menuNav) => patchLayout({ menuNav: menuNav ?? {} })}
+              onMenu={(menuNav) => patchVisual({ menuNav: menuNav ?? {} })}
               secciones={sections.filter((x) => !x.parentId).map((x) => ({ slug: x.slug, name: x.name }))}
-              nota={selected !== null && items[selected] ? { index: selected, title: items[selected].title, style: items[selected].homeStyle ?? {} } : null}
+              nota={selected !== null && items[selected] ? { index: selected, title: items[selected].title, style: estiloEnPantalla(items[selected].homeStyle, pantalla), enLienzo: notaEnLienzo } : null}
               onNotaChange={(p) => selected !== null && patchStyle(selected, p)}
               onNotaClear={() => selected !== null && patchStyle(selected, null)}
               zone={zoneBundle()}

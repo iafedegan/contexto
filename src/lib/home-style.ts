@@ -2,6 +2,7 @@ import type { HomeStyle } from "@/db/schema";
 import { HOME_FONTS, homeFontFamily, type HomeTitleFont } from "@/lib/home-fonts";
 import { gradientCss, sanitizeGradient } from "@/lib/section-els";
 import { acotar as num, colorHex as hex } from "@/lib/validate";
+import { MEDIA_PANTALLA, PANTALLAS, estiloEnPantalla } from "@/lib/pantallas";
 
 /**
  * Estilo de título fijado a mano en /panel/portada, resuelto a CSS. Compartido
@@ -21,12 +22,24 @@ function fluidRem(px: number): string {
   return `clamp(${min / 16}rem, calc(${min / 16}rem + (100vw - 22.5rem) * ${k}), ${px / 16}rem)`;
 }
 
+/** Cuánto cambia el titular el tamaño de tarjeta elegido en el panel («Mediana» es el tamaño normal de la plantilla). */
+export const FACTOR_TAMANO: Record<NonNullable<HomeStyle["size"]>, number> = { sm: 0.85, md: 1, lg: 1.25 };
+// Factor de tamaño del titular de una tarjeta; 1 si no se fijó.
+export const factorTamano = (style: HomeStyle | null | undefined) => (style?.size && !style.pantallas ? FACTOR_TAMANO[style.size] : 1);
+
+/**
+ * El estilo que la tarjeta puede resolver al pintarse. Con ajustes por pantalla no se sabe en el servidor qué pantalla es: la tarjeta se
+ * pinta neutra, con unas marcas en `style` (`--cg-t-esc`, `--cg-caja-foto`, `--cg-mini-foto`, `--cg-hero-foto`), y lo pone `blockStylesCss`.
+ */
+export const estiloFijo = (style: HomeStyle | null | undefined): HomeStyle | null | undefined => (style?.pantallas ? null : style);
+
 // Estilos CSS del titular de una tarjeta según su configuración manual (tamaño, tipografía, negrilla, cursiva y color).
 export function homeStyleTitleCss(
   style: HomeStyle | null | undefined,
   basePx: number,
   lineHeight = 1.2,
 ): React.CSSProperties {
+  if (style?.pantallas) return { fontSize: `var(--cg-t-px, calc(${fluidRem(basePx)} * var(--cg-t-esc, 1)))`, lineHeight };
   const scale = (style?.titleScale ?? 100) / 100;
   const grad = style?.titleGradient;
   return {
@@ -62,6 +75,7 @@ export function homeStyleImageScale(style: HomeStyle | null | undefined): number
  * así que se acomoda solo. `alto` avisa a la tarjeta de que la altura es fija (la imagen debe llenarla, no usar su proporción).
  */
 export function homeStyleImageBox(style: HomeStyle | null | undefined): { css: React.CSSProperties | undefined; alto: boolean } {
+  if (style?.pantallas) return { css: { ["--cg-caja-foto" as string]: "1" }, alto: false };
   const ancho = style?.imageWidth;
   const alto = style?.imageHeight;
   const pct = style?.imageScale ?? 100;
@@ -85,7 +99,13 @@ export function homeStyleImageBox(style: HomeStyle | null | undefined): { css: R
 export function sanitizeHomeStyle(input: unknown): HomeStyle | null {
   if (!input || typeof input !== "object") return null;
   const r = input as Record<string, unknown>;
+  const pantallas: NonNullable<HomeStyle["pantallas"]> = {};
+  for (const id of ["pc", "tablet", "movil"] as const) {
+    const propio = (r.pantallas as Record<string, unknown> | undefined)?.[id];
+    if (propio && typeof propio === "object") pantallas[id] = sanitizeHomeStyle({ ...propio, pantallas: undefined }) ?? {};
+  }
   const s: HomeStyle = {
+    pantallas: Object.keys(pantallas).length ? pantallas : undefined,
     size: r.size === "sm" || r.size === "md" || r.size === "lg" ? r.size : undefined,
     span: r.span === 1 || r.span === 2 ? r.span : undefined,
     font: HOME_FONTS.some((f) => f.id === r.font) ? (r.font as HomeTitleFont) : undefined,
@@ -116,6 +136,68 @@ export function sanitizeHomeStyle(input: unknown): HomeStyle | null {
   return Object.keys(clean).length ? clean : null;
 }
 
+// Declaraciones de la caja de un bloque (posición, tamaño, fondo, texto y forma).
+function cajaBloque(s: HomeStyle): string[] {
+  const d: string[] = [];
+  if (s.colStart) d.push(`grid-column:${s.colStart} / span ${s.colSpan ?? 1}!important`);
+  else if (s.colSpan) d.push(`grid-column:span ${s.colSpan} / span ${s.colSpan}!important`);
+  if (s.rowStart) d.push(`grid-row-start:${s.rowStart}!important`);
+  if (s.height) d.push(`min-height:${s.height}px!important`);
+  if (s.widthPct && s.widthPct < 100) {
+    d.push(`width:${s.widthPct}%!important`);
+    const al = s.blockAlign ?? "left";
+    d.push(al === "center" ? "margin-inline:auto!important" : al === "right" ? "margin-left:auto!important" : "margin-right:auto!important");
+  }
+  if (s.bgGradient) d.push(`background:${gradientCss(s.bgGradient)}!important`);
+  else if (s.bg) d.push(`background:${s.bg}!important`);
+  if (s.fg) d.push(`color:${s.fg}!important`, `--fg:${s.fg}`, `--ink:${s.fg}`);
+  if (s.radius !== undefined) d.push(`border-radius:${s.radius}px!important`, "overflow:hidden!important");
+  if (s.pad !== undefined) d.push(`padding:${s.pad}px!important`);
+  const fam = homeFontFamily(s.textFont);
+  if (fam) d.push(`font-family:${fam}!important`);
+  return d;
+}
+
+// Lo que una tarjeta sin ajustes por pantalla resuelve al pintarse (titular, foto, tamaño), como reglas para las marcas que deja en `style`.
+function reglasDeTarjeta(s: HomeStyle, en: (interior: string) => string): string[] {
+  const out: string[] = [];
+  const titulo: string[] = [];
+  const fam = homeFontFamily(s.font);
+  if (fam) titulo.push(`font-family:${fam}!important`);
+  if (s.bold) titulo.push("font-weight:800!important");
+  if (s.italic) titulo.push("font-style:italic!important");
+  if (s.titleGradient) {
+    titulo.push(`background-image:${gradientCss(s.titleGradient)}!important`, "-webkit-background-clip:text!important", "background-clip:text!important", "-webkit-text-fill-color:transparent!important", "color:transparent!important");
+  } else if (s.color) titulo.push(`color:${s.color}!important`);
+  if (titulo.length) out.push(`${en(`[style*="--cg-t-esc"]`)}{${titulo.join(";")}}`);
+
+  const caja: string[] = [];
+  const hero: string[] = [];
+  const pct = s.imageScale ?? 100;
+  if (s.imageWidth) {
+    const w = `width:${s.imageWidth}px!important;max-width:100%!important;margin-inline:auto!important`;
+    caja.push(w);
+    hero.push(w);
+  } else if (pct !== 100) caja.push(`width:${pct}%!important;margin-inline:auto!important`);
+  if (s.imageHeight) {
+    caja.push(`height:${s.imageHeight}px!important;aspect-ratio:auto!important`);
+    hero.push(`height:${s.imageHeight}px!important;min-height:0!important;max-height:none!important`);
+    out.push(`${en(`[style*="--cg-caja-foto"]>*`)}{height:100%!important;aspect-ratio:auto!important}`);
+  } else if (pct !== 100) hero.push(`height:calc(46dvh * ${pct / 100})!important;min-height:0!important`);
+  if (caja.length) out.push(`${en(`[style*="--cg-caja-foto"]`)}{${caja.join(";")}}`);
+  if (hero.length) out.push(`${en(`[style*="--cg-hero-foto"]`)}{${hero.join(";")}}`);
+  const mini = pct !== 100 ? Math.round((84 * pct) / 100) : undefined;
+  const lado = { w: s.imageWidth ?? s.imageHeight ?? mini, h: s.imageHeight ?? s.imageWidth ?? mini };
+  if (lado.w && lado.h) out.push(`${en(`[style*="--cg-mini-foto"]`)}{width:${lado.w}px!important;height:${lado.h}px!important}`);
+
+  if (s.size === "sm") out.push(`${en(`:is([style*="--cg-caja-foto"],[style*="--cg-mini-foto"],[data-cg-resumen])`)}{display:none!important}`);
+  if (s.size === "lg") out.push(`${en("[data-cg-resumen]")}{-webkit-line-clamp:4!important;line-clamp:4!important}`);
+  if (s.textPos) {
+    out.push(`${en("[data-cg-panel]")}{align-self:start!important;justify-self:${s.textPos === "arriba-der" ? "end" : "start"}!important${s.textPos === "arriba-der" ? ";text-align:right!important" : ""}}`);
+  }
+  return out;
+}
+
 /**
  * Hoja CSS de los bloques libres: una regla por nota con su tamaño, fondo y
  * texto. Se aplica por `data-bslug` (el envoltorio de la portada) o, en las
@@ -127,25 +209,28 @@ export function blockStylesCss(items: Array<{ slug: string; homeStyle?: HomeStyl
     const s = sanitizeHomeStyle(it.homeStyle);
     if (!s || !/^[\w-]+$/.test(it.slug)) continue;
     const sel = `${scope} [data-bslug="${it.slug}"],${scope} [data-bs-root="${it.slug}"]:not([data-bslug] *)`;
-    const d: string[] = [];
-    if (s.colStart) d.push(`grid-column:${s.colStart} / span ${s.colSpan ?? 1}!important`);
-    else if (s.colSpan) d.push(`grid-column:span ${s.colSpan} / span ${s.colSpan}!important`);
-    if (s.rowStart) d.push(`grid-row-start:${s.rowStart}!important`);
-    if (s.height) d.push(`min-height:${s.height}px!important`);
-    if (s.widthPct && s.widthPct < 100) {
-      d.push(`width:${s.widthPct}%!important`);
-      const al = s.blockAlign ?? "left";
-      d.push(al === "center" ? "margin-inline:auto!important" : al === "right" ? "margin-left:auto!important" : "margin-right:auto!important");
-    }
-    if (s.bgGradient) d.push(`background:${gradientCss(s.bgGradient)}!important`);
-    else if (s.bg) d.push(`background:${s.bg}!important`);
-    if (s.fg) d.push(`color:${s.fg}!important`, `--fg:${s.fg}`, `--ink:${s.fg}`);
-    if (s.radius !== undefined) d.push(`border-radius:${s.radius}px!important`, "overflow:hidden!important");
-    if (s.pad !== undefined) d.push(`padding:${s.pad}px!important`);
-    const fam = homeFontFamily(s.textFont);
-    if (fam) d.push(`font-family:${fam}!important`);
-    if (d.length) rules.push(`${sel}{${d.join(";")}}`);
-    if (fam) rules.push(`${scope} [data-bslug="${it.slug}"] :is(p,span,small,time,li,.kicker,.entry-dek,.meta),${scope} [data-bs-root="${it.slug}"] :is(p,span,small,time,li,.kicker,.entry-dek,.meta){font-family:${fam}!important}`);
+    const en = (interior: string) => `${scope} [data-bslug="${it.slug}"] ${interior},${scope} [data-bs-root="${it.slug}"] ${interior}`;
+    // Las reglas de un estilo; con `tarjeta`, también lo que la tarjeta no resolvió al pintarse.
+    const reglas = (e: HomeStyle, tarjeta: boolean) => {
+      const out: string[] = [];
+      const d = cajaBloque(e);
+      if (tarjeta) {
+        d.push(`--cg-t-esc:${((e.titleScale ?? 100) / 100) * (e.size ? FACTOR_TAMANO[e.size] : 1)}`);
+        if (e.titlePx) d.push(`--cg-t-px:${e.titlePx / 16}rem`);
+        if (e.span === 2 && !e.colSpan && !e.colStart) d.push("grid-column:span 2 / span 2!important");
+      }
+      if (d.length) out.push(`${sel}{${d.join(";")}}`);
+      const fam = homeFontFamily(e.textFont);
+      if (fam) out.push(`${en(":is(p,span,small,time,li,.kicker,.entry-dek,.meta)")}{font-family:${fam}!important}`);
+      if (tarjeta) out.push(...reglasDeTarjeta(e, en));
+      return out;
+    };
+    if (s.pantallas) {
+      for (const { id } of PANTALLAS) {
+        const css = reglas(estiloEnPantalla(s, id), true);
+        if (css.length) rules.push(`@media ${MEDIA_PANTALLA[id]}{\n${css.join("\n")}\n}`);
+      }
+    } else rules.push(...reglas(s, false));
   }
   return rules.join("\n");
 }

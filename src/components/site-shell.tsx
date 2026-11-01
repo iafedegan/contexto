@@ -13,7 +13,7 @@ import type { Theme } from "@/lib/theme";
 import { DEFAULT_LOCALE, categoryLabel, t, type Locale } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { NAV_VISIBLE } from "@/lib/nav-limits";
-import { aplicarMenu } from "@/lib/menu-navbar";
+import { aplicarMenu, sinOcultas } from "@/lib/menu-navbar";
 import { conTextos } from "@/lib/textos-cabecera";
 
 /**
@@ -115,7 +115,7 @@ export async function SiteShell({
       )}
       {/* «Última hora» ya no es una franja roja: la nota marcada lleva una insignia en la esquina de su imagen (ver `estiloUltimaHora`). */}
       {ultimaHora && /^[a-z0-9-]+$/.test(ultimaHora.slug) && <style dangerouslySetInnerHTML={{ __html: estiloUltimaHora(ultimaHora.slug, t(locale, "breaking.label")) }} />}
-      <SiteHeader theme={theme} nav={nav} extraNav={extraNav} locale={locale} identity={conTextos(identity, site.textos)} variant={site.parts.navbar} />
+      <SiteHeader theme={theme} nav={nav} extraNav={sinOcultas(extraNav, site.menuNav)} locale={locale} identity={conTextos(identity, site.textos)} variant={site.parts.navbar} />
       {aboveMain}
       <main id="contenido" data-region="body" className={mainClassName ?? shell.main}>
         {/* Honestidad con el lector: la interfaz cambia de idioma, las notas no. */}

@@ -9,6 +9,7 @@ import type { Layout } from "@/components/panel/portada-types";
 import { RegionEditor } from "@/components/panel/region-editor";
 import { MenuNavbarEditor } from "@/components/panel/menu-navbar-editor";
 import type { MenuNavbar } from "@/lib/menu-navbar";
+import type { Pantalla } from "@/lib/pantallas";
 import { TextosCabeceraEditor } from "@/components/panel/textos-cabecera-editor";
 import type { TextosCabecera } from "@/lib/textos-cabecera";
 import { REGIONS, type RegionId, type RegionStyles } from "@/lib/home-regions";
@@ -37,6 +38,7 @@ export function PropiedadesCard({
   region,
   onRegion,
   layout,
+  pantalla = "pc",
   onRegions,
   onTextos,
   onMenu,
@@ -53,6 +55,8 @@ export function PropiedadesCard({
   region: RegionId;
   onRegion: (r: RegionId) => void;
   layout: Layout;
+  /** Pantalla que se edita. */
+  pantalla?: Pantalla;
   onRegions: (next: RegionStyles) => void;
   /** Cambia el título, subtítulo o fecha de la cabecera (`undefined` = los del sitio). */
   onTextos: (next: TextosCabecera | undefined) => void;
@@ -61,7 +65,7 @@ export function PropiedadesCard({
   /** Secciones principales del sitio, para elegir cuáles se muestran en la barra. */
   secciones: { slug: string; name: string }[];
   /** La nota elegida: su posición (-1 si no está en la lista), título y estilo actual. */
-  nota: { index: number; title: string; style: HomeStyle } | null;
+  nota: { index: number; title: string; style: HomeStyle; enLienzo?: boolean } | null;
   onNotaChange: (p: Partial<HomeStyle>) => void;
   onNotaClear: () => void;
   zone: ZoneBundle;
@@ -144,7 +148,7 @@ export function PropiedadesCard({
             </p>
             <RegionEditor value={layout.regions ?? {}} active={region} onActive={onRegion} onChange={onRegions} only={PARTES} />
             {region === "navbar" && <TextosCabeceraEditor value={layout.textos} onChange={onTextos} />}
-            {region === "navbar" && <MenuNavbarEditor value={layout.menuNav} onChange={onMenu} secciones={secciones} />}
+            {region === "navbar" && <MenuNavbarEditor value={layout.menuNav} onChange={onMenu} secciones={secciones} conAspecto={pantalla === "pc"} />}
             {region === "cards" && nota && (
               <button type="button" onClick={() => onFoco("nota")} className="self-start text-xs font-semibold text-[var(--accent)] hover:underline">
                 ← Editar solo {nota.index >= 0 ? `la nota ${nota.index + 1}` : "la nota elegida"}
@@ -166,7 +170,7 @@ function NotaPanel({
   onClear,
   zone,
 }: {
-  nota: { index: number; title: string; style: HomeStyle };
+  nota: { index: number; title: string; style: HomeStyle; enLienzo?: boolean };
   layout: Layout;
   onRegions: (next: RegionStyles) => void;
   onChange: (p: Partial<HomeStyle>) => void;
@@ -184,6 +188,11 @@ function NotaPanel({
           <span className="font-semibold text-[var(--fg)]">{etiqueta}</span>
         </p>
         <p className="mt-1 line-clamp-2 text-sm font-bold leading-snug">{title}</p>
+        {nota.enLienzo === false && (
+          <p className="mt-2 rounded-[var(--radius)] bg-[var(--surface-2)] p-2 text-xs leading-snug text-[var(--fg-muted)]">
+            Esta plantilla no muestra esta nota como un bloque propio en esta página: sus ajustes se guardan, pero aquí no se verán.
+          </p>
+        )}
       </div>
 
       <div role="group" aria-label="Alcance del cambio" className="grid grid-cols-2 gap-1 rounded-lg border border-[var(--border)] p-1">
@@ -209,7 +218,7 @@ function NotaPanel({
 
       {alcance === "nota" ? (
         <>
-          <Inspector style={style} showSpan={index >= 6} showTextPos={index === 0 && layout.templateId === "esmeralda"} showSize={["esmeralda", "revista"].includes(layout.templateId)} showImage={["esmeralda", "clasico", "revista"].includes(layout.templateId)} onChange={onChange} onClear={onClear} />
+          <Inspector style={style} showSpan={index >= 6 && layout.templateId !== "gremial"} showTextPos={index === 0 && layout.templateId === "esmeralda"} showSize={["esmeralda", "revista"].includes(layout.templateId)} showImage={["esmeralda", "revista"].includes(layout.templateId) || (layout.templateId === "clasico" && (index < 2 || index >= 6))} onChange={onChange} onClear={onClear} />
           <details className="group rounded-[var(--radius)] border border-[var(--border)]">
             <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2.5 text-sm font-semibold">
               Más ajustes de esta nota

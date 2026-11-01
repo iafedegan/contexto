@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useMemo, useSyncExternalStore } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Check, ChevronDown, GripHorizontal, Paintbrush, X } from "lucide-react";
 import { publishHomeDraft, restoreHomeSnapshot, saveHomeDraft } from "@/app/panel/(app)/portada/actions";
@@ -12,9 +13,11 @@ import { PublicarControles } from "@/components/panel/portada-publicar";
 import type { Anterior } from "@/components/panel/portada-types";
 import { REGIONS, type RegionId } from "@/lib/home-regions";
 import { HOME_TEMPLATES } from "@/lib/home-layout";
+import { PantallaEditada } from "@/components/panel/pantalla-editada";
+import { conCambios, conEstiloEnPantalla, copiarDiseno, copiarEstilo, cssPorPantalla, estiloEnPantalla, layoutDePantalla, pantallaDeAncho } from "@/lib/pantallas";
 import { SECTION_ELS, sectionElsCss } from "@/lib/section-els";
 import type { HomeStyle, SectionElId } from "@/db/schema";
-import { cleanupBlocks, enhanceBlocks, measureZone, type ZoneMapData } from "@/lib/block-tools";
+import { bloqueVisible, cleanupBlocks, enhanceBlocks, measureZone, type ZoneMapData } from "@/lib/block-tools";
 import { installCanvasHints, type HintLabels } from "@/lib/canvas-hints";
 import { countChanges, type ChangeLine } from "@/lib/portada-summary";
 import type { ZoneStyle } from "@/db/schema";
@@ -77,6 +80,17 @@ export function PreviewChrome({
 }) {
   const router = useRouter();
   const [layout, setLayout] = useState(draft?.layout ?? null);
+  // En la vista previa la página ocupa la ventana: se edita la pantalla que corresponde a su ancho.
+  const pantalla = useSyncExternalStore(
+    (avisar) => {
+      window.addEventListener("resize", avisar);
+      return () => window.removeEventListener("resize", avisar);
+    },
+    () => pantallaDeAncho(window.innerWidth),
+    () => "pc" as const,
+  );
+  const layoutVisible = useMemo(() => (layout ? layoutDePantalla(layout, pantalla) : null), [layout, pantalla]);
+  const cssSeccion = layout ? cssPorPantalla(layout.sectionEls, (p) => layout.pantallas?.[p]?.sectionEls, (v) => sectionElsCss(v)) : "";
   const [panel, setPanel] = useState(false);
   const [region, setRegion] = useState<RegionId>("navbar");
   const [foco, setFoco] = useState<Foco>(null);
@@ -142,7 +156,8 @@ export function PreviewChrome({
   const layoutRef = useRef(layout);
   const itemsRef = useRef(items);
   useEffect(() => {
-    draftRef.current = draft;
+    // Publicar borra el borrador: se conserva el último para poder seguir editando sin recargar.
+    if (draft) draftRef.current = draft;
   });
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Cuándo se tocó algo por última vez aquí: el borrador que vuelve del servidor justo después no debe pisar lo que se está escribiendo.
@@ -172,6 +187,19 @@ export function PreviewChrome({
     }, 600);
   }
   // Aplica un cambio de diseño hecho en la vista previa.
+  function editVisual(cambio: Partial<NonNullable<typeof layout>>) {
+    if (layoutRef.current) editLayout(conCambios(layoutRef.current, pantalla, cambio));
+  }
+  // Lleva lo visual de esta pantalla (diseño y estilo de las notas) a las otras dos.
+  function copiarAOtrasPantallas() {
+    if (layoutRef.current) {
+      layoutRef.current = copiarDiseno(layoutRef.current, pantalla);
+      setLayout(layoutRef.current);
+    }
+    itemsRef.current = itemsRef.current.map((i) => (i.homeStyle ? { ...i, homeStyle: copiarEstilo(i.homeStyle, pantalla) } : i));
+    setItems(itemsRef.current);
+    persist();
+  }
   function editLayout(next: NonNullable<typeof layout>) {
     layoutRef.current = next;
     setLayout(next);
@@ -192,13 +220,8 @@ export function PreviewChrome({
   /** Cambia el estilo de un bloque (nota); `null` lo restablece. */
   function patchBlock(slug: string, partial: Partial<HomeStyle> | null) {
     const cur = itemsRef.current;
-    // Aplica un estilo a una nota.
-    const apply = (st: HomeStyle | null): HomeStyle | null => {
-      if (partial === null) return null;
-      const merged = { ...(st ?? {}), ...partial } as Record<string, unknown>;
-      for (const k of Object.keys(merged)) if (merged[k] === undefined) delete merged[k];
-      return Object.keys(merged).length ? (merged as HomeStyle) : null;
-    };
+    // Aplica un estilo a una nota, solo en la pantalla que se está editando.
+    const apply = (st: HomeStyle | null): HomeStyle | null => conEstiloEnPantalla(st, pantalla, partial);
     const next = cur.some((i) => i.slug === slug)
       ? cur.map((i) => (i.slug === slug ? { ...i, homeStyle: apply(i.homeStyle) } : i))
       : [...cur, { slug, homeStyle: apply(null) }];
@@ -236,7 +259,7 @@ export function PreviewChrome({
     const id = setTimeout(() => {
       const root = contentRef.current;
       if (!root || !selSlug || !/^[\w-]+$/.test(selSlug)) return setZoneMap(null);
-      const el = root.querySelector<HTMLElement>(`[data-bslug="${selSlug}"]`) ?? root.querySelector<HTMLElement>(`[data-bs-root="${selSlug}"]`);
+      const el = bloqueVisible(root, selSlug);
       setZoneMap(el ? measureZone(el, zoneUp) : null);
     }, 900);
     return () => clearTimeout(id);
@@ -244,16 +267,16 @@ export function PreviewChrome({
 
   // Cambia el estilo de una zona.
   function setZone(key: string, z: ZoneStyle | undefined) {
-    if (!layout) return;
-    const zones = { ...(layout.zones ?? {}) };
+    if (!layoutVisible) return;
+    const zones = { ...(layoutVisible.zones ?? {}) };
     if (z && Object.keys(z).length) zones[key] = z;
     else delete zones[key];
-    editLayout({ ...layout, zones });
+    editVisual({ zones });
   }
   // Reúne los datos de las zonas.
   const zoneBundle = (): ZoneBundle => ({
     map: zoneMap,
-    style: zoneMap?.key ? layout?.zones?.[zoneMap.key] : undefined,
+    style: zoneMap?.key ? layoutVisible?.zones?.[zoneMap.key] : undefined,
     selectedSlug: selSlug,
     level: zoneUp,
     onLevel: setZoneUp,
@@ -317,7 +340,7 @@ export function PreviewChrome({
     // Tras la hidratación: tocar el DOM antes provocaría errores.
     let limpiar: (() => void) | null = null;
     const id = setTimeout(() => {
-      limpiar = installCanvasHints(document, labels, "clic para editar · doble clic para abrir la nota");
+      limpiar = installCanvasHints(document, labels, "clic para editar · doble clic para abrir la nota", 56);
     }, 1500);
     return () => {
       clearTimeout(id);
@@ -388,14 +411,14 @@ export function PreviewChrome({
     setSelTitle(titles[it.slug] ?? it.slug);
     setRegion("body");
     elegir("nota");
-    if (/^[\w-]+$/.test(it.slug)) contentRef.current?.querySelector(`[data-bs-root="${it.slug}"]`)?.scrollIntoView({ block: "center", behavior: "smooth" });
+    if (contentRef.current && /^[\w-]+$/.test(it.slug)) bloqueVisible(contentRef.current, it.slug)?.scrollIntoView({ block: "center", behavior: "smooth" });
   }
   const estiladas = items.filter((i) => i.homeStyle).length;
   const anunciosActivos = Object.values(adDrafts).filter((d) => d.active).length;
 
   const nota =
     selSlug !== null
-      ? { index: items.findIndex((i) => i.slug === selSlug), title: selTitle || selSlug, style: items.find((i) => i.slug === selSlug)?.homeStyle ?? {} }
+      ? { index: items.findIndex((i) => i.slug === selSlug), title: selTitle || selSlug, style: estiloEnPantalla(items.find((i) => i.slug === selSlug)?.homeStyle, pantalla) }
       : null;
 
   return (
@@ -414,6 +437,11 @@ export function PreviewChrome({
               ? "Sin cambios pendientes: esto es exactamente lo que está publicado."
               : "Abre el editor y cambia algo para verlo aquí antes de publicar."}
         </p>
+        {!hasDraft && !layout && (
+          <Link href="/panel/portada" className="inline-flex h-9 shrink-0 items-center rounded-full bg-[var(--accent)] px-3.5 text-xs font-semibold text-[var(--accent-fg)]">
+            Abrir el editor
+          </Link>
+        )}
         <span className="flex-1 lg:hidden" />
 
         {msg && (
@@ -446,7 +474,7 @@ export function PreviewChrome({
         <style>{`[data-bslug="${selSlug}"],[data-bs-root="${selSlug}"]:not([data-bslug] *){outline:3px solid #84a21f!important;outline-offset:2px}`}</style>
       )}
       {/* Los ajustes de piezas se ven al instante (el servidor los repinta después de guardar el borrador). */}
-      {layout?.sectionEls && Object.keys(layout.sectionEls).length > 0 && <style>{sectionElsCss(layout.sectionEls)}</style>}
+      {cssSeccion && <style>{cssSeccion}</style>}
       <div
         ref={contentRef}
         className="absolute inset-x-0 bottom-0 top-14 overflow-y-auto"
@@ -517,7 +545,7 @@ export function PreviewChrome({
           className={`fixed z-[130] flex w-[22rem] max-w-[calc(100vw-2rem)] flex-col items-end gap-2 text-[var(--fg)] ${pos ? "" : "bottom-4 right-4 max-h-[calc(100dvh-6rem)]"}`}
         >
           {panel && (
-            <div className="flex w-full flex-col gap-3 overflow-y-auto rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--bg)] p-4 shadow-2xl">
+            <div id="editor-flotante" className="flex w-full flex-col gap-3 overflow-y-auto rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--bg)] p-4 shadow-2xl">
               <div
                 onPointerDown={startDrag}
                 title="Arrastra para mover el panel"
@@ -528,6 +556,8 @@ export function PreviewChrome({
                   {seccion ? `Editar sección · ${seccion.name}` : enNota ? "Editar esta nota" : "Editar esta página"}
                 </p>
               </div>
+
+              <PantallaEditada pantalla={pantalla} onCopiar={copiarAOtrasPantallas} porVentana />
 
               {enNota && (
                 <button type="button" onClick={() => router.push("/panel/portada?vista=1")} className="self-start text-xs font-semibold text-[var(--accent)]">
@@ -557,8 +587,8 @@ export function PreviewChrome({
 
               {seccion || enNota ? (
                 <SectionPanel
-                  layout={layout}
-                  onChange={(partial) => editLayout({ ...layout, ...partial })}
+                  layout={layoutVisible ?? layout}
+                  onChange={editVisual}
                   region={region}
                   onRegion={setRegion}
                   el={secEl}
@@ -569,7 +599,7 @@ export function PreviewChrome({
                     selSlug
                       ? {
                           title: selTitle,
-                          style: items.find((i) => i.slug === selSlug)?.homeStyle ?? {},
+                          style: estiloEnPantalla(items.find((i) => i.slug === selSlug)?.homeStyle, pantalla),
                           onChange: (p) => patchBlock(selSlug, p),
                           onClear: () => patchBlock(selSlug, null),
                           zone: zoneBundle(),
@@ -584,10 +614,11 @@ export function PreviewChrome({
                     onFoco={elegir}
                     region={region}
                     onRegion={setRegion}
-                    layout={layout}
-                    onRegions={(regions) => editLayout({ ...layout, regions })}
+                    layout={layoutVisible ?? layout}
+                    pantalla={pantalla}
+                    onRegions={(regions) => editVisual({ regions })}
                     onTextos={(textos) => editLayout({ ...layout, textos: textos ?? {} })}
-                    onMenu={(menuNav) => editLayout({ ...layout, menuNav: menuNav ?? {} })}
+                    onMenu={(menuNav) => editVisual({ menuNav: menuNav ?? {} })}
                     secciones={sections.filter((x) => !x.parentId).map((x) => ({ slug: x.slug, name: x.name }))}
                     nota={nota}
                     onNotaChange={(p) => selSlug && patchBlock(selSlug, p)}
@@ -600,7 +631,7 @@ export function PreviewChrome({
                     flash={flash}
                   />
                   <Bloque titulo="Plantilla" resumen={plantillaActiva(layout)}>
-                    <TemplatePicker layout={layout} onPick={(config) => editLayout({ ...layout, ...config, parts: {}, sectionFilters: layout.sectionFilters })} compacto />
+                    <TemplatePicker layout={layout} onPick={(config) => editLayout({ ...layout, ...config, parts: {}, pantallas: {}, sectionFilters: layout.sectionFilters })} compacto />
                     {/* Crear plantilla desde cero, dentro del mismo bloque. */}
                     <details className="mt-3 rounded-[var(--radius)] border border-[var(--border)]">
                       <summary className="cursor-pointer px-3 py-2.5 text-sm font-semibold">Crear una plantilla desde cero</summary>

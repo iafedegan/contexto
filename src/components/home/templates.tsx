@@ -9,7 +9,7 @@ import { BreveCarousel } from "@/components/home/breve-carousel";
 import { EditableCard, type BuilderProps } from "@/components/home/editable-card";
 import { NewsletterForm } from "@/components/newsletter-form";
 import { CoverArt } from "@/components/cover-art";
-import { homeStyleTitleCss } from "@/lib/home-style";
+import { estiloFijo, homeStyleTitleCss } from "@/lib/home-style";
 import type { ArticleListItem } from "@/lib/content";
 import { BREVE_COLS, RIVER_COLS, anchaEnCelular, type HomeTemplateId } from "@/lib/home-layout";
 import type { HomeLayoutConfig } from "@/db/schema";
@@ -132,7 +132,7 @@ export function ClasicoTemplate({
               wrap(
                 a,
                 <BroadsheetCard a={a} locale={locale} index={indexOf(a)} variant="feature" interactive={interactive} />,
-                a.homeStyle?.span === 2 ? "sm:col-span-2" : undefined,
+                estiloFijo(a.homeStyle)?.span === 2 ? "sm:col-span-2" : undefined,
               ),
             )}
           </div>
@@ -197,7 +197,7 @@ export function RevistaTemplate({
                 builderOverIndex={builderOverIndex}
                 builderDragProps={builderDragProps}
                 hasStyle={builderHasStyle?.(6 + i)}
-                className={a.homeStyle?.span === 2 ? "sm:col-span-2" : undefined}
+                className={estiloFijo(a.homeStyle)?.span === 2 ? "sm:col-span-2" : undefined}
               >
                 <HomeCard a={a} locale={locale} variant="feature" hover="zoom" interactive={interactive} />
               </EditableCard>
@@ -265,6 +265,7 @@ export function CompactoTemplate({
             builderOverIndex={builderOverIndex}
             builderDragProps={builderDragProps}
             hasStyle={builderHasStyle?.(i + 1)}
+            className={estiloFijo(a.homeStyle)?.span === 2 ? "col-span-2" : undefined}
           >
             <TileCard a={a} locale={locale} index={i + 1} size="md" interactive={interactive} className="h-full" />
           </EditableCard>
@@ -338,7 +339,7 @@ export function VanguardiaTemplate({
             builderOverIndex={builderOverIndex}
             builderDragProps={builderDragProps}
             hasStyle={builderHasStyle?.(2 + i)}
-            className="col-span-1 sm:col-span-2"
+            className={estiloFijo(a.homeStyle)?.span === 2 ? "col-span-2 sm:col-span-4" : "col-span-1 sm:col-span-2"}
           >
             <BentoTile
               a={a}
@@ -435,7 +436,7 @@ export function EsmeraldaTemplate({
               return wrap(
                 a,
                 <ArticleCard a={a} locale={locale} compact={!ancha} />,
-                cn(ancha && "max-sm:col-span-2", a.homeStyle?.span === 2 && "sm:col-span-2", i < relleno && "xl:hidden"),
+                cn(ancha && "max-sm:col-span-2", estiloFijo(a.homeStyle)?.span === 2 && "sm:col-span-2", i < relleno && "xl:hidden"),
               );
             })}
           </div>

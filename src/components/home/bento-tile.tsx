@@ -102,7 +102,7 @@ export function BentoTile({
         <div className="pointer-events-none absolute inset-0 rounded-[1.75rem] opacity-0 shadow-[inset_0_0_0_1.5px_rgba(255,255,255,0.25)] transition-opacity duration-300 group-hover:opacity-100" aria-hidden />
 
         {a.categoryName && (
-          <span className="glass absolute left-3 top-3 max-w-[calc(100%-1.5rem)] truncate rounded-full px-2.5 py-1 text-[0.72rem] font-bold uppercase tracking-[0.08em] text-white/90 sm:left-4 sm:top-4">
+          <span className="glass cg-etiqueta-acento absolute left-3 top-3 max-w-[calc(100%-1.5rem)] truncate rounded-full px-2.5 py-1 text-[0.72rem] font-bold uppercase tracking-[0.08em] text-white/90 sm:left-4 sm:top-4">
             {categoryLabel(locale, a.categorySlug, a.categoryName ?? "")}
           </span>
         )}

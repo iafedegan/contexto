@@ -16,6 +16,9 @@ import { acotar, colorHex as color } from "@/lib/validate";
  * la base de datos y no debe poder inyectar reglas.
  */
 
+/** Evento del navegador: el editor de colores avisa qué modo se está editando («ambos», «claro» u «oscuro») para que el lienzo lo muestre. */
+export const EVENTO_MODO_LIENZO = "cg:modo-lienzo";
+
 export type RegionId = "navbar" | "hero" | "body" | "cards" | "footer" | "encabezado";
 
 /** Colores de un componente: los que pueden ser distintos en modo claro y en modo oscuro. */
@@ -192,7 +195,7 @@ function coloresDecl(s: RegionColors): string[] {
     decl.push(`--fg:${s.fg}`, `--ink:${s.fg}`, `--fg-muted:${muted}`, `--ink-soft:${muted}`, `--ink-faint:${muted}`, `color:${s.fg}`);
   }
   if (s.accent) {
-    decl.push(`--accent:${s.accent}`, `--brand:${s.accent}`, `--brand-ink:${s.accent}`, `--rule-strong:${s.accent}`, `--link:${s.accent}`);
+    decl.push(`--acento-region:${s.accent}`, `--accent:${s.accent}`, `--brand:${s.accent}`, `--brand-ink:${s.accent}`, `--rule-strong:${s.accent}`, `--link:${s.accent}`);
   }
   return decl;
 }
@@ -228,6 +231,8 @@ export function regionsCss(input: RegionStyles | undefined, scope = "[data-site-
       continue;
     }
     decl.push(...coloresDecl(s));
+    // La etiqueta de sección es un enlace, y la regla global `a{color:inherit}` le anula el color del acento: se lo devuelve si la parte tiene uno.
+    if (s.accent || s.claro?.accent || s.oscuro?.accent) rules.push(`${sel} a.lx-kicker{color:var(--accent)}`);
     // El fondo del cuerpo es el de TODA la página entre la barra de navegación y el pie, no solo el de la columna central (`main` es un
     // contenedor de ancho limitado: pintarlo ahí dejaba franjas a los lados y los bloques de arriba con el fondo anterior). Se pinta en la
     // raíz del sitio, que la barra y el pie cubren con el suyo; el color del texto y los tonos siguen en el cuerpo.

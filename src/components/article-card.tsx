@@ -3,7 +3,7 @@ import type { ArticleListItem } from "@/lib/content";
 import { CardMedia } from "@/components/cover-art";
 import { LiveBadge } from "@/components/live-badge";
 import { formatDate } from "@/lib/utils";
-import { homeStyleImageBox, homeStyleTitleCss } from "@/lib/home-style";
+import { estiloFijo, factorTamano, homeStyleImageBox, homeStyleTitleCss } from "@/lib/home-style";
 import { DEFAULT_LOCALE, INTL_LOCALE, categoryLabel, localePath, type Locale } from "@/lib/i18n";
 import { hrefNota } from "@/lib/ruta-nota";
 
@@ -25,13 +25,14 @@ const TITLE_PX: Record<CardVariant, number> = {
 
 /** Estilo resuelto de una tarjeta: titular, imagen y densidad del bloque. */
 function cardStyle(a: ArticleListItem, variant: CardVariant) {
-  const size = a.homeStyle?.size ?? null;
+  const fijo = estiloFijo(a.homeStyle);
+  const size = fijo?.size ?? null;
   return {
-    title: homeStyleTitleCss(a.homeStyle, TITLE_PX[variant], variant === "lead" ? 1.08 : 1.2),
+    title: homeStyleTitleCss(a.homeStyle, TITLE_PX[variant] * factorTamano(a.homeStyle), variant === "lead" ? 1.08 : 1.2),
     // Caja de la imagen elegida en el panel (porcentaje o medidas exactas) y si trae alto fijo.
     // Dónde va el texto sobre la foto (solo la nota principal): abajo a lo ancho, o arriba en una esquina.
-    textArriba: a.homeStyle?.textPos === "arriba-izq" || a.homeStyle?.textPos === "arriba-der",
-    textDerecha: a.homeStyle?.textPos === "arriba-der",
+    textArriba: fijo?.textPos === "arriba-izq" || fijo?.textPos === "arriba-der",
+    textDerecha: fijo?.textPos === "arriba-der",
     imageBox: homeStyleImageBox(a.homeStyle).css,
     imageAlto: homeStyleImageBox(a.homeStyle).alto,
     // "S" comprime el bloque (sin imagen ni resumen); "L" lo abre.
@@ -140,7 +141,7 @@ function LeadCard({ a, priority, locale }: { a: ArticleListItem; priority?: bool
   const detalle = (
     <>
       {!st.hideExcerpt && (
-        <p
+        <p data-cg-resumen
           className={`mt-3 hidden max-w-xl text-sm leading-relaxed text-[var(--fg-muted)] sm:block md:text-base ${st.excerptClamp} ${st.textDerecha ? "ml-auto" : ""}`}
         >
           {a.excerpt}
@@ -186,7 +187,7 @@ function LeadCard({ a, priority, locale }: { a: ArticleListItem; priority?: bool
           la portada entera), una copia invisible del texto completo reserva el alto que ya tenía; nadie la ve, la oyen ni la enfocan. */}
       <div
         aria-hidden
-        className={`pointer-events-none invisible m-3 rounded-[var(--radius-lg)] border border-transparent p-4 md:m-5 md:max-w-[40rem] md:p-6 [@media(hover:none)]:hidden ${posicionPanel}`}
+        data-cg-panel className={`pointer-events-none invisible m-3 rounded-[var(--radius-lg)] border border-transparent p-4 md:m-5 md:max-w-[40rem] md:p-6 [@media(hover:none)]:hidden ${posicionPanel}`}
       >
         <Kicker a={a} locale={locale} className="text-[var(--accent)]" />
         <div className="lx-display mt-2.5 text-2xl font-semibold leading-[1.12] tracking-tight sm:text-3xl md:mt-3 md:text-[2.75rem]" style={st.title}>
@@ -194,7 +195,7 @@ function LeadCard({ a, priority, locale }: { a: ArticleListItem; priority?: bool
         </div>
         {detalle}
       </div>
-      <div className={`relative z-[4] m-3 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--bg)]/60 p-4 shadow-[0_10px_30px_rgba(0,0,0,0.14)] backdrop-blur-md backdrop-saturate-150 md:m-5 md:max-w-[40rem] md:p-6 ${posicionPanel}`}>
+      <div data-cg-panel className={`relative z-[4] m-3 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--bg)]/60 p-4 shadow-[0_10px_30px_rgba(0,0,0,0.14)] backdrop-blur-md backdrop-saturate-150 md:m-5 md:max-w-[40rem] md:p-6 ${posicionPanel}`}>
         <Kicker a={a} locale={locale} className="text-[var(--accent)]" />
         <h2
           className="lead-titulo lx-display mt-2.5 text-2xl font-semibold leading-[1.12] tracking-tight sm:text-3xl md:mt-3 md:text-[2.75rem]"
@@ -240,13 +241,13 @@ function GoldCard({ a, priority, locale, compact = false }: { a: ArticleListItem
       {/* `!`: el titular y el rótulo traen su tamaño en línea o en una clase sin capa, y en media pantalla deben ceder. */}
       <div className={`flex flex-1 flex-col gap-2.5 p-5 ${compact ? "max-sm:gap-1.5 max-sm:p-3" : ""}`}>
         <Kicker a={a} locale={locale} className={`text-[var(--accent)] ${compact ? "max-sm:!text-[0.6rem] max-sm:!tracking-[0.14em] max-sm:leading-snug" : ""}`} />
-        <h3 className={`lx-display text-xl font-semibold leading-snug ${compact ? "max-sm:!text-[0.95rem] max-sm:!leading-[1.25]" : ""}`} style={st.title}>
+        <h3 className={`lx-display text-xl font-semibold leading-snug ${compact ? "max-sm:!text-[length:var(--cg-t-px,calc(0.95rem*var(--cg-t-esc,1)))] max-sm:!leading-[1.25]" : ""}`} style={st.title}>
           <Link href={hrefNota(locale, a)} className="transition-colors hover:text-[var(--link)] after:absolute after:inset-0 after:z-[2]">
             {a.title}
           </Link>
         </h3>
         {!st.hideExcerpt && (
-          <p className={`text-sm leading-relaxed text-[var(--fg-muted)] ${st.excerptClamp} ${compact ? "max-sm:hidden" : ""}`}>
+          <p data-cg-resumen className={`text-sm leading-relaxed text-[var(--fg-muted)] ${st.excerptClamp} ${compact ? "max-sm:hidden" : ""}`}>
             {a.excerpt}
           </p>
         )}
@@ -259,7 +260,10 @@ function GoldCard({ a, priority, locale, compact = false }: { a: ArticleListItem
 /* ------------------------------------------------- Portada: columna lateral */
 function RailCard({ a, index, locale }: { a: ArticleListItem; index?: number; locale: Locale }) {
   const st = cardStyle(a, "rail");
-  const lado = { w: a.homeStyle?.imageWidth ?? a.homeStyle?.imageHeight, h: a.homeStyle?.imageHeight ?? a.homeStyle?.imageWidth };
+  // Sin medidas exactas, el porcentaje del panel encoge la miniatura (84 px es su lado normal).
+  const fijo = estiloFijo(a.homeStyle);
+  const pct = fijo?.imageScale && fijo.imageScale !== 100 ? Math.round((84 * fijo.imageScale) / 100) : undefined;
+  const lado = { w: fijo?.imageWidth ?? fijo?.imageHeight ?? pct, h: fijo?.imageHeight ?? fijo?.imageWidth ?? pct };
   const medidasMiniatura: React.CSSProperties | undefined = lado.w && lado.h ? { width: `${lado.w}px`, height: `${lado.h}px` } : undefined;
   return (
     <article data-bs-root={a.slug} className="lx-reveal group flex gap-3 border-b border-[var(--border)] pb-4 last:border-0 sm:gap-4">
@@ -281,7 +285,7 @@ function RailCard({ a, index, locale }: { a: ArticleListItem; index?: number; lo
       {!st.hideMedia && (
       <Link href={hrefNota(locale, a)} className="block max-w-[45%] shrink-0" aria-hidden tabIndex={-1}>
         {/* La miniatura es cuadrada; con medidas exactas en el panel toma esas (si solo hay una, es el lado del cuadrado) y el texto, al lado, se acomoda. */}
-        <span className={`lx-media block overflow-hidden rounded-[var(--radius)] ${medidasMiniatura ? "max-w-full" : "size-[5.25rem] sm:size-20"}`} style={medidasMiniatura}>
+        <span className={`lx-media block overflow-hidden rounded-[var(--radius)] ${medidasMiniatura ? "max-w-full" : "size-[5.25rem] sm:size-20"}`} style={a.homeStyle?.pantallas ? ({ ["--cg-mini-foto" as string]: "1" } as React.CSSProperties) : medidasMiniatura}>
           <CardMedia
             src={a.coverImageUrl}
             alt=""
@@ -332,7 +336,7 @@ function CopperCard({ a, index, locale }: { a: ArticleListItem; index?: number; 
           </Link>
         </h3>
         {!st.hideExcerpt && (
-          <p className={`text-sm leading-relaxed text-[var(--fg-muted)] ${st.excerptClamp}`}>
+          <p data-cg-resumen className={`text-sm leading-relaxed text-[var(--fg-muted)] ${st.excerptClamp}`}>
             {a.excerpt}
           </p>
         )}
@@ -375,7 +379,7 @@ function PearlCard({ a, locale }: { a: ArticleListItem; locale: Locale }) {
           </Link>
         </h3>
         {!st.hideExcerpt && (
-          <p className={`text-sm font-light leading-relaxed text-[var(--fg-muted)] ${st.excerptClamp}`}>
+          <p data-cg-resumen className={`text-sm font-light leading-relaxed text-[var(--fg-muted)] ${st.excerptClamp}`}>
             {a.excerpt}
           </p>
         )}

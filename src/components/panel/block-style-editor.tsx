@@ -100,8 +100,11 @@ export function BlockStyleEditor({
           <span className="w-28 shrink-0 text-xs text-[var(--fg-muted)]">Alinear bloque</span>
           <select
             value={style.blockAlign ?? ""}
+            // Un bloque a todo el ancho no tiene hacia dónde alinearse.
+            disabled={!style.widthPct || style.widthPct >= 100}
+            title={!style.widthPct || style.widthPct >= 100 ? "Primero baja el «Ancho (%)»" : undefined}
             onChange={(e) => onChange({ blockAlign: (e.target.value || undefined) as HomeStyle["blockAlign"] })}
-            className="min-w-0 flex-1 rounded-lg border border-[var(--border-strong)] bg-[var(--surface-2)] px-2 py-1.5 text-sm"
+            className="min-w-0 flex-1 rounded-lg border border-[var(--border-strong)] bg-[var(--surface-2)] px-2 py-1.5 text-sm disabled:opacity-50"
           >
             <option value="">Izquierda</option>
             <option value="center">Centro</option>

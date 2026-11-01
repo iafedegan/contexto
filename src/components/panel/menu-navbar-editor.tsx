@@ -12,10 +12,13 @@ export function MenuNavbarEditor({
   value,
   onChange,
   secciones,
+  conAspecto = true,
 }: {
   value: MenuNavbar | undefined;
   onChange: (next: MenuNavbar | undefined) => void;
   secciones: { slug: string; name: string }[];
+  /** En tableta y celular la barra va plegada tras el botón de menú: el aspecto de sus enlaces no se vería. */
+  conAspecto?: boolean;
 }) {
   const m = value ?? {};
   const ocultas = new Set(m.ocultas ?? []);
@@ -71,23 +74,29 @@ export function MenuNavbarEditor({
         <input type="checkbox" checked={m.submenus !== false} onChange={(e) => patch({ submenus: e.target.checked ? undefined : false })} />
         Desplegar subsecciones
       </label>
-      <p className="mt-1 text-sm font-semibold">Aspecto de los enlaces</p>
-      <ColorRow label="Color del texto" value={m.estilo?.color} onChange={(color) => estilo({ color })} />
-      <FontSelect label="Tipo de letra" value={m.estilo?.font} onChange={(font) => estilo({ font })} />
-      {num("Tamaño del texto (px)", m.estilo?.tamano, 10, 24, "tamano")}
-      {num("Espacio entre enlaces (px)", m.estilo?.espacio, 0, 60, "espacio")}
-      {num("Espaciado entre letras (décimas de px)", m.estilo?.letras, 0, 60, "letras")}
-      <label className="flex items-center gap-2 text-sm">
-        <select
-          value={m.estilo?.mayusculas === undefined ? "" : m.estilo.mayusculas ? "si" : "no"}
-          onChange={(e) => estilo({ mayusculas: e.target.value === "" ? undefined : e.target.value === "si" })}
-          className={campo}
-        >
-          <option value="">Mayúsculas: según la plantilla</option>
-          <option value="si">MAYÚSCULAS</option>
-          <option value="no">Minúsculas normales</option>
-        </select>
-      </label>
+      {conAspecto ? (
+        <>
+        <p className="mt-1 text-sm font-semibold">Aspecto de los enlaces</p>
+        <ColorRow label="Color del texto" value={m.estilo?.color} onChange={(color) => estilo({ color })} />
+        <FontSelect label="Tipo de letra" value={m.estilo?.font} onChange={(font) => estilo({ font })} />
+        {num("Tamaño del texto (px)", m.estilo?.tamano, 10, 24, "tamano")}
+        {num("Espacio entre enlaces (px)", m.estilo?.espacio, 0, 60, "espacio")}
+        {num("Espaciado entre letras (décimas de px)", m.estilo?.letras, 0, 60, "letras")}
+        <label className="flex items-center gap-2 text-sm">
+          <select
+            value={m.estilo?.mayusculas === undefined ? "" : m.estilo.mayusculas ? "si" : "no"}
+            onChange={(e) => estilo({ mayusculas: e.target.value === "" ? undefined : e.target.value === "si" })}
+            className={campo}
+          >
+            <option value="">Mayúsculas: según la plantilla</option>
+            <option value="si">MAYÚSCULAS</option>
+            <option value="no">Minúsculas normales</option>
+          </select>
+        </label>
+        </>
+      ) : (
+        <p className="mt-1 text-xs leading-relaxed text-[var(--fg-muted)]">En esta pantalla el menú va plegado tras su botón: el aspecto de los enlaces (color, letra, tamaño) se ajusta en la pantalla de computador.</p>
+      )}
       <p className="mt-1 text-sm font-semibold">Enlaces propios</p>
       {extras.map((e, i) => (
         <div key={i} className="flex items-center gap-1.5">

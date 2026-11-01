@@ -170,7 +170,7 @@ export function sanitizeCarrusel(input: unknown): Required<CarruselConfig> {
     diapositivas: sanitizeDiapositivas(c.diapositivas),
     propiasPosicion: uno(c.propiasPosicion, ["antes", "despues"] as const, d.propiasPosicion),
     activo: bool(c.activo, d.activo),
-    titulo: typeof c.titulo === "string" ? c.titulo.replace(/\s+/g, " ").trim().slice(0, 60) : d.titulo,
+    titulo: typeof c.titulo === "string" ? c.titulo.replace(/\s+/g, " ").trimStart().slice(0, 60) : d.titulo,
     posicion: uno(c.posicion, ["arriba", "tras-principal", "abajo"] as const, d.posicion),
     fuente,
     seccion: fuente === "seccion" && typeof c.seccion === "string" && /^[a-z0-9-]{1,80}$/.test(c.seccion) ? c.seccion : "",

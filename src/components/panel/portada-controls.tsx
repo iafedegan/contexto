@@ -224,7 +224,7 @@ export function TemplatePicker({
   compacto = false,
 }: {
   layout: Layout;
-  onPick: (config: Omit<Layout, "ticker" | "carrusel" | "textos" | "menuNav">) => void;
+  onPick: (config: Omit<Layout, "ticker" | "carrusel" | "textos" | "menuNav" | "pantallas">) => void;
   /** En la barra lateral: una columna y sin descripción larga. */
   compacto?: boolean;
 }) {
@@ -277,7 +277,7 @@ export function TemplatePicker({
 }
 
 /** Diagrama en miniatura de cómo se organiza cada plantilla. */
-function TemplateThumb({ config }: { config: Omit<Layout, "ticker" | "carrusel" | "textos" | "menuNav"> }) {
+function TemplateThumb({ config }: { config: Omit<Layout, "ticker" | "carrusel" | "textos" | "menuNav" | "pantallas"> }) {
   const ink = "bg-[color-mix(in_srgb,var(--ink-faint)_40%,transparent)]";
   const brand = "bg-[color-mix(in_srgb,var(--brand)_35%,transparent)]";
 
@@ -453,17 +453,16 @@ export function Inspector({
   onClear: () => void;
 }) {
   const s = style;
-  const tamano = { sm: "S", md: "M", lg: "L" }[s.size ?? "" as "sm"] ?? "Automático";
+  const tamano = s.size === "sm" ? "Pequeña" : s.size === "lg" ? "Grande" : "Automático";
   return (
     <div className="flex flex-col">
       {/* Una lista de ajustes cerrados: cada fila muestra su valor actual y se despliega al pulsarla. */}
       {showSize && (
       <Fila icono={<Type size={13} />} titulo="Tamaño de la tarjeta" resumen={tamano}>
         <div className="flex gap-1.5">
-          <SegButton active={!s.size} onClick={() => onChange({ size: undefined })} title="Lo decide la plantilla">Automático</SegButton>
-          <SegButton active={s.size === "sm"} onClick={() => onChange({ size: "sm" })} title="Pequeña">S</SegButton>
-          <SegButton active={s.size === "md"} onClick={() => onChange({ size: "md" })} title="Mediana">M</SegButton>
-          <SegButton active={s.size === "lg"} onClick={() => onChange({ size: "lg" })} title="Grande">L</SegButton>
+          <SegButton active={!s.size || s.size === "md"} onClick={() => onChange({ size: undefined })} title="El tamaño normal de la plantilla">Automático</SegButton>
+          <SegButton active={s.size === "sm"} onClick={() => onChange({ size: "sm" })} title="Titular menor, sin foto ni resumen">Pequeña</SegButton>
+          <SegButton active={s.size === "lg"} onClick={() => onChange({ size: "lg" })} title="Titular mayor y más resumen">Grande</SegButton>
         </div>
       </Fila>
       )}
