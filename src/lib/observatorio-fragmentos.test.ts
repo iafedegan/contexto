@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buscarFragmentos, fragmentosDelObservatorio, palabrasClave } from "@/lib/observatorio-fragmentos";
+import { buscarFragmentos, cubrePregunta, fragmentosDelObservatorio, palabrasClave } from "@/lib/observatorio-fragmentos";
 import type { Indicador } from "@/lib/indicadores-fedegan";
 import type { Observatorio } from "@/lib/observatorio-fedegan";
 
@@ -46,4 +46,10 @@ test("lo que no tiene que ver con el Observatorio no trae nada, y devuelve como 
   assert.deepEqual(buscarFragmentos(frag, "receta de arepas con queso"), []);
   assert.deepEqual(buscarFragmentos(frag, "¿qué?"), []);
   assert.ok(buscarFragmentos(frag, "ganado precio bovinos", 2).length <= 2);
+});
+
+test("una cifra solo cubre la pregunta si tiene todas sus palabras", () => {
+  assert.equal(cubrePregunta("Consumo de carnes por habitante", "exportaciones carne"), false);
+  assert.equal(cubrePregunta("Inventario bovino por departamento: Antioquia 3.250.969", "bovinos Antioquia"), true);
+  assert.equal(cubrePregunta("Consumo de carnes", ""), false);
 });

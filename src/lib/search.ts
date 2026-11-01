@@ -133,8 +133,9 @@ export async function hybridSearch(query: string, limit = 20, opciones: { semant
       -- ORDER BY rn antes del LIMIT: sin él, Postgres no garantiza que las 50 filas sean las mejores.
       SELECT *, row_number() OVER (ORDER BY rank DESC, id) AS rn FROM lexical ORDER BY rn LIMIT 50
     ),
+    -- Cada rama ordena y corta por su cuenta: así usa el índice HNSW. Ordenar la unión recorría los 51.000 vectores en cada pregunta.
     semantic AS (
-      SELECT 'articulo'::text AS kind, a.id::text AS id, a.title,
+      (SELECT 'articulo'::text AS kind, a.id::text AS id, a.title,
              a.excerpt AS summary, coalesce(a.legacy_path, '/articulo/' || a.slug) AS url, a.published_at,
              a.cover_image_url AS image, c.slug AS category_slug, c.name AS category_name,
              a.embedding <=> (SELECT vec FROM params)::vector AS dist
@@ -142,12 +143,16 @@ export async function hybridSearch(query: string, limit = 20, opciones: { semant
       LEFT JOIN categories c ON c.id = a.category_id
       WHERE a.status = 'publicado' AND a.embedding IS NOT NULL
         AND (SELECT vec FROM params) IS NOT NULL
+      ORDER BY a.embedding <=> (SELECT vec FROM params)::vector
+      LIMIT 50)
       UNION ALL
-      SELECT 'archivo'::text, ar.external_id, ar.title, ar.summary,
+      (SELECT 'archivo'::text, ar.external_id, ar.title, ar.summary,
              ar.canonical_url, ar.published_at, NULL::text, NULL::text, NULL::text,
              ar.embedding <=> (SELECT vec FROM params)::vector AS dist
       FROM archive_index ar
       WHERE ar.embedding IS NOT NULL AND (SELECT vec FROM params) IS NOT NULL
+      ORDER BY ar.embedding <=> (SELECT vec FROM params)::vector
+      LIMIT 50)
     ),
     semantic_ranked AS (
       SELECT *, row_number() OVER (ORDER BY dist ASC, id) AS rn FROM semantic ORDER BY rn LIMIT 50
@@ -261,28 +266,59 @@ export async function buscarParecidas(query: string, limit = 8): Promise<SearchH
 }
 
 /**
- * Búsqueda por palabra clave, de lo más NUEVO a lo más viejo: las notas publicadas que contienen TODAS las palabras de la consulta (con su
- * forma con tilde, ver `toOrQuery`), ordenadas por fecha. Es determinista y no depende de ninguna IA: «ciclo vacunas» trae primero el ciclo
- * de vacunación de esta semana. Si la consulta tiene más de 5 palabras (una pregunta larga, no una palabra clave) o ninguna nota las tiene todas,
- * devuelve `[]` y manda el buscador por relevancia.
+ * Búsqueda por palabra clave: las notas publicadas que contienen TODAS las palabras de la consulta (con su forma con tilde, ver `toOrQuery`).
+ * Primero las que las tienen en el título o el resumen (`score` 1: tratan del tema) y después las que solo las mencionan en el texto (`score` 0);
+ * dentro de cada grupo, de lo más nuevo a lo más viejo. Es determinista y no depende de ninguna IA. Con más de 5 palabras (una pregunta larga, no
+ * una palabra clave) o si ninguna nota las tiene todas, devuelve `[]` y manda el buscador por relevancia. `desde` limita a las publicadas desde esa fecha.
  */
-export async function buscarRecientes(query: string, limit = 6): Promise<SearchHit[]> {
+export async function buscarRecientes(query: string, limit = 6, desde?: Date): Promise<SearchHit[]> {
   const grupos = toOrQuery(query).split(" or ");
   // Cada palabra con su variante con tilde forma un grupo «a or b»; los grupos se unen con AND.
   const palabras = [...new Set(query.toLowerCase().normalize("NFD").replace(/\p{Diacritic}/gu, "").replace(/[^a-z0-9ñ\s]/g, " ").split(/\s+/).filter((w) => w.length >= 3))].filter((w) => grupos.some((g) => g.normalize("NFD").replace(/\p{Diacritic}/gu, "") === w));
   if (!palabras.length || palabras.length > 5) return [];
   // Solo letras y números (sin operadores): se arma con la sintaxis de `to_tsquery`, donde «&» une las palabras y «|» sus variantes.
-  const consulta = palabras.map((w) => `(${toOrQuery(w).split(" or ").join(" | ")})`).join(" & ");
+  // `query` conserva las tildes del lector: cada grupo se arma desde ella para no perder la forma que el diccionario sí reduce a su raíz.
+  const conTilde = query.toLowerCase().replace(/[^a-z0-9ñáéíóúü\s]/g, " ").split(/\s+/).filter(Boolean);
+  const original = (w: string) => conTilde.find((t) => t.normalize("NFD").replace(/\p{Diacritic}/gu, "") === w) ?? w;
+  const consulta = palabras.map((w) => `(${toOrQuery(original(w)).split(" or ").join(" | ")})`).join(" & ");
+  const rows = rowsOf(await db.execute(sql`
+    WITH candidatas AS (
+      -- Las 3.000 más nuevas bastan: una palabra muy general coincide con decenas de miles de notas y mirar el título de todas tardaría segundos.
+      SELECT a.id
+      FROM articles a
+      WHERE a.status = 'publicado' AND a.search_vec @@ to_tsquery('spanish', ${consulta})
+        ${desde ? sql`AND a.published_at >= ${desde.toISOString()}::timestamptz` : sql``}
+      ORDER BY a.published_at DESC NULLS LAST
+      LIMIT 3000
+    )
+    SELECT a.id::text AS id, a.title, a.excerpt AS summary, coalesce(a.legacy_path, '/articulo/' || a.slug) AS url,
+           a.published_at, a.cover_image_url AS image, c.slug AS category_slug, c.name AS category_name,
+           to_tsvector('spanish', a.title || ' ' || a.excerpt) @@ to_tsquery('spanish', ${consulta}) AS del_tema
+    FROM candidatas
+    JOIN articles a ON a.id = candidatas.id
+    LEFT JOIN categories c ON c.id = a.category_id
+    ORDER BY del_tema DESC, a.published_at DESC NULLS LAST
+    LIMIT ${limit}
+  `));
+  return aResultados(rows, (r) => (r.del_tema ? 1 : 0));
+}
+
+/** Las últimas notas publicadas, para «últimas noticias», donde no hay tema que buscar. */
+export async function ultimasNotas(limit = 6, desde?: Date): Promise<SearchHit[]> {
   const rows = rowsOf(await db.execute(sql`
     SELECT a.id::text AS id, a.title, a.excerpt AS summary, coalesce(a.legacy_path, '/articulo/' || a.slug) AS url,
            a.published_at, a.cover_image_url AS image, c.slug AS category_slug, c.name AS category_name
     FROM articles a
     LEFT JOIN categories c ON c.id = a.category_id
-    WHERE a.status = 'publicado' AND a.search_vec @@ to_tsquery('spanish', ${consulta})
+    WHERE a.status = 'publicado' ${desde ? sql`AND a.published_at >= ${desde.toISOString()}::timestamptz` : sql``}
     ORDER BY a.published_at DESC NULLS LAST
     LIMIT ${limit}
   `));
-  return (rows as unknown as Array<Record<string, unknown>>).map((r) => ({
+  return aResultados(rows, () => 1);
+}
+
+function aResultados(rows: unknown, puntaje: (r: Record<string, unknown>) => number): SearchHit[] {
+  return (rows as Array<Record<string, unknown>>).map((r) => ({
     kind: "articulo" as const,
     id: String(r.id),
     title: String(r.title),
@@ -292,6 +328,6 @@ export async function buscarRecientes(query: string, limit = 6): Promise<SearchH
     image: (r.image as string | null) ?? null,
     categorySlug: (r.category_slug as string | null) ?? null,
     categoryName: (r.category_name as string | null) ?? null,
-    score: 1,
+    score: puntaje(r),
   }));
 }

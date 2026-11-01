@@ -102,6 +102,13 @@ export function palabrasClave(pregunta: string): string[] {
   return [...new Set(claves.map(raiz))];
 }
 
+/** ¿Tiene el texto TODAS las palabras de la pregunta? Una cifra que solo coincide en «carne» no responde «exportaciones de carne». */
+export function cubrePregunta(texto: string, pregunta: string): boolean {
+  const claves = palabrasClave(pregunta).filter((c) => c !== "observ");
+  const limpio = limpiar(texto);
+  return claves.length > 0 && claves.every((c) => limpio.includes(c));
+}
+
 /**
  * Los fragmentos que mejor responden a la pregunta: cada palabra suma 3 si está en el título y 1 si está en el texto (y la
  * pregunta por «observatorio» trae lo más general). Devuelve como mucho `k` y solo los que tienen alguna coincidencia real.

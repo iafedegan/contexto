@@ -39,3 +39,12 @@ export function envolver(sql: string): string {
   const cuerpo = /^with\b/i.test(sql) ? `WITH ${PREPARADAS}, ${sql.replace(/^with\s+(recursive\s+)?/i, "")}` : `WITH ${PREPARADAS} ${sql}`;
   return `SELECT * FROM (${cuerpo}) AS resultado LIMIT ${MAX_FILAS_SQL}`;
 }
+
+const PIDE_ORDEN = /\b(mayor|menor|m[aá]s|menos|alto|alta|bajo|baja|primer|primero|ranking|compar\w*)\b/i;
+
+/** Sin un orden pedido («el país más caro»), la cifra de Colombia o la nacional va primero: este es un medio colombiano y la primera fila es la respuesta. */
+export function colombiaPrimero<T extends Record<string, unknown>>(filas: T[], pregunta: string): T[] {
+  if (PIDE_ORDEN.test(pregunta)) return filas;
+  const propia = (f: T) => /^(colombia|total nacional|nacional)\b/i.test(String(f.serie ?? ""));
+  return [...filas.filter(propia), ...filas.filter((f) => !propia(f))];
+}

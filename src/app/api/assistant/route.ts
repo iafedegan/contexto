@@ -6,10 +6,12 @@ import { getModelo } from "@/lib/ai-provider";
 import { generateText } from "ai";
 import { db } from "@/db";
 import { assistantQueries } from "@/db/schema";
-import { buscarParecidas, buscarRecientes, hybridSearch } from "@/lib/search";
+import { buscarParecidas, buscarRecientes, hybridSearch, ultimasNotas } from "@/lib/search";
 import { expandirConsulta } from "@/lib/ai/expansion-busqueda";
 import { consultarConIA } from "@/lib/ai/consulta-sql";
 import { elegirNotas } from "@/lib/ai/seleccion-notas";
+import { leerPregunta, publicadaDesde, separarPorTema } from "@/lib/ai/lectura-pregunta";
+import { cubrePregunta } from "@/lib/observatorio-fragmentos";
 import { COSTO_EMBEDDING_USD, SESION_ASISTENTE_COOKIE, estimateCostUsd, liquidarGeneracion, reservarGeneracion, sesionAsistente } from "@/lib/budget";
 import { ASSISTANT_SYSTEM } from "@/agents/prompts";
 import { clientIp, hit } from "@/lib/rate-limit";
@@ -32,6 +34,8 @@ const PLAZO_SELECCION_MS = 3_500;
 const MAX_NOTAS = 6;
 /** Tiempo máximo para que la IA escriba la consulta SQL y se ejecute; pasado esto se sigue con la búsqueda de siempre. */
 const PLAZO_SQL_MS = 6_000;
+/** Tope del buscador por relevancia (embedding y consulta): pasado esto se sigue con lo que ya trajo la palabra clave. */
+const PLAZO_BUSCADOR_MS = 5_000;
 /** Tope de la generación: pasado esto se responde en modo búsqueda en vez de dejar que la plataforma corte la función a los 30 s. */
 const PLAZO_GENERACION_MS = 20_000;
 
@@ -60,12 +64,10 @@ export async function POST(req: Request) {
   const sesion = sesionAsistente(req.headers.get("cookie")?.match(new RegExp(`(?:^|;\\s*)${SESION_ASISTENTE_COOKIE}=([^;]+)`))?.[1]);
   // Toda respuesta pasa por aquí para que la sesión nueva llegue como cookie.
   let estadoConsulta = "no-aplica";
-  let detalleConsulta = "";
   const responder = (cuerpo: unknown, init?: ResponseInit) => {
     const r = NextResponse.json(cuerpo, init);
     // Cómo salió la consulta SQL de la IA (solo una palabra: sirve para saber qué falló sin ver el contenido).
     r.headers.set("x-consulta", estadoConsulta);
-    if (detalleConsulta) r.headers.set("x-consulta-detalle", encodeURIComponent(detalleConsulta));
     if (sesion.nueva) {
       r.cookies.set(SESION_ASISTENTE_COOKIE, sesion.valor, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/api/assistant", maxAge: 30 * 24 * 3600 });
     }
@@ -89,6 +91,9 @@ export async function POST(req: Request) {
     return responder({ error: "demasiadas consultas" }, { status: 429, headers: { "Retry-After": String(limite.retryAfter) } });
   }
 
+  // Qué busca de verdad: sin «noticias» ni «recientes», que como palabras clave traían notas que solo las mencionan; y de qué periodo la quiere.
+  const lectura = leerPregunta(q);
+  const tema = lectura.claves.join(" ");
   // Notas y archivo, y además lo que hay en el Observatorio (cifras y documentos): el asistente responde a todo lo que el lector ve allí.
   // El modelo se pide a la vez (sus ajustes están en la base): así no suma otra espera después de la búsqueda.
   // La pregunta se traduce a términos de búsqueda con un modelo barato (sinónimos y términos del sector) para encontrar por significado sin vectores.
@@ -98,20 +103,27 @@ export async function POST(req: Request) {
     getModelo("asistente"),
     // Una IA barata escribe la consulta SQL (solo lectura, solo notas y cifras) y trae directamente la nota o la cifra que se pidió.
     conPlazo(consultarConIA(q), PLAZO_SQL_MS, { fuentes: [], estado: "error-modelo" as const, detalle: "plazo" }),
-    // Por palabra clave, de lo más nuevo a lo más viejo: no depende de la IA (si falla, «ciclo vacunas» sigue trayendo lo de esta semana).
-    buscarRecientes(q, MAX_NOTAS).catch(() => []),
+    // Por palabra clave, primero las que tratan del tema y de lo más nuevo a lo más viejo: no depende de la IA.
+    (async () => {
+      if (!tema) return lectura.pideNotas ? ultimasNotas(MAX_NOTAS, lectura.desde ?? undefined) : [];
+      const delPeriodo = lectura.desde ? await buscarRecientes(tema, MAX_NOTAS, lectura.desde) : [];
+      return delPeriodo.length ? delPeriodo : buscarRecientes(tema, MAX_NOTAS);
+    })().catch(() => []),
   ]);
-  let hits = await hybridSearch(q, 8, { terminosExtra: terminos }).catch(() => []);
+  // Con 3 notas del tema ya está la respuesta: no se paga el embedding ni la espera del buscador por relevancia.
+  const bastan = process.env.ASISTENTE_MODO !== "resumen" && recientes.filter((r) => r.score > 0).length >= 3;
+  let hits = bastan ? [] : await conPlazo(hybridSearch(q, 8, { terminosExtra: terminos }), PLAZO_BUSCADOR_MS, [] as Awaited<ReturnType<typeof hybridSearch>>).catch(() => []);
   // Sin resultados casi siempre es un error de escritura: se busca por parecido de letras en los títulos.
-  if (hits.length === 0 && delObservatorio.length === 0) hits = await buscarParecidas(q, 8).catch(() => []);
+  if (hits.length === 0 && recientes.length === 0 && delObservatorio.length === 0) hits = await buscarParecidas(q, 8).catch(() => []);
   estadoConsulta = porSql.estado;
-  detalleConsulta = porSql.detalle ?? "";
+  if (porSql.detalle) console.error("asistente: consulta SQL", porSql.detalle);
   const sqlNotas = porSql.fuentes.filter((f) => f.kind === "articulo").map((f) => ({ ...f, id: f.url, score: 1 }));
-  const sqlCifras = porSql.fuentes.filter((f) => f.kind === "observatorio").map((f) => ({ ...f, id: f.url, score: 1 }));
-  // Primero lo que trajo la consulta de la IA; si no hubo, las más recientes con todas las palabras de la pregunta.
-  const delBuscador = sqlNotas.length ? sqlNotas : recientes;
-  const yaEstan = new Set(delBuscador.map((n) => n.url));
-  const sources = [...sqlCifras, ...delBuscador, ...hits.filter((h) => !yaEstan.has(h.url)), ...delObservatorio].map((h, i) => ({
+  // Quien pide noticias quiere noticias, aunque el tema tenga cifras.
+  const sqlCifras = lectura.pideNotas ? [] : porSql.fuentes.filter((f) => f.kind === "observatorio").map((f) => ({ ...f, id: f.url, score: 1 }));
+  const vistas = new Set<string>();
+  const sinRepetir = <T extends { url: string }>(n: T) => !vistas.has(n.url) && !!vistas.add(n.url);
+  const delBuscador = [...recientes, ...sqlNotas, ...hits].filter(sinRepetir);
+  const sources = [...sqlCifras, ...delBuscador, ...delObservatorio].map((h, i) => ({
     n: i + 1,
     title: h.title,
     url: h.url,
@@ -153,34 +165,42 @@ export async function POST(req: Request) {
         sources: mostrar,
       });
     }
-    const cifras = sources.filter((s) => s.kind === "observatorio").map((s) => ({ ...s, summary: s.summary.length > 420 ? `${s.summary.slice(0, 420).replace(/[;,]?\s*\S*$/, "")}…` : s.summary }));
-    // Sin consulta SQL pero con cifras del Observatorio que coinciden con la pregunta: también solo las cifras, sin notas.
-    if (cifras.length) {
-      const mostrar = cifras.slice(0, 2).map((s, i) => ({ ...s, n: i + 1 }));
+    const cifras = lectura.pideNotas ? [] : sources.filter((s) => s.kind === "observatorio").map((s) => ({ ...s, summary: s.summary.length > 420 ? `${s.summary.slice(0, 420).replace(/[;,]?\s*\S*$/, "")}…` : s.summary }));
+    // Las cifras van solas únicamente si tienen TODO lo que se preguntó: «exportaciones de carne» no se responde con el consumo de carne.
+    const exactas = cifras.filter((s) => cubrePregunta(`${s.title} ${s.summary}`, tema));
+    if (exactas.length) {
+      const mostrar = exactas.slice(0, 2).map((s, i) => ({ ...s, n: i + 1 }));
       await log(sessionId, q, "semantico_degradado", toCited(mostrar), true, 0, 0);
       return responder({ mode: "articulos", answer: "Esto dice el Observatorio de FEDEGÁN:", sources: mostrar });
     }
-    const notas = sources.filter((s) => s.kind !== "observatorio" && !yaEstan.has(s.url));
-    // Las notas que trajo la consulta SQL van tal cual, en el orden de la consulta (más recientes primero): el modelo barato no las reordena
-    // ni las descarta. Solo si son pocas se completa con las del buscador, ya filtradas.
-    const deLaConsulta = sources.filter((s) => s.kind !== "observatorio" && yaEstan.has(s.url)).slice(0, MAX_NOTAS);
-    const completar = deLaConsulta.length < 3;
-    const elegidas = completar ? await conPlazo(elegirNotas(q, notas.slice(0, 12)), PLAZO_SELECCION_MS, null as number[] | null) : [];
-    const sinCoincidencia = completar && elegidas !== null && elegidas.length === 0 && !deLaConsulta.length;
-    const extra = !completar ? [] : sinCoincidencia ? (cifras.length ? [] : notas.slice(0, 3)) : elegidas === null ? notas.slice(0, MAX_NOTAS) : elegidas.map((n) => notas[n - 1]).filter(Boolean);
-    const deNotas = [...deLaConsulta, ...extra].slice(0, MAX_NOTAS);
-    const lista = [...cifras.slice(0, 3), ...deNotas];
-    const mostrar = lista.map((s, i) => ({ ...s, n: i + 1 }));
+    const todas = sources.filter((s) => s.kind !== "observatorio");
+    const delPeriodo = publicadaDesde(todas, lectura.desde);
+    // Si no hay nada del periodo pedido se dice, y se muestran las más recientes del tema en vez de responder con nada.
+    const sinPeriodo = lectura.desde !== null && delPeriodo.length === 0;
+    const { delTema, resto } = separarPorTema(sinPeriodo ? todas : delPeriodo, lectura.claves);
+    // Solo se consulta al modelo barato si faltan notas: las que tienen la palabra en el título o el resumen no necesitan que nadie las confirme.
+    const faltan = delTema.length < 3;
+    const candidatas = resto.slice(0, 12);
+    const elegidas = faltan ? await conPlazo(elegirNotas(q, candidatas), PLAZO_SELECCION_MS, null as number[] | null) : [];
+    const extra = !faltan ? [] : elegidas === null ? candidatas.slice(0, MAX_NOTAS) : elegidas.map((n) => candidatas[n - 1]).filter(Boolean);
+    const elegibles = [...delTema, ...extra].slice(0, MAX_NOTAS);
+    // Ninguna nota trata el tema: se dice, con lo más cercano del Observatorio o de las notas.
+    const sinCoincidencia = elegibles.length === 0;
+    const cercanas = sinCoincidencia ? (cifras.length ? cifras.slice(0, 2) : resto.slice(0, 3)) : elegibles;
+    const mostrar = cercanas.map((s, i) => ({ ...s, n: i + 1 }));
     await log(sessionId, q, "semantico_degradado", toCited(mostrar), true, 0, 0);
+    const periodo = lectura.periodo ?? "";
     return responder({
       mode: "articulos",
-      answer: cifras.length
-        ? "Esto dice el Observatorio" + (deNotas.length ? ", y estas notas lo acompañan:" : ":")
-        : sinCoincidencia
-        ? "No encontré una nota que responda eso exactamente. Estas son las más cercanas:"
-        : mostrar.length === 1
-          ? "Encontré esta nota sobre tu pregunta:"
-          : `Encontré ${mostrar.length} notas sobre tu pregunta:`,
+      answer: sinCoincidencia
+        ? cifras.length
+          ? "No encontré una nota sobre eso. Esto es lo más cercano en el Observatorio de FEDEGÁN:"
+          : "No encontré una nota que responda eso exactamente. Estas son las más cercanas:"
+        : sinPeriodo
+          ? `No hay notas de ${periodo} sobre eso. Estas son las más recientes:`
+          : mostrar.length === 1
+            ? `Encontré esta nota${periodo ? ` de ${periodo}` : ""} sobre tu pregunta:`
+            : `Encontré ${mostrar.length} notas${periodo ? ` de ${periodo}` : ""} sobre tu pregunta:`,
       sources: mostrar,
     });
   }

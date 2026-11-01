@@ -90,3 +90,16 @@ test("los términos extra de la IA permiten encontrar una nota que usa otras pal
 test("toOrQuery junta pregunta y términos extra sin repetir ni dejar palabras vacías", () => {
   assert.equal(search.toOrQuery("¿Cómo va el novillo? ganado gordo, novillo"), "novillo or ganado or gordo");
 });
+
+test("buscarRecientes: primero las que tratan del tema, aunque otra más nueva lo mencione en el texto", async () => {
+  const categoria = (await bd.db.select().from(schema.categories).limit(1))[0];
+  const nota = (slug: string, title: string, body: string, dias: number) => ({ slug, title, excerpt: "Resumen", body, status: "publicado" as const, categoryId: categoria?.id, publishedAt: new Date(Date.now() - dias * 86_400_000) });
+  await bd.db.insert(schema.articles).values([
+    nota("mencion-brucelosis", "Otra cosa distinta", "De paso se menciona la brucelosis aquí.", 1),
+    nota("tema-brucelosis", "Brucelosis en el hato", "Texto de la nota.", 20),
+  ]);
+  const r = await search.buscarRecientes("brucelosis", 6);
+  assert.deepEqual(r.map((n) => [n.title, n.score]), [["Brucelosis en el hato", 1], ["Otra cosa distinta", 0]]);
+  const recientes = await search.buscarRecientes("brucelosis", 6, new Date(Date.now() - 5 * 86_400_000));
+  assert.deepEqual(recientes.map((n) => n.title), ["Otra cosa distinta"]);
+});
