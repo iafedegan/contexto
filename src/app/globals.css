@@ -1016,6 +1016,18 @@ a {
   box-shadow: 0 0 0 4px color-mix(in oklab, var(--accent) 18%, transparent);
 }
 
+/* Preguntas de ejemplo del asistente: se leen como frases, no como etiquetas. */
+.cg-sugerencia {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-2);
+  padding: 0.4rem 0.9rem;
+  font-family: var(--font-ui);
+  font-size: 0.8rem;
+  line-height: 1.35;
+  color: var(--fg-muted);
+}
+
 .lx-chip {
   display: inline-flex;
   align-items: center;
@@ -2104,4 +2116,53 @@ main > div:has([data-asistente]) { max-width: none; }
 }
 .toro-wrap[data-salida] .toro-float {
   transform: none !important;
+}
+
+/* Asistente en el celular: la pregunta primero. */
+@media (max-width: 639.98px) {
+  .cg-chat-intro {
+    border: 0;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+    backdrop-filter: none;
+    padding: 0;
+    text-align: left;
+  }
+  .cg-sugerencia {
+    display: flex;
+    width: 100%;
+    min-height: 2.75rem;
+    align-items: center;
+    border-radius: var(--radius);
+    padding: 0.55rem 0.85rem;
+    font-size: 0.92rem;
+    text-align: left;
+    color: var(--fg);
+  }
+  /* Fijo a la pantalla, encima de la barra de pestañas y del toro, que sobresale de ella. `sticky` no sirve: un contenedor de la página recorta su recorrido. */
+  .cg-chat-campo-fijo {
+    position: fixed;
+    right: max(1rem, env(safe-area-inset-right, 0px));
+    bottom: calc(var(--cg-barra, 0px) + 1.9rem);
+    left: max(1rem, env(safe-area-inset-left, 0px));
+    z-index: 30;
+    background: var(--surface);
+    transition: bottom 0.2s;
+  }
+  /* Espacio para que el campo fijo no tape lo último de la conversación. */
+  .cg-chat:has(> .cg-chat-campo-fijo) { padding-bottom: 5.5rem; }
+  .cg-chat [data-ultimo] { scroll-margin-top: 1rem; }
+  /* La presentación ya dice qué hace; aquí solo quedan las preguntas de ejemplo. */
+  .cg-asistente-cabecera .lx-chip,
+  .cg-chat-intro > p:first-child { display: none; }
+  .cg-chat .lx-kicker { overflow: visible; white-space: normal; letter-spacing: 0.08em; }
+  .cg-chat-campo { gap: 0.4rem; padding: 0.35rem; border-radius: 999px; }
+  /* 16 px: con menos, iOS acerca la página al enfocar el campo. */
+  .cg-chat-campo .lx-input { border: 0; background: transparent; padding-inline: 0.5rem; font-size: 1rem; }
+  .cg-chat-enviar { width: 2.75rem; height: 2.75rem; flex-shrink: 0; padding: 0; border-radius: 999px; }
+  /* Pantalla de conversación, como una app: lo que hay después del chat quedaría tapado por el campo fijo. */
+  body:has(.cg-chat-campo-fijo) :is(footer, .cg-banda-instalar) { display: none; }
+  /* Ya conversando, la presentación solo le quita espacio a las respuestas. */
+  body:has(.cg-chat[data-conversando]) .cg-asistente-cabecera { display: none; }
 }

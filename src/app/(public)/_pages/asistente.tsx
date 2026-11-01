@@ -16,22 +16,22 @@ async function AssistantPage({ locale }: { locale: Locale }) {
   const site = await getSiteTheme();
   return (
     <SiteShell theme={site.theme} style={site.style} locale={locale} variant="asistente">
-      <header className="pt-10 text-center">
-        <span className="lx-chip mx-auto border-[var(--border-strong)] text-[var(--accent)]">
+      <header className="cg-asistente-cabecera pt-10 text-center max-sm:pt-1">
+        <span className="lx-chip mx-auto border-[var(--border-strong)] text-[var(--accent)] max-sm:hidden">
           {t(locale, "assistant.badge")}
         </span>
-        <h1 className="lx-display mt-6 text-4xl font-semibold leading-tight tracking-tight md:text-5xl">
+        <h1 className="lx-display mt-6 text-4xl font-semibold leading-tight tracking-tight max-sm:mt-0 max-sm:text-[1.7rem] md:text-5xl">
           {t(locale, "assistant.title")}{" "}
           <span className="bg-gradient-to-r from-[var(--accent)] to-[var(--accent-2)] bg-clip-text text-transparent">
             CONtexto Ganadero
           </span>
         </h1>
-        <p className="mx-auto mt-5 max-w-xl text-sm leading-relaxed text-[var(--fg-muted)]">
+        <p className="mx-auto mt-5 max-w-xl text-sm leading-relaxed text-[var(--fg-muted)] max-sm:mt-2 max-sm:text-[0.8rem] max-sm:leading-snug">
           {t(locale, "assistant.blurb")}
         </p>
       </header>
 
-      <div className="mt-12">
+      <div className="mt-12 max-sm:mt-5">
         <AssistantChat />
       </div>
     </SiteShell>

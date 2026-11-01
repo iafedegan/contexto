@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ArrowUpRight, ChevronDown, Mic, Square, Volume2, VolumeX } from "lucide-react";
+import { ArrowUp, ArrowUpRight, ChevronDown, Mic, Square, Volume2, VolumeX } from "lucide-react";
 import { LogoMark } from "@/components/logo-mark";
 import { useVoz } from "@/components/voz-asistente";
 
@@ -55,6 +55,7 @@ export function AssistantChat({ compact = false }: { compact?: boolean }) {
   // Preguntas de ejemplo: arrancan con las de respaldo y se reemplazan por las de los temas del momento cuando llegan.
   const [ejemplos, setEjemplos] = useState<string[]>(EJEMPLOS);
   const finRef = useRef<HTMLDivElement>(null);
+  const ultimoRef = useRef<HTMLDivElement>(null);
   const voz = useVoz();
   // Si la pregunta se dictó, la respuesta se lee en voz alta (se puede apagar con el altavoz).
   const [leerRespuestas, setLeerRespuestas] = useState(true);
@@ -87,6 +88,8 @@ export function AssistantChat({ compact = false }: { compact?: boolean }) {
   }, [busy]);
   useEffect(() => {
     if (compact) finRef.current?.scrollIntoView({ block: "end", behavior: "smooth" });
+    // En el celular la respuesta se lee desde su comienzo: sin esto quedaba debajo del campo fijo.
+    else if (window.matchMedia("(max-width: 639.98px)").matches) ultimoRef.current?.scrollIntoView({ block: "start", behavior: "smooth" });
   }, [compact, messages, busy]);
 
   // Una consulta con tope de 40 s; la respuesta se lee solo si el servidor contestó bien.
@@ -138,21 +141,22 @@ export function AssistantChat({ compact = false }: { compact?: boolean }) {
   }
 
   return (
-    <div className={compact ? "flex h-full min-h-0 flex-col gap-3" : "flex flex-col gap-6"}>
+    <div data-conversando={messages.length > 0 || undefined} className={compact ? "cg-chat flex h-full min-h-0 flex-col gap-3" : "cg-chat flex flex-col gap-6"}>
       <div className={compact ? "flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto overscroll-contain pr-1" : "contents"}>
       {messages.length === 0 && (
-        <div className={compact ? "lx-card lx-glass p-4 text-center" : "lx-card lx-glass p-7 text-center"}>
+        <div className={compact ? "cg-chat-intro lx-card lx-glass p-4 text-center" : "cg-chat-intro lx-card lx-glass p-7 text-center"}>
           <p className="text-sm leading-relaxed text-[var(--fg-muted)]">
             Pregunta sobre precios, regiones, normativa o cualquier tema cubierto por CONtexto
             Ganadero. Te traigo las notas del archivo que tratan tu pregunta, con su enlace; si no hay notas, no invento una respuesta.
           </p>
-          <div className="mt-6 flex flex-wrap justify-center gap-2">
+          <p className="lx-kicker mt-5 hidden text-[var(--fg-muted)] max-sm:block">Prueba con</p>
+          <div className="mt-6 flex flex-wrap justify-center gap-2 max-sm:mt-2">
             {ejemplos.map((e) => (
               <button
                 key={e}
                 type="button"
                 onClick={() => void send(e)}
-                className="lx-chip text-[0.78rem] normal-case tracking-normal transition hover:border-[var(--border-strong)] hover:text-[var(--accent)]"
+                className="cg-sugerencia transition hover:border-[var(--border-strong)] hover:text-[var(--accent)]"
               >
                 {e}
               </button>
@@ -165,6 +169,8 @@ export function AssistantChat({ compact = false }: { compact?: boolean }) {
         {messages.map((m, i) => (
           <div
             key={i}
+            ref={i === messages.length - 1 ? ultimoRef : undefined}
+            data-ultimo={i === messages.length - 1 || undefined}
             className={m.role === "user" ? "flex justify-end" : "flex flex-col gap-3"}
           >
             {m.role === "user" ? (
@@ -272,7 +278,7 @@ export function AssistantChat({ compact = false }: { compact?: boolean }) {
           setInput("");
           void send(q);
         }}
-        className={compact ? "lx-card lx-glass flex shrink-0 items-center gap-2 p-2" : "lx-card lx-glass sticky bottom-[max(1rem,env(safe-area-inset-bottom))] flex items-center gap-2 p-2"}
+        className={compact ? "cg-chat-campo lx-card lx-glass flex shrink-0 items-center gap-2 p-2" : "cg-chat-campo cg-chat-campo-fijo lx-card lx-glass sticky bottom-[max(1rem,env(safe-area-inset-bottom))] flex items-center gap-2 p-2"}
       >
         {voz.soportaDictado && (
           <button
@@ -297,7 +303,9 @@ export function AssistantChat({ compact = false }: { compact?: boolean }) {
           placeholder="Escribe tu pregunta…"
           disabled={busy}
           aria-label="Pregunta para el asistente"
-          className="lx-input flex-1 border-0 bg-transparent focus:shadow-none"
+          enterKeyHint="send"
+          autoComplete="off"
+          className="lx-input min-w-0 flex-1 border-0 bg-transparent focus:shadow-none"
         />
         {voz.soportaLectura && (voz.leyendo || voz.soportaDictado) && (
           <button
@@ -305,13 +313,15 @@ export function AssistantChat({ compact = false }: { compact?: boolean }) {
             onClick={() => { if (voz.leyendo) voz.callar(); else setLeerRespuestas((v) => !v); }}
             aria-label={voz.leyendo ? "Callar al asistente" : leerRespuestas ? "No leer las respuestas en voz alta" : "Leer las respuestas en voz alta"}
             title={voz.leyendo ? "Callar" : leerRespuestas ? "Respuestas en voz alta: activadas" : "Respuestas en voz alta: apagadas"}
-            className="grid size-11 shrink-0 place-items-center rounded-full border border-[var(--border-strong)] hover:border-[var(--accent)]"
+            // En el celular solo aparece mientras lee, para callarlo: el campo necesita ese espacio.
+            className={`${voz.leyendo ? "grid" : "hidden sm:grid"} size-11 shrink-0 place-items-center rounded-full border border-[var(--border-strong)] hover:border-[var(--accent)]`}
           >
             {voz.leyendo || leerRespuestas ? <Volume2 size={18} aria-hidden /> : <VolumeX size={18} aria-hidden />}
           </button>
         )}
-        <button type="submit" className="lx-btn" disabled={busy || !input.trim()}>
-          Enviar
+        <button type="submit" aria-label="Enviar" className="cg-chat-enviar lx-btn" disabled={busy || !input.trim()}>
+          <span className="max-sm:hidden">Enviar</span>
+          <ArrowUp size={20} aria-hidden className="sm:hidden" />
         </button>
       </form>
       {voz.aviso && <p role="status" className="text-xs text-[var(--danger)]">{voz.aviso}</p>}

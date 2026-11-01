@@ -225,7 +225,7 @@ export function InstalarApp({ locale: localeProp, variante = "pildora" }: { loca
 
   const contenido =
     variante === "banda" ? (
-      <section aria-label={t(locale, "pwa.bandTitle")} className="border-t border-[var(--border)] bg-[var(--bg)] text-[var(--fg)]">
+      <section aria-label={t(locale, "pwa.bandTitle")} className="cg-banda-instalar border-t border-[var(--border)] bg-[var(--bg)] text-[var(--fg)]">
         <div className="mx-auto flex max-w-7xl flex-col items-start gap-4 px-4 py-6 sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <div className="flex items-start gap-4">
             <span className="grid size-12 shrink-0 place-items-center rounded-full border border-[var(--border-strong)] text-[var(--accent)]">
