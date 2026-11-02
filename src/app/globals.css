@@ -2118,9 +2118,50 @@ main > div:has([data-asistente]) { max-width: none; }
   transform: none !important;
 }
 
-/* Asistente en el celular: la pregunta primero. */
+/* Asistente: la cifra del Observatorio como dato. */
+.cg-cifra {
+  display: block;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 1.1rem 1.15rem;
+}
+.cg-cifra-titulo { display: block; margin-top: 0.3rem; font-family: var(--font-display); font-size: 1.15rem; line-height: 1.25; }
+.cg-cifra-valor {
+  display: block;
+  font-family: var(--font-display);
+  font-size: clamp(2.6rem, 13vw, 3.4rem);
+  font-variant-numeric: lining-nums tabular-nums;
+  line-height: 1.1;
+  color: var(--accent);
+}
+.cg-cifra-fila { display: block; padding-block: 0.55rem 0.5rem; }
+.cg-cifra-fila + .cg-cifra-fila { border-top: 1px solid var(--border); }
+.cg-cifra-barra { display: block; height: 2px; margin-top: 0.35rem; background: color-mix(in oklab, var(--fg) 8%, transparent); }
+.cg-cifra-barra > span { display: block; height: 100%; background: var(--accent); }
+
+.cg-saludo,
+.cg-saludo-nota,
+.cg-sugerencia-num,
+.cg-sugerencia-flecha,
+.cg-chat-velo,
+.cg-esqueleto { display: none; }
+
+/* Asistente en el celular: una pantalla de app con identidad de periódico. La pregunta al alcance del pulgar, las notas como una portada pequeña. */
 @media (max-width: 639.98px) {
+  body:has(.cg-chat-campo-fijo) :is(footer, .cg-banda-instalar, [data-region="navbar"]) { display: none; }
+  body:has(.cg-chat-campo-fijo) main { padding-block: 0.75rem 0; }
+  /* Sin esto el alto de la pantalla más el relleno de la barra hacían scroll aunque no hubiera nada que leer. */
+  body:has(.cg-chat-campo-fijo) .lx-shell { min-height: 0; }
+  /* El campo ya va fijo sobre la barra: el relleno que reserva la barra al final de la página solo creaba 60 px de desplazamiento. */
+  body:has(.cg-chat-campo-fijo) { padding-bottom: 0; }
+
+  /* Pantalla inicial: saludo arriba y preguntas abajo, junto al campo. */
+  .cg-chat:has(> .cg-chat-campo-fijo) { min-height: calc(100dvh - var(--cg-barra, 0px) - 0.75rem); padding-bottom: 6.75rem; }
   .cg-chat-intro {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
     border: 0;
     border-radius: 0;
     background: none;
@@ -2129,18 +2170,144 @@ main > div:has([data-asistente]) { max-width: none; }
     padding: 0;
     text-align: left;
   }
-  .cg-sugerencia {
-    display: flex;
-    width: 100%;
+  .cg-chat-intro::before, .cg-chat-intro::after { display: none; }
+  .cg-chat-intro-texto { display: none; }
+
+  .cg-saludo { position: relative; display: block; }
+  .cg-saludo-marca {
+    display: inline-flex;
     min-height: 2.75rem;
     align-items: center;
-    border-radius: var(--radius);
-    padding: 0.55rem 0.85rem;
-    font-size: 0.92rem;
+    gap: 0.5rem;
+    font-family: var(--font-display);
+    font-size: 1rem;
+    color: var(--fg);
+  }
+  .cg-saludo-toro {
+    position: absolute;
+    top: 0;
+    right: -0.25rem;
+    display: block;
+    width: 5rem;
+    filter: drop-shadow(0 14px 22px rgb(0 0 0 / 0.28));
+  }
+  .cg-saludo-titulo {
+    max-width: 12ch;
+    margin-top: 1.25rem;
+    font-family: var(--font-display);
+    font-size: clamp(2rem, 9.5vw, 2.5rem);
+    line-height: 1.08;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+    color: var(--fg);
+  }
+  .cg-saludo-texto { max-width: 34ch; margin-top: 0.85rem; font-size: 0.92rem; line-height: 1.5; color: var(--fg-muted); }
+  .cg-saludo-nota { display: block; margin-top: 0.7rem; font-size: 0.72rem; line-height: 1.35; color: var(--fg-muted); }
+
+  /* Las preguntas de ejemplo son un sumario: número dorado, frase y filete, como «Lo último» en la portada. */
+  .cg-sugerencias { display: block; margin-top: auto; padding-top: 1.25rem; }
+  .cg-sugerencia {
+    display: grid;
+    width: 100%;
+    min-height: 3.25rem;
+    grid-template-columns: 2rem 1fr 1rem;
+    align-items: center;
+    gap: 0.25rem;
+    border: 0;
+    border-top: 1px solid var(--border);
+    border-radius: 0;
+    background: none;
+    padding: 0.7rem 0;
     text-align: left;
     color: var(--fg);
   }
-  /* Fijo a la pantalla, encima de la barra de pestañas y del toro, que sobresale de ella. `sticky` no sirve: un contenedor de la página recorta su recorrido. */
+  .cg-sugerencia-num {
+    display: block;
+    font-family: var(--font-display);
+    font-size: 1.05rem;
+    font-variant-numeric: lining-nums;
+    color: var(--accent);
+  }
+  .cg-sugerencia-texto { font-family: var(--font-display); font-size: 1.02rem; line-height: 1.25; }
+  .cg-sugerencia-flecha { display: block; color: var(--fg-muted); }
+
+  /* Pantallas bajas: las preguntas no pueden quedar fuera de la vista. */
+  @media (max-height: 720px) {
+    .cg-saludo-titulo { margin-top: 0.5rem; font-size: 1.7rem; }
+    .cg-saludo-texto, .cg-saludo-nota { display: none; }
+    .cg-saludo-toro { width: 3.75rem; }
+    .cg-sugerencias { padding-top: 0.5rem; }
+    .cg-sugerencia { min-height: 2.75rem; padding-block: 0.4rem; }
+    .cg-sugerencia-texto { font-size: 0.92rem; line-height: 1.2; }
+  }
+
+  /* Un aviso se lee con calma: texto normal y solo el filete en rojo. */
+  .cg-aviso {
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--danger);
+    border-radius: var(--radius);
+    background: var(--surface);
+    padding: 0.6rem 0.85rem;
+    color: var(--fg);
+  }
+
+  /* Conversación. */
+  .cg-chat [data-ultimo] { scroll-margin-top: 0.75rem; }
+  .cg-burbuja {
+    border-color: transparent;
+    border-radius: 1.1rem 1.1rem 0.25rem;
+    background: color-mix(in oklab, var(--accent) 18%, var(--surface));
+    padding: 0.6rem 0.95rem;
+    font-size: 0.95rem;
+  }
+  .cg-respuesta { font-family: var(--font-display); font-size: 1.15rem; line-height: 1.3; }
+  .cg-chat .lx-kicker { overflow: visible; white-space: normal; font-size: 0.66rem; letter-spacing: 0.1em; }
+
+  /* Notas sin cajas: la primera manda, con su foto a todo el ancho; las demás en filas con filete. */
+  .cg-notas { gap: 0; }
+  .cg-notas > li + li { border-top: 1px solid var(--border); }
+  .cg-nota {
+    flex-direction: row-reverse;
+    gap: 0.85rem;
+    border: 0;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+    backdrop-filter: none;
+    padding: 0.85rem 0;
+  }
+  .cg-nota::before, .cg-nota::after { display: none; }
+  .cg-nota-flecha, .cg-nota-resumen { display: none; }
+  .cg-nota-img { width: 4.75rem; height: 4.75rem; border-radius: calc(var(--radius) * 0.75); }
+  .cg-nota-titulo { margin-top: 0.2rem; font-family: var(--font-display); font-size: 1.02rem; font-weight: 500; line-height: 1.25; }
+  .cg-notas > li:first-child .cg-nota { flex-direction: column; padding-top: 0.25rem; }
+  .cg-notas > li:first-child .cg-nota-img { width: 100%; height: auto; aspect-ratio: 16 / 9; border-radius: var(--radius); }
+  .cg-notas > li:first-child .cg-nota-titulo { font-size: 1.4rem; line-height: 1.18; }
+  .cg-notas > li:first-child .cg-nota-resumen { display: block; margin-top: 0.4rem; font-size: 0.86rem; line-height: 1.45; }
+
+  /* Mientras busca. */
+  .cg-esqueleto { display: flex; flex-direction: column; gap: 0.55rem; }
+  .cg-esqueleto > span {
+    display: block;
+    height: 0.8rem;
+    border-radius: 999px;
+    background: color-mix(in oklab, var(--fg) 9%, transparent);
+    animation: cg-esqueleto 1.4s ease-in-out infinite;
+  }
+  .cg-esqueleto > span:first-child { width: 100%; height: 10rem; border-radius: var(--radius); }
+  .cg-esqueleto > span:nth-child(2) { width: 88%; height: 1.1rem; }
+  .cg-esqueleto > span:nth-child(3) { width: 60%; }
+
+  /* El campo, fijo a la pantalla sobre la barra y el toro. Lo que pasa por debajo se desvanece. `sticky` no sirve: un contenedor recorta su recorrido. */
+  .cg-chat-velo {
+    position: fixed;
+    inset: auto 0 0;
+    z-index: 25;
+    display: block;
+    height: calc(var(--cg-barra, 0px) + 7.5rem);
+    background: linear-gradient(to top, var(--bg) 55%, transparent);
+    pointer-events: none;
+  }
   .cg-chat-campo-fijo {
     position: fixed;
     right: max(1rem, env(safe-area-inset-right, 0px));
@@ -2148,21 +2315,30 @@ main > div:has([data-asistente]) { max-width: none; }
     left: max(1rem, env(safe-area-inset-left, 0px));
     z-index: 30;
     background: var(--surface);
-    transition: bottom 0.2s;
+    box-shadow: 0 10px 28px -12px rgb(0 0 0 / 0.45);
+    transition: bottom 0.2s, border-color 0.2s;
   }
-  /* Espacio para que el campo fijo no tape lo último de la conversación. */
-  .cg-chat:has(> .cg-chat-campo-fijo) { padding-bottom: 5.5rem; }
-  .cg-chat [data-ultimo] { scroll-margin-top: 1rem; }
-  /* La presentación ya dice qué hace; aquí solo quedan las preguntas de ejemplo. */
-  .cg-asistente-cabecera .lx-chip,
-  .cg-chat-intro > p:first-child { display: none; }
-  .cg-chat .lx-kicker { overflow: visible; white-space: normal; letter-spacing: 0.08em; }
-  .cg-chat-campo { gap: 0.4rem; padding: 0.35rem; border-radius: 999px; }
+  .cg-chat-campo { gap: 0.25rem; border-radius: 999px; padding: 0.3rem; }
+  .cg-chat-campo::before, .cg-chat-campo::after { display: none; }
+  .cg-chat-campo:focus-within { border-color: var(--accent); }
+  .cg-chat-campo > button:not(.cg-chat-enviar) { border-color: transparent; }
   /* 16 px: con menos, iOS acerca la página al enfocar el campo. */
   .cg-chat-campo .lx-input { border: 0; background: transparent; padding-inline: 0.5rem; font-size: 1rem; }
-  .cg-chat-enviar { width: 2.75rem; height: 2.75rem; flex-shrink: 0; padding: 0; border-radius: 999px; }
-  /* Pantalla de conversación, como una app: lo que hay después del chat quedaría tapado por el campo fijo. */
-  body:has(.cg-chat-campo-fijo) :is(footer, .cg-banda-instalar) { display: none; }
-  /* Ya conversando, la presentación solo le quita espacio a las respuestas. */
-  body:has(.cg-chat[data-conversando]) .cg-asistente-cabecera { display: none; }
+  .cg-chat-enviar {
+    width: 2.75rem;
+    height: 2.75rem;
+    flex-shrink: 0;
+    border-radius: 999px;
+    background: var(--accent);
+    padding: 0;
+    box-shadow: none;
+  }
+  .cg-chat-enviar:disabled { background: color-mix(in oklab, var(--fg) 8%, transparent); opacity: 1; color: var(--fg-muted); }
+}
+
+@keyframes cg-esqueleto {
+  50% { opacity: 0.45; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cg-esqueleto > span { animation: none; }
 }

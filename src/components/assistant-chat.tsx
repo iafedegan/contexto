@@ -1,9 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { ArrowUp, ArrowUpRight, ChevronDown, Mic, Square, Volume2, VolumeX } from "lucide-react";
 import { LogoMark } from "@/components/logo-mark";
+import { ToroBot } from "@/components/toro-bot";
 import { useVoz } from "@/components/voz-asistente";
+import { leerCifra, type FilaCifra } from "@/lib/ai/lectura-cifra";
 
 // Fuente que respalda una respuesta.
 type Source = {
@@ -45,6 +48,35 @@ const ESPERAS = [
   { desde: 10000, texto: "Sigue trabajando; esto está tardando más de lo normal…" },
 ] as const;
 
+// La respuesta del Observatorio como dato: la cifra grande y, debajo, las demás con una barra que las compara.
+function TarjetaCifra({ fuente, filas }: { fuente: Source; filas: FilaCifra[] }) {
+  const [primera, ...resto] = filas;
+  const mayor = Math.max(...filas.map((f) => Math.abs(f.numero))) || 1;
+  return (
+    <a href={fuente.url} target="_blank" rel="noreferrer" className="cg-cifra group/c">
+      <span className="lx-kicker block text-[var(--accent)]">Observatorio{primera.periodo ? ` · ${primera.periodo}` : ""}</span>
+      <span className="cg-cifra-titulo">{fuente.title.replace(/^Observatorio · /, "")}</span>
+      <span className="mt-3 block text-sm text-[var(--fg-muted)]">{primera.serie}</span>
+      <span className="cg-cifra-valor">{primera.valor}</span>
+      {primera.unidad && <span className="block text-sm text-[var(--fg-muted)]">{primera.unidad}</span>}
+      {resto.length > 0 && (
+        <span className="mt-4 block border-t border-[var(--border)]">
+          {resto.slice(0, 5).map((f) => (
+            <span key={`${f.serie}-${f.periodo}`} className="cg-cifra-fila">
+              <span className="flex items-baseline justify-between gap-3 text-sm">
+                <span className="min-w-0 truncate">{f.serie}{f.periodo && f.periodo !== primera.periodo ? ` · ${f.periodo}` : ""}</span>
+                <span className="shrink-0 font-semibold tabular-nums">{f.valor}</span>
+              </span>
+              <span aria-hidden className="cg-cifra-barra"><span style={{ width: `${Math.max(2, (Math.abs(f.numero) / mayor) * 100)}%` }} /></span>
+            </span>
+          ))}
+        </span>
+      )}
+      <span className="mt-4 flex items-center gap-1 text-xs font-semibold text-[var(--accent)]">Ver en el Observatorio <ArrowUpRight size={14} aria-hidden /></span>
+    </a>
+  );
+}
+
 /** `compact`: versión para el cuadro flotante (altura propia con desplazamiento y el campo fijo abajo). */
 export function AssistantChat({ compact = false }: { compact?: boolean }) {
   const [input, setInput] = useState("");
@@ -56,6 +88,7 @@ export function AssistantChat({ compact = false }: { compact?: boolean }) {
   const [ejemplos, setEjemplos] = useState<string[]>(EJEMPLOS);
   const finRef = useRef<HTMLDivElement>(null);
   const ultimoRef = useRef<HTMLDivElement>(null);
+  const [ultima, setUltima] = useState("");
   const voz = useVoz();
   // Si la pregunta se dictó, la respuesta se lee en voz alta (se puede apagar con el altavoz).
   const [leerRespuestas, setLeerRespuestas] = useState(true);
@@ -110,6 +143,7 @@ export function AssistantChat({ compact = false }: { compact?: boolean }) {
 
   // Envía la pregunta al asistente y agrega su respuesta a la conversación. Si la red o el servidor fallan, lo intenta una vez más.
   async function send(question: string) {
+    setUltima(question);
     setBusy(true);
     setEspera(0);
     setError(null);
@@ -140,28 +174,40 @@ export function AssistantChat({ compact = false }: { compact?: boolean }) {
     }
   }
 
+  // En el celular la conversación baja hasta la última pregunta de la persona: así se ve ella y, debajo, su respuesta.
+  const ultimaPregunta = messages.map((m) => m.role).lastIndexOf("user");
   return (
     <div data-conversando={messages.length > 0 || undefined} className={compact ? "cg-chat flex h-full min-h-0 flex-col gap-3" : "cg-chat flex flex-col gap-6"}>
       <div className={compact ? "flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto overscroll-contain pr-1" : "contents"}>
       {messages.length === 0 && (
         <div className={compact ? "cg-chat-intro lx-card lx-glass p-4 text-center" : "cg-chat-intro lx-card lx-glass p-7 text-center"}>
-          <p className="text-sm leading-relaxed text-[var(--fg-muted)]">
+          {!compact && (
+            <div className="cg-saludo">
+              <Link href="/" className="cg-saludo-marca"><LogoMark size={26} /> CONtexto Ganadero</Link>
+              <span aria-hidden className="cg-saludo-toro"><ToroBot bubble={false} label="" /></span>
+              <p className="cg-saludo-titulo">¿Qué quieres saber del campo hoy?</p>
+              <p className="cg-saludo-texto">Busco en más de 51.000 notas y en las cifras del Observatorio, y siempre te muestro la fuente.</p>
+            </div>
+          )}
+          <p className="cg-chat-intro-texto text-sm leading-relaxed text-[var(--fg-muted)]">
             Pregunta sobre precios, regiones, normativa o cualquier tema cubierto por CONtexto
             Ganadero. Te traigo las notas del archivo que tratan tu pregunta, con su enlace; si no hay notas, no invento una respuesta.
           </p>
-          <p className="lx-kicker mt-5 hidden text-[var(--fg-muted)] max-sm:block">Prueba con</p>
-          <div className="mt-6 flex flex-wrap justify-center gap-2 max-sm:mt-2">
-            {ejemplos.map((e) => (
+          <div className="cg-sugerencias mt-6 flex flex-wrap justify-center gap-2">
+            {ejemplos.map((e, i) => (
               <button
                 key={e}
                 type="button"
                 onClick={() => void send(e)}
                 className="cg-sugerencia transition hover:border-[var(--border-strong)] hover:text-[var(--accent)]"
               >
-                {e}
+                <span aria-hidden className="cg-sugerencia-num">{String(i + 1).padStart(2, "0")}</span>
+                <span className="cg-sugerencia-texto">{e}</span>
+                <ArrowUpRight aria-hidden size={16} className="cg-sugerencia-flecha" />
               </button>
             ))}
           </div>
+          {!compact && <p className="cg-saludo-nota">No reemplaza a un médico veterinario en casos individuales.</p>}
         </div>
       )}
 
@@ -169,47 +215,59 @@ export function AssistantChat({ compact = false }: { compact?: boolean }) {
         {messages.map((m, i) => (
           <div
             key={i}
-            ref={i === messages.length - 1 ? ultimoRef : undefined}
-            data-ultimo={i === messages.length - 1 || undefined}
+            ref={i === ultimaPregunta ? ultimoRef : undefined}
+            data-ultimo={i === ultimaPregunta || undefined}
             className={m.role === "user" ? "flex justify-end" : "flex flex-col gap-3"}
           >
             {m.role === "user" ? (
-              <p className="max-w-[85%] rounded-[var(--radius)] rounded-br-sm border border-[var(--border-strong)] bg-[var(--surface-2)] px-5 py-3 text-sm leading-relaxed">
+              <p className="cg-burbuja max-w-[85%] rounded-[var(--radius)] rounded-br-sm border border-[var(--border-strong)] bg-[var(--surface-2)] px-5 py-3 text-sm leading-relaxed">
                 {m.text}
               </p>
             ) : (
               <>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 max-sm:hidden">
                   <LogoMark size={28} />
                   <span className="lx-kicker text-[var(--fg-muted)]">
                     Asistente{m.mode === "degraded" ? " · modo búsqueda" : ""}
                   </span>
                 </div>
-                <p className="whitespace-pre-wrap text-[15px] leading-[1.75]">{m.text}</p>
+                {/* Con la cifra en grande la frase sobra en el celular; se conserva lo que aclara qué se buscó y la versión para lectores de pantalla. */}
+                {(() => {
+                  const cifra = m.mode === "articulos" && m.sources?.length === 1 && m.sources[0].kind === "observatorio" ? leerCifra(m.sources[0].summary) : null;
+                  if (!cifra) return <p className="cg-respuesta whitespace-pre-wrap text-[15px] leading-[1.75]">{m.text}</p>;
+                  const aviso = m.text.match(/^Busqué [^.]*\./)?.[0];
+                  return (
+                    <>
+                      {aviso && <p className="text-sm text-[var(--fg-muted)] sm:hidden">{aviso}</p>}
+                      <p className="whitespace-pre-wrap text-[15px] leading-[1.75] max-sm:sr-only">{m.text}</p>
+                      <TarjetaCifra fuente={m.sources![0]} filas={cifra} />
+                    </>
+                  );
+                })()}
 
                 {/* Modo por defecto: las notas y sus enlaces, como tarjetas (sin resumen redactado). */}
-                {m.mode === "articulos" && m.sources && m.sources.length > 0 && (
-                  <ul className="flex flex-col gap-2.5">
+                {m.mode === "articulos" && m.sources && m.sources.length > 0 && !(m.sources.length === 1 && m.sources[0].kind === "observatorio" && leerCifra(m.sources[0].summary)) && (
+                  <ul className="cg-notas flex flex-col gap-2.5">
                     {m.sources.map((s) => (
                       <li key={s.n}>
                         <a
                           href={s.url}
                           target="_blank"
                           rel="noreferrer"
-                          className="lx-card lx-glass group/n flex gap-3 p-3 transition hover:border-[var(--accent)]"
+                          className="cg-nota lx-card lx-glass group/n flex gap-3 p-3 transition hover:border-[var(--accent)]"
                         >
                           {s.image && (
                             // eslint-disable-next-line @next/next/no-img-element -- miniatura remota de la nota; el chat no necesita optimizarla
-                            <img src={s.image} alt="" width={72} height={72} loading="lazy" className="size-[4.5rem] shrink-0 rounded-[var(--radius)] object-cover" />
+                            <img src={s.image} alt="" width={72} height={72} loading="lazy" className="cg-nota-img size-[4.5rem] shrink-0 rounded-[var(--radius)] object-cover" />
                           )}
                           <span className="min-w-0 flex-1">
                             <span className="lx-kicker block truncate text-[0.68rem] text-[var(--accent)]">
                               {[s.kind === "archivo" ? "Archivo" : s.kind === "observatorio" ? "Observatorio" : s.categoryName, s.publishedAt ? fechaCorta(s.publishedAt) : null].filter(Boolean).join(" · ")}
                             </span>
-                            <span className="mt-0.5 block text-[0.95rem] font-semibold leading-snug group-hover/n:underline">{s.title}</span>
-                            {s.summary && <span className={`mt-1 block ${s.kind === "observatorio" ? "" : "line-clamp-2"} text-xs leading-snug text-[var(--fg-muted)]`}>{s.summary}</span>}
+                            <span className="cg-nota-titulo mt-0.5 block text-[0.95rem] font-semibold leading-snug group-hover/n:underline">{s.title}</span>
+                            {s.summary && <span className={`cg-nota-resumen mt-1 block ${s.kind === "observatorio" ? "" : "line-clamp-2"} text-xs leading-snug text-[var(--fg-muted)]`}>{s.summary}</span>}
                           </span>
-                          <ArrowUpRight size={16} aria-hidden className="mt-0.5 shrink-0 text-[var(--fg-muted)] transition group-hover/n:text-[var(--accent)]" />
+                          <ArrowUpRight size={16} aria-hidden className="cg-nota-flecha mt-0.5 shrink-0 text-[var(--fg-muted)] transition group-hover/n:text-[var(--accent)]" />
                         </a>
                       </li>
                     ))}
@@ -260,16 +318,28 @@ export function AssistantChat({ compact = false }: { compact?: boolean }) {
         ))}
 
         {busy && (
-          <p role="status" className="flex items-center gap-3 text-sm text-[var(--fg-muted)]">
-            <span className="lx-pulse size-2 rounded-full bg-[var(--accent)]" />
-            {ESPERAS[espera].texto}
-          </p>
+          <div className="flex flex-col gap-3">
+            <p role="status" className="flex items-center gap-3 text-sm text-[var(--fg-muted)]">
+              <span className="lx-pulse size-2 rounded-full bg-[var(--accent)]" />
+              {ESPERAS[espera].texto}
+            </p>
+            {/* En el celular se adelanta la forma de la respuesta. */}
+            <div aria-hidden className="cg-esqueleto"><span /><span /><span /></div>
+          </div>
         )}
-        {error && <p className="text-sm text-[var(--danger)]">{error}</p>}
+        {error && (
+          <div role="alert" className="cg-aviso flex items-center justify-between gap-3 text-sm text-[var(--danger)]">
+            <p>{error}</p>
+            {ultima && !error.startsWith("Hiciste") && (
+              <button type="button" onClick={() => { setMessages((m) => m.slice(0, -1)); void send(ultima); }} className="min-h-11 shrink-0 font-semibold underline underline-offset-4">Reintentar</button>
+            )}
+          </div>
+        )}
         <div ref={finRef} />
       </div>
       </div>
 
+      {!compact && <div aria-hidden className="cg-chat-velo" />}
       <form
         onSubmit={(e) => {
           e.preventDefault();

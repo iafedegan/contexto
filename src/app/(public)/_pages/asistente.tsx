@@ -16,22 +16,23 @@ async function AssistantPage({ locale }: { locale: Locale }) {
   const site = await getSiteTheme();
   return (
     <SiteShell theme={site.theme} style={site.style} locale={locale} variant="asistente">
-      <header className="cg-asistente-cabecera pt-10 text-center max-sm:pt-1">
-        <span className="lx-chip mx-auto border-[var(--border-strong)] text-[var(--accent)] max-sm:hidden">
+      {/* En el celular el saludo lo pone el propio chat; el título sigue para buscadores y lectores de pantalla. */}
+      <header className="cg-asistente-cabecera pt-10 text-center max-sm:sr-only">
+        <span className="lx-chip mx-auto border-[var(--border-strong)] text-[var(--accent)]">
           {t(locale, "assistant.badge")}
         </span>
-        <h1 className="lx-display mt-6 text-4xl font-semibold leading-tight tracking-tight max-sm:mt-0 max-sm:text-[1.7rem] md:text-5xl">
+        <h1 className="lx-display mt-6 text-4xl font-semibold leading-tight tracking-tight md:text-5xl">
           {t(locale, "assistant.title")}{" "}
           <span className="bg-gradient-to-r from-[var(--accent)] to-[var(--accent-2)] bg-clip-text text-transparent">
             CONtexto Ganadero
           </span>
         </h1>
-        <p className="mx-auto mt-5 max-w-xl text-sm leading-relaxed text-[var(--fg-muted)] max-sm:mt-2 max-sm:text-[0.8rem] max-sm:leading-snug">
+        <p className="mx-auto mt-5 max-w-xl text-sm leading-relaxed text-[var(--fg-muted)]">
           {t(locale, "assistant.blurb")}
         </p>
       </header>
 
-      <div className="mt-12 max-sm:mt-5">
+      <div className="mt-12 max-sm:mt-0">
         <AssistantChat />
       </div>
     </SiteShell>
