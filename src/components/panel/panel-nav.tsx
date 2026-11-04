@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { grupoDe, useGruposMenu } from "@/components/panel/grupos-menu";
-import { CalendarRange, ChevronDown, ClipboardList, Inbox, KeyRound, LayoutDashboard, LayoutTemplate, Mail, Newspaper, Settings, Users, Circle } from "lucide-react";
+import { CalendarRange, ChevronDown, ClipboardList, PenLine, Inbox, KeyRound, LayoutDashboard, LayoutTemplate, Mail, Newspaper, Settings, Users, Circle } from "lucide-react";
 import type { PermisoId } from "@/lib/permisos";
 import { PanelMobileMenu } from "@/components/panel/panel-mobile-menu";
 
@@ -16,6 +16,10 @@ type Item = {
   permiso?: PermisoId;
   /** Solo lo ve y lo usa un administrador (el servidor además lo exige). */
   soloAdmin?: boolean;
+  /** Solo lo ve quien NO es administrador (el administrador llega a esa página desde otra entrada). */
+  soloNoAdmin?: boolean;
+  /** Otras direcciones que dejan esta entrada marcada como la actual. */
+  tambien?: string[];
   /** Cómo la ve quien no es administrador (si sigue viéndola, con otro texto). */
   paraOtros?: { label: string; hint: string };
   /** Número que se muestra en una insignia junto al nombre (p. ej. las piezas que te asignaron). */
@@ -49,8 +53,8 @@ const GROUPS: Group[] = [
       { href: "/panel", label: "Resumen", hint: "Estado editorial, audiencia y suscriptores" },
       { href: "/panel/articulos", label: "Artículos", hint: "Crear, editar y programar", permiso: "articulos" },
       { href: "/panel/pendientes", label: "Mis pendientes", hint: "Piezas del consejo que te asignaron" },
-      { href: "/panel/consejo", label: "Consejo de redacción", hint: "Planear la semana con IA", permiso: "articulos", soloAdmin: true },
-      { href: "/panel/asignaciones", label: "Notas para editores", hint: "Preescribir una nota y asignarla a un editor", permiso: "asignar_notas" },
+      { href: "/panel/consejo", label: "Mesa de redacción", hint: "Consejo de redacción y notas para editores", permiso: "articulos", soloAdmin: true, tambien: ["/panel/asignaciones"] },
+      { href: "/panel/asignaciones", label: "Notas para editores", hint: "Preescribir una nota y asignarla a un editor", permiso: "asignar_notas", soloNoAdmin: true },
       { href: "/panel/newsletter", label: "Newsletter", hint: "Configurar y enviar el boletín", permiso: "newsletter" },
       { href: "/panel/en-vivo", label: "En vivo", hint: "Transmisión de YouTube en la portada", permiso: "avisos" },
     ],
@@ -97,7 +101,7 @@ function gruposVisibles(role: string, permisos: string[], pendientes = 0) {
   return GROUPS.map((g) => ({
     ...g,
     items: g.items
-      .filter((i) => (!i.soloAdmin || esAdmin) && (!i.permiso || permisos.includes(i.permiso)))
+      .filter((i) => (!i.soloAdmin || esAdmin) && (!i.soloNoAdmin || !esAdmin) && (!i.permiso || permisos.includes(i.permiso)))
       .map((i) => (esAdmin || !i.paraOtros ? i : { ...i, ...i.paraOtros }))
       .map((i) => (i.href === "/panel/pendientes" && pendientes > 0 ? { ...i, badge: pendientes } : i)),
   })).filter((g) => g.items.length > 0);
@@ -109,6 +113,7 @@ const ICONOS: Record<string, typeof Circle> = {
   "/panel/portada": LayoutTemplate,
   "/panel/articulos": Newspaper,
   "/panel/consejo": CalendarRange,
+  "/panel/asignaciones": PenLine,
   "/panel/pendientes": ClipboardList,
   "/panel/newsletter": Mail,
   "/panel/configuracion": Settings,
@@ -143,7 +148,7 @@ export function PanelSidebarNav({ role, permisos, pendientes = 0 }: { role: stri
             <ul id={`menu-grupo-${g.id}`} className={`mt-1 flex flex-col gap-1 ${abiertoG ? "" : "group-hover/sb:hidden group-focus-within/sb:hidden"}`}>
               {g.items.map((i) => {
                 const base = i.href.split(/[#?]/)[0];
-                const current = i.href.includes("?") ? false : pathname === base || (base !== "/panel" && pathname.startsWith(`${base}/`)) || (base === "/panel" && pathname.startsWith("/panel/analitica"));
+                const current = i.href.includes("?") ? false : pathname === base || (base !== "/panel" && pathname.startsWith(`${base}/`)) || (base === "/panel" && pathname.startsWith("/panel/analitica")) || (i.tambien ?? []).some((t) => pathname === t || pathname.startsWith(`${t}/`));
                 const Icon = ICONOS[i.href] ?? Circle;
                 return (
                   <li key={i.href}>

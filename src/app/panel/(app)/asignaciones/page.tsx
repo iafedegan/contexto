@@ -5,6 +5,7 @@ import { db } from "@/db";
 import { categories } from "@/db/schema";
 import { requirePermiso } from "@/lib/auth";
 import { Card } from "@/components/ui";
+import { TabsConsejo } from "@/components/panel/tabs-consejo";
 import { AsignarNotaForm } from "@/components/panel/asignar-nota-form";
 import { editoresParaAsignar, misAsignaciones, type FilaAsignada } from "./consultas";
 
@@ -42,6 +43,8 @@ export default async function NotasParaEditores() {
   ]);
   return (
     <div className="flex flex-col gap-5 sm:gap-6">
+      {/* El administrador llega desde la «Mesa de redacción» y vuelve a sus otras pestañas; un editor solo ve esta página. */}
+      {yo.role === "administrador" && <TabsConsejo activa="notas" abiertas={0} />}
       <header>
         <p className="lx-kicker text-[var(--accent)]">Para editores</p>
         <h1 className="lx-display mt-1 text-3xl font-semibold tracking-tight sm:text-4xl">Notas para editores</h1>
