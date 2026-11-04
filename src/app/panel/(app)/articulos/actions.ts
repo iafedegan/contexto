@@ -15,6 +15,7 @@ import { tienePermiso } from "@/lib/permisos-server";
 import { avisarSiUltimaHora } from "@/lib/push";
 import { invalidarCache } from "@/lib/data-cache";
 import { esNotaPropia, exigirNotaPropia } from "@/lib/propiedad-notas";
+import { esEditorActivo, puedeEnviarAEditor, registrarAsignacion } from "@/lib/notas-asignadas";
 import { piezaParaEscribir, vincularPieza } from "@/app/panel/(app)/pendientes/consultas";
 
 // Variante para las acciones que responden con un mensaje en vez de lanzar.
@@ -34,6 +35,11 @@ async function requirePublicador() {
 // Guarda una nota desde el formulario: sanea el cuerpo, impide editar notas publicadas a quien no puede publicar, recalcula su embedding y, si se pide, publica, envía a revisión o programa.
 export async function saveArticle(formData: FormData) {
   const user = await requirePermiso("articulos");
+  // «Enviar a un editor» (solo administradores y redactores): se valida ANTES de guardar, para no dejar la nota a medias.
+  const enviarA = String(formData.get("intent") ?? "") === "editor" ? String(formData.get("enviarA") ?? "") : "";
+  const editorDestino = enviarA ? await esEditorActivo(enviarA) : null;
+  if (enviarA && !puedeEnviarAEditor(user.role)) throw new Error("Solo los administradores y los redactores pueden enviar una nota a un editor.");
+  if (enviarA && !editorDestino) throw new Error("Elige un editor activo de la lista.");
   const id = String(formData.get("id") ?? "");
   const title = String(formData.get("title") ?? "").trim();
   const excerpt = String(formData.get("excerpt") ?? "").trim();
@@ -127,6 +133,12 @@ export async function saveArticle(formData: FormData) {
   const intent = String(formData.get("intent") ?? "");
   if (intent === "publicar") await publishArticle(articleId);
   else if (intent === "revision") await submitForReview(articleId);
+  else if (intent === "editor" && editorDestino) {
+    // Queda «En revisión» y le aparece al editor en «Artículos» y en «Notas para editores» (la nota cuenta como suya para revisarla).
+    await enviarARevisionCore(articleId);
+    await registrarAsignacion({ articleId, editorId: editorDestino.id, porId: user.id, mensaje: String(formData.get("mensajeEditor") ?? "").trim().slice(0, 600), fecha: new Date().toISOString() });
+    revalidatePath("/panel/asignaciones");
+  }
   else if (intent === "programar") {
     // «YYYY-MM-DDTHH:mm» llega en hora de Colombia (UTC-5, sin horario de verano).
     const v = String(formData.get("programarPara") ?? "");

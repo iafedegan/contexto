@@ -9,6 +9,7 @@ import Link from "next/link";
 import { ArrowLeft, PenLine, Sparkles } from "lucide-react";
 import { ArticleEditor } from "@/components/article-editor";
 import { ArticleWizard } from "@/components/panel/article-wizard";
+import { editoresActivos, puedeEnviarAEditor } from "@/lib/notas-asignadas";
 import { escritoresParaElegir, getEstilo } from "@/lib/ai/estilo";
 import { getModelosEditor } from "@/lib/ai-provider";
 import { esNotaPropia } from "@/lib/propiedad-notas";
@@ -112,6 +113,8 @@ export default async function ArticleEditorPage({
           site={await siteChrome()}
           modelosEditor={await getModelosEditor(session!.user.id)}
           esAdmin={session!.user.role === "administrador"}
+          editores={puedeEnviarAEditor(session!.user.role) ? await editoresActivos() : []}
+          puedeEnviarEditor={puedeEnviarAEditor(session!.user.role)}
           canPublish={canPublish(session!.user.role)}
           canPortada={await tienePermiso(session!.user.id, session!.user.role, "portada")}
           estilo={estilo}
@@ -168,6 +171,8 @@ export default async function ArticleEditorPage({
           site={await siteChrome()}
           modelosEditor={await getModelosEditor(session!.user.id)}
           esAdmin={session!.user.role === "administrador"}
+          editores={puedeEnviarAEditor(session!.user.role) ? await editoresActivos() : []}
+          puedeEnviarEditor={puedeEnviarAEditor(session!.user.role)}
           status={row.status}
           canPublish={canPublish(session!.user.role)}
           canPortada={await tienePermiso(session!.user.id, session!.user.role, "portada")}

@@ -3,10 +3,10 @@ import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import { articles, siteSettings, users } from "@/db/schema";
 
-/** Clave en `site_settings` donde se anota cada asignación (se añade con una sola sentencia, sin leer y reescribir). */
-export const ASIGNADAS_KEY = "notas_asignadas";
+import { ASIGNADAS_KEY, type Asignacion } from "@/lib/notas-asignadas";
 
-export type Asignacion = { articleId: string; editorId: string; porId: string; mensaje: string; fecha: string };
+// La clave y la forma de cada asignación viven en `lib/notas-asignadas.ts` (las usan también el asistente y los permisos de las notas).
+export { ASIGNADAS_KEY, type Asignacion };
 
 /** Personas a las que se les puede asignar una nota: editores y administradores activos. */
 export async function editoresParaAsignar(): Promise<{ id: string; nombre: string; rol: string }[]> {

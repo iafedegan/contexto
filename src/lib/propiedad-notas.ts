@@ -2,11 +2,13 @@ import "server-only";
 import { and, eq, inArray, or, type SQL } from "drizzle-orm";
 import { db } from "@/db";
 import { articles, authors } from "@/db/schema";
+import { notasAsignadasA } from "@/lib/notas-asignadas";
 
 /**
  * Quién ve y toca qué notas: los administradores todas; el resto de las personas (redactor y editor), solo las SUYAS — las que
  * crearon ellas o las que llevan su firma (la ficha de autor vinculada a su cuenta). Se usa en el listado y, además, en cada
- * acción sobre una nota y al abrirla: ocultar la fila no basta si se puede escribir la dirección o llamar a la acción.
+ * acción sobre una nota y al abrirla: ocultar la fila no basta si se puede escribir la dirección o llamar a la acción. Las notas que le
+ * enviaron o asignaron a la persona (ver `notas-asignadas.ts`) también cuentan como suyas: así el editor puede revisarlas y publicarlas.
  */
 type Persona = { id: string; role: string };
 
@@ -19,8 +21,8 @@ async function misAutorIds(userId: string): Promise<string[]> {
 /** Condición SQL que limita las notas a las de la persona; `undefined` (sin límite) para un administrador. */
 export async function condicionMisNotas(p: Persona): Promise<SQL | undefined> {
   if (p.role === "administrador") return undefined;
-  const ids = await misAutorIds(p.id);
-  return ids.length ? or(eq(articles.createdBy, p.id), inArray(articles.authorId, ids)) : eq(articles.createdBy, p.id);
+  const [ids, asignadas] = await Promise.all([misAutorIds(p.id), notasAsignadasA(p.id)]);
+  return or(eq(articles.createdBy, p.id), ...(ids.length ? [inArray(articles.authorId, ids)] : []), ...(asignadas.length ? [inArray(articles.id, asignadas)] : []));
 }
 
 /** ¿Es la nota de la persona (o es administradora)? Una nota que no existe devuelve `true` para que quien llama dé su propio error. */

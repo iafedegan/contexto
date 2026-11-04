@@ -133,6 +133,8 @@ export function ArticleWizard({
   savedAs,
   modelosEditor,
   esAdmin = false,
+  editores = [],
+  puedeEnviarEditor = false,
 }: {
   categories: (Option & { parentId?: string | null })[];
   authors: Option[];
@@ -165,6 +167,10 @@ export function ArticleWizard({
   modelosEditor?: { modelos: { ref: string; etiqueta: string }[]; predeterminado: string | null; inicial: string | null; sinClave: string[] };
   /** Resultado del último guardado (?guardado=…), para confirmarlo. */
   savedAs?: string;
+  /** Editores activos a los que se puede enviar la nota. */
+  editores?: { id: string; nombre: string }[];
+  /** Administrador o redactor: puede enviar la nota a un editor (paso «Sección y autor»). */
+  puedeEnviarEditor?: boolean;
 }) {
   const heading = pieza ? "Tarea del consejo · artículo con IA" : mode === "ia" ? "Nuevo artículo con IA" : "Nuevo artículo";
   const STEPS: readonly { key: StepKey; label: string }[] = mode === "ia" ? STEPS_IA : STEPS_MANUAL;
@@ -237,6 +243,10 @@ export function ArticleWizard({
   const [tagDraft, setTagDraft] = useState("");
   const [categoryId, setCategoryId] = useState(initial?.categoryId ?? pieza?.categoryId ?? "");
   const [region, setRegion] = useState(initial?.region ?? "");
+  // A qué editor se envía la nota al terminar (vacío = a nadie) y el mensaje que le llega con ella.
+  const [enviarA, setEnviarA] = useState("");
+  const [mensajeEditor, setMensajeEditor] = useState("");
+  const editorElegido = editores.find((e) => e.id === enviarA);
   const [depto, setDepto] = useState(initial?.depto ?? "");
   const [authorId] = useState(initial?.authorId ?? miAutorId ?? "");
   // El cuerpo se guarda como HTML (el editor lo muestra ya formateado). Las gráficas viajan como marcador `[[GRAFICA …]]`.
@@ -805,6 +815,8 @@ export function ArticleWizard({
       <input type="hidden" name="isBreaking" value={breaking ? "1" : "0"} />
       <input type="hidden" name="isLive" value={live ? "1" : "0"} />
       <input type="hidden" name="portadaPos" value={canPortada ? portadaPos : "keep"} />
+      <input type="hidden" name="enviarA" value={puedeEnviarEditor ? enviarA : ""} />
+      <input type="hidden" name="mensajeEditor" value={puedeEnviarEditor && enviarA ? mensajeEditor : ""} />
 
       {/* --- Pasos --- */}
       <div className="lx-card shrink-0 px-4 py-3">
@@ -1354,6 +1366,26 @@ export function ArticleWizard({
               ) : (
                 <p className="px-1 text-xs text-[var(--fg-muted)]">Tu cuenta no ubica notas en la portada del sitio: un editor lo hace al publicar.</p>
               )}
+              {/* A qué editor se envía la nota (solo administradores y redactores). Se envía al final, desde la vista previa. */}
+              {puedeEnviarEditor && (
+                <div className="rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] px-3.5 py-2.5">
+                  <label htmlFor="enviar-a" className="lx-kicker text-[var(--fg-muted)]" title="Al terminar, la nota queda «En revisión» y le llega a ese editor en «Artículos» y en «Notas para editores».">Enviar a un editor</label>
+                  {editores.length ? (
+                    <div className="mt-1.5 flex flex-wrap gap-2">
+                      <select id="enviar-a" value={enviarA} onChange={(e) => setEnviarA(e.target.value)} className="min-w-0 flex-1 basis-44 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5 text-sm">
+                        <option value="">No enviar a nadie</option>
+                        {editores.map((e) => <option key={e.id} value={e.id}>{e.nombre}</option>)}
+                      </select>
+                      {enviarA && (
+                        <input value={mensajeEditor} onChange={(e) => setMensajeEditor(e.target.value)} maxLength={600} placeholder="Mensaje para el editor (opcional)" aria-label="Mensaje para el editor"
+                          className="min-w-0 flex-[2] basis-56 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5 text-sm" />
+                      )}
+                    </div>
+                  ) : (
+                    <p className="mt-1 text-xs text-[var(--fg-muted)]">No hay editores activos todavía: un administrador los crea en Configuración → Usuarios.</p>
+                  )}
+                </div>
+              )}
             </SectionTree>
           </Step>
         )}
@@ -1696,7 +1728,7 @@ export function ArticleWizard({
           <div className="flex flex-wrap items-center justify-end gap-2">
             {savedAs && (
               <span className="text-sm font-medium text-[#16a34a]">
-                ✓ {savedAs === "publicar" ? "Publicado" : savedAs === "programar" ? "Programado" : savedAs === "revision" ? "Enviado a revisión" : "Guardado"}
+                ✓ {savedAs === "publicar" ? "Publicado" : savedAs === "programar" ? "Programado" : savedAs === "revision" ? "Enviado a revisión" : savedAs === "editor" ? "Enviado al editor" : "Guardado"}
               </span>
             )}
             {canPublish && (
@@ -1735,15 +1767,21 @@ export function ArticleWizard({
             <button type="submit" name="intent" value="borrador" className="lx-btn lx-btn-ghost">
               <Save size={15} /> Guardar borrador
             </button>
+            {/* Con un editor elegido en «Sección y autor», el envío a ese editor va primero (y reemplaza «Enviar a revisión»). */}
+            {puedeEnviarEditor && editorElegido && (
+              <button type="submit" name="intent" value="editor" className={canPublish ? "lx-btn lx-btn-ghost" : "lx-btn"}>
+                <Send size={15} /> Enviar a {editorElegido.nombre}
+              </button>
+            )}
             {canPublish ? (
               <button type="submit" name="intent" value="publicar" className="lx-btn">
                 <Send size={15} /> {status === "publicado" ? "Guardar y actualizar" : "Publicar"}
               </button>
-            ) : (
+            ) : !editorElegido ? (
               <button type="submit" name="intent" value="revision" className="lx-btn">
                 <Send size={15} /> Enviar a revisión
               </button>
-            )}
+            ) : null}
           </div>
         ) : current.key === "tema" && !generated ? (
           <button
