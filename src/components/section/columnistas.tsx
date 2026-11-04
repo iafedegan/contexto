@@ -22,7 +22,7 @@ const iniciales = (nombre: string | null) =>
 /** Retrato redondo con aro dorado; sin foto, las iniciales del autor. */
 function Retrato({ a, tam }: { a: ArticleListItem; tam: number }) {
   return (
-    <span className="relative inline-flex shrink-0 overflow-hidden rounded-full ring-2 ring-[var(--accent)]/70 ring-offset-2 ring-offset-[var(--surface)]" style={{ width: tam, height: tam }}>
+    <span className="relative inline-flex shrink-0 overflow-hidden rounded-full ring-1 ring-[var(--border-strong)]" style={{ width: tam, height: tam }}>
       {a.coverImageUrl ? (
         <Image src={a.coverImageUrl} alt={a.authorName ?? a.title} width={tam * 2} height={tam * 2} sizes={`${tam}px`} className="h-full w-full object-cover object-top" />
       ) : (
@@ -34,68 +34,29 @@ function Retrato({ a, tam }: { a: ArticleListItem; tam: number }) {
 
 const fecha = (a: ArticleListItem, locale: Locale) => (a.publishedAt ? formatDate(a.publishedAt, INTL_LOCALE[locale]) : "");
 
-// «Columna de X, cargo, del 7 de octubre de 2026.»: resumen automático que solo repite autor y fecha; no se muestra.
-const resumenUtil = (a: ArticleListItem) => (a.excerpt && !/^Columna (de|del)\b[^]*\bdel? \d{1,2} de [a-záéíóú]+ de \d{4}\.?\s*$/i.test(a.excerpt.trim()) ? a.excerpt : null);
+const fecha = (a: ArticleListItem, locale: Locale) => (a.publishedAt ? formatDate(a.publishedAt, INTL_LOCALE[locale]) : "");
 
-/** Columna destacada: retrato grande a la izquierda y el texto a la derecha. */
-function Destacada({ a, locale }: { a: ArticleListItem; locale: Locale }) {
+/** Una columna: retrato a la izquierda; autor, titular y fecha a la derecha. Sin caja ni adornos. */
+function Fila({ a, locale }: { a: ArticleListItem; locale: Locale }) {
   return (
-    <Link href={hrefNota(locale, a)} className="lx-card group flex flex-col items-center gap-6 p-6 text-center sm:flex-row sm:items-center sm:gap-10 sm:p-10 sm:text-left">
-      <Retrato a={a} tam={168} />
+    <Link href={hrefNota(locale, a)} className="group flex items-start gap-4 border-b border-[var(--border)] py-6">
+      <Retrato a={a} tam={64} />
       <span className="min-w-0">
-        <span className="lx-kicker text-[var(--accent)]">{a.categoryName}</span>
-        <span className="lx-display mt-1 block text-lg font-medium text-[var(--fg-muted)]">{a.authorName}</span>
-        <span className="lx-display mt-2 block text-3xl font-semibold leading-tight tracking-tight transition group-hover:text-[var(--accent)] md:text-4xl">{a.title}</span>
-        {resumenUtil(a) && <span className="mt-3 line-clamp-3 block max-w-2xl text-[var(--fg-muted)]">{resumenUtil(a)}</span>}
-        <span className="lx-ui mt-4 inline-flex items-center gap-2 text-xs uppercase tracking-[0.14em] text-[var(--accent)]">
-          {fecha(a, locale)} <ArrowRight size={14} aria-hidden />
-        </span>
+        <span className="lx-ui block text-xs uppercase tracking-[0.14em] text-[var(--accent)]">{a.authorName}</span>
+        <span className="lx-display mt-1 block text-xl font-semibold leading-snug transition group-hover:text-[var(--accent)]">{a.title}</span>
+        <span className="lx-ui mt-1.5 block text-xs text-[var(--fg-muted)]">{fecha(a, locale)}</span>
       </span>
     </Link>
   );
 }
 
-/** Columna en la cuadrícula: retrato y autor arriba, el titular como protagonista y, al pie, la fecha con la invitación a leer. */
-function Tarjeta({ a, locale }: { a: ArticleListItem; locale: Locale }) {
-  const resumen = resumenUtil(a);
-  return (
-    <Link
-      href={hrefNota(locale, a)}
-      className="lx-card group relative flex h-full flex-col overflow-hidden p-6 transition duration-300 hover:-translate-y-1 hover:shadow-xl before:absolute before:inset-x-0 before:top-0 before:h-0.5 before:origin-left before:scale-x-0 before:bg-[var(--accent)] before:transition before:duration-300 hover:before:scale-x-100"
-    >
-      <span className="flex items-center gap-4">
-        <Retrato a={a} tam={76} />
-        <span className="min-w-0">
-          <span className="lx-kicker block text-[var(--accent)]">Columnista</span>
-          <span className="lx-display mt-0.5 block text-lg font-semibold leading-tight">{a.authorName}</span>
-        </span>
-      </span>
-      <span className="lx-display mt-5 block text-2xl font-semibold leading-snug tracking-tight transition group-hover:text-[var(--accent)]">{a.title}</span>
-      {resumen && <span className="mt-3 line-clamp-3 block text-[0.95rem] leading-relaxed text-[var(--fg-muted)]">{resumen}</span>}
-      <span className="lx-ui mt-auto flex items-center justify-between border-t border-[var(--border)] pt-4 text-xs uppercase tracking-[0.14em]">
-        <span className="text-[var(--fg-muted)]">{fecha(a, locale)}</span>
-        <span className="inline-flex items-center gap-2 text-[var(--accent)]">
-          Leer <ArrowRight size={14} aria-hidden className="transition group-hover:translate-x-1" />
-        </span>
-      </span>
-    </Link>
-  );
-}
-
-/** Rejilla de columnistas: la primera columna destacada y el resto en tarjetas de 1, 2 o 3 por fila. */
+/** Rejilla de columnistas: dos columnas de filas simples (una en el celular). */
 export function ColumnistasGrid({ items, locale }: { items: ArticleListItem[]; locale: Locale }) {
-  const [primera, ...resto] = items;
-  if (!primera) return null;
   return (
-    <div className="flex flex-col gap-8">
-      <Destacada a={primera} locale={locale} />
-      {resto.length > 0 && (
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {resto.map((a) => (
-            <Tarjeta key={a.slug} a={a} locale={locale} />
-          ))}
-        </div>
-      )}
+    <div className="grid grid-cols-1 gap-x-12 md:grid-cols-2">
+      {items.map((a) => (
+        <Fila key={a.slug} a={a} locale={locale} />
+      ))}
     </div>
   );
 }
