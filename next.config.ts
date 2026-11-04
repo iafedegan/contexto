@@ -82,12 +82,16 @@ const nextConfig: NextConfig = {
         source: "/:locale(en)?",
         headers: [
           { key: "Vercel-CDN-Cache-Control", value: "s-maxage=300, stale-while-revalidate=3600" },
+          // Etiqueta para que el panel borre estas copias al guardar (ver `invalidarCache`).
+          { key: "Vercel-Cache-Tag", value: "portal" },
         ],
       },
       {
         source: "/:locale(en)?/categoria/:slug",
         headers: [
           { key: "Vercel-CDN-Cache-Control", value: "s-maxage=300, stale-while-revalidate=3600" },
+          // Etiqueta para que el panel borre estas copias al guardar (ver `invalidarCache`).
+          { key: "Vercel-Cache-Tag", value: "portal" },
         ],
       },
       {

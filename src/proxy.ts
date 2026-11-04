@@ -144,6 +144,8 @@ export async function proxy(req: NextRequest) {
   // sin guardarla (`Cache-Control` intacto): solo cambia lo que hace la red. Con búsqueda en la dirección (?…) no se guarda.
   if (req.method === "GET" && !search && (pathname === "/" || pathname === "/en")) {
     res.headers.set("Vercel-CDN-Cache-Control", "max-age=60, stale-while-revalidate=600");
+    // Con esta etiqueta el panel borra la copia al guardar (ver `invalidarCache`), sin esperar a que caduque.
+    res.headers.set("Vercel-Cache-Tag", "portal");
   }
   return res;
 }

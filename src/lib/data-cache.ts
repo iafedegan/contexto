@@ -1,5 +1,7 @@
 import "server-only";
 import { revalidateTag, unstable_cache } from "next/cache";
+import { after } from "next/server";
+import { dangerouslyDeleteByTag } from "@vercel/functions";
 
 /**
  * Caché de datos ENTRE peticiones para las lecturas del portal público.
@@ -47,4 +49,23 @@ export function cachear<A extends unknown[], R>(
  */
 export function invalidarCache(...tags: string[]) {
   for (const tag of tags.length ? tags : [TAG_CONTENIDO, TAG_AJUSTES]) revalidateTag(tag, { expire: 0 });
+  borrarCopiasCdn();
+}
+
+/** Etiqueta (`Vercel-Cache-Tag`) de las páginas que guarda la red de Vercel: portada y secciones. */
+export const TAG_CDN_PORTAL = "portal";
+
+/**
+ * Borra de la red de Vercel las copias de la portada y las secciones (ver `next.config.ts` y `src/proxy.ts`).
+ * Sin esto, tras apagar el directo o publicar, la red seguía sirviendo la copia vieja hasta que caducaba.
+ * Se borra (no solo se marca como vieja) para que la siguiente visita ya vea el cambio.
+ * Corre después de responder; fuera de Vercel no hace nada.
+ */
+function borrarCopiasCdn() {
+  const borrar = () => dangerouslyDeleteByTag(TAG_CDN_PORTAL).catch((e) => console.error("[cdn] no se pudo borrar la caché", e));
+  try {
+    after(borrar);
+  } catch {
+    // Fuera de una petición (scripts) no hay `after`: no hay red de Vercel que limpiar.
+  }
 }
