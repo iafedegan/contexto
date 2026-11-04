@@ -348,7 +348,10 @@ async function CategoryPage({ params, searchParams, locale }: PageProps & { loca
           {/* TV, Radio y Especiales (y sus subsecciones) tienen formato propio; el resto, la cuadrícula de la plantilla. */}
           {(() => {
             const formato = formatoDeSeccion(slug, category.parentSlug);
-            return formato ? <FormatoDeSeccion formato={formato} items={items} locale={locale} /> : <SectionGrid theme={site.parts.body} items={items} locale={locale} />;
+            if (formato) return <FormatoDeSeccion formato={formato} items={items} locale={locale} />;
+            const grilla = <SectionGrid theme={site.parts.body} items={items} locale={locale} />;
+            // Los retratos de columnistas se guardaron en ~300 px: se muestran a su tamaño real y no ampliados a todo el ancho (ver .lx-retratos).
+            return conAutor ? <div className="lx-retratos">{grilla}</div> : grilla;
           })()}
         </>
       )}
