@@ -34,6 +34,9 @@ function Retrato({ a, tam }: { a: ArticleListItem; tam: number }) {
 
 const fecha = (a: ArticleListItem, locale: Locale) => (a.publishedAt ? formatDate(a.publishedAt, INTL_LOCALE[locale]) : "");
 
+// «Columna de X, cargo, del 7 de octubre de 2026.»: resumen automático que solo repite autor y fecha; no se muestra.
+const resumenUtil = (a: ArticleListItem) => (a.excerpt && !/^Columna (de|del)\b[^]*\bdel? \d{1,2} de [a-záéíóú]+ de \d{4}\.?\s*$/i.test(a.excerpt.trim()) ? a.excerpt : null);
+
 /** Columna destacada: retrato grande a la izquierda y el texto a la derecha. */
 function Destacada({ a, locale }: { a: ArticleListItem; locale: Locale }) {
   return (
@@ -43,7 +46,7 @@ function Destacada({ a, locale }: { a: ArticleListItem; locale: Locale }) {
         <span className="lx-kicker text-[var(--accent)]">{a.categoryName}</span>
         <span className="lx-display mt-1 block text-lg font-medium text-[var(--fg-muted)]">{a.authorName}</span>
         <span className="lx-display mt-2 block text-3xl font-semibold leading-tight tracking-tight transition group-hover:text-[var(--accent)] md:text-4xl">{a.title}</span>
-        {a.excerpt && <span className="mt-3 line-clamp-3 block max-w-2xl text-[var(--fg-muted)]">{a.excerpt}</span>}
+        {resumenUtil(a) && <span className="mt-3 line-clamp-3 block max-w-2xl text-[var(--fg-muted)]">{resumenUtil(a)}</span>}
         <span className="lx-ui mt-4 inline-flex items-center gap-2 text-xs uppercase tracking-[0.14em] text-[var(--accent)]">
           {fecha(a, locale)} <ArrowRight size={14} aria-hidden />
         </span>
@@ -52,21 +55,28 @@ function Destacada({ a, locale }: { a: ArticleListItem; locale: Locale }) {
   );
 }
 
-/** Columna en la cuadrícula: autor con su retrato arriba, el título y un resumen debajo. */
+/** Columna en la cuadrícula: retrato y autor arriba, el titular como protagonista y, al pie, la fecha con la invitación a leer. */
 function Tarjeta({ a, locale }: { a: ArticleListItem; locale: Locale }) {
+  const resumen = resumenUtil(a);
   return (
-    <Link href={hrefNota(locale, a)} className="lx-card group flex h-full flex-col gap-4 p-5 sm:p-6">
-      <span className="flex items-center gap-3">
-        <Retrato a={a} tam={64} />
+    <Link
+      href={hrefNota(locale, a)}
+      className="lx-card group relative flex h-full flex-col overflow-hidden p-6 transition duration-300 hover:-translate-y-1 hover:shadow-xl before:absolute before:inset-x-0 before:top-0 before:h-0.5 before:origin-left before:scale-x-0 before:bg-[var(--accent)] before:transition before:duration-300 hover:before:scale-x-100"
+    >
+      <span className="flex items-center gap-4">
+        <Retrato a={a} tam={76} />
         <span className="min-w-0">
-          <span className="lx-display block truncate text-base font-semibold">{a.authorName}</span>
-          <span className="lx-ui block text-xs text-[var(--fg-muted)]">{fecha(a, locale)}</span>
+          <span className="lx-kicker block text-[var(--accent)]">Columnista</span>
+          <span className="lx-display mt-0.5 block text-lg font-semibold leading-tight">{a.authorName}</span>
         </span>
       </span>
-      <span className="lx-display block text-xl font-semibold leading-snug tracking-tight transition group-hover:text-[var(--accent)]">{a.title}</span>
-      {a.excerpt && <span className="line-clamp-3 block text-sm leading-relaxed text-[var(--fg-muted)]">{a.excerpt}</span>}
-      <span className="lx-ui mt-auto inline-flex items-center gap-2 pt-1 text-xs uppercase tracking-[0.14em] text-[var(--accent)]">
-        Leer columna <ArrowRight size={14} aria-hidden className="transition group-hover:translate-x-1" />
+      <span className="lx-display mt-5 block text-2xl font-semibold leading-snug tracking-tight transition group-hover:text-[var(--accent)]">{a.title}</span>
+      {resumen && <span className="mt-3 line-clamp-3 block text-[0.95rem] leading-relaxed text-[var(--fg-muted)]">{resumen}</span>}
+      <span className="lx-ui mt-auto flex items-center justify-between border-t border-[var(--border)] pt-4 text-xs uppercase tracking-[0.14em]">
+        <span className="text-[var(--fg-muted)]">{fecha(a, locale)}</span>
+        <span className="inline-flex items-center gap-2 text-[var(--accent)]">
+          Leer <ArrowRight size={14} aria-hidden className="transition group-hover:translate-x-1" />
+        </span>
       </span>
     </Link>
   );
