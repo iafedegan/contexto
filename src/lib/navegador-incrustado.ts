@@ -6,6 +6,9 @@
  *    o la suya propia.
  *  - Android: el navegador incrustado lleva `; wv)`.
  *
+ * Confirmado el 2026-11-04 en producción: la SuperApp en iPhone llega como `…(KHTML, like Gecko) Mobile/15E148` (sin `Safari/` ni nombre de la
+ * app) y en Android con `; wv)`.
+ *
  * Las apps de redes sociales también usan navegador incrustado, pero ahí el lector llega desde un enlace compartido y SÍ se le pregunta por la
  * medición: por eso se excluyen.
  */

@@ -1,7 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { LEGACY_SYSTEM_REDIRECTS, resolveLegacyTaxonomy } from "@/lib/redirects";
 import { isBlockedBot } from "@/lib/bots";
-import { esNavegadorIncrustado } from "@/lib/navegador-incrustado";
 import { anfitrionIndexable } from "@/lib/indexacion";
 import { siteUrl } from "@/lib/utils";
 
@@ -137,11 +136,6 @@ export async function proxy(req: NextRequest) {
   // La ruta debe viajar en la PETICIÓN (no solo en la respuesta): es lo que
   // lee `headers()` en el layout del panel. Se sobrescribe siempre, así un
   // cliente no puede falsearla enviando su propio `x-pathname`.
-  // TEMPORAL (diagnóstico de la SuperApp de FEDEGÁN): anota cómo se identifica el navegador incrustado que abre las páginas, para
-  // confirmar cuál es la SuperApp. Solo la identificación del navegador y la ruta (sin IP ni cookies). Quitar cuando quede confirmado.
-  if (req.method === "GET" && !pathname.startsWith("/panel") && !pathname.startsWith("/api") && esNavegadorIncrustado(req.headers.get("user-agent"))) {
-    console.info(`[webview] ${pathname}${search ? "?…" : ""} ua=${(req.headers.get("user-agent") ?? "").slice(0, 300)}`);
-  }
   const requestHeaders = new Headers(req.headers);
   requestHeaders.set("x-pathname", pathname);
   const res = conCabeceras(NextResponse.next({ request: { headers: requestHeaders } }), pathname);
