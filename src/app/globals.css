@@ -2343,9 +2343,9 @@ main > div:has([data-asistente]) { max-width: none; }
   .cg-esqueleto > span { animation: none; }
 }
 
-/* Secciones de columnistas: las fotos de autor miden ~300 px; ampliarlas al ancho de la tarjeta las pixelaba. Se muestran a su proporción y tamaño reales, centradas. */
+/* Secciones de columnistas: las fotos de autor miden ~300 px; ampliarlas al ancho de la tarjeta las pixelaba. Se muestran a su proporción y en pequeño, centradas. */
 .lx-retratos .lx-media {
-  max-width: 300px;
+  max-width: 190px;
   margin-inline: auto;
 }
 .lx-retratos .lx-media,
