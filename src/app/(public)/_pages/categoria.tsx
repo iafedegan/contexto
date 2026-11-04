@@ -252,6 +252,7 @@ async function CategoryPage({ params, searchParams, locale }: PageProps & { loca
         // En «cabecera» y «barra» los filtros van al lado de las etiquetas (n publicaciones · actualizado), no en un bloque aparte.
         filters={undefined}
         chips={
+          esDirectorio ? null : (
           <>
             <span className="lx-chip border-[var(--border-strong)] text-[var(--accent)]">
               {totalAproximado ? `+${total.toLocaleString("es-CO")}` : total} {t(locale, "section.count")}
@@ -283,6 +284,7 @@ async function CategoryPage({ params, searchParams, locale }: PageProps & { loca
             })}
             {(pos === "cabecera" || pos === "barra") && filters}
           </>
+          )
         }
       />
 
