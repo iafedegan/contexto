@@ -1,12 +1,12 @@
 import Link from "next/link";
-import { BarChart3, ListTree, Users } from "lucide-react";
+import { BarChart3, ListTree, Smartphone, Users } from "lucide-react";
 
 /**
  * Las tres pestañas de la opción «Resumen» del panel: el estado editorial (`/panel`) y el centro de análisis, que se parte en
- * Audiencia y Suscriptores (`/panel/analitica`). Las dos últimas solo aparecen a quien tiene el permiso «analitica».
+ * Audiencia, Lectores, Suscriptores y SuperApp (`/panel/analitica`). Las dos últimas solo aparecen a quien tiene el permiso «analitica».
  * `parametros` (periodo y filtros) pasa de una pestaña de análisis a la otra para no perder lo que se estaba mirando.
  */
-export type PestanaResumen = "resumen" | "audiencia" | "lectores" | "suscriptores";
+export type PestanaResumen = "resumen" | "audiencia" | "lectores" | "suscriptores" | "superapp";
 
 export function TabsResumen({ activa, analitica, parametros = "" }: { activa: PestanaResumen; analitica: boolean; parametros?: string }) {
   const p = parametros.replace(/^\?/, "");
@@ -20,6 +20,7 @@ export function TabsResumen({ activa, analitica, parametros = "" }: { activa: Pe
           { id: "audiencia" as const, t: "Audiencia", Icono: BarChart3, href: con("") },
           { id: "lectores" as const, t: "Lectores", Icono: ListTree, href: con("vista=lectores") },
           { id: "suscriptores" as const, t: "Suscriptores", Icono: Users, href: con("vista=suscriptores") },
+          { id: "superapp" as const, t: "SuperApp", Icono: Smartphone, href: con("vista=superapp") },
         ]
       : []),
   ];
@@ -30,7 +31,7 @@ export function TabsResumen({ activa, analitica, parametros = "" }: { activa: Pe
         {pestanas.map(({ id, t, Icono, href }) => (
           <li key={id} className="min-w-0 flex-1 sm:flex-none">
             <Link href={href} aria-current={activa === id ? "page" : undefined}
-              className={`inline-flex min-h-10 w-full items-center justify-center gap-2 whitespace-nowrap rounded-full px-2.5 text-[0.8125rem] sm:w-auto sm:px-4 sm:text-sm font-semibold transition ${activa === id ? "bg-[var(--accent)] text-[var(--accent-fg)]" : "text-[var(--fg-muted)] hover:text-[var(--fg)]"}`}>
+              className={`inline-flex min-h-10 w-full items-center justify-center gap-2 whitespace-nowrap rounded-full px-2.5 text-[0.8125rem] sm:w-auto sm:px-4 sm:text-sm font-semibold transition ${activa === id ? "bg-[var(--accent)] text-white!" : "text-[var(--fg-muted)] hover:text-[var(--fg)]"}`}>
               <Icono size={15} aria-hidden className="hidden min-[430px]:block" /> {t}
             </Link>
           </li>

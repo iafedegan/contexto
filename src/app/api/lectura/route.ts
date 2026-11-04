@@ -1,8 +1,11 @@
+import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { clientIp, hit } from "@/lib/rate-limit";
 import { validarInicio, validarProgreso, validarVinculo } from "@/lib/lectores-entrada";
 import { lectorTokenValido, vincularVisitante } from "@/lib/lectores-suscriptor";
 import { iniciarLectura, registrarProgreso } from "@/lib/lectores-registro";
+import { COOKIE_SUPERAPP, leerSesionLocal } from "@/lib/superapp/sesion";
+import { FUENTE_SUPERAPP, vincularVisitante as vincularSuperApp } from "@/lib/superapp/personas";
 
 /**
  * Medición de lectura de quien aceptó (cookie `cg_med`): cómo lee una nota, no quién es. El navegador avisa al empezar
@@ -31,7 +34,11 @@ export async function POST(req: Request) {
       if (!e) return NextResponse.json({ ok: false }, { status: 400 });
       if (!(await hit(`lectura:v:${e.visitante}:${e.slug}`, 1, 1800)).allowed) return NextResponse.json({ ok: true });
       const h = req.headers;
+      // ¿Lee con sesión de la SuperApp? Entonces la lectura cuenta con ese origen y el navegador queda unido a la persona.
+      const sa = await leerSesionLocal((await cookies()).get(COOKIE_SUPERAPP)?.value).catch(() => null);
+      if (sa) await vincularSuperApp(sa.audience, sa.subject, e.visitante).catch(() => undefined);
       const id = await iniciarLectura(e, {
+        fuente: sa ? FUENTE_SUPERAPP : undefined,
         userAgent: h.get("user-agent"),
         pais: h.get("x-vercel-ip-country"),
         region: h.get("x-vercel-ip-country-region"),

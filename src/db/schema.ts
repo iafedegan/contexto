@@ -174,8 +174,8 @@ export const passkeys = pgTable(
 /**
  * Sesiones locales de quien entra desde la SuperApp de FEDEGÁN (MiniApp «Contexto Ganadero»). La persona llega con un cupón de un solo uso que el
  * servidor canjea; aquí queda la sesión que Contexto mantiene por su cuenta. Se guarda solo lo necesario: la pareja audience + subject, el nivel y los
- * permisos que comunicó FEDEGÁN, la referencia de la sesión de origen (CIFRADA, para consultar su vigencia) y los vencimientos. **No** se guardan
- * documento ni correo. La cookie lleva un token aleatorio; aquí solo está su huella.
+ * permisos que comunicó FEDEGÁN, la referencia de la sesión de origen (CIFRADA, para consultar su vigencia) y los vencimientos. Correo y documento
+ * van aparte, cifrados, en `superapp_personas`. La cookie lleva un token aleatorio; aquí solo está su huella.
  */
 export const superappSesiones = pgTable(
   "superapp_sesiones",
@@ -198,6 +198,42 @@ export const superappSesiones = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index("superapp_sesiones_vence_idx").on(t.expiresAt)],
+);
+
+/**
+ * Personas que entraron desde la SuperApp de FEDEGÁN, una fila por `audience` + `subject`, para el análisis del panel (pestaña «SuperApp»).
+ * Correo y documento llegan en cada entrada y se guardan CIFRADOS (clave de secretos); del documento queda a la vista solo el final, para
+ * reconocerlo sin mostrarlo entero. `subscriberId` se llena si el correo coincide con un suscriptor del boletín. Cada entrada queda además en
+ * `superapp_sesiones` (una fila por entrada).
+ */
+export const superappPersonas = pgTable(
+  "superapp_personas",
+  {
+    audience: text("audience").notNull(),
+    subject: text("subject").notNull(),
+    emailCifrado: text("email_cifrado"),
+    documentoTipo: text("documento_tipo"),
+    documentoCifrado: text("documento_cifrado"),
+    /** Últimos 4 caracteres del documento (para mostrar «CC ••••0001»). */
+    documentoFinal: text("documento_final"),
+    assuranceLevel: integer("assurance_level").notNull().default(0),
+    subscriberId: uuid("subscriber_id").references(() => newsletterSubscribers.id, { onDelete: "set null" }),
+    primeraEntrada: timestamp("primera_entrada", { withTimezone: true }).notNull().defaultNow(),
+    ultimaEntrada: timestamp("ultima_entrada", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.audience, t.subject] }), index("superapp_personas_ultima_idx").on(t.ultimaEntrada)],
+);
+
+/** Navegadores (código de la medición `cg_med`) con los que leyó una persona de la SuperApp: une sus lecturas con ella. */
+export const superappVisitantes = pgTable(
+  "superapp_visitantes",
+  {
+    audience: text("audience").notNull(),
+    subject: text("subject").notNull(),
+    visitorId: uuid("visitor_id").notNull(),
+    linkedAt: timestamp("linked_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.audience, t.subject, t.visitorId] }), index("superapp_visitantes_visitor_idx").on(t.visitorId)],
 );
 
 // Tablas mínimas requeridas por @auth/drizzle-adapter (sesiones JWT no las usan,

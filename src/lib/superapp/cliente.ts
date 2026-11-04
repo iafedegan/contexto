@@ -1,5 +1,5 @@
 import "server-only";
-import { FORMA_CUPON, FORMA_REFERENCIA, validarRespuesta, validarVigencia, type IdentidadSuperApp } from "./contrato";
+import { contactoDe, FORMA_CUPON, FORMA_REFERENCIA, validarRespuesta, validarVigencia, type ContactoSuperApp, type IdentidadSuperApp } from "./contrato";
 import { RUTA_INTERCAMBIO, RUTA_VALIDACION, type ConfigSuperApp } from "./config";
 
 /**
@@ -7,7 +7,7 @@ import { RUTA_INTERCAMBIO, RUTA_VALIDACION, type ConfigSuperApp } from "./config
  * (red, 5xx, tiempo agotado) NO se concede acceso. Sin redirecciones (un 3xx es un fallo) y sin caché.
  */
 export type Motivo = "cupon" | "credencial" | "peticion" | "rechazado" | "servicio" | "respuesta";
-export type Resultado = { ok: true; identidad: IdentidadSuperApp; ms: number } | { ok: false; motivo: Motivo; http?: number; ms: number };
+export type Resultado = { ok: true; identidad: IdentidadSuperApp; contacto: ContactoSuperApp | null; ms: number } | { ok: false; motivo: Motivo; http?: number; ms: number };
 
 type Fetcher = typeof fetch;
 const PLAZO_MS = 8_000;
@@ -47,7 +47,7 @@ export async function intercambiarCupon(code: string, cfg: ConfigSuperApp, f: Fe
   if (!r) return { ok: false, motivo: "servicio", ms };
   if (r.status !== 200) return { ok: false, motivo: motivoDe(r.status), http: r.status, ms };
   const identidad = validarRespuesta(r.json, cfg);
-  return identidad ? { ok: true, identidad, ms } : { ok: false, motivo: "respuesta", http: 200, ms };
+  return identidad ? { ok: true, identidad, contacto: contactoDe(r.json), ms } : { ok: false, motivo: "respuesta", http: 200, ms };
 }
 
 export type ResultadoVigencia = { ok: true; expiresAt: Date; correlationId: string; ms: number } | { ok: false; motivo: Motivo; http?: number; ms: number };

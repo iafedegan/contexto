@@ -69,6 +69,16 @@ export function validarRespuesta(json: unknown, cfg: ConfigSuperApp, ahora: Date
   };
 }
 
+/** Correo y documento de la persona, para su ficha en el análisis (se guardan cifrados en `superapp_personas`, nunca en la sesión). */
+export type ContactoSuperApp = { email: string; documentoTipo: string; documentoNumero: string };
+
+/** Saca correo y documento de una respuesta YA validada con `validarRespuesta`. */
+export function contactoDe(json: unknown): ContactoSuperApp | null {
+  const r = respuesta.safeParse(json);
+  if (!r.success) return null;
+  return { email: r.data.email.trim().toLowerCase(), documentoTipo: r.data.documentType, documentoNumero: r.data.documentNumber.trim() };
+}
+
 /** Lo mínimo que debe traer la respuesta de la consulta de sesión (la guía no exige repetir la referencia ni la URL). */
 const vigencia = z.object({
   audience: z.string().min(1),

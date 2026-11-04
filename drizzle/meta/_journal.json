@@ -204,6 +204,13 @@
       "when": 1793496325658,
       "tag": "0028_rol_lector_asistente",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1793809534738,
+      "tag": "0029_personas_de_la_superapp",
+      "breakpoints": true
     }
   ]
 }

@@ -131,3 +131,32 @@ test("sin configuración completa la integración queda apagada", async () => {
     for (const k of claves) { if (antes[k] === undefined) delete process.env[k]; else process.env[k] = antes[k]; }
   }
 });
+
+test("la persona queda registrada con correo y documento cifrados, y unida al boletín si su correo coincide", async () => {
+  const { db } = await import("@/db");
+  const { newsletterSubscribers, superappPersonas } = await import("@/db/schema");
+  const { registrarPersona, personasSuperApp } = await import("@/lib/superapp/personas");
+  await db.insert(newsletterSubscribers).values({ email: "persona@example.test" }).onConflictDoNothing();
+  const i = contrato.validarRespuesta(base(), CFG, ahora)!;
+  await registrarPersona(i, contrato.contactoDe(base()));
+  const [fila] = await db.select().from(superappPersonas);
+  assert.ok(fila.subscriberId, "unida al suscriptor");
+  assert.equal(fila.documentoFinal, "0000");
+  assert.ok(!JSON.stringify(fila).includes("persona@example.test"), "el correo no queda en claro");
+  const hoy = new Date().toISOString().slice(0, 10);
+  const [conDatos] = await personasSuperApp({ desde: hoy, hasta: hoy }, true);
+  const [sinDatos] = await personasSuperApp({ desde: hoy, hasta: hoy }, false);
+  // Sin entradas en superapp_sesiones no aparece en el periodo; con una sesión, sí.
+  if (!conDatos) {
+    await sesion.crearSesionLocal(i);
+    const [p] = await personasSuperApp({ desde: hoy, hasta: hoy }, true);
+    const [q] = await personasSuperApp({ desde: hoy, hasta: hoy }, false);
+    assert.equal(p.correo, "persona@example.test");
+    assert.equal(p.documento, "CC ••••0000");
+    assert.equal(p.suscrita, true);
+    assert.equal(q.correo, null, "sin permiso no se ve el correo");
+  } else {
+    assert.equal(conDatos.correo, "persona@example.test");
+    assert.equal(sinDatos.correo, null);
+  }
+});

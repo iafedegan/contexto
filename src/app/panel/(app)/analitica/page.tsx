@@ -1,4 +1,4 @@
-import { Clock, Eye, Flame, Repeat, ScrollText, ShieldCheck, TriangleAlert, Users } from "lucide-react";
+import { Clock, Eye, Flame, LogIn, Repeat, ScrollText, ShieldCheck, Smartphone, TriangleAlert, UserPlus, Users } from "lucide-react";
 import { requirePermiso } from "@/lib/auth";
 import { tienePermiso } from "@/lib/permisos-server";
 import { adopcion, identificados, lecturasDe } from "@/lib/lectores-identificados";
@@ -20,6 +20,8 @@ import { subscriberPoints } from "@/lib/subscriber-map";
 import { hallazgosAudiencia } from "@/lib/lectores-resumen";
 import { duracion, parte, variacionPct } from "@/lib/lectores-formato";
 import { nfCO } from "@/lib/format";
+import { configSuperApp } from "@/lib/superapp/config";
+import { entradasPorDia, personasSuperApp, resumenSuperApp } from "@/lib/superapp/personas";
 
 // Se calcula en cada petición, nunca durante la compilación.
 export const dynamic = "force-dynamic";
@@ -92,7 +94,7 @@ export default async function AnaliticaPage({ searchParams }: { searchParams: Pr
   const verPersonas = await tienePermiso(user.id, user.role, "newsletter");
   const sel = typeof q.suscriptor === "string" && esUuid(q.suscriptor) ? q.suscriptor.toLowerCase() : undefined;
   const f = leerFiltros(q);
-  const vista = q.vista === "suscriptores" ? "suscriptores" : q.vista === "lectores" ? "lectores" : "audiencia";
+  const vista = q.vista === "suscriptores" ? "suscriptores" : q.vista === "lectores" ? "lectores" : q.vista === "superapp" ? "superapp" : "audiencia";
   const lector = typeof q.lector === "string" && esUuid(q.lector) ? q.lector.toLowerCase() : undefined;
   const hoy = hoyColombia();
 
@@ -102,12 +104,12 @@ export default async function AnaliticaPage({ searchParams }: { searchParams: Pr
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="lx-kicker text-[var(--accent)]">Análisis</p>
-          <h1 className="lx-display mt-1 text-3xl font-semibold tracking-tight sm:text-4xl">{vista === "audiencia" ? "Audiencia" : vista === "lectores" ? "Lectores" : "Suscriptores"}</h1>
+          <h1 className="lx-display mt-1 text-3xl font-semibold tracking-tight sm:text-4xl">{vista === "audiencia" ? "Audiencia" : vista === "lectores" ? "Lectores" : vista === "superapp" ? "SuperApp FEDEGÁN" : "Suscriptores"}</h1>
           <p className="mt-1 max-w-2xl text-sm text-[var(--fg-muted)]">Qué se lee, a qué hora, desde dónde y con quién. Cruza los filtros para llegar al detalle; cada vista queda en la dirección y se puede compartir.</p>
         </div>
       </header>
 
-      {vista === "audiencia" ? <Audiencia f={f} hoy={hoy} /> : vista === "lectores" ? <Lectores f={f} hoy={hoy} verPersonas={verPersonas} lector={lector} /> : <Suscriptores f={f} hoy={hoy} verPersonas={verPersonas} sel={sel} />}
+      {vista === "audiencia" ? <Audiencia f={f} hoy={hoy} /> : vista === "lectores" ? <Lectores f={f} hoy={hoy} verPersonas={verPersonas} lector={lector} /> : vista === "superapp" ? <SuperApp f={f} hoy={hoy} verPersonas={verPersonas} /> : <Suscriptores f={f} hoy={hoy} verPersonas={verPersonas} sel={sel} />}
     </div>
   );
 }
@@ -295,6 +297,103 @@ async function Suscriptores({ f, hoy, verPersonas, sel }: { f: ReturnType<typeof
         </ul>
         <p className="mt-4 text-xs leading-relaxed text-[var(--fg-muted)]">Todo aquí es agregado: ninguna persona aparece sola ni se muestra su correo. Qué lee cada persona solo se analiza si ella lo autorizó (casilla del formulario de suscripción).</p>
       </Card>
+    </>
+  );
+}
+
+async function SuperApp({ f, hoy, verPersonas }: { f: ReturnType<typeof leerFiltros>; hoy: string; verPersonas: boolean }) {
+  // Como en Suscriptores, aquí solo cuenta el periodo.
+  const fp = { desde: f.desde, hasta: f.hasta };
+  const habilitada = configSuperApp() !== null;
+  let datos: [Awaited<ReturnType<typeof resumenSuperApp>>, Awaited<ReturnType<typeof entradasPorDia>>, Awaited<ReturnType<typeof personasSuperApp>>];
+  try {
+    datos = await Promise.all([resumenSuperApp(fp), entradasPorDia(fp), personasSuperApp(fp, verPersonas)]);
+  } catch {
+    return (
+      <Card className="flex items-start gap-3 border-[#b4232a]/40 p-5">
+        <TriangleAlert aria-hidden className="mt-0.5 shrink-0 text-[#b4232a]" />
+        <div className="text-sm">
+          <p className="font-semibold">Falta preparar la base de datos de la SuperApp.</p>
+          <p className="mt-1 text-[var(--fg-muted)]">Corre la migración <code className="lx-mono">drizzle/0029_personas_de_la_superapp.sql</code> en el SQL Editor de Supabase y recarga esta página.</p>
+        </div>
+      </Card>
+    );
+  }
+  const [r, dias, personas] = datos;
+  return (
+    <>
+      <BiFiltros filtros={f} opciones={{ ciudades: [], fuentes: [], categorias: [] }} hoy={hoy} soloFechas />
+
+      {!habilitada && (
+        <p className="flex items-start gap-2 rounded-[var(--radius)] bg-[var(--surface-2)] px-3.5 py-2.5 text-xs leading-relaxed text-[var(--fg-muted)]">
+          <Smartphone size={15} aria-hidden className="mt-0.5 shrink-0 text-[var(--accent)]" />
+          <span>La entrada desde la SuperApp todavía no está habilitada: falta la configuración que entrega FEDEGÁN (credencial, dirección de la API y versión). Cuando se active, aquí aparecerá cada persona que entre.</span>
+        </p>
+      )}
+
+      <section aria-label="Indicadores" className="grid grid-cols-1 gap-3 min-[480px]:grid-cols-2 lg:grid-cols-4">
+        <Kpi icono={Users} titulo="Personas" valor={nfCO.format(r.personas)} ayuda={`${nfCO.format(r.nuevas)} por primera vez`} delta={null} />
+        <Kpi icono={LogIn} titulo="Entradas" valor={nfCO.format(r.entradas)} ayuda={`${(r.entradas / Math.max(1, r.personas)).toLocaleString("es-CO", { maximumFractionDigits: 1 })} por persona`} delta={null} />
+        <Kpi icono={UserPlus} titulo="Suscritas al boletín" valor={nfCO.format(r.suscritas)} ayuda={`${parte(r.suscritas, r.personas).toLocaleString("es-CO", { maximumFractionDigits: 0 })} % de las personas`} delta={null} />
+        <Kpi icono={Eye} titulo="Notas leídas" valor={nfCO.format(r.lecturas)} ayuda={r.lecturas ? `${duracion(Math.round(r.segundos / r.lecturas))} por nota` : "con la medición aceptada"} delta={null} />
+      </section>
+
+      <Panel kicker="Tendencia" titulo="Entradas y personas por día">
+        <GraficaTiempo
+          dias={dias.map((d) => d.dia)}
+          series={[
+            { clave: "entradas", etiqueta: "Entradas", valores: dias.map((d) => d.entradas), color: BI_COLORES[0], area: true, total: r.entradas },
+            { clave: "personas", etiqueta: "Personas", valores: dias.map((d) => d.personas), color: BI_COLORES[1] },
+          ]}
+        />
+      </Panel>
+
+      <Panel kicker="Quiénes entraron" titulo="Personas que vienen desde la SuperApp">
+        {personas.length === 0 ? (
+          <p className="text-sm text-[var(--fg-muted)]">Nadie ha entrado desde la SuperApp en este periodo.</p>
+        ) : (
+          <div className="-mx-1 overflow-x-auto px-1">
+            <table className="w-full min-w-[720px] text-left text-sm">
+              <thead className="text-xs text-[var(--fg-muted)]">
+                <tr className="border-b border-[var(--border)]">
+                  <th className="py-2 pr-3 font-semibold">Persona</th>
+                  <th className="py-2 pr-3 font-semibold">Documento</th>
+                  <th className="py-2 pr-3 font-semibold">Boletín</th>
+                  <th className="py-2 pr-3 text-right font-semibold">Entradas</th>
+                  <th className="py-2 pr-3 text-right font-semibold">Notas</th>
+                  <th className="py-2 pr-3 text-right font-semibold">Tiempo</th>
+                  <th className="py-2 pr-3 font-semibold">Primera vez</th>
+                  <th className="py-2 font-semibold">Última</th>
+                </tr>
+              </thead>
+              <tbody>
+                {personas.map((p) => (
+                  <tr key={p.subject} className="border-b border-[var(--border)] last:border-0">
+                    <td className="py-2 pr-3">
+                      <div className="font-medium">{p.correo ?? "Persona de la SuperApp"}</div>
+                      <div className="lx-mono text-xs text-[var(--fg-muted)]">{p.subject}</div>
+                    </td>
+                    <td className="py-2 pr-3 tabular-nums">{p.documento ?? "—"}</td>
+                    <td className="py-2 pr-3">
+                      <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${p.suscrita ? "bg-[#157a4a]/15 text-[#157a4a]" : "bg-[var(--surface-2)] text-[var(--fg-muted)]"}`}>{p.suscrita ? "Suscrita" : "No suscrita"}</span>
+                    </td>
+                    <td className="py-2 pr-3 text-right tabular-nums">{nfCO.format(p.entradas)}</td>
+                    <td className="py-2 pr-3 text-right tabular-nums">{nfCO.format(p.notas)}</td>
+                    <td className="py-2 pr-3 text-right tabular-nums">{p.notas ? duracion(p.segundos) : "—"}</td>
+                    <td className="py-2 pr-3 tabular-nums text-[var(--fg-muted)]">{p.primera}</td>
+                    <td className="py-2 tabular-nums text-[var(--fg-muted)]">{p.ultima}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Panel>
+
+      <p className="text-xs leading-relaxed text-[var(--fg-muted)]">
+        Los datos de cada persona los entrega FEDEGÁN al entrar (correo, documento y un código propio); el correo y el documento se guardan cifrados y del documento solo se muestran los últimos 4 dígitos.
+        {verPersonas ? "" : " El correo y el documento solo los ve quien también tiene el permiso del boletín."} «Suscrita» quiere decir que su correo coincide con un suscriptor activo del boletín. Las notas leídas solo cuentan si la persona aceptó la medición de lectura; en «Audiencia» se pueden filtrar con el origen «SuperApp FEDEGÁN».
+      </p>
     </>
   );
 }

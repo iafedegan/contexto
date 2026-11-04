@@ -4,6 +4,7 @@ import { clientIp, hit } from "@/lib/rate-limit";
 import { configSuperApp } from "@/lib/superapp/config";
 import { intercambiarCupon, type Motivo } from "@/lib/superapp/cliente";
 import { COOKIE_SUPERAPP, crearSesionLocal, revocarSesion } from "@/lib/superapp/sesion";
+import { registrarPersona } from "@/lib/superapp/personas";
 
 /**
  * Entrada de la MiniApp desde la SuperApp de FEDEGÁN: `GET /superapp/launch?code=<cupón>`.
@@ -54,6 +55,8 @@ export async function GET(req: Request) {
   const jar = await cookies();
   await revocarSesion(jar.get(COOKIE_SUPERAPP)?.value);
   const { token, expiresAt } = await crearSesionLocal(r.identidad);
+  // Ficha de la persona para el análisis del panel (correo y documento cifrados); si falla, la entrada sigue.
+  await registrarPersona(r.identidad, r.contacto);
 
   const res = new NextResponse(null, { status: 303, headers: { location: "/", "cache-control": "no-store", "referrer-policy": "no-referrer", "x-robots-tag": "noindex, nofollow" } });
   res.cookies.set(COOKIE_SUPERAPP, token, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/", expires: expiresAt });

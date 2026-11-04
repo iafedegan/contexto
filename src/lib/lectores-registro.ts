@@ -12,7 +12,7 @@ import type { EntradaInicio, EntradaProgreso } from "@/lib/lectores-entrada";
  * avance: nunca lo baja ni lo pisa un mensaje atrasado). El `User-Agent` solo se usa para clasificar y no se guarda;
  * la IP no se lee aquí.
  */
-export type Contexto = { userAgent: string | null; pais: string | null; region: string | null; ciudad: string | null; host: string };
+export type Contexto = { userAgent: string | null; pais: string | null; region: string | null; ciudad: string | null; host: string; /** Origen ya conocido (p. ej. la SuperApp); si falta, se deduce de UTM y referente. */ fuente?: string };
 
 /** Empieza una lectura. Devuelve su código, o `null` si la nota no existe o no está publicada. */
 export async function iniciarLectura(e: EntradaInicio, c: Contexto): Promise<string | null> {
@@ -25,7 +25,8 @@ export async function iniciarLectura(e: EntradaInicio, c: Contexto): Promise<str
   const perfil = perfilDeUa(c.userAgent);
   // Un robot no es un lector: no entra a la medición.
   if (perfil.browser === "Robot") return null;
-  const fuente = clasificarFuente({ ...e.utm, host: c.host });
+  // Con sesión de la SuperApp el origen es ella (dentro de la app no hay referente ni UTM que lo diga).
+  const fuente = c.fuente ?? clasificarFuente({ ...e.utm, host: c.host });
   const [fila] = await db
     .insert(readerSessions)
     .values({
