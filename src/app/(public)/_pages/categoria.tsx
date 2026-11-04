@@ -3,7 +3,7 @@ import { categoryLabel, localePath, t, type Locale } from "@/lib/i18n";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { SectionGrid, SectionHeader } from "@/components/section/section-layout";
-import { ColumnistasGrid } from "@/components/section/columnistas";
+import { ColumnistasGrid, DirectorioColumnistas } from "@/components/section/columnistas";
 import { FormatoDeSeccion } from "@/components/section/formatos-seccion";
 import { formatoDeSeccion } from "@/lib/formato-seccion";
 import { AdsBanner } from "@/components/ads-banner";
@@ -11,7 +11,7 @@ import { JsonLd } from "@/components/json-ld";
 import { breadcrumbJsonLd, collectionJsonLd } from "@/lib/seo";
 import { SiteShell } from "@/components/site-shell";
 import { getSiteTheme } from "@/lib/site-theme";
-import { getArticlesByCategory, getAutoresDeSeccion, getCategoryMeta, getHomeLayoutConfig } from "@/lib/content";
+import { getArticlesByCategory, getAutoresDeSeccion, getCategoryMeta, getColumnistas, getHomeLayoutConfig } from "@/lib/content";
 import { MapaSeccionRegiones } from "@/components/mapa-seccion-regiones";
 import { departamentoPorSlug, regionPorSlug } from "@/lib/regiones-colombia";
 import { siteUrl } from "@/lib/utils";
@@ -97,6 +97,8 @@ async function CategoryPage({ params, searchParams, locale }: PageProps & { loca
 
   const conAutor = SECCIONES_CON_AUTOR.has(slug);
   const autores = conAutor ? await getAutoresDeSeccion(slug).catch(() => []) : [];
+  // «Columnistas» es el directorio de autores (como en el sitio anterior), no una lista de notas.
+  const directorio = slug === "columnistas" ? await getColumnistas().catch(() => []) : null;
   const anioActual = new Date().getFullYear();
   const site = await getSiteTheme();
   // Dónde van los filtros lo elige el editor en /panel/portada (por defecto, junto al título).
@@ -339,7 +341,9 @@ async function CategoryPage({ params, searchParams, locale }: PageProps & { loca
         </div>
       )}
 
-      {items.length === 0 ? (
+      {directorio && directorio.length > 0 ? (
+        <DirectorioColumnistas autores={directorio} locale={locale} />
+      ) : items.length === 0 ? (
         <p className="py-16 text-center text-[var(--fg-muted)]">
           {filtrando ? t(locale, "section.noMatches") : t(locale, "section.empty")}
         </p>

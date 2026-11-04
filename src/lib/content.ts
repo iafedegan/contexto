@@ -298,6 +298,35 @@ const leerAutoresDeSeccion = cachear(
 );
 export const getAutoresDeSeccion = (slug: string) => leerAutoresDeSeccion(slug);
 
+export type Columnista = { slug: string; name: string; foto: string | null; notas: number };
+
+/** Directorio de columnistas: los autores con notas publicadas en Opinión (y sus subsecciones), el más reciente primero, con su foto (la de su última columna). */
+const leerColumnistas = cachear(
+  "columnistas",
+  async (): Promise<Columnista[]> => {
+    const [cat] = await db.select({ id: categories.id }).from(categories).where(eq(categories.slug, "opinion")).limit(1);
+    if (!cat) return [];
+    const hijas = await db.select({ id: categories.id, slug: categories.slug }).from(categories).where(eq(categories.parentId, cat.id));
+    const ultima = sql<Date>`max(${articles.publishedAt})`;
+    const filas = await db
+      .select({
+        slug: authors.slug,
+        name: authors.name,
+        avatar: authors.avatarUrl,
+        notas: sql<number>`count(*)::int`,
+        foto: sql<string | null>`(array_agg(${articles.coverImageUrl} order by ${articles.publishedAt} desc) filter (where ${articles.coverImageUrl} is not null))[1]`,
+      })
+      .from(articles)
+      .innerJoin(authors, eq(articles.authorId, authors.id))
+      .where(and(publishedCondition, enCategorias([cat.id, ...hijas.map((h) => h.id)], ["opinion", ...hijas.map((h) => h.slug)])))
+      .groupBy(authors.id)
+      .orderBy(desc(ultima));
+    return filas.map((f) => ({ slug: f.slug, name: f.name, foto: f.avatar ?? f.foto, notas: f.notas }));
+  },
+  { tags: [TAG_CONTENIDO], segundos: 600 },
+);
+export const getColumnistas = () => leerColumnistas();
+
 // Listado de una categoría (con sus subcategorías) leído de la caché; en la vista previa aplica el estilo de bloque sin publicar.
 export async function getArticlesByCategory(categorySlug: string, filters: CategoryFilters = {}): Promise<ListadoCategoria> {
   const listado = await leerCategoria(categorySlug, filters);
