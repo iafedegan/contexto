@@ -295,6 +295,8 @@ export async function regenerateDraftPartCore(userId: string, input: {
   section?: string;
   /** Indicaciones del editor sobre cómo escribir esta parte. Tienen prioridad. */
   instrucciones?: string;
+  /** Escritor cuyo estilo se imita (por defecto, el de quien pide la parte). */
+  estiloDe?: string;
   /** Entrevista o texto de enlaces del que sale la nota (para citar y no salirse del tema). */
   material?: Material[];
   /** Modelo elegido al crear la nota (ver `generateArticleDraftCore`). */
@@ -308,7 +310,7 @@ export async function regenerateDraftPartCore(userId: string, input: {
     const cuotaIA = await verificarCuotaIA(userId);
     if (!cuotaIA.ok) return { ok: false, error: cuotaIA.message };
     // Estilo de escritura de la persona (si lo cargó y lo dejó activo): solo de forma, nunca cambia las reglas de veracidad.
-    const sistema = await sistemaConEstilo(EDITOR_ASSIST_SYSTEM, userId);
+    const sistema = await sistemaConEstilo(EDITOR_ASSIST_SYSTEM, input.estiloDe ?? userId);
     const mat = materialParaPrompt(input.material);
     const instr = input.instrucciones?.trim() ?? "";
     const prompt = [

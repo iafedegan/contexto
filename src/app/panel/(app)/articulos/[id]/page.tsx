@@ -9,7 +9,7 @@ import Link from "next/link";
 import { ArrowLeft, PenLine, Sparkles } from "lucide-react";
 import { ArticleEditor } from "@/components/article-editor";
 import { ArticleWizard } from "@/components/panel/article-wizard";
-import { getEstilo } from "@/lib/ai/estilo";
+import { escritoresParaElegir, getEstilo } from "@/lib/ai/estilo";
 import { getModelosEditor } from "@/lib/ai-provider";
 import { esNotaPropia } from "@/lib/propiedad-notas";
 import { piezaParaEscribir } from "@/app/panel/(app)/pendientes/consultas";
@@ -88,6 +88,8 @@ export default async function ArticleEditorPage({
   const miAutorId = await autorDeUsuario(session!.user.id);
   // ¿La persona ya enseñó su estilo a la IA? Se avisa en el asistente para que se vea que la IA lo está usando.
   const est = await getEstilo(session!.user.id);
+  // Escritores cuyo estilo puede imitar la IA en esta nota: ya aprendidos y activos (la propia persona incluida).
+  const escritores = (await escritoresParaElegir({ id: session!.user.id, role: session!.user.role })).filter((e) => e.conDiagnostico && e.activo).map((e) => ({ id: e.id, nombre: e.nombre, propio: e.id === session!.user.id }));
   const estilo: "activo" | "apagado" | "sin" = est.diagnostico ? (est.activo ? "activo" : "apagado") : "sin";
   const [cats, auths] = await Promise.all([
     db.select({ id: categories.id, name: categories.name, parentId: categories.parentId }).from(categories).orderBy(asc(categories.sortOrder), asc(categories.name)),
@@ -113,6 +115,7 @@ export default async function ArticleEditorPage({
           canPublish={canPublish(session!.user.role)}
           canPortada={await tienePermiso(session!.user.id, session!.user.role, "portada")}
           estilo={estilo}
+          escritores={escritores}
           estiloInfo={est.diagnostico ? { generadoEn: est.diagnostico.generadoEn, muestras: est.diagnostico.muestras, palabras: est.diagnostico.palabras } : null}
         />
       );
@@ -169,6 +172,7 @@ export default async function ArticleEditorPage({
           canPublish={canPublish(session!.user.role)}
           canPortada={await tienePermiso(session!.user.id, session!.user.role, "portada")}
           estilo={estilo}
+          escritores={escritores}
           estiloInfo={est.diagnostico ? { generadoEn: est.diagnostico.generadoEn, muestras: est.diagnostico.muestras, palabras: est.diagnostico.palabras } : null}
           savedAs={guardado}
           initial={{

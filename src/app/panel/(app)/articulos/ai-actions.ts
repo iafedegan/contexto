@@ -5,6 +5,7 @@
  * para poder usarla también desde el bot de Telegram, que no tiene sesión de navegador.
  */
 import { requirePermiso } from "@/lib/auth";
+import { escritoresParaElegir } from "@/lib/ai/estilo";
 import { getModelosEditor } from "@/lib/ai-provider";
 import { setModeloFavorito } from "@/lib/ai-preferencia";
 import { autollenarPreguntasCore } from "@/lib/ai/consejo-ia";
@@ -44,13 +45,18 @@ export type { NotaRelacionada } from "@/lib/ai/relacionadas-html";
 // Redacta un borrador con IA. Exige el permiso «articulos» y delega en la función núcleo, que descuenta la cuota de IA.
 export async function generateArticleDraft(...args: Parameters<typeof generateArticleDraftCore> extends [string, ...infer R] ? R : never) {
   const user = await requirePermiso("articulos");
-  return generateArticleDraftCore(user.id, ...args);
+  const [input] = args;
+  // El escritor cuyo estilo se imita solo vale si la persona puede elegirlo (a sí misma y a los externos; el administrador, a todos).
+  const estiloDe = input.estiloDe && (await escritoresParaElegir(user)).some((e) => e.id === input.estiloDe) ? input.estiloDe : undefined;
+  return generateArticleDraftCore(user.id, { ...input, estiloDe });
 }
 
 // Regenera una parte del borrador. Exige el permiso «articulos» y delega en la función núcleo, que descuenta la cuota de IA.
 export async function regenerateDraftPart(...args: Parameters<typeof regenerateDraftPartCore> extends [string, ...infer R] ? R : never) {
   const user = await requirePermiso("articulos");
-  return regenerateDraftPartCore(user.id, ...args);
+  const [input] = args;
+  const estiloDe = input.estiloDe && (await escritoresParaElegir(user)).some((e) => e.id === input.estiloDe) ? input.estiloDe : undefined;
+  return regenerateDraftPartCore(user.id, { ...input, estiloDe });
 }
 
 // Propone títulos y enfoques. Exige el permiso «articulos» y delega en la función núcleo, que descuenta la cuota de IA.

@@ -16,10 +16,17 @@ export function TarjetaEstilo({
   estado,
   info,
   alCambiar,
+  escritores = [],
+  elegido = "",
+  onElegir,
 }: {
   estado: EstadoEstilo;
   info: { generadoEn: string; muestras: number; palabras: number } | null;
   alCambiar: (e: EstadoEstilo) => void;
+  /** Escritores cuyo estilo puede imitar la IA; con más de uno se muestra el selector. */
+  escritores?: { id: string; nombre: string; propio: boolean }[];
+  elegido?: string;
+  onElegir?: (id: string) => void;
 }) {
   const [pendiente, empezar] = useTransition();
   const [error, setError] = useState("");
@@ -52,6 +59,21 @@ export function TarjetaEstilo({
     });
   }
 
+  const otros = escritores.filter((e) => !e.propio);
+  // Elegir a otro escritor: con el estilo propio activo se ofrece «Yo» como vuelta; sin él, la IA escribe sin estilo propio.
+  const selector =
+    otros.length > 0 && onElegir ? (
+      <label className="flex items-center gap-1.5 text-xs text-[var(--fg-muted)]">
+        <span>{estado === "activo" ? "Imitar a" : "O imitar el estilo de"}</span>
+        <select value={elegido} onChange={(e) => onElegir(e.target.value)} className="lx-ui max-w-[14rem] rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg)] px-2 py-1 text-xs text-[var(--fg)] outline-none focus:border-[var(--accent)]">
+          <option value="">{estado === "activo" ? "Yo" : "Ninguno"}</option>
+          {otros.map((e) => (
+            <option key={e.id} value={e.id}>{e.nombre}</option>
+          ))}
+        </select>
+      </label>
+    ) : null;
+
   const marco = "flex flex-col gap-2 rounded-[var(--radius)] border px-3.5 py-3";
   const boton = "lx-btn !px-3 !py-1.5 text-xs";
 
@@ -60,7 +82,8 @@ export function TarjetaEstilo({
     return (
       <div role="status" className="flex flex-wrap items-center gap-x-2 gap-y-1 px-1 text-xs text-[var(--fg-muted)]">
         <CheckCircle2 size={13} aria-hidden className="shrink-0 text-[var(--accent)]" />
-        <span className="min-w-0 flex-1">Con tu estilo de escritura{info ? ` · diagnóstico del ${fecha(info.generadoEn)} (${info.muestras} notas)` : ""}</span>
+        <span className="min-w-0 flex-1">{elegido ? "La IA escribirá con el estilo del escritor elegido" : "Con tu estilo de escritura"}{!elegido && info ? ` · diagnóstico del ${fecha(info.generadoEn)} (${info.muestras} notas)` : ""}</span>
+        {selector}
         <span className="flex shrink-0 items-center gap-3">
           <a href="/panel/configuracion#estilo" target="_blank" rel="noopener" className="lx-link">Ver</a>
           <button type="button" disabled={pendiente} onClick={() => cambiar(false)} className="lx-link inline-flex items-center gap-1">
@@ -85,6 +108,7 @@ export function TarjetaEstilo({
             {pendiente ? <Loader2 size={13} className="animate-spin" /> : <PenLine size={13} />} Usar mi estilo
           </button>
         </div>
+        {selector}
         {error && <p className="text-xs text-[var(--danger)]">{error}</p>}
       </div>
     );
@@ -104,6 +128,7 @@ export function TarjetaEstilo({
           <PenLine size={13} aria-hidden /> Registrar mi estilo
         </a>
       </div>
+      {selector}
     </div>
   );
 }

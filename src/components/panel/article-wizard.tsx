@@ -129,6 +129,7 @@ export function ArticleWizard({
   canPortada = false,
   estilo = "sin",
   estiloInfo = null,
+  escritores = [],
   savedAs,
   modelosEditor,
   esAdmin = false,
@@ -156,6 +157,8 @@ export function ArticleWizard({
   estilo?: EstadoEstilo;
   /** Datos del diagnóstico de estilo (fecha, notas, palabras) para el aviso del paso 1. */
   estiloInfo?: { generadoEn: string; muestras: number; palabras: number } | null;
+  /** Escritores cuyo estilo puede imitar la IA en esta nota (con diagnóstico y activos). */
+  escritores?: { id: string; nombre: string; propio: boolean }[];
   /** Modelos de IA que un administrador habilitó para redactar (con el predeterminado). Con más de uno, quien crea la nota elige cuál usar. */
   /** La persona es administradora: puede habilitar más modelos (se lo dice la tarjeta del modelo). */
   esAdmin?: boolean;
@@ -169,6 +172,9 @@ export function ArticleWizard({
   const [context, setContext] = useState("");
   // Estado del estilo propio: arranca como lo guardó la persona y cambia aquí mismo si lo apaga o lo vuelve a encender.
   const [estiloAhora, setEstiloAhora] = useState<EstadoEstilo>(estilo);
+  // A quién imita la IA al redactar: vacío = la propia persona.
+  const [estiloDe, setEstiloDe] = useState("");
+  const estiloDeElegido = escritores.some((e) => e.id === estiloDe && !e.propio) ? estiloDe : undefined;
   // Tema -> la IA propone títulos y contextos -> el redactor elige y genera.
   const [topic, setTopic] = useState(pieza?.tema ?? "");
   const [options, setOptions] = useState<TitleContextOptions | null>(null);
@@ -442,6 +448,7 @@ export function ArticleWizard({
         references: refs.map((r) => ({ title: r.title, outlet: r.outlet, url: r.url, videoId: r.videoId })),
         material,
         instrucciones,
+        estiloDe: estiloDeElegido,
         modelo: modelo || undefined,
       });
       if (!res.ok) return setError(res.error);
@@ -727,6 +734,7 @@ export function ArticleWizard({
         current,
         section: categories.find((c) => c.id === categoryId)?.name,
         instrucciones,
+        estiloDe: estiloDeElegido,
         material,
         modelo: modelo || undefined,
       });
@@ -1093,7 +1101,7 @@ export function ArticleWizard({
                   }}
                 />
                 {mode === "ia" && modelosEditor && <TarjetaModelo modelos={modelosEditor.modelos} sinClave={modelosEditor.sinClave} valor={modelo} onCambiar={setModelo} esAdmin={esAdmin} deshabilitado={generating} />}
-                {mode === "ia" && <TarjetaEstilo estado={estiloAhora} info={estiloInfo} alCambiar={setEstiloAhora} />}
+                {mode === "ia" && <TarjetaEstilo estado={estiloAhora} info={estiloInfo} alCambiar={setEstiloAhora} escritores={escritores} elegido={estiloDe} onElegir={setEstiloDe} />}
                 </div>
               </div>
             )}
