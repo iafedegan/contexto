@@ -60,5 +60,10 @@ export async function GET(req: Request) {
 
   const res = new NextResponse(null, { status: 303, headers: { location: "/", "cache-control": "no-store", "referrer-policy": "no-referrer", "x-robots-tag": "noindex, nofollow" } });
   res.cookies.set(COOKIE_SUPERAPP, token, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/", expires: expiresAt });
+  // Quien entra por la SuperApp ya trae sus datos: no se le muestra el aviso de medición. Solo aquí se da el permiso por defecto (cookie `cg_med`, la
+  // misma que escribe el aviso: ver `src/lib/medicion-cliente.ts`) y nunca se pisa un «no» que la persona ya hubiera dicho en este navegador.
+  if (jar.get("cg_med")?.value !== "no") {
+    res.cookies.set("cg_med", "si", { httpOnly: false, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/", maxAge: 365 * 86400 });
+  }
   return res;
 }
