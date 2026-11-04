@@ -268,11 +268,11 @@ export default async function ArticlesList({ searchParams }: { searchParams: Sea
                 )}
                 <span className="text-xs text-[var(--fg-muted)]">{r.author ?? "Sin autor"}</span>
               </div>
-              <div className="mt-3 flex items-center justify-between gap-3 border-t border-[var(--border)] pt-3">
+              <div className="mt-3 flex flex-col gap-3 border-t border-[var(--border)] pt-3 min-[480px]:flex-row min-[480px]:items-center min-[480px]:justify-between">
                 {r.status === "publicado" || Number(r.views) > 0 ? (
                   <div className="flex items-center gap-3">
                     <SparklineZoom values={serie} title={r.title} articleId={r.id} />
-                    <div className="text-xs leading-tight">
+                    <div className="text-xs leading-tight whitespace-nowrap">
                       <div className="text-base font-semibold tabular-nums">{nf.format(Number(r.views))}</div>
                       <div className="text-[var(--fg-muted)]">
                         {nf.format(last7)} en 7 días
@@ -289,7 +289,7 @@ export default async function ArticlesList({ searchParams }: { searchParams: Sea
                 ) : (
                   <span className="text-xs text-[var(--fg-muted)]">Sin publicar</span>
                 )}
-                <div className="flex shrink-0 items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   {r.publishedAt && r.status === "publicado" && (
                     <a href={`/articulo/${r.slug}`} target="_blank" rel="noreferrer" className="lx-link text-xs">
                       Ver en el sitio ↗

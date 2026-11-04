@@ -50,6 +50,8 @@ type TemplateProps = Slots &
     interactive?: boolean;
     /** Idioma de la interfaz (rótulos y fechas). */
     locale?: Locale;
+    /** Bloque que va justo debajo de la nota principal (en el celular, la columna del Dr. Lafaurie). Compacto y Vanguardia no lo usan: es una cuadrícula. */
+    trasPrincipal?: React.ReactNode;
     /**
      * Indicadores ya formateados para la cabecera de Gremial (el resto de
      * plantillas lo ignora). Van pre-formateados desde el servidor: este
@@ -71,6 +73,7 @@ export function ClasicoTemplate({
   river,
   layout,
   interactive = true,
+  trasPrincipal,
   locale = DEFAULT_LOCALE,
   builderSelected,
   builderOverIndex,
@@ -96,6 +99,7 @@ export function ClasicoTemplate({
     <div className="flex flex-col gap-8">
       {wrap(lead, <BroadsheetCard a={lead} locale={locale} index={indexOf(lead)} variant="lead" priority interactive={interactive} />)}
       {second && wrap(second, <BroadsheetCard a={second} locale={locale} index={indexOf(second)} variant="feature" interactive={interactive} />)}
+      {trasPrincipal}
     </div>
   );
 
@@ -154,6 +158,7 @@ export function RevistaTemplate({
   river,
   layout,
   interactive = true,
+  trasPrincipal,
   locale = DEFAULT_LOCALE,
   builderSelected,
   builderOverIndex,
@@ -168,6 +173,7 @@ export function RevistaTemplate({
       <EditableCard index={0} builderSelected={builderSelected} builderOverIndex={builderOverIndex} builderDragProps={builderDragProps} hasStyle={builderHasStyle?.(0)}>
         <HeroCarousel locale={locale} items={heroItems} interactive={interactive} />
       </EditableCard>
+      {trasPrincipal && <div className="mt-8">{trasPrincipal}</div>}
 
       {rail.length > 0 && (
         <section className="mt-12 border-t-2 border-[var(--rule-strong)] pt-6">
@@ -370,6 +376,7 @@ export function EsmeraldaTemplate({
   river,
   layout,
   interactive = true,
+  trasPrincipal,
   locale = DEFAULT_LOCALE,
   builderSelected,
   builderOverIndex,
@@ -404,6 +411,7 @@ export function EsmeraldaTemplate({
       <section className="grid grid-cols-1 gap-7 sm:gap-8 xl:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
         <div className="flex min-w-0 flex-col gap-7 sm:gap-8">
           {wrap(lead, <ArticleCard a={lead} locale={locale} variant="lead" priority={interactive} />)}
+          {trasPrincipal}
           {relleno > 0 && (
             <div className="hidden grid-cols-2 gap-x-6 gap-y-8 xl:grid">
               {river.slice(0, relleno).map((a) => wrap(a, <ArticleCard a={a} locale={locale} compact />))}
@@ -527,6 +535,7 @@ export function GremialTemplate({
   river,
   layout,
   interactive = true,
+  trasPrincipal,
   locale = DEFAULT_LOCALE,
   market = [],
   builderSelected,
@@ -635,6 +644,8 @@ export function GremialTemplate({
           )}
         </div>
       </section>
+
+      {trasPrincipal}
 
       {/* Últimas noticias */}
       {noticias.length > 0 && (

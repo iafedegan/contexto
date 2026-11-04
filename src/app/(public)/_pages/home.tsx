@@ -140,14 +140,20 @@ async function HomePage({ locale }: { locale: Locale }) {
     carrusel = notasCar.length ? <CarruselPortada config={car} notas={notasCar} /> : null;
   }
   // En el celular la columna del Dr. Lafaurie sube justo debajo del carrusel (en computador sigue en la barra lateral).
-  const carruselConColumna = (
+  // Sin carrusel, la columna baja justo debajo de la nota principal de la plantilla (las de cuadrícula la reciben después del bloque).
+  const columnaMovil = (
+    <div className="lg:hidden">
+      <ColumnaLafaurieSuelta locale={locale} />
+    </div>
+  );
+  const carruselConColumna = carrusel ? (
     <>
       {carrusel}
-      <div className="mb-10 lg:hidden">
-        <ColumnaLafaurieSuelta locale={locale} />
-      </div>
+      <div className="mb-10">{columnaMovil}</div>
     </>
-  );
+  ) : null;
+  const sinSlot = body === "compacto" || body === "vanguardia";
+  const trasPrincipal = carrusel || sinSlot ? undefined : columnaMovil;
   const cintillo =
     piezas.length > 0 ? (
       <div className="mb-2 overflow-hidden border-b border-[var(--border)] py-2.5 sm:mb-3 sm:border-y">
@@ -181,7 +187,7 @@ async function HomePage({ locale }: { locale: Locale }) {
       aboveMain={
         <>
           {cintillo}
-          {car.posicion === "arriba" && <div className="mt-4">{carruselConColumna}</div>}
+          {car.posicion === "arriba" && carruselConColumna && <div className="mt-4">{carruselConColumna}</div>}
         </>
       }
     >
@@ -222,20 +228,21 @@ async function HomePage({ locale }: { locale: Locale }) {
           {/* Con una transmisión encendida en /panel/en-vivo, el video toma el lugar principal y la nota destacada baja. */}
           <EnVivoBlock config={enVivo} locale={locale} />
           {body === "revista" ? (
-            <RevistaTemplate {...props} />
+            <RevistaTemplate {...props} trasPrincipal={trasPrincipal} />
           ) : body === "compacto" ? (
             <CompactoTemplate {...props} />
           ) : body === "vanguardia" ? (
             <VanguardiaTemplate {...props} />
           ) : body === "clasico" ? (
-            <ClasicoTemplate {...props} />
+            <ClasicoTemplate {...props} trasPrincipal={trasPrincipal} />
           ) : body === "gremial" ? (
-            <GremialTemplate {...props} />
+            <GremialTemplate {...props} trasPrincipal={trasPrincipal} />
           ) : (
-            <EsmeraldaTemplate {...props} />
+            <EsmeraldaTemplate {...props} trasPrincipal={trasPrincipal} />
           )}
+          {!carrusel && sinSlot && <div className="mt-8">{columnaMovil}</div>}
 
-          {car.posicion === "tras-principal" && <div className="mt-12">{carruselConColumna}</div>}
+          {car.posicion === "tras-principal" && carruselConColumna && <div className="mt-12">{carruselConColumna}</div>}
 
           {/* Billboard entre el bloque destacado y el resto (§9.1). */}
           <AdsBanner zone="home_billboard" className="mx-auto mt-14" />
@@ -245,7 +252,7 @@ async function HomePage({ locale }: { locale: Locale }) {
       </div>
       </CardSlugsProvider>
 
-      {car.posicion === "abajo" && <div className="mt-12">{carruselConColumna}</div>}
+      {car.posicion === "abajo" && carruselConColumna && <div className="mt-12">{carruselConColumna}</div>}
 
       <AdsBanner zone="home_bottom" className="mx-auto mt-14" />
 
