@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { BarChart3 } from "lucide-react";
 import { MED_EVENT, decidirMedicion, decisionMedicion } from "@/lib/medicion-cliente";
+import { enSuperApp } from "@/lib/superapp-cliente";
 
 /**
  * Aviso de medición, antes que el de ubicación: explica qué se mide y qué no, y deja decidir. «Sí» activa la cookie de código
@@ -13,7 +14,8 @@ export function MedicionConsent() {
   const [abierto, setAbierto] = useState(false);
 
   useEffect(() => {
-    if (decisionMedicion()) return;
+    // Dentro de la SuperApp de FEDEGÁN no se pregunta (y sin permiso no se mide).
+    if (decisionMedicion() || enSuperApp()) return;
     // En el celular espera un poco más: no tapa la primera pantalla mientras se lee.
     const espera = window.matchMedia("(max-width: 767px)").matches ? 3500 : 1200;
     const id = setTimeout(() => setAbierto(true), espera);

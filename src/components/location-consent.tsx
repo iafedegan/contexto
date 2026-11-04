@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { LocateFixed } from "lucide-react";
 import { captureGeo, LOC_COOKIE, readCookie, readGeo, writeCookie } from "@/lib/geo-consent";
 import { MED_EVENT, decisionMedicion } from "@/lib/medicion-cliente";
+import { enSuperApp } from "@/lib/superapp-cliente";
 
 /**
  * Aviso de ubicación, al estilo del de cookies: la decisión (permitir / ahora
@@ -17,7 +18,8 @@ export function LocationConsent() {
 
   useEffect(() => {
     const decision = readCookie(LOC_COOKIE);
-    if (!decision) {
+    // Dentro de la SuperApp de FEDEGÁN no se pide la ubicación.
+    if (!decision && !enSuperApp()) {
       // En el celular espera más: a los 1,5 s tapaba la primera pantalla, justo cuando la persona la está mirando.
       const espera = window.matchMedia("(max-width: 767px)").matches ? 9000 : 1500;
       let id: ReturnType<typeof setTimeout> | undefined;

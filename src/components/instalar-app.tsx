@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } fro
 import { usePathname } from "next/navigation";
 import { ArrowDown, ArrowUp, Check, Compass, Copy, Download, Ellipsis, Share, Smartphone, SquarePlus, X } from "lucide-react";
 import { t, type Locale } from "@/lib/i18n";
+import { enSuperApp } from "@/lib/superapp-cliente";
 
 /**
  * Botón «Instalar app» (FM-04). Cómo se instala una PWA depende del aparato, y el botón se adapta:
@@ -139,7 +140,8 @@ export function InstalarApp({ locale: localeProp, variante = "pildora" }: { loca
   // de los avisos de medición y de ubicación, y no vuelve a salir durante tres semanas si se descarta.
   useEffect(() => {
     if (variante !== "aviso" || actual === "no") return;
-    if (!window.matchMedia("(max-width: 767px)").matches || descartado()) return;
+    // Dentro de la SuperApp de FEDEGÁN no tiene sentido ofrecer instalar el sitio.
+    if (!window.matchMedia("(max-width: 767px)").matches || descartado() || enSuperApp()) return;
     let id: ReturnType<typeof setTimeout>;
     let intentos = 0;
     const probar = () => {
