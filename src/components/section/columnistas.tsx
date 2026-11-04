@@ -34,7 +34,6 @@ function Retrato({ a, tam }: { a: ArticleListItem; tam: number }) {
 
 const fecha = (a: ArticleListItem, locale: Locale) => (a.publishedAt ? formatDate(a.publishedAt, INTL_LOCALE[locale]) : "");
 
-const fecha = (a: ArticleListItem, locale: Locale) => (a.publishedAt ? formatDate(a.publishedAt, INTL_LOCALE[locale]) : "");
 
 /** Una columna: retrato a la izquierda; autor, titular y fecha a la derecha. Sin caja ni adornos. */
 function Fila({ a, locale }: { a: ArticleListItem; locale: Locale }) {
