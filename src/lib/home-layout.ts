@@ -21,6 +21,7 @@ export const DEFAULT_HOME_LAYOUT: Required<HomeLayoutConfig> = {
   zones: {},
   ticker: DEFAULT_TICKER,
   carrusel: DEFAULT_CARRUSEL,
+  carruseles: [],
   textos: {},
   menuNav: {},
 };
@@ -34,7 +35,7 @@ export type HomeTemplate = {
   name: string;
   description: string;
   /** Sin `ticker` ni `textos`: elegir una plantilla no debe borrar el cintillo, el carrusel ni los textos de la cabecera que el editor configuró. */
-  config: Omit<Required<HomeLayoutConfig>, "ticker" | "carrusel" | "textos" | "menuNav" | "pantallas">;
+  config: Omit<Required<HomeLayoutConfig>, "ticker" | "carrusel" | "carruseles" | "textos" | "menuNav" | "pantallas">;
 };
 
 /**

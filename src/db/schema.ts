@@ -819,6 +819,8 @@ export type HomeLayoutConfig = {
   ticker?: TickerConfig;
   /** Carrusel de notas de la portada, en todas las plantillas (ver src/lib/carrusel.ts). */
   carrusel?: CarruselConfig;
+  /** Carruseles adicionales (cada uno con su lugar en la portada). */
+  carruseles?: CarruselConfig[];
   /** Título, subtítulo y fecha de la cabecera (ver src/lib/textos-cabecera.ts). */
   textos?: TextosCabecera;
   /** Secciones visibles, enlaces propios y submenús de la barra (ver src/lib/menu-navbar.ts). */

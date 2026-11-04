@@ -224,7 +224,7 @@ export function TemplatePicker({
   compacto = false,
 }: {
   layout: Layout;
-  onPick: (config: Omit<Layout, "ticker" | "carrusel" | "textos" | "menuNav" | "pantallas">) => void;
+  onPick: (config: Omit<Layout, "ticker" | "carrusel" | "carruseles" | "textos" | "menuNav" | "pantallas">) => void;
   /** En la barra lateral: una columna y sin descripción larga. */
   compacto?: boolean;
 }) {
@@ -277,7 +277,7 @@ export function TemplatePicker({
 }
 
 /** Diagrama en miniatura de cómo se organiza cada plantilla. */
-function TemplateThumb({ config }: { config: Omit<Layout, "ticker" | "carrusel" | "textos" | "menuNav" | "pantallas"> }) {
+function TemplateThumb({ config }: { config: Omit<Layout, "ticker" | "carrusel" | "carruseles" | "textos" | "menuNav" | "pantallas"> }) {
   const ink = "bg-[color-mix(in_srgb,var(--ink-faint)_40%,transparent)]";
   const brand = "bg-[color-mix(in_srgb,var(--brand)_35%,transparent)]";
 

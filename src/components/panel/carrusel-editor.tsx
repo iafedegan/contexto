@@ -2,9 +2,9 @@
 
 import { useState, type ReactNode } from "react";
 import Image from "next/image";
-import { ArrowDown, ArrowUp, ImagePlus, Loader2, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, ImagePlus, Loader2, Plus, Trash2 } from "lucide-react";
 import { subirMedia } from "@/components/panel/subir-media";
-import { CARRUSEL_MAX_DIAPOSITIVAS, sanitizeCarrusel, type CarruselConfig, type Diapositiva } from "@/lib/carrusel";
+import { CARRUSEL_MAX_DIAPOSITIVAS, CARRUSEL_MAX_EXTRA, resumenCarrusel, sanitizeCarrusel, sanitizeCarruseles, type CarruselConfig, type Diapositiva } from "@/lib/carrusel";
 
 /**
  * Carrusel de notas de la portada, dentro del editor: de dónde salen las notas, cuántas tarjetas se ven en cada pantalla, el estilo
@@ -39,6 +39,7 @@ export function CarruselEditor({
             valor={v.posicion}
             opciones={[
               ["arriba", "Arriba, bajo el cintillo"],
+              ["tras-en-vivo", "Tras el bloque «En vivo»"],
               ["tras-principal", "Tras la nota principal"],
               ["abajo", "Al final, antes del pie"],
             ]}
@@ -345,6 +346,63 @@ function Diapositivas({ lista, onChange }: { lista: Diapositiva[]; onChange: (d:
       )}
       {msg && <p role="alert" className="text-xs text-red-700">{msg}</p>}
       <p className="text-[11px] text-[var(--fg-muted)]">Hasta {CARRUSEL_MAX_DIAPOSITIVAS} diapositivas. Una enlaza a una nota si pegas su dirección (p. ej. /articulo/mi-nota).</p>
+    </div>
+  );
+}
+
+/**
+ * Más carruseles, además del principal: cada uno con su propia fuente, estilo y lugar de la portada. Se pueden añadir hasta
+ * `CARRUSEL_MAX_EXTRA`, abrir uno para editarlo y quitarlo cuando ya no haga falta.
+ */
+export function CarruselesExtra({
+  value,
+  onChange,
+  secciones,
+}: {
+  value: CarruselConfig[] | undefined;
+  onChange: (next: Required<CarruselConfig>[]) => void;
+  secciones: { slug: string; name: string }[];
+}) {
+  const lista = sanitizeCarruseles(value);
+  const [abierto, setAbierto] = useState<number | null>(null);
+  const cambiar = (i: number, c: Required<CarruselConfig>) => onChange(lista.map((x, j) => (j === i ? c : x)));
+  const quitar = (i: number) => {
+    onChange(lista.filter((_, j) => j !== i));
+    setAbierto(null);
+  };
+  const añadir = () => {
+    onChange([...lista, sanitizeCarrusel({ activo: true, posicion: "abajo", titulo: `Carrusel ${lista.length + 2}`, fuente: "recientes" })]);
+    setAbierto(lista.length);
+  };
+  return (
+    <div className="mt-4 border-t border-[var(--border)] pt-4">
+      <h4 className="text-sm font-semibold">Más carruseles</h4>
+      <p className="mt-1 text-xs text-[var(--fg-muted)]">Añade otros carruseles y ponlos donde quieras: bajo el cintillo, tras «En vivo», tras la nota principal o al final.</p>
+      <ul className="mt-3 flex flex-col gap-2">
+        {lista.map((c, i) => (
+          <li key={i} className="rounded-lg border border-[var(--border)]">
+            <div className="flex items-center gap-2 p-2">
+              <button type="button" onClick={() => setAbierto(abierto === i ? null : i)} className="min-w-0 flex-1 text-left" aria-expanded={abierto === i}>
+                <span className="block truncate text-sm font-medium">{c.titulo || `Carrusel ${i + 2}`}{c.activo ? "" : " · apagado"}</span>
+                <span className="block truncate text-xs text-[var(--fg-muted)]">{resumenCarrusel(c)}</span>
+              </button>
+              <button type="button" onClick={() => quitar(i)} aria-label={`Quitar el carrusel ${i + 2}`} className="rounded-md p-2 text-[var(--danger)] hover:bg-[var(--surface-2)]">
+                <Trash2 size={15} />
+              </button>
+            </div>
+            {abierto === i && (
+              <div className="border-t border-[var(--border)] p-2">
+                <CarruselEditor value={c} onChange={(n) => cambiar(i, n)} secciones={secciones} />
+              </div>
+            )}
+          </li>
+        ))}
+      </ul>
+      {lista.length < CARRUSEL_MAX_EXTRA && (
+        <button type="button" onClick={añadir} className="mt-3 inline-flex items-center gap-2 rounded-lg border border-[var(--border-strong)] px-3 py-2 text-xs font-semibold hover:bg-[var(--surface-2)]">
+          <Plus size={14} /> Añadir otro carrusel
+        </button>
+      )}
     </div>
   );
 }

@@ -15,7 +15,7 @@ import { ColumnaLafaurieSuelta, SiteSidebar } from "@/components/site-sidebar";
 import { SiteShell } from "@/components/site-shell";
 import { getArticlesByCategory, getHomeLayoutConfig, getHomepageArticles, getMostReadArticles, getRecentArticles, PORTADA_NOTAS } from "@/lib/content";
 import { CarruselPortada, type NotaCarrusel } from "@/components/home/carrusel-portada";
-import { sanitizeCarrusel } from "@/lib/carrusel";
+import { sanitizeCarrusel, sanitizeCarruseles } from "@/lib/carrusel";
 import { hrefNota } from "@/lib/ruta-nota";
 import { formatDate } from "@/lib/utils";
 import { duracionDelCintillo, piezasDelCintillo, sanitizeTicker } from "@/lib/cintillo";
@@ -97,9 +97,9 @@ async function HomePage({ locale }: { locale: Locale }) {
       })
     : [];
   // Carrusel de notas (todas las plantillas): de dónde salen, cuántas y dónde se pone se decide en /panel/portada.
-  const car = sanitizeCarrusel(layout.carrusel);
-  let carrusel: React.ReactNode = null;
-  if (car.activo) {
+  const carruseles = [sanitizeCarrusel(layout.carrusel), ...sanitizeCarruseles(layout.carruseles)];
+  const construirCarrusel = async (car: ReturnType<typeof sanitizeCarrusel>, clave: number): Promise<React.ReactNode> => {
+    if (!car.activo) return null;
     const pedir = car.cantidad * 2;
     const fuente =
       car.fuente === "recientes"
@@ -137,8 +137,13 @@ async function HomePage({ locale }: { locale: Locale }) {
         fecha: a.publishedAt ? formatDate(a.publishedAt, INTL_LOCALE[locale]) : null,
       }));
     const notasCar = car.propiasPosicion === "antes" ? [...propias, ...delSitio] : [...delSitio, ...propias];
-    carrusel = notasCar.length ? <CarruselPortada config={car} notas={notasCar} /> : null;
-  }
+    return notasCar.length ? <CarruselPortada key={clave} config={car} notas={notasCar} /> : null;
+  };
+  const nodosCarrusel = await Promise.all(carruseles.map((c, i) => construirCarrusel(c, i)));
+  const car = carruseles[0];
+  const carrusel = nodosCarrusel[0];
+  // Los carruseles adicionales, agrupados por el lugar de la portada que cada uno eligió.
+  const extrasEn = (pos: string) => carruseles.map((c, i) => (i > 0 && c.posicion === pos ? nodosCarrusel[i] : null)).filter(Boolean);
   // En el celular la columna del Dr. Lafaurie sube justo debajo del carrusel (en computador sigue en la barra lateral).
   // Sin carrusel, la columna baja justo debajo de la nota principal de la plantilla (las de cuadrícula la reciben después del bloque).
   const columnaMovil = (
@@ -188,6 +193,7 @@ async function HomePage({ locale }: { locale: Locale }) {
         <>
           {cintillo}
           {car.posicion === "arriba" && carruselConColumna && <div className="mt-4">{carruselConColumna}</div>}
+          {extrasEn("arriba").map((n, i) => <div key={`ar${i}`} className="mt-4">{n}</div>)}
         </>
       }
     >
@@ -227,6 +233,8 @@ async function HomePage({ locale }: { locale: Locale }) {
               que Next resuelve de forma estática. */}
           {/* Con una transmisión encendida en /panel/en-vivo, el video toma el lugar principal y la nota destacada baja. */}
           <EnVivoBlock config={enVivo} locale={locale} />
+          {car.posicion === "tras-en-vivo" && carruselConColumna && <div className="mb-10">{carruselConColumna}</div>}
+          {extrasEn("tras-en-vivo").map((n, i) => <div key={`ev${i}`} className="mb-10">{n}</div>)}
           {body === "revista" ? (
             <RevistaTemplate {...props} trasPrincipal={trasPrincipal} />
           ) : body === "compacto" ? (
@@ -243,6 +251,7 @@ async function HomePage({ locale }: { locale: Locale }) {
           {!carrusel && sinSlot && <div className="mt-8">{columnaMovil}</div>}
 
           {car.posicion === "tras-principal" && carruselConColumna && <div className="mt-12">{carruselConColumna}</div>}
+          {extrasEn("tras-principal").map((n, i) => <div key={`tp${i}`} className="mt-12">{n}</div>)}
 
           {/* Billboard entre el bloque destacado y el resto (§9.1). */}
           <AdsBanner zone="home_billboard" className="mx-auto mt-14" />
@@ -253,6 +262,7 @@ async function HomePage({ locale }: { locale: Locale }) {
       </CardSlugsProvider>
 
       {car.posicion === "abajo" && carruselConColumna && <div className="mt-12">{carruselConColumna}</div>}
+      {extrasEn("abajo").map((n, i) => <div key={`ab${i}`} className="mt-12">{n}</div>)}
 
       <AdsBanner zone="home_bottom" className="mx-auto mt-14" />
 

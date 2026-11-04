@@ -23,7 +23,7 @@ import { SectionTree, type SectionNode } from "@/components/panel/section-tree";
 import { PartsEditor } from "@/components/panel/parts-editor";
 import { PopupEditor } from "@/components/panel/popup-editor";
 import { CintilloEditor } from "@/components/panel/cintillo-editor";
-import { CarruselEditor } from "@/components/panel/carrusel-editor";
+import { CarruselEditor, CarruselesExtra } from "@/components/panel/carrusel-editor";
 import { resumenCarrusel } from "@/lib/carrusel";
 import { PreviewFrame, type Zoom } from "@/components/panel/preview-frame";
 import { PortadaToolbar, type Viewport } from "@/components/panel/portada-toolbar";
@@ -533,7 +533,7 @@ export function HomeBuilder({
   }
 
   // Elige una plantilla: parte de cero también en los ajustes por pantalla.
-  function pickTemplate(config: Omit<Layout, "ticker" | "carrusel" | "textos" | "menuNav" | "pantallas">) {
+  function pickTemplate(config: Omit<Layout, "ticker" | "carrusel" | "carruseles" | "textos" | "menuNav" | "pantallas">) {
     const teniaComposicion = Object.values(layout.parts ?? {}).some(Boolean);
     patchLayout({ ...config, parts: {}, pantallas: {}, sectionFilters: layout.sectionFilters });
     if (teniaComposicion) {
@@ -1059,6 +1059,7 @@ export function HomeBuilder({
               onToggle={toggle("carrusel")}
             >
               <CarruselEditor value={layout.carrusel} onChange={(carrusel) => patchLayout({ carrusel })} secciones={sections.map((n) => ({ slug: n.slug, name: n.name }))} />
+              <CarruselesExtra value={layout.carruseles} onChange={(carruseles) => patchLayout({ carruseles })} secciones={sections.map((n) => ({ slug: n.slug, name: n.name }))} />
             </Bloque>
 
             <Bloque

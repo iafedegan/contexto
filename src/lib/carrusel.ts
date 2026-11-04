@@ -4,7 +4,10 @@
  * las notas ya consultadas y el cliente solo pinta.
  */
 export type CarruselFuente = "portada" | "recientes" | "masleidas" | "seccion" | "propias";
-export type CarruselPosicion = "arriba" | "tras-principal" | "abajo";
+export type CarruselPosicion = "arriba" | "tras-en-vivo" | "tras-principal" | "abajo";
+
+/** Cuántos carruseles adicionales se pueden añadir además del principal. */
+export const CARRUSEL_MAX_EXTRA = 6;
 export type CarruselEstilo = "superpuesta" | "debajo" | "solo-imagen";
 export type CarruselAspecto = "21:9" | "16:9" | "3:2" | "4:3" | "1:1";
 export type CarruselTransicion = "deslizar" | "fundido";
@@ -171,7 +174,7 @@ export function sanitizeCarrusel(input: unknown): Required<CarruselConfig> {
     propiasPosicion: uno(c.propiasPosicion, ["antes", "despues"] as const, d.propiasPosicion),
     activo: bool(c.activo, d.activo),
     titulo: typeof c.titulo === "string" ? c.titulo.replace(/\s+/g, " ").trimStart().slice(0, 60) : d.titulo,
-    posicion: uno(c.posicion, ["arriba", "tras-principal", "abajo"] as const, d.posicion),
+    posicion: uno(c.posicion, ["arriba", "tras-en-vivo", "tras-principal", "abajo"] as const, d.posicion),
     fuente,
     seccion: fuente === "seccion" && typeof c.seccion === "string" && /^[a-z0-9-]{1,80}$/.test(c.seccion) ? c.seccion : "",
     cantidad: entero(c.cantidad, 3, 20, d.cantidad),
@@ -212,4 +215,9 @@ export function resumenCarrusel(c: CarruselConfig | undefined): string {
   const fuentes: Record<CarruselFuente, string> = { portada: "como la portada", recientes: "las más recientes", masleidas: "las más leídas", seccion: "de una sección", propias: "solo diapositivas propias" };
   const propias = v.diapositivas.length ? ` + ${v.diapositivas.length} propias` : "";
   return `${v.cantidad} notas ${fuentes[v.fuente]}${propias} · ${v.visiblesEscritorio} a la vez${v.autoplay ? ` · cada ${v.intervalo} s` : ""}`;
+}
+
+/** Carruseles adicionales: cada uno con su propia fuente, estilo y lugar en la portada. */
+export function sanitizeCarruseles(input: unknown): Required<CarruselConfig>[] {
+  return Array.isArray(input) ? input.slice(0, CARRUSEL_MAX_EXTRA).map((c) => sanitizeCarrusel(c)) : [];
 }
