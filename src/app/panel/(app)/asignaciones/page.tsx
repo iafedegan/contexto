@@ -43,7 +43,7 @@ export default async function NotasParaEditores() {
   ]);
   return (
     <div className="flex flex-col gap-5 sm:gap-6">
-      {/* El administrador llega desde la «Mesa de redacción» y vuelve a sus otras pestañas; un editor solo ve esta página. */}
+      {/* El administrador llega desde el «Grupo de redacción» y vuelve a sus otras pestañas; un editor solo ve esta página. */}
       {yo.role === "administrador" && <TabsConsejo activa="notas" abiertas={0} />}
       <header>
         <p className="lx-kicker text-[var(--accent)]">Para editores</p>

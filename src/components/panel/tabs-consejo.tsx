@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { CalendarPlus, ClipboardList, PenLine } from "lucide-react";
 
-/** Las pestañas de «Mesa de redacción»: crear y abrir consejos, ver las tareas de cada editor con su estado y su enlace, y preescribir notas para editores. */
+/** Las pestañas de «Grupo de redacción»: crear y abrir consejos, ver las tareas de cada editor con su estado y su enlace, y preescribir notas para editores. */
 export type PestanaConsejo = "consejos" | "tareas" | "notas";
 
 export function TabsConsejo({ activa, abiertas }: { activa: PestanaConsejo; abiertas: number }) {
@@ -11,7 +11,7 @@ export function TabsConsejo({ activa, abiertas }: { activa: PestanaConsejo; abie
     { id: "notas" as const, t: "Notas para editores", Icono: PenLine, href: "/panel/asignaciones", n: 0 },
   ];
   return (
-    <nav aria-label="Mesa de redacción" className="-mx-1 overflow-x-auto px-1 pb-1">
+    <nav aria-label="Grupo de redacción" className="-mx-1 overflow-x-auto px-1 pb-1">
       <ul className="inline-flex rounded-full border border-[var(--border-strong)] bg-[var(--surface)] p-0.5 shadow-[var(--shadow)]">
         {pestanas.map(({ id, t, Icono, href, n }) => (
           <li key={id}>
