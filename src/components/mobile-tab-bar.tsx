@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Home, LayoutGrid, Mail, Search } from "lucide-react";
@@ -13,36 +12,14 @@ import { cn } from "@/lib/utils";
  * Barra de pestañas del celular (solo debajo de 768 px): Inicio, Secciones, el asistente (el toro, al centro),
  * Buscar y Boletín. Pone lo que más se usa al alcance del pulgar, en vez de esconderlo todo tras el menú de arriba.
  *
- * Se esconde al bajar por la página y reaparece al subir, para no quitarle pantalla a quien lee. El resto de avisos
- * fijos (ubicación, notificaciones) se acomodan encima de ella con `--cg-barra` (globals.css), y el toro flotante se
- * retira en el celular porque ahora vive aquí.
+ * Queda siempre a la vista, también al bajar por la página (antes se escondía al bajar; se pidió que el menú no se
+ * esconda). El resto de avisos fijos (ubicación, notificaciones) se acomodan encima de ella con `--cg-barra`
+ * (globals.css), y el toro flotante se retira en el celular porque ahora vive aquí.
  */
 export function MobileTabBar() {
   const pathname = usePathname() ?? "/";
   const locale = idiomaDeRuta(pathname);
   const activa = pestanaActiva(pathname);
-  const [visible, setVisible] = useState(true);
-  const ultimoY = useRef(0);
-
-  // Mientras la barra está escondida, los avisos fijos (ubicación, notificaciones) bajan al borde (`--cg-barra` en globals.css).
-  useEffect(() => {
-    document.documentElement.toggleAttribute("data-cg-barra-oculta", !visible);
-    return () => document.documentElement.removeAttribute("data-cg-barra-oculta");
-  }, [visible]);
-
-  useEffect(() => {
-    // Bajar esconde la barra; subir (o estar arriba del todo) la muestra. Un umbral evita que el temblor del dedo la parpadee.
-    const alDesplazar = () => {
-      const y = window.scrollY;
-      const delta = y - ultimoY.current;
-      if (Math.abs(delta) < 8) return;
-      setVisible(delta < 0 || y < 120);
-      ultimoY.current = y;
-    };
-    window.addEventListener("scroll", alDesplazar, { passive: true });
-    return () => window.removeEventListener("scroll", alDesplazar);
-  }, []);
-
   const base = "relative flex min-h-14 flex-col items-center justify-center gap-0.5 px-1 text-[0.625rem] font-semibold tracking-wide transition-colors active:opacity-70";
   const clase = (p: Pestana) =>
     cn(
@@ -55,9 +32,7 @@ export function MobileTabBar() {
     <nav
       aria-label={t(locale, "tab.label")}
       className={cn(
-        "cg-tabbar fixed inset-x-0 bottom-0 z-[60] border-t border-[var(--border-strong)] bg-[var(--nav-bg)]/95 pb-[env(safe-area-inset-bottom,0px)] shadow-[0_-10px_30px_-18px_rgba(0,0,0,0.7)] backdrop-blur-md transition-transform duration-300 motion-reduce:transition-none md:hidden print:hidden",
-        // Escondida, baja también lo que el círculo del asistente asoma por encima de la barra; con el foco del teclado dentro, vuelve.
-        !visible && "translate-y-[calc(100%+2rem)] focus-within:translate-y-0",
+        "cg-tabbar fixed inset-x-0 bottom-0 z-[60] border-t border-[var(--border-strong)] bg-[var(--nav-bg)]/95 pb-[env(safe-area-inset-bottom,0px)] shadow-[0_-10px_30px_-18px_rgba(0,0,0,0.7)] backdrop-blur-md md:hidden print:hidden",
       )}
     >
       <div className="mx-auto grid max-w-md grid-cols-5 items-end">
