@@ -96,7 +96,9 @@ async function CategoryPage({ params, searchParams, locale }: PageProps & { loca
   if (!category) notFound();
 
   const conAutor = SECCIONES_CON_AUTOR.has(slug);
-  const autores = conAutor ? await getAutoresDeSeccion(slug).catch(() => []) : [];
+  // El directorio «Columnistas» filtra sobre las columnas de Opinión: el mismo selector de autor, año y mes, que lleva a esa sección.
+  const esDirectorio = slug === "columnistas";
+  const autores = conAutor || esDirectorio ? await getAutoresDeSeccion(esDirectorio ? "opinion" : slug).catch(() => []) : [];
   // «Columnistas» es el directorio de autores (como en el sitio anterior), no una lista de notas.
   const directorio = slug === "columnistas" ? await getColumnistas().catch(() => []) : null;
   const anioActual = new Date().getFullYear();
@@ -286,10 +288,10 @@ async function CategoryPage({ params, searchParams, locale }: PageProps & { loca
 
       {slug === "regiones" && <MapaSeccionRegiones locale={locale} actual={region} departamento={depto} />}
 
-      {conAutor && autores.length > 0 && (
+      {(conAutor || esDirectorio) && autores.length > 0 && (
         // Filtro de columnistas: una barra delgada bajo el encabezado, con autor, año y mes en una sola fila. Formulario GET (URL propia, sin JavaScript).
         <form
-          action={localePath(locale, `/categoria/${slug}`)}
+          action={localePath(locale, `/categoria/${esDirectorio ? "opinion" : slug}`)}
           method="get"
           className="mb-8 grid grid-cols-2 items-end gap-3 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--bg-2)] p-3 sm:p-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1.2fr)_auto]"
         >
