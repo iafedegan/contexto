@@ -50,6 +50,7 @@ const GROUPS: Group[] = [
       { href: "/panel/articulos", label: "Artículos", hint: "Crear, editar y programar", permiso: "articulos" },
       { href: "/panel/pendientes", label: "Mis pendientes", hint: "Piezas del consejo que te asignaron" },
       { href: "/panel/consejo", label: "Consejo de redacción", hint: "Planear la semana con IA", permiso: "articulos", soloAdmin: true },
+      { href: "/panel/asignaciones", label: "Notas para editores", hint: "Preescribir una nota y asignarla a un editor", permiso: "asignar_notas" },
       { href: "/panel/newsletter", label: "Newsletter", hint: "Configurar y enviar el boletín", permiso: "newsletter" },
       { href: "/panel/en-vivo", label: "En vivo", hint: "Transmisión de YouTube en la portada", permiso: "avisos" },
     ],

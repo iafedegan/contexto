@@ -20,6 +20,7 @@ export const ROLES: UserRole[] = ["redactor", "disenador", "editor", "administra
 export const PERMISOS = [
   { id: "articulos", label: "Redactar artículos", hint: "Crear y editar artículos y mandarlos a revisión", min: "redactor" },
   { id: "publicar", label: "Publicar y eliminar artículos", hint: "Publicar, programar, despublicar y borrar", min: "editor" },
+  { id: "asignar_notas", label: "Notas para editores", hint: "Preescribir una nota y asignarla al editor que elijas", min: "editor" },
   { id: "borradores_ia", label: "Borradores de IA", hint: "Revisar, aprobar y descartar lo que propone la IA", min: "editor" },
   { id: "avisos", label: "Avisos", hint: "Crear y retirar avisos del sitio", min: "editor" },
   { id: "mensajes", label: "Mensajes recibidos", hint: "Leer contacto y solicitudes de pauta", min: "editor" },
