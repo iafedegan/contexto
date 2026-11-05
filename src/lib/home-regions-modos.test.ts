@@ -60,3 +60,22 @@ test("el fondo del cuerpo se pinta en toda la página (raíz del sitio) y no sol
   // La barra y el pie no se tocan.
   assert.equal(regionsCss({ navbar: { bg: "#112233" } }).includes("[data-site-root]{background"), false);
 });
+
+test("el fondo del cuerpo elegido para un modo pinta TODA la página (la raíz) y la banda de instalar queda transparente", () => {
+  const css = regionsCss({ body: { oscuro: { bg: "#123456" } } });
+  const raiz = css.split("\n").find((x) => x.includes('html[data-dark="1"] [data-site-root]{') || x.startsWith('html[data-dark="1"] [data-site-root],'));
+  assert.ok(raiz, css);
+  assert.match(raiz!, /background:#123456!important/);
+  assert.match(css, /\[data-site-root\] \.cg-banda-instalar\{background:transparent!important\}/);
+  // El fondo no se repite en la columna central (`main`): solo los tonos de texto.
+  const cuerpo = css.split("\n").find((x) => x.startsWith('html[data-dark="1"] [data-site-root] [data-region="body"],'));
+  assert.ok(cuerpo && !/background:/.test(cuerpo), cuerpo);
+});
+
+test("el color de títulos pinta los titulares y deja el nombre del sitio de un solo color, también por modo", () => {
+  const css = regionsCss({ navbar: { title: "#ffffff", claro: { title: "#111111" } } });
+  assert.match(css, /\[data-site-root\] \[data-region="navbar"\] \.lx-foil\{background:none!important;-webkit-text-fill-color:#ffffff!important/);
+  const claro = css.split("\n").find((x) => x.includes('html[data-dark="0"]') && x.includes(".lx-foil"));
+  assert.ok(claro && claro.includes("#111111"), css);
+  assert.equal(sanitizeRegions({ navbar: { title: "red;}x{" } }).navbar, undefined, "un color inválido no llega al CSS");
+});

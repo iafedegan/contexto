@@ -149,6 +149,7 @@ export function RegionEditor({
             {has("bgGradient") && <GradientEditor label="Degradado de fondo" value={colores.bgGradient} onChange={(bgGradient) => patchColor({ bgGradient })} />}
             {has("fg") && <ColorRow label="Texto" value={colores.fg} onChange={(fg) => patchColor({ fg })} />}
             {has("accent") && <ColorRow label="Acento" value={colores.accent} onChange={(accent) => patchColor({ accent })} />}
+            {has("title") && <ColorRow label="Títulos" value={colores.title} onChange={(title) => patchColor({ title })} />}
           </Group>
 
           <Group title="Tipografía">

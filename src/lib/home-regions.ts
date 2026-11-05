@@ -22,7 +22,7 @@ export const EVENTO_MODO_LIENZO = "cg:modo-lienzo";
 export type RegionId = "navbar" | "hero" | "body" | "cards" | "footer" | "encabezado";
 
 /** Colores de un componente: los que pueden ser distintos en modo claro y en modo oscuro. */
-export type RegionColors = { bg?: string; bgGradient?: Gradient; fg?: string; accent?: string };
+export type RegionColors = { bg?: string; bgGradient?: Gradient; fg?: string; accent?: string; /** Color de los titulares (y del nombre del sitio en la cabecera, que si no sale dorado con brillo). */ title?: string };
 
 // Estilos editables de un componente de la portada (fondo, colores, escalas…).
 export type RegionStyle = {
@@ -38,6 +38,8 @@ export type RegionStyle = {
   fg?: string;
   /** Color de acento (enlaces, filetes, etiquetas). */
   accent?: string;
+  /** Color de los titulares y del nombre del sitio (en vez del dorado con brillo). */
+  title?: string;
   /** Tipografía de los titulares. */
   titleFont?: HomeTitleFont;
   /** Tipografía del texto corrido y menús. */
@@ -77,37 +79,37 @@ export const REGIONS: Array<{
     id: "navbar",
     label: "Cabecera",
     description: "Cabecera con el logo, la fecha y el menú de secciones.",
-    controls: ["bg", "fg", "accent", "titleFont", "textFont", "titleScale", "textScale", "padY", "maxWidth", "align"],
+    controls: ["bg", "fg", "accent", "title", "titleFont", "textFont", "titleScale", "textScale", "padY", "maxWidth", "align"],
   },
   {
     id: "hero",
     label: "Principal",
     description: "La noticia principal de la portada (o el carrusel, en la plantilla Revista).",
-    controls: ["bg", "fg", "accent", "titleFont", "textFont", "titleScale", "textScale", "padY", "padX", "radius", "align"],
+    controls: ["bg", "fg", "accent", "title", "titleFont", "textFont", "titleScale", "textScale", "padY", "padX", "radius", "align"],
   },
   {
     id: "cards",
     label: "Tarjetas",
     description: "Todas las demás noticias: «En breve», «Lo último» y la cuadrícula.",
-    controls: ["bg", "fg", "accent", "titleFont", "textFont", "titleScale", "textScale", "padY", "padX", "radius", "align"],
+    controls: ["bg", "fg", "accent", "title", "titleFont", "textFont", "titleScale", "textScale", "padY", "padX", "radius", "align"],
   },
   {
     id: "body",
     label: "Cuerpo",
     description: "El lienzo de la página entre la cabecera y el pie.",
-    controls: ["bg", "bgGradient", "fg", "accent", "titleFont", "textFont", "titleScale", "textScale", "padTop", "padY", "maxWidth"],
+    controls: ["bg", "bgGradient", "fg", "accent", "title", "titleFont", "textFont", "titleScale", "textScale", "padTop", "padY", "maxWidth"],
   },
   {
     id: "encabezado",
     label: "Encabezado",
     description: "Migas, etiqueta, título, descripción, datos y filtros de la sección.",
-    controls: ["bg", "bgGradient", "fg", "accent", "padY", "padX", "radius", "align"],
+    controls: ["bg", "bgGradient", "fg", "accent", "title", "padY", "padX", "radius", "align"],
   },
   {
     id: "footer",
     label: "Pie",
     description: "Pie con secciones, enlaces legales y firma.",
-    controls: ["bg", "fg", "accent", "titleFont", "textFont", "titleScale", "textScale", "padY", "maxWidth", "align", "hidden"],
+    controls: ["bg", "fg", "accent", "title", "titleFont", "textFont", "titleScale", "textScale", "padY", "maxWidth", "align", "hidden"],
   },
 ];
 
@@ -129,7 +131,7 @@ const num = (v: unknown, key: keyof typeof RANGES) => acotar(v, RANGES[key].min,
 function sanitizeColors(raw: unknown): RegionColors | undefined {
   if (!raw || typeof raw !== "object") return undefined;
   const r = raw as Record<string, unknown>;
-  const c: RegionColors = { bg: color(r.bg), bgGradient: sanitizeGradient(r.bgGradient), fg: color(r.fg), accent: color(r.accent) };
+  const c: RegionColors = { bg: color(r.bg), bgGradient: sanitizeGradient(r.bgGradient), fg: color(r.fg), accent: color(r.accent), title: color(r.title) };
   const clean = Object.fromEntries(Object.entries(c).filter(([, v]) => v !== undefined)) as RegionColors;
   return Object.keys(clean).length ? clean : undefined;
 }
@@ -149,6 +151,7 @@ export function sanitizeRegions(input: unknown): RegionStyles {
       bgGradient: sanitizeGradient(r.bgGradient),
       fg: color(r.fg),
       accent: color(r.accent),
+      title: color(r.title),
       titleFont: homeFontFamily(r.titleFont as HomeTitleFont) ? (r.titleFont as HomeTitleFont) : undefined,
       textFont: homeFontFamily(r.textFont as HomeTitleFont) ? (r.textFont as HomeTitleFont) : undefined,
       titleScale: num(r.titleScale, "titleScale"),
@@ -171,6 +174,11 @@ export function sanitizeRegions(input: unknown): RegionStyles {
 const TITLES = ":is(h1,h2,h3,h4,.lx-display)";
 // Selector CSS del texto corrido.
 const TEXT = ":is(p,li,time,small,dd,dt,figcaption,nav a)";
+
+// El nombre del sitio sin el dorado con brillo: un solo color (el degradado va recortado al texto, así que se quita y se pinta el texto).
+const foilPlano = (c: string) => `background:none!important;-webkit-text-fill-color:${c}!important;color:${c}!important;animation:none!important`;
+// Reglas del color de titulares de un componente.
+const reglasTitulo = (sel: string, c: string) => [`${sel} ${TITLES}{color:${c}!important}`, `${sel} .lx-foil{${foilPlano(c)}}`];
 
 // Las declaraciones CSS de los colores de un componente (fondo, degradado, texto, acento).
 function coloresDecl(s: RegionColors): string[] {
@@ -207,8 +215,9 @@ const PLANTILLAS_OSCURAS = ["home", "esmeralda", "revista", "vanguardia"];
  * Selectores de un componente cuando el sitio se VE en un modo: el elegido por el lector (`html[data-dark]`) o, si no eligió,
  * el propio de la plantilla. Llevan más peso que la regla base, así que mandan sobre los colores «de los dos modos».
  */
-function selectoresDeModo(modo: "claro" | "oscuro", scope: string, id: string): string {
-  const comp = ` [data-region="${id}"]`;
+function selectoresDeModo(modo: "claro" | "oscuro", scope: string, id: string | null, sufijo = ""): string {
+  // `id` nulo = la raíz del sitio (el lienzo de toda la página), para el fondo del cuerpo.
+  const comp = `${id ? ` [data-region="${id}"]` : ""}${sufijo}`;
   const nativas = PLANTILLAS_OSCURAS.map((t) => `[data-theme="${t}"]`).join(",");
   return modo === "oscuro"
     ? `html[data-dark="1"] ${scope}${comp},html:not([data-dark]) ${scope}:is(${nativas})${comp}`
@@ -243,7 +252,12 @@ export function regionsCss(input: RegionStyles | undefined, scope = "[data-site-
         for (const d of fondos) decl.splice(decl.indexOf(d), 1);
         rules.push(`${sel} .tpl-broadsheet{background:transparent!important}`);
       }
+      // La banda «Instala la app» (entre el cuerpo y el pie) trae su propio fondo: con un fondo de cuerpo elegido (en cualquier modo) se
+      // vuelve transparente para que no quede una franja del color anterior.
+      if (fondos.length || s.claro?.bg || s.claro?.bgGradient || s.oscuro?.bg || s.oscuro?.bgGradient) rules.push(`${scope} .cg-banda-instalar{background:transparent!important}`);
     }
+    // Color de los titulares: también el nombre del sitio, que de fábrica sale dorado con brillo (`.lx-foil`) y así queda de un solo color.
+    if (s.title) rules.push(...reglasTitulo(sel, s.title));
     if (s.textFont) {
       const f = homeFontFamily(s.textFont)!;
       decl.push(`--font-body:${f}`, `--font-ui:${f}`, `--font-sans:${f}`, `--font-serif:${f}`, `font-family:${f}`);
@@ -304,7 +318,19 @@ export function regionsCss(input: RegionStyles | undefined, scope = "[data-site-
     for (const modo of ["claro", "oscuro"] as const) {
       const c = s[modo];
       const d = c ? coloresDecl(c) : [];
+      // En el cuerpo, el fondo de cada modo también es el de toda la página (como el de «los dos modos», arriba).
+      if (id === "body") {
+        const fondos = d.filter((x) => x.startsWith("background:"));
+        if (fondos.length) {
+          rules.push(`${selectoresDeModo(modo, scope, null)}{${fondos.join(";")}}`);
+          for (const f of fondos) d.splice(d.indexOf(f), 1);
+        }
+      }
       if (d.length) rules.push(`${selectoresDeModo(modo, scope, id)}{${d.join(";")}}`);
+      if (c?.title) {
+        rules.push(`${selectoresDeModo(modo, scope, id, ` ${TITLES}`)}{color:${c.title}!important}`);
+        rules.push(`${selectoresDeModo(modo, scope, id, " .lx-foil")}{${foilPlano(c.title)}}`);
+      }
     }
   }
   return rules.join("\n");
