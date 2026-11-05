@@ -1,14 +1,14 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { and, eq, sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { categories, siteSettings, users } from "@/db/schema";
+import { categories, siteSettings } from "@/db/schema";
 import { requirePermiso } from "@/lib/auth";
 import { guardarBorradorCore } from "@/lib/article-ops";
 import { autorDeUsuario } from "@/lib/user-authors";
 import { ASIGNADAS_KEY, type Asignacion } from "./consultas";
-import { puedeEnviarAEditor } from "@/lib/notas-asignadas";
+import { esEditorActivo, puedeEnviarAEditor } from "@/lib/notas-asignadas";
 
 /**
  * Preescribe una nota y se la deja a un editor: crea el BORRADOR a nombre de ese editor (así le aparece en «Artículos», donde la termina, la
@@ -22,7 +22,7 @@ export async function asignarNota(input: { titulo: string; resumen: string; text
   const texto = String(input.texto ?? "").trim();
   if (texto.length < 20) return { ok: false, message: "Escribe la nota (o al menos el esquema) para que el editor tenga con qué trabajar." };
 
-  const [editor] = await db.select({ id: users.id }).from(users).where(and(eq(users.id, String(input.editorId)), eq(users.active, true), eq(users.role, "editor"))).limit(1);
+  const editor = await esEditorActivo(String(input.editorId));
   if (!editor) return { ok: false, message: "Elige un editor de la lista." };
   const categoryId = input.categoryId ? (await db.select({ id: categories.id }).from(categories).where(eq(categories.id, input.categoryId)).limit(1))[0]?.id ?? null : null;
 

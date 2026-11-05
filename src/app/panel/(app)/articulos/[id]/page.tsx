@@ -113,7 +113,7 @@ export default async function ArticleEditorPage({
           site={await siteChrome()}
           modelosEditor={await getModelosEditor(session!.user.id)}
           esAdmin={session!.user.role === "administrador"}
-          editores={puedeEnviarAEditor(session!.user.role) ? await editoresActivos() : []}
+          editores={puedeEnviarAEditor(session!.user.role) ? await editoresActivos(session!.user.id) : []}
           puedeEnviarEditor={puedeEnviarAEditor(session!.user.role)}
           canPublish={canPublish(session!.user.role)}
           canPortada={await tienePermiso(session!.user.id, session!.user.role, "portada")}
@@ -171,7 +171,7 @@ export default async function ArticleEditorPage({
           site={await siteChrome()}
           modelosEditor={await getModelosEditor(session!.user.id)}
           esAdmin={session!.user.role === "administrador"}
-          editores={puedeEnviarAEditor(session!.user.role) ? await editoresActivos() : []}
+          editores={puedeEnviarAEditor(session!.user.role) ? await editoresActivos(session!.user.id) : []}
           puedeEnviarEditor={puedeEnviarAEditor(session!.user.role)}
           status={row.status}
           canPublish={canPublish(session!.user.role)}

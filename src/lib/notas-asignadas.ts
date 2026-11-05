@@ -1,5 +1,5 @@
 import "server-only";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, inArray, ne, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { siteSettings, users } from "@/db/schema";
 
@@ -15,15 +15,22 @@ export type Asignacion = { articleId: string; editorId: string; porId: string; m
 /** Solo administradores y redactores envían notas a un editor desde el asistente. */
 export const puedeEnviarAEditor = (role: string) => role === "administrador" || role === "redactor";
 
-/** Editores activos a los que se les puede enviar una nota, por nombre. */
-export async function editoresActivos(): Promise<{ id: string; nombre: string }[]> {
-  const filas = await db.select({ id: users.id, nombre: users.name }).from(users).where(and(eq(users.active, true), eq(users.role, "editor")));
+/** Quién recibe notas: los editores y los administradores (en la redacción, los administradores también hacen de editores). */
+export const ROLES_QUE_RECIBEN = ["editor", "administrador"] as const;
+export const recibeNotas = (role: string) => (ROLES_QUE_RECIBEN as readonly string[]).includes(role);
+
+/** Editores y administradores activos a los que se les puede enviar una nota, por nombre (sin la persona que envía). */
+export async function editoresActivos(excepto?: string): Promise<{ id: string; nombre: string }[]> {
+  const filas = await db
+    .select({ id: users.id, nombre: users.name })
+    .from(users)
+    .where(and(eq(users.active, true), inArray(users.role, [...ROLES_QUE_RECIBEN]), ...(excepto ? [ne(users.id, excepto)] : [])));
   return filas.sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
 }
 
-/** ¿Es una persona con rol de editor y activa? */
+/** ¿Puede recibir notas (editor o administrador, activo)? */
 export async function esEditorActivo(id: string): Promise<{ id: string; nombre: string } | null> {
-  const [e] = await db.select({ id: users.id, nombre: users.name }).from(users).where(and(eq(users.id, id), eq(users.active, true), eq(users.role, "editor"))).limit(1);
+  const [e] = await db.select({ id: users.id, nombre: users.name }).from(users).where(and(eq(users.id, id), eq(users.active, true), inArray(users.role, [...ROLES_QUE_RECIBEN]))).limit(1);
   return e ?? null;
 }
 

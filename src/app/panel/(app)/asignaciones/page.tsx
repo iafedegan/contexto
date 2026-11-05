@@ -9,7 +9,7 @@ import { Card } from "@/components/ui";
 import { TabsConsejo } from "@/components/panel/tabs-consejo";
 import { AsignarNotaForm } from "@/components/panel/asignar-nota-form";
 import { editoresParaAsignar, misAsignaciones, type FilaAsignada } from "./consultas";
-import { puedeEnviarAEditor } from "@/lib/notas-asignadas";
+import { puedeEnviarAEditor, recibeNotas } from "@/lib/notas-asignadas";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Notas para editores" };
@@ -40,10 +40,10 @@ export default async function NotasParaEditores() {
   const yo = await requirePermiso("articulos");
   // Envían los administradores y los redactores; el editor recibe. Cualquier otro rol no tiene nada que hacer aquí.
   const envia = puedeEnviarAEditor(yo.role);
-  const recibe = yo.role === "editor";
+  const recibe = recibeNotas(yo.role);
   if (!envia && !recibe) redirect("/panel");
   const [editores, secciones, { paraMi, porMi }] = await Promise.all([
-    editoresParaAsignar(),
+    editoresParaAsignar(yo.id),
     db.select({ id: categories.id, nombre: categories.name }).from(categories).orderBy(asc(categories.name)),
     misAsignaciones(yo.id),
   ]);
