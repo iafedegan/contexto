@@ -143,7 +143,8 @@ test("la persona queda registrada con correo y documento cifrados, y unida al bo
   assert.ok(fila.subscriberId, "unida al suscriptor");
   assert.equal(fila.documentoFinal, "0000");
   assert.ok(!JSON.stringify(fila).includes("persona@example.test"), "el correo no queda en claro");
-  const hoy = new Date().toISOString().slice(0, 10);
+  // «Hoy» en hora de Colombia, como lo cuenta la consulta (con la fecha UTC la prueba fallaba después de las 7 p. m.).
+  const hoy = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Bogota" }).format(new Date());
   const [conDatos] = await personasSuperApp({ desde: hoy, hasta: hoy }, true);
   const [sinDatos] = await personasSuperApp({ desde: hoy, hasta: hoy }, false);
   // Sin entradas en superapp_sesiones no aparece en el periodo; con una sesión, sí.
