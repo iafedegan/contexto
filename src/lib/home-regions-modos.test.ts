@@ -72,9 +72,14 @@ test("el fondo del cuerpo elegido para un modo pinta TODA la página (la raíz) 
   assert.ok(cuerpo && !/background:/.test(cuerpo), cuerpo);
 });
 
-test("el color de títulos pinta los titulares y deja el nombre del sitio de un solo color, también por modo", () => {
+test("el color de títulos pinta los titulares y es la base de la lámina con brillo del nombre (que sigue animada), también por modo", () => {
   const css = regionsCss({ navbar: { title: "#ffffff", claro: { title: "#111111" } } });
-  assert.match(css, /\[data-site-root\] \[data-region="navbar"\] \.lx-foil\{background:none!important;-webkit-text-fill-color:#ffffff!important/);
+  const foil = css.split("\n").find((x) => x.startsWith('[data-site-root] [data-region="navbar"] .lx-foil{'));
+  assert.ok(foil && foil.includes("--accent:#ffffff!important") && foil.includes("color:transparent!important"), css);
+  assert.ok(!/animation:none|background:none/.test(foil!), "no apaga el brillo ni el degradado");
+  // La regla del nombre va después de la de titulares (el nombre también es `.lx-display`): así queda transparente y se ve la lámina.
+  const lineas = css.split("\n");
+  assert.ok(lineas.indexOf(foil!) > lineas.findIndex((x) => x.startsWith('[data-site-root] [data-region="navbar"] :is(h1')), css);
   const claro = css.split("\n").find((x) => x.includes('html[data-dark="0"]') && x.includes(".lx-foil"));
   assert.ok(claro && claro.includes("#111111"), css);
   assert.equal(sanitizeRegions({ navbar: { title: "red;}x{" } }).navbar, undefined, "un color inválido no llega al CSS");

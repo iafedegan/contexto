@@ -22,7 +22,7 @@ export const EVENTO_MODO_LIENZO = "cg:modo-lienzo";
 export type RegionId = "navbar" | "hero" | "body" | "cards" | "footer" | "encabezado";
 
 /** Colores de un componente: los que pueden ser distintos en modo claro y en modo oscuro. */
-export type RegionColors = { bg?: string; bgGradient?: Gradient; fg?: string; accent?: string; /** Color de los titulares (y del nombre del sitio en la cabecera, que si no sale dorado con brillo). */ title?: string };
+export type RegionColors = { bg?: string; bgGradient?: Gradient; fg?: string; accent?: string; /** Color de los titulares; en el nombre del sitio es la base de su lámina con brillo (que sigue moviéndose). */ title?: string };
 
 // Estilos editables de un componente de la portada (fondo, colores, escalas…).
 export type RegionStyle = {
@@ -38,7 +38,7 @@ export type RegionStyle = {
   fg?: string;
   /** Color de acento (enlaces, filetes, etiquetas). */
   accent?: string;
-  /** Color de los titulares y del nombre del sitio (en vez del dorado con brillo). */
+  /** Color de los titulares y base de la lámina con brillo del nombre del sitio. */
   title?: string;
   /** Tipografía de los titulares. */
   titleFont?: HomeTitleFont;
@@ -175,10 +175,11 @@ const TITLES = ":is(h1,h2,h3,h4,.lx-display)";
 // Selector CSS del texto corrido.
 const TEXT = ":is(p,li,time,small,dd,dt,figcaption,nav a)";
 
-// El nombre del sitio sin el dorado con brillo: un solo color (el degradado va recortado al texto, así que se quita y se pinta el texto).
-const foilPlano = (c: string) => `background:none!important;-webkit-text-fill-color:${c}!important;color:${c}!important;animation:none!important`;
+// El nombre del sitio con el color elegido como base de su lámina: el degradado y el brillo que lo recorre (globals.css, `.lx-foil`) se
+// arman con `--accent`, así que basta con cambiarlo ahí; el texto sigue transparente para que se vea el degradado y no un color plano.
+const foilColor = (c: string) => `--accent:${c}!important;color:transparent!important;-webkit-text-fill-color:transparent!important`;
 // Reglas del color de titulares de un componente.
-const reglasTitulo = (sel: string, c: string) => [`${sel} ${TITLES}{color:${c}!important}`, `${sel} .lx-foil{${foilPlano(c)}}`];
+const reglasTitulo = (sel: string, c: string) => [`${sel} ${TITLES}{color:${c}!important}`, `${sel} .lx-foil{${foilColor(c)}}`];
 
 // Las declaraciones CSS de los colores de un componente (fondo, degradado, texto, acento).
 function coloresDecl(s: RegionColors): string[] {
@@ -256,7 +257,7 @@ export function regionsCss(input: RegionStyles | undefined, scope = "[data-site-
       // vuelve transparente para que no quede una franja del color anterior.
       if (fondos.length || s.claro?.bg || s.claro?.bgGradient || s.oscuro?.bg || s.oscuro?.bgGradient) rules.push(`${scope} .cg-banda-instalar{background:transparent!important}`);
     }
-    // Color de los titulares: también el nombre del sitio, que de fábrica sale dorado con brillo (`.lx-foil`) y así queda de un solo color.
+    // Color de los titulares: en el nombre del sitio (`.lx-foil`) cambia el color de la lámina y el brillo sigue moviéndose.
     if (s.title) rules.push(...reglasTitulo(sel, s.title));
     if (s.textFont) {
       const f = homeFontFamily(s.textFont)!;
@@ -329,7 +330,7 @@ export function regionsCss(input: RegionStyles | undefined, scope = "[data-site-
       if (d.length) rules.push(`${selectoresDeModo(modo, scope, id)}{${d.join(";")}}`);
       if (c?.title) {
         rules.push(`${selectoresDeModo(modo, scope, id, ` ${TITLES}`)}{color:${c.title}!important}`);
-        rules.push(`${selectoresDeModo(modo, scope, id, " .lx-foil")}{${foilPlano(c.title)}}`);
+        rules.push(`${selectoresDeModo(modo, scope, id, " .lx-foil")}{${foilColor(c.title)}}`);
       }
     }
   }
