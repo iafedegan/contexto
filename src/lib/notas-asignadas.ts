@@ -10,7 +10,7 @@ import { articles, siteSettings, users } from "@/db/schema";
  */
 export const ASIGNADAS_KEY = "notas_asignadas";
 
-export type Asignacion = { articleId: string; editorId: string; porId: string; mensaje: string; fecha: string };
+export type Asignacion = { articleId: string; editorId: string; porId: string; mensaje: string; fecha: string; /** Cuándo la abrió por primera vez quien la recibe (pasa de «Pendiente» a «Editando»). */ abiertaAt?: string };
 
 /** Solo administradores y redactores envían notas a un editor desde el asistente. */
 export const puedeEnviarAEditor = (role: string) => role === "administrador" || role === "redactor";
@@ -86,4 +86,13 @@ export async function contarNotasPendientes(userId: string): Promise<number> {
   } catch {
     return 0;
   }
+}
+
+/** Marca como abierta la nota enviada a la persona (la primera vez que la abre). Si no le fue enviada, no hace nada. */
+export async function marcarAsignacionAbierta(articleId: string, userId: string): Promise<void> {
+  await db.execute(sql`update site_settings set value = (
+      select jsonb_agg(case when e->>'articleId' = ${articleId} and e->>'editorId' = ${userId} and e->>'abiertaAt' is null
+        then e || jsonb_build_object('abiertaAt', ${new Date().toISOString()}::text) else e end)
+      from jsonb_array_elements(value) e), updated_at = now()
+    where key = ${ASIGNADAS_KEY} and exists (select 1 from jsonb_array_elements(value) e where e->>'articleId' = ${articleId} and e->>'editorId' = ${userId} and e->>'abiertaAt' is null)`);
 }

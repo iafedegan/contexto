@@ -1,35 +1,66 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { CalendarClock, ChevronRight, ClipboardList, Send } from "lucide-react";
+import { CalendarClock, CircleCheck, ClipboardList, PenLine, Send, Sparkles, type LucideIcon } from "lucide-react";
 import { auth } from "@/lib/auth";
-import { Card } from "@/components/ui";
 import { MarcarVistos } from "@/components/panel/marcar-vistos";
 import { sincronizarCasillas } from "@/lib/ai/consejo-ejecucion";
-import { contarMisPendientes, misPendientes } from "./consultas";
-import { misAsignaciones } from "@/app/panel/(app)/asignaciones/consultas";
-import { ESTADOS_PENDIENTES } from "@/lib/notas-asignadas";
+import { contarMisPendientes } from "./consultas";
+import { tableroDe, type Columna, type Tarjeta } from "./tablero";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Mis pendientes" };
 
-const ESTADO: Record<string, { texto: string; clase: string }> = {
-  planificada: { texto: "Por redactar", clase: "bg-[var(--surface-2)] text-[var(--fg-muted)]" },
-  redactando: { texto: "Redactando", clase: "bg-amber-500/15 text-amber-700" },
-  revision: { texto: "Para revisar", clase: "bg-[var(--accent)]/15 text-[var(--accent)]" },
-  fallida: { texto: "Falló", clase: "bg-red-600/15 text-red-700" },
-};
-const cuando = (d: Date) => new Intl.DateTimeFormat("es-CO", { weekday: "long", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "America/Bogota" }).format(d);
+const cuando = (d: Date) => new Intl.DateTimeFormat("es-CO", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "America/Bogota" }).format(d);
 
-// Lo que le «llegó» a quien entra y debe revisar o escribir: las piezas de los consejos activos del grupo de redacción y las notas que le
-// enviaron los redactores o los administradores (desde el asistente o desde «Notas para editores») y siguen sin publicar.
+const COLUMNAS: { id: Columna; titulo: string; vacia: string; Icono: LucideIcon; tono: string }[] = [
+  { id: "pendiente", titulo: "Pendiente", vacia: "Nada por empezar.", Icono: ClipboardList, tono: "bg-red-600" },
+  { id: "editando", titulo: "Editando", vacia: "No tienes notas a medio camino.", Icono: PenLine, tono: "bg-amber-500" },
+  { id: "publicado", titulo: "Publicado", vacia: "Nada publicado en los últimos 30 días.", Icono: CircleCheck, tono: "bg-[#157a4a]" },
+];
+
+const ORIGEN: Record<Tarjeta["origen"], { texto: string; Icono: LucideIcon }> = {
+  pieza: { texto: "Grupo de redacción", Icono: Sparkles },
+  enviada: { texto: "Te la enviaron", Icono: Send },
+  propia: { texto: "Tuya", Icono: PenLine },
+};
+
+// Una tarjeta del tablero: de dónde viene, estado, título, contexto y la fecha que importa; lleva a la nota.
+function TarjetaNota({ t }: { t: Tarjeta }) {
+  const o = ORIGEN[t.origen];
+  return (
+    <li>
+      <Link href={t.href} className="group block rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] p-3 shadow-[var(--shadow)] transition hover:border-[var(--accent)] focus-visible:outline-2 focus-visible:outline-offset-2">
+        <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[0.7rem] text-[var(--fg-muted)]">
+          <span className="inline-flex items-center gap-1 font-semibold"><o.Icono size={12} aria-hidden /> {o.texto}</span>
+          <span className={`rounded-full px-2 py-0.5 font-semibold ${t.alerta ? "bg-red-600/15 text-red-700" : "bg-[var(--surface-2)]"}`}>{t.estado}</span>
+        </p>
+        <p className="mt-1.5 text-sm font-semibold leading-snug group-hover:text-[var(--accent)]">{t.titulo}</p>
+        {t.detalle && <p className="mt-0.5 truncate text-xs text-[var(--fg-muted)]">{t.detalle}</p>}
+        {t.mensaje && <p className={`mt-1 line-clamp-2 text-xs ${t.alerta ? "text-red-700" : ""}`}>«{t.mensaje}»</p>}
+        {t.fecha && (
+          <p className="mt-2 flex items-center gap-1 text-[0.7rem] text-[var(--fg-muted)]">
+            <CalendarClock size={12} aria-hidden /> {t.fechaTexto} <span className="font-medium text-[var(--fg)]">{cuando(t.fecha)}</span>
+          </p>
+        )}
+      </Link>
+    </li>
+  );
+}
+
+// «Mis pendientes» como tablero: lo que le toca a quien entra, en tres columnas (pendiente, editando, publicado). Reúne las piezas del grupo de
+// redacción, las notas que le enviaron los redactores o los administradores y sus propias notas.
 export default async function MisPendientes() {
   const session = await auth();
   if (!session?.user) redirect("/panel/login?motivo=sesion");
   await sincronizarCasillas().catch(() => {});
-  const [lista, { nuevas }, { paraMi }] = await Promise.all([misPendientes(session.user.id), contarMisPendientes(session.user.id), misAsignaciones(session.user.id)]);
-  const paraRevisar = lista.filter((p) => p.estado === "revision").length;
-  const enviadas = paraMi.filter((f) => (ESTADOS_PENDIENTES as readonly string[]).includes(f.estado));
-  const nada = lista.length === 0 && enviadas.length === 0;
+  const [tarjetas, { nuevas }] = await Promise.all([tableroDe(session.user.id), contarMisPendientes(session.user.id)]);
+  const de = (c: Columna) =>
+    tarjetas
+      .filter((t) => t.columna === c)
+      // Pendiente y editando: lo más urgente (o lo que sale antes) arriba; publicado: lo último arriba.
+      .sort((a, b) => (c === "publicado" ? (b.fecha?.getTime() ?? 0) - (a.fecha?.getTime() ?? 0) : (a.fecha?.getTime() ?? Infinity) - (b.fecha?.getTime() ?? Infinity)));
+  const n = (c: Columna) => tarjetas.filter((t) => t.columna === c).length;
+
   return (
     <div className="flex flex-col gap-5 sm:gap-6">
       <MarcarVistos hayNuevas={nuevas > 0} />
@@ -37,73 +68,31 @@ export default async function MisPendientes() {
         <p className="lx-kicker text-[var(--accent)]">Grupo de redacción</p>
         <h1 className="lx-display mt-1 text-3xl font-semibold tracking-tight sm:text-4xl">Mis pendientes</h1>
         <p className="mt-1 text-sm text-[var(--fg-muted)]">
-          {nada
-            ? "No tienes pendientes por ahora."
-            : [
-                lista.length ? `${lista.length} ${lista.length === 1 ? "pieza del grupo de redacción" : "piezas del grupo de redacción"}${paraRevisar ? ` (${paraRevisar} para revisar)` : ""}` : "",
-                enviadas.length ? `${enviadas.length} ${enviadas.length === 1 ? "nota que te enviaron" : "notas que te enviaron"}` : "",
-              ].filter(Boolean).join(" · ") + "."}
+          {n("pendiente")} {n("pendiente") === 1 ? "pendiente" : "pendientes"} · {n("editando")} editando · {n("publicado")} {n("publicado") === 1 ? "publicada" : "publicadas"} en los últimos 30 días.
+          Aquí llegan las piezas del grupo de redacción y las notas que te envían.
         </p>
       </header>
 
-      {/* Notas que le enviaron (redactores y administradores): van primero, porque ya están escritas y esperan revisión. */}
-      {enviadas.length > 0 && (
-        <section aria-label="Notas que te enviaron" className="flex flex-col gap-3">
-          <h2 className="text-lg font-semibold">Notas que te enviaron</h2>
-          <ul className="flex flex-col gap-3">
-            {enviadas.map((f) => (
-              <li key={f.articleId}>
-                <Link href={`/panel/articulos/${f.articleId}?modo=manual&paso=vista`} className="group block rounded-[var(--radius-lg)] focus-visible:outline-2 focus-visible:outline-offset-2">
-                  <Card className="lx-shine flex flex-wrap items-center gap-x-4 gap-y-2 p-4 transition group-hover:border-[var(--border-strong)] sm:p-5">
-                    <div className="min-w-0 flex-1 basis-64">
-                      <p className="flex flex-wrap items-center gap-2 text-xs text-[var(--fg-muted)]">
-                        <span className="rounded-full bg-[var(--accent)]/15 px-2.5 py-0.5 font-semibold text-[var(--accent)]">{f.estado === "en_revision" ? "Para revisar" : "Borrador"}</span>
-                        <span className="inline-flex items-center gap-1"><Send size={12} aria-hidden /> De <span className="font-medium text-[var(--fg)]">{f.por}</span></span>
-                      </p>
-                      <p className="mt-1 text-base font-semibold leading-snug">{f.titulo}</p>
-                      {f.mensaje && <p className="mt-0.5 text-sm text-[var(--fg-muted)]">«{f.mensaje}»</p>}
-                    </div>
-                    <span className="inline-flex items-center gap-1 text-sm font-semibold text-[var(--accent)]">Revisar la nota <ChevronRight size={16} aria-hidden className="transition group-hover:translate-x-0.5" /></span>
-                  </Card>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      {enviadas.length > 0 && lista.length > 0 && <h2 className="text-lg font-semibold">Piezas del grupo de redacción</h2>}
-      {nada ? (
-        <Card className="flex items-center gap-3 p-6 text-sm text-[var(--fg-muted)]">
-          <ClipboardList size={20} aria-hidden /> Cuando el grupo de redacción te asigne una pieza o alguien te envíe una nota, aparecerá aquí con un punto rojo en el menú.
-        </Card>
-      ) : lista.length === 0 ? null : (
-        <ul className="flex flex-col gap-3">
-          {lista.map((p) => {
-            const e = ESTADO[p.estado] ?? ESTADO.planificada;
-            const href = p.articleId ? `/panel/articulos/${p.articleId}?modo=ia&paso=vista` : `/panel/articulos/nuevo?modo=ia&pieza=${p.id}`;
-            return (
-              <li key={p.id}>
-                <Link href={href} className="group block rounded-[var(--radius-lg)] focus-visible:outline-2 focus-visible:outline-offset-2">
-                  <Card className="lx-shine flex flex-wrap items-center gap-x-4 gap-y-2 p-4 transition group-hover:border-[var(--border-strong)] sm:p-5">
-                    <div className="min-w-0 flex-1 basis-64">
-                      <p className="flex flex-wrap items-center gap-2 text-xs text-[var(--fg-muted)]">
-                        <span className={`rounded-full px-2.5 py-0.5 font-semibold ${e.clase}`}>{e.texto}</span>
-                        <span className="font-medium text-[var(--fg)]">{p.seccion}</span>
-                      </p>
-                      <p className="mt-1 text-base font-semibold leading-snug">{p.tema || "Sin tema"}</p>
-                      <p className="mt-0.5 text-xs text-[var(--fg-muted)]">{p.plan}</p>
-                      {p.estado === "fallida" && p.error && <p className="mt-1 text-xs text-red-700">{p.error}</p>}
-                    </div>
-                    <p className="flex items-center gap-1.5 text-sm text-[var(--fg-muted)]"><CalendarClock size={15} aria-hidden /> Sale <span className="font-medium capitalize text-[var(--fg)]">{cuando(p.publicaEn)}</span></p>
-                    <span className="inline-flex items-center gap-1 text-sm font-semibold text-[var(--accent)]">{p.articleId ? "Seguir con la nota" : "Escribir esta nota"} <ChevronRight size={16} aria-hidden className="transition group-hover:translate-x-0.5" /></span>
-                  </Card>
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      )}
+      <div className="grid items-start gap-4 lg:grid-cols-3">
+        {COLUMNAS.map(({ id, titulo, vacia, Icono, tono }) => {
+          const lista = de(id);
+          return (
+            <section key={id} aria-label={titulo} className="flex min-w-0 flex-col gap-3 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--bg-2)] p-3">
+              <h2 className="flex items-center gap-2 px-1 text-sm font-semibold uppercase tracking-[0.12em]">
+                <span aria-hidden className={`size-2 rounded-full ${tono}`} />
+                <Icono size={15} aria-hidden className="text-[var(--fg-muted)]" />
+                {titulo}
+                <span className="ml-auto rounded-full bg-[var(--surface)] px-2 text-xs tabular-nums text-[var(--fg-muted)]">{lista.length}</span>
+              </h2>
+              {lista.length ? (
+                <ul className="flex flex-col gap-2">{lista.map((t) => <TarjetaNota key={t.clave} t={t} />)}</ul>
+              ) : (
+                <p className="rounded-[var(--radius)] border border-dashed border-[var(--border)] px-3 py-6 text-center text-xs text-[var(--fg-muted)]">{vacia}</p>
+              )}
+            </section>
+          );
+        })}
+      </div>
     </div>
   );
 }

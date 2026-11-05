@@ -9,7 +9,7 @@ import Link from "next/link";
 import { ArrowLeft, PenLine, Sparkles } from "lucide-react";
 import { ArticleEditor } from "@/components/article-editor";
 import { ArticleWizard } from "@/components/panel/article-wizard";
-import { editoresActivos, puedeEnviarAEditor } from "@/lib/notas-asignadas";
+import { editoresActivos, marcarAsignacionAbierta, puedeEnviarAEditor } from "@/lib/notas-asignadas";
 import { escritoresParaElegir, getEstilo } from "@/lib/ai/estilo";
 import { getModelosEditor } from "@/lib/ai-provider";
 import { esNotaPropia } from "@/lib/propiedad-notas";
@@ -140,6 +140,8 @@ export default async function ArticleEditorPage({
     if (!row) notFound();
     // Quien no es administrador solo abre sus propias notas (escribir la dirección de otra no sirve).
     if (!(await esNotaPropia({ id: session!.user.id, role: session!.user.role }, id))) redirect("/panel/articulos");
+    // Si se la enviaron a esta persona, queda como abierta: en «Mis pendientes» pasa de «Pendiente» a «Editando».
+    await marcarAsignacionAbierta(id, session!.user.id).catch(() => {});
     initial = {
       id: row.id,
       title: row.title,
