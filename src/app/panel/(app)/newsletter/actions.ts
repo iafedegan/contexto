@@ -18,6 +18,7 @@ import { enviarTanda, type SendProgress } from "@/lib/newsletter/envio";
 import { NEWSLETTER_KEY, NEWSLETTER_SECRET_KEY, getNewsletterSettings, getProviderStatus } from "@/lib/newsletter/settings";
 import { sanitizeNewsletterDesign, sanitizeNewsletterSettings, type NewsletterSettings } from "@/lib/newsletter/types";
 import { EMAIL_RE, HEX6 } from "@/lib/validate";
+import { FORMA_GMAIL, accesoGmail } from "@/lib/newsletter/gmail";
 
 // Refresca la pantalla del boletín.
 const REVALIDATE = () => revalidatePath("/panel/newsletter");
@@ -226,18 +227,50 @@ export async function saveResendKey(key: string): Promise<{ ok: boolean; message
   if (!/^re_[A-Za-z0-9_\-]{16,}$/.test(k)) {
     return { ok: false, message: "La clave de Resend empieza por «re_». Cópiala completa desde resend.com → API Keys." };
   }
-  await db
-    .insert(siteSettings)
-    .values({ key: NEWSLETTER_SECRET_KEY, value: { resend: encryptSecret(k) } })
-    .onConflictDoUpdate({ target: siteSettings.key, set: { value: { resend: encryptSecret(k) }, updatedAt: sql`now()` } });
+  await guardarSecreto({ resend: encryptSecret(k) });
   REVALIDATE();
   return { ok: true, message: "Clave guardada (cifrada)" };
 }
 
-// Borra la clave de Resend guardada (solo administradores).
+// Borra la clave de Resend guardada (solo administradores). Las credenciales de Gmail, si las hay, se conservan.
 export async function deleteResendKey(): Promise<void> {
   await requireRole("administrador");
-  await db.delete(siteSettings).where(eq(siteSettings.key, NEWSLETTER_SECRET_KEY));
+  await quitarSecreto("resend");
+  REVALIDATE();
+}
+
+// Los secretos del boletín viven juntos (cifrados) en una fila: se mezclan y se quitan por nombre, sin pisar los demás.
+async function guardarSecreto(parte: Record<string, string>) {
+  await db
+    .insert(siteSettings)
+    .values({ key: NEWSLETTER_SECRET_KEY, value: parte })
+    .onConflictDoUpdate({ target: siteSettings.key, set: { value: sql`${siteSettings.value} || excluded.value`, updatedAt: sql`now()` } });
+}
+async function quitarSecreto(nombre: string) {
+  await db.update(siteSettings).set({ value: sql`${siteSettings.value} - ${nombre}::text`, updatedAt: sql`now()` }).where(eq(siteSettings.key, NEWSLETTER_SECRET_KEY));
+}
+
+/**
+ * Guarda cifradas las credenciales de Gmail (Google Cloud): ID de cliente, secreto y refresh token. Antes de guardarlas se prueban con
+ * Google (se pide un permiso de acceso): si no sirven, no se guardan y se dice por qué. Solo administradores.
+ */
+export async function saveGmailCredentials(input: { clientId: string; clientSecret: string; refreshToken: string }): Promise<{ ok: boolean; message: string }> {
+  await requireRole("administrador");
+  const c = { clientId: String(input.clientId ?? "").trim(), clientSecret: String(input.clientSecret ?? "").trim(), refreshToken: String(input.refreshToken ?? "").trim() };
+  if (!FORMA_GMAIL.clientId.test(c.clientId)) return { ok: false, message: "El ID de cliente termina en «.apps.googleusercontent.com». Cópialo de Google Cloud → Clientes." };
+  if (!FORMA_GMAIL.clientSecret.test(c.clientSecret)) return { ok: false, message: "Revisa el secreto de cliente (en Google Cloud empieza por «GOCSPX-»)." };
+  if (!FORMA_GMAIL.refreshToken.test(c.refreshToken)) return { ok: false, message: "El refresh token empieza por «1//». Cópialo completo del OAuth Playground." };
+  const prueba = await accesoGmail(c);
+  if (!prueba.ok) return { ok: false, message: prueba.error };
+  await guardarSecreto({ gmail: encryptSecret(JSON.stringify(c)) });
+  REVALIDATE();
+  return { ok: true, message: "Gmail conectado: Google aceptó las credenciales (guardadas cifradas). Revisa que el correo remitente sea la misma cuenta." };
+}
+
+// Borra las credenciales de Gmail guardadas (solo administradores).
+export async function deleteGmailCredentials(): Promise<void> {
+  await requireRole("administrador");
+  await quitarSecreto("gmail");
   REVALIDATE();
 }
 

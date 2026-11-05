@@ -1,16 +1,18 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { deleteResendKey, saveNewsletterSettings, saveResendKey } from "./actions";
+import { deleteGmailCredentials, deleteResendKey, saveGmailCredentials, saveNewsletterSettings, saveResendKey } from "./actions";
 import type { NewsletterSettings } from "@/lib/newsletter/types";
 
 // Estado del proveedor de correo.
-type Provider = { configured: boolean; source: string | null; masked: string | null; dryRun: boolean };
+type Provider = { configured: boolean; source: string | null; masked: string | null; dryRun: boolean; tipo?: "resend" | "gmail" | null; gmail?: { configured: boolean; source: string | null; clientId: string | null } };
 
 // Formulario de ajustes del boletín (remitente, textos y color) y de la clave del proveedor de correo.
 export function SettingsForm({ settings, provider, canManage }: { settings: NewsletterSettings; provider: Provider; canManage: boolean }) {
   const [s, setS] = useState(settings);
   const [key, setKey] = useState("");
+  const [g, setG] = useState({ clientId: "", clientSecret: "", refreshToken: "" });
+  const [msgG, setMsgG] = useState("");
   const [msg, setMsg] = useState("");
   const [pending, start] = useTransition();
   // Actualiza un campo del formulario al escribir.
@@ -46,7 +48,8 @@ export function SettingsForm({ settings, provider, canManage }: { settings: News
       <section className="flex flex-col gap-3 rounded-[var(--radius)] border border-[var(--border)] p-4">
         <h2 className="font-semibold">Proveedor de correo (Resend)</h2>
         <p className="text-sm">
-          Estado: <strong>{provider.configured ? (provider.dryRun ? "modo prueba (no envía)" : `conectado (${provider.source}) ${provider.masked ?? ""}`) : "sin conectar"}</strong>
+          Estado: <strong>{provider.tipo === "resend" ? `conectado (${provider.source}) ${provider.masked ?? ""}` : provider.dryRun ? "modo prueba (no envía)" : "sin conectar"}</strong>
+          {provider.tipo === "gmail" && <span className="text-[var(--fg-muted)]"> · los correos salen por Gmail</span>}
         </p>
         <ol className="list-decimal pl-5 text-sm text-[var(--fg-muted)]">
           <li>Crea una cuenta en resend.com.</li>
@@ -64,6 +67,35 @@ export function SettingsForm({ settings, provider, canManage }: { settings: News
         )}
         {!canManage && <p className="text-xs text-[var(--fg-muted)]">Solo un administrador puede cambiar estos ajustes.</p>}
         {msg && <p className="text-sm text-[var(--accent)]">{msg}</p>}
+      </section>
+
+      {/* Alternativa a Resend: enviar como la cuenta de Gmail / Google Workspace (p. ej. info@…) con la API de Gmail. Si hay clave de Resend, manda Resend. */}
+      <section className="flex flex-col gap-3 rounded-[var(--radius)] border border-[var(--border)] p-4 lg:col-span-2">
+        <h2 className="font-semibold">Gmail (Google Cloud)</h2>
+        <p className="text-sm">
+          Estado: <strong>{provider.gmail?.configured ? `conectado (${provider.gmail.source}) · cliente ${provider.gmail.clientId}` : "sin conectar"}</strong>
+          {provider.gmail?.configured && provider.tipo === "resend" && <span className="text-[var(--fg-muted)]"> · hay clave de Resend, así que se usa Resend</span>}
+        </p>
+        <ol className="list-decimal pl-5 text-sm text-[var(--fg-muted)]">
+          <li>En console.cloud.google.com: un proyecto con la API de Gmail habilitada y la pantalla de consentimiento «Interno».</li>
+          <li>Un cliente de OAuth «Aplicación web» con el redireccionamiento https://developers.google.com/oauthplayground.</li>
+          <li>En el OAuth Playground (con tus credenciales), autoriza el permiso gmail.send con la cuenta que envía y copia el refresh token.</li>
+          <li>Pega los tres datos aquí. El «Correo remitente» de arriba debe ser esa misma cuenta. Límite: ~2.000 correos al día.</li>
+        </ol>
+        {canManage && provider.gmail?.source !== "entorno" && (
+          <>
+            <div className="grid gap-2 md:grid-cols-3">
+              <input className="lx-input" placeholder="ID de cliente (…apps.googleusercontent.com)" value={g.clientId} onChange={(e) => setG({ ...g, clientId: e.target.value })} autoComplete="off" />
+              <input className="lx-input" type="password" placeholder="Secreto de cliente (GOCSPX-…)" value={g.clientSecret} onChange={(e) => setG({ ...g, clientSecret: e.target.value })} autoComplete="off" />
+              <input className="lx-input" type="password" placeholder="Refresh token (1//…)" value={g.refreshToken} onChange={(e) => setG({ ...g, refreshToken: e.target.value })} autoComplete="off" />
+            </div>
+            <div className="flex gap-3">
+              <button className="lx-btn" disabled={pending || !g.clientId || !g.clientSecret || !g.refreshToken} onClick={() => start(async () => { const r = await saveGmailCredentials(g); setMsgG(r.message); if (r.ok) setG({ clientId: "", clientSecret: "", refreshToken: "" }); })}>Probar y guardar</button>
+              {provider.gmail?.source === "panel" && <button className="lx-btn-ghost" disabled={pending} onClick={() => start(async () => { await deleteGmailCredentials(); setMsgG("Gmail desconectado"); })}>Desconectar Gmail</button>}
+            </div>
+          </>
+        )}
+        {msgG && <p className="text-sm text-[var(--accent)]">{msgG}</p>}
       </section>
     </div>
   );

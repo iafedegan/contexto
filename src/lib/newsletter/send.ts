@@ -1,5 +1,6 @@
 import "server-only";
-import { resolveResendKey } from "@/lib/newsletter/settings";
+import { resolveGmail, resolveResendKey } from "@/lib/newsletter/settings";
+import { accesoGmail, armarMime, enviarGmail } from "@/lib/newsletter/gmail";
 
 // Un correo por enviar: destinatario, asunto y contenidos.
 export type Outgoing = {
@@ -28,6 +29,11 @@ export async function sendMany(
 ): Promise<SendResult> {
   if (messages.length === 0) return { delivered: 0, failed: 0 };
   const { key } = await resolveResendKey();
+  // Sin Resend, Gmail (Google Cloud) si tiene sus tres datos.
+  if (!key) {
+    const { cred } = await resolveGmail();
+    if (cred) return enviarPorGmail(messages, opts, cred);
+  }
 
   if (!key) {
     if (process.env.NODE_ENV === "development") {
@@ -75,6 +81,37 @@ export async function sendMany(
     }
     // Resend admite ~2 peticiones por segundo por cuenta.
     if (i + 100 < messages.length) await sleep(600);
+  }
+  return { delivered, failed, error };
+}
+
+/** Envío por la API de Gmail, uno por uno (Gmail no tiene envío por lotes). Si Google corta por el tope diario, se detiene. */
+async function enviarPorGmail(
+  messages: Outgoing[],
+  opts: { fromName: string; fromEmail: string; replyTo?: string },
+  cred: Parameters<typeof accesoGmail>[0],
+): Promise<SendResult> {
+  if (!opts.fromEmail) return { delivered: 0, failed: messages.length, error: "Falta el correo remitente en Ajustes (debe ser la cuenta de Gmail que autorizó el envío)." };
+  const acceso = await accesoGmail(cred);
+  if (!acceso.ok) return { delivered: 0, failed: messages.length, error: acceso.error };
+  let delivered = 0;
+  let failed = 0;
+  let error: string | undefined;
+  for (let i = 0; i < messages.length; i++) {
+    const m = messages[i];
+    const raw = armarMime({ from: opts.fromEmail, fromName: opts.fromName, to: m.to, replyTo: opts.replyTo, subject: m.subject, html: m.html, text: m.text, headers: m.headers });
+    const r = await enviarGmail(acceso.token, raw);
+    if (r.ok) delivered++;
+    else {
+      failed++;
+      error ??= r.error;
+      if (r.limite) {
+        failed += messages.length - i - 1;
+        break;
+      }
+    }
+    // Un respiro entre correos: Gmail limita la ráfaga por segundo.
+    if (i + 1 < messages.length) await sleep(150);
   }
   return { delivered, failed, error };
 }
