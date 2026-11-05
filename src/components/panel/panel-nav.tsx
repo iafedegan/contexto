@@ -54,9 +54,9 @@ const GROUPS: Group[] = [
     items: [
       { href: "/panel", label: "Resumen", hint: "Estado editorial, audiencia y suscriptores" },
       { href: "/panel/articulos", label: "Artículos", hint: "Crear, editar y programar", permiso: "articulos" },
-      { href: "/panel/pendientes", label: "Mis pendientes", hint: "Piezas del consejo que te asignaron" },
+      { href: "/panel/pendientes", label: "Mis pendientes", hint: "Piezas del grupo de redacción y notas que te enviaron" },
       { href: "/panel/consejo", label: "Grupo de redacción", hint: "Consejo de redacción y notas para editores", permiso: "articulos", soloAdmin: true, tambien: ["/panel/asignaciones"] },
-      { href: "/panel/asignaciones", label: "Notas para editores", hint: "Enviar una nota a un editor, o ver las que te enviaron", permiso: "articulos", soloNoAdmin: true, roles: ["redactor", "editor"] },
+      { href: "/panel/asignaciones", label: "Notas para editores", hint: "Preescribir una nota y enviarla a un editor", permiso: "articulos", soloNoAdmin: true, roles: ["redactor"] },
       { href: "/panel/newsletter", label: "Newsletter", hint: "Configurar y enviar el boletín", permiso: "newsletter" },
       { href: "/panel/en-vivo", label: "En vivo", hint: "Transmisión de YouTube en la portada", permiso: "avisos" },
     ],
@@ -105,9 +105,8 @@ function gruposVisibles(role: string, permisos: string[], pendientes = 0, notas 
     items: g.items
       .filter((i) => (!i.soloAdmin || esAdmin) && (!i.soloNoAdmin || !esAdmin) && (!i.roles || i.roles.includes(role)) && (!i.permiso || permisos.includes(i.permiso)))
       .map((i) => (esAdmin || !i.paraOtros ? i : { ...i, ...i.paraOtros }))
-      .map((i) => (i.href === "/panel/pendientes" && pendientes > 0 ? { ...i, badge: pendientes } : i))
-      // Notas que le enviaron a la persona y siguen pendientes: el editor entra por «Notas para editores», el administrador por «Grupo de redacción».
-      .map((i) => ((i.href === "/panel/asignaciones" || i.href === "/panel/consejo") && notas > 0 ? { ...i, badge: notas } : i)),
+      // Un solo punto rojo, en «Mis pendientes»: las piezas del grupo de redacción y las notas que le enviaron a la persona.
+      .map((i) => (i.href === "/panel/pendientes" && pendientes + notas > 0 ? { ...i, badge: pendientes + notas } : i)),
   })).filter((g) => g.items.length > 0);
 }
 
