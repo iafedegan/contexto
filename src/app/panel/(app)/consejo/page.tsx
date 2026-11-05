@@ -8,6 +8,7 @@ import { ConsejoNuevo } from "@/components/panel/consejo-nuevo";
 import { ConsejoBorrar } from "@/components/panel/consejo-borrar";
 import { lunesDe, sumarDias } from "@/lib/consejo/plan";
 import { TabsConsejo } from "@/components/panel/tabs-consejo";
+import { contarNotasPendientes } from "@/lib/notas-asignadas";
 import { TareasEquipo } from "@/components/panel/tareas-equipo";
 import { tareasDelEquipo } from "./tareas";
 import { sincronizarCasillas } from "@/lib/ai/consejo-ejecucion";
@@ -19,13 +20,14 @@ const ESTADO = { borrador: "Borrador", activo: "Activo", cerrado: "Cerrado" } as
 
 /** Lista de consejos de redacción y alta de uno nuevo. */
 export default async function ConsejosPage({ searchParams }: { searchParams: Promise<{ tab?: string; editor?: string; estado?: string }> }) {
-  await requireRole("administrador");
+  const yo = await requireRole("administrador");
   const { tab, editor = "", estado = "" } = await searchParams;
   const verTareas = tab === "tareas";
   // Pone al día el estado de las piezas según el de su nota (publicada, programada, en revisión) antes de listarlas.
   await sincronizarCasillas().catch(() => {});
   const tareas = await tareasDelEquipo();
   const abiertas = tareas.filter((t) => t.estado !== "publicada").length;
+  const misNotas = await contarNotasPendientes(yo.id);
   const hoy = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Bogota" }).format(new Date());
   const proximoLunes = sumarDias(lunesDe(hoy), 7);
   const planes = await db
@@ -48,7 +50,7 @@ export default async function ConsejosPage({ searchParams }: { searchParams: Pro
         <h1 className="lx-display mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">Grupo de redacción</h1>
         <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[var(--fg-muted)]">Como en una sala de redacción: se planea la semana (temas, cuántas notas por día y sección, horas de publicación y quién aprueba), y la IA redacta cada pieza a su tiempo. Nada sale sin que un editor lo haya autorizado.</p>
       </div>
-      <TabsConsejo activa={verTareas ? "tareas" : "consejos"} abiertas={abiertas} />
+      <TabsConsejo activa={verTareas ? "tareas" : "consejos"} abiertas={abiertas} notas={misNotas} />
       {verTareas && <TareasEquipo tareas={tareas} editor={editor} estado={estado} />}
       {!verTareas && <ConsejoNuevo proximoLunes={proximoLunes} />}
       {!verTareas && planes.length > 0 && (

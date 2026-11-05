@@ -9,7 +9,7 @@ import { Card } from "@/components/ui";
 import { TabsConsejo } from "@/components/panel/tabs-consejo";
 import { AsignarNotaForm } from "@/components/panel/asignar-nota-form";
 import { editoresParaAsignar, misAsignaciones, type FilaAsignada } from "./consultas";
-import { puedeEnviarAEditor, recibeNotas } from "@/lib/notas-asignadas";
+import { ESTADOS_PENDIENTES, puedeEnviarAEditor, recibeNotas } from "@/lib/notas-asignadas";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Notas para editores" };
@@ -42,15 +42,17 @@ export default async function NotasParaEditores() {
   const envia = puedeEnviarAEditor(yo.role);
   const recibe = recibeNotas(yo.role);
   if (!envia && !recibe) redirect("/panel");
-  const [editores, secciones, { paraMi, porMi }] = await Promise.all([
+  const [editores, secciones, { paraMi: todasParaMi, porMi }] = await Promise.all([
     editoresParaAsignar(yo.id),
     db.select({ id: categories.id, nombre: categories.name }).from(categories).orderBy(asc(categories.name)),
     misAsignaciones(yo.id),
   ]);
+  // A quien recibe solo le quedan a la vista las pendientes (borrador o en revisión); las publicadas o archivadas salen de la lista.
+  const paraMi = todasParaMi.filter((f) => (ESTADOS_PENDIENTES as readonly string[]).includes(f.estado));
   return (
     <div className="flex flex-col gap-5 sm:gap-6">
       {/* El administrador llega desde el «Grupo de redacción» y vuelve a sus otras pestañas; un editor solo ve esta página. */}
-      {yo.role === "administrador" && <TabsConsejo activa="notas" abiertas={0} />}
+      {yo.role === "administrador" && <TabsConsejo activa="notas" abiertas={0} notas={paraMi.length} />}
       <header>
         <p className="lx-kicker text-[var(--accent)]">Para editores</p>
         <h1 className="lx-display mt-1 text-3xl font-semibold tracking-tight sm:text-4xl">Notas para editores</h1>
@@ -69,8 +71,8 @@ export default async function NotasParaEditores() {
       <div className={`grid gap-5 ${envia && recibe ? "lg:grid-cols-2" : ""}`}>
         {recibe && (
         <Card>
-          <h2 className="mb-3 text-lg font-semibold">Me asignaron <span className="text-sm font-normal text-[var(--fg-muted)]">({paraMi.length})</span></h2>
-          {paraMi.length ? <ul className="flex flex-col gap-2">{paraMi.map((f) => <Fila key={f.articleId} f={f} de="para" />)}</ul> : <p className="text-sm text-[var(--fg-muted)]">Nadie te ha asignado notas todavía.</p>}
+          <h2 className="mb-3 text-lg font-semibold">Pendientes para mí <span className="text-sm font-normal text-[var(--fg-muted)]">({paraMi.length})</span></h2>
+          {paraMi.length ? <ul className="flex flex-col gap-2">{paraMi.map((f) => <Fila key={f.articleId} f={f} de="para" />)}</ul> : <p className="text-sm text-[var(--fg-muted)]">No tienes notas pendientes.</p>}
         </Card>
         )}
         {envia && (

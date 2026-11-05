@@ -1,7 +1,7 @@
 import "server-only";
 import { and, eq, inArray, ne, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { siteSettings, users } from "@/db/schema";
+import { articles, siteSettings, users } from "@/db/schema";
 
 /**
  * Notas que se le dejan a un editor: las preescritas en «Notas para editores» y las que un redactor o un administrador le envía desde el
@@ -56,4 +56,34 @@ export async function notasAsignadasA(userId: string): Promise<string[]> {
   const [row] = await db.select({ value: siteSettings.value }).from(siteSettings).where(eq(siteSettings.key, ASIGNADAS_KEY)).limit(1);
   const lista = Array.isArray(row?.value) ? (row.value as Asignacion[]) : [];
   return [...new Set(lista.filter((a) => a.editorId === userId).map((a) => a.articleId))];
+}
+
+/** A quién se envió cada nota (nombre del editor), para las notas dadas. Solo las que siguen en borrador o en revisión importan a quien llama. */
+export async function destinatariosDe(articleIds: string[]): Promise<Map<string, string>> {
+  if (!articleIds.length) return new Map();
+  const [row] = await db.select({ value: siteSettings.value }).from(siteSettings).where(eq(siteSettings.key, ASIGNADAS_KEY)).limit(1);
+  const pedidas = new Set(articleIds);
+  const lista = (Array.isArray(row?.value) ? (row.value as Asignacion[]) : []).filter((a) => pedidas.has(a.articleId));
+  if (!lista.length) return new Map();
+  const personas = await db.select({ id: users.id, nombre: users.name }).from(users).where(inArray(users.id, [...new Set(lista.map((a) => a.editorId))]));
+  const nombre = new Map(personas.map((p) => [p.id, p.nombre]));
+  // La más reciente manda (una nota reenviada a otro editor muestra al último).
+  const porNota = new Map<string, string>();
+  for (const a of [...lista].sort((x, y) => x.fecha.localeCompare(y.fecha))) porNota.set(a.articleId, nombre.get(a.editorId) ?? "un editor");
+  return porNota;
+}
+
+/** Estados en los que una nota enviada sigue pendiente para el editor. */
+export const ESTADOS_PENDIENTES = ["borrador", "en_revision"] as const;
+
+/** Cuántas notas enviadas a la persona siguen pendientes (borrador o en revisión): el punto rojo del menú. Si falla, 0. */
+export async function contarNotasPendientes(userId: string): Promise<number> {
+  try {
+    const ids = await notasAsignadasA(userId);
+    if (!ids.length) return 0;
+    const [r] = await db.select({ n: sql<number>`count(*)::int` }).from(articles).where(and(inArray(articles.id, ids), inArray(articles.status, [...ESTADOS_PENDIENTES])));
+    return r?.n ?? 0;
+  } catch {
+    return 0;
+  }
 }

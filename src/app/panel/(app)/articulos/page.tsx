@@ -14,6 +14,7 @@ import { dailySeries, hasDailyViews, pctChange, resumenGlobalNotas, siteWeekTota
 import { formatDate } from "@/lib/utils";
 import { nfCO as nf } from "@/lib/format";
 import { ESTADO_LABEL as STATUS_LABEL } from "@/lib/estados";
+import { destinatariosDe } from "@/lib/notas-asignadas";
 
 // Se calcula en cada petición, nunca durante la compilación.
 export const dynamic = "force-dynamic";
@@ -151,6 +152,8 @@ export default async function ArticlesList({ searchParams }: { searchParams: Sea
       : resumenGlobalNotas(),
     soloMias ? Promise.resolve(null) : siteWeekTotals(),
   ]);
+  // A quién se envió cada nota que sigue en borrador o en revisión (sale en su etiqueta: «En revisión · para …»).
+  const para = await destinatariosDe(rows.filter((r) => r.status === "en_revision" || r.status === "borrador").map((r) => r.id));
 
   const { byArticle } = await dailySeries(
     rows.map((r) => r.id),
@@ -261,7 +264,7 @@ export default async function ArticlesList({ searchParams }: { searchParams: Sea
               </div>
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <Badge className={r.status === "publicado" ? "border-[var(--border-strong)] text-[var(--accent)]" : ""}>
-                  {STATUS_LABEL[r.status] ?? r.status}
+                  {STATUS_LABEL[r.status] ?? r.status}{(r.status === "en_revision" || r.status === "borrador") && para.get(r.id) ? ` · para ${para.get(r.id)}` : ""}
                 </Badge>
                 {r.status === "programado" && r.scheduledFor && (
                   <span className="text-xs text-[var(--fg-muted)]">{formatDate(r.scheduledFor)}</span>
@@ -363,7 +366,7 @@ export default async function ArticlesList({ searchParams }: { searchParams: Sea
                         r.status === "publicado" ? "border-[var(--border-strong)] text-[var(--accent)]" : ""
                       }
                     >
-                      {STATUS_LABEL[r.status] ?? r.status}
+                      {STATUS_LABEL[r.status] ?? r.status}{(r.status === "en_revision" || r.status === "borrador") && para.get(r.id) ? ` · para ${para.get(r.id)}` : ""}
                     </Badge>
                     {r.status === "programado" && r.scheduledFor && (
                       <span className="ml-2 text-xs text-[var(--fg-muted)]">{formatDate(r.scheduledFor)}</span>

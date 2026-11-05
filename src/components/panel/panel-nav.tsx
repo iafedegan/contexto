@@ -97,7 +97,7 @@ const GROUPS: Group[] = [
 ];
 
 // Grupos y elementos que la persona puede ver según su rol y permisos.
-function gruposVisibles(role: string, permisos: string[], pendientes = 0) {
+function gruposVisibles(role: string, permisos: string[], pendientes = 0, notas = 0) {
   const esAdmin = role === "administrador";
   // Lo que el rol no puede usar ni se muestra (el servidor además lo exige).
   return GROUPS.map((g) => ({
@@ -105,7 +105,9 @@ function gruposVisibles(role: string, permisos: string[], pendientes = 0) {
     items: g.items
       .filter((i) => (!i.soloAdmin || esAdmin) && (!i.soloNoAdmin || !esAdmin) && (!i.roles || i.roles.includes(role)) && (!i.permiso || permisos.includes(i.permiso)))
       .map((i) => (esAdmin || !i.paraOtros ? i : { ...i, ...i.paraOtros }))
-      .map((i) => (i.href === "/panel/pendientes" && pendientes > 0 ? { ...i, badge: pendientes } : i)),
+      .map((i) => (i.href === "/panel/pendientes" && pendientes > 0 ? { ...i, badge: pendientes } : i))
+      // Notas que le enviaron a la persona y siguen pendientes: el editor entra por «Notas para editores», el administrador por «Grupo de redacción».
+      .map((i) => ((i.href === "/panel/asignaciones" || i.href === "/panel/consejo") && notas > 0 ? { ...i, badge: notas } : i)),
   })).filter((g) => g.items.length > 0);
 }
 
@@ -125,8 +127,8 @@ const ICONOS: Record<string, typeof Circle> = {
 };
 
 /** Barra lateral de escritorio (≥ lg): navegación vertical agrupada, con la sección activa resaltada. */
-export function PanelSidebarNav({ role, permisos, pendientes = 0 }: { role: string; permisos: string[]; pendientes?: number }) {
-  const groups = gruposVisibles(role, permisos, pendientes);
+export function PanelSidebarNav({ role, permisos, pendientes = 0, notas = 0 }: { role: string; permisos: string[]; pendientes?: number; notas?: number }) {
+  const groups = gruposVisibles(role, permisos, pendientes, notas);
   const pathname = usePathname();
   const { abierto, alternar } = useGruposMenu(grupoDe(groups, pathname));
   return (
@@ -180,13 +182,13 @@ export function PanelSidebarNav({ role, permisos, pendientes = 0 }: { role: stri
 }
 
 // Menú lateral del panel, filtrado por rol y permisos.
-export function PanelNav({ role, permisos, pendientes = 0, children }: { role: string; permisos: string[]; pendientes?: number; children?: React.ReactNode }) {
-  const groups = gruposVisibles(role, permisos, pendientes);
+export function PanelNav({ role, permisos, pendientes = 0, notas = 0, children }: { role: string; permisos: string[]; pendientes?: number; notas?: number; children?: React.ReactNode }) {
+  const groups = gruposVisibles(role, permisos, pendientes, notas);
 
   return (
     <>
     {/* Debajo de `lg` los tres desplegables no caben: menú móvil con todas las secciones y la cuenta. */}
-    <PanelMobileMenu groups={groups} alerta={pendientes > 0}>{children}</PanelMobileMenu>
+    <PanelMobileMenu groups={groups} alerta={pendientes + notas > 0}>{children}</PanelMobileMenu>
     </>
   );
 }
