@@ -8,9 +8,9 @@ import { ASIGNADAS_KEY, type Asignacion } from "@/lib/notas-asignadas";
 // La clave y la forma de cada asignación viven en `lib/notas-asignadas.ts` (las usan también el asistente y los permisos de las notas).
 export { ASIGNADAS_KEY, type Asignacion };
 
-/** Personas a las que se les puede asignar una nota: editores y administradores activos. */
+/** Personas a las que se les puede asignar una nota: editores activos. */
 export async function editoresParaAsignar(): Promise<{ id: string; nombre: string; rol: string }[]> {
-  const filas = await db.select({ id: users.id, nombre: users.name, rol: users.role }).from(users).where(and(eq(users.active, true), inArray(users.role, ["editor", "administrador"])));
+  const filas = await db.select({ id: users.id, nombre: users.name, rol: users.role }).from(users).where(and(eq(users.active, true), eq(users.role, "editor")));
   return filas.sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
 }
 

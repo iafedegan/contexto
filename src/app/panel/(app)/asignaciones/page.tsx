@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { ChevronRight } from "lucide-react";
 import { asc } from "drizzle-orm";
 import { db } from "@/db";
@@ -8,6 +9,7 @@ import { Card } from "@/components/ui";
 import { TabsConsejo } from "@/components/panel/tabs-consejo";
 import { AsignarNotaForm } from "@/components/panel/asignar-nota-form";
 import { editoresParaAsignar, misAsignaciones, type FilaAsignada } from "./consultas";
+import { puedeEnviarAEditor } from "@/lib/notas-asignadas";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Notas para editores" };
@@ -35,7 +37,11 @@ function Fila({ f, de }: { f: FilaAsignada; de: "por" | "para" }) {
 
 // Preescribir una nota y asignarla al editor que se elija, y ver lo que le asignaron a uno y lo que uno asignó.
 export default async function NotasParaEditores() {
-  const yo = await requirePermiso("asignar_notas");
+  const yo = await requirePermiso("articulos");
+  // Envían los administradores y los redactores; el editor recibe. Cualquier otro rol no tiene nada que hacer aquí.
+  const envia = puedeEnviarAEditor(yo.role);
+  const recibe = yo.role === "editor";
+  if (!envia && !recibe) redirect("/panel");
   const [editores, secciones, { paraMi, porMi }] = await Promise.all([
     editoresParaAsignar(),
     db.select({ id: categories.id, nombre: categories.name }).from(categories).orderBy(asc(categories.name)),
@@ -48,21 +54,31 @@ export default async function NotasParaEditores() {
       <header>
         <p className="lx-kicker text-[var(--accent)]">Para editores</p>
         <h1 className="lx-display mt-1 text-3xl font-semibold tracking-tight sm:text-4xl">Notas para editores</h1>
-        <p className="mt-2 max-w-2xl text-[var(--fg-muted)]">Escribe una nota (o su esquema) y déjasela al editor que elijas: le llega como borrador en «Artículos», la termina, la revisa y la publica él. Nada se publica solo.</p>
+        <p className="mt-2 max-w-2xl text-[var(--fg-muted)]">
+          {envia
+            ? "Escribe una nota (o su esquema) y déjasela al editor que elijas: le llega en «Artículos», la termina, la revisa y la publica él. Nada se publica solo. También puedes enviar una nota desde el asistente de redacción («Sección y autor»)."
+            : "Las notas que te enviaron los redactores y los administradores: ábrelas, revísalas y publícalas. Nada se publica solo."}
+        </p>
       </header>
-      <Card>
-        <h2 className="mb-4 text-lg font-semibold">Asignar una nota</h2>
-        <AsignarNotaForm editores={editores} secciones={secciones} />
-      </Card>
-      <div className="grid gap-5 lg:grid-cols-2">
+      {envia && (
+        <Card>
+          <h2 className="mb-4 text-lg font-semibold">Asignar una nota</h2>
+          <AsignarNotaForm editores={editores} secciones={secciones} />
+        </Card>
+      )}
+      <div className={`grid gap-5 ${envia && recibe ? "lg:grid-cols-2" : ""}`}>
+        {recibe && (
         <Card>
           <h2 className="mb-3 text-lg font-semibold">Me asignaron <span className="text-sm font-normal text-[var(--fg-muted)]">({paraMi.length})</span></h2>
           {paraMi.length ? <ul className="flex flex-col gap-2">{paraMi.map((f) => <Fila key={f.articleId} f={f} de="para" />)}</ul> : <p className="text-sm text-[var(--fg-muted)]">Nadie te ha asignado notas todavía.</p>}
         </Card>
+        )}
+        {envia && (
         <Card>
           <h2 className="mb-3 text-lg font-semibold">Las que asigné <span className="text-sm font-normal text-[var(--fg-muted)]">({porMi.length})</span></h2>
           {porMi.length ? <ul className="flex flex-col gap-2">{porMi.map((f) => <Fila key={f.articleId} f={f} de="por" />)}</ul> : <p className="text-sm text-[var(--fg-muted)]">Todavía no has asignado ninguna.</p>}
         </Card>
+        )}
       </div>
     </div>
   );
