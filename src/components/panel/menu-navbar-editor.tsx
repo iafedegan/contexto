@@ -77,7 +77,9 @@ export function MenuNavbarEditor({
       {conAspecto ? (
         <>
         <p className="mt-1 text-sm font-semibold">Aspecto de los enlaces</p>
-        <ColorRow label="Color del texto" value={m.estilo?.color} onChange={(color) => estilo({ color })} />
+        <ColorRow label="Color del texto (los dos modos)" value={m.estilo?.color} onChange={(color) => estilo({ color })} />
+        <ColorRow label="Color en modo claro" value={m.estilo?.colorClaro} onChange={(colorClaro) => estilo({ colorClaro })} />
+        <ColorRow label="Color en modo oscuro" value={m.estilo?.colorOscuro} onChange={(colorOscuro) => estilo({ colorOscuro })} />
         <FontSelect label="Tipo de letra" value={m.estilo?.font} onChange={(font) => estilo({ font })} />
         {num("Tamaño del texto (px)", m.estilo?.tamano, 10, 24, "tamano")}
         {num("Espacio entre enlaces (px)", m.estilo?.espacio, 0, 60, "espacio")}

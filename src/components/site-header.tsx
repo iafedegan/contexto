@@ -160,28 +160,32 @@ function MastheadHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extr
     <header data-region="navbar" className="sticky top-[var(--stick-top,0px)] z-40 bg-[var(--nav-bg)]">
       {/* Solo la fila de secciones queda pegada al desplazarse (ver StickyRail). */}
       <StickyRail />
-      <div className="mx-auto max-w-7xl px-6 pb-4 pt-6 text-center md:pt-7">
+      {/* Contenedor de tamaño propio: el nombre, el emblema y las líneas se escalan con su ancho y se ajustan juntos. */}
+      <div className="mx-auto max-w-7xl px-6 pb-4 pt-6 text-center md:pt-7 [container-type:inline-size]">
+        {/* Emblema en un solo color (el del texto; si hay color de titulares, ese), como máscara: cambia con el color elegido en el panel. */}
+        <Link href={localePath(locale, "/")} aria-label={identity.name} className="mx-auto mb-[0.6cqi] block">
+          <span
+            aria-hidden
+            data-titulo-marca
+            className="mx-auto block aspect-[8/5] h-[clamp(2.25rem,5.2cqi,4rem)] bg-[var(--fg)]"
+            style={{ WebkitMask: "url(/logo/contexto-ganadero-emblema.png) center / contain no-repeat", mask: "url(/logo/contexto-ganadero-emblema.png) center / contain no-repeat" }}
+          />
+        </Link>
+        {/* `items-center` sobre ESTA fila (solo el nombre): las líneas quedan siempre en el centro vertical del título. */}
         <div className="flex items-center justify-center gap-6">
           <span data-titulo-linea className="hidden h-px flex-1 bg-gradient-to-r from-transparent to-[var(--border-strong)] md:block" />
           <Link href={localePath(locale, "/")} className="block">
-            {/* Emblema en un solo color (el de los titulares / el acento), como máscara: cambia con el color elegido en el panel. */}
-            <span
-              aria-hidden
-              data-titulo-marca
-              className="mx-auto mb-2 block h-14 w-16 bg-[var(--accent)] md:h-16 md:w-[4.5rem]"
-              style={{ WebkitMask: "url(/logo/contexto-ganadero-emblema.png) center / contain no-repeat", mask: "url(/logo/contexto-ganadero-emblema.png) center / contain no-repeat" }}
-            />
-            <span className="lx-display lx-foil block text-4xl font-semibold leading-none tracking-tight md:text-5xl">
+            <span className="lx-display lx-foil block text-[clamp(1.875rem,6.4cqi,3.75rem)] font-semibold leading-none tracking-tight">
               {identity.name}
-            </span>
-            {/* El lema y, debajo, la fecha. */}
-            <span className="mt-2 flex flex-col items-center gap-y-1">
-              {!identity.sinLema && <span data-titulo-texto className="lx-kicker text-[var(--fg-muted)]">{identity.tagline || t(locale, "nav.tagline")}</span>}
-              {identity.fecha !== false && <span data-titulo-texto className="lx-ui text-[0.62rem] font-medium uppercase tracking-[0.18em] text-[var(--fg-muted)]/80">{today}</span>}
             </span>
           </Link>
           <span data-titulo-linea className="hidden h-px flex-1 bg-gradient-to-l from-transparent to-[var(--border-strong)] md:block" />
         </div>
+        {/* El lema y, debajo, la fecha. */}
+        <span className="mt-2 flex flex-col items-center gap-y-1">
+          {!identity.sinLema && <span data-titulo-texto className="lx-kicker text-[var(--fg-muted)]">{identity.tagline || t(locale, "nav.tagline")}</span>}
+          {identity.fecha !== false && <span data-titulo-texto className="lx-ui text-[0.62rem] font-medium uppercase tracking-[0.18em] text-[var(--fg-muted)]/80">{today}</span>}
+        </span>
       </div>
 
       <nav

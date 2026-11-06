@@ -225,7 +225,7 @@ const PLANTILLAS_OSCURAS = ["home", "esmeralda", "revista", "vanguardia"];
  * Selectores de un componente cuando el sitio se VE en un modo: el elegido por el lector (`html[data-dark]`) o, si no eligió,
  * el propio de la plantilla. Llevan más peso que la regla base, así que mandan sobre los colores «de los dos modos».
  */
-function selectoresDeModo(modo: "claro" | "oscuro", scope: string, id: string | null, sufijo = ""): string {
+export function selectoresDeModo(modo: "claro" | "oscuro", scope: string, id: string | null, sufijo = ""): string {
   // `id` nulo = la raíz del sitio (el lienzo de toda la página), para el fondo del cuerpo.
   const comp = `${id ? ` [data-region="${id}"]` : ""}${sufijo}`;
   const nativas = PLANTILLAS_OSCURAS.map((t) => `[data-theme="${t}"]`).join(",");

@@ -1,5 +1,6 @@
 import { HOME_FONTS, homeFontFamily, type HomeTitleFont } from "@/lib/home-fonts";
 import { acotar, colorHex } from "@/lib/validate";
+import { selectoresDeModo } from "@/lib/home-regions";
 
 /**
  * Ajustes del menú de la barra de navegación que se editan en /panel/portada (Cabecera › Menú): qué secciones principales se muestran, enlaces
@@ -20,6 +21,9 @@ export type MenuNavbar = {
 export type EstiloMenu = {
   /** Color del texto de los enlaces. */
   color?: string;
+  /** Color del texto solo cuando el sitio se ve en modo claro / oscuro (pisa a `color`). */
+  colorClaro?: string;
+  colorOscuro?: string;
   font?: HomeTitleFont;
   /** Tamaño del texto, en px (10-24). */
   tamano?: number;
@@ -36,6 +40,8 @@ function sanitizeEstilo(input: unknown): EstiloMenu | undefined {
   const e = input as Record<string, unknown>;
   const s: EstiloMenu = {
     color: colorHex(e.color),
+    colorClaro: colorHex(e.colorClaro),
+    colorOscuro: colorHex(e.colorOscuro),
     font: HOME_FONTS.some((f) => f.id === e.font) ? (e.font as HomeTitleFont) : undefined,
     tamano: acotar(e.tamano, 10, 24),
     espacio: acotar(e.espacio, 0, 60),
@@ -65,7 +71,13 @@ export function menuNavCss(menu: MenuNavbar | undefined, scope = "[data-site-roo
   if (fam) ld.push(`font-family:${fam}!important`);
   if (e.letras !== undefined) ld.push(`letter-spacing:${e.letras / 10}px!important`);
   if (e.mayusculas !== undefined) ld.push(`text-transform:${e.mayusculas ? "uppercase" : "none"}!important`);
-  return [nd.length ? `${nav}{${nd.join(";")}}` : "", ld.length ? `${enlaces}{${ld.join(";")}}` : ""].filter(Boolean).join("\n");
+  const porModo = (["claro", "oscuro"] as const)
+    .map((m) => {
+      const c = m === "claro" ? e.colorClaro : e.colorOscuro;
+      return c ? `${selectoresDeModo(m, scope, "navbar", ' nav:not(#mobile-menu nav) a:not([role="menuitem"])')}{color:${c}!important}` : "";
+    })
+    .filter(Boolean);
+  return [nd.length ? `${nav}{${nd.join(";")}}` : "", ld.length ? `${enlaces}{${ld.join(";")}}` : "", ...porModo].filter(Boolean).join("\n");
 }
 
 export const MAX_EXTRAS = 6;
