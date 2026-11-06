@@ -260,9 +260,9 @@ function GoldCard({ a, priority, locale, compact = false }: { a: ArticleListItem
 /* ------------------------------------------------- Portada: columna lateral */
 function RailCard({ a, index, locale }: { a: ArticleListItem; index?: number; locale: Locale }) {
   const st = cardStyle(a, "rail");
-  // Sin medidas exactas, el porcentaje del panel encoge la miniatura (84 px es su lado normal).
+  // Sin medidas exactas, el porcentaje del panel encoge la miniatura (140 px es su ancho normal).
   const fijo = estiloFijo(a.homeStyle);
-  const pct = fijo?.imageScale && fijo.imageScale !== 100 ? Math.round((84 * fijo.imageScale) / 100) : undefined;
+  const pct = fijo?.imageScale && fijo.imageScale !== 100 ? Math.round((140 * fijo.imageScale) / 100) : undefined;
   const lado = { w: fijo?.imageWidth ?? fijo?.imageHeight ?? pct, h: fijo?.imageHeight ?? fijo?.imageWidth ?? pct };
   const medidasMiniatura: React.CSSProperties | undefined = lado.w && lado.h ? { width: `${lado.w}px`, height: `${lado.h}px` } : undefined;
   return (
@@ -283,16 +283,16 @@ function RailCard({ a, index, locale }: { a: ArticleListItem; index?: number; lo
       </div>
       {/* La miniatura también va en el celular: sin ella «Lo último» era una lista de texto plano. */}
       {!st.hideMedia && (
-      <Link href={hrefNota(locale, a)} className="block max-w-[45%] shrink-0" aria-hidden tabIndex={-1}>
-        {/* La miniatura es cuadrada; con medidas exactas en el panel toma esas (si solo hay una, es el lado del cuadrado) y el texto, al lado, se acomoda. */}
-        <span className={`lx-media block overflow-hidden rounded-[var(--radius)] ${medidasMiniatura ? "max-w-full" : "size-[5.25rem] sm:size-20"}`} style={a.homeStyle?.pantallas ? ({ ["--cg-mini-foto" as string]: "1" } as React.CSSProperties) : medidasMiniatura}>
+      <Link href={hrefNota(locale, a)} className="block max-w-[46%] shrink-0 self-start" aria-hidden tabIndex={-1}>
+        {/* La miniatura es apaisada (4:3, más grande en el celular); con medidas exactas en el panel toma esas (si solo hay una, es el lado del cuadrado) y el texto, al lado, se acomoda. */}
+        <span className={`lx-media block overflow-hidden rounded-[var(--radius)] ${medidasMiniatura ? "max-w-full" : "aspect-[4/3] w-[8.75rem] sm:w-28"}`} style={a.homeStyle?.pantallas ? ({ ["--cg-mini-foto" as string]: "1" } as React.CSSProperties) : medidasMiniatura}>
           <CardMedia
             src={a.coverImageUrl}
             alt=""
             seed={a.slug}
             label={a.categoryName ?? a.title}
-            ratio={medidasMiniatura ? "h-full" : "aspect-square"}
-            sizes="84px"
+            ratio={medidasMiniatura ? "h-full" : "aspect-[4/3]"}
+            sizes="140px"
           />
         </span>
       </Link>

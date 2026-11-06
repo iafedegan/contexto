@@ -14,7 +14,7 @@ import { carpetasVisibles, estaDentroDe, nombreValido } from "@/lib/biblioteca-a
 import { urlPublicaMedia } from "@/lib/media-storage";
 
 export type CarpetaInfo = { id: string; parentId: string | null; name: string };
-export type ActivoInfo = { id: string; name: string; url: string; kind: string; folderId: string | null; carpeta: string | null; createdAt: string };
+export type ActivoInfo = { id: string; name: string; url: string; kind: string; bytes: number | null; folderId: string | null; carpeta: string | null; createdAt: string };
 export type Explorado =
   | { ok: true; gestiona: boolean; carpetas: CarpetaInfo[]; activos: ActivoInfo[]; hayMas: boolean }
   | { ok: false; error: string };
@@ -45,7 +45,7 @@ const todasLasCarpetas = async (): Promise<CarpetaInfo[]> =>
 const comoLiteral = (q: string) => `%${q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
 
 /** Las carpetas que la persona ve y los archivos de una carpeta (o los que coinciden con la búsqueda, en todas las que ve). */
-export async function explorarBiblioteca(input: { carpeta: string | null; q?: string }): Promise<Explorado> {
+export async function explorarBiblioteca(input: { carpeta: string | null; q?: string; pagina?: number }): Promise<Explorado> {
   const { yo, gestiona } = await contexto();
   const carpetas = await todasLasCarpetas();
   const asignadas = gestiona ? [] : (await db.select({ id: mediaFolderAccess.folderId }).from(mediaFolderAccess).where(eq(mediaFolderAccess.userId, yo.id))).map((r) => r.id);
@@ -62,12 +62,15 @@ export async function explorarBiblioteca(input: { carpeta: string | null; q?: st
       ? eq(mediaAssets.folderId, carpeta)
       : isNull(mediaAssets.folderId);
   const limite = q ? MAX_BUSQUEDA : MAX_ACTIVOS;
+  // Una carpeta con miles de imágenes (las de las notas) se lee por páginas de 200.
+  const desde = q ? 0 : Math.max(0, Math.min(Math.floor(Number(input.pagina) || 0), 1000)) * limite;
   const filas = await db
-    .select({ id: mediaAssets.id, name: mediaAssets.name, url: mediaAssets.url, kind: mediaAssets.kind, folderId: mediaAssets.folderId, createdAt: mediaAssets.createdAt })
+    .select({ id: mediaAssets.id, name: mediaAssets.name, url: mediaAssets.url, kind: mediaAssets.kind, bytes: mediaAssets.bytes, folderId: mediaAssets.folderId, createdAt: mediaAssets.createdAt })
     .from(mediaAssets)
     .where(donde)
-    .orderBy(desc(mediaAssets.createdAt))
-    .limit(limite + 1);
+    .orderBy(desc(mediaAssets.createdAt), asc(mediaAssets.id))
+    .limit(limite + 1)
+    .offset(desde);
   const nombre = new Map(carpetas.map((c) => [c.id, c.name]));
   return {
     ok: true,

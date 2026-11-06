@@ -28,6 +28,7 @@ import { rutaDe } from "@/lib/biblioteca-acceso";
 type Modo = "gestion" | "selector";
 type Persona = { id: string; name: string; role: string };
 
+const peso = (b: number | null) => (b == null ? "" : b >= 1048576 ? `${(b / 1048576).toFixed(1).replace(".", ",")} MB` : `${Math.max(1, Math.round(b / 1024))} KB`);
 const fecha = (iso: string) => new Intl.DateTimeFormat("es-CO", { day: "numeric", month: "short", year: "numeric", timeZone: "America/Bogota" }).format(new Date(iso));
 const ROL: Record<string, string> = { redactor: "Redactor", editor: "Editor", disenador: "Diseñador" };
 const boton = "inline-flex min-h-9 items-center gap-1.5 rounded-[var(--radius)] border border-[var(--border)] px-3 text-sm font-medium transition hover:border-[var(--accent)] disabled:opacity-50";
@@ -41,6 +42,7 @@ export function BibliotecaExplorador({ modo, onElegir }: { modo: Modo; onElegir?
   const [q, setQ] = useState("");
   const [busqueda, setBusqueda] = useState("");
   const [cargando, setCargando] = useState(true);
+  const [pagina, setPagina] = useState(0);
   const [error, setError] = useState("");
   const [aviso, setAviso] = useState("");
   const [abiertas, setAbiertas] = useState<Set<string>>(new Set());
@@ -53,20 +55,21 @@ export function BibliotecaExplorador({ modo, onElegir }: { modo: Modo; onElegir?
 
   const gestion = modo === "gestion" && gestiona;
 
-  const cargar = useCallback(async (carpeta: string | null, texto: string) => {
+  const cargar = useCallback(async (carpeta: string | null, texto: string, pag = 0) => {
     setCargando(true);
     setError("");
     try {
-      const r = await explorarBiblioteca({ carpeta, q: texto });
+      const r = await explorarBiblioteca({ carpeta, q: texto, pagina: pag });
       if (!r.ok) {
         setError(r.error);
         return;
       }
       setCarpetas(r.carpetas);
-      setActivos(r.activos);
+      setActivos((previos) => (pag > 0 ? [...previos, ...r.activos] : r.activos));
       setGestiona(r.gestiona);
       setHayMas(r.hayMas);
-      setSeleccion(new Set());
+      setPagina(pag);
+      if (pag === 0) setSeleccion(new Set());
     } catch {
       setError("No se pudo cargar la biblioteca. Intenta de nuevo.");
     } finally {
@@ -310,7 +313,7 @@ export function BibliotecaExplorador({ modo, onElegir }: { modo: Modo; onElegir?
                   <span className="grid aspect-[4/3] w-full place-items-center rounded-[calc(var(--radius)*0.75)] bg-[var(--surface-2)] text-xs text-[var(--fg-muted)]">Video</span>
                 )}
                 <span className="mt-1.5 block truncate text-sm font-medium">{a.name}</span>
-                <span className="block truncate text-xs text-[var(--fg-muted)]">{busqueda && a.carpeta ? `${a.carpeta} · ` : ""}{fecha(a.createdAt)}</span>
+                <span className="block truncate text-xs text-[var(--fg-muted)]">{busqueda && a.carpeta ? `${a.carpeta} · ` : ""}{fecha(a.createdAt)}{a.bytes ? ` · ${peso(a.bytes)}` : ""}</span>
               </>
             );
             return (
@@ -332,6 +335,11 @@ export function BibliotecaExplorador({ modo, onElegir }: { modo: Modo; onElegir?
             );
           })}
         </ul>
+        {hayMas && !busqueda && !cargando && (
+          <div className="mt-4 text-center">
+            <button type="button" className={boton} onClick={() => void cargar(actual, busqueda, pagina + 1)}>Cargar más imágenes</button>
+          </div>
+        )}
         {sinNada && (
           <p className="mt-8 text-center text-sm text-[var(--fg-muted)]">
             {busqueda ? "Ninguna imagen se llama así en las carpetas que ves." : gestion ? "Esta carpeta está vacía. Arrastra imágenes aquí o usa «Subir archivos»." : actual ? "Esta carpeta aún no tiene imágenes." : "Elige una carpeta para ver sus imágenes."}
