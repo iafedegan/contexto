@@ -188,6 +188,13 @@ function MastheadHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extr
         </span>
       </div>
 
+      {/* Cinta de seis colores bajo el nombre del sitio y encima del menú. */}
+      <div aria-hidden className="flex h-1 w-full">
+        {["#f2a900", "#b5124f", "#00587c", "#6a9fc0", "#e5214f", "#5a8f9e"].map((c) => (
+          <span key={c} className="h-full flex-1" style={{ background: c }} />
+        ))}
+      </div>
+
       <nav
         aria-label={t(locale, "nav.sections")}
         className="sticky top-0 z-40 border-y border-[var(--border)] bg-[var(--nav-bg)] sm:static"

@@ -177,7 +177,7 @@ const TEXT = ":is(p,li,time,small,dd,dt,figcaption,nav a)";
 
 // El nombre del sitio con el color elegido como base de su lámina: el degradado y el brillo que lo recorre (globals.css, `.lx-foil`) se
 // arman con `--accent`, así que basta con cambiarlo ahí; el texto sigue transparente para que se vea el degradado y no un color plano.
-const foilColor = (c: string) => `--accent:${c}!important;color:transparent!important;-webkit-text-fill-color:transparent!important`;
+const foilColor = (c: string) => `--accent:${c}!important;--foil-brillo:color-mix(in oklab, ${c} 60%, #ffffff)!important;color:transparent!important;-webkit-text-fill-color:transparent!important`;
 // Reglas del color de titulares de un componente.
 // Con el color de los titulares también cambian el adorno a los lados del nombre del sitio, el lema y la fecha (marcas `data-titulo-*` de la cabecera).
 const juntoAlTitulo = (sel: string, c: string) => [

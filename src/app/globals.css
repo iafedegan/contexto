@@ -753,7 +753,7 @@ a {
     100deg,
     color-mix(in oklab, var(--accent) 65%, var(--fg)) 0%,
     var(--accent) 28%,
-    #fff8e2 46%,
+    var(--foil-brillo, #fff8e2) 46%,
     var(--accent) 62%,
     color-mix(in oklab, var(--accent) 60%, var(--fg)) 100%
   );
