@@ -162,18 +162,25 @@ function MastheadHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extr
       <StickyRail />
       <div className="mx-auto max-w-7xl px-6 pb-4 pt-6 text-center md:pt-7">
         <div className="flex items-center justify-center gap-6">
-          <span className="hidden h-px flex-1 bg-gradient-to-r from-transparent to-[var(--border-strong)] md:block" />
+          <span data-titulo-linea className="hidden h-px flex-1 bg-gradient-to-r from-transparent to-[var(--border-strong)] md:block" />
           <Link href={localePath(locale, "/")} className="block">
+            {/* Emblema en un solo color (el de los titulares / el acento), como máscara: cambia con el color elegido en el panel. */}
+            <span
+              aria-hidden
+              data-titulo-marca
+              className="mx-auto mb-2 block h-14 w-16 bg-[var(--accent)] md:h-16 md:w-[4.5rem]"
+              style={{ WebkitMask: "url(/logo/contexto-ganadero-emblema.png) center / contain no-repeat", mask: "url(/logo/contexto-ganadero-emblema.png) center / contain no-repeat" }}
+            />
             <span className="lx-display lx-foil block text-4xl font-semibold leading-none tracking-tight md:text-5xl">
               {identity.name}
             </span>
             {/* El lema y, debajo, la fecha. */}
             <span className="mt-2 flex flex-col items-center gap-y-1">
-              {!identity.sinLema && <span className="lx-kicker text-[var(--fg-muted)]">{identity.tagline || t(locale, "nav.tagline")}</span>}
-              {identity.fecha !== false && <span className="lx-ui text-[0.62rem] font-medium uppercase tracking-[0.18em] text-[var(--fg-muted)]/80">{today}</span>}
+              {!identity.sinLema && <span data-titulo-texto className="lx-kicker text-[var(--fg-muted)]">{identity.tagline || t(locale, "nav.tagline")}</span>}
+              {identity.fecha !== false && <span data-titulo-texto className="lx-ui text-[0.62rem] font-medium uppercase tracking-[0.18em] text-[var(--fg-muted)]/80">{today}</span>}
             </span>
           </Link>
-          <span className="hidden h-px flex-1 bg-gradient-to-l from-transparent to-[var(--border-strong)] md:block" />
+          <span data-titulo-linea className="hidden h-px flex-1 bg-gradient-to-l from-transparent to-[var(--border-strong)] md:block" />
         </div>
       </div>
 

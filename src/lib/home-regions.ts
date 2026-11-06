@@ -179,7 +179,13 @@ const TEXT = ":is(p,li,time,small,dd,dt,figcaption,nav a)";
 // arman con `--accent`, así que basta con cambiarlo ahí; el texto sigue transparente para que se vea el degradado y no un color plano.
 const foilColor = (c: string) => `--accent:${c}!important;color:transparent!important;-webkit-text-fill-color:transparent!important`;
 // Reglas del color de titulares de un componente.
-const reglasTitulo = (sel: string, c: string) => [`${sel} ${TITLES}{color:${c}!important}`, `${sel} .lx-foil{${foilColor(c)}}`];
+// Con el color de los titulares también cambian el adorno a los lados del nombre del sitio, el lema y la fecha (marcas `data-titulo-*` de la cabecera).
+const juntoAlTitulo = (sel: string, c: string) => [
+  `${sel} [data-titulo-linea]{--border-strong:color-mix(in srgb, ${c} 65%, transparent)}`,
+  `${sel} [data-titulo-marca]{background:${c}!important}`,
+  `${sel} [data-titulo-texto]{color:color-mix(in srgb, ${c} 85%, transparent)!important}`,
+];
+const reglasTitulo = (sel: string, c: string) => [`${sel} ${TITLES}{color:${c}!important}`, `${sel} .lx-foil{${foilColor(c)}}`, ...juntoAlTitulo(sel, c)];
 
 // Las declaraciones CSS de los colores de un componente (fondo, degradado, texto, acento).
 function coloresDecl(s: RegionColors): string[] {
@@ -340,6 +346,10 @@ export function regionsCss(input: RegionStyles | undefined, scope = "[data-site-
       if (c?.title) {
         rules.push(`${selectoresDeModo(modo, scope, id, ` ${TITLES}`)}{color:${c.title}!important}`);
         rules.push(`${selectoresDeModo(modo, scope, id, " .lx-foil")}{${foilColor(c.title)}}`);
+        for (const ext of [" [data-titulo-linea]", " [data-titulo-texto]"]) {
+          const r = juntoAlTitulo("", c.title).find((x) => x.trim().startsWith(ext.trim()));
+          if (r) rules.push(`${selectoresDeModo(modo, scope, id, ext)}{${r.slice(r.indexOf("{") + 1)}`);
+        }
       }
     }
   }
