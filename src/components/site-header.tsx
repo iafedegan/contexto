@@ -167,8 +167,8 @@ function MastheadHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extr
           <span
             aria-hidden
             data-titulo-marca
-            className="mx-auto block aspect-[8/5] h-[clamp(2.25rem,5.2cqi,4rem)] bg-[var(--fg)]"
-            style={{ WebkitMask: "url(/logo/contexto-ganadero-emblema.png) center / contain no-repeat", mask: "url(/logo/contexto-ganadero-emblema.png) center / contain no-repeat" }}
+            className="mx-auto block aspect-[8/5] h-[clamp(2.25rem,5.2cqi,4rem)] lx-foil"
+            style={{ backgroundClip: "border-box", WebkitBackgroundClip: "border-box", WebkitMask: "url(/logo/contexto-ganadero-emblema.png) center / contain no-repeat", mask: "url(/logo/contexto-ganadero-emblema.png) center / contain no-repeat" }}
           />
         </Link>
         {/* `items-center` sobre ESTA fila (solo el nombre): las líneas quedan siempre en el centro vertical del título. */}

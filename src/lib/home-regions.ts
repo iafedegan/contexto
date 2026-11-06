@@ -182,7 +182,7 @@ const foilColor = (c: string) => `--accent:${c}!important;--foil-brillo:color-mi
 // Con el color de los titulares también cambian el adorno a los lados del nombre del sitio, el lema y la fecha (marcas `data-titulo-*` de la cabecera).
 const juntoAlTitulo = (sel: string, c: string) => [
   `${sel} [data-titulo-linea]{--border-strong:color-mix(in srgb, ${c} 65%, transparent)}`,
-  `${sel} [data-titulo-marca]{background:${c}!important}`,
+  `${sel} [data-titulo-marca]{${foilColor(c)}}`,
   `${sel} [data-titulo-texto]{color:color-mix(in srgb, ${c} 85%, transparent)!important}`,
 ];
 const reglasTitulo = (sel: string, c: string) => [`${sel} ${TITLES}{color:${c}!important}`, `${sel} .lx-foil{${foilColor(c)}}`, ...juntoAlTitulo(sel, c)];
