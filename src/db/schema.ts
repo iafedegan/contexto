@@ -17,6 +17,7 @@ import type { TextosCabecera } from "@/lib/textos-cabecera";
 import type { MenuNavbar } from "@/lib/menu-navbar";
 import type { ConfigConsejo, FichaPauta, TemaConsejo } from "@/lib/consejo/plan";
 import {
+  type AnyPgColumn,
   bigserial,
   boolean,
   customType,
@@ -949,4 +950,48 @@ export const observatorioDatos = pgTable(
     unique("observatorio_datos_unico").on(t.tema, t.indicador, t.serie, t.periodo),
     index("observatorio_datos_consulta_idx").on(t.tema, t.indicador, t.fecha),
   ],
+);
+
+/* ---------------------------------------------------------------- BIBLIOTECA DE IMÁGENES
+   Carpetas y archivos que la diseñadora deja listos para las notas. Los archivos viven en el bucket «media» (como todo lo demás);
+   aquí solo se guarda dónde están y quién los puede ver. Un archivo de la biblioteca NUNCA se borra por falta de uso (ver media-limpieza). */
+
+/** Una carpeta de la biblioteca; `parentId` null = está en la raíz. */
+export const mediaFolders = pgTable(
+  "media_folders",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    parentId: uuid("parent_id").references((): AnyPgColumn => mediaFolders.id, { onDelete: "restrict" }),
+    name: text("name").notNull(),
+    createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("media_folders_parent_idx").on(t.parentId)],
+);
+
+/** Un archivo de la biblioteca: su carpeta, su nombre y la dirección pública en el bucket. */
+export const mediaAssets = pgTable(
+  "media_assets",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    folderId: uuid("folder_id").references(() => mediaFolders.id, { onDelete: "restrict" }),
+    name: text("name").notNull(),
+    url: text("url").notNull().unique(),
+    kind: text("kind").notNull().default("imagen"),
+    bytes: integer("bytes"),
+    uploadedBy: uuid("uploaded_by").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("media_assets_folder_idx").on(t.folderId, t.createdAt)],
+);
+
+/** Qué personas ven una carpeta (y todo lo que hay dentro). Administradores y quien gestiona la biblioteca ven todo sin estar aquí. */
+export const mediaFolderAccess = pgTable(
+  "media_folder_access",
+  {
+    folderId: uuid("folder_id").notNull().references(() => mediaFolders.id, { onDelete: "cascade" }),
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.folderId, t.userId] }), index("media_folder_access_user_idx").on(t.userId)],
 );

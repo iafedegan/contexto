@@ -26,6 +26,7 @@ export const PERMISOS = [
   { id: "portada", label: "Portada, plantillas y secciones", hint: "Diseño del sitio, orden y menú de secciones", min: "administrador" },
   { id: "newsletter", label: "Newsletter", hint: "Ediciones, envíos y suscriptores", min: "editor" },
   { id: "analitica", label: "Centro de análisis", hint: "Qué leen, cuándo, desde dónde, y cómo crece la base de suscriptores", min: "editor" },
+  { id: "biblioteca", label: "Biblioteca de imágenes", hint: "Crear carpetas, subir imágenes y asignarlas a personas", min: "administrador" },
   { id: "api", label: "API pública", hint: "Claves para terceros", min: "administrador" },
 ] as const satisfies readonly { id: string; label: string; hint: string; min: UserRole }[];
 
@@ -52,7 +53,7 @@ export function exige2fa(role: UserRole, ajustes: Ajustes | undefined): boolean 
 export function porDefecto(role: UserRole, id: PermisoId): boolean {
   const p = PERMISOS.find((x) => x.id === id)!;
   // El diseñador tiene el rango de un redactor, pero además toca la portada, las plantillas y las secciones.
-  if (role === "disenador" && id === "portada") return true;
+  if (role === "disenador" && (id === "portada" || id === "biblioteca")) return true;
   return RANGO[role] >= RANGO[p.min];
 }
 

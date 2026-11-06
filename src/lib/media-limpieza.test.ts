@@ -25,6 +25,7 @@ beforeEach(async () => {
   process.env.SUPABASE_SERVICE_ROLE_KEY = "clave-de-servicio-de-prueba";
   await bd.db.delete(schema.articles);
   await bd.db.delete(schema.siteSettings);
+  await bd.db.delete(schema.mediaAssets);
 });
 
 // Storage simulado: lista fija de objetos y registro de lo que se borra.
@@ -73,6 +74,22 @@ test("al borrar una nota, sus imágenes quedan sin uso y la limpieza las retira"
     await bd.db.delete(schema.articles).where((await import("drizzle-orm")).eq(schema.articles.id, nota.id));
     assert.equal((await limpieza.limpiarMediaHuerfana()).borrados, 1);
     assert.deepEqual(s.borrados, ["de-la-nota.png"]);
+  } finally {
+    s.restaurar();
+  }
+});
+
+test("lo que está en la biblioteca de imágenes no se borra nunca, aunque ninguna nota lo use", async () => {
+  await bd.db.insert(schema.mediaAssets).values({ name: "vacunacion.webp", url: publica("de-la-biblioteca.webp"), kind: "imagen" });
+  await bd.db.insert(schema.siteSettings).values({ key: "algo", value: { x: publica("citada.png") } });
+  const s = simularStorage([
+    { name: "de-la-biblioteca.webp", created_at: dias(365) },
+    { name: "citada.png", created_at: dias(365) },
+    { name: "huerfana.png", created_at: dias(365) },
+  ]);
+  try {
+    await limpieza.limpiarMediaHuerfana();
+    assert.deepEqual(s.borrados, ["huerfana.png"]);
   } finally {
     s.restaurar();
   }

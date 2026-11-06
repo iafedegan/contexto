@@ -7,7 +7,7 @@ import { borrarMedia, listarMedia } from "@/lib/media-storage";
  * Limpieza de medios huérfanos (H-22): el almacenamiento solo crecía porque nada borraba las imágenes de una nota
  * eliminada ni las que se subieron y nunca se usaron. Cada día se listan los archivos del bucket y se borran los que
  * llevan más de `dias` días Y no aparecen citados en ninguna parte (notas, borradores de IA, anuncios, autores, ediciones
- * del boletín ni ajustes del sitio, que incluyen el estado de las conversaciones de Telegram).
+ * del boletín, ajustes del sitio ni la biblioteca de imágenes, que incluyen el estado de las conversaciones de Telegram).
  */
 
 /** Días que un archivo sin uso se conserva antes de borrarse: margen para borradores que aún no se guardan. */
@@ -19,7 +19,8 @@ const MAX_BORRADOS = 200;
 export async function nombresReferenciados(): Promise<Set<string>> {
   // `to_jsonb(fila)` evita enumerar columnas (y sigue valiendo si se añaden); el vector de embeddings se descarta por pesado.
   const patron = "/object/public/media/([A-Za-z0-9._/-]+)";
-  const tablas = ["articles", "ads_zones", "authors", "agent_drafts", "newsletter_editions", "site_settings"];
+  // `media_assets`: lo que está en la biblioteca de imágenes cuenta como usado SIEMPRE, aunque ninguna nota lo cite: la diseñadora lo deja ahí para usarlo después.
+  const tablas = ["articles", "ads_zones", "authors", "agent_drafts", "newsletter_editions", "site_settings", "media_assets"];
   const consulta = tablas
     .map((t) => `select regexp_matches((to_jsonb(x) - 'embedding')::text, '${patron}', 'g') as m from ${t} x`)
     .join(" union all ");

@@ -17,6 +17,7 @@ import {
   Check,
   Eye,
   ImagePlus,
+  Images,
   Loader2,
   RotateCcw,
   Save,
@@ -58,6 +59,7 @@ import { briefParaPrompt, type BriefSeccion } from "@/lib/consejo/plan";
 import { FuenteCards, PantallaEnlaces, PantallaEntrevista, PantallaIdeas, PantallaNoticias, type Fuente } from "@/components/panel/wizard-fuentes";
 import { WizardStepper } from "@/components/panel/wizard-stepper";
 import { BotonVoz } from "@/components/panel/boton-voz";
+import { SelectorBiblioteca } from "@/components/panel/selector-biblioteca";
 import { PanelRelacionadas } from "@/components/panel/panel-relacionadas";
 import { TarjetaEstilo, type EstadoEstilo } from "@/components/panel/tarjeta-estilo";
 import { TarjetaModelo } from "@/components/panel/tarjeta-modelo";
@@ -218,6 +220,8 @@ export function ArticleWizard({
   const [urlsBusy, startUrls] = useTransition();
   const [sceneTxt, setSceneTxt] = useState("");
   const [imgError, setImgError] = useState("");
+  // Ventana para elegir la imagen de portada entre las carpetas de la biblioteca.
+  const [biblioteca, setBiblioteca] = useState(false);
   const [genImg, startImg] = useTransition();
   const [ideasBrief, setIdeasBrief] = useState<BriefSeccion>(pieza?.brief ?? {});
   const [llenandoIdeas, startLlenar] = useTransition();
@@ -1541,6 +1545,9 @@ export function ArticleWizard({
                         <ImagePlus size={13} /> Cambiar
                         <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void onCover(f); }} />
                       </label>
+                      <button type="button" onClick={() => setBiblioteca(true)} disabled={genImg || uploading} className="lx-btn lx-btn-ghost !border-white/40 !bg-white/10 !px-3 !py-1.5 text-xs !text-white">
+                        <Images size={13} /> Biblioteca
+                      </button>
                       <button type="button" onClick={makeCover} disabled={genImg || uploading} className="lx-btn lx-btn-ghost !border-white/40 !bg-white/10 !px-3 !py-1.5 text-xs !text-white">
                         <Sparkles size={13} /> Generar otra
                       </button>
@@ -1559,6 +1566,9 @@ export function ArticleWizard({
                           <ImagePlus size={15} /> Subir foto
                           <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void onCover(f); }} />
                         </label>
+                        <button type="button" onClick={() => setBiblioteca(true)} disabled={genImg || uploading} className="lx-btn lx-btn-ghost">
+                          <Images size={15} /> Elegir de la biblioteca
+                        </button>
                         <button type="button" onClick={makeCover} disabled={genImg || uploading} className="lx-btn lx-btn-ghost">
                           <Sparkles size={15} /> Generar con IA
                         </button>
@@ -1595,6 +1605,12 @@ export function ArticleWizard({
                 </div>
               </div>
             </section>
+            {biblioteca && (
+              <SelectorBiblioteca
+                onCerrar={() => setBiblioteca(false)}
+                onElegir={(a) => { setCover(a.url); if (!coverAlt.trim()) setCoverAlt(a.name); setImgError(""); setBiblioteca(false); }}
+              />
+            )}
           </Step>
         )}
 

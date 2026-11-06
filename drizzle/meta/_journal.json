@@ -211,6 +211,13 @@
       "when": 1793809534738,
       "tag": "0029_personas_de_la_superapp",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1793809594738,
+      "tag": "0030_biblioteca_de_imagenes",
+      "breakpoints": true
     }
   ]
 }

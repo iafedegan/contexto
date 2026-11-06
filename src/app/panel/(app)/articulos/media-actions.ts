@@ -21,6 +21,7 @@
 
 import { randomUUID } from "node:crypto";
 import { requirePermiso } from "@/lib/auth";
+import { tienePermiso } from "@/lib/permisos-server";
 import { hit } from "@/lib/rate-limit";
 import { tipoPorFirma } from "@/lib/media-firma";
 import { MAX_BYTES_MEDIA, SIN_STORAGE, borrarMedia, firmarSubidaMedia, inspeccionarMedia, subirBytesMedia, urlPublicaMedia } from "@/lib/media-storage";
@@ -41,6 +42,8 @@ const FORMATOS = "JPG, PNG, WebP, AVIF, GIF, MP4 o WebM";
 const MAX_DIRECTO = 4 * 1024 * 1024;
 // Subidas por persona y hora.
 const CUPO_POR_HORA = 60;
+// Quien gestiona la biblioteca de imágenes sube carpetas enteras de una vez: su tope es mucho mayor.
+const CUPO_BIBLIOTECA_POR_HORA = 1000;
 
 // Resultado de subir un archivo: su dirección pública y tipo, o un error.
 export type UploadResult =
@@ -48,8 +51,9 @@ export type UploadResult =
   | { ok: false; error: string };
 
 // Comprueba el cupo de subidas de la persona.
-async function dentroDelCupo(userId: string): Promise<boolean> {
-  return (await hit(`media:${userId}`, CUPO_POR_HORA, 3600)).allowed;
+async function dentroDelCupo(user: { id: string; role: Parameters<typeof tienePermiso>[1] }): Promise<boolean> {
+  const maximo = (await tienePermiso(user.id, user.role, "biblioteca")) ? CUPO_BIBLIOTECA_POR_HORA : CUPO_POR_HORA;
+  return (await hit(`media:${user.id}`, maximo, 3600)).allowed;
 }
 // Texto de error para un formato no admitido.
 const formatoNoAdmitido = (declarado: string) => `Formato no admitido (${declarado || "desconocido"}). Usa ${FORMATOS}.`;
@@ -59,7 +63,7 @@ const demasiadoGrande = (bytes: number) => `El archivo pesa ${(bytes / 1024 / 10
 // Sube una imagen o un video pequeño tras comprobar, por su firma, que de verdad lo es.
 export async function uploadMedia(formData: FormData): Promise<UploadResult> {
   const user = await requirePermiso("articulos");
-  if (!(await dentroDelCupo(user.id))) return { ok: false, error: "Has subido muchos archivos en la última hora. Espera un poco e inténtalo de nuevo." };
+  if (!(await dentroDelCupo(user))) return { ok: false, error: "Has subido muchos archivos en la última hora. Espera un poco e inténtalo de nuevo." };
 
   const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0) return { ok: false, error: "No llegó ningún archivo." };
@@ -80,7 +84,7 @@ export type PrepararSubidaResult = { ok: true; uploadUrl: string; path: string }
 /** Paso 1 de una subida grande: valida el tipo declarado y el tamaño, aparta el cupo y devuelve una dirección firmada. */
 export async function prepararSubidaMedia(input: { name: string; type: string; size: number }): Promise<PrepararSubidaResult> {
   const user = await requirePermiso("articulos");
-  if (!(await dentroDelCupo(user.id))) return { ok: false, error: "Has subido muchos archivos en la última hora. Espera un poco e inténtalo de nuevo." };
+  if (!(await dentroDelCupo(user))) return { ok: false, error: "Has subido muchos archivos en la última hora. Espera un poco e inténtalo de nuevo." };
   const ext = TIPOS[String(input.type ?? "")];
   if (!ext) return { ok: false, error: formatoNoAdmitido(input.type) };
   const size = Number(input.size);
