@@ -195,7 +195,7 @@ function LeadCard({ a, priority, locale }: { a: ArticleListItem; priority?: bool
         </div>
         {detalle}
       </div>
-      <div data-cg-panel className={`relative z-[4] m-3 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--bg)]/60 p-4 shadow-[0_10px_30px_rgba(0,0,0,0.14)] backdrop-blur-md backdrop-saturate-150 md:m-5 md:max-w-[40rem] md:p-6 ${posicionPanel}`}>
+      <div data-cg-panel className={`relative z-[4] m-3 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--bg)]/80 p-4 shadow-[0_10px_30px_rgba(0,0,0,0.14)] backdrop-blur-md backdrop-saturate-150 [&_.lead-detalle_:is(p,span,time)]:!text-[color-mix(in_srgb,var(--fg)_90%,transparent)] md:m-5 md:max-w-[40rem] md:p-6 ${posicionPanel}`}>
         <Kicker a={a} locale={locale} className="text-[var(--accent)]" />
         <h2
           className="lead-titulo lx-display mt-2.5 text-2xl font-semibold leading-[1.12] tracking-tight sm:text-3xl md:mt-3 md:text-[2.75rem]"

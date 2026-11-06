@@ -2,7 +2,7 @@ import type { Gradient } from "@/db/schema";
 import type { HomeTitleFont } from "@/lib/home-fonts";
 import { gradientCss, sanitizeGradient } from "@/lib/section-els";
 import { homeFontFamily } from "@/lib/home-fonts";
-import { derivePalette, mutedOf } from "@/lib/home-background";
+import { derivePalette } from "@/lib/home-background";
 import { acotar, colorHex as color } from "@/lib/validate";
 
 /**
@@ -200,8 +200,11 @@ function coloresDecl(s: RegionColors): string[] {
     decl.push(`color:${p["--fg"]}`);
   }
   if (s.fg) {
-    const muted = mutedOf(s.fg);
-    decl.push(`--fg:${s.fg}`, `--ink:${s.fg}`, `--fg-muted:${muted}`, `--ink-soft:${muted}`, `--ink-faint:${muted}`, `color:${s.fg}`);
+    // Todo lo secundario (fecha, menús, filas y líneas junto al título) se deriva del color de texto elegido, así que cambia con él y conserva el contraste.
+    const muted = `color-mix(in srgb, ${s.fg} 82%, transparent)`;
+    const linea = `color-mix(in srgb, ${s.fg} 22%, transparent)`;
+    const lineaFuerte = `color-mix(in srgb, ${s.fg} 55%, transparent)`;
+    decl.push(`--fg:${s.fg}`, `--ink:${s.fg}`, `--fg-muted:${muted}`, `--ink-soft:${muted}`, `--ink-faint:${muted}`, `--border:${linea}`, `--border-strong:${lineaFuerte}`, `--rule:${linea}`, `color:${s.fg}`);
   }
   if (s.accent) {
     decl.push(`--acento-region:${s.accent}`, `--accent:${s.accent}`, `--brand:${s.accent}`, `--brand-ink:${s.accent}`, `--rule-strong:${s.accent}`, `--link:${s.accent}`);
@@ -315,6 +318,11 @@ export function regionsCss(input: RegionStyles | undefined, scope = "[data-site-
     }
 
     if (decl.length) rules.unshift(`${sel}{${decl.join(";")}}`);
+    // El cintillo de arriba de la página toma los colores de la cabecera (fondo, texto y líneas), no sus medidas.
+    if (id === "navbar") {
+      const col = coloresDecl(s);
+      if (col.length) rules.push(`${scope} [data-region="cintillo"]{${col.join(";")}}`);
+    }
     // Colores distintos según el modo con el que se ve el sitio: pisan a los de «los dos modos».
     for (const modo of ["claro", "oscuro"] as const) {
       const c = s[modo];
@@ -328,6 +336,7 @@ export function regionsCss(input: RegionStyles | undefined, scope = "[data-site-
         }
       }
       if (d.length) rules.push(`${selectoresDeModo(modo, scope, id)}{${d.join(";")}}`);
+      if (id === "navbar" && d.length) rules.push(`${selectoresDeModo(modo, scope, "cintillo")}{${d.join(";")}}`);
       if (c?.title) {
         rules.push(`${selectoresDeModo(modo, scope, id, ` ${TITLES}`)}{color:${c.title}!important}`);
         rules.push(`${selectoresDeModo(modo, scope, id, " .lx-foil")}{${foilColor(c.title)}}`);
