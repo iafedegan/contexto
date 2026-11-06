@@ -42,6 +42,16 @@ export function RegionEditor({
   const visibles = REGIONS.filter((r) => !only || only.includes(r.id));
   const meta = REGIONS.find((r) => r.id === active)!;
   const s: RegionStyle = value[active] ?? {};
+  // Qué cambia cada color en cada parte (lo que más confundía: dos controles distintos movían cosas parecidas).
+  const pista: Partial<Record<RegionId, Partial<Record<"bg" | "fg" | "accent" | "title", string>>>> = {
+    navbar: {
+      bg: "El fondo de toda la cabecera y del cintillo.",
+      fg: "La fecha, el lema, las líneas junto al nombre y el logo. Los enlaces del menú tienen su color aparte, en «Menú de la barra».",
+      accent: "Botones y detalles (Buscar, idioma).",
+      title: "El nombre del sitio y el logo; si lo eliges, también la fecha, el lema y las líneas.",
+    },
+  };
+  const hintDe = (k: "bg" | "fg" | "accent" | "title") => pista[active]?.[k];
   // Indica si la región admite un ajuste.
   const has = (k: keyof RegionStyle) => meta.controls.includes(k);
 
@@ -118,7 +128,7 @@ export function RegionEditor({
 
       {!s.hidden && (
         <>
-          <Group title="Colores">
+          <Group title="Colores" resumen="Fondo, texto, acento y títulos · claro u oscuro">
             {/* El sitio tiene modo claro y modo oscuro: los colores pueden ser los mismos en ambos o distintos en cada uno. */}
             <div role="group" aria-label="Modo al que se aplican los colores" className="grid grid-cols-3 gap-1 rounded-lg border border-[var(--border)] p-1">
               {(
@@ -145,14 +155,14 @@ export function RegionEditor({
                 ? "Estos colores valen para el modo claro y el oscuro."
                 : `Solo para quien ve el sitio en modo ${modo}: el otro modo no cambia. El lienzo se muestra en modo ${modo} mientras lo editas.`}
             </p>
-            {has("bg") && <ColorRow label="Fondo" value={colores.bg} onChange={(bg) => patchColor({ bg })} />}
+            {has("bg") && <ColorRow label="Fondo" value={colores.bg} onChange={(bg) => patchColor({ bg })} hint={hintDe("bg")} />}
             {has("bgGradient") && <GradientEditor label="Degradado de fondo" value={colores.bgGradient} onChange={(bgGradient) => patchColor({ bgGradient })} />}
-            {has("fg") && <ColorRow label="Texto" value={colores.fg} onChange={(fg) => patchColor({ fg })} />}
-            {has("accent") && <ColorRow label="Acento" value={colores.accent} onChange={(accent) => patchColor({ accent })} />}
-            {has("title") && <ColorRow label="Títulos" value={colores.title} onChange={(title) => patchColor({ title })} />}
+            {has("fg") && <ColorRow label="Texto" value={colores.fg} onChange={(fg) => patchColor({ fg })} hint={hintDe("fg")} />}
+            {has("accent") && <ColorRow label="Acento" value={colores.accent} onChange={(accent) => patchColor({ accent })} hint={hintDe("accent")} />}
+            {has("title") && <ColorRow label="Títulos" value={colores.title} onChange={(title) => patchColor({ title })} hint={hintDe("title")} />}
           </Group>
 
-          <Group title="Tipografía">
+          <Group title="Tipografía" resumen="Tipo y tamaño de letra">
             {has("titleFont") && (
               <FontSelect label="Titulares" value={s.titleFont} onChange={(titleFont) => patch({ titleFont })} />
             )}
@@ -167,7 +177,7 @@ export function RegionEditor({
             )}
           </Group>
 
-          <Group title="Dimensiones y disposición">
+          <Group title="Medidas y alineación" resumen="Espacios, ancho y posición">
             {has("padTop") && <Slider label="Espacio superior (bajo la barra)" k="padTop" value={s.padTop} onChange={(padTop) => patch({ padTop })} />}
             {has("padY") && <Slider label="Relleno vertical" k="padY" value={s.padY} onChange={(padY) => patch({ padY })} />}
             {has("padX") && <Slider label="Relleno horizontal" k="padX" value={s.padX} onChange={(padX) => patch({ padX })} />}
@@ -228,11 +238,15 @@ export function RegionEditor({
 }
 
 // Grupo de ajustes con título: se despliega al pulsarlo y arranca cerrado, para que el panel no sea una lista interminable.
-export function Group({ title, children, abierto = false }: { title: string; children: React.ReactNode; abierto?: boolean }) {
+export function Group({ title, children, abierto = false, resumen }: { title: string; children: React.ReactNode; abierto?: boolean; resumen?: string }) {
+  // Acordeón: con `name` común el navegador deja abierto solo un grupo a la vez, así el panel nunca es una pared de controles.
   return (
-    <details open={abierto} className="group/g border-t border-[var(--border)] pt-2">
-      <summary className="flex min-h-9 cursor-pointer list-none items-center justify-between gap-2 rounded-md py-1 text-[0.95rem] font-extrabold tracking-normal text-[#0b0b0b] marker:hidden [&::-webkit-details-marker]:hidden">
-        {title}
+    <details open={abierto} name="grupo-propiedades" className="group/g border-t border-[var(--border)] pt-2">
+      <summary className="flex min-h-9 cursor-pointer list-none items-center justify-between gap-2 rounded-md py-1 marker:hidden [&::-webkit-details-marker]:hidden">
+        <span className="min-w-0">
+          <span className="block text-[0.95rem] font-extrabold tracking-normal text-[#0b0b0b]">{title}</span>
+          {resumen && <span className="block text-[11px] font-normal leading-snug text-[var(--fg-muted)]">{resumen}</span>}
+        </span>
         <ChevronDown size={16} aria-hidden className="shrink-0 text-[var(--fg-muted)] transition group-open/g:rotate-180" />
       </summary>
       <div className="flex flex-col gap-2.5 pb-1 pt-2.5">{children}</div>
@@ -245,14 +259,18 @@ export function ColorRow({
   label,
   value,
   onChange,
+  hint,
 }: {
   label: string;
   value: string | undefined;
   onChange: (v: string | undefined) => void;
+  /** Qué parte del sitio cambia este color (para no adivinar). */
+  hint?: string;
 }) {
   return (
     <div className="flex flex-col gap-1.5">
-      <span className="text-xs text-[var(--fg-muted)]">{label}</span>
+      <span className="text-xs font-semibold text-[#0b0b0b]">{label}</span>
+      {hint && <span className="-mt-1 text-[11px] leading-snug text-[var(--fg-muted)]">{hint}</span>}
       {/* Una sola fila ordenada: «sin color» (automático), las muestras y el selector de color exacto. */}
       <div role="group" aria-label={label} className="grid grid-cols-10 items-center justify-items-center gap-1">
         <button

@@ -60,7 +60,7 @@ export function MenuNavbarEditor({
   );
   const campo = "w-full rounded-[var(--radius)] border border-[var(--border-strong)] bg-white px-2 py-1.5 text-sm text-[#0b0b0b] placeholder:text-[var(--fg-muted)]";
   return (
-    <Group title="Menú de la barra">
+    <Group title="Menú de la barra" resumen="Qué secciones salen y cómo se ven los enlaces">
       <p className="text-xs leading-relaxed text-[var(--fg-muted)]">Marca las secciones que se muestran. Las demás no aparecen en la barra.</p>
       <div className="flex flex-col gap-1.5">
         {[...secciones, { slug: "observatorio", name: "Observatorio" }].map((s) => (
@@ -77,7 +77,7 @@ export function MenuNavbarEditor({
       {conAspecto ? (
         <>
         <p className="mt-1 text-sm font-semibold">Aspecto de los enlaces</p>
-        <ColorRow label="Color del texto (los dos modos)" value={m.estilo?.color} onChange={(color) => estilo({ color })} />
+        <ColorRow label="Color de los enlaces (los dos modos)" hint="Solo los enlaces del menú; el resto de la cabecera usa «Colores»." value={m.estilo?.color} onChange={(color) => estilo({ color })} />
         <ColorRow label="Color en modo claro" value={m.estilo?.colorClaro} onChange={(colorClaro) => estilo({ colorClaro })} />
         <ColorRow label="Color en modo oscuro" value={m.estilo?.colorOscuro} onChange={(colorOscuro) => estilo({ colorOscuro })} />
         <FontSelect label="Tipo de letra" value={m.estilo?.font} onChange={(font) => estilo({ font })} />
