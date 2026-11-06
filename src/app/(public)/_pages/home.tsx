@@ -189,9 +189,9 @@ async function HomePage({ locale }: { locale: Locale }) {
       theme={site.theme}
       style={site.style}
       locale={locale} variant="portada"
+      topBar={cintillo}
       aboveMain={
         <>
-          {cintillo}
           {car.posicion === "arriba" && carruselConColumna && <div className="mt-4">{carruselConColumna}</div>}
           {extrasEn("arriba").map((n, i) => <div key={`ar${i}`} className="mt-4">{n}</div>)}
         </>

@@ -69,6 +69,7 @@ export async function SiteShell({
   style,
   locale = DEFAULT_LOCALE,
   aboveMain,
+  topBar,
 }: {
   /** Plantilla activa: paleta, tipografías, cabecera y pie. */
   theme: Theme;
@@ -90,6 +91,8 @@ export async function SiteShell({
    * ventana real del navegador y no el recuadro del mockup).
    */
   aboveMain?: React.ReactNode;
+  /** Franja a todo el ancho por ENCIMA de la cabecera, en lo más alto de la página (el cintillo de la portada). */
+  topBar?: React.ReactNode;
 }) {
   const [navTodo, extraNav, identity, site, popup, ultimaHora] = await Promise.all([
     navItems(locale),
@@ -115,6 +118,7 @@ export async function SiteShell({
       )}
       {/* «Última hora» ya no es una franja roja: la nota marcada lleva una insignia en la esquina de su imagen (ver `estiloUltimaHora`). */}
       {ultimaHora && /^[a-z0-9-]+$/.test(ultimaHora.slug) && <style dangerouslySetInnerHTML={{ __html: estiloUltimaHora(ultimaHora.slug, t(locale, "breaking.label")) }} />}
+      {topBar}
       <SiteHeader theme={theme} nav={nav} extraNav={sinOcultas(extraNav, site.menuNav)} locale={locale} identity={conTextos(identity, site.textos)} variant={site.parts.navbar} />
       {aboveMain}
       <main id="contenido" data-region="body" className={mainClassName ?? shell.main}>
