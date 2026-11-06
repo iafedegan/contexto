@@ -13,6 +13,8 @@ import {
   moverCarpeta,
   registrarActivos,
   renombrarActivo,
+  fichaActivo,
+  type FichaActivo,
   renombrarCarpeta,
   type ActivoInfo,
   type CarpetaInfo,
@@ -50,6 +52,7 @@ export function BibliotecaExplorador({ modo, onElegir }: { modo: Modo; onElegir?
   const [subida, setSubida] = useState<{ hechos: number; total: number } | null>(null);
   const [arrastrando, setArrastrando] = useState(false);
   const [acceso, setAcceso] = useState<{ personas: Persona[]; marcadas: Set<string>; guardando: boolean } | null>(null);
+  const [ficha, setFicha] = useState<FichaActivo | null>(null);
   const [moviendo, setMoviendo] = useState<{ tipo: "archivos" | "carpeta"; destino: string } | null>(null);
   const entrada = useRef<HTMLInputElement>(null);
 
@@ -326,6 +329,7 @@ export function BibliotecaExplorador({ modo, onElegir }: { modo: Modo; onElegir?
                     {gestion && (
                       <>
                         <input type="checkbox" checked={marcado} onChange={() => setSeleccion((s) => { const n = new Set(s); if (n.has(a.id)) n.delete(a.id); else n.add(a.id); return n; })} aria-label={`Marcar ${a.name}`} className="absolute left-3.5 top-3.5 size-5 accent-[var(--accent)]" />
+                        <button type="button" aria-label={`Ficha de ${a.name}`} onClick={async () => { const r = await fichaActivo({ id: a.id }); if (r.ok) setFicha(r.ficha); else setError(r.error); }} className="absolute right-12 top-3.5 grid size-8 place-items-center rounded-full bg-black/55 text-xs font-bold text-white opacity-0 transition focus:opacity-100 group-hover/a:opacity-100 [@media(pointer:coarse)]:opacity-100">i</button>
                         <button type="button" aria-label={`Renombrar ${a.name}`} onClick={async () => { const n = window.prompt("Nuevo nombre", a.name); if (n) await accion(() => renombrarActivo({ id: a.id, name: n })); }} className="absolute right-3.5 top-3.5 grid size-8 place-items-center rounded-full bg-black/55 text-white opacity-0 transition focus:opacity-100 group-hover/a:opacity-100 [@media(pointer:coarse)]:opacity-100"><Pencil size={14} aria-hidden /></button>
                       </>
                     )}
@@ -348,6 +352,27 @@ export function BibliotecaExplorador({ modo, onElegir }: { modo: Modo; onElegir?
       </section>
 
       {/* Quién ve esta carpeta */}
+      {ficha && (
+        <Ventana titulo={ficha.name} onCerrar={() => setFicha(null)}>
+          <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+            <dt className="text-[var(--fg-muted)]">Tipo</dt><dd>{ficha.mime ?? ficha.kind}</dd>
+            <dt className="text-[var(--fg-muted)]">Peso</dt><dd>{ficha.bytes ? peso(ficha.bytes) : "—"}</dd>
+            <dt className="text-[var(--fg-muted)]">Fecha</dt><dd>{fecha(ficha.creada)}</dd>
+            <dt className="text-[var(--fg-muted)]">Subida por</dt><dd>{ficha.subidaPor ?? "Importada de las notas"}</dd>
+            <dt className="text-[var(--fg-muted)]">Dirección</dt><dd className="break-all text-xs">{ficha.url}</dd>
+          </dl>
+          <h3 className="mt-4 text-sm font-semibold">Usada en {ficha.usos.length} {ficha.usos.length === 1 ? "nota" : "notas"}</h3>
+          <ul className="mt-2 flex max-h-64 flex-col gap-2 overflow-y-auto text-sm">
+            {ficha.usos.map((u) => (
+              <li key={u.slug} className="rounded-[var(--radius)] border border-[var(--border)] p-2">
+                <a href={`/articulo/${u.slug}`} target="_blank" rel="noreferrer" className="font-medium hover:underline">{u.titulo}</a>
+                <span className="block text-xs text-[var(--fg-muted)]">{u.periodista ?? "Sin periodista"} · {u.seccion ?? "Sin sección"} · {u.fecha ?? u.estado} · {u.comoPortada ? "portada" : "en el texto"}</span>
+              </li>
+            ))}
+            {!ficha.usos.length && <li className="text-[var(--fg-muted)]">Ninguna nota la usa todavía.</li>}
+          </ul>
+        </Ventana>
+      )}
       {acceso && carpetaActual && (
         <Ventana titulo={`Quién ve «${carpetaActual.name}»`} onCerrar={() => setAcceso(null)}>
           <p className="text-sm text-[var(--fg-muted)]">Las personas marcadas ven esta carpeta y todo lo que hay dentro. Los administradores y la diseñadora ven todo siempre.</p>

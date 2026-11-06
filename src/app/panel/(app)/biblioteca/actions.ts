@@ -6,7 +6,7 @@
  * Las reglas de quién ve qué están en `src/lib/biblioteca-acceso.ts`.
  */
 import { and, asc, desc, eq, ilike, inArray, isNull, sql } from "drizzle-orm";
-import { db } from "@/db";
+import { db, rowsOf } from "@/db";
 import { mediaAssets, mediaFolderAccess, mediaFolders, users } from "@/db/schema";
 import { requireRole } from "@/lib/auth";
 import { tienePermiso } from "@/lib/permisos-server";
@@ -202,4 +202,42 @@ export async function asignarCarpeta(input: { carpeta: string; userIds: string[]
     if (validas.length) await tx.insert(mediaFolderAccess).values(validas.map((userId) => ({ folderId: input.carpeta, userId })));
   });
   return { ok: true };
+}
+
+/** Ficha completa de una imagen: metadata del archivo, quién la subió y en qué notas se usó (con su periodista). */
+export type FichaActivo = {
+  name: string; url: string; kind: string; bytes: number | null; mime: string | null; creada: string; subidaPor: string | null;
+  usos: { titulo: string; slug: string; estado: string; periodista: string | null; seccion: string | null; fecha: string | null; comoPortada: boolean }[];
+};
+export async function fichaActivo(input: { id: string }): Promise<{ ok: true; ficha: FichaActivo } | { ok: false; error: string }> {
+  await gestor();
+  const [a] = await db
+    .select({ name: mediaAssets.name, url: mediaAssets.url, kind: mediaAssets.kind, bytes: mediaAssets.bytes, createdAt: mediaAssets.createdAt, por: users.name })
+    .from(mediaAssets).leftJoin(users, eq(users.id, mediaAssets.uploadedBy)).where(eq(mediaAssets.id, input.id)).limit(1);
+  if (!a) return { ok: false, error: "Esa imagen ya no existe." };
+  const objeto = a.url.split("/object/public/media/")[1] ?? "";
+  let mime: string | null = null;
+  let bytes = a.bytes;
+  try {
+    const o = rowsOf<{ mime: string | null; size: string | null }>(
+      await db.execute(sql`select metadata->>'mimetype' as mime, metadata->>'size' as size from storage.objects where bucket_id = 'media' and name = ${objeto} limit 1`),
+    )[0];
+    mime = o?.mime ?? null;
+    if (!bytes && o?.size) bytes = Number(o.size);
+  } catch { /* sin almacenamiento (pruebas locales) */ }
+  const usos = rowsOf<{ titulo: string; slug: string; estado: string; periodista: string | null; seccion: string | null; fecha: string | null; portada: boolean }>(
+    await db.execute(sql`
+      select a.title as titulo, a.slug, a.status::text as estado, au.name as periodista, c.name as seccion,
+             to_char(a.published_at, 'YYYY-MM-DD') as fecha, (a.cover_image_url = ${a.url}) as portada
+      from articles a left join authors au on au.id = a.author_id left join categories c on c.id = a.category_id
+      where a.cover_image_url = ${a.url} or (${objeto} <> '' and position(${objeto} in a.body) > 0)
+      order by a.published_at desc nulls last limit 50`),
+  );
+  return {
+    ok: true,
+    ficha: {
+      name: a.name, url: a.url, kind: a.kind, bytes, mime, creada: new Date(a.createdAt).toISOString(), subidaPor: a.por ?? null,
+      usos: usos.map((u) => ({ titulo: u.titulo, slug: u.slug, estado: u.estado, periodista: u.periodista, seccion: u.seccion, fecha: u.fecha, comoPortada: !!u.portada })),
+    },
+  };
 }
