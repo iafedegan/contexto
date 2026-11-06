@@ -162,19 +162,17 @@ function MastheadHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extr
       <StickyRail />
       {/* Contenedor de tamaño propio: el nombre, el emblema y las líneas se escalan con su ancho y se ajustan juntos. */}
       <div className="mx-auto max-w-7xl px-6 pb-4 pt-6 text-center md:pt-7 [container-type:inline-size]">
-        {/* Emblema en un solo color (el del texto; si hay color de titulares, ese), como máscara: cambia con el color elegido en el panel. */}
-        <Link href={localePath(locale, "/")} aria-label={identity.name} className="mx-auto mb-[0.6cqi] block">
-          <span
-            aria-hidden
-            data-titulo-marca
-            className="mx-auto block aspect-[8/5] h-[clamp(2.25rem,5.2cqi,4rem)] lx-foil"
-            style={{ backgroundClip: "border-box", WebkitBackgroundClip: "border-box", WebkitMask: "url(/logo/contexto-ganadero-emblema.png) center / contain no-repeat", mask: "url(/logo/contexto-ganadero-emblema.png) center / contain no-repeat" }}
-          />
-        </Link>
-        {/* `items-center` sobre ESTA fila (solo el nombre): las líneas quedan siempre en el centro vertical del título. */}
+        {/* Logo a la izquierda y, a su lado, el nombre. `items-center` en ESTA fila: las líneas y el logo quedan en el centro vertical del título. */}
         <div className="flex items-center justify-center gap-6">
           <span data-titulo-linea className="hidden h-px flex-1 bg-gradient-to-r from-transparent to-[var(--border-strong)] md:block" />
-          <Link href={localePath(locale, "/")} className="block">
+          <Link href={localePath(locale, "/")} className="flex items-center justify-center gap-[0.9cqi]">
+            {/* Emblema con la misma lámina que el nombre (máscara): cambia con el color de los titulares. */}
+            <span
+              aria-hidden
+              data-titulo-marca
+              className="lx-foil block aspect-[8/5] h-[clamp(2.25rem,7cqi,4.5rem)] shrink-0"
+              style={{ backgroundClip: "border-box", WebkitBackgroundClip: "border-box", WebkitMask: "url(/logo/contexto-ganadero-emblema.png) center / contain no-repeat", mask: "url(/logo/contexto-ganadero-emblema.png) center / contain no-repeat" }}
+            />
             <span className="lx-display lx-foil block text-[clamp(1.875rem,6.4cqi,3.75rem)] font-semibold leading-none tracking-tight">
               {identity.name}
             </span>
