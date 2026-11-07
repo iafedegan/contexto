@@ -311,11 +311,7 @@ export function regionsCss(input: RegionStyles | undefined, scope = "[data-site-
     }
 
     if (decl.length) rules.unshift(`${sel}{${decl.join(";")}}`);
-    // El cintillo de arriba de la página toma los colores de la cabecera (fondo, texto y líneas), no sus medidas.
-    if (id === "navbar") {
-      const col = coloresDecl(s);
-      if (col.length) rules.push(`${scope} [data-region="cintillo"]{${col.join(";")}}`);
-    }
+    // El cintillo NO hereda los colores de la cabecera: va siempre en negro (ver home.tsx).
     // Colores distintos según el modo con el que se ve el sitio: pisan a los de «los dos modos».
     for (const modo of ["claro", "oscuro"] as const) {
       const c = s[modo];
@@ -329,7 +325,6 @@ export function regionsCss(input: RegionStyles | undefined, scope = "[data-site-
         }
       }
       if (d.length) rules.push(`${selectoresDeModo(modo, scope, id)}{${d.join(";")}}`);
-      if (id === "navbar" && d.length) rules.push(`${selectoresDeModo(modo, scope, "cintillo")}{${d.join(";")}}`);
       if (c?.title) {
         rules.push(`${selectoresDeModo(modo, scope, id, ` ${TITLES}`)}{color:${c.title}!important}`);
         rules.push(`${selectoresDeModo(modo, scope, id, " .lx-foil")}{${foilColor(c.title)}}`);

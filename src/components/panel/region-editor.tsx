@@ -45,7 +45,7 @@ export function RegionEditor({
   // Qué cambia cada color en cada parte (lo que más confundía: dos controles distintos movían cosas parecidas).
   const pista: Partial<Record<RegionId, Partial<Record<"bg" | "fg" | "accent" | "title", string>>>> = {
     navbar: {
-      bg: "El fondo de toda la cabecera y del cintillo.",
+      bg: "El fondo de toda la cabecera (el cintillo va siempre en negro).",
       fg: "La fecha, el lema, las líneas junto al nombre y el logo. Los enlaces del menú tienen su color aparte, en «Menú de la barra».",
       accent: "Botones y detalles (Buscar, idioma).",
       title: "El nombre del sitio y el logo; si lo eliges, también la fecha, el lema y las líneas.",
