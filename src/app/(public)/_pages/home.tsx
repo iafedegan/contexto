@@ -203,9 +203,9 @@ async function HomePage({ locale }: { locale: Locale }) {
             );
           })()}
         </div>
-        <div aria-hidden className="flex h-1 w-full">
+        <div aria-hidden className="flex h-[2px] w-full">
           {["#f2a900", "#b5124f", "#00587c", "#6a9fc0", "#e5214f", "#5a8f9e"].map((c) => (
-            <span key={c} className="h-full flex-1" style={{ background: c }} />
+            <span key={c} className="cg-cinta-tramo h-full flex-1" style={{ "--c": c } as React.CSSProperties} />
           ))}
         </div>
       </div>
