@@ -121,7 +121,7 @@ export function SectionPanel({
           <div>
             <p className="mb-1.5 text-[0.95rem] font-extrabold text-[#0b0b0b]">Elige una pieza (o púlsala en la página)</p>
             <div className="flex flex-wrap gap-1.5">
-              {SECTION_ELS.filter((x) => (x.group === "nota") === nota).map((x) => (
+              {SECTION_ELS.filter((x) => x.group !== "cabecera" && (x.group === "nota") === nota).map((x) => (
                 <button
                   key={x.id}
                   type="button"

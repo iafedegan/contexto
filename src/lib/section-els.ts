@@ -10,7 +10,7 @@ import { acotar, colorHex as hex } from "@/lib/validate";
  * src/components/section/section-layout.tsx); aquí solo se genera la hoja CSS.
  * Todo valor se valida antes de convertirse en CSS.
  */
-export const SECTION_ELS: Array<{ id: SectionElId; label: string; hint: string; gradient: boolean; /** Dónde vive: el encabezado de una sección o una nota. */ group?: "nota" }> = [
+export const SECTION_ELS: Array<{ id: SectionElId; label: string; hint: string; gradient: boolean; /** Dónde vive: el encabezado de una sección, una nota o la cabecera del sitio. */ group?: "nota" | "cabecera" }> = [
   { id: "breadcrumb", label: "Migas", hint: "Inicio / Sección", gradient: false },
   { id: "kicker", label: "Etiqueta", hint: "La palabra «Sección» sobre el título", gradient: true },
   { id: "title", label: "Título", hint: "El nombre de la sección", gradient: true },
@@ -22,6 +22,12 @@ export const SECTION_ELS: Array<{ id: SectionElId; label: string; hint: string; 
   { id: "n-byline", label: "Autor y fecha", hint: "Quién firma, fecha y minutos de lectura", gradient: false, group: "nota" },
   { id: "n-photo", label: "Foto", hint: "La foto de la nota: el tamaño es su ancho en px", gradient: false, group: "nota" },
   { id: "n-body", label: "Texto de la nota", hint: "El cuerpo del artículo", gradient: false, group: "nota" },
+  { id: "h-nombre", label: "Nombre del sitio", hint: "«CONtexto Ganadero» en la cabecera", gradient: true, group: "cabecera" },
+  { id: "h-logo", label: "Logo", hint: "El emblema junto al nombre: el tamaño es su alto en px", gradient: true, group: "cabecera" },
+  { id: "h-lema", label: "Lema", hint: "La frase bajo el nombre", gradient: true, group: "cabecera" },
+  { id: "h-fecha", label: "Fecha", hint: "El día de hoy bajo el nombre", gradient: false, group: "cabecera" },
+  { id: "h-menu", label: "Menú", hint: "Los enlaces de las secciones", gradient: false, group: "cabecera" },
+  { id: "h-cintillo", label: "Cintillo", hint: "La franja de titulares que corre arriba", gradient: false, group: "cabecera" },
 ];
 
 // Rangos permitidos (tamaño y espaciado entre letras) de los textos del encabezado de sección.
@@ -29,6 +35,8 @@ export const EL_RANGES = {
   size: { min: 8, max: 220 },
   // Ancho de la foto de la nota, en px.
   photo: { min: 80, max: 1400 },
+  // Alto del logo de la cabecera, en px.
+  logo: { min: 16, max: 200 },
   tracking: { min: -2, max: 20 },
 } as const;
 
@@ -61,7 +69,7 @@ export function sanitizeSectionEls(input: unknown): Partial<Record<SectionElId, 
     const weight = typeof r.weight === "number" && (WEIGHTS as readonly number[]).includes(r.weight) ? r.weight : undefined;
     const s: SectionElStyle = {
       font: HOME_FONTS.some((f) => f.id === r.font) ? (r.font as HomeTitleFont) : undefined,
-      size: id === "n-photo" ? clamp(r.size, EL_RANGES.photo.min, EL_RANGES.photo.max) : clamp(r.size, EL_RANGES.size.min, EL_RANGES.size.max),
+      size: id === "n-photo" ? clamp(r.size, EL_RANGES.photo.min, EL_RANGES.photo.max) : id === "h-logo" ? clamp(r.size, EL_RANGES.logo.min, EL_RANGES.logo.max) : clamp(r.size, EL_RANGES.size.min, EL_RANGES.size.max),
       weight,
       color: hex(r.color),
       gradient: gradient ? sanitizeGradient(r.gradient) : undefined,
@@ -86,6 +94,15 @@ export function sectionElsCss(input: unknown, scope = "[data-site-root]"): strin
     // La foto no lleva letras: «tamaño» es su ancho.
     if (id === "n-photo") {
       if (s.size !== undefined) rules.push(`${sel}{width:${s.size}px!important;max-width:100%!important;margin-inline:auto!important}`);
+      continue;
+    }
+    // El logo es una máscara pintada con su fondo: «tamaño» es su alto y el color (o degradado) es el fondo, no el de las letras.
+    if (id === "h-logo") {
+      const l: string[] = [];
+      if (s.size !== undefined) l.push(`height:${s.size}px!important`);
+      if (s.gradient) l.push(`background:${gradientCss(s.gradient)}!important`, "animation:none!important");
+      else if (s.color) l.push(`background:${s.color}!important`, "animation:none!important");
+      if (l.length) rules.push(`${sel}{${l.join(";")}}`);
       continue;
     }
     const d: string[] = [];

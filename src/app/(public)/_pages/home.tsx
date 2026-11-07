@@ -161,7 +161,7 @@ async function HomePage({ locale }: { locale: Locale }) {
   const trasPrincipal = carrusel || sinSlot ? undefined : columnaMovil;
   const cintillo =
     piezas.length > 0 ? (
-      <div data-region="cintillo" className="overflow-hidden border-b border-[var(--border)] bg-[var(--nav-bg)] py-2.5 text-[var(--fg)]">
+      <div data-region="cintillo" data-el="h-cintillo" className="overflow-hidden border-b border-[var(--border)] bg-[var(--nav-bg)] py-2.5 text-[var(--fg)]">
         <div
           className="lx-marquee text-[0.72rem] uppercase tracking-[0.14em] text-[color:var(--cin,var(--fg))] sm:tracking-[0.25em]"
           style={{ "--lx-marquee-s": `${duracionDelCintillo(piezas, ticker.velocidad)}s`, ...(ticker.color ? { "--cin": ticker.color } : {}) } as React.CSSProperties}

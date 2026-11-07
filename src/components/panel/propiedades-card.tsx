@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ChevronRight, MousePointerClick, X } from "lucide-react";
-import type { HomeStyle } from "@/db/schema";
+import type { HomeStyle, SectionElId, SectionElStyle } from "@/db/schema";
+import { PIEZAS_CABECERA, PiezaCabeceraEditor } from "@/components/panel/pieza-cabecera-editor";
 import { BlockStyleEditor, type ZoneBundle } from "@/components/panel/block-style-editor";
 import { Inspector } from "@/components/panel/portada-controls";
 import type { Layout } from "@/components/panel/portada-types";
@@ -42,6 +43,9 @@ export function PropiedadesCard({
   onRegions,
   onTextos,
   onMenu,
+  pieza = null,
+  onPieza,
+  onSectionEls,
   secciones,
   nota,
   onNotaChange,
@@ -62,6 +66,11 @@ export function PropiedadesCard({
   onTextos: (next: TextosCabecera | undefined) => void;
   /** Cambia el menú de la barra (`undefined` = el original). */
   onMenu: (next: MenuNavbar | undefined) => void;
+  /** Pieza de la cabecera elegida (nombre, logo, fecha…); `null` = toda la cabecera. */
+  pieza?: SectionElId | null;
+  onPieza?: (p: SectionElId | null) => void;
+  /** Cambia el estilo de las piezas sueltas (de la pantalla que se edita). */
+  onSectionEls?: (next: Partial<Record<SectionElId, SectionElStyle>>) => void;
   /** Secciones principales del sitio, para elegir cuáles se muestran en la barra. */
   secciones: { slug: string; name: string }[];
   /** La nota elegida: su posición (-1 si no está en la lista), título y estilo actual. */
@@ -146,9 +155,57 @@ export function PropiedadesCard({
             <p className="flex flex-wrap items-center gap-1 text-xs text-[var(--fg-muted)]">
               Portada <ChevronRight size={12} aria-hidden /> <span className="font-semibold text-[var(--fg)]">{parteLabel(region)}</span>
             </p>
-            <RegionEditor value={layout.regions ?? {}} active={region} onActive={onRegion} onChange={onRegions} only={PARTES} />
-            {region === "navbar" && <TextosCabeceraEditor value={layout.textos} onChange={onTextos} />}
-            {region === "navbar" && <MenuNavbarEditor value={layout.menuNav} onChange={onMenu} secciones={secciones} conAspecto={pantalla === "pc"} />}
+            {/* Cabecera: primero se elige QUÉ pieza (o toda la cabecera) y después se ve todo lo que se le puede hacer a esa pieza. */}
+            {region === "navbar" && onPieza && (
+              <div>
+                <p className="mb-1.5 text-[0.95rem] font-extrabold text-[#0b0b0b]">¿Qué quieres cambiar?</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {[{ id: null, label: "Toda la cabecera", hint: "Fondo, colores generales y medidas" }, ...PIEZAS_CABECERA].map((x) => {
+                    const on = pieza === x.id;
+                    const tocada = x.id ? !!layout.sectionEls?.[x.id] : false;
+                    return (
+                      <button
+                        key={x.id ?? "toda"}
+                        type="button"
+                        title={x.hint}
+                        aria-pressed={on}
+                        onClick={() => onPieza(x.id)}
+                        className={`relative rounded-full border px-3 py-1 text-xs font-semibold transition ${on ? "border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-fg)]" : "border-[var(--border)] bg-white hover:border-[var(--accent)]"}`}
+                      >
+                        {x.label}
+                        {tocada && <span className="absolute -right-0.5 -top-0.5 size-2 rounded-full bg-[#c9a227]" aria-label="modificado" />}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="mt-1.5 text-[11px] text-[var(--fg-muted)]">También puedes hacer clic en la pieza dentro de la página.</p>
+              </div>
+            )}
+            {region === "navbar" && pieza && onSectionEls ? (
+              <>
+                <PiezaCabeceraEditor
+                  key={pieza}
+                  el={pieza}
+                  style={layout.sectionEls?.[pieza] ?? {}}
+                  onChange={(st) => {
+                    const next = { ...(layout.sectionEls ?? {}) };
+                    if (st) next[pieza] = st;
+                    else delete next[pieza];
+                    onSectionEls(next);
+                  }}
+                />
+                {/* Lo que no es de aspecto pero sí de esa pieza: el texto que dice o qué enlaces muestra. */}
+                {(pieza === "h-nombre" || pieza === "h-lema" || pieza === "h-fecha") && <TextosCabeceraEditor value={layout.textos} onChange={onTextos} />}
+                {pieza === "h-menu" && <MenuNavbarEditor value={layout.menuNav} onChange={onMenu} secciones={secciones} conAspecto={pantalla === "pc"} />}
+                {pieza === "h-cintillo" && <p className="text-xs leading-snug text-[var(--fg-muted)]">Qué titulares lleva y a qué velocidad corre se ajusta en el bloque «Cintillo de titulares», más abajo.</p>}
+              </>
+            ) : (
+              <>
+                <RegionEditor value={layout.regions ?? {}} active={region} onActive={onRegion} onChange={onRegions} only={PARTES} />
+                {region === "navbar" && <TextosCabeceraEditor value={layout.textos} onChange={onTextos} />}
+                {region === "navbar" && <MenuNavbarEditor value={layout.menuNav} onChange={onMenu} secciones={secciones} conAspecto={pantalla === "pc"} />}
+              </>
+            )}
             {region === "cards" && nota && (
               <button type="button" onClick={() => onFoco("nota")} className="self-start text-xs font-semibold text-[var(--accent)] hover:underline">
                 ← Editar solo {nota.index >= 0 ? `la nota ${nota.index + 1}` : "la nota elegida"}

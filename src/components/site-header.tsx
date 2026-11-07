@@ -170,10 +170,11 @@ function MastheadHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extr
             <span
               aria-hidden
               data-titulo-marca
+              data-el="h-logo"
               className="lx-foil block aspect-[8/5] h-[clamp(2.25rem,7cqi,4.5rem)] shrink-0"
               style={{ backgroundClip: "border-box", WebkitBackgroundClip: "border-box", WebkitMask: "url(/logo/contexto-ganadero-emblema.png) center / contain no-repeat", mask: "url(/logo/contexto-ganadero-emblema.png) center / contain no-repeat" }}
             />
-            <span className="lx-display lx-foil block text-[clamp(1.875rem,6.4cqi,3.75rem)] font-semibold leading-none tracking-tight">
+            <span data-el="h-nombre" className="lx-display lx-foil block text-[clamp(1.875rem,6.4cqi,3.75rem)] font-semibold leading-none tracking-tight">
               {identity.name}
             </span>
           </Link>
@@ -181,8 +182,8 @@ function MastheadHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extr
         </div>
         {/* El lema y, debajo, la fecha. */}
         <span className="mt-2 flex flex-col items-center gap-y-1">
-          {!identity.sinLema && <span data-titulo-texto className="lx-kicker text-[var(--fg-muted)]">{identity.tagline || t(locale, "nav.tagline")}</span>}
-          {identity.fecha !== false && <span data-titulo-texto className="lx-ui text-[0.62rem] font-medium uppercase tracking-[0.18em] text-[var(--fg-muted)]/80">{today}</span>}
+          {!identity.sinLema && <span data-titulo-texto data-el="h-lema" className="lx-kicker text-[var(--fg-muted)]">{identity.tagline || t(locale, "nav.tagline")}</span>}
+          {identity.fecha !== false && <span data-titulo-texto data-el="h-fecha" className="lx-ui text-[0.62rem] font-medium uppercase tracking-[0.18em] text-[var(--fg-muted)]/80">{today}</span>}
         </span>
       </div>
 
@@ -193,7 +194,7 @@ function MastheadHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extr
         ))}
       </div>
 
-      <nav
+      <nav data-el="h-menu"
         aria-label={t(locale, "nav.sections")}
         className="sticky top-0 z-40 border-y border-[var(--border)] bg-[var(--nav-bg)] sm:static"
       >

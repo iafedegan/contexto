@@ -97,6 +97,8 @@ export function HomeBuilder({
   const [foco, setFoco] = useState<Foco>(null);
   const [flash, setFlash] = useState(0);
   const [secEl, setSecEl] = useState<SectionElId>("title");
+  // Pieza de la cabecera elegida (nombre, logo, lema…); `null` = toda la cabecera.
+  const [piezaCab, setPiezaCab] = useState<SectionElId | null>(null);
 
   const [popupPreview, setPopupPreview] = useState(false);
   const [draftReady, setDraftReady] = useState(false);
@@ -122,6 +124,7 @@ export function HomeBuilder({
   const frameDoc = useRef<Document | null>(null);
   const regionRef = useRef<RegionId>("navbar");
   const secElRef = useRef<SectionElId>("title");
+  const piezaCabRef = useRef<SectionElId | null>(null);
   const focoRef = useRef<Foco>(null);
   const inSectionRef = useRef(false);
   const itemsRef = useRef<Item[]>(initialItems);
@@ -236,6 +239,7 @@ export function HomeBuilder({
     if (f === "parte" || (inSec && f !== null)) {
       css += `[data-region="${r}"]{outline:2px dashed #2563eb88;outline-offset:-2px}`;
       // La pieza elegida: contorno azul firme, halo suave y un pulso al elegirla, para ubicarla de un vistazo.
+      if (r === "navbar" && piezaCabRef.current) css += `[data-el="${piezaCabRef.current}"]{outline:3px solid #2563eb;outline-offset:4px;border-radius:6px;box-shadow:0 0 0 9px rgba(37,99,235,.16)}`;
       if (r === "encabezado") css += `[data-el="${e}"]{outline:3px solid #2563eb;outline-offset:4px;border-radius:6px;box-shadow:0 0 0 9px rgba(37,99,235,.16);animation:cgselpulse .7s ease-out}@keyframes cgselpulse{from{box-shadow:0 0 0 22px rgba(37,99,235,.35)}}`;
     }
     if (f === "nota" && c !== null) {
@@ -248,6 +252,7 @@ export function HomeBuilder({
   useEffect(() => {
     regionRef.current = region;
     secElRef.current = secEl;
+    piezaCabRef.current = piezaCab;
     focoRef.current = foco;
     inSectionRef.current = previewPath.startsWith("/vista-portada/categoria/");
     itemsRef.current = items;
@@ -336,6 +341,13 @@ export function HomeBuilder({
         }
         // Pieza suelta del encabezado de una sección (migas, título…): abre su editor.
         const piece = el.closest("[data-el]")?.getAttribute("data-el") as SectionElId | null;
+        // Pieza de la cabecera del sitio: se edita dentro de «Cabecera», con todo lo que admite esa pieza.
+        if (piece && piece.startsWith("h-")) {
+          setPiezaCab(piece);
+          setRegion("navbar");
+          focusOn("parte");
+          return;
+        }
         if (piece) {
           setSecEl(piece);
           setRegion("encabezado");
@@ -358,6 +370,7 @@ export function HomeBuilder({
           }
         }
         const r = el.closest("[data-region]")?.getAttribute("data-region") as RegionId | null;
+        if (r === "navbar") setPiezaCab(null);
         // En una sección solo hay dos piezas editables: encabezado y cuerpo.
         if (r && (!inSectionRef.current || r === "encabezado" || r === "body")) setRegion(r);
         if (nota) focusOn("nota");
@@ -989,6 +1002,9 @@ export function HomeBuilder({
               onRegions={(regions: RegionStyles) => patchVisual({ regions })}
               onTextos={(textos) => patchLayout({ textos: textos ?? {} })}
               onMenu={(menuNav) => patchVisual({ menuNav: menuNav ?? {} })}
+              pieza={piezaCab}
+              onPieza={setPiezaCab}
+              onSectionEls={(sectionEls) => patchVisual({ sectionEls })}
               secciones={sections.filter((x) => !x.parentId).map((x) => ({ slug: x.slug, name: x.name }))}
               nota={selected !== null && items[selected] ? { index: selected, title: items[selected].title, style: estiloEnPantalla(items[selected].homeStyle, pantalla), enLienzo: notaEnLienzo } : null}
               onNotaChange={(p) => selected !== null && patchStyle(selected, p)}
