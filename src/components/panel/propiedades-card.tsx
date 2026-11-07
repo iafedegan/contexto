@@ -201,9 +201,8 @@ export function PropiedadesCard({
               </>
             ) : (
               <>
+                {/* Lo de cada pieza (textos, menú, tipografía) vive en su pieza: aquí solo lo de toda la cabecera, sin repetir. */}
                 <RegionEditor value={layout.regions ?? {}} active={region} onActive={onRegion} onChange={onRegions} only={PARTES} />
-                {region === "navbar" && <TextosCabeceraEditor value={layout.textos} onChange={onTextos} />}
-                {region === "navbar" && <MenuNavbarEditor value={layout.menuNav} onChange={onMenu} secciones={secciones} conAspecto={pantalla === "pc"} />}
               </>
             )}
             {region === "cards" && nota && (

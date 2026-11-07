@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ChevronDown, ChevronRight, Menu, Moon, Search, UserCircle, X } from "lucide-react";
+import { ChevronDown, ChevronRight, EllipsisVertical, Menu, Moon, Search, UserCircle, X } from "lucide-react";
 import { LogoMark } from "@/components/logo-mark";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { RadioPlayer } from "@/components/radio-player";
@@ -120,17 +120,35 @@ export function MobileNav({
 
   // El nombre como en la web (MastheadHeader de site-header.tsx): dorado con el brillo que lo recorre, filetes que se
   // desvanecen a los lados y el lema debajo. `lx-kicker` no sirve aquí: su tamaño sin capa le gana a las utilidades.
-  const escaparate = tagline || fecha ? (
-    <div className="flex min-w-0 items-center justify-center gap-4 px-2 py-2.5">
-      <span aria-hidden className="h-px flex-1 bg-gradient-to-r from-transparent to-[var(--border-strong)]" />
-      <Link href={localePath(locale, "/")} className="block min-w-0 text-center">
-        <span className="lx-display lx-foil block whitespace-nowrap text-[clamp(1.4rem,7.2vw,1.9rem)] font-semibold leading-tight tracking-tight">{name}</span>
-        {tagline && <span className="lx-ui mt-1.5 block whitespace-nowrap text-[clamp(0.55rem,2.6vw,0.7rem)] font-semibold uppercase leading-none tracking-[0.16em] text-[var(--fg-muted)]">{tagline}</span>}
-        {fecha && <span className="lx-ui mt-1.5 block whitespace-nowrap text-[0.62rem] font-medium uppercase leading-none tracking-[0.18em] text-[var(--fg-muted)]/80">{fecha}</span>}
+  // Cabecera de app: el logo (misma lámina que el nombre) a la izquierda, el nombre y la fecha a su lado, y a la derecha
+  // el botón de opciones. Sin filetes a los lados: en un teléfono solo restaban espacio al nombre.
+  const escaparate = (
+    <div className="flex min-w-0 items-center gap-3 px-4 py-2.5">
+      <Link href={localePath(locale, "/")} className="flex min-w-0 flex-1 items-center gap-2.5">
+        <span
+          aria-hidden
+          data-titulo-marca
+          data-el="h-logo"
+          className="lx-foil block aspect-[8/5] h-10 shrink-0"
+          style={{ backgroundClip: "border-box", WebkitBackgroundClip: "border-box", WebkitMask: "url(/logo/contexto-ganadero-emblema.png) center / contain no-repeat", mask: "url(/logo/contexto-ganadero-emblema.png) center / contain no-repeat" }}
+        />
+        <span className="min-w-0">
+          <span data-el="h-nombre" className="lx-display lx-foil block truncate text-[clamp(1.25rem,6vw,1.6rem)] font-semibold leading-none tracking-tight">{name}</span>
+          {tagline && <span data-titulo-texto data-el="h-lema" className="lx-ui mt-1 block truncate text-[0.62rem] font-semibold uppercase leading-none tracking-[0.14em] text-[var(--fg-muted)]">{tagline}</span>}
+          {fecha && <span data-titulo-texto data-el="h-fecha" className="lx-ui mt-1 block truncate text-[0.6rem] font-medium uppercase leading-none tracking-[0.14em] text-[var(--fg-muted)]">{fecha}</span>}
+        </span>
       </Link>
-      <span aria-hidden className="h-px flex-1 bg-gradient-to-l from-transparent to-[var(--border-strong)]" />
+      <button
+        type="button"
+        onClick={() => setMore((v) => !v)}
+        aria-expanded={more}
+        aria-label={es ? "Más opciones" : "More options"}
+        className="grid size-11 shrink-0 place-items-center rounded-full text-[var(--fg)] active:bg-[var(--surface-2)]"
+      >
+        <EllipsisVertical size={20} />
+      </button>
     </div>
-  ) : null;
+  );
 
   // Cada plantilla, su barra.
   let bar: React.ReactNode;
@@ -140,7 +158,7 @@ export function MobileNav({
       bar = (
         <div className="grid grid-cols-[2.75rem_1fr_2.75rem] items-center px-2 py-1 max-md:grid-cols-1">
           {menuButton}
-          {escaparate ?? logo("lx-display text-center text-[1.35rem] font-semibold leading-none tracking-tight")}
+          {escaparate}
           {searchLink}
         </div>
       );
@@ -207,18 +225,15 @@ export function MobileNav({
       {bar}
       {/* En el celular el menú y la lupa viven en la barra de abajo y esta queda con solo el nombre: el modo claro/oscuro va aquí, a la vista. */}
 
-      <div className="flex flex-col items-center pb-1">
-        <button
-          type="button"
-          onClick={() => setMore((v) => !v)}
-          aria-expanded={more}
-          aria-label={es ? "Más opciones" : "More options"}
-          className="grid h-8 w-16 place-items-center text-[var(--accent)]"
-        >
-          <ChevronDown size={18} className={`transition ${more ? "rotate-180" : ""}`} />
-        </button>
+      {/* Cinta de seis colores, como en la web. */}
+      <div aria-hidden className="flex h-[3px] w-full">
+        {["#f2a900", "#b5124f", "#00587c", "#6a9fc0", "#e5214f", "#5a8f9e"].map((c) => (
+          <span key={c} className="h-full flex-1" style={{ background: c }} />
+        ))}
+      </div>
+      <div className="flex flex-col items-center">
         {more && (
-          <div className="mt-2 w-[min(18rem,90%)] rounded-2xl border border-[var(--border-strong)] bg-[var(--surface-2)] p-2">
+          <div className="my-2 w-[min(18rem,90%)] rounded-2xl border border-[var(--border-strong)] bg-[var(--surface-2)] p-2">
             <button type="button" onClick={toggleTheme} className="flex min-h-12 w-full items-center gap-3 rounded-xl px-2 text-left text-base font-semibold">
               <span className="grid size-10 place-items-center rounded-full border border-[var(--border-strong)] text-[var(--accent)]"><Moon size={18} /></span>
               {es ? "Tono claro / oscuro" : "Light / dark"}

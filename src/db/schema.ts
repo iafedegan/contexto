@@ -802,6 +802,9 @@ export type SectionElStyle = {
   upper?: boolean;
   /** Espaciado entre letras en px (-2 a 20). */
   tracking?: number;
+  /** Lo mismo, solo cuando el sitio se ve en modo claro / oscuro (pisa a lo de arriba). */
+  claro?: Omit<SectionElStyle, "claro" | "oscuro">;
+  oscuro?: Omit<SectionElStyle, "claro" | "oscuro">;
 };
 
 /** Una zona del cuerpo (contenedor de varios bloques) convertida en cuadrícula. */

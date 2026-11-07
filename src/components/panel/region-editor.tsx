@@ -159,10 +159,12 @@ export function RegionEditor({
             {has("bgGradient") && <GradientEditor label="Degradado de fondo" value={colores.bgGradient} onChange={(bgGradient) => patchColor({ bgGradient })} />}
             {has("fg") && <ColorRow label="Texto" value={colores.fg} onChange={(fg) => patchColor({ fg })} hint={hintDe("fg")} />}
             {has("accent") && <ColorRow label="Acento" value={colores.accent} onChange={(accent) => patchColor({ accent })} hint={hintDe("accent")} />}
-            {has("title") && <ColorRow label="Títulos" value={colores.title} onChange={(title) => patchColor({ title })} hint={hintDe("title")} />}
+            {has("title") && (active !== "navbar" || colores.title) && <ColorRow label={active === "navbar" ? "Títulos (anterior: ahora va en cada pieza)" : "Títulos"} value={colores.title} onChange={(title) => patchColor({ title })} hint={hintDe("title")} />}
           </Group>
 
-          <Group title="Tipografía" resumen="Tipo y tamaño de letra">
+          {/* En la cabecera la letra se elige pieza por pieza; solo se muestra si quedó un ajuste de antes, para poder quitarlo. */}
+          {(active !== "navbar" || s.titleFont || s.textFont || (s.titleScale && s.titleScale !== 100) || (s.textScale && s.textScale !== 100)) && (
+          <Group title={active === "navbar" ? "Tipografía (anterior)" : "Tipografía"} resumen={active === "navbar" ? "Ahora se cambia en cada pieza; aquí solo para quitar lo de antes" : "Tipo y tamaño de letra"}>
             {has("titleFont") && (
               <FontSelect label="Titulares" value={s.titleFont} onChange={(titleFont) => patch({ titleFont })} />
             )}
@@ -176,6 +178,7 @@ export function RegionEditor({
               <Slider label="Tamaño del texto" k="textScale" value={s.textScale} def={100} onChange={(textScale) => patch({ textScale })} />
             )}
           </Group>
+          )}
 
           <Group title="Medidas y alineación" resumen="Espacios, ancho y posición">
             {has("padTop") && <Slider label="Espacio superior (bajo la barra)" k="padTop" value={s.padTop} onChange={(padTop) => patch({ padTop })} />}

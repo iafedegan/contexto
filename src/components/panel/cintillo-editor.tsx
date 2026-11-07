@@ -114,17 +114,13 @@ export function CintilloEditor({
           </p>
         </Grupo>
 
-        <Grupo titulo="Color del texto">
-          <div className="flex items-center gap-3">
-            <input type="color" aria-label="Color del texto del cintillo" value={v.color || "#cccccc"} onChange={(e) => set({ color: e.target.value })} className="h-9 w-14 cursor-pointer rounded border border-[var(--border-strong)] bg-white p-0.5" />
-            <span className="text-xs text-[var(--fg-muted)]">{v.color || "El del tema"}</span>
-            {v.color && (
-              <button type="button" onClick={() => set({ color: "" })} className="text-xs font-semibold text-[var(--accent)] hover:underline">
-                Volver al del tema
-              </button>
-            )}
-          </div>
-        </Grupo>
+        {/* El aspecto del cintillo (color, tamaño, letra) se edita en un solo lugar: Cabecera › Cintillo. Aquí solo queda quitar un color de antes. */}
+        <p className="text-[11px] leading-snug text-[var(--fg-muted)]">El color, el tamaño y la letra del cintillo se cambian en Propiedades › Cabecera › Cintillo.</p>
+        {v.color && (
+          <button type="button" onClick={() => set({ color: "" })} className="self-start text-xs font-semibold text-[var(--accent)] hover:underline">
+            Quitar el color anterior del cintillo ({v.color})
+          </button>
+        )}
 
         <Grupo titulo="Velocidad">
           <Deslizador

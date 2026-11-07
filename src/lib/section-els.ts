@@ -1,6 +1,7 @@
 import type { Gradient, SectionElId, SectionElStyle } from "@/db/schema";
 import { HOME_FONTS, homeFontFamily, type HomeTitleFont } from "@/lib/home-fonts";
 import { acotar, colorHex as hex } from "@/lib/validate";
+import { selectoresDeModo } from "@/lib/modo-selectores";
 
 /**
  * Cada elemento suelto del encabezado de una sección (migas, etiqueta, título,
@@ -62,10 +63,8 @@ export const gradientCss = (g: Gradient) => `linear-gradient(${g.angle}deg,${g.f
 export function sanitizeSectionEls(input: unknown): Partial<Record<SectionElId, SectionElStyle>> {
   if (!input || typeof input !== "object") return {};
   const out: Partial<Record<SectionElId, SectionElStyle>> = {};
-  for (const { id, gradient } of SECTION_ELS) {
-    const raw = (input as Record<string, unknown>)[id];
-    if (!raw || typeof raw !== "object") continue;
-    const r = raw as Record<string, unknown>;
+  // Valida un estilo suelto (sin modos).
+  const uno = (id: SectionElId, gradient: boolean, r: Record<string, unknown>): SectionElStyle | undefined => {
     const weight = typeof r.weight === "number" && (WEIGHTS as readonly number[]).includes(r.weight) ? r.weight : undefined;
     const s: SectionElStyle = {
       font: HOME_FONTS.some((f) => f.id === r.font) ? (r.font as HomeTitleFont) : undefined,
@@ -77,7 +76,18 @@ export function sanitizeSectionEls(input: unknown): Partial<Record<SectionElId, 
       tracking: clamp(r.tracking, EL_RANGES.tracking.min, EL_RANGES.tracking.max),
     };
     const clean = Object.fromEntries(Object.entries(s).filter(([, v]) => v !== undefined)) as SectionElStyle;
-    if (Object.keys(clean).length) out[id] = clean;
+    return Object.keys(clean).length ? clean : undefined;
+  };
+  for (const { id, gradient } of SECTION_ELS) {
+    const raw = (input as Record<string, unknown>)[id];
+    if (!raw || typeof raw !== "object") continue;
+    const r = raw as Record<string, unknown>;
+    const base: SectionElStyle = uno(id, gradient, r) ?? {};
+    for (const m of ["claro", "oscuro"] as const) {
+      const v = r[m] && typeof r[m] === "object" ? uno(id, gradient, r[m] as Record<string, unknown>) : undefined;
+      if (v) base[m] = v;
+    }
+    if (Object.keys(base).length) out[id] = base;
   }
   return out;
 }
@@ -86,15 +96,14 @@ export function sanitizeSectionEls(input: unknown): Partial<Record<SectionElId, 
 export function sectionElsCss(input: unknown, scope = "[data-site-root]"): string {
   const els = sanitizeSectionEls(input);
   const rules: string[] = [];
-  for (const { id } of SECTION_ELS) {
-    const s = els[id];
-    if (!s) continue;
-    const sel = `${scope} [data-el="${id}"]`;
+  // Reglas de un estilo sobre un selector (que puede ser una lista: se envuelve en :is()).
+  const reglas = (id: SectionElId, s: SectionElStyle, selector: string, conMovil: boolean) => {
+    const sel = `:is(${selector})`;
     const all = `${sel},${sel} *`;
     // La foto no lleva letras: «tamaño» es su ancho.
     if (id === "n-photo") {
       if (s.size !== undefined) rules.push(`${sel}{width:${s.size}px!important;max-width:100%!important;margin-inline:auto!important}`);
-      continue;
+      return;
     }
     // El logo es una máscara pintada con su fondo: «tamaño» es su alto y el color (o degradado) es el fondo, no el de las letras.
     if (id === "h-logo") {
@@ -103,7 +112,7 @@ export function sectionElsCss(input: unknown, scope = "[data-site-root]"): strin
       if (s.gradient) l.push(`background:${gradientCss(s.gradient)}!important`, "animation:none!important");
       else if (s.color) l.push(`background:${s.color}!important`, "animation:none!important");
       if (l.length) rules.push(`${sel}{${l.join(";")}}`);
-      continue;
+      return;
     }
     const d: string[] = [];
     const family = homeFontFamily(s.font);
@@ -119,13 +128,22 @@ export function sectionElsCss(input: unknown, scope = "[data-site-root]"): strin
       );
     } else if (s.color) {
       d.push(`color:${s.color}!important`, `-webkit-text-fill-color:${s.color}!important`);
-      rules.unshift(`${sel}{background-image:none!important}`);
+      rules.push(`${sel}{background-image:none!important}`);
     }
     if (d.length) rules.push(`${all}{${d.join(";")}}`);
     // En móvil un tamaño de escritorio desborda: se reduce a ~70 % si es grande.
-    if (s.size !== undefined && s.size > 24) {
+    if (conMovil && s.size !== undefined && s.size > 24) {
       rules.push(`@media(max-width:640px){${all}{font-size:${Math.max(12, Math.round(s.size * 0.7))}px!important}}`);
     }
+  };
+  for (const { id } of SECTION_ELS) {
+    const s = els[id];
+    if (!s) continue;
+    const { claro, oscuro, ...base } = s;
+    reglas(id, base, `${scope} [data-el="${id}"]`, true);
+    // Lo de cada modo va después: con el mismo peso (`!important`) y más especificidad, manda sobre «los dos modos».
+    if (claro) reglas(id, claro, selectoresDeModo("claro", scope, null, ` [data-el="${id}"]`), true);
+    if (oscuro) reglas(id, oscuro, selectoresDeModo("oscuro", scope, null, ` [data-el="${id}"]`), true);
   }
   return rules.join("\n");
 }

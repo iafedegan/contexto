@@ -74,30 +74,11 @@ export function MenuNavbarEditor({
         <input type="checkbox" checked={m.submenus !== false} onChange={(e) => patch({ submenus: e.target.checked ? undefined : false })} />
         Desplegar subsecciones
       </label>
-      {conAspecto ? (
-        <>
-        <p className="mt-1 text-sm font-semibold">Aspecto de los enlaces</p>
-        <ColorRow label="Color de los enlaces (los dos modos)" hint="Solo los enlaces del menú; el resto de la cabecera usa «Colores»." value={m.estilo?.color} onChange={(color) => estilo({ color })} />
-        <ColorRow label="Color en modo claro" value={m.estilo?.colorClaro} onChange={(colorClaro) => estilo({ colorClaro })} />
-        <ColorRow label="Color en modo oscuro" value={m.estilo?.colorOscuro} onChange={(colorOscuro) => estilo({ colorOscuro })} />
-        <FontSelect label="Tipo de letra" value={m.estilo?.font} onChange={(font) => estilo({ font })} />
-        {num("Tamaño del texto (px)", m.estilo?.tamano, 10, 24, "tamano")}
-        {num("Espacio entre enlaces (px)", m.estilo?.espacio, 0, 60, "espacio")}
-        {num("Espaciado entre letras (décimas de px)", m.estilo?.letras, 0, 60, "letras")}
-        <label className="flex items-center gap-2 text-sm">
-          <select
-            value={m.estilo?.mayusculas === undefined ? "" : m.estilo.mayusculas ? "si" : "no"}
-            onChange={(e) => estilo({ mayusculas: e.target.value === "" ? undefined : e.target.value === "si" })}
-            className={campo}
-          >
-            <option value="">Mayúsculas: según la plantilla</option>
-            <option value="si">MAYÚSCULAS</option>
-            <option value="no">Minúsculas normales</option>
-          </select>
-        </label>
-        </>
-      ) : (
-        <p className="mt-1 text-xs leading-relaxed text-[var(--fg-muted)]">En esta pantalla el menú va plegado tras su botón: el aspecto de los enlaces (color, letra, tamaño) se ajusta en la pantalla de computador.</p>
+      {/* El aspecto de los enlaces (color, letra, tamaño, mayúsculas) se edita en un solo lugar: Cabecera › Menú, arriba. */}
+      {m.estilo && (
+        <button type="button" onClick={() => patch({ estilo: undefined })} className="self-start text-xs font-semibold text-[var(--accent)] hover:underline">
+          Quitar los ajustes anteriores de aspecto del menú
+        </button>
       )}
       <p className="mt-1 text-sm font-semibold">Enlaces propios</p>
       {extras.map((e, i) => (
