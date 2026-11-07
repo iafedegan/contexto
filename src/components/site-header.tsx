@@ -202,12 +202,6 @@ function MastheadHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extr
           {nav.map((n) => (
             <NavMenuItem key={n.href} item={n} locale={locale} className="lx-link lx-ui" />
           ))}
-          <Link
-            href={localePath(locale, "/buscar")}
-            className="lx-ui rounded-full border border-[var(--border-strong)] px-4 py-1 text-[var(--accent)] transition hover:bg-[var(--surface-2)] pointer-coarse:py-[0.8125rem]"
-          >
-            {t(locale, "nav.search")}
-          </Link>
           <MoreMenu locale={locale} extra={extra} />
           {/* Idioma, modo, radio e instalar: pequeños y discretos, al final de la barra y no en una franja propia. */}
           <span className="flex items-center gap-0.5 border-l border-[var(--border)] pl-3 text-[var(--fg-muted)] opacity-80 transition-opacity hover:opacity-100 focus-within:opacity-100">
