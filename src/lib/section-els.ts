@@ -140,10 +140,12 @@ export function sectionElsCss(input: unknown, scope = "[data-site-root]"): strin
     const s = els[id];
     if (!s) continue;
     const { claro, oscuro, ...base } = s;
-    reglas(id, base, `${scope} [data-el="${id}"]`, true);
+    // El menú tiene estilos propios en sus enlaces (y ajustes viejos de «Menú y secciones»): se sube la especificidad para que la pieza mande en todos.
+    const peso = id === "h-menu" ? ":not(#_):not(#_)" : "";
+    reglas(id, base, `${scope} [data-el="${id}"]${peso}`, true);
     // Lo de cada modo va después: con el mismo peso (`!important`) y más especificidad, manda sobre «los dos modos».
-    if (claro) reglas(id, claro, selectoresDeModo("claro", scope, null, ` [data-el="${id}"]`), true);
-    if (oscuro) reglas(id, oscuro, selectoresDeModo("oscuro", scope, null, ` [data-el="${id}"]`), true);
+    if (claro) reglas(id, claro, selectoresDeModo("claro", scope, null, ` [data-el="${id}"]${peso}`), true);
+    if (oscuro) reglas(id, oscuro, selectoresDeModo("oscuro", scope, null, ` [data-el="${id}"]${peso}`), true);
   }
   return rules.join("\n");
 }
