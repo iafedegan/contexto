@@ -94,7 +94,8 @@ async function HomePage({ locale }: { locale: Locale }) {
     ? piezasDelCintillo(ticker, {
         mercado: market.map((m) => ({ key: m.key, texto: `${t(locale, `market.${m.key}`)} ${formatMarketValue(m)}`, etiqueta: t(locale, `market.${m.key}`), valor: formatMarketValue(m), cambio: m.previousValue ? ((m.value - m.previousValue) / m.previousValue) * 100 : null })),
         notas: notasCintillo,
-      })
+        // Solo información financiera (como una cinta de cotizaciones): sin titulares ni mensajes.
+      }).filter((p) => p.tipo === "mercado")
     : [];
   // Carrusel de notas (todas las plantillas): de dónde salen, cuántas y dónde se pone se decide en /panel/portada.
   const carruseles = [sanitizeCarrusel(layout.carrusel), ...sanitizeCarruseles(layout.carruseles)];
@@ -159,11 +160,11 @@ async function HomePage({ locale }: { locale: Locale }) {
   ) : null;
   const sinSlot = body === "compacto" || body === "vanguardia";
   const trasPrincipal = carrusel || sinSlot ? undefined : columnaMovil;
-  // Cintillo como una cinta de cotizaciones: fondo negro, nombre en negrita, valor y la variación con flecha verde o roja.
+  // Cintillo como una cinta de cotizaciones: fondo verde oscuro, nombre en negrita, valor y la variación con flecha verde o roja.
   // Debajo, la cinta de seis colores de la marca (la de la cabecera se oculta cuando está el cintillo, para no repetirla).
   const cintillo =
     piezas.length > 0 ? (
-      <div data-region="cintillo" data-el="h-cintillo" className="cg-cintillo-arriba bg-[#0b0b0b] pt-[env(safe-area-inset-top)] text-white [--fg:#ffffff]">
+      <div data-region="cintillo" data-el="h-cintillo" className="cg-cintillo-arriba bg-[#0b2a1c] pt-[env(safe-area-inset-top)] text-white [--fg:#ffffff]">
         <div className="overflow-hidden py-2">
           <div
             className="lx-marquee items-center gap-10 text-[0.8rem] font-medium text-[color:var(--cin,#ffffff)]"
