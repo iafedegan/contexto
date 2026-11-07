@@ -129,11 +129,12 @@ export function MobileNav({
           aria-hidden
           data-titulo-marca
           data-el="h-logo"
-          className="lx-foil block aspect-[8/5] h-10 shrink-0"
+          className="lx-foil block aspect-[8/5] h-9 shrink-0"
           style={{ backgroundClip: "border-box", WebkitBackgroundClip: "border-box", WebkitMask: "url(/logo/contexto-ganadero-emblema.png) center / contain no-repeat", mask: "url(/logo/contexto-ganadero-emblema.png) center / contain no-repeat" }}
         />
         <span className="min-w-0">
-          <span data-el="h-nombre" className="lx-display lx-foil block truncate text-[clamp(1.25rem,6vw,1.6rem)] font-semibold leading-none tracking-tight">{name}</span>
+          {/* Sin la escala de titulares del panel (zoom) y con un tamaño que cabe entero en un teléfono de 360 px: nunca «Gan…». */}
+          <span data-el="h-nombre" style={{ zoom: 1 }} className="lx-display lx-foil block whitespace-nowrap text-[min(1.5rem,5.6vw)] font-semibold leading-tight tracking-tight">{name}</span>
           {tagline && <span data-titulo-texto data-el="h-lema" className="lx-ui mt-1 block truncate text-[0.62rem] font-semibold uppercase leading-none tracking-[0.14em] text-[var(--fg-muted)]">{tagline}</span>}
           {fecha && <span data-titulo-texto data-el="h-fecha" className="lx-ui mt-1 block truncate text-[0.6rem] font-medium uppercase leading-none tracking-[0.14em] text-[var(--fg-muted)]">{fecha}</span>}
         </span>
@@ -143,7 +144,7 @@ export function MobileNav({
         onClick={() => setMore((v) => !v)}
         aria-expanded={more}
         aria-label={es ? "Más opciones" : "More options"}
-        className="grid size-11 shrink-0 place-items-center rounded-full text-[var(--fg)] active:bg-[var(--surface-2)]"
+        className="-mr-2 grid size-10 shrink-0 place-items-center rounded-full text-[var(--fg)] active:bg-[var(--surface-2)]"
       >
         <EllipsisVertical size={20} />
       </button>
@@ -221,7 +222,7 @@ export function MobileNav({
   }
 
   return (
-    <header data-region="navbar" className="relative z-40 bg-[var(--nav-bg)] pt-[env(safe-area-inset-top)] text-[var(--fg)] md:sticky md:top-0 lg:hidden">
+    <header data-region="navbar" className="cg-pt-seguro relative z-40 bg-[var(--nav-bg)] pt-[env(safe-area-inset-top)] text-[var(--fg)] md:sticky md:top-0 lg:hidden">
       {bar}
       {/* En el celular el menú y la lupa viven en la barra de abajo y esta queda con solo el nombre: el modo claro/oscuro va aquí, a la vista. */}
 

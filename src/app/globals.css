@@ -2340,3 +2340,6 @@ main > div:has([data-asistente]) { max-width: none; }
 @media (prefers-reduced-motion: reduce) {
   .cg-esqueleto > span { animation: none; }
 }
+
+/* El cintillo va en lo más alto: él se separa de la barra de estado del teléfono (safe-area) y la cabecera ya no repite ese espacio. */
+body:has(.cg-cintillo-arriba) header[data-region="navbar"].cg-pt-seguro { padding-top: 0; }
