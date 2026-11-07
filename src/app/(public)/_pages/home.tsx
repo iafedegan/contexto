@@ -166,12 +166,12 @@ async function HomePage({ locale }: { locale: Locale }) {
     piezas.length > 0 ? (
       <div data-region="cintillo" data-el="h-cintillo" className="cg-cintillo-arriba bg-[#0b2a1c] pt-[env(safe-area-inset-top)] text-white [--fg:#ffffff]">
         <div className="overflow-hidden py-2">
-          <div
-            className="lx-marquee items-center gap-10 text-[0.8rem] font-medium text-[color:var(--cin,#ffffff)]"
-            style={{ "--lx-marquee-s": `${duracionDelCintillo(piezas, ticker.velocidad)}s`, ...(ticker.color ? { "--cin": ticker.color } : {}) } as React.CSSProperties}
-          >
-            {/* Dos copias seguidas: la animación avanza media tira y reinicia sin que se note el salto. */}
-            {[...piezas, ...piezas].map((p, i) =>
+          {(() => {
+            // Una vuelta lo bastante larga para llenar pantallas anchas: si hay pocos datos, se repiten seguidos.
+            const largo = piezas.reduce((n, p) => n + (p.etiqueta ? p.etiqueta.length + (p.valor?.length ?? 0) + 8 : p.texto.length), 0) || 1;
+            const veces = Math.max(1, Math.ceil(320 / largo));
+            const vuelta = Array.from({ length: veces }, () => piezas).flat();
+            const pieza = (p: (typeof piezas)[number], i: number) =>
               p.tipo === "mercado" && p.etiqueta ? (
                 <span key={`${p.clave}-${i}`} className="flex items-center gap-2 whitespace-nowrap tabular-nums">
                   <span className="font-bold">{p.etiqueta}</span>
@@ -187,9 +187,21 @@ async function HomePage({ locale }: { locale: Locale }) {
                   <span className="text-[0.6rem] text-[#f2a900]">◆</span>
                   {p.texto}
                 </span>
-              ),
-            )}
-          </div>
+              );
+            return (
+              <div
+                className="lx-marquee !gap-0 items-center text-[0.8rem] font-medium text-[color:var(--cin,#ffffff)]"
+                style={{ "--lx-marquee-s": `${duracionDelCintillo(vuelta, ticker.velocidad)}s`, ...(ticker.color ? { "--cin": ticker.color } : {}) } as React.CSSProperties}
+              >
+                {/* Dos copias idénticas, cada una con su espacio final: al avanzar media tira la segunda queda justo donde empezó la primera y reinicia sin salto. */}
+                {[0, 1].map((k) => (
+                  <div key={k} aria-hidden={k === 1} className="flex shrink-0 items-center gap-8 pr-8">
+                    {vuelta.map(pieza)}
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
         </div>
         <div aria-hidden className="flex h-1 w-full">
           {["#f2a900", "#b5124f", "#00587c", "#6a9fc0", "#e5214f", "#5a8f9e"].map((c) => (
