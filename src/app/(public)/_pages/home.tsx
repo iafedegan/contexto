@@ -92,7 +92,7 @@ async function HomePage({ locale }: { locale: Locale }) {
         : articles;
   const piezas = ticker.activo
     ? piezasDelCintillo(ticker, {
-        mercado: market.map((m) => ({ key: m.key, texto: `${t(locale, `market.${m.key}`)} ${formatMarketValue(m)}` })),
+        mercado: market.map((m) => ({ key: m.key, texto: `${t(locale, `market.${m.key}`)} ${formatMarketValue(m)}`, etiqueta: t(locale, `market.${m.key}`), valor: formatMarketValue(m), cambio: m.previousValue ? ((m.value - m.previousValue) / m.previousValue) * 100 : null })),
         notas: notasCintillo,
       })
     : [];
@@ -159,27 +159,41 @@ async function HomePage({ locale }: { locale: Locale }) {
   ) : null;
   const sinSlot = body === "compacto" || body === "vanguardia";
   const trasPrincipal = carrusel || sinSlot ? undefined : columnaMovil;
+  // Cintillo como una cinta de cotizaciones: fondo negro, nombre en negrita, valor y la variación con flecha verde o roja.
+  // Debajo, la cinta de seis colores de la marca (la de la cabecera se oculta cuando está el cintillo, para no repetirla).
   const cintillo =
     piezas.length > 0 ? (
-      <div data-region="cintillo" data-el="h-cintillo" className="cg-cintillo-arriba overflow-hidden bg-[#0b0b0b] pb-2.5 pt-[calc(0.625rem+env(safe-area-inset-top))] text-white [--fg:#ffffff]">
-        <div
-          className="lx-marquee text-[0.72rem] uppercase tracking-[0.14em] text-[color:var(--cin,var(--fg))] sm:tracking-[0.25em]"
-          style={{ "--lx-marquee-s": `${duracionDelCintillo(piezas, ticker.velocidad)}s`, ...(ticker.color ? { "--cin": ticker.color } : {}) } as React.CSSProperties}
-        >
-          {/* Dos copias seguidas: la animación avanza media tira y reinicia sin que se note el salto. */}
-          {[...piezas, ...piezas].map((p, i) =>
-            p.tipo === "nota" ? (
-              <span key={`${p.clave}-${i}`} className="flex items-center gap-3 whitespace-nowrap">
-                <span className="text-[var(--accent)]">◆</span>
-                {p.texto}
-              </span>
-            ) : (
-              <span key={`${p.clave}-${i}`} className="flex items-center gap-1.5 whitespace-nowrap font-semibold text-[color:var(--cin,var(--fg))]">
-                <span className="text-[var(--accent)]">◆</span>
-                {p.texto}
-              </span>
-            ),
-          )}
+      <div data-region="cintillo" data-el="h-cintillo" className="cg-cintillo-arriba bg-[#0b0b0b] pt-[env(safe-area-inset-top)] text-white [--fg:#ffffff]">
+        <div className="overflow-hidden py-2">
+          <div
+            className="lx-marquee items-center gap-10 text-[0.8rem] font-medium text-[color:var(--cin,#ffffff)]"
+            style={{ "--lx-marquee-s": `${duracionDelCintillo(piezas, ticker.velocidad)}s`, ...(ticker.color ? { "--cin": ticker.color } : {}) } as React.CSSProperties}
+          >
+            {/* Dos copias seguidas: la animación avanza media tira y reinicia sin que se note el salto. */}
+            {[...piezas, ...piezas].map((p, i) =>
+              p.tipo === "mercado" && p.etiqueta ? (
+                <span key={`${p.clave}-${i}`} className="flex items-center gap-2 whitespace-nowrap tabular-nums">
+                  <span className="font-bold">{p.etiqueta}</span>
+                  <span className="opacity-90">{p.valor}</span>
+                  {typeof p.cambio === "number" && Number.isFinite(p.cambio) && (
+                    <span className={`font-bold ${p.cambio >= 0 ? "text-[#4ade80]" : "text-[#f87171]"}`}>
+                      {p.cambio >= 0 ? "▲" : "▼"} {Math.abs(p.cambio).toLocaleString(locale === "en" ? "en-US" : "es-CO", { maximumFractionDigits: 2, minimumFractionDigits: 2 })}%
+                    </span>
+                  )}
+                </span>
+              ) : (
+                <span key={`${p.clave}-${i}`} className={`flex items-center gap-2 whitespace-nowrap ${p.tipo === "nota" ? "" : "font-bold"}`}>
+                  <span className="text-[0.6rem] text-[#f2a900]">◆</span>
+                  {p.texto}
+                </span>
+              ),
+            )}
+          </div>
+        </div>
+        <div aria-hidden className="flex h-1 w-full">
+          {["#f2a900", "#b5124f", "#00587c", "#6a9fc0", "#e5214f", "#5a8f9e"].map((c) => (
+            <span key={c} className="h-full flex-1" style={{ background: c }} />
+          ))}
         </div>
       </div>
     ) : undefined;

@@ -78,16 +78,24 @@ export function sanitizeTicker(input: unknown): Required<TickerConfig> {
 }
 
 /** Una pieza del cintillo ya lista para pintar. */
-export type PiezaCintillo = { clave: string; tipo: "texto" | "mercado" | "nota"; texto: string };
+export type PiezaCintillo = {
+  clave: string;
+  tipo: "texto" | "mercado" | "nota";
+  texto: string;
+  /** Indicador: nombre, valor y variación en % frente al dato anterior (para pintarlo como una cotización). */
+  etiqueta?: string;
+  valor?: string;
+  cambio?: number | null;
+};
 
 /** Orden: mensajes propios, indicadores y titulares. `mercado` llega ya formateado (etiqueta + valor) con su clave. */
 export function piezasDelCintillo(
   cfg: Required<TickerConfig>,
-  datos: { mercado: { key: CintilloMercado; texto: string }[]; notas: { slug: string; title: string }[] },
+  datos: { mercado: { key: CintilloMercado; texto: string; etiqueta?: string; valor?: string; cambio?: number | null }[]; notas: { slug: string; title: string }[] },
 ): PiezaCintillo[] {
   return [
     ...cfg.textos.map((t, i): PiezaCintillo => ({ clave: `txt-${i}`, tipo: "texto", texto: t })),
-    ...datos.mercado.filter((m) => cfg.mercado.includes(m.key)).map((m): PiezaCintillo => ({ clave: `mer-${m.key}`, tipo: "mercado", texto: m.texto })),
+    ...datos.mercado.filter((m) => cfg.mercado.includes(m.key)).map((m): PiezaCintillo => ({ clave: `mer-${m.key}`, tipo: "mercado", texto: m.texto, etiqueta: m.etiqueta, valor: m.valor, cambio: m.cambio })),
     ...datos.notas.slice(0, cfg.cantidad).map((n): PiezaCintillo => ({ clave: `nota-${n.slug}`, tipo: "nota", texto: n.title })),
   ];
 }

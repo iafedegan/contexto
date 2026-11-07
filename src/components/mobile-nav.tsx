@@ -227,7 +227,7 @@ export function MobileNav({
       {/* En el celular el menú y la lupa viven en la barra de abajo y esta queda con solo el nombre: el modo claro/oscuro va aquí, a la vista. */}
 
       {/* Cinta de seis colores, como en la web. */}
-      <div aria-hidden className="flex h-[3px] w-full">
+      <div aria-hidden className="cg-cinta-cabecera flex h-[3px] w-full">
         {["#f2a900", "#b5124f", "#00587c", "#6a9fc0", "#e5214f", "#5a8f9e"].map((c) => (
           <span key={c} className="h-full flex-1" style={{ background: c }} />
         ))}
