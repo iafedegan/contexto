@@ -8,7 +8,14 @@ import { LOCALE_SHORT, LOCALES, localePath, stripLocale, t, type Locale } from "
  * Conmutador de idioma. Enlaza a la MISMA ruta en el otro idioma (no a la
  * portada): cambiar de idioma leyendo una nota debe dejarte en esa nota.
  */
-export function LocaleSwitch({ locale, className = "", compacto = false }: { locale: Locale; className?: string; /** Versión pequeña y discreta para la barra de secciones. */ compacto?: boolean }) {
+/** Oculto por decisión editorial: el portal se muestra solo en español. Cambiar a `true` para volver a mostrarlo. */
+const MOSTRAR_SELECTOR_IDIOMA = false;
+
+export function LocaleSwitch(props: { locale: Locale; className?: string; compacto?: boolean }) {
+  return MOSTRAR_SELECTOR_IDIOMA ? <SelectorIdioma {...props} /> : null;
+}
+
+function SelectorIdioma({ locale, className = "", compacto = false }: { locale: Locale; className?: string; /** Versión pequeña y discreta para la barra de secciones. */ compacto?: boolean }) {
   const pathname = usePathname();
   const bare = stripLocale(pathname ?? "/");
 
