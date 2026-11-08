@@ -52,7 +52,7 @@ export async function generateMetadata(): Promise<Metadata> {
   ...(verificacion ? { verification: { google: verificacion } } : {}),
   // Instalable como aplicación: el manifiesto lo genera src/app/manifest.ts.
   manifest: "/manifest.webmanifest",
-  appleWebApp: { capable: true, statusBarStyle: "default", title: identity.name },
+  appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: identity.name },
   };
 }
 
@@ -67,7 +67,7 @@ export const viewport: Viewport = {
   viewportFit: "cover",
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#faf7f0" },
-    { media: "(prefers-color-scheme: dark)", color: "#05100b" },
+    { media: "(prefers-color-scheme: dark)", color: "#0b2a1c" },
   ],
 };
 

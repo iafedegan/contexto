@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
         <img src={logo} width={size} height={size} alt="" />
       </div>
     ) : (
-      <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "50%", overflow: "hidden", background: "#f6f8f3" }}>
+      <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "50%", overflow: "hidden", background: "#0b2a1c" }}>
         {/* eslint-disable-next-line @next/next/no-img-element -- next/og no admite next/image */}
         <img src={logo} width={Math.round(size * 0.84)} height={Math.round(size * 0.84)} alt="" />
       </div>

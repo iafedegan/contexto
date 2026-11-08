@@ -10,7 +10,7 @@ export const contentType = "image/png";
 export default function Icon() {
   return new ImageResponse(
     (
-      <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "50%", overflow: "hidden", background: "#f6f8f3" }}>
+      <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "50%", overflow: "hidden", background: "#0b2a1c" }}>
         {/* next/og no admite next/image: aquí va una <img> a propósito */}
         <img src={logoDataUri("redondeado")} width={Math.round(size.width * 0.84)} height={Math.round(size.height * 0.84)} alt="" />
       </div>
