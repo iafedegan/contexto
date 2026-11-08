@@ -177,7 +177,7 @@ async function HomePage({ locale }: { locale: Locale }) {
                   <span className="font-bold">{p.etiqueta}</span>
                   <span className="opacity-90">{p.valor}</span>
                   {typeof p.cambio === "number" && Number.isFinite(p.cambio) && (
-                    <span className={`font-bold ${p.cambio >= 0 ? "text-[#4ade80]" : "text-[#f87171]"}`}>
+                    <span data-color-propio className="font-bold text-[color:var(--color-propio)]" style={{ "--color-propio": p.cambio >= 0 ? "#4ade80" : "#f87171" } as React.CSSProperties}>
                       {p.cambio >= 0 ? "▲" : "▼"} {Math.abs(p.cambio).toLocaleString(locale === "en" ? "en-US" : "es-CO", { maximumFractionDigits: 2, minimumFractionDigits: 2 })}%
                     </span>
                   )}

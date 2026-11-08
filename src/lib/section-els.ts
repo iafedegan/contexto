@@ -131,6 +131,8 @@ export function sectionElsCss(input: unknown, scope = "[data-site-root]"): strin
       rules.push(`${sel}{background-image:none!important}`);
     }
     if (d.length) rules.push(`${all}{${d.join(";")}}`);
+    // Lo que lleva su propio color con sentido (la variación ▲ verde / ▼ roja del cintillo) no se pinta con el color de la pieza.
+    if (s.color || s.gradient) rules.push(`${sel} [data-color-propio]{color:var(--color-propio)!important;-webkit-text-fill-color:var(--color-propio)!important;background-image:none!important}`);
     // En móvil un tamaño de escritorio desborda: se reduce a ~70 % si es grande.
     if (conMovil && s.size !== undefined && s.size > 24) {
       rules.push(`@media(max-width:640px){${all}{font-size:${Math.max(12, Math.round(s.size * 0.7))}px!important}}`);
