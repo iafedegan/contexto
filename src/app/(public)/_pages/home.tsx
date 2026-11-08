@@ -177,8 +177,12 @@ async function HomePage({ locale }: { locale: Locale }) {
                   <span className="font-bold">{p.etiqueta}</span>
                   <span className="opacity-90">{p.valor}</span>
                   {typeof p.cambio === "number" && Number.isFinite(p.cambio) && (
-                    <span data-color-propio className="font-bold text-[color:var(--color-propio)]" style={{ "--color-propio": p.cambio >= 0 ? "#4ade80" : "#f87171" } as React.CSSProperties}>
-                      {p.cambio >= 0 ? "▲" : "▼"} {Math.abs(p.cambio).toLocaleString(locale === "en" ? "en-US" : "es-CO", { maximumFractionDigits: 2, minimumFractionDigits: 2 })}%
+                    <span className="font-bold">
+                      {/* Solo la flecha lleva el verde o el rojo; el número sigue el color de letra del cintillo. */}
+                      <span data-color-propio className="text-[color:var(--color-propio)]" style={{ "--color-propio": p.cambio >= 0 ? "#4ade80" : "#f87171" } as React.CSSProperties}>
+                        {p.cambio >= 0 ? "▲" : "▼"}
+                      </span>{" "}
+                      {Math.abs(p.cambio).toLocaleString(locale === "en" ? "en-US" : "es-CO", { maximumFractionDigits: 2, minimumFractionDigits: 2 })}%
                     </span>
                   )}
                 </span>
