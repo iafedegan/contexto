@@ -2350,3 +2350,8 @@ body:has(.cg-cintillo-arriba) .cg-cinta-cabecera { display: none; }
 :is(html[data-dark="1"], html:not([data-dark]) :is([data-theme="home"],[data-theme="esmeralda"],[data-theme="revista"],[data-theme="vanguardia"])) .cg-cinta-tramo { background: #c9a227; }
 :is(html[data-dark="1"], html:not([data-dark]) :is([data-theme="home"],[data-theme="esmeralda"],[data-theme="revista"],[data-theme="vanguardia"])) .cg-cinta-tramo:nth-child(2n) { background: #8a6a1f; }
 :is(html[data-dark="1"], html:not([data-dark]) :is([data-theme="home"],[data-theme="esmeralda"],[data-theme="revista"],[data-theme="vanguardia"])) .cg-cinta-tramo:nth-child(3n) { background: #e6c66a; }
+
+/* App instalada (PWA): iOS desenfoca una franja bajo la barra de estado; el cintillo baja un poco para quedar fuera de ella. */
+@media (display-mode: standalone) {
+  .cg-cintillo-arriba { padding-top: calc(env(safe-area-inset-top, 0px) + 0.875rem) !important; }
+}
