@@ -174,7 +174,7 @@ function MastheadHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extr
                   aria-hidden
                   data-titulo-marca
                   data-el="h-logo"
-                  className="lx-foil -mr-[0.02em] inline-block size-[0.72em] align-[0em]"
+                  className="lx-foil mr-[0.04em] inline-block size-[1.3em] align-[-0.28em]"
                   style={{ backgroundClip: "border-box", WebkitBackgroundClip: "border-box", WebkitMask: "url(/logo/contexto-media-emblema.png) center / contain no-repeat", mask: "url(/logo/contexto-media-emblema.png) center / contain no-repeat" }}
                 />
                 <span className="sr-only">{identity.name.charAt(0)}</span>
