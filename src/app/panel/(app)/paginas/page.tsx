@@ -5,6 +5,8 @@ import { categories, paginas } from "@/db/schema";
 import { requirePermiso } from "@/lib/auth";
 import { NuevaPagina } from "@/components/panel/nueva-pagina";
 import { BorrarPagina } from "@/components/panel/borrar-pagina";
+import { ArbolPaginas } from "@/components/panel/arbol-paginas";
+import { seccionesConConteo } from "@/lib/secciones-conteo";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Páginas" };
@@ -12,13 +14,14 @@ export const metadata = { title: "Páginas" };
 // Lista de las páginas armadas con el constructor y el botón para crear una.
 export default async function Paginas() {
   await requirePermiso("portada");
-  const [lista, secciones] = await Promise.all([
+  const [lista, secciones, arbol] = await Promise.all([
     db
       .select({ id: paginas.id, titulo: paginas.titulo, slug: paginas.slug, publicada: paginas.publicada, updatedAt: paginas.updatedAt, seccion: categories.name })
       .from(paginas)
       .leftJoin(categories, eq(categories.id, paginas.seccionId))
       .orderBy(desc(paginas.updatedAt)),
     db.select({ id: categories.id, name: categories.name }).from(categories).orderBy(categories.sortOrder, categories.name),
+    seccionesConConteo(),
   ]);
   return (
     <div className="flex flex-col gap-6">
@@ -32,6 +35,15 @@ export default async function Paginas() {
         </div>
         <NuevaPagina secciones={secciones} />
       </header>
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,26rem)_minmax(0,1fr)]">
+        {/* Árbol del sitio: para ver dónde va a quedar la página. Pulse una sección y use «Página nueva en …». */}
+        <section className="flex flex-col gap-2">
+          <h2 className="text-sm font-bold">Árbol del sitio</h2>
+          <p className="text-xs text-[var(--fg-muted)]">Pulse la sección de la que va a colgar la página y use «Página nueva en …». «Ver árbol completo» lo abre en grande.</p>
+          <ArbolPaginas sections={arbol} />
+        </section>
+        <section className="flex min-w-0 flex-col gap-2">
+          <h2 className="text-sm font-bold">Páginas creadas ({lista.length})</h2>
       {lista.length === 0 ? (
         <p className="rounded-xl border border-dashed border-[var(--border-strong)] p-10 text-center text-sm text-[var(--fg-muted)]">Todavía no hay páginas. Cree la primera con «Nueva página».</p>
       ) : (
@@ -51,6 +63,8 @@ export default async function Paginas() {
           ))}
         </ul>
       )}
+        </section>
+      </div>
     </div>
   );
 }
