@@ -168,7 +168,7 @@ function MastheadHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extr
           <Link href={localePath(locale, "/")} className="relative flex items-center justify-center gap-[0.9cqi]">
             {/* Cinta de aniversario: inclinada sobre la esquina del logo, en la misma lámina dorada del nombre. */}
             <span
-              className="pointer-events-none absolute -left-[1.2cqi] -top-[0.9cqi] z-10 -rotate-[24deg] whitespace-nowrap rounded-[0.2em] border border-[#7a5d12]/60 bg-gradient-to-b from-[#f0dc9b] to-[#c9a24a] px-[0.9cqi] py-[0.12cqi] text-[clamp(0.5rem,1.35cqi,0.8rem)] font-extrabold uppercase leading-tight tracking-[0.14em] text-[#0b2a1c] shadow-[0_2px_6px_rgba(0,0,0,0.45)]"
+              className="pointer-events-none absolute -left-[1.2cqi] -top-[0.9cqi] z-10 -rotate-[24deg] whitespace-nowrap text-[clamp(0.6rem,1.7cqi,1rem)] font-extrabold uppercase leading-none tracking-[0.16em] text-[#f0dc9b] [text-shadow:0_1px_3px_rgba(0,0,0,0.7)]"
             >
               {locale === "en" ? "14 years" : "14 años"}
             </span>
