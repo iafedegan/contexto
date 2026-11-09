@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 // Título y descripción de la página; no se indexa si así lo indica.
 export const metadata: Metadata = {
   title: "Suscríbete por RSS",
-  description: "Recibe las noticias de CONtexto Ganadero en tu lector RSS: el feed general y uno por cada sección.",
+  description: "Recibe las noticias de CONtexto Ganadero Media en tu lector RSS: el feed general y uno por cada sección.",
   alternates: { canonical: siteUrl("/feeds"), types: { "application/rss+xml": siteUrl("/feed.xml") } },
 };
 
@@ -37,7 +37,7 @@ export default async function RssPage() {
         <Rss className="text-[var(--accent)]" size={36} /> Suscríbete por RSS
       </h1>
       <p className="mt-5 max-w-3xl text-lg leading-relaxed text-[var(--fg-muted)]">
-        RSS te permite recibir cada nota nueva de CONtexto Ganadero en tu lector de noticias
+        RSS te permite recibir cada nota nueva de CONtexto Ganadero Media en tu lector de noticias
         (Feedly, Inoreader, NetNewsWire, Outlook…) sin entrar a la web ni depender de redes
         sociales. Copia la dirección de la sección que te interese y pégala en tu lector.
       </p>

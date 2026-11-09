@@ -90,7 +90,7 @@ export async function armarPautaCore(
   const hoy = new Intl.DateTimeFormat("es-CO", { dateStyle: "long", timeZone: "America/Bogota" }).format(new Date());
   const temas = input.temas.map((t, n) => `${n + 1}. ${t.texto}${t.seccion ? ` [sección: ${t.seccion}]` : ""}${t.dia ? ` [día fijo: ${["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"][t.dia - 1]}]` : ""}${t.angulo ? ` — enfoque: ${t.angulo}` : ""}${t.prioridad === 1 ? " (PRIORITARIO)" : ""}${t.dia ? ` (DÍA FIJO: ${["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"][t.dia - 1]})` : ""}${t.brief && respondidas({ ...t.brief, escritorId: undefined }) ? `\n   ${briefParaPrompt(t.texto, t.brief).split("\n").slice(1).join("\n   ")}` : ""}`).join("\n");
   const sistema =
-    "Eres el editor jefe de CONtexto Ganadero, un medio colombiano del sector ganadero y agropecuario, y diriges el consejo de redacción semanal. " +
+    "Eres el editor jefe de CONtexto Ganadero Media, un medio colombiano del sector ganadero y agropecuario, y diriges el consejo de redacción semanal. " +
     "Tu trabajo es repartir la cobertura de la semana: qué se publica en cada casilla (día, hora y sección ya definidos), con qué enfoque y con qué encargo para quien redacta. " +
     "Criterios de un consejo de redacción real: (1) lo urgente y de mayor impacto sale temprano y en días fuertes; el análisis, los explicativos y los temas atemporales, a media tarde y en la noche o el fin de semana; " +
     "(2) no repetir el mismo hecho en dos casillas: si un tema merece dos piezas, la segunda va con otro ángulo (consecuencia para el productor, antecedentes, voces del sector); " +
@@ -175,7 +175,7 @@ export async function completarFichaCore(
       temperature: 0.2,
       abortSignal: AbortSignal.timeout(60_000),
       system:
-        "Eres el editor jefe de CONtexto Ganadero (medio colombiano del sector ganadero y agropecuario). Antes de encargar una nota llenas su FICHA DE PAUTA, como en un consejo de redacción. " +
+        "Eres el editor jefe de CONtexto Ganadero Media (medio colombiano del sector ganadero y agropecuario). Antes de encargar una nota llenas su FICHA DE PAUTA, como en un consejo de redacción. " +
         "Te basas SOLO en el dossier que recibes: no inventes cifras, fechas, cargos, nombres de personas ni enlaces. Si el dossier no responde algo, ponlo en «abiertas». " +
         "Las fuentes deben ser entidades, documentos o personas que consten en el dossier, con el enlace tal como aparece. Escribe en español de Colombia." + (input.estilo ? `\n\nLa nota la escribirá este escritor; adapta el enfoque, el género y las preguntas a su voz:\n${input.estilo}` : ""),
       prompt: `TEMA: ${input.tema}
@@ -234,7 +234,7 @@ export async function autollenarPreguntasCore(
       temperature: 0.2,
       abortSignal: AbortSignal.timeout(60_000),
       system:
-        "Eres el editor jefe de CONtexto Ganadero (medio colombiano del sector ganadero y agropecuario). Un editor te describe un tema y tú contestas las preguntas previas del consejo de redacción: " +
+        "Eres el editor jefe de CONtexto Ganadero Media (medio colombiano del sector ganadero y agropecuario). Un editor te describe un tema y tú contestas las preguntas previas del consejo de redacción: " +
         "qué hechos, fechas y cifras hay, para quién se escribe, extensión, género, alcance, lugares, tono, fuentes a consultar y qué evitar. " +
         (dossier
           ? "Recibes un DOSSIER de búsqueda web con fuentes: llena los campos con la mayor profundidad posible, usando SOLO lo que consta en el dossier (hechos con su fecha y entidad, lugares, fuentes con su enlace, disputas o mitos a evitar). No inventes cifras, fechas, cargos, nombres ni enlaces; lo que el dossier no responde va vacío. "

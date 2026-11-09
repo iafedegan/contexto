@@ -32,7 +32,7 @@ export function pushConfigurado(): boolean {
 
 // Registra los datos VAPID en la librería web-push y devuelve el nombre del sitio.
 async function configurar() {
-  const { name } = await getSiteIdentity().catch(() => ({ name: "CONtexto Ganadero" }));
+  const { name } = await getSiteIdentity().catch(() => ({ name: "CONtexto Ganadero Media" }));
   webpush.setVapidDetails(
     env(process.env.VAPID_SUBJECT, "mailto:contexto@fedegan.org.co"),
     PUBLIC_KEY,

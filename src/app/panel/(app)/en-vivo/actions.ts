@@ -43,7 +43,7 @@ export async function guardarEnVivo(_prev: EnVivoState, formData: FormData): Pro
   let aviso = "";
   if (config.activo && !(antes.activo && antes.videoId === config.videoId)) {
     const res = await enviarAviso({
-      titulo: `🔴 Estamos en vivo desde ${(await getSiteIdentity().catch(() => ({ name: "CONtexto Ganadero" }))).name}`,
+      titulo: `🔴 Estamos en vivo desde ${(await getSiteIdentity().catch(() => ({ name: "CONtexto Ganadero Media" }))).name}`,
       cuerpo: config.titulo || "Sigue la transmisión ahora.",
       url: `${siteUrl("/en-vivo")}?utm_source=push&utm_medium=notificacion&utm_campaign=en-vivo`,
       tag: "en-vivo",

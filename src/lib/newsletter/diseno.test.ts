@@ -8,7 +8,7 @@ const nota = (n: number, foto: string | null) => ({
 });
 const render = (design: unknown): string =>
   renderNewsletterHtml({
-    siteName: "CONtexto Ganadero",
+    siteName: "CONtexto Ganadero Media",
     settings: sanitizeNewsletterSettings({ ...DEFAULT_NEWSLETTER_SETTINGS, design }),
     subject: "Edición", preheader: "p", intro: "hola", issue: 3, unsubscribeUrl: "https://contexto.test/baja",
     articles: [nota(1, "https://contexto.test/a.jpg"), nota(2, "https://contexto.test/b.jpg"), nota(3, null)],
@@ -84,7 +84,7 @@ test("con secciones, cada una lleva su encabezado y sus notas en las nueve maque
   ];
   const generar = (plantilla: string) =>
     renderNewsletterHtml({
-      siteName: "CONtexto Ganadero",
+      siteName: "CONtexto Ganadero Media",
       settings: sanitizeNewsletterSettings({ ...DEFAULT_NEWSLETTER_SETTINGS, design: { plantilla } }),
       subject: "Edición", preheader: "p", intro: "hola", issue: 3, unsubscribeUrl: "https://contexto.test/baja",
       articles: secciones.flatMap((s) => s.articulos), secciones,
@@ -101,7 +101,7 @@ test("con secciones, cada una lleva su encabezado y sus notas en las nueve maque
   assert.doesNotMatch(render({ plantilla: "clasica" }), /Última hora/);
   // La versión en texto también separa por secciones y conserva una sola destacada.
   const texto = renderNewsletterText({
-    siteName: "CONtexto Ganadero", settings: sanitizeNewsletterSettings(DEFAULT_NEWSLETTER_SETTINGS), subject: "E", preheader: "", intro: "", issue: 1, unsubscribeUrl: "https://contexto.test/baja",
+    siteName: "CONtexto Ganadero Media", settings: sanitizeNewsletterSettings(DEFAULT_NEWSLETTER_SETTINGS), subject: "E", preheader: "", intro: "", issue: 1, unsubscribeUrl: "https://contexto.test/baja",
     articles: secciones.flatMap((s) => s.articulos), secciones,
   } as unknown as NewsletterRender);
   assert.match(texto, /ÚLTIMA HORA\n\n.*DESTACADA/);

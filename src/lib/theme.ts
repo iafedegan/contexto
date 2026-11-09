@@ -22,7 +22,7 @@ export type Theme =
   | "acceso";
 
 // Nombre del sitio, de la variable de entorno o el predeterminado.
-export const SITE_NAME = env(process.env.NEXT_PUBLIC_SITE_NAME, "CONtexto Ganadero");
+export const SITE_NAME = env(process.env.NEXT_PUBLIC_SITE_NAME, "CONtexto Ganadero Media");
 
 /** Nombre "de galería" del tema, visible en los footers como firma de diseño. */
 export const THEME_LABEL: Record<Theme, string> = {

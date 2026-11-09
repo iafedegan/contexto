@@ -33,7 +33,7 @@ const juezSchema = z.object({
 });
 
 /**
- * Busca, SOLO entre las notas de CONtexto Ganadero (las publicadas del sitio y su archivo histórico), las que tratan lo mismo que la
+ * Busca, SOLO entre las notas de CONtexto Ganadero Media (las publicadas del sitio y su archivo histórico), las que tratan lo mismo que la
  * nota que se está escribiendo. La búsqueda trae candidatas y el modelo descarta las que solo comparten sector o palabras: queda
  * únicamente la que un lector querría seguir leyendo sobre ese mismo asunto. Nunca inventa una nota ni un enlace: todo sale de la base.
  */

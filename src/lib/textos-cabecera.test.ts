@@ -5,7 +5,7 @@ import { normalizeLayout } from "@/lib/home-layout-normalize";
 import { summarizeChanges } from "@/lib/portada-summary";
 import { DEFAULT_HOME_LAYOUT } from "@/lib/home-layout";
 
-const sitio = { name: "CONtexto Ganadero", tagline: "Periodismo del sector ganadero" };
+const sitio = { name: "CONtexto Ganadero Media", tagline: "Periodismo del sector ganadero" };
 
 test("sin ajustes, la cabecera usa el nombre y el lema del sitio", () => {
   assert.deepEqual(conTextos(sitio), sitio);

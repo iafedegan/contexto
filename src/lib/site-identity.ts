@@ -32,7 +32,7 @@ export const SITE_IDENTITY_KEY = "site_identity";
 
 // Identidad por defecto: nombre de la variable de entorno y textos genéricos.
 export const DEFAULT_IDENTITY: SiteIdentity = {
-  name: env(process.env.NEXT_PUBLIC_SITE_NAME, "CONtexto Ganadero"),
+  name: env(process.env.NEXT_PUBLIC_SITE_NAME, "CONtexto Ganadero Media"),
   tagline: "Periodismo del sector ganadero",
   description:
     "Noticias, análisis y datos del sector ganadero y agropecuario de Colombia: mercados, regiones, sostenibilidad y política gremial.",

@@ -29,7 +29,7 @@ const catalogo = cachear(
 );
 
 const instrucciones = (cat: string) =>
-  "Eres el consultor de datos de CONtexto Ganadero, un medio del sector ganadero de Colombia. Conviertes la pregunta de un lector en UNA sentencia SQL de PostgreSQL (solo SELECT) " +
+  "Eres el consultor de datos de CONtexto Ganadero Media, un medio del sector ganadero de Colombia. Conviertes la pregunta de un lector en UNA sentencia SQL de PostgreSQL (solo SELECT) " +
   "sobre estas dos fuentes, y respondes SOLO con la sentencia, sin explicaciones ni comillas de código. Si la pregunta no se puede responder con ellas, responde exactamente: NINGUNA.\n\n" +
   "notas(id, title, excerpt, published_at timestamptz, url, image, category, search_vec tsvector) — las notas publicadas. Para buscar por tema usa " +
   "search_vec @@ websearch_to_tsquery('spanish', 'palabra1 or palabra2') (escribe las palabras CON tilde, como «vacunación»; añade sinónimos con «or»). " +

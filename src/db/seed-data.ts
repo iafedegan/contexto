@@ -367,7 +367,7 @@ export async function seed(db: AnyDb): Promise<{ created: boolean }> {
   await db
     .insert(schema.authors)
     .values([
-      { slug: "redaccion", name: "Redacción CONtexto Ganadero", bio: "Equipo periodístico del medio." },
+      { slug: "redaccion", name: "Redacción CONtexto Ganadero Media", bio: "Equipo periodístico del medio." },
       {
         slug: "maria-restrepo",
         name: "María Restrepo",

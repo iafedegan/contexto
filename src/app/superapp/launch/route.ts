@@ -21,7 +21,7 @@ const CABECERAS = { "cache-control": "no-store", "referrer-policy": "no-referrer
 const esc = (t: string) => t.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
 function pagina(status: number, titulo: string, mensaje: string): Response {
   const html = `<!doctype html><html lang="es"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><meta name="referrer" content="no-referrer"><title>${esc(titulo)}</title>
-<body style="font:16px/1.5 system-ui,sans-serif;max-width:32rem;margin:15vh auto;padding:0 1.25rem;color:#142019"><h1 style="font-size:1.4rem">${esc(titulo)}</h1><p>${esc(mensaje)}</p><p><a href="/">Ir a CONtexto Ganadero</a></p></body></html>`;
+<body style="font:16px/1.5 system-ui,sans-serif;max-width:32rem;margin:15vh auto;padding:0 1.25rem;color:#142019"><h1 style="font-size:1.4rem">${esc(titulo)}</h1><p>${esc(mensaje)}</p><p><a href="/">Ir a CONtexto Ganadero Media</a></p></body></html>`;
   return new Response(html, { status, headers: CABECERAS });
 }
 

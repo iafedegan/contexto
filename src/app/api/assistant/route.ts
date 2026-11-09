@@ -154,7 +154,7 @@ export async function POST(req: Request) {
     return responder({
       mode: "declined",
       answer:
-        "No encontré fuentes en CONtexto Ganadero para responder eso con seguridad. " +
+        "No encontré fuentes en CONtexto Ganadero Media para responder eso con seguridad. " +
         "Prueba a reformular la pregunta o a usar otros términos.",
       sources: [],
     });

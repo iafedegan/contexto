@@ -8,7 +8,7 @@ import { aplicarRelacionadas, contarRemisionesMuertas, limpiarRemisiones } from 
 const fecha = (iso: string | null) => (iso ? new Intl.DateTimeFormat("es-CO", { day: "numeric", month: "short", year: "numeric", timeZone: "America/Bogota" }).format(new Date(iso)) : "");
 
 /**
- * Notas relacionadas de CONtexto Ganadero: busca, solo entre las notas del propio medio, las que tratan lo mismo que la que se escribe y
+ * Notas relacionadas de CONtexto Ganadero Media: busca, solo entre las notas del propio medio, las que tratan lo mismo que la que se escribe y
  * las añade al final con su enlace real. También quita las remisiones «Lea en CONtexto ganadero» que no llevan a ninguna parte.
  * Nunca se inserta nada sin que la persona lo elija.
  */
@@ -60,7 +60,7 @@ export function PanelRelacionadas({
     <div className="shrink-0 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
         <span className="inline-flex items-center gap-1.5 font-semibold">
-          <Link2 size={14} className="text-[var(--accent)]" aria-hidden /> Notas relacionadas de CONtexto Ganadero
+          <Link2 size={14} className="text-[var(--accent)]" aria-hidden /> Notas relacionadas de CONtexto Ganadero Media
         </span>
         <button type="button" onClick={ejecutar} disabled={buscando || title.trim().length < 5} className="lx-btn-ghost !py-1 text-xs disabled:opacity-60">
           {buscando ? <Loader2 size={13} className="animate-spin" /> : <Search size={13} />}
@@ -85,7 +85,7 @@ export function PanelRelacionadas({
       {error && <p className="mt-1.5 text-xs text-[var(--danger,#b4442e)]">{error}</p>}
       {notas && notas.length === 0 && (
         <p className="mt-1.5 text-xs text-[var(--fg-muted)]">
-          No hay notas de CONtexto Ganadero que traten lo mismo; por eso no se enlaza ninguna. Solo se enlaza lo que habla del mismo asunto.
+          No hay notas de CONtexto Ganadero Media que traten lo mismo; por eso no se enlaza ninguna. Solo se enlaza lo que habla del mismo asunto.
         </p>
       )}
       {notas && notas.length > 0 && (

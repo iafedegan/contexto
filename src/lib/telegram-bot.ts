@@ -56,7 +56,7 @@ const NOMBRE_PASO: Partial<Record<Fase, string>> = {
 };
 // Texto de ayuda: describe los nueve pasos y los comandos.
 const AYUDA =
-  "✍️ <b>Redactor de CONtexto Ganadero</b>\n\nEs el mismo asistente del panel, en nueve pasos: Título y contexto · Resumen · Palabras clave · Portada · Sección y autor · Cuerpo · Gráfica · Buscadores · Vista previa.\n\nTodo ocurre en un solo mensaje que se va actualizando: usa los botones <b>⬅️ Atrás</b> y <b>Siguiente ➡️</b>. Lo que escribas en el chat se suma al tema (o responde al botón que pulsaste). También puedes enviar una <b>nota de voz, un audio o un video</b> (hasta 20 MB): lo transcribo y propongo títulos.\n\n/nueva — empezar un artículo con IA\n/estado — estado de la última nota\n/cancelar — descartar el flujo actual\n/ayuda — esta ayuda\n/desvincular — separar este Telegram de tu cuenta";
+  "✍️ <b>Redactor de CONtexto Ganadero Media</b>\n\nEs el mismo asistente del panel, en nueve pasos: Título y contexto · Resumen · Palabras clave · Portada · Sección y autor · Cuerpo · Gráfica · Buscadores · Vista previa.\n\nTodo ocurre en un solo mensaje que se va actualizando: usa los botones <b>⬅️ Atrás</b> y <b>Siguiente ➡️</b>. Lo que escribas en el chat se suma al tema (o responde al botón que pulsaste). También puedes enviar una <b>nota de voz, un audio o un video</b> (hasta 20 MB): lo transcribo y propongo títulos.\n\n/nueva — empezar un artículo con IA\n/estado — estado de la última nota\n/cancelar — descartar el flujo actual\n/ayuda — esta ayuda\n/desvincular — separar este Telegram de tu cuenta";
 
 // Direcciones web que contiene un texto, sin repetir.
 const urlsEn = (t: string) => [...new Set(t.match(/https?:\/\/[^\s<>"')]+/gi) ?? [])];
@@ -825,7 +825,7 @@ export async function procesar(u: Update): Promise<unknown> {
       return void (await enviar(chatId, "❌ Ese código no existe o ya venció (duran 10 minutos). Genera uno nuevo en el panel: Configuración → Telegram."));
     }
     if (cb) await responderCallback(cb.id);
-    return void (await enviar(chatId, "👋 Este bot es del equipo de CONtexto Ganadero.\n\nPara usarlo, entra al panel → <b>Configuración → Telegram</b>, genera un código y envíamelo aquí (por ejemplo <code>/vincular ABC123</code>)."));
+    return void (await enviar(chatId, "👋 Este bot es del equipo de CONtexto Ganadero Media.\n\nPara usarlo, entra al panel → <b>Configuración → Telegram</b>, genera un código y envíamelo aquí (por ejemplo <code>/vincular ABC123</code>)."));
   }
 
   const [usr] = await db.select({ id: users.id, name: users.name, role: users.role, active: users.active }).from(users).where(eq(users.id, vinculo.userId)).limit(1);

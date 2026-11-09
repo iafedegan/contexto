@@ -42,7 +42,7 @@ export async function rpInfo(): Promise<{ rpID: string; rpName: string; origin: 
   }
   const rpID = hostnameDe(host) ?? "localhost";
   const proto = h.get("x-forwarded-proto") ?? (rpID === "localhost" ? "http" : "https");
-  return { rpID, rpName: "CONtexto Ganadero", origin: `${proto}://${host}` };
+  return { rpID, rpName: "CONtexto Ganadero Media", origin: `${proto}://${host}` };
 }
 
 // Cookie temporal que guarda el desafío de la ceremonia WebAuthn.

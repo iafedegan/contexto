@@ -211,7 +211,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
 
       <footer data-theme="panel-amber" className="border-t border-[var(--border)] bg-[var(--bg)] text-[var(--fg)] px-4 py-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:px-6">
         <p className="mx-auto max-w-6xl text-[0.72rem] uppercase tracking-[0.18em] text-[var(--fg-muted)]">
-          CONtexto Ganadero · plantilla «Grafito & Jade» · ningún contenido de IA se publica sin
+          CONtexto Ganadero Media · plantilla «Grafito & Jade» · ningún contenido de IA se publica sin
           aprobación humana
         </p>
       </footer>

@@ -120,7 +120,7 @@ export async function leerEnlaces(...args: Parameters<typeof leerEnlacesCore> ex
   return leerEnlacesCore(user.id, ...args);
 }
 
-// Busca, solo entre las notas de CONtexto Ganadero, las que tratan lo mismo que la nota que se escribe. Exige el permiso «articulos».
+// Busca, solo entre las notas de CONtexto Ganadero Media, las que tratan lo mismo que la nota que se escribe. Exige el permiso «articulos».
 export async function buscarRelacionadas(...args: Parameters<typeof buscarRelacionadasCore> extends [string, ...infer R] ? R : never) {
   const user = await requirePermiso("articulos");
   return buscarRelacionadasCore(user.id, ...args);

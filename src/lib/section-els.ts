@@ -23,7 +23,7 @@ export const SECTION_ELS: Array<{ id: SectionElId; label: string; hint: string; 
   { id: "n-byline", label: "Autor y fecha", hint: "Quién firma, fecha y minutos de lectura", gradient: false, group: "nota" },
   { id: "n-photo", label: "Foto", hint: "La foto de la nota: el tamaño es su ancho en px", gradient: false, group: "nota" },
   { id: "n-body", label: "Texto de la nota", hint: "El cuerpo del artículo", gradient: false, group: "nota" },
-  { id: "h-nombre", label: "Nombre del sitio", hint: "«CONtexto Ganadero» en la cabecera", gradient: true, group: "cabecera" },
+  { id: "h-nombre", label: "Nombre del sitio", hint: "«CONtexto Ganadero Media» en la cabecera", gradient: true, group: "cabecera" },
   { id: "h-logo", label: "Logo", hint: "El emblema junto al nombre: el tamaño es su alto en px", gradient: true, group: "cabecera" },
   { id: "h-lema", label: "Lema", hint: "La frase bajo el nombre", gradient: true, group: "cabecera" },
   { id: "h-fecha", label: "Fecha", hint: "El día de hoy bajo el nombre", gradient: false, group: "cabecera" },

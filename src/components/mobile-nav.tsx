@@ -130,11 +130,11 @@ export function MobileNav({
           data-titulo-marca
           data-el="h-logo"
           className="lx-foil block aspect-[8/5] h-9 shrink-0"
-          style={{ backgroundClip: "border-box", WebkitBackgroundClip: "border-box", WebkitMask: "url(/logo/contexto-ganadero-emblema.png) center / contain no-repeat", mask: "url(/logo/contexto-ganadero-emblema.png) center / contain no-repeat" }}
+          style={{ backgroundClip: "border-box", WebkitBackgroundClip: "border-box", WebkitMask: "url(/logo/contexto-media-emblema.png) center / contain no-repeat", mask: "url(/logo/contexto-media-emblema.png) center / contain no-repeat" }}
         />
         <span className="min-w-0">
           {/* Sin la escala de titulares del panel (zoom) y con un tamaño que cabe entero en un teléfono de 360 px: nunca «Gan…». */}
-          <span data-el="h-nombre" style={{ zoom: 1 }} className="lx-display lx-foil block whitespace-nowrap text-[min(1.5rem,5.6vw)] font-semibold leading-tight tracking-tight">{name}</span>
+          <span data-el="h-nombre" style={{ zoom: 1 }} className="lx-display lx-foil block whitespace-nowrap text-[min(1.35rem,4.7vw)] font-semibold leading-tight tracking-tight">{name}</span>
           {tagline && <span data-titulo-texto data-el="h-lema" className="lx-ui mt-1 block truncate text-[0.62rem] font-semibold uppercase leading-none tracking-[0.14em] text-[var(--fg-muted)]">{tagline}</span>}
           {fecha && <span data-titulo-texto data-el="h-fecha" className="lx-ui mt-1 block truncate text-[0.6rem] font-medium uppercase leading-none tracking-[0.14em] text-[var(--fg-muted)]">{fecha}</span>}
         </span>

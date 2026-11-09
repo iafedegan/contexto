@@ -183,7 +183,7 @@ export function AssistantChat({ compact = false }: { compact?: boolean }) {
         <div className={compact ? "cg-chat-intro lx-card lx-glass p-4 text-center" : "cg-chat-intro lx-card lx-glass p-7 text-center"}>
           {!compact && (
             <div className="cg-saludo">
-              <Link href="/" className="cg-saludo-marca"><LogoMark size={26} /> CONtexto Ganadero</Link>
+              <Link href="/" className="cg-saludo-marca"><LogoMark size={26} /> CONtexto Ganadero Media</Link>
               <span aria-hidden className="cg-saludo-toro"><ToroBot bubble={false} label="" /></span>
               <p className="cg-saludo-titulo">¿Qué quieres saber del campo hoy?</p>
               <p className="cg-saludo-texto">Busco en más de 51.000 notas y en las cifras del Observatorio, y siempre te muestro la fuente.</p>

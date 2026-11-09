@@ -7,7 +7,7 @@ import { getSiteTheme } from "@/lib/site-theme";
 export const metadata: Metadata = {
   title: "Política editorial",
   description:
-    "Cómo trabaja la redacción de CONtexto Ganadero: verificación, uso de asistentes de IA y atribución de autoría.",
+    "Cómo trabaja la redacción de CONtexto Ganadero Media: verificación, uso de asistentes de IA y atribución de autoría.",
 };
 
 // Secciones del índice de la política editorial.
@@ -54,7 +54,7 @@ async function PoliticaEditorial({ locale }: { locale: Locale }) {
 
         <div className="prose prose-drop mt-12">
           <p>
-            CONtexto Ganadero es un medio periodístico del sector ganadero y agropecuario
+            CONtexto Ganadero Media es un medio periodístico del sector ganadero y agropecuario
             colombiano. Esta página resume nuestras prácticas de verificación y el papel de las
             herramientas de inteligencia artificial en la producción de contenido.
           </p>

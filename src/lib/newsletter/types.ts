@@ -84,7 +84,7 @@ export type NewsletterSettings = {
   legalText: string;
   /** Dirección postal o ciudad, para el pie. */
   address: string;
-  /** Prefijo del asunto, p. ej. «[CONtexto Ganadero]». Vacío = ninguno. */
+  /** Prefijo del asunto, p. ej. «[CONtexto Ganadero Media]». Vacío = ninguno. */
   subjectPrefix: string;
   /** Diseño del correo. */
   design: NewsletterDesign;
@@ -92,7 +92,7 @@ export type NewsletterSettings = {
 
 // Ajustes por defecto del boletín.
 export const DEFAULT_NEWSLETTER_SETTINGS: NewsletterSettings = {
-  fromName: "CONtexto Ganadero",
+  fromName: "CONtexto Ganadero Media",
   fromEmail: "",
   replyTo: "",
   accentColor: "#8a2b1f",

@@ -39,7 +39,7 @@ export default async function EnVivoPage() {
         theme={site.parts.body}
         kicker="Transmisión"
         title={titulo}
-        description="Sigue la transmisión en directo de CONtexto Ganadero."
+        description="Sigue la transmisión en directo de CONtexto Ganadero Media."
         breadcrumb={
           /* Miga solo para lectores de pantalla, como en las secciones. */
           <nav aria-label="breadcrumb" className="sr-only">

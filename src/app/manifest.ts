@@ -20,16 +20,16 @@ export default function manifest(): MetadataRoute.Manifest {
     lang: "es-CO",
     categories: ["news", "agriculture"],
     icons: [
-      { src: "/api/pwa-icon?size=192&v=4", sizes: "192x192", type: "image/png", purpose: "any" },
-      { src: "/api/pwa-icon?size=512&v=4", sizes: "512x512", type: "image/png", purpose: "any" },
+      { src: "/api/pwa-icon?size=192&v=5", sizes: "192x192", type: "image/png", purpose: "any" },
+      { src: "/api/pwa-icon?size=512&v=5", sizes: "512x512", type: "image/png", purpose: "any" },
       {
-        src: "/api/pwa-icon?size=192&maskable=1&v=4",
+        src: "/api/pwa-icon?size=192&maskable=1&v=5",
         sizes: "192x192",
         type: "image/png",
         purpose: "maskable",
       },
       {
-        src: "/api/pwa-icon?size=512&maskable=1&v=4",
+        src: "/api/pwa-icon?size=512&maskable=1&v=5",
         sizes: "512x512",
         type: "image/png",
         purpose: "maskable",

@@ -1,5 +1,5 @@
 /**
- * Modelo de datos único — CONtexto Ganadero
+ * Modelo de datos único — CONtexto Ganadero Media
  * -----------------------------------------------------------------------------
  * Principio de arquitectura #3: un solo motor Postgres para contenido, usuarios,
  * avisos, series de datos y vectores de embeddings. Sin buscador externo.

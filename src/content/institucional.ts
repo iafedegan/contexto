@@ -47,8 +47,8 @@ export const DOCUMENTOS: DocumentoInstitucional[] = [
       en: "Write to us: the newsroom replies on business days.",
     },
     descripcion: {
-      es: "Canales de contacto de CONtexto Ganadero: redacción, corrección de contenidos, pauta y atención institucional.",
-      en: "Contact channels for CONtexto Ganadero: newsroom, corrections, advertising and institutional enquiries.",
+      es: "Canales de contacto de CONtexto Ganadero Media: redacción, corrección de contenidos, pauta y atención institucional.",
+      en: "Contact channels for CONtexto Ganadero Media: newsroom, corrections, advertising and institutional enquiries.",
     },
     secciones: {
       es: [
@@ -129,8 +129,8 @@ export const DOCUMENTOS: DocumentoInstitucional[] = [
       en: "Colombia's specialist digital outlet for the cattle sector.",
     },
     descripcion: {
-      es: "CONtexto Ganadero es el medio digital de FEDEGÁN especializado en el sector ganadero y agropecuario colombiano.",
-      en: "CONtexto Ganadero is FEDEGÁN's digital outlet specialising in Colombia's cattle and agricultural sector.",
+      es: "CONtexto Ganadero Media es el medio digital de FEDEGÁN especializado en el sector ganadero y agropecuario colombiano.",
+      en: "CONtexto Ganadero Media is FEDEGÁN's digital outlet specialising in Colombia's cattle and agricultural sector.",
     },
     secciones: {
       es: [
@@ -141,7 +141,7 @@ export const DOCUMENTOS: DocumentoInstitucional[] = [
             {
               tipo: "parrafo",
               texto:
-                "CONtexto Ganadero es el medio digital especializado del sector ganadero colombiano, un activo editorial del Fondo Nacional del Ganado administrado por FEDEGÁN. Publicamos noticias, análisis y datos sobre mercados, regiones, sostenibilidad, sanidad animal, ciencia, tecnología y política gremial.",
+                "CONtexto Ganadero Media es el medio digital especializado del sector ganadero colombiano, un activo editorial del Fondo Nacional del Ganado administrado por FEDEGÁN. Publicamos noticias, análisis y datos sobre mercados, regiones, sostenibilidad, sanidad animal, ciencia, tecnología y política gremial.",
             },
             {
               tipo: "parrafo",
@@ -177,7 +177,7 @@ export const DOCUMENTOS: DocumentoInstitucional[] = [
             {
               tipo: "parrafo",
               texto:
-                "CONtexto Ganadero conserva un archivo de más de cuarenta mil publicaciones. El archivo histórico es de solo lectura y mantiene sus direcciones originales para no romper enlaces ni citas académicas.",
+                "CONtexto Ganadero Media conserva un archivo de más de cuarenta mil publicaciones. El archivo histórico es de solo lectura y mantiene sus direcciones originales para no romper enlaces ni citas académicas.",
             },
           ],
         },
@@ -190,7 +190,7 @@ export const DOCUMENTOS: DocumentoInstitucional[] = [
             {
               tipo: "parrafo",
               texto:
-                "CONtexto Ganadero is Colombia's specialist digital outlet for the cattle sector, an editorial asset of the Fondo Nacional del Ganado managed by FEDEGÁN. We publish news, analysis and data on markets, regions, sustainability, animal health, science, technology and industry policy.",
+                "CONtexto Ganadero Media is Colombia's specialist digital outlet for the cattle sector, an editorial asset of the Fondo Nacional del Ganado managed by FEDEGÁN. We publish news, analysis and data on markets, regions, sustainability, animal health, science, technology and industry policy.",
             },
             {
               tipo: "parrafo",
@@ -222,7 +222,7 @@ export const DOCUMENTOS: DocumentoInstitucional[] = [
             {
               tipo: "parrafo",
               texto:
-                "CONtexto Ganadero keeps an archive of more than forty thousand publications. The historical archive is read-only and keeps its original addresses so links and academic citations never break.",
+                "CONtexto Ganadero Media keeps an archive of more than forty thousand publications. The historical archive is read-only and keeps its original addresses so links and academic citations never break.",
             },
           ],
         },
@@ -239,8 +239,8 @@ export const DOCUMENTOS: DocumentoInstitucional[] = [
       en: "Common questions about the site, its content and its reuse.",
     },
     descripcion: {
-      es: "Respuestas a las dudas más frecuentes sobre CONtexto Ganadero: suscripción, uso de contenidos, archivo histórico y publicidad.",
-      en: "Answers to the most frequent questions about CONtexto Ganadero: newsletter, content reuse, archive and advertising.",
+      es: "Respuestas a las dudas más frecuentes sobre CONtexto Ganadero Media: suscripción, uso de contenidos, archivo histórico y publicidad.",
+      en: "Answers to the most frequent questions about CONtexto Ganadero Media: newsletter, content reuse, archive and advertising.",
     },
     secciones: {
       es: [
@@ -251,7 +251,7 @@ export const DOCUMENTOS: DocumentoInstitucional[] = [
             {
               tipo: "parrafo",
               texto:
-                "Sí. Todo el contenido periodístico de CONtexto Ganadero es de acceso libre y no requiere suscripción ni registro.",
+                "Sí. Todo el contenido periodístico de CONtexto Ganadero Media es de acceso libre y no requiere suscripción ni registro.",
             },
           ],
         },
@@ -273,7 +273,7 @@ export const DOCUMENTOS: DocumentoInstitucional[] = [
             {
               tipo: "parrafo",
               texto:
-                "Se permite citar fragmentos breves con atribución expresa a CONtexto Ganadero y enlace a la publicación original. La reproducción total requiere autorización previa por escrito; escríbenos a contexto@fedegan.org.co.",
+                "Se permite citar fragmentos breves con atribución expresa a CONtexto Ganadero Media y enlace a la publicación original. La reproducción total requiere autorización previa por escrito; escríbenos a contexto@fedegan.org.co.",
             },
           ],
         },
@@ -319,7 +319,7 @@ export const DOCUMENTOS: DocumentoInstitucional[] = [
             {
               tipo: "parrafo",
               texto:
-                "Yes. All journalistic content on CONtexto Ganadero is freely accessible and requires no subscription or registration.",
+                "Yes. All journalistic content on CONtexto Ganadero Media is freely accessible and requires no subscription or registration.",
             },
           ],
         },
@@ -341,7 +341,7 @@ export const DOCUMENTOS: DocumentoInstitucional[] = [
             {
               tipo: "parrafo",
               texto:
-                "Short quotations are allowed with explicit attribution to CONtexto Ganadero and a link to the original. Full republication requires prior written permission: write to contexto@fedegan.org.co.",
+                "Short quotations are allowed with explicit attribution to CONtexto Ganadero Media and a link to the original. Full republication requires prior written permission: write to contexto@fedegan.org.co.",
             },
           ],
         },
@@ -392,8 +392,8 @@ export const DOCUMENTOS: DocumentoInstitucional[] = [
       en: "Reach Colombia's specialist cattle-sector audience.",
     },
     descripcion: {
-      es: "Formatos publicitarios, audiencia y contacto comercial de CONtexto Ganadero.",
-      en: "Advertising formats, audience and commercial contact for CONtexto Ganadero.",
+      es: "Formatos publicitarios, audiencia y contacto comercial de CONtexto Ganadero Media.",
+      en: "Advertising formats, audience and commercial contact for CONtexto Ganadero Media.",
     },
     secciones: {
       es: [
@@ -404,7 +404,7 @@ export const DOCUMENTOS: DocumentoInstitucional[] = [
             {
               tipo: "parrafo",
               texto:
-                "CONtexto Ganadero reúne a productores, técnicos, comercializadores, gremios, entidades públicas y academia del sector agropecuario colombiano. Es un público profesional que consulta el portal para tomar decisiones de producción y de mercado.",
+                "CONtexto Ganadero Media reúne a productores, técnicos, comercializadores, gremios, entidades públicas y academia del sector agropecuario colombiano. Es un público profesional que consulta el portal para tomar decisiones de producción y de mercado.",
             },
           ],
         },
@@ -449,7 +449,7 @@ export const DOCUMENTOS: DocumentoInstitucional[] = [
             {
               tipo: "parrafo",
               texto:
-                "CONtexto Ganadero brings together producers, technicians, traders, trade bodies, public agencies and academia from Colombia's agricultural sector — a professional readership that consults the site to make production and market decisions.",
+                "CONtexto Ganadero Media brings together producers, technicians, traders, trade bodies, public agencies and academia from Colombia's agricultural sector — a professional readership that consults the site to make production and market decisions.",
             },
           ],
         },
@@ -498,8 +498,8 @@ export const DOCUMENTOS: DocumentoInstitucional[] = [
       en: "Conditions governing access to and use of this site.",
     },
     descripcion: {
-      es: "Términos y condiciones de uso del portal CONtexto Ganadero.",
-      en: "Terms and conditions of use for the CONtexto Ganadero website.",
+      es: "Términos y condiciones de uso del portal CONtexto Ganadero Media.",
+      en: "Terms and conditions of use for the CONtexto Ganadero Media website.",
     },
     secciones: {
       es: [
@@ -510,7 +510,7 @@ export const DOCUMENTOS: DocumentoInstitucional[] = [
             {
               tipo: "parrafo",
               texto:
-                "Estos términos regulan el acceso y uso del portal CONtexto Ganadero, activo digital del Fondo Nacional del Ganado administrado por la Federación Colombiana de Ganaderos (FEDEGÁN). El acceso al portal implica la aceptación plena de estas condiciones.",
+                "Estos términos regulan el acceso y uso del portal CONtexto Ganadero Media, activo digital del Fondo Nacional del Ganado administrado por la Federación Colombiana de Ganaderos (FEDEGÁN). El acceso al portal implica la aceptación plena de estas condiciones.",
             },
           ],
         },
@@ -551,7 +551,7 @@ export const DOCUMENTOS: DocumentoInstitucional[] = [
             {
               tipo: "parrafo",
               texto:
-                "Las opiniones publicadas en la sección de opinión son responsabilidad de sus autores y no representan necesariamente la posición institucional de FEDEGÁN ni de CONtexto Ganadero.",
+                "Las opiniones publicadas en la sección de opinión son responsabilidad de sus autores y no representan necesariamente la posición institucional de FEDEGÁN ni de CONtexto Ganadero Media.",
             },
           ],
         },
@@ -575,7 +575,7 @@ export const DOCUMENTOS: DocumentoInstitucional[] = [
             {
               tipo: "parrafo",
               texto:
-                "These terms govern access to and use of CONtexto Ganadero, a digital asset of the Fondo Nacional del Ganado managed by the Colombian Cattle Farmers' Federation (FEDEGÁN). Accessing the site implies full acceptance of these conditions.",
+                "These terms govern access to and use of CONtexto Ganadero Media, a digital asset of the Fondo Nacional del Ganado managed by the Colombian Cattle Farmers' Federation (FEDEGÁN). Accessing the site implies full acceptance of these conditions.",
             },
           ],
         },
@@ -616,7 +616,7 @@ export const DOCUMENTOS: DocumentoInstitucional[] = [
             {
               tipo: "parrafo",
               texto:
-                "Opinions published in the opinion section are their authors' responsibility and do not necessarily reflect the institutional position of FEDEGÁN or CONtexto Ganadero.",
+                "Opinions published in the opinion section are their authors' responsibility and do not necessarily reflect the institutional position of FEDEGÁN or CONtexto Ganadero Media.",
             },
           ],
         },
@@ -643,8 +643,8 @@ export const DOCUMENTOS: DocumentoInstitucional[] = [
       en: "What data we process, why, and how to exercise your rights.",
     },
     descripcion: {
-      es: "Política de tratamiento de datos personales de CONtexto Ganadero, conforme a la Ley 1581 de 2012.",
-      en: "Personal data policy for CONtexto Ganadero under Colombian Law 1581 of 2012.",
+      es: "Política de tratamiento de datos personales de CONtexto Ganadero Media, conforme a la Ley 1581 de 2012.",
+      en: "Personal data policy for CONtexto Ganadero Media under Colombian Law 1581 of 2012.",
     },
     secciones: {
       es: [
@@ -864,8 +864,8 @@ export const DOCUMENTOS: DocumentoInstitucional[] = [
       en: "Which cookies we use and how to control them.",
     },
     descripcion: {
-      es: "Tipos de cookies utilizadas en CONtexto Ganadero y cómo gestionarlas.",
-      en: "Cookie types used on CONtexto Ganadero and how to manage them.",
+      es: "Tipos de cookies utilizadas en CONtexto Ganadero Media y cómo gestionarlas.",
+      en: "Cookie types used on CONtexto Ganadero Media and how to manage them.",
     },
     secciones: {
       es: [
@@ -959,8 +959,8 @@ export const DOCUMENTOS: DocumentoInstitucional[] = [
       en: "Ownership of content and conditions for reuse.",
     },
     descripcion: {
-      es: "Política de derechos de autor y propiedad intelectual de CONtexto Ganadero.",
-      en: "Copyright and intellectual property policy for CONtexto Ganadero.",
+      es: "Política de derechos de autor y propiedad intelectual de CONtexto Ganadero Media.",
+      en: "Copyright and intellectual property policy for CONtexto Ganadero Media.",
     },
     secciones: {
       es: [
@@ -971,7 +971,7 @@ export const DOCUMENTOS: DocumentoInstitucional[] = [
             {
               tipo: "parrafo",
               texto:
-                "Los contenidos publicados en CONtexto Ganadero —textos, fotografías, vídeos, audios, infografías, bases de datos y elementos de diseño— están protegidos por la Ley 23 de 1982 y demás normas sobre derecho de autor, y son titularidad del Fondo Nacional del Ganado o de sus respectivos autores y licenciantes.",
+                "Los contenidos publicados en CONtexto Ganadero Media —textos, fotografías, vídeos, audios, infografías, bases de datos y elementos de diseño— están protegidos por la Ley 23 de 1982 y demás normas sobre derecho de autor, y son titularidad del Fondo Nacional del Ganado o de sus respectivos autores y licenciantes.",
             },
           ],
         },
@@ -982,7 +982,7 @@ export const DOCUMENTOS: DocumentoInstitucional[] = [
             {
               tipo: "lista",
               items: [
-                "Cita de fragmentos breves con atribución expresa a CONtexto Ganadero y enlace a la publicación original.",
+                "Cita de fragmentos breves con atribución expresa a CONtexto Ganadero Media y enlace a la publicación original.",
                 "Uso personal, académico o de investigación, sin explotación comercial.",
                 "Enlace directo a cualquier publicación, sin necesidad de autorización previa.",
               ],
@@ -1027,7 +1027,7 @@ export const DOCUMENTOS: DocumentoInstitucional[] = [
             {
               tipo: "parrafo",
               texto:
-                "Content published on CONtexto Ganadero — text, photographs, video, audio, infographics, databases and design elements — is protected by Colombian Law 23 of 1982 and other copyright rules, and is owned by the Fondo Nacional del Ganado or its respective authors and licensors.",
+                "Content published on CONtexto Ganadero Media — text, photographs, video, audio, infographics, databases and design elements — is protected by Colombian Law 23 of 1982 and other copyright rules, and is owned by the Fondo Nacional del Ganado or its respective authors and licensors.",
             },
           ],
         },
@@ -1038,7 +1038,7 @@ export const DOCUMENTOS: DocumentoInstitucional[] = [
             {
               tipo: "lista",
               items: [
-                "Short quotations with explicit attribution to CONtexto Ganadero and a link to the original.",
+                "Short quotations with explicit attribution to CONtexto Ganadero Media and a link to the original.",
                 "Personal, academic or research use, without commercial exploitation.",
                 "Direct linking to any publication, with no prior permission needed.",
               ],

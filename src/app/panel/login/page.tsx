@@ -102,7 +102,7 @@ function LoginForm() {
           <LogoMark size={44} />
         </Link>
         <h1 className="lx-display mt-6 text-2xl font-semibold tracking-tight">Panel editorial</h1>
-        <p className="lx-kicker mt-2 text-[var(--fg-muted)]">CONtexto Ganadero</p>
+        <p className="lx-kicker mt-2 text-[var(--fg-muted)]">CONtexto Ganadero Media</p>
 
         <form ref={formRef} onSubmit={onSubmit} className="mt-8 flex flex-col gap-4">
           <label className="lx-kicker flex flex-col gap-2 text-[var(--fg-muted)]">
@@ -207,7 +207,7 @@ export default function LoginPage() {
           <Link href="/" className="flex items-center gap-3">
             <LogoMark size={40} />
             <span className="lx-display text-sm font-semibold tracking-tight text-white">
-              CONtexto Ganadero
+              CONtexto Ganadero Media
             </span>
           </Link>
 

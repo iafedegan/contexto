@@ -1,5 +1,5 @@
 /**
- * Remisiones a otras notas de CONtexto Ganadero dentro del cuerpo («Lea en CONtexto ganadero: …»). Sin `server-only`: lo usan el servidor
+ * Remisiones a otras notas de CONtexto Ganadero Media dentro del cuerpo («Lea en CONtexto ganadero: …»). Sin `server-only`: lo usan el servidor
  * (al redactar) y el editor del panel (al insertar las notas elegidas).
  *
  * Una remisión solo vale si apunta a una nota real. El modelo, al imitar el estilo de quien escribe, inventaba remisiones con título y
@@ -7,7 +7,7 @@
  */
 import { escapeHtml as esc } from "@/lib/escape";
 
-/** Una nota de CONtexto Ganadero que se puede enlazar. */
+/** Una nota de CONtexto Ganadero Media que se puede enlazar. */
 export type NotaRelacionada = {
   /** `articulo`: nota propia (enlace relativo); `archivo`: del archivo histórico del medio (enlace a su dirección original). */
   kind: "articulo" | "archivo";
@@ -18,7 +18,7 @@ export type NotaRelacionada = {
   publishedAt: string | null;
 };
 
-// «Lea en CONtexto ganadero», «Lea también en CONtexto Ganadero»…
+// «Lea en CONtexto ganadero», «Lea también en CONtexto Ganadero Media»…
 const MARCA = String.raw`Lea\s+(?:también\s+)?en\s+CONtexto\s+ganadero`;
 const ANCLA = /<a\b[^>]*>[\s\S]*?<\/a>/gi;
 

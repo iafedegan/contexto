@@ -4,7 +4,7 @@ import { renderNewsletterHtml, renderNewsletterText, type NewsletterRender } fro
 
 const base = (lector?: { id: string; token: string }): NewsletterRender =>
   ({
-    siteName: "CONtexto Ganadero",
+    siteName: "CONtexto Ganadero Media",
     settings: { fromName: "x", fromEmail: "x@x.co", replyTo: "", accentColor: "#1f3f78", headerTagline: "t", legalText: "legal", address: "Bogotá", subjectPrefix: "" },
     subject: "Edición 7",
     preheader: "p",

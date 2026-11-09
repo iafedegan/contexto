@@ -172,7 +172,7 @@ function MastheadHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extr
               data-titulo-marca
               data-el="h-logo"
               className="lx-foil block aspect-[8/5] h-[clamp(2.25rem,7cqi,4.5rem)] shrink-0"
-              style={{ backgroundClip: "border-box", WebkitBackgroundClip: "border-box", WebkitMask: "url(/logo/contexto-ganadero-emblema.png) center / contain no-repeat", mask: "url(/logo/contexto-ganadero-emblema.png) center / contain no-repeat" }}
+              style={{ backgroundClip: "border-box", WebkitBackgroundClip: "border-box", WebkitMask: "url(/logo/contexto-media-emblema.png) center / contain no-repeat", mask: "url(/logo/contexto-media-emblema.png) center / contain no-repeat" }}
             />
             <span data-el="h-nombre" className="lx-display lx-foil block text-[clamp(1.875rem,6.4cqi,3.75rem)] font-semibold leading-none tracking-tight">
               {identity.name}

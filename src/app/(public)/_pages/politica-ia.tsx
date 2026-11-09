@@ -32,7 +32,7 @@ async function PoliticaIA({ locale }: { locale: Locale }) {
         </header>
         <div className="prose prose-drop mt-12">
           <p>
-            CONtexto Ganadero usa inteligencia artificial para ampliar la cobertura del equipo de redacción, no para reemplazarlo.
+            CONtexto Ganadero Media usa inteligencia artificial para ampliar la cobertura del equipo de redacción, no para reemplazarlo.
             Estas son las reglas que cumplimos y que cualquier lector puede exigirnos.
           </p>
           {REGLAS.map((r) => (

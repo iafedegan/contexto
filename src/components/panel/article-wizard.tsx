@@ -1641,7 +1641,7 @@ export function ArticleWizard({
               <div className="flex items-center gap-2.5">
                 <span className="grid size-7 shrink-0 place-items-center rounded-full bg-[#f1f3f4] text-xs font-bold text-[#202124]">C</span>
                 <div className="min-w-0 leading-tight">
-                  <p className="truncate text-sm text-[#202124]">CONtexto Ganadero</p>
+                  <p className="truncate text-sm text-[#202124]">CONtexto Ganadero Media</p>
                   <p className="truncate text-xs text-[#4d5156]">contextoganadero.com › articulo</p>
                 </div>
               </div>

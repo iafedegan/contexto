@@ -18,7 +18,7 @@ export const dynamic = "force-dynamic";
 // Mapa del sitio para Google Noticias: notas de las últimas 48 horas.
 export async function GET() {
   const identity = await getSiteIdentity().catch(() => null);
-  const nombre = identity?.name ?? "CONtexto Ganadero";
+  const nombre = identity?.name ?? "CONtexto Ganadero Media";
 
   let filas: { slug: string; legacyPath: string | null; title: string; publishedAt: Date | null; categoryName: string | null }[] = [];
   try {

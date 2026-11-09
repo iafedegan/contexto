@@ -8,7 +8,7 @@ import { getSiteTheme } from "@/lib/site-theme";
 export const metadata: Metadata = {
   title: "Asistente",
   description:
-    "Asistente conversacional de CONtexto Ganadero: responde con base en el archivo completo del medio y cita cada fuente.",
+    "Asistente conversacional de CONtexto Ganadero Media: responde con base en el archivo completo del medio y cita cada fuente.",
 };
 
 // Página del asistente conversacional.
@@ -24,7 +24,7 @@ async function AssistantPage({ locale }: { locale: Locale }) {
         <h1 className="lx-display mt-6 text-4xl font-semibold leading-tight tracking-tight md:text-5xl">
           {t(locale, "assistant.title")}{" "}
           <span className="bg-gradient-to-r from-[var(--accent)] to-[var(--accent-2)] bg-clip-text text-transparent">
-            CONtexto Ganadero
+            CONtexto Ganadero Media
           </span>
         </h1>
         <p className="mx-auto mt-5 max-w-xl text-sm leading-relaxed text-[var(--fg-muted)]">

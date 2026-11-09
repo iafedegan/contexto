@@ -22,7 +22,7 @@ async function generateMetadataImpl({ params }: Params): Promise<Metadata> {
   if (!data) return { title: "Autor no encontrado", robots: { index: false } };
   return {
     title: data.author.name,
-    description: data.author.bio ?? `Artículos de ${data.author.name} en CONtexto Ganadero.`,
+    description: data.author.bio ?? `Artículos de ${data.author.name} en CONtexto Ganadero Media.`,
     alternates: { canonical: siteUrl(`/autor/${slug}`) },
   };
 }

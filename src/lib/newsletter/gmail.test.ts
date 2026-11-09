@@ -7,12 +7,12 @@ const resp = (status: number, cuerpo: unknown) => (async () => new Response(JSON
 
 test("el correo se arma en MIME con tildes, texto y HTML, y sin cabeceras inyectadas", () => {
   const raw = armarMime({
-    from: "info@contextoganadero.com", fromName: "CONtexto Ganadero", to: "lector@example.com", replyTo: "info@contextoganadero.com",
+    from: "info@contextoganadero.com", fromName: "CONtexto Ganadero Media", to: "lector@example.com", replyTo: "info@contextoganadero.com",
     subject: "Confirma tu suscripción · Ñame", html: "<p>Hola, ganadería</p>", text: "Hola, ganadería",
     headers: { "List-Unsubscribe": "<https://x.test/baja>\r\nBcc: espia@malo.test", Bcc: "otro@malo.test" },
   });
   const mime = Buffer.from(raw, "base64url").toString("utf8");
-  assert.match(mime, /^From: CONtexto Ganadero <info@contextoganadero\.com>\r\n/);
+  assert.match(mime, /^From: CONtexto Ganadero Media <info@contextoganadero\.com>\r\n/);
   assert.match(mime, /\r\nTo: <lector@example\.com>\r\n/);
   assert.match(mime, /\r\nSubject: =\?UTF-8\?B\?/, "el asunto con tildes va codificado");
   assert.match(mime, /List-Unsubscribe: <https:\/\/x\.test\/baja> Bcc: espia@malo\.test/, "el salto de línea se aplana: no crea otra cabecera");

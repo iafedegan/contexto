@@ -118,7 +118,7 @@ const es: Dict = {
   "footer.tools": "Herramientas",
   "pwa.install": "Instalar app",
   "pwa.installFull": "Instalar la app",
-  "pwa.bandTitle": "Lleva CONtexto Ganadero en tu celular",
+  "pwa.bandTitle": "Lleva CONtexto Ganadero Media en tu celular",
   "pwa.bandText": "Instálala gratis, sin tienda de aplicaciones: abre más rápido, funciona sin conexión y puedes recibir avisos de última hora.",
   "pwa.iosTitle": "Instálala en tu iPhone o iPad",
   "pwa.iosIntro": "Apple no deja instalar con un solo botón, pero son pocos toques:",
@@ -154,9 +154,9 @@ const es: Dict = {
   "footer.consultArchive": "Consultar el archivo",
   "footer.quote": "«Cada pieza lleva la firma de quien la reportea.»",
   "footer.assistantNote":
-    "Las respuestas se generan únicamente sobre contenido publicado por CONtexto Ganadero y citan su fuente. No sustituyen la asesoría de un médico veterinario.",
+    "Las respuestas se generan únicamente sobre contenido publicado por CONtexto Ganadero Media y citan su fuente. No sustituyen la asesoría de un médico veterinario.",
   "footer.about":
-    "CONtexto Ganadero es un medio periodístico del sector ganadero y agropecuario colombiano.",
+    "CONtexto Ganadero Media es un medio periodístico del sector ganadero y agropecuario colombiano.",
   "footer.template": "Plantilla",
 
   // --- Portada ---
@@ -166,7 +166,7 @@ const es: Dict = {
   "home.recent": "Lo más reciente",
   "home.archiveKicker": "Archivo completo · 20 años",
   "home.ctaTitle":
-    "Pregúntale al asistente sobre cualquier tema del archivo de CONtexto Ganadero",
+    "Pregúntale al asistente sobre cualquier tema del archivo de CONtexto Ganadero Media",
   "home.ctaText":
     "Respuestas con fuente citada y enlace verificable. Si no hay fuente, no hay respuesta.",
   "home.ctaPrimary": "Abrir el asistente",
@@ -361,7 +361,7 @@ const en: Dict = {
   "footer.tools": "Tools",
   "pwa.install": "Install app",
   "pwa.installFull": "Install the app",
-  "pwa.bandTitle": "Take CONtexto Ganadero on your phone",
+  "pwa.bandTitle": "Take CONtexto Ganadero Media on your phone",
   "pwa.bandText": "Install it for free, no app store needed: it opens faster, works offline and can send you breaking-news alerts.",
   "pwa.iosTitle": "Install it on your iPhone or iPad",
   "pwa.iosIntro": "Apple doesn't allow one-tap installs, but it only takes a few taps:",
@@ -397,9 +397,9 @@ const en: Dict = {
   "footer.consultArchive": "Search the archive",
   "footer.quote": "“Every story carries the byline of whoever reported it.”",
   "footer.assistantNote":
-    "Answers are generated only from content published by CONtexto Ganadero and always cite their source. They do not replace advice from a veterinarian.",
+    "Answers are generated only from content published by CONtexto Ganadero Media and always cite their source. They do not replace advice from a veterinarian.",
   "footer.about":
-    "CONtexto Ganadero is a news outlet covering Colombia's cattle and agricultural sector.",
+    "CONtexto Ganadero Media is a news outlet covering Colombia's cattle and agricultural sector.",
   "footer.template": "Template",
 
   "home.cover": "Front page",
@@ -407,7 +407,7 @@ const en: Dict = {
   "home.current": "Today",
   "home.recent": "Most recent",
   "home.archiveKicker": "Full archive · 20 years",
-  "home.ctaTitle": "Ask the assistant about anything in the CONtexto Ganadero archive",
+  "home.ctaTitle": "Ask the assistant about anything in the CONtexto Ganadero Media archive",
   "home.ctaText":
     "Answers with a cited source and a verifiable link. No source, no answer.",
   "home.ctaPrimary": "Open the assistant",

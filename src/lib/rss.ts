@@ -48,7 +48,7 @@ type FeedCategory = { slug: string; name: string; description: string | null };
 
 /** XML del feed. Sin `categorySlug`, el general; con él, el de esa sección y sus subsecciones. */
 export async function buildFeed(categorySlug?: string): Promise<{ xml: string } | null> {
-  const siteName = env(process.env.NEXT_PUBLIC_SITE_NAME, "CONtexto Ganadero");
+  const siteName = env(process.env.NEXT_PUBLIC_SITE_NAME, "CONtexto Ganadero Media");
 
   let category: FeedCategory | null = null;
   let categoryIds: string[] = [];
