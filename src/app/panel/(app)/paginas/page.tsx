@@ -16,7 +16,7 @@ export default async function Paginas() {
   await requirePermiso("portada");
   const [lista, secciones, arbol] = await Promise.all([
     db
-      .select({ id: paginas.id, titulo: paginas.titulo, slug: paginas.slug, publicada: paginas.publicada, updatedAt: paginas.updatedAt, seccion: categories.name })
+      .select({ id: paginas.id, titulo: paginas.titulo, slug: paginas.slug, publicada: paginas.publicada, updatedAt: paginas.updatedAt, seccion: categories.name, seccionId: paginas.seccionId })
       .from(paginas)
       .leftJoin(categories, eq(categories.id, paginas.seccionId))
       .orderBy(desc(paginas.updatedAt)),
@@ -29,7 +29,7 @@ export default async function Paginas() {
         <div>
           <h1 className="text-2xl font-semibold">Páginas</h1>
           <p className="mt-1 max-w-3xl text-sm text-[var(--fg-muted)]">
-            Cree una página y ármela como en un CMS: divida cada fila en columnas y arrastre títulos, textos, imágenes, botones o notas a cada una.
+            Cree una página y ármela como en un CMS: divida cada fila en columnas y arrastre títulos, carruseles, tarjetas, galerías, preguntas, cifras, mapas, notas y mucho más; o empiece con una plantilla.
             Queda en borrador hasta que la publique.
           </p>
         </div>
@@ -39,8 +39,8 @@ export default async function Paginas() {
         {/* Árbol del sitio: para ver dónde va a quedar la página. Pulse una sección y use «Página nueva en …». */}
         <section className="flex flex-col gap-2">
           <h2 className="text-sm font-bold">Árbol del sitio</h2>
-          <p className="text-xs text-[var(--fg-muted)]">Pulse la sección de la que va a colgar la página y use «Página nueva en …». «Ver árbol completo» lo abre en grande.</p>
-          <ArbolPaginas sections={arbol} />
+          <p className="text-xs text-[var(--fg-muted)]">Pulse una sección para ver sus páginas («Editar página») o crear una nueva: queda en «/sección/nombre-de-la-página». «Ver árbol completo» lo abre en grande.</p>
+          <ArbolPaginas sections={arbol} paginas={lista.map(({ id, titulo, slug, publicada, seccionId }) => ({ id, titulo, slug, publicada, seccionId }))} />
         </section>
         <section className="flex min-w-0 flex-col gap-2">
           <h2 className="text-sm font-bold">Páginas creadas ({lista.length})</h2>

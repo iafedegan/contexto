@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { createContext, useContext, useMemo, useState, useTransition } from "react";
+import Link from "next/link";
 import { createPortal } from "react-dom";
-import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, Loader2, Maximize2, Network, Plus, Trash2, X } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, ExternalLink, Loader2, Maximize2, Network, Pencil, Plus, Trash2, X } from "lucide-react";
 import { SeccionForm } from "@/components/panel/seccion-form";
 import { NuevaPagina } from "@/components/panel/nueva-pagina";
 import { NAV_VISIBLE } from "@/lib/nav-limits";
@@ -40,7 +41,19 @@ function buildTree(sections: SectionNode[]): Branch[] {
  * debajo y, colgando de ella, sus subsecciones. Se puede ver compacto (en la
  * barra lateral) o en grande, de izquierda a derecha, con el detalle al lado.
  */
-export function SectionTree({ sections, onSaved }: { sections: SectionNode[]; onSaved: () => void }) {
+/** Una página del constructor que cuelga de una sección (para «Editar página» en el detalle de la sección). */
+export type PaginaDeSeccion = { id: string; titulo: string; slug: string; publicada: boolean; seccionId: string | null };
+const PaginasCtx = createContext<PaginaDeSeccion[] | null>(null);
+
+export function SectionTree({ paginas, ...props }: { sections: SectionNode[]; onSaved: () => void; paginas?: PaginaDeSeccion[] }) {
+  return (
+    <PaginasCtx.Provider value={paginas ?? null}>
+      <ArbolSecciones {...props} />
+    </PaginasCtx.Provider>
+  );
+}
+
+function ArbolSecciones({ sections, onSaved }: { sections: SectionNode[]; onSaved: () => void }) {
   const tree = useMemo(() => buildTree(sections), [sections]);
   const [open, setOpen] = useState<Set<string>>(new Set());
   const [selected, setSelected] = useState<string | null>(null);
@@ -359,12 +372,8 @@ function Detail({
         </button>
       )}
 
-      {/* Páginas de diseño libre que cuelgan de esta sección: se crean aquí y se arman en el constructor. */}
-      <div className="rounded-[var(--radius)] border border-dashed border-[var(--border-strong)] p-2.5">
-        <p className="mb-1.5 text-xs font-semibold">Página nueva en {sel.name}</p>
-        <p className="mb-2 text-[11px] leading-snug text-[var(--fg-muted)]">Se abre el constructor para armarla con filas, columnas y elementos que se arrastran. <a href="/panel/paginas" className="font-semibold text-[var(--accent)]">Ver todas las páginas</a></p>
-        <NuevaPagina seccionId={sel.id} compacto />
-      </div>
+      {/* Páginas de diseño libre que cuelgan de esta sección: se editan o se crean aquí y se arman en el constructor. */}
+      <PaginasDeLaSeccion sel={sel} />
 
       <SeccionForm key={`${sel.id}:${sel.sortOrder}`} {...pick(sel)} onSaved={onSaved} />
 
@@ -580,6 +589,47 @@ function WideTree({
             </div>
           </aside>
         </div>
+      </div>
+    </div>
+  );
+}
+
+/** Las páginas del constructor que cuelgan de la sección elegida («Editar página») y el botón para crear otra. */
+function PaginasDeLaSeccion({ sel }: { sel: SectionNode }) {
+  const todas = useContext(PaginasCtx);
+  const suyas = (todas ?? []).filter((p) => p.seccionId === sel.id);
+  return (
+    <div className="flex flex-col gap-2 rounded-[var(--radius)] border border-dashed border-[var(--border-strong)] p-2.5">
+      {suyas.length > 0 && (
+        <div className="flex flex-col gap-1.5">
+          <p className="text-xs font-semibold">Páginas de {sel.name} ({suyas.length})</p>
+          {suyas.map((p) => (
+            <div key={p.id} className="flex items-center gap-2 rounded-[var(--radius)] border border-[var(--border)] bg-[#f6f8ec] p-2">
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold">{p.titulo}</p>
+                <p className="truncate font-mono text-[11px] text-[var(--fg-muted)]">
+                  /{p.slug} · <span className={p.publicada ? "text-[#15803d]" : "text-[#8a6200]"}>{p.publicada ? "Publicada" : "Borrador"}</span>
+                </p>
+              </div>
+              {p.publicada && (
+                <a href={`/${p.slug}`} target="_blank" rel="noreferrer" aria-label={`Ver «${p.titulo}» en el sitio`} title="Ver en el sitio" className="grid size-8 shrink-0 place-items-center rounded-full border border-[var(--border)] hover:border-[var(--accent)]">
+                  <ExternalLink size={13} />
+                </a>
+              )}
+              <Link href={`/panel/paginas/${p.id}`} className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[var(--accent)] px-3 py-1.5 text-xs font-semibold text-[var(--accent-fg)] hover:opacity-90">
+                <Pencil size={12} /> Editar página
+              </Link>
+            </div>
+          ))}
+        </div>
+      )}
+      <div>
+        <p className="mb-1 text-xs font-semibold">Página nueva en {sel.name}</p>
+        <p className="mb-2 text-[11px] leading-snug text-[var(--fg-muted)]">
+          Queda en <span className="font-mono">/{sel.slug}/nombre-de-la-pagina</span> y se abre el constructor para armarla.{" "}
+          <Link href="/panel/paginas" className="font-semibold text-[var(--accent)]">Ver todas las páginas</Link>
+        </p>
+        <NuevaPagina seccionId={sel.id} compacto />
       </div>
     </div>
   );

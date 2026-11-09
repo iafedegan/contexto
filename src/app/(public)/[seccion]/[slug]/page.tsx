@@ -2,11 +2,13 @@ import type { Metadata } from "next";
 import { getSlugPorRutaOriginal } from "@/lib/content";
 import { makeMetadata, makePage } from "../../_pages/articulo";
 import { resolverRutaAntigua } from "../../_pages/ruta-antigua";
+import { PaginaConstruida, metadataDePagina, paginaDeLaRuta } from "../../_pages/pagina-construida";
 
 /**
  * Las notas migradas del sitio anterior, en SU dirección original (`/regiones/titulo`), sin redirección: ni una URL de las que Google ya
  * tiene indexadas cambia. Si la dirección no es la de ninguna nota (una sección antigua, una nota nueva buscada por título, un error),
- * se resuelve como antes: redirecciones, categoría o 404. Las rutas con nombre propio (`/categoria/x`, `/autor/x`…) ganan a esta.
+ * se busca una página armada en el constructor con esa dirección (`/seccion/pagina`) y, si tampoco, se resuelve como antes: redirecciones,
+ * categoría o 404. Las rutas con nombre propio (`/categoria/x`, `/autor/x`…) ganan a esta.
  */
 export const revalidate = 3600;
 // Las páginas no se generan en la compilación: se crean en la primera visita y se guardan.
@@ -35,14 +37,20 @@ async function slugDeLaRuta(params: Props["params"]): Promise<{ slug: string | n
 
 // Metadatos de la nota (canónica = esta misma dirección).
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { slug } = await slugDeLaRuta(params);
-  if (!slug) return { robots: { index: false } };
+  const { slug, partes } = await slugDeLaRuta(params);
+  if (!slug) {
+    const p = await paginaDeLaRuta(partes);
+    return p ? metadataDePagina(p) : { robots: { index: false } };
+  }
   return makeMetadata("es")({ params: Promise.resolve({ slug }), desdeOriginal: true });
 }
 
 // La nota en su dirección original; si no es de ninguna nota, el comportamiento de siempre para direcciones antiguas.
 export default async function Page({ params }: Props) {
   const { slug, partes } = await slugDeLaRuta(params);
-  if (!slug) return resolverRutaAntigua(partes);
+  if (!slug) {
+    const p = await paginaDeLaRuta(partes);
+    return p ? <PaginaConstruida p={p} /> : resolverRutaAntigua(partes);
+  }
   return makePage("es")({ params: Promise.resolve({ slug }), desdeOriginal: true });
 }

@@ -10,8 +10,9 @@ import { db } from "@/db";
 import { categories, paginas } from "@/db/schema";
 import { requirePermiso } from "@/lib/auth";
 import { invalidarCache } from "@/lib/data-cache";
-import { resolveLegacyTaxonomy } from "@/lib/redirects";
-import { sanearPagina, slugPagina } from "@/lib/paginas-bloques";
+import { LEGACY_SYSTEM_REDIRECTS, resolveLegacyTaxonomy } from "@/lib/redirects";
+import { getSlugPorRutaOriginal } from "@/lib/content";
+import { rutaPagina, sanearPagina, slugPagina } from "@/lib/paginas-bloques";
 import { TAG_PAGINAS } from "@/lib/paginas";
 
 export type ResultadoPagina = { ok: true; id?: string } | { ok: false; error: string };
@@ -23,11 +24,20 @@ const RESERVADAS = new Set([
   "quienes-somos", "terminos-y-condiciones", "panel", "api", "columna", "sitemap", "manifest", "robots",
 ]);
 
+/**
+ * ¿Puede una página tomar esta dirección? Admite `pagina` o `seccion/pagina`. El primer tramo no puede ser una ruta del sitio;
+ * con un solo tramo tampoco el nombre de una sección; con dos, no puede ser la dirección de una nota del archivo (ganaría la nota).
+ */
 async function slugLibre(slug: string, excepto?: string): Promise<string | null> {
-  if (!slug) return "Escriba una dirección (letras, números y guiones).";
-  if (RESERVADAS.has(slug) || resolveLegacyTaxonomy(`/${slug}`)) return `La dirección «/${slug}» ya la usa el sitio. Elija otra.`;
-  const [cat] = await db.select({ id: categories.id }).from(categories).where(eq(categories.slug, slug)).limit(1);
-  if (cat) return `«/${slug}» es el nombre de una sección. Elija otra dirección.`;
+  if (!slug) return "Escriba una dirección (letras, números y guiones; «sección/página» si va dentro de una sección).";
+  const [primero, segundo] = slug.split("/");
+  if (RESERVADAS.has(primero) || resolveLegacyTaxonomy(`/${primero}`) || LEGACY_SYSTEM_REDIRECTS[`/${slug}`]) return `La dirección «/${slug}» ya la usa el sitio. Elija otra.`;
+  if (!segundo) {
+    const [cat] = await db.select({ id: categories.id }).from(categories).where(eq(categories.slug, slug)).limit(1);
+    if (cat) return `«/${slug}» es el nombre de una sección. Póngale «/${slug}/nombre-de-la-pagina».`;
+  } else if (await getSlugPorRutaOriginal(`/${slug}`).catch(() => null)) {
+    return `«/${slug}» es la dirección de una nota del archivo. Elija otra.`;
+  }
   const [otra] = await db.select({ id: paginas.id }).from(paginas).where(eq(paginas.slug, slug)).limit(1);
   if (otra && otra.id !== excepto) return `Ya hay una página en «/${slug}».`;
   return null;
@@ -39,14 +49,24 @@ function refrescar(slug?: string) {
   revalidatePath("/panel/paginas");
 }
 
-/** Crea una página en blanco (en borrador) y devuelve su id para abrir el constructor. */
+/**
+ * Crea una página en blanco (en borrador) y devuelve su id para abrir el constructor. Si cuelga de una sección, su dirección queda
+ * `/{seccion}/{pagina}` (como las notas del sitio); si no, `/{pagina}`.
+ */
 export async function crearPagina(titulo: string, seccionId: string | null): Promise<ResultadoPagina> {
   const yo = await requirePermiso("portada");
   const t = titulo.trim().slice(0, 160);
   if (!t) return { ok: false, error: "Escriba el nombre de la página." };
-  let slug = slugPagina(t);
+  let prefijo = "";
+  if (seccionId) {
+    const [cat] = await db.select({ slug: categories.slug }).from(categories).where(eq(categories.id, seccionId)).limit(1);
+    if (!cat) return { ok: false, error: "Esa sección ya no existe." };
+    prefijo = `${slugPagina(cat.slug)}/`;
+  }
+  const base = slugPagina(t) || "pagina";
+  let slug = `${prefijo}${base}`;
   // Si la dirección está tomada, se le añade un número.
-  for (let n = 2; (await slugLibre(slug)) && n < 50; n++) slug = `${slugPagina(t).slice(0, 74)}-${n}`;
+  for (let n = 2; (await slugLibre(slug)) && n < 50; n++) slug = `${prefijo}${base.slice(0, 74)}-${n}`;
   const error = await slugLibre(slug);
   if (error) return { ok: false, error };
   const [p] = await db
@@ -65,7 +85,7 @@ export async function guardarPagina(
   const yo = await requirePermiso("portada");
   const titulo = datos.titulo.trim().slice(0, 160);
   if (!titulo) return { ok: false, error: "La página necesita un título." };
-  const slug = slugPagina(datos.slug);
+  const slug = rutaPagina(datos.slug);
   const error = await slugLibre(slug, id);
   if (error) return { ok: false, error };
   const [antes] = await db.select({ slug: paginas.slug }).from(paginas).where(eq(paginas.id, id)).limit(1);

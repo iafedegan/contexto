@@ -4,15 +4,17 @@ import { useCallback, useEffect, useMemo, useState, useTransition, type DragEven
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  AlignCenter, AlignLeft, AlignRight, ArrowDown, ArrowUp, ExternalLink, Eye, EyeOff, GripVertical, Heading, Image as ImageIcon, List, Loader2,
-  Megaphone, MousePointerClick, Newspaper, Pencil, Pilcrow, Quote, Redo2, Rows3, Save, Minus, MoveVertical, Trash2, Undo2, Video, X,
+  AlignCenter, AlignLeft, AlignRight, ArrowDown, ArrowUp, BadgeDollarSign, ChevronDown, Columns3, Contact, Copy, ExternalLink, Eye, EyeOff, FileDown,
+  GalleryHorizontal, GripVertical, Hash, Headphones, Heading, Image as ImageIcon, Images, LayoutGrid, LayoutTemplate, List, ListCollapse, Loader2,
+  MailPlus, Map as MapIcon, Megaphone, Milestone, Minus, MousePointerClick, MoveVertical, Newspaper, PanelTop, Pencil, Pilcrow, Plus, Quote, Redo2,
+  Rows3, Save, Search, Share2, Sparkles, SquareSplitHorizontal, Table2, Timer, Trash2, Type, Undo2, Users, Video, X, Award, Footprints,
 } from "lucide-react";
 import { borrarPagina, guardarPagina, publicarPagina } from "@/app/panel/(app)/paginas/actions";
-import { ElementoVista, claseColumna, claseFondo } from "@/components/pagina-vista";
+import { ElementoVista, claseColumna, claseFila, estiloFila } from "@/components/pagina-vista";
 import { SelectorBiblioteca } from "@/components/panel/selector-biblioteca";
 import {
-  DIVISIONES, PALETA, elementoNuevo, filaNueva, slugPagina,
-  type Alinear, type ContenidoPagina, type Elemento, type Fila, type TipoElemento,
+  DIVISIONES, ESQUEMAS, PALETA, PLANTILLAS, duplicarElemento, duplicarFila, elementoNuevo, esBloque, filaNueva, nuevoId, rutaPagina,
+  type Alinear, type Campo, type ContenidoPagina, type Elemento, type ElementoBloque, type Fila, type TipoElemento, type Valores,
 } from "@/lib/paginas-bloques";
 
 type Pagina = { id: string; titulo: string; slug: string; descripcion: string; publicada: boolean; contenido: ContenidoPagina };
@@ -24,6 +26,12 @@ const ICONOS: Record<TipoElemento, ReactNode> = {
   titulo: <Heading size={18} />, parrafo: <Pilcrow size={18} />, lista: <List size={18} />, cita: <Quote size={18} />, aviso: <Megaphone size={18} />,
   imagen: <ImageIcon size={18} />, video: <Video size={18} />, boton: <MousePointerClick size={18} />, notas: <Newspaper size={18} />,
   separador: <Minus size={18} />, espacio: <MoveVertical size={18} />,
+  heroe: <PanelTop size={18} />, carrusel: <GalleryHorizontal size={18} />, tarjetas: <LayoutGrid size={18} />, galeria: <Images size={18} />,
+  acordeon: <ListCollapse size={18} />, pestanas: <Columns3 size={18} />, cifras: <Hash size={18} />, caracteristicas: <Sparkles size={18} />,
+  testimonios: <Quote size={18} />, linea: <Milestone size={18} />, pasos: <Footprints size={18} />, equipo: <Users size={18} />, logos: <Award size={18} />,
+  tabla: <Table2 size={18} />, llamado: <Megaphone size={18} />, destacado: <Type size={18} />, audio: <Headphones size={18} />, mapa: <MapIcon size={18} />,
+  contacto: <Contact size={18} />, cuenta: <Timer size={18} />, redes: <Share2 size={18} />, descarga: <FileDown size={18} />, boletin: <MailPlus size={18} />,
+  comparacion: <SquareSplitHorizontal size={18} />, precios: <BadgeDollarSign size={18} />,
 };
 const NOMBRE = Object.fromEntries(PALETA.flatMap((g) => g.items.map((i) => [i.tipo, i.etiqueta]))) as Record<TipoElemento, string>;
 
@@ -39,14 +47,15 @@ function ubicar(c: ContenidoPagina, id: string): { fila: number; celda: number; 
 const copia = (c: ContenidoPagina): ContenidoPagina => JSON.parse(JSON.stringify(c));
 
 /**
- * Constructor de páginas: a la izquierda los elementos, en el centro la página como filas de una cuadrícula de 12 columnas y a la
- * derecha lo que se puede cambiar del elemento elegido. Se arrastra de la paleta a una columna (o se pulsa para añadirlo a la
- * columna elegida) y los elementos del lienzo se pueden arrastrar entre columnas y filas.
+ * Constructor de páginas: a la izquierda los elementos y las filas prediseñadas, en el centro la página como filas de una
+ * cuadrícula de 12 columnas y a la derecha lo que se puede cambiar del elemento elegido. Se arrastra de la paleta a una columna
+ * (o se pulsa para añadirlo a la columna elegida) y los elementos del lienzo se pueden arrastrar entre columnas y filas.
  */
 export function ConstructorPagina({ pagina, secciones }: { pagina: Pagina; secciones: { slug: string; name: string }[] }) {
   const router = useRouter();
   const [titulo, setTitulo] = useState(pagina.titulo);
   const [slug, setSlug] = useState(pagina.slug);
+  const [slugGuardado, setSlugGuardado] = useState(pagina.slug);
   const [descripcion, setDescripcion] = useState(pagina.descripcion);
   const [publicada, setPublicada] = useState(pagina.publicada);
   const [hist, setHist] = useState<{ pasado: ContenidoPagina[]; actual: ContenidoPagina; futuro: ContenidoPagina[] }>({ pasado: [], actual: pagina.contenido, futuro: [] });
@@ -59,15 +68,17 @@ export function ConstructorPagina({ pagina, secciones }: { pagina: Pagina; secci
   const [sucio, setSucio] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; t: string } | null>(null);
   const [ocupado, start] = useTransition();
-  const [eligiendoImagen, setEligiendoImagen] = useState(false);
+  const [elegirImagen, setElegirImagen] = useState<((url: string, nombre: string) => void) | null>(null);
   const [divisionNueva, setDivisionNueva] = useState(false);
+  const [pestanaPaleta, setPestanaPaleta] = useState<"elementos" | "plantillas">("elementos");
+  const [buscar, setBuscar] = useState("");
 
   /** Aplica un cambio al contenido guardando el estado anterior para deshacer. */
   const cambiar = useCallback((fn: (c: ContenidoPagina) => void) => {
     setHist((h) => {
       const n = copia(h.actual);
       fn(n);
-      return { pasado: [...h.pasado.slice(-60), h.actual], actual: n, futuro: [] };
+      return { pasado: [...h.pasado.slice(-80), h.actual], actual: n, futuro: [] };
     });
     setSucio(true);
   }, []);
@@ -91,8 +102,16 @@ export function ConstructorPagina({ pagina, secciones }: { pagina: Pagina; secci
   // --- Filas ---
   function anadirFila(columnas: number[]) {
     const pos = c.filas.length;
-    cambiar((n) => n.filas.push(filaNueva(columnas)));
+    cambiar((n) => void n.filas.push(filaNueva(columnas)));
     setCeldaActiva({ fila: pos, celda: 0 });
+    setDivisionNueva(false);
+  }
+  function anadirPlantilla(crear: () => Fila) {
+    // Si hay una fila elegida, la plantilla entra justo debajo; si no, al final.
+    const pos = celdaActiva && c.filas[celdaActiva.fila] ? celdaActiva.fila + 1 : c.filas.length;
+    cambiar((n) => void n.filas.splice(pos, 0, crear()));
+    setCeldaActiva({ fila: pos, celda: 0 });
+    setSel(null);
     setDivisionNueva(false);
   }
   function cambiarDivision(f: number, columnas: number[]) {
@@ -106,12 +125,18 @@ export function ConstructorPagina({ pagina, secciones }: { pagina: Pagina; secci
       fila.celdas = celdas;
     });
   }
+  function editarFila(f: number, p: Partial<Fila>) {
+    cambiar((n) => void Object.assign(n.filas[f], p));
+  }
   function moverFila(f: number, d: -1 | 1) {
     if (f + d < 0 || f + d >= c.filas.length) return;
     cambiar((n) => {
       const [x] = n.filas.splice(f, 1);
       n.filas.splice(f + d, 0, x);
     });
+  }
+  function copiarFila(f: number) {
+    cambiar((n) => void n.filas.splice(f + 1, 0, duplicarFila(n.filas[f])));
   }
   function borrarFila(f: number) {
     cambiar((n) => void n.filas.splice(f, 1));
@@ -163,13 +188,15 @@ export function ConstructorPagina({ pagina, secciones }: { pagina: Pagina; secci
     });
     setSel({ fila, celda, el: a.mover });
   }
-  function editar(p: Partial<Elemento>) {
+  /** Cambia el elemento elegido: `fn` recibe la copia de trabajo y la modifica. */
+  function editarCon(fn: (e: Elemento) => void) {
     if (!sel) return;
     cambiar((n) => {
       const u = ubicar(n, sel.el);
-      if (u) Object.assign(n.filas[u.fila].celdas[u.celda][u.i], p);
+      if (u) fn(n.filas[u.fila].celdas[u.celda][u.i]);
     });
   }
+  const editar = (p: Partial<Elemento> | Record<string, unknown>) => editarCon((e) => void Object.assign(e, p));
   function moverElemento(d: -1 | 1) {
     if (!sel) return;
     cambiar((n) => {
@@ -181,6 +208,14 @@ export function ConstructorPagina({ pagina, secciones }: { pagina: Pagina; secci
       lista.splice(u.i + d, 0, x);
     });
   }
+  function copiarElemento() {
+    if (!sel) return;
+    const u = ubicar(c, sel.el);
+    if (!u) return;
+    const nuevo = duplicarElemento(c.filas[u.fila].celdas[u.celda][u.i]);
+    cambiar((n) => void n.filas[u.fila].celdas[u.celda].splice(u.i + 1, 0, nuevo));
+    setSel({ fila: u.fila, celda: u.celda, el: nuevo.id });
+  }
   function borrarElemento() {
     if (!sel) return;
     cambiar((n) => {
@@ -190,7 +225,7 @@ export function ConstructorPagina({ pagina, secciones }: { pagina: Pagina; secci
     setSel(null);
   }
 
-  // Teclado: Supr borra el elemento elegido; Cmd/Ctrl+Z deshace.
+  // Teclado: Supr borra el elemento elegido; Cmd/Ctrl+Z deshace; Cmd/Ctrl+D duplica.
   useEffect(() => {
     const f = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement;
@@ -199,6 +234,9 @@ export function ConstructorPagina({ pagina, secciones }: { pagina: Pagina; secci
         e.preventDefault();
         if (e.shiftKey) rehacer();
         else deshacer();
+      } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "d" && sel) {
+        e.preventDefault();
+        copiarElemento();
       } else if ((e.key === "Delete" || e.key === "Backspace") && sel) {
         e.preventDefault();
         borrarElemento();
@@ -212,9 +250,11 @@ export function ConstructorPagina({ pagina, secciones }: { pagina: Pagina; secci
   function guardar(despues?: () => Promise<unknown>) {
     setMsg(null);
     start(async () => {
-      const r = await guardarPagina(pagina.id, { titulo, slug, descripcion, contenido: c });
+      const limpio = rutaPagina(slug);
+      const r = await guardarPagina(pagina.id, { titulo, slug: limpio, descripcion, contenido: c });
       if (!r.ok) return setMsg({ ok: false, t: r.error });
-      setSlug(slugPagina(slug));
+      setSlug(limpio);
+      setSlugGuardado(limpio);
       setSucio(false);
       if (despues) await despues();
       setMsg({ ok: true, t: "Cambios guardados." });
@@ -250,6 +290,11 @@ export function ConstructorPagina({ pagina, secciones }: { pagina: Pagina; secci
     },
   });
 
+  const q = buscar.trim().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+  const paleta = q
+    ? PALETA.map((g) => ({ ...g, items: g.items.filter((i) => i.etiqueta.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").includes(q)) })).filter((g) => g.items.length)
+    : PALETA;
+
   const boton = "inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-sm font-semibold transition hover:border-[var(--accent)] disabled:opacity-40";
 
   return (
@@ -264,15 +309,15 @@ export function ConstructorPagina({ pagina, secciones }: { pagina: Pagina; secci
           <input value={titulo} onChange={(e) => { setTitulo(e.target.value); setSucio(true); }} className="lx-input !py-2 !text-base !font-semibold" maxLength={160} />
         </label>
         <label className="flex flex-col gap-1 text-xs font-semibold">
-          Dirección
+          Dirección (sección/página)
           <span className="flex items-center rounded-lg border border-[var(--border)] bg-[var(--bg)] pl-3 font-mono text-sm">
-            /<input value={slug} onChange={(e) => { setSlug(e.target.value.toLowerCase()); setSucio(true); }} onBlur={() => setSlug(slugPagina(slug))} className="min-w-0 flex-1 bg-transparent py-2 pr-3 outline-none" maxLength={80} />
+            /<input value={slug} onChange={(e) => { setSlug(e.target.value.toLowerCase()); setSucio(true); }} onBlur={() => setSlug(rutaPagina(slug))} className="min-w-0 flex-1 bg-transparent py-2 pr-3 outline-none" maxLength={161} />
           </span>
         </label>
         <div className="flex items-end gap-2">
           <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${publicada ? "bg-[#16a34a]/15 text-[#15803d]" : "bg-[#f2a900]/20 text-[#8a6200]"}`}>{publicada ? "Publicada" : "Borrador"}</span>
           {publicada && (
-            <a href={`/${pagina.slug}`} target="_blank" rel="noreferrer" className={boton}>
+            <a href={`/${slugGuardado}`} target="_blank" rel="noreferrer" className={boton}>
               <ExternalLink size={14} /> Ver
             </a>
           )}
@@ -303,35 +348,58 @@ export function ConstructorPagina({ pagina, secciones }: { pagina: Pagina; secci
         <button type="button" onClick={borrar} disabled={ocupado} aria-label="Borrar página" title="Borrar página" className="grid size-8 place-items-center rounded-lg text-[#b91c1c] hover:bg-[#b91c1c]/10"><Trash2 size={16} /></button>
       </div>
 
-      <div className={`grid gap-4 ${vista ? "" : elegido ? "lg:grid-cols-[13rem_minmax(0,1fr)_17rem]" : "lg:grid-cols-[13rem_minmax(0,1fr)]"}`}>
+      <div className={`grid gap-4 ${vista ? "" : elegido ? "lg:grid-cols-[14rem_minmax(0,1fr)_20rem]" : "lg:grid-cols-[14rem_minmax(0,1fr)]"}`}>
         {/* Paleta */}
         {!vista && (
-          <aside className="flex flex-col gap-3 self-start rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3 lg:sticky lg:top-16">
-            <div>
-              <p className="text-sm font-bold">Elementos</p>
-              <p className="text-xs leading-snug text-[var(--fg-muted)]">Arrástrelos a una columna o púlselos para añadirlos a la columna elegida.</p>
+          <aside className="flex max-h-[calc(100dvh-6rem)] flex-col gap-3 self-start overflow-y-auto rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3 lg:sticky lg:top-16">
+            <div className="grid grid-cols-2 overflow-hidden rounded-lg border border-[var(--border)] text-xs font-bold">
+              <button type="button" onClick={() => setPestanaPaleta("elementos")} aria-pressed={pestanaPaleta === "elementos"} className={`py-1.5 ${pestanaPaleta === "elementos" ? "bg-[var(--accent)] text-[var(--accent-fg)]" : ""}`}>Elementos</button>
+              <button type="button" onClick={() => setPestanaPaleta("plantillas")} aria-pressed={pestanaPaleta === "plantillas"} className={`inline-flex items-center justify-center gap-1 py-1.5 ${pestanaPaleta === "plantillas" ? "bg-[var(--accent)] text-[var(--accent-fg)]" : ""}`}><LayoutTemplate size={13} /> Plantillas</button>
             </div>
-            {PALETA.map((g) => (
-              <div key={g.grupo}>
-                <p className="mb-1 text-[0.68rem] font-bold uppercase tracking-[0.14em] text-[var(--fg-muted)]">{g.grupo}</p>
-                <div className="grid grid-cols-2 gap-1.5">
-                  {g.items.map((it) => (
-                    <button
-                      key={it.tipo}
-                      type="button"
-                      draggable
-                      onDragStart={(e) => { e.dataTransfer.setData("text/plain", it.tipo); e.dataTransfer.effectAllowed = "copy"; setArrastre({ nuevo: it.tipo }); }}
-                      onDragEnd={() => { setArrastre(null); setDestino(null); }}
-                      onClick={() => anadirDesdePaleta(it.tipo)}
-                      className="flex cursor-grab flex-col items-center gap-1 rounded-lg border border-[var(--border)] bg-[var(--bg)] px-1 py-2 text-[0.72rem] font-semibold leading-tight transition hover:border-[var(--accent)] hover:text-[var(--accent)] active:cursor-grabbing"
-                    >
-                      {ICONOS[it.tipo]}
-                      {it.etiqueta}
+            {pestanaPaleta === "elementos" ? (
+              <>
+                <label className="flex items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--bg)] px-2.5">
+                  <Search size={14} className="shrink-0 text-[var(--fg-muted)]" />
+                  <input value={buscar} onChange={(e) => setBuscar(e.target.value)} placeholder="Buscar elemento…" className="min-w-0 flex-1 bg-transparent py-1.5 text-sm outline-none" aria-label="Buscar elemento" />
+                </label>
+                <p className="text-[11px] leading-snug text-[var(--fg-muted)]">Arrástrelos a una columna o púlselos para añadirlos a la columna elegida.</p>
+                {paleta.map((g) => (
+                  <div key={g.grupo}>
+                    <p className="mb-1 text-[0.68rem] font-bold uppercase tracking-[0.14em] text-[var(--fg-muted)]">{g.grupo}</p>
+                    <div className="grid grid-cols-3 gap-1">
+                      {g.items.map((it) => (
+                        <button
+                          key={it.tipo}
+                          type="button"
+                          draggable
+                          title={it.etiqueta}
+                          onDragStart={(e) => { e.dataTransfer.setData("text/plain", it.tipo); e.dataTransfer.effectAllowed = "copy"; setArrastre({ nuevo: it.tipo }); }}
+                          onDragEnd={() => { setArrastre(null); setDestino(null); }}
+                          onClick={() => anadirDesdePaleta(it.tipo)}
+                          className="flex cursor-grab flex-col items-center gap-1 rounded-lg border border-[var(--border)] bg-[var(--bg)] px-0.5 py-1.5 text-center text-[0.64rem] font-semibold leading-tight transition hover:border-[var(--accent)] hover:text-[var(--accent)] active:cursor-grabbing"
+                        >
+                          {ICONOS[it.tipo]}
+                          {it.etiqueta}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+                {!paleta.length && <p className="text-xs text-[var(--fg-muted)]">Nada con «{buscar}».</p>}
+              </>
+            ) : (
+              <>
+                <p className="text-[11px] leading-snug text-[var(--fg-muted)]">Filas ya armadas: se añaden debajo de la fila elegida y luego se cambian como cualquier otra.</p>
+                <div className="flex flex-col gap-1.5">
+                  {PLANTILLAS.map((t) => (
+                    <button key={t.id} type="button" onClick={() => anadirPlantilla(t.crear)} className="flex flex-col items-start rounded-lg border border-[var(--border)] bg-[var(--bg)] px-2.5 py-2 text-left transition hover:border-[var(--accent)]">
+                      <span className="text-[0.78rem] font-bold">{t.etiqueta}</span>
+                      <span className="text-[0.68rem] leading-snug text-[var(--fg-muted)]">{t.descripcion}</span>
                     </button>
                   ))}
                 </div>
-              </div>
-            ))}
+              </>
+            )}
           </aside>
         )}
 
@@ -348,8 +416,10 @@ export function ConstructorPagina({ pagina, secciones }: { pagina: Pagina; secci
                 total={c.filas.length}
                 vista={vista}
                 onDivision={(cols) => cambiarDivision(fi, cols)}
-                onFondo={(fondo) => cambiar((n) => void (n.filas[fi].fondo = fondo))}
+                onEditar={(p) => editarFila(fi, p)}
+                onElegirFondo={() => setElegirImagen(() => (url: string) => editarFila(fi, { fondo: "imagen", fondoImagen: url }))}
                 onMover={(d) => moverFila(fi, d)}
+                onCopiar={() => copiarFila(fi)}
                 onBorrar={() => borrarFila(fi)}
               >
                 {f.columnas.map((n, ci) => {
@@ -359,7 +429,7 @@ export function ConstructorPagina({ pagina, secciones }: { pagina: Pagina; secci
                       key={ci}
                       {...(vista ? {} : zonaSoltar(fi, ci))}
                       onClick={(e) => { if (vista) return; e.stopPropagation(); setCeldaActiva({ fila: fi, celda: ci }); setSel(null); }}
-                      className={`${claseColumna(n)} flex min-h-24 min-w-0 flex-col gap-4 ${vista ? "" : `rounded-lg border-2 border-dashed p-3 transition ${destino === `${fi}:${ci}:fin` ? "border-[var(--accent)] bg-[var(--accent)]/5" : activa ? "border-[var(--accent)]/60" : "border-[var(--border)]"}`}`}
+                      className={`${claseColumna(n)} @container flex min-h-24 min-w-0 flex-col gap-4 ${vista ? "" : `rounded-lg border-2 border-dashed p-3 transition ${destino === `${fi}:${ci}:fin` ? "border-[var(--accent)] bg-[var(--accent)]/5" : activa ? "border-[var(--accent)]/60" : "border-[var(--border)]"}`}`}
                     >
                       {f.celdas[ci].map((e) =>
                         vista ? (
@@ -371,6 +441,11 @@ export function ConstructorPagina({ pagina, secciones }: { pagina: Pagina; secci
                               draggable
                               onDragStart={(ev) => { ev.stopPropagation(); ev.dataTransfer.setData("text/plain", e.id); ev.dataTransfer.effectAllowed = "move"; setArrastre({ mover: e.id }); }}
                               onDragEnd={() => { setArrastre(null); setDestino(null); }}
+                              onClickCapture={(ev) => {
+                                // En el lienzo, un clic elige el elemento (no navega ni abre nada dentro de él).
+                                const dentro = (ev.target as HTMLElement).closest("a");
+                                if (dentro) ev.preventDefault();
+                              }}
                               onClick={(ev) => { ev.stopPropagation(); setSel({ fila: fi, celda: ci, el: e.id }); setCeldaActiva({ fila: fi, celda: ci }); }}
                               className={`group relative cursor-pointer rounded-md p-1 outline-2 outline-offset-2 transition ${sel?.el === e.id ? "outline outline-[var(--accent)]" : "hover:outline hover:outline-[var(--border-strong)]"}`}
                             >
@@ -397,7 +472,7 @@ export function ConstructorPagina({ pagina, secciones }: { pagina: Pagina; secci
             <div className="mt-6" onClick={(e) => e.stopPropagation()}>
               {divisionNueva || !c.filas.length ? (
                 <div className="rounded-xl border-2 border-dashed border-[var(--border-strong)] p-4">
-                  <p className="mb-3 text-center text-sm font-semibold">{c.filas.length ? "¿Cómo se divide la nueva fila?" : "La página está en blanco: empiece eligiendo cómo se divide la primera fila"}</p>
+                  <p className="mb-3 text-center text-sm font-semibold">{c.filas.length ? "¿Cómo se divide la nueva fila?" : "La página está en blanco: elija cómo se divide la primera fila o empiece con una plantilla"}</p>
                   <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-7">
                     {DIVISIONES.map((d) => (
                       <button key={d.id} type="button" onClick={() => anadirFila(d.columnas)} className="flex flex-col gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-2 text-[0.7rem] font-semibold transition hover:border-[var(--accent)]">
@@ -406,8 +481,16 @@ export function ConstructorPagina({ pagina, secciones }: { pagina: Pagina; secci
                       </button>
                     ))}
                   </div>
+                  <p className="mb-2 mt-4 text-center text-xs font-bold uppercase tracking-[0.12em] text-[var(--fg-muted)]">O una fila ya armada</p>
+                  <div className="flex flex-wrap justify-center gap-1.5">
+                    {PLANTILLAS.map((t) => (
+                      <button key={t.id} type="button" onClick={() => anadirPlantilla(t.crear)} className="rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 py-1 text-xs font-semibold transition hover:border-[var(--accent)] hover:text-[var(--accent)]">
+                        {t.etiqueta}
+                      </button>
+                    ))}
+                  </div>
                   {c.filas.length > 0 && (
-                    <button type="button" onClick={() => setDivisionNueva(false)} className="mx-auto mt-2 block text-xs text-[var(--fg-muted)] hover:text-[var(--fg)]">Cancelar</button>
+                    <button type="button" onClick={() => setDivisionNueva(false)} className="mx-auto mt-3 block text-xs text-[var(--fg-muted)] hover:text-[var(--fg)]">Cancelar</button>
                   )}
                 </div>
               ) : (
@@ -421,26 +504,29 @@ export function ConstructorPagina({ pagina, secciones }: { pagina: Pagina; secci
 
         {/* Propiedades: solo aparece con un elemento elegido. */}
         {!vista && elegido && (
-          <aside className="self-start rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 lg:sticky lg:top-16">
+          <aside className="flex max-h-[calc(100dvh-6rem)] flex-col self-start overflow-y-auto rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 lg:sticky lg:top-16">
             <Propiedades
+              key={elegido.id}
               e={elegido}
               secciones={secciones}
               onCambiar={editar}
+              onCambiarCon={editarCon}
               onMover={moverElemento}
+              onCopiar={copiarElemento}
               onBorrar={borrarElemento}
               onCerrar={() => setSel(null)}
-              onElegirImagen={() => setEligiendoImagen(true)}
+              onElegirImagen={(cb) => setElegirImagen(() => cb)}
             />
           </aside>
         )}
       </div>
 
-      {eligiendoImagen && (
+      {elegirImagen && (
         <SelectorBiblioteca
-          onCerrar={() => setEligiendoImagen(false)}
+          onCerrar={() => setElegirImagen(null)}
           onElegir={(a) => {
-            editar({ url: a.url, alt: elegido && elegido.tipo === "imagen" && elegido.alt ? elegido.alt : a.name.replace(/\.[a-z0-9]+$/i, "") } as Partial<Elemento>);
-            setEligiendoImagen(false);
+            elegirImagen(a.url, a.name.replace(/\.[a-z0-9]+$/i, ""));
+            setElegirImagen(null);
           }}
         />
       )}
@@ -461,15 +547,16 @@ function MiniDivision({ columnas }: { columnas: number[] }) {
 
 /** Una fila del lienzo con su barra de controles. */
 function FilaLienzo({
-  fila, indice, total, vista, children, onDivision, onFondo, onMover, onBorrar,
+  fila, indice, total, vista, children, onDivision, onEditar, onElegirFondo, onMover, onCopiar, onBorrar,
 }: {
   fila: Fila; indice: number; total: number; vista: boolean; children: ReactNode;
-  onDivision: (c: number[]) => void; onFondo: (f: Fila["fondo"]) => void; onMover: (d: -1 | 1) => void; onBorrar: () => void;
+  onDivision: (c: number[]) => void; onEditar: (p: Partial<Fila>) => void; onElegirFondo: () => void; onMover: (d: -1 | 1) => void; onCopiar: () => void; onBorrar: () => void;
 }) {
   const [abierto, setAbierto] = useState(false);
   const actual = DIVISIONES.find((d) => d.columnas.join() === fila.columnas.join());
-  if (vista) return <section className={`grid grid-cols-12 gap-6 md:gap-8 ${claseFondo(fila.fondo)}`}>{children}</section>;
+  if (vista) return <section className={claseFila(fila)} style={estiloFila(fila)}>{children}</section>;
   const btn = "grid size-7 place-items-center rounded-md hover:bg-[var(--surface-2)] disabled:opacity-30";
+  const sel = "rounded-md border border-[var(--border)] bg-[var(--surface)] px-1.5 py-1 font-semibold";
   return (
     <div className="group/fila rounded-xl border border-transparent p-1 transition hover:border-[var(--border)]" onClick={(e) => e.stopPropagation()}>
       <div className="mb-1 flex flex-wrap items-center gap-1 text-xs">
@@ -477,10 +564,10 @@ function FilaLienzo({
         <div className="relative">
           <button type="button" onClick={() => setAbierto((v) => !v)} className="inline-flex items-center gap-1.5 rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 py-1 font-semibold hover:border-[var(--accent)]">
             <span className="w-10"><MiniDivision columnas={fila.columnas} /></span>
-            {actual?.etiqueta ?? "Columnas"}
+            {actual?.etiqueta ?? "Columnas"} <ChevronDown size={12} />
           </button>
           {abierto && (
-            <div className="absolute left-0 top-full z-20 mt-1 grid w-72 grid-cols-2 gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-2 shadow-lg">
+            <div className="absolute left-0 top-full z-20 mt-1 grid w-80 grid-cols-2 gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-2 shadow-lg">
               {DIVISIONES.map((d) => (
                 <button key={d.id} type="button" onClick={() => { onDivision(d.columnas); setAbierto(false); }} className={`flex flex-col gap-1 rounded-md border p-1.5 text-[0.68rem] font-semibold ${d.id === actual?.id ? "border-[var(--accent)]" : "border-[var(--border)] hover:border-[var(--accent)]"}`}>
                   <MiniDivision columnas={d.columnas} />
@@ -490,31 +577,172 @@ function FilaLienzo({
             </div>
           )}
         </div>
-        <select value={fila.fondo ?? "ninguno"} onChange={(e) => onFondo(e.target.value as Fila["fondo"])} aria-label="Fondo de la fila" className="rounded-md border border-[var(--border)] bg-[var(--surface)] px-1.5 py-1 font-semibold">
+        <select value={fila.fondo ?? "ninguno"} onChange={(e) => (e.target.value === "imagen" && !fila.fondoImagen ? onElegirFondo() : onEditar({ fondo: e.target.value as Fila["fondo"] }))} aria-label="Fondo de la fila" className={sel}>
           <option value="ninguno">Sin fondo</option>
           <option value="suave">Fondo suave</option>
           <option value="acento">Fondo de color</option>
+          <option value="oscuro">Fondo oscuro</option>
+          <option value="degradado">Degradado verde</option>
+          <option value="imagen">Imagen de fondo…</option>
+        </select>
+        {fila.fondo === "imagen" && (
+          <button type="button" onClick={onElegirFondo} className={`${sel} inline-flex items-center gap-1`}><ImageIcon size={12} /> Cambiar imagen</button>
+        )}
+        <select value={fila.espaciado ?? "normal"} onChange={(e) => onEditar({ espaciado: e.target.value as Fila["espaciado"] })} aria-label="Espacio de la fila" className={sel}>
+          <option value="compacto">Compacta</option>
+          <option value="normal">Espacio normal</option>
+          <option value="amplio">Amplia</option>
+        </select>
+        <select value={fila.vertical ?? "arriba"} onChange={(e) => onEditar({ vertical: e.target.value as Fila["vertical"] })} aria-label="Alineación vertical" className={sel}>
+          <option value="arriba">Arriba</option>
+          <option value="centro">Centrado</option>
         </select>
         <span className="flex-1" />
         <button type="button" onClick={() => onMover(-1)} disabled={indice === 0} aria-label="Subir fila" title="Subir fila" className={btn}><ArrowUp size={14} /></button>
         <button type="button" onClick={() => onMover(1)} disabled={indice === total - 1} aria-label="Bajar fila" title="Bajar fila" className={btn}><ArrowDown size={14} /></button>
+        <button type="button" onClick={onCopiar} aria-label="Duplicar fila" title="Duplicar fila" className={btn}><Copy size={14} /></button>
         <button type="button" onClick={() => window.confirm("¿Quitar esta fila y lo que tiene?") && onBorrar()} aria-label="Quitar fila" title="Quitar fila" className={`${btn} text-[#b91c1c]`}><Trash2 size={14} /></button>
       </div>
-      <section className={`grid grid-cols-12 gap-4 ${claseFondo(fila.fondo)}`}>{children}</section>
+      <section className={claseFila(fila)} style={estiloFila(fila)}>{children}</section>
     </div>
+  );
+}
+
+const CAMPO = "lx-input !py-1.5 !text-sm";
+const ETIQUETA = "flex flex-col gap-1 text-xs font-semibold";
+
+/** Un campo de un bloque, según su tipo en el esquema. */
+function CampoBloque({ c, valor, onCambiar, onElegirImagen }: { c: Campo; valor: string; onCambiar: (v: string) => void; onElegirImagen: (cb: (url: string, nombre: string) => void) => void }) {
+  const ayuda = c.ayuda ? <span className="text-[10px] font-normal text-[var(--fg-muted)]">{c.ayuda}</span> : null;
+  switch (c.tipo) {
+    case "area":
+      return <label className={ETIQUETA}>{c.etiqueta}<textarea value={valor} onChange={(v) => onCambiar(v.target.value)} rows={c.k === "datos" ? 7 : 3} className={`${CAMPO} resize-y ${c.k === "datos" ? "font-mono !text-xs" : ""}`} />{ayuda}</label>;
+    case "imagen":
+      return (
+        <div className={ETIQUETA}>
+          {c.etiqueta}
+          <div className="flex items-center gap-2">
+            {valor ? (
+              // eslint-disable-next-line @next/next/no-img-element -- miniatura en el panel
+              <img src={valor} alt="" className="size-12 shrink-0 rounded-md border border-[var(--border)] object-cover" />
+            ) : (
+              <span className="grid size-12 shrink-0 place-items-center rounded-md border border-dashed border-[var(--border-strong)] text-[var(--fg-muted)]"><ImageIcon size={16} /></span>
+            )}
+            <div className="flex min-w-0 flex-1 flex-col gap-1">
+              <button type="button" onClick={() => onElegirImagen((url) => onCambiar(url))} className="rounded-md bg-[var(--accent)] px-2 py-1 text-xs font-semibold text-[var(--accent-fg)]">{valor ? "Cambiar" : "Biblioteca"}</button>
+              <input value={valor} onChange={(v) => onCambiar(v.target.value)} placeholder="o pegue https://…" className={`${CAMPO} !py-1 !text-xs`} />
+            </div>
+            {valor && <button type="button" onClick={() => onCambiar("")} aria-label="Quitar imagen" className="grid size-6 place-items-center rounded text-[#b91c1c] hover:bg-[#b91c1c]/10"><X size={13} /></button>}
+          </div>
+        </div>
+      );
+    case "numero":
+      return <label className={ETIQUETA}>{c.etiqueta}: {valor}<input type="range" min={c.min} max={c.max} step={c.paso ?? 1} value={Number(valor) || c.min} onChange={(v) => onCambiar(v.target.value)} className="accent-[var(--accent)]" />{ayuda}</label>;
+    case "opcion":
+      if (c.opciones.length <= 3 && c.opciones.every(([, l]) => l.length <= 12))
+        return (
+          <div className={ETIQUETA}>
+            {c.etiqueta}
+            <div className="flex gap-1">
+              {c.opciones.map(([k, l]) => (
+                <button key={k} type="button" aria-pressed={valor === k} onClick={() => onCambiar(k)} className={`flex-1 rounded-md border py-1.5 text-xs font-semibold ${valor === k ? "border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-fg)]" : "border-[var(--border)]"}`}>{l}</button>
+              ))}
+            </div>
+          </div>
+        );
+      return (
+        <label className={ETIQUETA}>
+          {c.etiqueta}
+          <select value={valor} onChange={(v) => onCambiar(v.target.value)} className={CAMPO}>
+            {c.opciones.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+          </select>
+        </label>
+      );
+    case "fecha":
+      return <label className={ETIQUETA}>{c.etiqueta}<input type="datetime-local" value={valor} onChange={(v) => onCambiar(v.target.value)} className={CAMPO} /><span className="text-[10px] font-normal text-[var(--fg-muted)]">Hora de Colombia</span></label>;
+    case "url":
+      return <label className={ETIQUETA}>{c.etiqueta}<input value={valor} onChange={(v) => onCambiar(v.target.value)} placeholder="/seccion o https://…" className={CAMPO} />{ayuda}</label>;
+    default:
+      return <label className={ETIQUETA}>{c.etiqueta}<input value={valor} onChange={(v) => onCambiar(v.target.value)} className={CAMPO} />{ayuda}</label>;
+  }
+}
+
+/** Propiedades de un bloque: sus campos y su lista de elementos (tarjetas, diapositivas, preguntas…). */
+function PropiedadesBloque({ e, onCambiarCon, onElegirImagen }: { e: ElementoBloque; onCambiarCon: (fn: (e: Elemento) => void) => void; onElegirImagen: (cb: (url: string, nombre: string) => void) => void }) {
+  const s = ESQUEMAS[e.tipo];
+  const [abierto, setAbierto] = useState<string | null>(e.items[0]?._id ?? null);
+  const conBloque = (fn: (b: ElementoBloque) => void) => onCambiarCon((x) => { if (esBloque(x)) fn(x); });
+  const moverItem = (i: number, d: -1 | 1) => conBloque((b) => { if (i + d < 0 || i + d >= b.items.length) return; const [x] = b.items.splice(i, 1); b.items.splice(i + d, 0, x); });
+  const resumen = (it: Valores, i: number) => it.titulo || it.nombre || it.etiqueta || it.texto?.slice(0, 40) || it.red || it.valor || `${s.items?.nombre} ${i + 1}`;
+  return (
+    <>
+      {s.campos.map((c) => (
+        <CampoBloque key={c.k} c={c} valor={e.p[c.k] ?? ""} onCambiar={(v) => conBloque((b) => void (b.p[c.k] = v))} onElegirImagen={onElegirImagen} />
+      ))}
+      {s.items && (
+        <div className="flex flex-col gap-1.5 border-t border-[var(--border)] pt-3">
+          <p className="text-xs font-bold">{s.items.nombre}s ({e.items.length})</p>
+          {e.items.map((it, i) => {
+            const abiertoEste = abierto === it._id;
+            return (
+              <div key={it._id} className={`rounded-lg border ${abiertoEste ? "border-[var(--accent)]" : "border-[var(--border)]"}`}>
+                <div className="flex items-center gap-1 px-2 py-1.5">
+                  <button type="button" onClick={() => setAbierto(abiertoEste ? null : it._id)} className="flex min-w-0 flex-1 items-center gap-1.5 text-left text-xs font-semibold">
+                    <ChevronDown size={13} className={`shrink-0 transition ${abiertoEste ? "" : "-rotate-90"}`} />
+                    <span className="truncate">{resumen(it, i)}</span>
+                  </button>
+                  <button type="button" onClick={() => moverItem(i, -1)} disabled={i === 0} aria-label="Subir" className="grid size-6 place-items-center rounded hover:bg-[var(--surface-2)] disabled:opacity-30"><ArrowUp size={12} /></button>
+                  <button type="button" onClick={() => moverItem(i, 1)} disabled={i === e.items.length - 1} aria-label="Bajar" className="grid size-6 place-items-center rounded hover:bg-[var(--surface-2)] disabled:opacity-30"><ArrowDown size={12} /></button>
+                  <button type="button" onClick={() => conBloque((b) => void b.items.splice(i + 1, 0, { ...b.items[i], _id: nuevoId() }))} disabled={e.items.length >= s.items!.max} aria-label="Duplicar" className="grid size-6 place-items-center rounded hover:bg-[var(--surface-2)] disabled:opacity-30"><Copy size={12} /></button>
+                  <button type="button" onClick={() => conBloque((b) => void b.items.splice(i, 1))} aria-label="Quitar" className="grid size-6 place-items-center rounded text-[#b91c1c] hover:bg-[#b91c1c]/10"><Trash2 size={12} /></button>
+                </div>
+                {abiertoEste && (
+                  <div className="flex flex-col gap-2.5 border-t border-[var(--border)] p-2.5">
+                    {s.items!.campos.map((c) => (
+                      <CampoBloque key={c.k} c={c} valor={it[c.k] ?? ""} onCambiar={(v) => conBloque((b) => { const x = b.items.find((y) => y._id === it._id); if (x) x[c.k] = v; })} onElegirImagen={onElegirImagen} />
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+          <button
+            type="button"
+            disabled={e.items.length >= s.items.max}
+            onClick={() => {
+              const nuevo = { ...s.items!.nuevo, _id: nuevoId() };
+              conBloque((b) => void b.items.push(nuevo));
+              setAbierto(nuevo._id);
+            }}
+            className="inline-flex items-center justify-center gap-1 rounded-lg border border-dashed border-[var(--border-strong)] py-1.5 text-xs font-semibold hover:border-[var(--accent)] hover:text-[var(--accent)] disabled:opacity-40"
+          >
+            <Plus size={13} /> Añadir {s.items.nombre.toLowerCase()}
+          </button>
+        </div>
+      )}
+    </>
   );
 }
 
 /** Lo que se puede cambiar del elemento elegido. */
 function Propiedades({
-  e, secciones, onCambiar, onMover, onBorrar, onCerrar, onElegirImagen,
+  e, secciones, onCambiar, onCambiarCon, onMover, onCopiar, onBorrar, onCerrar, onElegirImagen,
 }: {
   e: Elemento; secciones: { slug: string; name: string }[];
-  onCambiar: (p: Partial<Elemento>) => void; onMover: (d: -1 | 1) => void; onBorrar: () => void; onCerrar: () => void; onElegirImagen: () => void;
+  onCambiar: (p: Record<string, unknown>) => void; onCambiarCon: (fn: (e: Elemento) => void) => void;
+  onMover: (d: -1 | 1) => void; onCopiar: () => void; onBorrar: () => void; onCerrar: () => void;
+  onElegirImagen: (cb: (url: string, nombre: string) => void) => void;
 }) {
-  const set = (p: Record<string, unknown>) => onCambiar(p as Partial<Elemento>);
-  const campo = "lx-input !py-1.5 !text-sm";
-  const etiqueta = "flex flex-col gap-1 text-xs font-semibold";
+  const set = onCambiar;
+  const campo = CAMPO;
+  const etiqueta = ETIQUETA;
+  const opciones = (k: string, valor: string, ops: [string, string][]) => (
+    <div className="flex gap-1">
+      {ops.map(([v, l]) => (
+        <button key={v} type="button" aria-pressed={valor === v} onClick={() => set({ [k]: v })} className={`flex-1 rounded-md border py-1.5 text-xs font-semibold ${valor === v ? "border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-fg)]" : "border-[var(--border)]"}`}>{l}</button>
+      ))}
+    </div>
+  );
   const alinearCtl = (valor: Alinear | undefined) => (
     <div className={etiqueta}>
       Alineación
@@ -540,8 +768,11 @@ function Propiedades({
         <button type="button" onClick={onCerrar} aria-label="Cerrar" className="grid size-7 place-items-center rounded-md hover:bg-[var(--surface-2)]"><X size={15} /></button>
       </div>
 
+      {esBloque(e) && <PropiedadesBloque e={e} onCambiarCon={onCambiarCon} onElegirImagen={onElegirImagen} />}
+
       {e.tipo === "titulo" && (
         <>
+          <label className={etiqueta}>Antetítulo (opcional)<input value={e.antetitulo ?? ""} onChange={(v) => set({ antetitulo: v.target.value })} className={campo} /></label>
           <label className={etiqueta}>Texto<input value={e.texto} onChange={(v) => set({ texto: v.target.value })} className={campo} /></label>
           <div className={etiqueta}>
             Tamaño
@@ -561,7 +792,10 @@ function Propiedades({
         </>
       )}
       {e.tipo === "lista" && (
-        <label className={etiqueta}>Puntos (uno por línea)<textarea value={e.items.join("\n")} onChange={(v) => set({ items: v.target.value.split("\n") })} rows={6} className={`${campo} resize-y`} /></label>
+        <>
+          <label className={etiqueta}>Puntos (uno por línea)<textarea value={e.items.join("\n")} onChange={(v) => set({ items: v.target.value.split("\n") })} rows={6} className={`${campo} resize-y`} /></label>
+          <div className={etiqueta}>Tipo{opciones("numerada", e.numerada ? "si" : "no", [["no", "Viñetas"], ["si", "Numerada"]])}</div>
+        </>
       )}
       {e.tipo === "cita" && (
         <>
@@ -572,21 +806,17 @@ function Propiedades({
       {e.tipo === "aviso" && (
         <>
           <label className={etiqueta}>Texto<textarea value={e.texto} onChange={(v) => set({ texto: v.target.value })} rows={4} className={`${campo} resize-y`} /></label>
-          <label className={etiqueta}>
-            Tono
-            <select value={e.tono ?? "info"} onChange={(v) => set({ tono: v.target.value })} className={campo}>
-              <option value="info">Información</option>
-              <option value="alerta">Alerta</option>
-            </select>
-          </label>
+          <div className={etiqueta}>Tono{opciones("tono", e.tono ?? "info", [["info", "Información"], ["exito", "Éxito"], ["alerta", "Alerta"]])}</div>
         </>
       )}
       {e.tipo === "imagen" && (
         <>
-          <button type="button" onClick={onElegirImagen} className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[var(--accent-fg)]"><ImageIcon size={15} /> {e.url ? "Cambiar imagen" : "Elegir de la biblioteca"}</button>
+          <button type="button" onClick={() => onElegirImagen((url, nombre) => set({ url, alt: e.alt || nombre }))} className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-[var(--accent-fg)]"><ImageIcon size={15} /> {e.url ? "Cambiar imagen" : "Elegir de la biblioteca"}</button>
           <label className={etiqueta}>O pegue la dirección de la imagen<input value={e.url} onChange={(v) => set({ url: v.target.value })} className={campo} placeholder="https://…" /></label>
           <label className={etiqueta}>Texto alternativo (para lectores de pantalla)<input value={e.alt} onChange={(v) => set({ alt: v.target.value })} className={campo} /></label>
           <label className={etiqueta}>Pie de foto<input value={e.pie ?? ""} onChange={(v) => set({ pie: v.target.value })} className={campo} /></label>
+          <label className={etiqueta}>Al pulsarla, ir a (opcional)<input value={e.url_enlace ?? ""} onChange={(v) => set({ url_enlace: v.target.value })} className={campo} placeholder="/seccion o https://…" /></label>
+          <div className={etiqueta}>Esquinas{opciones("redondeo", e.redondeo ?? "si", [["no", "Rectas"], ["si", "Redondeadas"], ["circulo", "Círculo"]])}</div>
         </>
       )}
       {e.tipo === "video" && <label className={etiqueta}>Enlace de YouTube o Vimeo<input value={e.url} onChange={(v) => set({ url: v.target.value })} className={campo} placeholder="https://www.youtube.com/watch?v=…" /></label>}
@@ -594,19 +824,15 @@ function Propiedades({
         <>
           <label className={etiqueta}>Texto<input value={e.texto} onChange={(v) => set({ texto: v.target.value })} className={campo} /></label>
           <label className={etiqueta}>Enlace<input value={e.url} onChange={(v) => set({ url: v.target.value })} className={campo} placeholder="/contacto o https://…" /></label>
-          <label className={etiqueta}>
-            Estilo
-            <select value={e.estilo ?? "lleno"} onChange={(v) => set({ estilo: v.target.value })} className={campo}>
-              <option value="lleno">Relleno</option>
-              <option value="borde">Solo borde</option>
-            </select>
-          </label>
+          <div className={etiqueta}>Estilo{opciones("estilo", e.estilo ?? "lleno", [["lleno", "Relleno"], ["borde", "Borde"], ["texto", "Solo texto"]])}</div>
+          <div className={etiqueta}>Tamaño{opciones("tamano", e.tamano ?? "normal", [["normal", "Normal"], ["grande", "Grande"]])}</div>
           {alinearCtl(e.alinear)}
         </>
       )}
       {e.tipo === "espacio" && (
-        <label className={etiqueta}>Alto: {e.alto} px<input type="range" min={8} max={200} step={4} value={e.alto} onChange={(v) => set({ alto: Number(v.target.value) })} className="accent-[var(--accent)]" /></label>
+        <label className={etiqueta}>Alto: {e.alto} px<input type="range" min={8} max={240} step={4} value={e.alto} onChange={(v) => set({ alto: Number(v.target.value) })} className="accent-[var(--accent)]" /></label>
       )}
+      {e.tipo === "separador" && <div className={etiqueta}>Estilo{opciones("estilo", e.estilo ?? "linea", [["linea", "Línea"], ["puntos", "Puntos"], ["ornamento", "Rombo"]])}</div>}
       {e.tipo === "notas" && (
         <>
           <label className={etiqueta}>
@@ -616,16 +842,26 @@ function Propiedades({
               {secciones.map((s) => <option key={s.slug} value={s.slug}>{s.name}</option>)}
             </select>
           </label>
-          <label className={etiqueta}>Cuántas notas: {e.cantidad}<input type="range" min={1} max={12} value={e.cantidad} onChange={(v) => set({ cantidad: Number(v.target.value) })} className="accent-[var(--accent)]" /></label>
+          <label className={etiqueta}>
+            Cómo se ven
+            <select value={e.estilo ?? "lista"} onChange={(v) => set({ estilo: v.target.value })} className={campo}>
+              <option value="lista">Lista con miniatura</option>
+              <option value="tarjetas">Tarjetas</option>
+              <option value="carrusel">Carrusel</option>
+              <option value="portada">Una grande y el resto en lista</option>
+            </select>
+          </label>
+          <label className={etiqueta}>Columnas: {e.columnas ?? 2}<input type="range" min={1} max={4} value={e.columnas ?? 2} onChange={(v) => set({ columnas: Number(v.target.value) })} className="accent-[var(--accent)]" /></label>
+          <label className={etiqueta}>Cuántas notas: {e.cantidad}<input type="range" min={1} max={24} value={e.cantidad} onChange={(v) => set({ cantidad: Number(v.target.value) })} className="accent-[var(--accent)]" /></label>
           <p className="text-[11px] text-[var(--fg-muted)]">Salen las más recientes de esa sección y se actualizan solas.</p>
         </>
       )}
-      {e.tipo === "separador" && <p className="text-xs text-[var(--fg-muted)]">Una línea para separar partes de la página.</p>}
 
-      <div className="flex gap-1 border-t border-[var(--border)] pt-3">
-        <button type="button" onClick={() => onMover(-1)} className="inline-flex flex-1 items-center justify-center gap-1 rounded-md border border-[var(--border)] py-1.5 text-xs font-semibold hover:border-[var(--accent)]"><ArrowUp size={13} /> Subir</button>
-        <button type="button" onClick={() => onMover(1)} className="inline-flex flex-1 items-center justify-center gap-1 rounded-md border border-[var(--border)] py-1.5 text-xs font-semibold hover:border-[var(--accent)]"><ArrowDown size={13} /> Bajar</button>
-        <button type="button" onClick={onBorrar} className="inline-flex flex-1 items-center justify-center gap-1 rounded-md border border-[#b91c1c]/30 py-1.5 text-xs font-semibold text-[#b91c1c] hover:bg-[#b91c1c]/10"><Trash2 size={13} /> Quitar</button>
+      <div className="grid grid-cols-4 gap-1 border-t border-[var(--border)] pt-3">
+        <button type="button" onClick={() => onMover(-1)} className="inline-flex items-center justify-center gap-1 rounded-md border border-[var(--border)] py-1.5 text-xs font-semibold hover:border-[var(--accent)]" title="Subir"><ArrowUp size={13} /></button>
+        <button type="button" onClick={() => onMover(1)} className="inline-flex items-center justify-center gap-1 rounded-md border border-[var(--border)] py-1.5 text-xs font-semibold hover:border-[var(--accent)]" title="Bajar"><ArrowDown size={13} /></button>
+        <button type="button" onClick={onCopiar} className="inline-flex items-center justify-center gap-1 rounded-md border border-[var(--border)] py-1.5 text-xs font-semibold hover:border-[var(--accent)]" title="Duplicar (Ctrl/Cmd + D)"><Copy size={13} /></button>
+        <button type="button" onClick={onBorrar} className="inline-flex items-center justify-center gap-1 rounded-md border border-[#b91c1c]/30 py-1.5 text-xs font-semibold text-[#b91c1c] hover:bg-[#b91c1c]/10" title="Quitar (Supr)"><Trash2 size={13} /></button>
       </div>
       <p className="text-[11px] text-[var(--fg-muted)]">También puede arrastrarlo a otra columna o fila.</p>
     </div>
