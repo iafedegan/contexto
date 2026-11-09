@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { autosaveDraft, saveArticle } from "@/app/panel/(app)/articulos/actions";
 import { subirMedia } from "./subir-media";
+import { PedirImagen } from "./pedir-imagen";
 import {
   generateArticleDraft,
   regenerateDraftPart,
@@ -1603,6 +1604,7 @@ export function ArticleWizard({
                     <p className="mt-1.5 text-xs text-[var(--fg-muted)]">Imagen realista, estilo cine (16:9); no retrata personas reales y se publica rotulada «imagen generada con IA».</p>
                   </details>
                 </div>
+                <PedirImagen articleId={savedId} titulo={title} resumen={excerpt} portadaActual={cover} alUsar={(u) => { setCover(u); setImgError(""); }} />
               </div>
             </section>
             {biblioteca && (

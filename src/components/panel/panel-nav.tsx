@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { grupoDe, useGruposMenu } from "@/components/panel/grupos-menu";
-import { CalendarRange, ChevronDown, Images, ClipboardList, PenLine, Inbox, KeyRound, LayoutDashboard, LayoutTemplate, Mail, Newspaper, Settings, Users, Circle } from "lucide-react";
+import { Brush, CalendarRange, ChevronDown, Images, ClipboardList, PenLine, Inbox, KeyRound, LayoutDashboard, LayoutTemplate, Mail, Newspaper, Settings, Users, Circle } from "lucide-react";
 import type { PermisoId } from "@/lib/permisos";
 import { PanelMobileMenu } from "@/components/panel/panel-mobile-menu";
 
@@ -56,6 +56,7 @@ const GROUPS: Group[] = [
       { href: "/panel", label: "Resumen", hint: "Estado editorial, audiencia y suscriptores" },
       { href: "/panel/articulos", label: "Artículos", hint: "Crear, editar y programar", permiso: "articulos" },
       { href: "/panel/biblioteca", label: "Biblioteca de imágenes", hint: "Carpetas e imágenes para las notas, y quién las ve", permiso: "biblioteca" },
+      { href: "/panel/imagenes", label: "Imágenes pedidas", hint: "Portadas que los redactores le piden al diseñador", permiso: "articulos", roles: ["disenador", "editor", "administrador"] },
       { href: "/panel/pendientes", label: "Mis pendientes", hint: "Piezas del grupo de redacción y notas que te enviaron" },
       { href: "/panel/consejo", label: "Grupo de redacción", hint: "Consejo de redacción y notas para editores", permiso: "articulos", soloAdmin: true, tambien: ["/panel/asignaciones"] },
       { href: "/panel/asignaciones", label: "Notas para editores", hint: "Preescribir una nota y enviarla a un editor", permiso: "articulos", soloNoAdmin: true, roles: ["redactor"] },
@@ -117,6 +118,7 @@ const ICONOS: Record<string, typeof Circle> = {
   "/panel": LayoutDashboard,
   "/panel/portada": LayoutTemplate,
   "/panel/biblioteca": Images,
+  "/panel/imagenes": Brush,
   "/panel/paginas": LayoutTemplate,
   "/panel/articulos": Newspaper,
   "/panel/consejo": CalendarRange,
