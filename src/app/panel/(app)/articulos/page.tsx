@@ -15,6 +15,8 @@ import { formatDate } from "@/lib/utils";
 import { nfCO as nf } from "@/lib/format";
 import { ESTADO_LABEL as STATUS_LABEL } from "@/lib/estados";
 import { destinatariosDe } from "@/lib/notas-asignadas";
+import { TabsArticulos } from "@/components/panel/tabs-articulos";
+import { TableroArticulos } from "./tablero";
 
 // Se calcula en cada petición, nunca durante la compilación.
 export const dynamic = "force-dynamic";
@@ -52,6 +54,24 @@ export default async function ArticlesList({ searchParams }: { searchParams: Sea
   const alcance = session?.user ? await condicionMisNotas({ id: session.user.id, role: session.user.role }) : undefined;
   const canDelete = session?.user?.role === "editor" || session?.user?.role === "administrador";
   const sp = await searchParams;
+  // Vista de tablero: en qué etapa está cada nota (redactor, diseñador, editor…). La lista de siempre sigue en la otra pestaña.
+  if (param(sp, "vista") === "tablero") {
+    return (
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-3">
+          <div>
+            <p className="lx-kicker text-[var(--accent)]">Contenido</p>
+            <h1 className="lx-display text-2xl font-semibold tracking-tight">Artículos</h1>
+          </div>
+          <Link href="/panel/articulos/nuevo">
+            <Button>Nuevo artículo</Button>
+          </Link>
+        </div>
+        <TabsArticulos activa="tablero" />
+        <TableroArticulos alcance={alcance} />
+      </div>
+    );
+  }
   const q = param(sp, "q").slice(0, 120);
   const estado = articles.status.enumValues.includes(param(sp, "estado") as Status)
     ? (param(sp, "estado") as Status)
@@ -182,6 +202,7 @@ export default async function ArticlesList({ searchParams }: { searchParams: Sea
 
   return (
     <div className="flex flex-col gap-4">
+      <div className="pt-3 lg:-mb-2"><TabsArticulos activa="lista" /></div>
       {/* --- Título, resumen y filtros: fijos bajo la cabecera del panel --- */}
       <div className="z-30 -mx-2 flex flex-col gap-2 rounded-b-[var(--radius)] bg-white px-2 pb-2 pt-3 lg:sticky lg:top-[var(--panel-header-h,61px)]">
       <div className="flex flex-wrap items-center justify-between gap-3">

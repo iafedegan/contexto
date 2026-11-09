@@ -25,7 +25,7 @@ import type { ZoneBundle } from "@/components/panel/block-style-editor";
 import { SectionPanel } from "@/components/panel/section-panel";
 import { AdsPanel } from "@/components/panel/ads-panel";
 import { NotasLista } from "@/components/panel/notas-lista";
-import { SectionTree, type SectionNode } from "@/components/panel/section-tree";
+import type { SectionNode } from "@/components/panel/section-tree";
 import { CintilloEditor } from "@/components/panel/cintillo-editor";
 import { CarruselEditor, CarruselesExtra } from "@/components/panel/carrusel-editor";
 import { resumenCarrusel } from "@/lib/carrusel";
@@ -646,22 +646,6 @@ export function PreviewChrome({
                       selected={selSlug ? items.findIndex((i) => i.slug === selSlug) : null}
                       onSelect={elegirNota}
                       onMove={moveBlock}
-                    />
-                  </Bloque>
-                  <Bloque titulo="Menú y secciones" resumen={`${sections.length} secciones en el sitio`}>
-                    <p className="mb-3 text-xs leading-relaxed text-[var(--fg-muted)]">
-                      Así cuelga cada sección del menú. Pulsa una para ver de cuál depende y editar su nombre, descripción y orden. Estos cambios se guardan al momento, no pasan por el borrador.
-                    </p>
-                    <SectionTree
-                      sections={sections}
-                      onSaved={() => {
-                        try {
-                          localStorage.setItem(SECCIONES_KEY, String(Date.now()));
-                        } catch {
-                          /* sin almacenamiento */
-                        }
-                        router.refresh();
-                      }}
                     />
                   </Bloque>
                   <Bloque titulo="Carrusel de notas" resumen={layout.carrusel?.activo ? `Activado · ${resumenCarrusel(layout.carrusel)}` : "Apagado"}>
