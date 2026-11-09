@@ -28,20 +28,20 @@ export const getPaginaPublicada = cachear(
   { tags: [TAG_PAGINAS], segundos: 300 },
 );
 
-export type PaginaDeSeccion = { slug: string; titulo: string; descripcion: string | null };
+export type PaginaDeSeccion = { slug: string; titulo: string; descripcion: string | null; contenido: ContenidoPagina };
 
-/** Páginas publicadas que cuelgan de una sección (por la dirección de la sección), por título: así el lector llega a ellas desde la propia sección. */
+/** Páginas publicadas que cuelgan de una sección (por la dirección de la sección), por título, con su contenido: la sección las muestra con su diseño. */
 export const getPaginasDeSeccion = cachear(
   "paginas-de-seccion",
   async (seccionSlug: string): Promise<PaginaDeSeccion[]> => {
     const filas = await db
-      .select({ slug: paginas.slug, titulo: paginas.titulo, descripcion: paginas.descripcion })
+      .select({ slug: paginas.slug, titulo: paginas.titulo, descripcion: paginas.descripcion, contenido: paginas.contenido })
       .from(paginas)
       .innerJoin(categories, eq(paginas.seccionId, categories.id))
       .where(and(eq(categories.slug, seccionSlug), eq(paginas.publicada, true)))
       .orderBy(asc(paginas.titulo))
-      .limit(24);
-    return filas;
+      .limit(12);
+    return filas.map((f) => ({ ...f, contenido: sanearPagina(f.contenido) }));
   },
   { tags: [TAG_PAGINAS], segundos: 300 },
 );
