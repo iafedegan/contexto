@@ -165,7 +165,13 @@ function MastheadHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extr
         {/* Logo a la izquierda y, a su lado, el nombre. `items-center` en ESTA fila: las líneas y el logo quedan en el centro vertical del título. */}
         <div className="flex items-center justify-center gap-6">
           <span data-titulo-linea className="hidden h-px flex-1 bg-gradient-to-r from-transparent to-[var(--border-strong)] md:block" />
-          <Link href={localePath(locale, "/")} className="flex items-center justify-center gap-[0.9cqi]">
+          <Link href={localePath(locale, "/")} className="relative flex items-center justify-center gap-[0.9cqi]">
+            {/* Cinta de aniversario: inclinada sobre la esquina del logo, en la misma lámina dorada del nombre. */}
+            <span
+              className="pointer-events-none absolute -left-[1.2cqi] -top-[0.9cqi] z-10 -rotate-[24deg] whitespace-nowrap rounded-[0.2em] border border-[#7a5d12]/60 bg-gradient-to-b from-[#f0dc9b] to-[#c9a24a] px-[0.9cqi] py-[0.12cqi] text-[clamp(0.5rem,1.35cqi,0.8rem)] font-extrabold uppercase leading-tight tracking-[0.14em] text-[#0b2a1c] shadow-[0_2px_6px_rgba(0,0,0,0.45)]"
+            >
+              {locale === "en" ? "14 years" : "14 años"}
+            </span>
             <span data-el="h-nombre" className="lx-display lx-foil block text-[clamp(1.875rem,6.4cqi,3.75rem)] font-semibold leading-none tracking-tight">
             {/^c/i.test(identity.name) ? (
               <>
