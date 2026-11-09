@@ -26,6 +26,26 @@ export function base64UrlABytes(base64: string): Uint8Array<ArrayBuffer> {
   return bytes;
 }
 
+const CLAVE_BAJA = "cg:push-baja";
+
+/** Recuerda que la persona se dio de baja de los avisos a propósito: sin esto, la renovación diaria la volvía a suscribir sola al recargar. */
+export function recordarBaja(baja: boolean) {
+  try {
+    if (baja) localStorage.setItem(CLAVE_BAJA, "1");
+    else localStorage.removeItem(CLAVE_BAJA);
+  } catch {
+    /* sin almacenamiento */
+  }
+}
+
+const dioDeBaja = () => {
+  try {
+    return localStorage.getItem(CLAVE_BAJA) === "1";
+  } catch {
+    return false;
+  }
+};
+
 // Resultado de pedir la suscripción a notificaciones.
 export type ResultadoSuscripcion = "activada" | "bloqueada" | "rechazada" | "error";
 
@@ -39,6 +59,7 @@ export async function suscribirPush(publicKey: string): Promise<ResultadoSuscrip
       (await reg.pushManager.getSubscription()) ??
       (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: base64UrlABytes(publicKey) }));
     const r = await fetch("/api/push", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(sub.toJSON()) });
+    if (r.ok) recordarBaja(false);
     return r.ok ? "activada" : "error";
   } catch {
     return "error";
@@ -48,7 +69,7 @@ export async function suscribirPush(publicKey: string): Promise<ResultadoSuscrip
 /** Con el permiso ya concedido, renueva el registro en el servidor (como mucho una vez al día). */
 export async function renovarSuscripcion(publicKey: string) {
   try {
-    if (Notification.permission !== "granted") return;
+    if (Notification.permission !== "granted" || dioDeBaja()) return;
     const clave = "cg:push-renovada";
     if (Date.now() - Number(localStorage.getItem(clave) ?? 0) < 24 * 3600_000) return;
     const reg = await navigator.serviceWorker.ready;

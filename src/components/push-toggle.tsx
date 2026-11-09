@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Bell, BellOff, Loader2 } from "lucide-react";
 import { t, type Locale } from "@/lib/i18n";
-import { suscribirPush } from "@/lib/push-client";
+import { recordarBaja, suscribirPush } from "@/lib/push-client";
 
 /**
  * Suscripción a avisos de última hora (FM-01).
@@ -47,6 +47,7 @@ export function PushToggle({ locale, publicKey }: { locale: Locale; publicKey: s
           body: JSON.stringify({ endpoint: actual.endpoint }),
         });
         await actual.unsubscribe();
+        recordarBaja(true);
         setEstado("no");
         return;
       }
