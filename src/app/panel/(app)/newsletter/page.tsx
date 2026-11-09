@@ -4,6 +4,7 @@ import { desc, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { newsletterEditions, newsletterSubscribers } from "@/db/schema";
 import { requirePermiso } from "@/lib/auth";
+import { getGoogleHealth } from "@/lib/newsletter/health";
 import { getNewsletterSettings, getProviderStatus } from "@/lib/newsletter/settings";
 import { confirmarSuscriptor, createEdition, deleteSubscriber, unsubscribeSubscriber } from "./actions";
 import { SettingsForm } from "./settings-form";
@@ -32,6 +33,7 @@ export default async function NewsletterPage({ searchParams }: { searchParams: P
     })
     .from(newsletterSubscribers);
   const provider = await getProviderStatus();
+  const salud = await getGoogleHealth();
   const [{ n: totalEdiciones }] = await db.select({ n: sql<number>`count(*)::int` }).from(newsletterEditions);
   const esAdmin = user.role === "administrador";
   // «Ajustes» (remitente y clave del correo) es solo de administradores: a los demás ni se les muestra.
@@ -69,12 +71,28 @@ export default async function NewsletterPage({ searchParams }: { searchParams: P
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold">Todavía no se pueden enviar correos</p>
             <p className="mt-0.5 text-sm leading-relaxed text-[var(--fg-muted)]">
-              Puedes armar y probar ediciones, pero el envío real necesita conectar el servicio de correo (Resend).{" "}
+              Puedes armar y probar ediciones, pero el envío real necesita conectar el servicio de correo (Gmail o Resend).{" "}
               {esAdmin ? "Es un paso de unos minutos." : "Pídele a un administrador que lo conecte."}
             </p>
           </div>
           {esAdmin && (
             <Link href="?tab=ajustes" className="lx-btn-ghost shrink-0">Conectar el envío <ArrowRight size={14} aria-hidden /></Link>
+          )}
+        </div>
+      )}
+
+      {provider.tipo === "gmail" && salud && !salud.ok && (
+        <div role="alert" className="flex flex-wrap items-start gap-3 rounded-[var(--radius-lg)] border border-red-500/40 bg-red-500/10 p-4">
+          <span className="grid size-9 shrink-0 place-items-center rounded-full bg-red-500/20 text-red-700"><AlertTriangle size={18} aria-hidden /></span>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold">La conexión con Google falló en la última comprobación ({fmt(new Date(salud.checkedAt))})</p>
+            <p className="mt-0.5 text-sm leading-relaxed text-[var(--fg-muted)]">
+              {salud.error} El boletín no se podrá enviar hasta resolverlo.{" "}
+              {esAdmin ? "Ve a Ajustes y vuelve a conectar la cuenta." : "Pídele a un administrador que vuelva a conectar la cuenta."}
+            </p>
+          </div>
+          {esAdmin && (
+            <Link href="?tab=ajustes" className="lx-btn-ghost shrink-0">Reconectar <ArrowRight size={14} aria-hidden /></Link>
           )}
         </div>
       )}

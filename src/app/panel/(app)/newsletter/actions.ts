@@ -19,6 +19,7 @@ import { NEWSLETTER_KEY, NEWSLETTER_SECRET_KEY, getNewsletterSettings, getProvid
 import { sanitizeNewsletterDesign, sanitizeNewsletterSettings, type NewsletterSettings } from "@/lib/newsletter/types";
 import { EMAIL_RE, HEX6 } from "@/lib/validate";
 import { FORMA_GMAIL, accesoGmail } from "@/lib/newsletter/gmail";
+import { clearGoogleHealth, recordGoogleHealth } from "@/lib/newsletter/health";
 
 // Refresca la pantalla del boletín.
 const REVALIDATE = () => revalidatePath("/panel/newsletter");
@@ -263,6 +264,8 @@ export async function saveGmailCredentials(input: { clientId: string; clientSecr
   const prueba = await accesoGmail(c);
   if (!prueba.ok) return { ok: false, message: prueba.error };
   await guardarSecreto({ gmail: encryptSecret(JSON.stringify(c)) });
+  // Credenciales nuevas y recién comprobadas: se apaga cualquier aviso anterior.
+  await recordGoogleHealth({ ok: true, checkedAt: new Date().toISOString() });
   REVALIDATE();
   return { ok: true, message: "Gmail conectado: Google aceptó las credenciales (guardadas cifradas). Revisa que el correo remitente sea la misma cuenta." };
 }
@@ -271,6 +274,7 @@ export async function saveGmailCredentials(input: { clientId: string; clientSecr
 export async function deleteGmailCredentials(): Promise<void> {
   await requireRole("administrador");
   await quitarSecreto("gmail");
+  await clearGoogleHealth();
   REVALIDATE();
 }
 

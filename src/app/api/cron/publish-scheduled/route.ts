@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { cronAutorizado } from "@/lib/cron-auth";
 import { procesarProgramadas } from "@/lib/scheduled";
 import { procesarBoletinesProgramados } from "@/lib/newsletter/envio";
+import { keepGoogleAlive } from "@/lib/newsletter/health";
 import { syncMarketData } from "@/lib/sync-market-data";
 import { purgarVencidos } from "@/lib/mantenimiento";
 import { refrescarObservatorio } from "@/lib/observatorio-fedegan";
@@ -23,6 +24,9 @@ import { revalidatePath } from "next/cache";
  * y ya están ocupados, así que se suben aquí una vez al día. Cada tarea va aislada en su propio try/catch: ninguna debe
  * bloquear la publicación programada. También calienta la caché del Observatorio (15 lecturas al origen de FEDEGÁN), para que
  * la primera visita del día no espere esa descarga.
+ *
+ * Y comprueba la conexión con Google del boletín (si se envía con Gmail): usar el refresh token a diario evita que caduque por
+ * inactividad (6 meses sin uso) y, si Google lo revocó, el panel de Newsletter muestra el aviso.
  */
 export const maxDuration = 300;
 
@@ -44,6 +48,13 @@ export async function GET(req: Request) {
   const consejo = await procesarConsejo({ max: soloProgramados ? 1 : 2 }).catch(() => ({ redactadas: 0 }));
   if (soloProgramados) return NextResponse.json({ published: pasada.slugs, boletines, consejo });
 
+  const newsletterGoogle = await keepGoogleAlive()
+    .then((h) => (h ? h.ok : null))
+    .catch((e) => {
+      console.error("publish-scheduled: falló la comprobación de la conexión con Google", e);
+      return null;
+    });
+
   const [marketData, mantenimiento] = await Promise.all([
     syncMarketData().catch((e) => {
       console.error("publish-scheduled: falló la sincronización de indicadores", e);
@@ -64,5 +75,5 @@ export async function GET(req: Request) {
     revalidatePath("/observatorio");
     revalidatePath("/en/observatorio");
   }
-  return NextResponse.json({ published: pasada.slugs, boletines, consejo, marketData, mantenimiento });
+  return NextResponse.json({ published: pasada.slugs, boletines, consejo, marketData, mantenimiento, newsletterGoogle });
 }

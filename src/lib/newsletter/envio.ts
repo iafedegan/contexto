@@ -121,15 +121,19 @@ export async function enviarTanda(id: string, { origen, tiempoMs }: { origen: Or
       { fromName: settings.fromName, fromEmail: settings.fromEmail, replyTo: settings.replyTo || undefined },
     );
 
+    // `sendMany` entrega en orden y se detiene en el primer fallo: lo entregado es un prefijo de la tanda. El cursor avanza solo hasta
+    // el último entregado, así que al reintentar se continúa justo en el correo que falló, sin repetir a nadie (con Gmail, que envía
+    // de uno en uno, un corte a mitad de tanda —p. ej. el tope diario— dejaría entregados los primeros).
+    delivered += res.delivered;
+    if (res.delivered > 0) cursor = batch[res.delivered - 1].id;
+
     if (res.failed > 0) {
-      // No se avanza el cursor: al reintentar se repite exactamente esta tanda.
-      await db.update(newsletterEditions).set({ failed: sql`${newsletterEditions.failed} + ${res.failed}`, updatedAt: sql`now()` }).where(eq(newsletterEditions.id, id));
+      // Se cuenta 1 intento fallido (el correo que el proveedor rechazó); el resto de la tanda ni se intentó.
+      await db.update(newsletterEditions).set({ cursor, delivered, failed: sql`${newsletterEditions.failed} + 1`, updatedAt: sql`now()` }).where(eq(newsletterEditions.id, id));
       refrescar();
       return falla(`${res.error ?? "El proveedor rechazó la tanda."} Se continúa desde donde quedó.`, edition.total, delivered);
     }
 
-    delivered += res.delivered;
-    cursor = batch[batch.length - 1].id;
     await db.update(newsletterEditions).set({ cursor, delivered, updatedAt: sql`now()` }).where(eq(newsletterEditions.id, id));
   }
 

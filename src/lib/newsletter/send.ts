@@ -85,7 +85,11 @@ export async function sendMany(
   return { delivered, failed, error };
 }
 
-/** Envío por la API de Gmail, uno por uno (Gmail no tiene envío por lotes). Si Google corta por el tope diario, se detiene. */
+/**
+ * Envío por la API de Gmail, uno por uno (Gmail no tiene envío por lotes) y EN ORDEN. Se detiene en el primer fallo (tope diario,
+ * token revocado, dirección inválida…): así `delivered` es siempre un prefijo de la lista y quien llama reanuda justo después del
+ * último entregado, sin repetir correos. (Resend, en cambio, acepta o rechaza el lote entero: ahí no hay entregas a medias.)
+ */
 async function enviarPorGmail(
   messages: Outgoing[],
   opts: { fromName: string; fromEmail: string; replyTo?: string },
@@ -95,23 +99,18 @@ async function enviarPorGmail(
   const acceso = await accesoGmail(cred);
   if (!acceso.ok) return { delivered: 0, failed: messages.length, error: acceso.error };
   let delivered = 0;
-  let failed = 0;
   let error: string | undefined;
   for (let i = 0; i < messages.length; i++) {
     const m = messages[i];
     const raw = armarMime({ from: opts.fromEmail, fromName: opts.fromName, to: m.to, replyTo: opts.replyTo, subject: m.subject, html: m.html, text: m.text, headers: m.headers });
     const r = await enviarGmail(acceso.token, raw);
-    if (r.ok) delivered++;
-    else {
-      failed++;
-      error ??= r.error;
-      if (r.limite) {
-        failed += messages.length - i - 1;
-        break;
-      }
+    if (!r.ok) {
+      error = r.error;
+      break;
     }
+    delivered++;
     // Un respiro entre correos: Gmail limita la ráfaga por segundo.
     if (i + 1 < messages.length) await sleep(150);
   }
-  return { delivered, failed, error };
+  return { delivered, failed: messages.length - delivered, error };
 }
