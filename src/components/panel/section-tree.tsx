@@ -605,7 +605,7 @@ function PaginasDeLaSeccion({ sel }: { sel: SectionNode }) {
         <p className="mb-2 text-[11px] leading-snug text-[var(--fg-muted)]">
           Cambia cómo se ve la página de esta sección (cabecera, tarjetas y orden de las notas) en el editor de portada.
         </p>
-        <Link href={`/panel/portada?vista=1&seccion=${encodeURIComponent(sel.slug)}`} className="inline-flex items-center gap-1 rounded-full bg-[var(--accent)] px-3 py-1.5 text-xs font-semibold text-[var(--accent-fg)] hover:opacity-90">
+        <Link href={`/panel/portada?vista=1&seccion=${encodeURIComponent(sel.slug)}`} className="inline-flex items-center gap-1 rounded-full bg-[var(--accent)] px-3 py-1.5 text-xs font-semibold !text-white hover:opacity-90">
           <Pencil size={12} /> Editar apariencia
         </Link>
       </div>
@@ -625,7 +625,7 @@ function PaginasDeLaSeccion({ sel }: { sel: SectionNode }) {
                   <ExternalLink size={13} />
                 </a>
               )}
-              <Link href={`/panel/paginas/${p.id}`} className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[var(--accent)] px-3 py-1.5 text-xs font-semibold text-[var(--accent-fg)] hover:opacity-90">
+              <Link href={`/panel/paginas/${p.id}`} className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[var(--accent)] px-3 py-1.5 text-xs font-semibold !text-white hover:opacity-90">
                 <Pencil size={12} /> Editar página
               </Link>
             </div>
