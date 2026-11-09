@@ -7,6 +7,7 @@ import { createPortal } from "react-dom";
 import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, ExternalLink, Loader2, Maximize2, Network, Pencil, Plus, Trash2, X } from "lucide-react";
 import { SeccionForm } from "@/components/panel/seccion-form";
 import { NuevaPagina } from "@/components/panel/nueva-pagina";
+import { crearPagina } from "@/app/panel/(app)/paginas/actions";
 import { NAV_VISIBLE } from "@/lib/nav-limits";
 import {
   crearSeccion,
@@ -618,20 +619,52 @@ function WideTree({
 }
 
 /** Las páginas del constructor que cuelgan de la sección elegida («Editar página») y el botón para crear otra. */
+// La acción principal de una sección: abrir el constructor sobre ella. Sin página, la crea (borrador, con el nombre de la sección) y la abre.
+function DisenarSeccion({ sel, primera }: { sel: SectionNode; primera: PaginaDeSeccion | null }) {
+  const router = useRouter();
+  const [error, setError] = useState("");
+  const [ocupado, start] = useTransition();
+  const clase = "inline-flex items-center gap-1.5 rounded-full bg-[var(--accent)] px-4 py-2 text-sm font-semibold !text-white hover:opacity-90 disabled:opacity-60";
+  return (
+    <div>
+      <p className="mb-1 text-xs font-semibold">Página de {sel.name}</p>
+      <p className="mb-2 text-[11px] leading-snug text-[var(--fg-muted)]">
+        {primera
+          ? "Ya tiene una página: ábrela para agregar o cambiar filas, columnas, textos, imágenes y notas."
+          : "Diséñala con el constructor: filas, columnas, textos, imágenes y notas. Queda como borrador hasta que la publiques."}
+      </p>
+      {primera ? (
+        <Link href={`/panel/paginas/${primera.id}`} className={clase}>
+          <Pencil size={14} /> Abrir el constructor
+        </Link>
+      ) : (
+        <button
+          type="button"
+          disabled={ocupado}
+          onClick={() => {
+            setError("");
+            start(async () => {
+              const r = await crearPagina(sel.name, sel.id);
+              if (r.ok && r.id) router.push(`/panel/paginas/${r.id}`);
+              else if (!r.ok) setError(r.error);
+            });
+          }}
+          className={clase}
+        >
+          {ocupado ? <Loader2 size={14} className="animate-spin" /> : <Pencil size={14} />} Crear y diseñar la página
+        </button>
+      )}
+      {error && <p className="mt-1 text-xs text-[#b91c1c]">{error}</p>}
+    </div>
+  );
+}
+
 function PaginasDeLaSeccion({ sel }: { sel: SectionNode }) {
   const todas = useContext(PaginasCtx);
   const suyas = (todas ?? []).filter((p) => p.seccionId === sel.id);
   return (
     <div className="flex flex-col gap-2 rounded-[var(--radius)] border border-dashed border-[var(--border-strong)] p-2.5">
-      <div>
-        <p className="mb-1 text-xs font-semibold">Apariencia de {sel.name}</p>
-        <p className="mb-2 text-[11px] leading-snug text-[var(--fg-muted)]">
-          Cambia cómo se ve la página de esta sección (cabecera, tarjetas y orden de las notas) en el editor de portada.
-        </p>
-        <Link href={`/panel/portada?vista=1&seccion=${encodeURIComponent(sel.slug)}`} className="inline-flex items-center gap-1 rounded-full bg-[var(--accent)] px-3 py-1.5 text-xs font-semibold !text-white hover:opacity-90">
-          <Pencil size={12} /> Editar apariencia
-        </Link>
-      </div>
+      <DisenarSeccion sel={sel} primera={suyas[0] ?? null} />
       {suyas.length > 0 && (
         <div className="flex flex-col gap-1.5">
           <p className="text-xs font-semibold">Páginas de {sel.name} ({suyas.length})</p>
