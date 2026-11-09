@@ -225,6 +225,13 @@
       "when": 1794200000000,
       "tag": "0031_paginas",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1794241114335,
+      "tag": "0032_etiquetas_de_suscriptores",
+      "breakpoints": true
     }
   ]
 }

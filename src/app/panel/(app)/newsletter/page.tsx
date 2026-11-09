@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { AlertTriangle, ArrowRight, CheckCircle2, Clock, Download, Mail, MailPlus, Newspaper, Settings2, Sparkles, UserMinus, Users } from "lucide-react";
-import { desc, sql } from "drizzle-orm";
+import { AlertTriangle, ArrowRight, CheckCircle2, Clock, Download, Mail, MailPlus, Newspaper, Search, Settings2, Sparkles, Tag, UserMinus, Users } from "lucide-react";
+import { and, desc, ilike, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { newsletterEditions, newsletterSubscribers } from "@/db/schema";
 import { requirePermiso } from "@/lib/auth";
@@ -8,6 +8,8 @@ import { getGoogleHealth } from "@/lib/newsletter/health";
 import { getNewsletterSettings, getProviderStatus } from "@/lib/newsletter/settings";
 import { confirmarSuscriptor, createEdition, deleteSubscriber, unsubscribeSubscriber } from "./actions";
 import { SettingsForm } from "./settings-form";
+import { BarraEtiquetado, EtiquetasSuscriptor, GestorEtiquetas } from "./etiquetas-ui";
+import { etiquetasEnUso } from "@/lib/newsletter/etiquetas-bd";
 import { BorrarEdicion } from "./borrar-edicion";
 import { TEMAS_INTERES } from "@/lib/newsletter/audiencia-tipos";
 import { describirCuando } from "@/lib/newsletter/programacion";
@@ -21,9 +23,9 @@ export const maxDuration = 300;
 const fmt = (d: Date | null) => (d ? new Intl.DateTimeFormat("es-CO", { dateStyle: "medium", timeStyle: "short", timeZone: "America/Bogota" }).format(d) : "—");
 
 // Pantalla del boletín en pestañas: ediciones, suscriptores y ajustes (exige el permiso «newsletter»).
-export default async function NewsletterPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
+export default async function NewsletterPage({ searchParams }: { searchParams: Promise<{ tab?: string; q?: string; etiqueta?: string }> }) {
   const user = await requirePermiso("newsletter");
-  const { tab = "ediciones" } = await searchParams;
+  const { tab = "ediciones", q = "", etiqueta = "" } = await searchParams;
   const [counts] = await db
     .select({
       activos: sql<number>`count(*) filter (where confirmed and unsubscribed_at is null)::int`,
@@ -125,7 +127,7 @@ export default async function NewsletterPage({ searchParams }: { searchParams: P
       </nav>
 
       {pestana === "ediciones" && <Ediciones />}
-      {pestana === "suscriptores" && <Suscriptores admin={esAdmin} />}
+      {pestana === "suscriptores" && <Suscriptores admin={esAdmin} q={q} etiqueta={etiqueta} />}
       {pestana === "ajustes" && esAdmin && (
         <SettingsForm settings={await getNewsletterSettings()} provider={provider} canManage />
       )}
@@ -190,37 +192,90 @@ async function Ediciones() {
   );
 }
 
-// Lista de los últimos 200 suscriptores, con su estado y acciones.
-async function Suscriptores({ admin }: { admin: boolean }) {
-  const rows = await db.select().from(newsletterSubscribers).orderBy(desc(newsletterSubscribers.createdAt)).limit(200);
+// Valor del filtro «Sin etiqueta» de la lista de suscriptores.
+const SIN_ETIQUETA = "__sin_etiqueta__";
+
+// Lista de los últimos 200 suscriptores (o de los que cumplen la búsqueda y la etiqueta elegidas), con su estado, sus etiquetas y acciones.
+async function Suscriptores({ admin, q, etiqueta }: { admin: boolean; q: string; etiqueta: string }) {
+  const busqueda = q.trim().slice(0, 80);
+  const patron = `%${busqueda.replace(/[\\%_]/g, "\\$&")}%`;
+  const filtros = [
+    ...(busqueda
+      ? [or(ilike(newsletterSubscribers.email, patron), ilike(newsletterSubscribers.firstName, patron), ilike(newsletterSubscribers.lastName, patron), ilike(newsletterSubscribers.city, patron), ilike(newsletterSubscribers.signupCity, patron))]
+      : []),
+    ...(etiqueta === SIN_ETIQUETA ? [sql`${newsletterSubscribers.tags} = '[]'::jsonb`] : etiqueta ? [sql`${newsletterSubscribers.tags} ? ${etiqueta}::text`] : []),
+  ];
+  const donde = filtros.length ? and(...filtros) : undefined;
+  const [rows, [{ n: total }], enUso] = await Promise.all([
+    db.select().from(newsletterSubscribers).where(donde).orderBy(desc(newsletterSubscribers.createdAt)).limit(200),
+    db.select({ n: sql<number>`count(*)::int` }).from(newsletterSubscribers).where(donde),
+    etiquetasEnUso(),
+  ]);
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between gap-2 text-sm text-[var(--fg-muted)]">
-        <span>Últimos {rows.length} suscriptores</span>
+      {/* Las etiquetas ya creadas, para sugerirlas al escribir (evita «Aliado» y «Aliados» por separado). */}
+      <datalist id="etiquetas-existentes">
+        {enUso.map((e) => <option key={e.nombre} value={e.nombre} />)}
+      </datalist>
+
+      <section aria-label="Etiquetas" className="flex flex-col gap-2 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-4">
+        <div>
+          <h2 className="inline-flex items-center gap-1.5 text-sm font-semibold"><Tag size={15} aria-hidden className="text-[var(--accent)]" /> Etiquetas</h2>
+          <p className="mt-0.5 text-xs leading-relaxed text-[var(--fg-muted)]">
+            Clasifica a tus suscriptores con etiquetas propias («Aliados», «Prensa», «Ganaderos de Antioquia»…). Luego, en el paso «¿A quién va?» de cada edición, puedes enviarla solo a quienes llevan una etiqueta.
+          </p>
+        </div>
+        <GestorEtiquetas etiquetas={enUso} esAdmin={admin} />
+      </section>
+
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <form method="get" className="flex flex-wrap items-center gap-2">
+          <input type="hidden" name="tab" value="suscriptores" />
+          <input name="q" defaultValue={busqueda} placeholder="Buscar por correo, nombre o ciudad" aria-label="Buscar suscriptores" className="lx-input !w-80 !py-1.5 text-sm" />
+          <select name="etiqueta" defaultValue={etiqueta} aria-label="Filtrar por etiqueta" className="lx-input !w-auto !py-1.5 text-sm">
+            <option value="">Todas las etiquetas</option>
+            <option value={SIN_ETIQUETA}>Sin etiqueta</option>
+            {enUso.map((e) => <option key={e.nombre} value={e.nombre}>{e.nombre} ({e.n})</option>)}
+          </select>
+          <button className="lx-btn !px-3 !py-1.5 text-xs"><Search size={13} aria-hidden /> Filtrar</button>
+          {(busqueda || etiqueta) && <Link href="?tab=suscriptores" className="text-xs underline">Quitar filtros</Link>}
+        </form>
         <Link href="/api/boletin/exportar" prefetch={false} className="lx-btn-ghost !px-3 !py-1.5 text-xs"><Download size={13} aria-hidden /> Exportar CSV</Link>
       </div>
+
+      <p className="text-sm text-[var(--fg-muted)]">
+        {busqueda || etiqueta ? `${total} ${total === 1 ? "suscriptor cumple" : "suscriptores cumplen"} el filtro` : `${total} ${total === 1 ? "suscriptor" : "suscriptores"}`}
+        {total > rows.length && ` · se muestran los ${rows.length} más recientes: afina la búsqueda para ver a los demás`}
+      </p>
+
+      <BarraEtiquetado />
+
       <ul className="divide-y divide-[var(--border)] rounded-[var(--radius)] border border-[var(--border)]">
+        {rows.length === 0 && <li className="p-4 text-sm text-[var(--fg-muted)]">Nadie coincide con ese filtro.</li>}
         {rows.map((r) => (
           <li key={r.id} className="flex flex-wrap items-center justify-between gap-2 p-3 text-sm">
-            <span>
-              {r.firstName || r.lastName ? `${r.firstName ?? ""} ${r.lastName ?? ""}`.trim() + " · " : ""}
-              {r.email}
-              {(r.city || r.signupCity) && (
-                <span className="ml-2 text-xs text-[var(--fg-muted)]">· {r.city || r.signupCity}</span>
-              )}
-              {Array.isArray(r.interests) && r.interests.length > 0 && (
-                <span className="ml-2 text-xs text-[var(--fg-muted)]">· {(r.interests as string[]).map((t) => TEMAS_INTERES.find((x) => x.id === t)?.es ?? t).join(", ")}</span>
-              )}
-              {r.signupPostal && (
-                <span className="ml-2 text-xs text-[var(--fg-muted)]">· C.P. {r.signupPostal}</span>
-              )}
-              {r.birthDate && (
-                <span className="ml-2 text-xs text-[var(--fg-muted)]">
-                  · {new Date(`${r.birthDate}T00:00:00`).toLocaleDateString("es-CO", { dateStyle: "medium" })}
-                </span>
-              )}
-              {r.mobile && <span className="ml-2 text-xs text-[var(--fg-muted)]">· {r.mobile}</span>}
+            <span className="flex items-start gap-2">
+              <input type="checkbox" data-suscriptor value={r.id} aria-label={`Marcar a ${r.email}`} className="mt-1" />
+              <span>
+                {r.firstName || r.lastName ? `${r.firstName ?? ""} ${r.lastName ?? ""}`.trim() + " · " : ""}
+                {r.email}
+                {(r.city || r.signupCity) && (
+                  <span className="ml-2 text-xs text-[var(--fg-muted)]">· {r.city || r.signupCity}</span>
+                )}
+                {Array.isArray(r.interests) && r.interests.length > 0 && (
+                  <span className="ml-2 text-xs text-[var(--fg-muted)]">· {(r.interests as string[]).map((t) => TEMAS_INTERES.find((x) => x.id === t)?.es ?? t).join(", ")}</span>
+                )}
+                {r.signupPostal && (
+                  <span className="ml-2 text-xs text-[var(--fg-muted)]">· C.P. {r.signupPostal}</span>
+                )}
+                {r.birthDate && (
+                  <span className="ml-2 text-xs text-[var(--fg-muted)]">
+                    · {new Date(`${r.birthDate}T00:00:00`).toLocaleDateString("es-CO", { dateStyle: "medium" })}
+                  </span>
+                )}
+                {r.mobile && <span className="ml-2 text-xs text-[var(--fg-muted)]">· {r.mobile}</span>}
+              </span>
             </span>
             <span className="flex items-center gap-3 text-xs text-[var(--fg-muted)]">
               <span className={`rounded-full px-2 py-0.5 text-[0.7rem] font-semibold ${r.unsubscribedAt ? "bg-[var(--surface-2)] text-[var(--fg-muted)]" : r.confirmed ? "bg-[#16a34a]/12 text-[#15803d]" : "bg-amber-500/15 text-amber-700"}`}>{r.unsubscribedAt ? "Baja" : r.confirmed ? "Activo" : "Pendiente"}</span> {fmt(r.createdAt)}
@@ -232,6 +287,10 @@ async function Suscriptores({ admin }: { admin: boolean }) {
               {!r.unsubscribedAt && <form action={unsubscribeSubscriber.bind(null, r.id)}><button className="underline">Dar de baja</button></form>}
               {admin && <form action={deleteSubscriber.bind(null, r.id)}><button className="text-red-600 underline">Eliminar</button></form>}
             </span>
+            {/* La clave incluye las etiquetas: si cambian desde otra acción (masiva, renombrar…) la fila se vuelve a montar con lo guardado. */}
+            <div className="w-full pl-6">
+              <EtiquetasSuscriptor key={`${r.id}:${(Array.isArray(r.tags) ? r.tags : []).join("|")}`} id={r.id} inicial={Array.isArray(r.tags) ? (r.tags as string[]) : []} />
+            </div>
           </li>
         ))}
       </ul>

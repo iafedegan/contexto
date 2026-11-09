@@ -156,6 +156,12 @@ export function Destinatarios({ valor, alCambiar, opciones, cuantos, bloqueada }
 
       {!sinNadie && grupo && (
         <div className="flex flex-col gap-3 border-t border-[var(--border)] pt-3">
+          {/* Etiquetas que puso el equipo en Suscriptores. Las ya elegidas que dejaron de existir (renombradas o eliminadas) siguen visibles para poder quitarlas. */}
+          <Grupo titulo="Etiquetas" ayuda={opciones.etiquetas.length === 0 && valor.etiquetas.length === 0 ? "aún no hay ninguna: se crean en la pestaña Suscriptores" : "las que puso el equipo"}>
+            {[...opciones.etiquetas, ...valor.etiquetas.filter((e) => !opciones.etiquetas.some((o) => o.nombre === e)).map((e) => ({ nombre: e, n: 0 }))].map((e) => (
+              <Opcion key={e.nombre} activa={valor.etiquetas.includes(e.nombre)} texto={e.nombre} n={e.n} deshabilitada={bloqueada} alPulsar={() => poner({ etiquetas: alternar(valor.etiquetas, e.nombre) })} />
+            ))}
+          </Grupo>
           <Grupo titulo="Temas de interés" ayuda={`${opciones.conTemas} de ${opciones.total} han elegido temas`}>
             {TEMAS_INTERES.map((t) => (
               <Opcion key={t.id} activa={valor.temas.includes(t.id)} texto={t.es} n={nTema(t.id)} deshabilitada={bloqueada} alPulsar={() => poner({ temas: alternar(valor.temas, t.id) })} />
@@ -174,7 +180,7 @@ export function Destinatarios({ valor, alCambiar, opciones, cuantos, bloqueada }
             ))}
           </Grupo>
           <p className="text-xs text-[var(--fg-muted)]">
-            Dentro de cada grupo basta con una opción (Bogotá <em>o</em> Medellín); entre grupos tienen que cumplirse todos (esa ciudad <em>y</em> ese tema). Quien no eligió temas no recibe las ediciones filtradas por tema.
+            Dentro de cada grupo basta con una opción (Bogotá <em>o</em> Medellín); entre grupos tienen que cumplirse todos (esa ciudad <em>y</em> ese tema). Quien no eligió temas no recibe las ediciones filtradas por tema, y quien no lleva la etiqueta no recibe las filtradas por esa etiqueta.
           </p>
           {!bloqueada && (
             <button type="button" className="lx-link inline-flex w-fit items-center gap-1 text-xs font-semibold" onClick={() => { setModoGrupo(false); alCambiar(AUDIENCIA_VACIA); }}>

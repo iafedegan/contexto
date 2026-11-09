@@ -520,6 +520,8 @@ export const newsletterSubscribers = pgTable("newsletter_subscribers", {
   city: text("city"),
   /** Temas que la persona eligió al suscribirse (identificadores de `TEMAS_INTERES`); sirve para enviar una edición solo a quien le interesa. */
   interests: jsonb("interests").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+  /** Etiquetas que pone el equipo desde el panel («Aliados», «Prensa»…); sirven para enviar una edición solo a un grupo. Ver `lib/newsletter/etiquetas.ts`. */
+  tags: jsonb("tags").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
   signupLat: numeric("signup_lat"),
   signupLon: numeric("signup_lon"),
   confirmed: boolean("confirmed").notNull().default(false),

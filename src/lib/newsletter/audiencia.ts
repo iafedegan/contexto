@@ -24,6 +24,7 @@ export function condicionAudiencia(a: Audiencia): SQL[] {
   if (a.ciudades.length) c.push(sql`${CIUDAD} in (${valores(a.ciudades)})`);
   if (a.paises.length) c.push(sql`upper(${t.signupCountry}) in (${valores(a.paises)})`);
   if (a.temas.length) c.push(sql`${t.interests} ?| array[${valores(a.temas)}]::text[]`);
+  if (a.etiquetas.length) c.push(sql`${t.tags} ?| array[${valores(a.etiquetas)}]::text[]`);
   if (a.nuevosDias !== null) c.push(sql`${t.createdAt} > now() - make_interval(days => ${a.nuevosDias})`);
   return c;
 }
@@ -49,11 +50,13 @@ export type OpcionesAudiencia = {
   ciudades: { clave: string; nombre: string; n: number; lat: number | null; lon: number | null }[];
   paises: { codigo: string; n: number }[];
   temas: { id: string; n: number }[];
+  /** Etiquetas puestas por el equipo, con cuántos suscriptores activos (confirmados y sin baja) las llevan. */
+  etiquetas: { nombre: string; n: number }[];
 };
 
 export async function opcionesAudiencia(): Promise<OpcionesAudiencia> {
   const base = sql`confirmed and unsubscribed_at is null`;
-  const [ciudades, paises, temas, totales, pend] = await Promise.all([
+  const [ciudades, paises, temas, totales, pend, etiquetas] = await Promise.all([
     db.execute(sql`
       select ${CIUDAD} as clave, min(coalesce(nullif(city, ''), signup_city)) as nombre, count(*)::int as n,
              avg(signup_lat::float8) as lat, avg(signup_lon::float8) as lon
@@ -71,6 +74,10 @@ export async function opcionesAudiencia(): Promise<OpcionesAudiencia> {
       select count(*)::int as total, count(*) filter (where interests <> '[]'::jsonb)::int as con_temas
       from newsletter_subscribers where ${base}`),
     db.execute(sql`select count(*)::int as n from newsletter_subscribers where not confirmed and unsubscribed_at is null`),
+    db.execute(sql`
+      select e as nombre, count(*)::int as n
+      from newsletter_subscribers, jsonb_array_elements_text(tags) e
+      where ${base} group by e order by n desc, e limit 200`),
   ]);
   const fila = (rowsOf(totales)[0] ?? {}) as { total?: number; con_temas?: number };
   return {
@@ -86,5 +93,6 @@ export async function opcionesAudiencia(): Promise<OpcionesAudiencia> {
     })),
     paises: (rowsOf(paises) as { codigo: string; n: number }[]).map((r) => ({ codigo: String(r.codigo), n: Number(r.n) })),
     temas: (rowsOf(temas) as { id: string; n: number }[]).map((r) => ({ id: String(r.id), n: Number(r.n) })),
+    etiquetas: (rowsOf(etiquetas) as { nombre: string; n: number }[]).map((r) => ({ nombre: String(r.nombre), n: Number(r.n) })),
   };
 }

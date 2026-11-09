@@ -20,6 +20,8 @@ import { sanitizeNewsletterDesign, sanitizeNewsletterSettings, type NewsletterSe
 import { EMAIL_RE, HEX6 } from "@/lib/validate";
 import { FORMA_GMAIL, accesoGmail } from "@/lib/newsletter/gmail";
 import { clearGoogleHealth, recordGoogleHealth } from "@/lib/newsletter/health";
+import { limpiarEtiqueta } from "@/lib/newsletter/etiquetas";
+import { agregarAVarios, eliminarEtiqueta, fijarEtiquetas, quitarDeVarios, renombrarEtiqueta } from "@/lib/newsletter/etiquetas-bd";
 
 // Refresca la pantalla del boletín.
 const REVALIDATE = () => revalidatePath("/panel/newsletter");
@@ -304,4 +306,60 @@ export async function deleteSubscriber(id: string): Promise<void> {
   await requireRole("administrador");
   await db.delete(newsletterSubscribers).where(eq(newsletterSubscribers.id, id));
   REVALIDATE();
+}
+
+// --- Etiquetas de suscriptores -------------------------------------------
+// Grupos que pone el equipo («Aliados», «Prensa»…) para enviar una edición solo a quienes los llevan (paso «¿A quién va?»).
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+/** Máximo de personas por operación masiva. */
+const MAX_MASIVO = 1000;
+
+const personas = (n: number) => `${n} ${n === 1 ? "suscriptor" : "suscriptores"}`;
+
+/** Fija las etiquetas de UNA persona (sustituye su lista). */
+export async function guardarEtiquetasSuscriptor(id: string, etiquetas: unknown): Promise<{ ok: boolean; message: string; etiquetas: string[] }> {
+  await requirePermiso("newsletter");
+  if (!UUID.test(id)) return { ok: false, message: "Suscriptor no válido.", etiquetas: [] };
+  const guardadas = await fijarEtiquetas(id, etiquetas);
+  if (!guardadas) return { ok: false, message: "Ese suscriptor ya no existe.", etiquetas: [] };
+  REVALIDATE();
+  return { ok: true, message: "Etiquetas guardadas", etiquetas: guardadas };
+}
+
+/** Pone o quita una etiqueta a las personas marcadas (hasta 1.000 a la vez). */
+export async function etiquetarVarios(ids: unknown, etiqueta: unknown, modo: "agregar" | "quitar"): Promise<{ ok: boolean; message: string }> {
+  await requirePermiso("newsletter");
+  const lista = Array.isArray(ids) ? [...new Set(ids.filter((x): x is string => typeof x === "string" && UUID.test(x)))].slice(0, MAX_MASIVO) : [];
+  if (lista.length === 0) return { ok: false, message: "Marca al menos un suscriptor." };
+  if (!limpiarEtiqueta(etiqueta)) return { ok: false, message: "Escribe el nombre de la etiqueta." };
+
+  if (modo === "quitar") {
+    const r = await quitarDeVarios(lista, String(etiqueta));
+    REVALIDATE();
+    return { ok: true, message: r.cambiados === 0 ? `Ninguno de los marcados llevaba «${r.etiqueta}».` : `Se quitó «${r.etiqueta}» a ${personas(r.cambiados)}.` };
+  }
+  const r = await agregarAVarios(lista, String(etiqueta));
+  REVALIDATE();
+  const partes = [r.cambiados > 0 ? `Se puso «${r.etiqueta}» a ${personas(r.cambiados)}.` : `Los marcados ya llevaban «${r.etiqueta}».`];
+  if (r.llenos > 0) partes.push(`${personas(r.llenos)} no la recibió${r.llenos === 1 ? "" : "ron"} por llevar ya el máximo de etiquetas.`);
+  return { ok: true, message: partes.join(" ") };
+}
+
+/** Cambia el nombre de una etiqueta en todas las personas que la llevan (solo administradores). Si el nombre nuevo ya existe, se unen. */
+export async function renombrarEtiquetaGlobal(de: string, nuevo: string): Promise<{ ok: boolean; message: string }> {
+  await requireRole("administrador");
+  if (!limpiarEtiqueta(nuevo)) return { ok: false, message: "Escribe el nombre nuevo." };
+  const r = await renombrarEtiqueta(de, nuevo);
+  if (!r) return { ok: false, message: "No se cambió nada: el nombre es el mismo o la etiqueta ya no existe." };
+  REVALIDATE();
+  return { ok: true, message: `«${de}» ahora se llama «${r.nombre}» (${personas(r.afectados)}). Las ediciones en borrador que filtraban por el nombre anterior hay que volver a filtrarlas.` };
+}
+
+/** Quita una etiqueta de todas las personas (solo administradores). Las personas no se tocan: solo pierden la etiqueta. */
+export async function eliminarEtiquetaGlobal(nombre: string): Promise<{ ok: boolean; message: string }> {
+  await requireRole("administrador");
+  const n = await eliminarEtiqueta(nombre);
+  REVALIDATE();
+  return { ok: true, message: n === 0 ? "Esa etiqueta ya no la llevaba nadie." : `Se eliminó «${nombre}» de ${personas(n)}.` };
 }

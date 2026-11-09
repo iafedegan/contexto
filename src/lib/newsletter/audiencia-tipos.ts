@@ -1,8 +1,10 @@
+import { limpiarEtiqueta } from "@/lib/newsletter/etiquetas";
+
 /**
  * A quién va una edición del boletín. Sin `server-only`: lo usan el servidor (al contar y enviar) y el panel (al elegir).
  *
  * `{}` (sin filtros) = todos los suscriptores confirmados y sin baja. Con filtros, cada TIPO de filtro tiene que cumplirse
- * (ciudad Y tema Y país Y antigüedad) y, dentro de un mismo tipo, basta con una opción (Bogotá O Medellín).
+ * (ciudad Y tema Y país Y etiqueta Y antigüedad) y, dentro de un mismo tipo, basta con una opción (Bogotá O Medellín).
  */
 
 /** Temas de interés que se ofrecen al suscribirse. Lista cerrada y estable: son los que sirven para segmentar. */
@@ -29,11 +31,13 @@ export type Audiencia = {
   paises: string[];
   /** Temas de interés (`TEMAS_INTERES`): basta con que le interese uno. */
   temas: string[];
+  /** Etiquetas que puso el equipo (tal como se escriben): basta con que la persona lleve una. */
+  etiquetas: string[];
   /** Solo quienes se suscribieron en los últimos N días; `null` = sin límite. */
   nuevosDias: number | null;
 };
 
-export const AUDIENCIA_VACIA: Audiencia = { ciudades: [], paises: [], temas: [], nuevosDias: null };
+export const AUDIENCIA_VACIA: Audiencia = { ciudades: [], paises: [], temas: [], etiquetas: [], nuevosDias: null };
 
 /** Clave con que se agrupan las ciudades: minúsculas, sin tildes ni espacios sobrantes («  Bogotá » → «bogota»). */
 export const claveCiudad = (s: string) => s.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase().replace(/\s+/g, " ").trim();
@@ -49,12 +53,13 @@ export function sanitizarAudiencia(v: unknown): Audiencia {
     ciudades: lista(o.ciudades, 30, () => true, claveCiudad),
     paises: lista(o.paises, 10, (s) => /^[A-Za-z]{2}$/.test(s), (s) => s.toUpperCase()),
     temas: lista(o.temas, TEMAS_INTERES.length, (s) => IDS_TEMAS.has(s)),
+    etiquetas: lista(o.etiquetas, 20, () => true, limpiarEtiqueta),
     nuevosDias: dias !== null && dias >= 1 && dias <= 3650 ? dias : null,
   };
 }
 
 /** ¿Hay algún filtro? Sin filtros, la edición va a todos. */
-export const esSegmento = (a: Audiencia) => a.ciudades.length > 0 || a.paises.length > 0 || a.temas.length > 0 || a.nuevosDias !== null;
+export const esSegmento = (a: Audiencia) => a.ciudades.length > 0 || a.paises.length > 0 || a.temas.length > 0 || a.etiquetas.length > 0 || a.nuevosDias !== null;
 
 /** Frase corta con a quién va («Bogotá y Medellín · interesados en Precios y mercado · nuevos de los últimos 30 días»). */
 export function describirAudiencia(a: Audiencia, nombreCiudad: (clave: string) => string = (c) => c, nombrePais: (c: string) => string = (c) => c): string {
@@ -64,6 +69,8 @@ export function describirAudiencia(a: Audiencia, nombreCiudad: (clave: string) =
   if (a.ciudades.length) partes.push(unir(a.ciudades.map(nombreCiudad)));
   if (a.paises.length) partes.push(unir(a.paises.map(nombrePais)));
   if (a.temas.length) partes.push(`interesados en ${unir(a.temas.map((t) => TEMAS_INTERES.find((x) => x.id === t)?.es ?? t))}`);
+  // Las etiquetas se unen con «o»: basta con llevar una.
+  if (a.etiquetas.length) partes.push(`con ${a.etiquetas.length === 1 ? "la etiqueta" : "las etiquetas"} ${a.etiquetas.map((e) => `«${e}»`).join(" o ")}`);
   if (a.nuevosDias !== null) partes.push(`suscritos en los últimos ${a.nuevosDias} días`);
   return partes.join(" · ");
 }

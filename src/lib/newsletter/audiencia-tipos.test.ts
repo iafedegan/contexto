@@ -31,6 +31,16 @@ test("lo que llega de la red se limpia: temas conocidos, países de dos letras, 
 
 test("la descripción dice a quién va", () => {
   assert.equal(describirAudiencia(AUDIENCIA_VACIA), "Todos los suscriptores");
-  const d = describirAudiencia({ ciudades: ["bogota", "medellin"], paises: [], temas: ["precios"], nuevosDias: 30 }, (c) => c.toUpperCase());
+  const d = describirAudiencia({ ciudades: ["bogota", "medellin"], paises: [], temas: ["precios"], etiquetas: [], nuevosDias: 30 }, (c) => c.toUpperCase());
   assert.equal(d, "BOGOTA y MEDELLIN · interesados en Precios y mercado · suscritos en los últimos 30 días");
+});
+
+test("las etiquetas son un filtro más: se limpian, cuentan como segmento y se describen con «o»", () => {
+  const a = sanitizarAudiencia({ etiquetas: ["  Aliados ", "Aliados", "Prensa\n", 5, "", "x".repeat(100)] });
+  assert.deepEqual(a.etiquetas, ["Aliados", "Prensa", "x".repeat(40)]);
+  assert.equal(esSegmento({ ...AUDIENCIA_VACIA, etiquetas: ["Aliados"] }), true);
+  assert.equal(sanitizarAudiencia({ etiquetas: "Aliados" }).etiquetas.length, 0, "no es una lista: se ignora");
+  assert.equal(sanitizarAudiencia({ etiquetas: Array.from({ length: 50 }, (_, i) => `e${i}`) }).etiquetas.length, 20);
+  assert.equal(describirAudiencia({ ...AUDIENCIA_VACIA, etiquetas: ["Aliados"] }), "con la etiqueta «Aliados»");
+  assert.equal(describirAudiencia({ ...AUDIENCIA_VACIA, ciudades: ["bogota"], etiquetas: ["Aliados", "Prensa"] }), "bogota · con las etiquetas «Aliados» o «Prensa»");
 });
