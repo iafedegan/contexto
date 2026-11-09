@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, ExternalLink, Loader2, Maximize2, Network, Pencil, Plus, Trash2, X } from "lucide-react";
 import { SeccionForm } from "@/components/panel/seccion-form";
@@ -453,6 +454,9 @@ function WideTree({
 }) {
   const ROW = 38, NODE_H = 30, PAD = 28;
   const CW = 172, GAP = 66;
+  // Una sección con UNA página: el clic en su caja abre el editor de esa página; la ⚙ abre los datos de la sección.
+  const router = useRouter();
+  const paginasCtx = useContext(PaginasCtx) ?? [];
 
   // Calco de la barra: 8 secciones, «Buscar» (fijo) y «Más» con el resto.
   type TNode = { key: string; label: string; kind: "root" | "item" | "extra" | "fixed" | "more" | "sub"; section?: SectionNode; kids: TNode[] };
@@ -551,15 +555,17 @@ function WideTree({
                 const c = look(t);
                 const pick = t.section;
                 const isSel = !!pick && selected === pick.id;
+                const suyas = pick ? paginasCtx.filter((p) => p.seccionId === pick.id) : [];
+                const unica = suyas.length === 1 ? suyas[0] : null;
                 return (
                   <g
                     key={t.key}
-                    onClick={pick ? () => onSelect(pick.id) : undefined}
+                    onClick={pick ? () => (unica ? router.push(`/panel/paginas/${unica.id}`) : onSelect(pick.id)) : undefined}
                     className={pick ? "cursor-pointer" : undefined}
                     role={pick ? "button" : undefined}
-                    aria-label={t.label}
+                    aria-label={unica ? `${t.label}: editar su página` : t.label}
                   >
-                    {pick && <title>{`${pick.name} · ${pick.articleCount} notas`}</title>}
+                    {pick && <title>{unica ? `${pick.name} · clic para editar su página «${unica.titulo}»` : `${pick.name} · ${pick.articleCount} notas`}</title>}
                     <rect x={x} y={y - NODE_H / 2} width={CW} height={NODE_H} rx={NODE_H / 2} fill={c.fill} stroke={isSel ? "#c9a227" : c.stroke} strokeWidth={isSel ? 3 : 2} strokeDasharray={t.kind === "fixed" ? "4 3" : undefined} />
                     <text x={t.kind === "root" || t.kind === "more" || t.kind === "fixed" ? x + CW / 2 : x + 14} y={y + 4} textAnchor={t.kind === "root" || t.kind === "more" || t.kind === "fixed" ? "middle" : "start"} fontSize="12.5" fontWeight={t.kind === "sub" || t.kind === "fixed" ? 600 : 700} fill={c.text}>
                       {trunc(t.label, 19)}
@@ -567,6 +573,23 @@ function WideTree({
                     {pick && (
                       <text x={x + CW - 12} y={y + 4} textAnchor="end" fontSize="11" fontWeight="700" fill={c.num}>
                         {pick.articleCount}
+                      </text>
+                    )}
+                    {unica && (
+                      <text
+                        x={x + CW - 40}
+                        y={y + 5}
+                        textAnchor="middle"
+                        fontSize="13"
+                        fill={c.num}
+                        className="cursor-pointer"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onSelect(pick!.id);
+                        }}
+                      >
+                        <title>Datos de la sección (nombre, orden, de qué depende)</title>
+                        ⚙
                       </text>
                     )}
                   </g>
