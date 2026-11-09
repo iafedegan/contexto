@@ -120,7 +120,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
   return (
     <div data-theme="panel" className="lx-shell">
       {/* Barra lateral (escritorio): con el color de la plantilla activa, la navegación agrupada y la cuenta al pie. */}
-      <aside data-theme="panel-header" style={{ ...estiloMarca, backgroundImage: `linear-gradient(180deg, ${marca.desde}, ${marca.hasta})` }} className="peer/sb group/sb fixed inset-y-0 left-0 z-50 hidden w-16 flex-col gap-6 overflow-y-auto overflow-x-hidden px-3 py-6 text-[var(--fg)] shadow-[8px_0_30px_-18px_rgba(0,0,0,0.6)] transition-[width] duration-200 ease-out hover:w-64 focus-within:w-64 lg:flex">
+      <aside data-theme="panel-header" style={{ ...estiloMarca, backgroundImage: `linear-gradient(180deg, ${marca.desde}, ${marca.hasta})` }} className="lx-sb peer/sb group/sb fixed inset-y-0 left-0 z-50 hidden w-16 flex-col gap-6 overflow-y-auto overflow-x-hidden px-3 py-6 text-[var(--fg)] shadow-[8px_0_30px_-18px_rgba(0,0,0,0.6)] transition-[width] duration-200 ease-out hover:w-64 focus-within:w-64 lg:flex">
         <Link href="/panel" className="flex shrink-0 items-center gap-3 rounded-xl px-1">
           <span className="shrink-0"><LogoMark size={36} /></span>
           <span className="lx-display whitespace-nowrap text-base font-semibold leading-tight opacity-0 transition-opacity duration-150 group-hover/sb:opacity-100 group-focus-within/sb:opacity-100">Panel editorial</span>

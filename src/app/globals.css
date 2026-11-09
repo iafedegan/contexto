@@ -2361,3 +2361,98 @@ body:has(.cg-cintillo-arriba) .cg-cinta-cabecera { display: none; }
   footer[data-region="footer"] li > a,
   nav[aria-label] ol a { display: inline-block; padding-block: 0.3rem; }
 }
+
+/* ===================== PANEL: ACABADO PROFUNDO ==============================
+   Capa de estilo para TODAS las pantallas del panel (el lienzo claro `panel-amber`). No toca la paleta, que viene de la plantilla activa:
+   cambia la estructura. Superficies que flotan con sombras en capas, relieve en los botones, halo al enfocar un campo, tablas finas y una
+   barra lateral con luz interior. Todo queda fuera del sitio público (`[data-site-root]`).
+   ============================================================================ */
+
+/* Tarjetas: blancas, de borde fino teñido, con luz arriba y una sombra suave en capas (antes, filete de color grueso y borde duro). */
+[data-theme="panel-amber"] .lx-card:not([data-site-root] *) {
+  border: 1px solid color-mix(in srgb, var(--accent) 14%, #dde2da);
+  border-radius: 1.25rem;
+  background: linear-gradient(180deg, #ffffff 0%, color-mix(in srgb, var(--accent) 3%, #ffffff) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 1px 1px rgba(16, 32, 24, 0.04),
+    0 6px 14px -6px rgba(16, 32, 24, 0.08),
+    0 28px 52px -30px rgba(16, 32, 24, 0.3);
+}
+@media (hover: hover) {
+  [data-theme="panel-amber"] a.lx-card:not([data-site-root] *):hover,
+  [data-theme="panel-amber"] .lx-card:not([data-site-root] *):hover {
+    transform: translateY(-2px);
+    border-color: color-mix(in srgb, var(--accent) 38%, #dde2da);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.9),
+      0 2px 3px rgba(16, 32, 24, 0.06),
+      0 12px 22px -8px rgba(16, 32, 24, 0.12),
+      0 36px 60px -30px rgba(16, 32, 24, 0.38);
+  }
+}
+
+/* Botones: con relieve y luz, en minúsculas legibles (antes todo en mayúsculas gritando). */
+[data-theme="panel-amber"] .lx-btn:not([data-site-root] *) {
+  min-height: 2.5rem;
+  border-radius: 0.85rem;
+  padding: 0.55rem 1.2rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 86%, #ffffff) 0%, var(--accent) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.24),
+    0 1px 2px rgba(16, 32, 24, 0.28),
+    0 10px 20px -12px color-mix(in srgb, var(--accent) 85%, transparent);
+}
+@media (hover: hover) {
+  [data-theme="panel-amber"] .lx-btn:not([data-site-root] *):hover {
+    transform: translateY(-1px);
+    filter: brightness(1.06);
+  }
+}
+[data-theme="panel-amber"] .lx-btn:not([data-site-root] *):active { transform: translateY(0); filter: brightness(0.97); }
+[data-theme="panel-amber"] .lx-btn-ghost:not([data-site-root] *) {
+  background: #ffffff;
+  border-color: color-mix(in srgb, var(--accent) 22%, #d4dad1);
+  color: var(--fg);
+  box-shadow: 0 1px 2px rgba(16, 32, 24, 0.08);
+}
+@media (hover: hover) {
+  [data-theme="panel-amber"] .lx-btn-ghost:not([data-site-root] *):hover { background: color-mix(in srgb, var(--accent) 6%, #ffffff); filter: none; }
+}
+
+/* Campos: esquinas amplias y un halo suave al enfocar. El reposo va con baja especificidad para no pelear con las clases de cada pantalla. */
+:where([data-theme="panel-amber"]) :where(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]), select, textarea) {
+  border-radius: 0.85rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+[data-theme="panel-amber"] :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]), select, textarea):focus-visible:not([data-site-root] *) {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+/* Tablas: cabecera tenue y pequeña, filas separadas por una línea fina. */
+[data-theme="panel-amber"] thead th:not([data-site-root] *) {
+  background: color-mix(in srgb, var(--accent) 5%, #ffffff);
+  color: var(--fg-muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+}
+[data-theme="panel-amber"] tbody tr:not([data-site-root] *) { transition: background-color 0.15s ease; }
+[data-theme="panel-amber"] tbody tr:hover:not([data-site-root] *) { background: color-mix(in srgb, var(--accent) 5%, transparent); }
+
+/* Títulos de pantalla: más ajustados, con carácter. */
+[data-theme="panel-amber"] h1:not([data-site-root] *) { letter-spacing: -0.028em; }
+
+/* Barra lateral: luz interior arriba, un filo de cristal a la derecha y una sombra larga hacia el contenido. */
+.lx-sb {
+  box-shadow:
+    inset -1px 0 0 rgba(255, 255, 255, 0.07),
+    inset 0 140px 130px -130px rgba(255, 255, 255, 0.1),
+    18px 0 50px -26px rgba(0, 0, 0, 0.6);
+}
