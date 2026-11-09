@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { categories, paginas } from "@/db/schema";
 import { requirePermiso } from "@/lib/auth";
 import { NuevaPagina } from "@/components/panel/nueva-pagina";
+import { BorrarPagina } from "@/components/panel/borrar-pagina";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Páginas" };
@@ -36,8 +37,8 @@ export default async function Paginas() {
       ) : (
         <ul className="divide-y divide-[var(--border)] overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)]">
           {lista.map((p) => (
-            <li key={p.id}>
-              <Link href={`/panel/paginas/${p.id}`} className="flex flex-wrap items-center gap-3 px-5 py-4 transition hover:bg-[var(--surface-2)]">
+            <li key={p.id} className="flex items-center gap-1 pr-3 transition hover:bg-[var(--surface-2)]">
+              <Link href={`/panel/paginas/${p.id}`} className="flex min-w-0 flex-1 flex-wrap items-center gap-3 px-5 py-4">
                 <span className="min-w-0 flex-1">
                   <span className="block font-semibold">{p.titulo}</span>
                   <span className="block font-mono text-xs text-[var(--fg-muted)]">/{p.slug}{p.seccion ? ` · en ${p.seccion}` : ""}</span>
@@ -45,6 +46,7 @@ export default async function Paginas() {
                 <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${p.publicada ? "bg-[#16a34a]/15 text-[#15803d]" : "bg-[#f2a900]/20 text-[#8a6200]"}`}>{p.publicada ? "Publicada" : "Borrador"}</span>
                 <span className="text-xs text-[var(--fg-muted)]">{p.updatedAt.toLocaleDateString("es-CO", { day: "numeric", month: "short", year: "numeric" })}</span>
               </Link>
+              <BorrarPagina id={p.id} titulo={p.titulo} />
             </li>
           ))}
         </ul>
