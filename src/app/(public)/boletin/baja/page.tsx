@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { newsletterSubscribers } from "@/db/schema";
@@ -18,10 +19,16 @@ async function darDeBaja(formData: FormData) {
   "use server";
   const s = String(formData.get("s") ?? "");
   const t = String(formData.get("t") ?? "");
-  if (!verifyUnsubscribeToken(s, t)) return;
-  await db.update(newsletterSubscribers).set({ unsubscribedAt: new Date() }).where(eq(newsletterSubscribers.id, s));
+  if (!verifyUnsubscribeToken(s, t)) redirect("/boletin/baja");
+  // El enlace de un correo de PRUEBA (sin suscriptor real) o de alguien ya eliminado no trae un id que exista: antes la consulta fallaba
+  // con un id que no es UUID, o no cambiaba nada, y la página se quedaba igual, como si el botón no hiciera nada.
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s)) {
+    await db.update(newsletterSubscribers).set({ unsubscribedAt: new Date() }).where(eq(newsletterSubscribers.id, s));
+  }
   // Desde este navegador se vuelve a ofrecer el boletín.
   await quitarMarcaSuscriptor().catch(() => undefined);
+  // Siempre se confirma en pantalla (sin revelar si la dirección existía).
+  redirect(`/boletin/baja?s=${encodeURIComponent(s)}&t=${encodeURIComponent(t)}&ok=1`);
 }
 
 /**
@@ -34,7 +41,7 @@ export default async function BajaPage({ searchParams }: { searchParams: Promise
   const site = await getSiteTheme();
   const valido = s.length > 0 && t.length > 0 && verifyUnsubscribeToken(s, t);
   let yaDeBaja = false;
-  if (valido) {
+  if (valido && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s)) {
     const [row] = await db.select({ u: newsletterSubscribers.unsubscribedAt }).from(newsletterSubscribers).where(eq(newsletterSubscribers.id, s)).limit(1);
     yaDeBaja = !!row?.u;
   }
