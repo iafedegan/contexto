@@ -181,7 +181,7 @@ function MastheadHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extr
                 {identity.name.slice(1)}
               </>
             ) : (
-              {identity.name}
+              identity.name
             )}
             </span>
           </Link>

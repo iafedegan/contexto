@@ -141,7 +141,7 @@ export function MobileNav({
                 {name.slice(1)}
               </>
             ) : (
-              {name}
+              name
             )}</span>
           {tagline && <span data-titulo-texto data-el="h-lema" className="lx-ui mt-1 block truncate text-[0.62rem] font-semibold uppercase leading-none tracking-[0.14em] text-[var(--fg-muted)]">{tagline}</span>}
           {fecha && <span data-titulo-texto data-el="h-fecha" className="lx-ui mt-1 block truncate text-[0.6rem] font-medium uppercase leading-none tracking-[0.14em] text-[var(--fg-muted)]">{fecha}</span>}
@@ -265,7 +265,7 @@ export function MobileNav({
         >
           <div className="flex items-center justify-between gap-3 border-b border-[var(--border)] px-4 pb-2 pt-[max(0.5rem,env(safe-area-inset-top))]">
             <Link href={localePath(locale, "/")} onClick={() => setOpen(false)} className="lx-display lx-foil min-w-0 truncate text-lg font-semibold">
-              {name}
+              name
             </Link>
             <button ref={closeRef} type="button" onClick={() => setOpen(false)} aria-label={label.close} className={btn}>
               <X size={22} />
