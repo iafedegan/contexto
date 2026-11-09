@@ -46,6 +46,7 @@ const GROUPS: Group[] = [
         hint: "Plantilla, fondo, orden y estilo de las tarjetas",
         permiso: "portada",
       },
+      { href: "/panel/paginas", label: "Páginas", hint: "Crear páginas y armarlas arrastrando elementos en una cuadrícula", permiso: "portada" },
     ],
   },
   {
@@ -116,6 +117,7 @@ const ICONOS: Record<string, typeof Circle> = {
   "/panel": LayoutDashboard,
   "/panel/portada": LayoutTemplate,
   "/panel/biblioteca": Images,
+  "/panel/paginas": LayoutTemplate,
   "/panel/articulos": Newspaper,
   "/panel/consejo": CalendarRange,
   "/panel/asignaciones": PenLine,

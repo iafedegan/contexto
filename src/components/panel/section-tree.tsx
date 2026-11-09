@@ -4,6 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, Loader2, Maximize2, Network, Plus, Trash2, X } from "lucide-react";
 import { SeccionForm } from "@/components/panel/seccion-form";
+import { NuevaPagina } from "@/components/panel/nueva-pagina";
 import { NAV_VISIBLE } from "@/lib/nav-limits";
 import {
   crearSeccion,
@@ -357,6 +358,13 @@ function Detail({
           ← Ir a {parent.name}
         </button>
       )}
+
+      {/* Páginas de diseño libre que cuelgan de esta sección: se crean aquí y se arman en el constructor. */}
+      <div className="rounded-[var(--radius)] border border-dashed border-[var(--border-strong)] p-2.5">
+        <p className="mb-1.5 text-xs font-semibold">Página nueva en {sel.name}</p>
+        <p className="mb-2 text-[11px] leading-snug text-[var(--fg-muted)]">Se abre el constructor para armarla con filas, columnas y elementos que se arrastran. <a href="/panel/paginas" className="font-semibold text-[var(--accent)]">Ver todas las páginas</a></p>
+        <NuevaPagina seccionId={sel.id} compacto />
+      </div>
 
       <SeccionForm key={`${sel.id}:${sel.sortOrder}`} {...pick(sel)} onSaved={onSaved} />
 

@@ -1,0 +1,54 @@
+import Link from "next/link";
+import { desc, eq } from "drizzle-orm";
+import { db } from "@/db";
+import { categories, paginas } from "@/db/schema";
+import { requirePermiso } from "@/lib/auth";
+import { NuevaPagina } from "@/components/panel/nueva-pagina";
+
+export const dynamic = "force-dynamic";
+export const metadata = { title: "Páginas" };
+
+// Lista de las páginas armadas con el constructor y el botón para crear una.
+export default async function Paginas() {
+  await requirePermiso("portada");
+  const [lista, secciones] = await Promise.all([
+    db
+      .select({ id: paginas.id, titulo: paginas.titulo, slug: paginas.slug, publicada: paginas.publicada, updatedAt: paginas.updatedAt, seccion: categories.name })
+      .from(paginas)
+      .leftJoin(categories, eq(categories.id, paginas.seccionId))
+      .orderBy(desc(paginas.updatedAt)),
+    db.select({ id: categories.id, name: categories.name }).from(categories).orderBy(categories.sortOrder, categories.name),
+  ]);
+  return (
+    <div className="flex flex-col gap-6">
+      <header className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold">Páginas</h1>
+          <p className="mt-1 max-w-3xl text-sm text-[var(--fg-muted)]">
+            Cree una página y ármela como en un CMS: divida cada fila en columnas y arrastre títulos, textos, imágenes, botones o notas a cada una.
+            Queda en borrador hasta que la publique.
+          </p>
+        </div>
+        <NuevaPagina secciones={secciones} />
+      </header>
+      {lista.length === 0 ? (
+        <p className="rounded-xl border border-dashed border-[var(--border-strong)] p-10 text-center text-sm text-[var(--fg-muted)]">Todavía no hay páginas. Cree la primera con «Nueva página».</p>
+      ) : (
+        <ul className="divide-y divide-[var(--border)] overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)]">
+          {lista.map((p) => (
+            <li key={p.id}>
+              <Link href={`/panel/paginas/${p.id}`} className="flex flex-wrap items-center gap-3 px-5 py-4 transition hover:bg-[var(--surface-2)]">
+                <span className="min-w-0 flex-1">
+                  <span className="block font-semibold">{p.titulo}</span>
+                  <span className="block font-mono text-xs text-[var(--fg-muted)]">/{p.slug}{p.seccion ? ` · en ${p.seccion}` : ""}</span>
+                </span>
+                <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${p.publicada ? "bg-[#16a34a]/15 text-[#15803d]" : "bg-[#f2a900]/20 text-[#8a6200]"}`}>{p.publicada ? "Publicada" : "Borrador"}</span>
+                <span className="text-xs text-[var(--fg-muted)]">{p.updatedAt.toLocaleDateString("es-CO", { day: "numeric", month: "short", year: "numeric" })}</span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}

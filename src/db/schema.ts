@@ -12,6 +12,7 @@ import type { HomeTitleFont } from "@/lib/home-fonts";
 import type { RegionStyles } from "@/lib/home-regions";
 import type { TemplateParts } from "@/lib/template-parts";
 import type { TickerConfig } from "@/lib/cintillo";
+import type { ContenidoPagina } from "@/lib/paginas-bloques";
 import type { CarruselConfig } from "@/lib/carrusel";
 import type { TextosCabecera } from "@/lib/textos-cabecera";
 import type { MenuNavbar } from "@/lib/menu-navbar";
@@ -997,4 +998,25 @@ export const mediaFolderAccess = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [primaryKey({ columns: [t.folderId, t.userId] }), index("media_folder_access_user_idx").on(t.userId)],
+);
+
+/**
+ * Páginas armadas en el panel con el constructor (filas, columnas y elementos arrastrados). Se publican en `/{slug}`.
+ * `seccionId` las cuelga de una sección del árbol (para encontrarlas allí); es opcional.
+ */
+export const paginas = pgTable(
+  "paginas",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    slug: text("slug").notNull().unique(),
+    titulo: text("titulo").notNull(),
+    descripcion: text("descripcion"),
+    seccionId: uuid("seccion_id").references(() => categories.id, { onDelete: "set null" }),
+    contenido: jsonb("contenido").$type<ContenidoPagina>().notNull().default(sql`'{"filas":[]}'::jsonb`),
+    publicada: boolean("publicada").notNull().default(false),
+    updatedBy: uuid("updated_by").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("paginas_seccion_idx").on(t.seccionId)],
 );
