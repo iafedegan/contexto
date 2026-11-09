@@ -716,6 +716,7 @@ export const DOCUMENTOS: DocumentoInstitucional[] = [
               items: [
                 "Cookie «cg_med»: recuerda tu decisión (sí o no). Dura hasta un año si aceptas y 90 días si rechazas.",
                 "Cookie «cg_vid»: un código aleatorio que solo sirve para contar personas distintas y saber si ya habías leído antes. No contiene tu nombre, tu correo ni tu IP. Dura hasta 400 días y se borra en cuanto retiras el permiso.",
+                "Cookie «cg_sus» (necesaria, no requiere permiso): solo existe si confirmaste tu suscripción al boletín desde este navegador o llegaste desde el enlace de uno. Sirve para no volver a ofrecerte el formulario de suscripción. No contiene tu correo ni datos del equipo. Dura un año y se borra al darte de baja.",
                 "No guardamos tu IP ni el identificador de tu navegador: la ciudad y el departamento se deducen de la conexión de forma aproximada y el dispositivo se clasifica en celular, tableta o computador.",
                 "Las lecturas medidas se conservan 400 días y se borran solas. El análisis se hace de forma agregada: no vemos a una persona sola.",
                 "Por defecto la medición NO se une con tu suscripción al boletín ni con ningún dato que te identifique.",
@@ -816,6 +817,7 @@ export const DOCUMENTOS: DocumentoInstitucional[] = [
               tipo: "lista",
               items: [
                 "Cookie “cg_med”: remembers your decision (yes or no). It lasts up to a year if you accept and 90 days if you decline.",
+                "Cookie “cg_sus” (necessary, no permission required): only exists if you confirmed your newsletter subscription from this browser or arrived from a newsletter link. It is used so we do not offer you the signup form again. It holds neither your email nor device data. It lasts one year and is deleted when you unsubscribe.",
                 "Cookie “cg_vid”: a random code used only to count distinct people and to know whether you have read before. It contains no name, email or IP address. It lasts up to 400 days and is deleted as soon as you withdraw permission.",
                 "We do not store your IP address or your browser identifier: city and region are approximated from the connection, and the device is only classified as phone, tablet or computer.",
                 "Measured readings are kept for 400 days and deleted automatically. Analysis is aggregated: we never look at a single person.",

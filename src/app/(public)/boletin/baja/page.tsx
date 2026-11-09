@@ -6,6 +6,7 @@ import { newsletterSubscribers } from "@/db/schema";
 import { SiteShell } from "@/components/site-shell";
 import { getSiteTheme } from "@/lib/site-theme";
 import { verifyUnsubscribeToken } from "@/lib/newsletter/token";
+import { quitarMarcaSuscriptor } from "@/lib/suscriptor-navegador";
 
 // Se calcula en cada petición, nunca durante la compilación.
 export const dynamic = "force-dynamic";
@@ -19,6 +20,8 @@ async function darDeBaja(formData: FormData) {
   const t = String(formData.get("t") ?? "");
   if (!verifyUnsubscribeToken(s, t)) return;
   await db.update(newsletterSubscribers).set({ unsubscribedAt: new Date() }).where(eq(newsletterSubscribers.id, s));
+  // Desde este navegador se vuelve a ofrecer el boletín.
+  await quitarMarcaSuscriptor().catch(() => undefined);
 }
 
 /**

@@ -26,6 +26,7 @@ import { reverseGeocode, sourceFromAccuracy, validAccuracy, validCoords } from "
 import { EMAIL_RE, fechaNacimientoValida } from "@/lib/validate";
 import { esUuid } from "@/lib/lectores-entrada";
 import { autorizarLectura, vincularVisitante } from "@/lib/lectores-suscriptor";
+import { marcarNavegadorSuscriptor } from "@/lib/suscriptor-navegador";
 
 // Estado que se devuelve al formulario: si salió bien y el mensaje.
 export type BoletinState = { ok: boolean; message: string } | null;
@@ -162,6 +163,8 @@ export async function confirmarSuscripcion(formData: FormData): Promise<void> {
       .set({ confirmed: true, unsubscribedAt: null, signupIp: null })
       .where(eq(newsletterSubscribers.confirmToken, token))
       .returning({ id: newsletterSubscribers.id, autorizo: sql<boolean>`${newsletterSubscribers.readingAuthorizedAt} is not null` });
+    // Este navegador es de un suscriptor confirmado: no se le vuelve a ofrecer el formulario.
+    if (c) await marcarNavegadorSuscriptor(c.id).catch(() => undefined);
     // Quien confirma controla ese correo: si autorizó su lectura y este navegador ya la mide, el vínculo queda VERIFICADO.
     if (c?.autorizo) {
       try {

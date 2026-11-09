@@ -19,26 +19,20 @@ const subscribeGeo = (cb: () => void) => {
   };
 };
 
-// Quien se suscribió desde este navegador no vuelve a ver el formulario durante 30 días (en ninguno de sus sitios: barra lateral, pie…).
-const SUSCRITO = "cg_suscrito";
+// Quien ya es suscriptor CONFIRMADO no ve el formulario: lo sabe la cookie `cg_sus`, que el sitio pone al confirmar el correo o al
+// llegar desde el enlace de un boletín, y quita al darse de baja (src/lib/suscriptor-navegador.ts). Llenar el formulario sin
+// confirmar no la pone: esa persona sigue viendo la invitación.
 const EVENTO_SUSCRITO = "cg-suscrito";
 const suscribirSuscrito = (cb: () => void) => {
   window.addEventListener(EVENTO_SUSCRITO, cb);
-  window.addEventListener("storage", cb);
-  return () => {
-    window.removeEventListener(EVENTO_SUSCRITO, cb);
-    window.removeEventListener("storage", cb);
-  };
+  return () => window.removeEventListener(EVENTO_SUSCRITO, cb);
 };
 const yaSuscrito = () => {
   try {
-    // Se guarda la fecha del alta y el formulario vuelve a salir pasados 30 días: si la persona no confirmó el correo,
-    // se dio de baja o era una prueba, no se queda sin la invitación para siempre. (Antes era una marca «1» sin fecha.)
-    const v = Number(localStorage.getItem(SUSCRITO));
-    return Number.isFinite(v) && v > 1 && Date.now() - v < 30 * 24 * 3600 * 1000;
-  } catch {
-    return false;
-  }
+    // La marca vieja de este navegador (sin confirmar) ya no cuenta.
+    localStorage.removeItem("cg_suscrito");
+  } catch {}
+  return /(?:^|;\s*)cg_sus=/.test(document.cookie);
 };
 
 /**
@@ -57,16 +51,6 @@ export function NewsletterForm({ locale, compacto = false }: { locale: Locale; c
     setTodosLosTemas(marcar);
   };
   const suscrito = useSyncExternalStore(suscribirSuscrito, yaSuscrito, () => false);
-  // Al darse de alta se recuerda en este navegador; el mensaje de «revisa tu correo» se ve esta vez y después el formulario ya no sale.
-  useEffect(() => {
-    if (!state?.ok) return;
-    try {
-      localStorage.setItem(SUSCRITO, String(Date.now()));
-      window.dispatchEvent(new Event(EVENTO_SUSCRITO));
-    } catch {
-      /* sin almacenamiento: volverá a salir */
-    }
-  }, [state]);
   // La ubicación la autoriza la persona en el aviso del sitio (cookie cg_loc).
   const geoRaw = useSyncExternalStore(subscribeGeo, readGeo, () => null);
   const geo = (() => {

@@ -3,6 +3,10 @@ import { NextResponse } from "next/server";
 import { clientIp, hit } from "@/lib/rate-limit";
 import { validarInicio, validarProgreso, validarVinculo } from "@/lib/lectores-entrada";
 import { lectorTokenValido, vincularVisitante } from "@/lib/lectores-suscriptor";
+import { marcarNavegadorSuscriptor } from "@/lib/suscriptor-navegador";
+import { and, eq, isNull } from "drizzle-orm";
+import { db } from "@/db";
+import { newsletterSubscribers } from "@/db/schema";
 import { iniciarLectura, registrarProgreso } from "@/lib/lectores-registro";
 import { COOKIE_SUPERAPP, leerSesionLocal } from "@/lib/superapp/sesion";
 import { FUENTE_SUPERAPP, vincularVisitante as vincularSuperApp } from "@/lib/superapp/personas";
@@ -56,6 +60,13 @@ export async function POST(req: Request) {
       // Enlace del boletín: la firma solo la tiene quien recibió ESE correo, así que el vínculo queda verificado.
       const e = validarVinculo(cuerpo);
       if (!e || !lectorTokenValido(e.suscriptor, e.firma)) return NextResponse.json({ ok: false }, { status: 400 });
+      // Si la suscripción sigue activa, este navegador queda marcado como de suscriptor (no se le ofrece el formulario).
+      const [activa] = await db
+        .select({ id: newsletterSubscribers.id })
+        .from(newsletterSubscribers)
+        .where(and(eq(newsletterSubscribers.id, e.suscriptor), eq(newsletterSubscribers.confirmed, true), isNull(newsletterSubscribers.unsubscribedAt)))
+        .limit(1);
+      if (activa) await marcarNavegadorSuscriptor(activa.id);
       return NextResponse.json({ ok: await vincularVisitante(e.suscriptor, e.visitante, true) });
     }
   } catch {
