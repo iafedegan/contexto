@@ -240,7 +240,7 @@ function GoldCard({ a, priority, locale, compact = false }: { a: ArticleListItem
       )}
       {/* `!`: el titular y el rótulo traen su tamaño en línea o en una clase sin capa, y en media pantalla deben ceder. */}
       <div className={`flex flex-1 flex-col gap-2.5 p-5 ${compact ? "max-sm:gap-1.5 max-sm:p-3" : ""}`}>
-        <Kicker a={a} locale={locale} className={`text-[var(--accent)] ${compact ? "max-sm:!text-[0.6rem] max-sm:!tracking-[0.14em] max-sm:leading-snug" : ""}`} />
+        <Kicker a={a} locale={locale} className={`text-[var(--accent)] ${compact ? "max-sm:!text-[0.66rem] max-sm:!tracking-[0.12em] max-sm:leading-snug" : ""}`} />
         <h3 className={`lx-display text-xl font-semibold leading-snug ${compact ? "max-sm:!text-[length:var(--cg-t-px,calc(0.95rem*var(--cg-t-esc,1)))] max-sm:!leading-[1.25]" : ""}`} style={st.title}>
           <Link href={hrefNota(locale, a)} className="transition-colors hover:text-[var(--link)] after:absolute after:inset-0 after:z-[2]">
             {a.title}

@@ -2355,3 +2355,9 @@ body:has(.cg-cintillo-arriba) .cg-cinta-cabecera { display: none; }
 @media (display-mode: standalone) {
   .cg-cintillo-arriba { padding-top: calc(env(safe-area-inset-top, 0px) + 0.875rem) !important; }
 }
+
+/* Pantallas táctiles: los enlaces de texto del pie y de las migas quedan con al menos ~28 px de alto para el dedo. */
+@media (pointer: coarse) {
+  footer[data-region="footer"] li > a,
+  nav[aria-label] ol a { display: inline-block; padding-block: 0.3rem; }
+}
