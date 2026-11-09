@@ -600,6 +600,15 @@ function PaginasDeLaSeccion({ sel }: { sel: SectionNode }) {
   const suyas = (todas ?? []).filter((p) => p.seccionId === sel.id);
   return (
     <div className="flex flex-col gap-2 rounded-[var(--radius)] border border-dashed border-[var(--border-strong)] p-2.5">
+      <div>
+        <p className="mb-1 text-xs font-semibold">Apariencia de {sel.name}</p>
+        <p className="mb-2 text-[11px] leading-snug text-[var(--fg-muted)]">
+          Cambia cómo se ve la página de esta sección (cabecera, tarjetas y orden de las notas) en el editor de portada.
+        </p>
+        <Link href={`/panel/portada?vista=1&seccion=${encodeURIComponent(sel.slug)}`} className="inline-flex items-center gap-1 rounded-full bg-[var(--accent)] px-3 py-1.5 text-xs font-semibold text-[var(--accent-fg)] hover:opacity-90">
+          <Pencil size={12} /> Editar apariencia
+        </Link>
+      </div>
       {suyas.length > 0 && (
         <div className="flex flex-col gap-1.5">
           <p className="text-xs font-semibold">Páginas de {sel.name} ({suyas.length})</p>
