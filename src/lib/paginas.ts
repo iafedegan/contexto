@@ -1,7 +1,7 @@
 import "server-only";
-import { eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { paginas } from "@/db/schema";
+import { categories, paginas } from "@/db/schema";
 import { cachear } from "@/lib/data-cache";
 import { getArticlesByCategory } from "@/lib/content";
 import { rutaDeNota } from "@/lib/ruta-nota";
@@ -24,6 +24,24 @@ export const getPaginaPublicada = cachear(
       .limit(1);
     if (!p || !p.publicada) return null;
     return { id: p.id, slug: p.slug, titulo: p.titulo, descripcion: p.descripcion, contenido: sanearPagina(p.contenido) };
+  },
+  { tags: [TAG_PAGINAS], segundos: 300 },
+);
+
+export type PaginaDeSeccion = { slug: string; titulo: string; descripcion: string | null };
+
+/** Páginas publicadas que cuelgan de una sección (por la dirección de la sección), por título: así el lector llega a ellas desde la propia sección. */
+export const getPaginasDeSeccion = cachear(
+  "paginas-de-seccion",
+  async (seccionSlug: string): Promise<PaginaDeSeccion[]> => {
+    const filas = await db
+      .select({ slug: paginas.slug, titulo: paginas.titulo, descripcion: paginas.descripcion })
+      .from(paginas)
+      .innerJoin(categories, eq(paginas.seccionId, categories.id))
+      .where(and(eq(categories.slug, seccionSlug), eq(paginas.publicada, true)))
+      .orderBy(asc(paginas.titulo))
+      .limit(24);
+    return filas;
   },
   { tags: [TAG_PAGINAS], segundos: 300 },
 );

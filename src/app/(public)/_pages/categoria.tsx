@@ -15,6 +15,7 @@ import { getArticlesByCategory, getAutoresDeSeccion, getCategoryMeta, getColumni
 import { MapaSeccionRegiones } from "@/components/mapa-seccion-regiones";
 import { departamentoPorSlug, regionPorSlug } from "@/lib/regiones-colombia";
 import { siteUrl } from "@/lib/utils";
+import { getPaginasDeSeccion } from "@/lib/paginas";
 import { blockStylesCss } from "@/lib/home-style";
 
 /** Sección — plantilla «Cobre & Obsidiana». */
@@ -112,6 +113,8 @@ async function CategoryPage({ params, searchParams, locale }: PageProps & { loca
         ? { items: "lg:items-center", justify: "lg:justify-center" }
         : { items: "lg:items-end", justify: "lg:justify-end" };
   const filtrando = Boolean(subcategoria || desde || hasta || autor);
+  // Las páginas armadas con el constructor que cuelgan de esta sección (solo en la primera página y sin filtros).
+  const paginasSeccion = !filtrando && page === 1 ? await getPaginasDeSeccion(slug).catch(() => []) : [];
   const paginas = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   /** Conserva los filtros al cambiar de página. */
@@ -345,9 +348,25 @@ async function CategoryPage({ params, searchParams, locale }: PageProps & { loca
         </div>
       )}
 
+      {paginasSeccion.length > 0 && (
+        <section aria-label={locale === "es" ? "Páginas de esta sección" : "Pages in this section"} className="mb-10">
+          <h2 className="lx-kicker mb-4 text-[var(--accent)]">{locale === "es" ? "En esta sección" : "In this section"}</h2>
+          <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {paginasSeccion.map((p) => (
+              <li key={p.slug}>
+                <Link href={localePath(locale, `/${p.slug}`)} className="lx-card block h-full p-5">
+                  <span className="lx-display block text-xl font-semibold leading-snug">{p.titulo}</span>
+                  {p.descripcion && <span className="mt-2 block text-sm text-[var(--fg-muted)]">{p.descripcion}</span>}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       {directorio && directorio.length > 0 ? (
         <DirectorioColumnistas autores={directorio} locale={locale} />
-      ) : items.length === 0 ? (
+      ) : items.length === 0 && paginasSeccion.length > 0 ? null : items.length === 0 ? (
         <p className="py-16 text-center text-[var(--fg-muted)]">
           {filtrando ? t(locale, "section.noMatches") : t(locale, "section.empty")}
         </p>
