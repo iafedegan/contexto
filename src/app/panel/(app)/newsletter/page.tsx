@@ -181,9 +181,9 @@ async function Ediciones() {
                 <span className={`ml-auto inline-flex items-center gap-1 font-semibold text-[var(--accent)] opacity-0 transition group-hover:opacity-100 ${e.status === "borrador" ? "mr-10" : ""}`}>Abrir <ArrowRight size={13} aria-hidden /></span>
               </div>
             </Link>
-            {/* Fuera del enlace (un botón no puede ir dentro de un <a>); solo los borradores se pueden eliminar. */}
-            {(e.status === "borrador") && (
-              <div className="absolute bottom-2.5 right-3"><BorrarEdicion id={e.id} asunto={e.subject} /></div>
+            {/* Fuera del enlace (un botón no puede ir dentro de un <a>); se puede eliminar todo menos lo que se está enviando ahora. */}
+            {e.status !== "enviando" && (
+              <div className="absolute bottom-2.5 right-3"><BorrarEdicion id={e.id} asunto={e.subject} enviada={e.status === "enviada"} /></div>
             )}
           </li>
         );

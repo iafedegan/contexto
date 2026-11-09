@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { and, eq, isNull, ne, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { newsletterEditions, newsletterSubscribers, siteSettings } from "@/db/schema";
 import { requirePermiso, requireRole } from "@/lib/auth";
@@ -54,10 +54,11 @@ export async function saveEdition(id: string, input: Partial<EditionContent>): P
   return { ok: true, message: "Borrador guardado" };
 }
 
-// Borra una edición del boletín.
+// Borra una edición del boletín (borrador, programada o ya enviada). Una que se está enviando ahora NO se borra: dejaría el envío a medias.
+// Borrar una enviada solo quita su registro de la lista (asunto, cuántos se entregaron); los correos ya enviados y los suscriptores no cambian.
 export async function deleteEdition(id: string): Promise<void> {
   await requirePermiso("newsletter");
-  await db.delete(newsletterEditions).where(and(eq(newsletterEditions.id, id), eq(newsletterEditions.status, "borrador")));
+  await db.delete(newsletterEditions).where(and(eq(newsletterEditions.id, id), ne(newsletterEditions.status, "enviando")));
   REVALIDATE();
 }
 

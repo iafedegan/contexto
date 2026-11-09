@@ -5,8 +5,11 @@ import { useRouter } from "next/navigation";
 import { Loader2, Trash2 } from "lucide-react";
 import { deleteEdition } from "./actions";
 
-/** Borra un borrador desde la lista, con confirmación en el mismo sitio (sin ventanas del navegador). Las ediciones enviadas no se pueden borrar. */
-export function BorrarEdicion({ id, asunto }: { id: string; asunto: string }) {
+/**
+ * Borra una edición desde la lista, con confirmación en el mismo sitio (sin ventanas del navegador). Si ya se envió, la confirmación lo
+ * dice: se quita su registro de la lista, no los correos que ya salieron.
+ */
+export function BorrarEdicion({ id, asunto, enviada = false }: { id: string; asunto: string; enviada?: boolean }) {
   const router = useRouter();
   const [confirmando, setConfirmando] = useState(false);
   const [pendiente, empezar] = useTransition();
@@ -16,8 +19,8 @@ export function BorrarEdicion({ id, asunto }: { id: string; asunto: string }) {
       <button
         type="button"
         onClick={() => setConfirmando(true)}
-        aria-label={`Eliminar el borrador «${asunto}»`}
-        title="Eliminar este borrador"
+        aria-label={`Eliminar la edición «${asunto}»`}
+        title={enviada ? "Quitar esta edición de la lista (los correos ya enviados no cambian)" : "Eliminar esta edición"}
         className="grid size-8 place-items-center rounded-full border border-[var(--border)] bg-[var(--surface)] text-[var(--fg-muted)] transition hover:border-[var(--danger,#b4442e)] hover:text-[var(--danger,#b4442e)]"
       >
         <Trash2 size={14} aria-hidden />
@@ -26,7 +29,7 @@ export function BorrarEdicion({ id, asunto }: { id: string; asunto: string }) {
   }
   return (
     <span role="alertdialog" aria-label="Confirmar eliminación" className="flex items-center gap-1.5 rounded-full border border-[var(--danger,#b4442e)] bg-[var(--surface)] py-0.5 pl-3 pr-0.5 text-xs shadow-sm">
-      <span className="font-semibold text-[var(--danger,#b4442e)]">¿Eliminar?</span>
+      <span className="font-semibold text-[var(--danger,#b4442e)]">{enviada ? "¿Quitar de la lista?" : "¿Eliminar?"}</span>
       <button
         type="button"
         autoFocus
