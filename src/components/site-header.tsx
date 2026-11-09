@@ -166,16 +166,23 @@ function MastheadHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extr
         <div className="flex items-center justify-center gap-6">
           <span data-titulo-linea className="hidden h-px flex-1 bg-gradient-to-r from-transparent to-[var(--border-strong)] md:block" />
           <Link href={localePath(locale, "/")} className="flex items-center justify-center gap-[0.9cqi]">
-            {/* Emblema con la misma lámina que el nombre (máscara): cambia con el color de los titulares. */}
-            <span
-              aria-hidden
-              data-titulo-marca
-              data-el="h-logo"
-              className="lx-foil block aspect-[8/5] h-[clamp(2.25rem,7cqi,4.5rem)] shrink-0"
-              style={{ backgroundClip: "border-box", WebkitBackgroundClip: "border-box", WebkitMask: "url(/logo/contexto-media-emblema.png) center / contain no-repeat", mask: "url(/logo/contexto-media-emblema.png) center / contain no-repeat" }}
-            />
             <span data-el="h-nombre" className="lx-display lx-foil block text-[clamp(1.875rem,6.4cqi,3.75rem)] font-semibold leading-none tracking-tight">
+            {/^c/i.test(identity.name) ? (
+              <>
+                {/* El logo hace de «C»: mismo alto que las mayúsculas y la misma lámina dorada del nombre. */}
+                <span
+                  aria-hidden
+                  data-titulo-marca
+                  data-el="h-logo"
+                  className="lx-foil mr-[0.03em] inline-block size-[0.86em] align-[-0.06em]"
+                  style={{ backgroundClip: "border-box", WebkitBackgroundClip: "border-box", WebkitMask: "url(/logo/contexto-media-emblema.png) center / contain no-repeat", mask: "url(/logo/contexto-media-emblema.png) center / contain no-repeat" }}
+                />
+                <span className="sr-only">{identity.name.charAt(0)}</span>
+                {identity.name.slice(1)}
+              </>
+            ) : (
               {identity.name}
+            )}
             </span>
           </Link>
           <span data-titulo-linea className="hidden h-px flex-1 bg-gradient-to-l from-transparent to-[var(--border-strong)] md:block" />
