@@ -2,7 +2,7 @@ import { siteUrl } from "@/lib/utils";
 import { DEFAULT_NEWSLETTER_DESIGN, type NewsletterSettings } from "@/lib/newsletter/types";
 import { escapeHtml as esc } from "@/lib/escape";
 import { luminosidad, mezclar, profundo, textoSobre } from "@/lib/newsletter/color";
-import { MARFIL, ORO, dobleFilete, ornamento, partirMarca, rotuloFlanqueado } from "@/lib/newsletter/deluxe";
+import { MARFIL, ORO, ORO_CLARO, RUTA_EMBLEMA_ORO, dobleFilete, marcaConEmblema, ornamento, rotuloFlanqueado } from "@/lib/newsletter/deluxe";
 import { rutaDeNota } from "@/lib/ruta-nota";
 
 /**
@@ -315,7 +315,6 @@ export function renderNewsletterHtml(r: NewsletterRender): string {
   };
 
   // ── Estilo «gala» (deluxe): jade, marfil y oro. Las piezas de marca (oro, ornamentos, marca partida) viven en deluxe.ts. ──
-  const marca = partirMarca(r.siteName);
   // Filete dorado suave sobre el cuerpo del correo (color sólido: Outlook no admite transparencias).
   const filete = mezclar(ORO, d.colorTarjeta, 55);
   // Texto tenue del pie: legible sobre la página, sea clara u oscura (el gris de siempre en las paletas claras).
@@ -439,8 +438,7 @@ export function renderNewsletterHtml(r: NewsletterRender): string {
           <div style="text-align:center;padding:30px 0 28px 0">
             <p style="margin:0 0 18px 0;font:700 10px/1.5 ${SANS};letter-spacing:.3em;text-transform:uppercase;color:${ORO}">${etiquetaEdicion}</p>
             ${logoImg}
-            <a href="${homeUrl}" class="brand" style="font:400 42px/1.05 ${SERIF};letter-spacing:.01em;color:${MARFIL};text-decoration:none">${esc(marca.principal)}</a>
-            ${marca.sub ? `<div style="margin:16px 0 0 0">${rotuloFlanqueado(esc(marca.sub), ORO, ORO, 12, 40)}</div>` : ""}
+            <a href="${homeUrl}" class="brand" style="font:400 36px/1.2 ${SERIF};letter-spacing:.005em;color:${ORO_CLARO};text-decoration:none;white-space:nowrap">${marcaConEmblema(r.siteName, siteUrl(RUTA_EMBLEMA_ORO), 36)}</a>
             ${r.settings.headerTagline ? `<p style="margin:16px 0 0 0;font:italic 400 14px/1.4 ${SERIF};color:${mezclar(MARFIL, oscuro, 78)}">${esc(r.settings.headerTagline)}</p>` : ""}
           </div>
           ${dobleFilete(ORO)}
@@ -517,7 +515,8 @@ export function renderNewsletterHtml(r: NewsletterRender): string {
     .thumb { display:block !important; width:100% !important; padding:0 0 12px 0 !important; }
     .thumb img { width:100% !important; height:auto !important; }
     .col { display:block !important; width:100% !important; padding:0 0 16px 0 !important; }
-    .brand { font-size:${d.masthead === "gigante" ? "46px" : d.masthead === "gala" ? "30px" : "24px"} !important; }
+    .brand { font-size:${d.masthead === "gigante" ? "46px" : d.masthead === "gala" ? "23px" : "24px"} !important; }
+    .brand img { width:auto !important; height:26px !important; }
   }
   @media (prefers-color-scheme: dark) {
     .bg-page { background:#141210 !important; }

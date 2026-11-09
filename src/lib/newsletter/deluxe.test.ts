@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { renderNewsletterHtml, type NewsletterRender } from "@/lib/newsletter/template";
 import { renderConfirmationHtml } from "@/lib/newsletter/confirm-html";
-import { ORO, partirMarca } from "@/lib/newsletter/deluxe";
+import { ORO, marcaConEmblema, partirMarca } from "@/lib/newsletter/deluxe";
 import { DEFAULT_NEWSLETTER_SETTINGS, sanitizeNewsletterDesign, sanitizeNewsletterSettings } from "@/lib/newsletter/types";
 
 const nota = (n: number, foto: string | null) => ({
@@ -34,8 +34,8 @@ test("el diseño acepta «gala» y lo desconocido sigue volviendo al de siempre"
 
 test("el correo de gala lleva la cabecera de marca, el oro, todas las notas y el cierre centrado", () => {
   const h = render(GALA);
-  assert.match(h, />CONtexto Ganadero</, "marca principal");
-  assert.match(h, />Media</, "«Media» aparte");
+  assert.match(h, /alt="C"[^>]*>ONtexto Ganadero Media</, "marca con el emblema como inicial");
+  assert.match(h, /contexto-media-emblema-oro\.png/);
   assert.ok(h.includes(ORO), "usa el oro");
   for (const n of [1, 2, 3]) assert.match(h, new RegExp(`Titular ${n}`));
   assert.match(h, /También en esta edición/);
@@ -67,11 +67,18 @@ test("el texto del usuario se escapa también en «gala»", () => {
 
 test("el correo de confirmación es de marca, escapa los datos y lleva el enlace", () => {
   const h = renderConfirmationHtml({ nombre: "CONtexto Ganadero Media", tagline: "Periodismo del sector ganadero", email: "a<b>@x.co", url: "https://sitio.test/boletin/confirmar?t=abc&x=1" });
-  assert.match(h, />CONtexto Ganadero</);
-  assert.match(h, />Media</);
-  assert.match(h, /Confirma tu suscripción/);
+  assert.match(h, /alt="C"[^>]*>ONtexto Ganadero Media</);
+  assert.match(h, /Te damos la bienvenida/);
+  assert.match(h, /Confirmar mi suscripción/);
   assert.match(h, /href="https:\/\/sitio\.test\/boletin\/confirmar\?t=abc&amp;x=1"/);
   assert.doesNotMatch(h, /a<b>@x\.co/);
   assert.match(h, /a&lt;b&gt;@x\.co/);
   assert.ok(h.includes(ORO));
+});
+
+test("el emblema hace de inicial y, sin emblema, el nombre se lee entero", () => {
+  const m = marcaConEmblema("CONtexto Ganadero Media", "https://x.test/e.png", 36);
+  assert.match(m, /<img src="https:\/\/x\.test\/e\.png"[^>]*alt="C"/);
+  assert.match(m, />ONtexto Ganadero Media$/);
+  assert.equal(marcaConEmblema("Otra <Marca>", "https://x.test/e.png", 36), "Otra &lt;Marca&gt;");
 });

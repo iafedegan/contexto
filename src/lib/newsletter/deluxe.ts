@@ -3,6 +3,25 @@
  * «gala») y por el correo de confirmación de la suscripción. Sin `server-only`. Todo es HTML de correo: tablas y estilos en línea, sin
  * glifos raros (los ornamentos son celdas de color, que se ven igual en todos los clientes).
  */
+import { escapeHtml } from "@/lib/escape";
+
+/** Oro claro del nombre de la marca sobre jade (el degradado de la cabecera del sitio no existe en correo: aquí, un tono sólido). */
+export const ORO_CLARO = "#dcc07a";
+/** Dirección (relativa al sitio) del emblema dorado de la marca: la «C» con el botón de reproducir, en PNG para correo. */
+export const RUTA_EMBLEMA_ORO = "/logo/contexto-media-emblema-oro.png";
+
+/**
+ * El nombre de la marca con el emblema haciendo de inicial: «[C]ONtexto Ganadero Media». La imagen lleva la letra como texto alternativo,
+ * así que si el cliente de correo bloquea imágenes se sigue leyendo «CONtexto Ganadero Media». Con un nombre que no empieza por «C», solo texto.
+ * `tam` = tamaño de letra en píxeles; en móvil la imagen sigue al texto con la clase `brand` (ver el CSS de cada correo).
+ */
+export function marcaConEmblema(nombre: string, urlEmblema: string, tam: number): string {
+  const limpio = nombre.trim().replace(/\s+/g, " ");
+  if (!/^c/i.test(limpio)) return escapeHtml(limpio);
+  const alto = Math.round(tam * 1.12);
+  const ancho = Math.round(alto * 0.86);
+  return `<img src="${escapeHtml(urlEmblema)}" width="${ancho}" height="${alto}" alt="${escapeHtml(limpio[0])}" style="display:inline-block;width:${ancho}px;height:${alto}px;border:0;vertical-align:-${Math.round(tam * 0.2)}px;margin:0 -2px 0 0">${escapeHtml(limpio.slice(1))}`;
+}
 
 /** Oro de los filetes y ornamentos sobre fondo oscuro. */
 export const ORO = "#b8975a";
