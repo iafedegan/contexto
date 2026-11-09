@@ -303,7 +303,7 @@ export function ConstructorPagina({ pagina, secciones }: { pagina: Pagina; secci
         <button type="button" onClick={borrar} disabled={ocupado} aria-label="Borrar página" title="Borrar página" className="grid size-8 place-items-center rounded-lg text-[#b91c1c] hover:bg-[#b91c1c]/10"><Trash2 size={16} /></button>
       </div>
 
-      <div className={`grid gap-4 ${vista ? "" : "lg:grid-cols-[13rem_minmax(0,1fr)_17rem]"}`}>
+      <div className={`grid gap-4 ${vista ? "" : elegido ? "lg:grid-cols-[13rem_minmax(0,1fr)_17rem]" : "lg:grid-cols-[13rem_minmax(0,1fr)]"}`}>
         {/* Paleta */}
         {!vista && (
           <aside className="flex flex-col gap-3 self-start rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3 lg:sticky lg:top-16">
@@ -419,27 +419,18 @@ export function ConstructorPagina({ pagina, secciones }: { pagina: Pagina; secci
           )}
         </div>
 
-        {/* Propiedades */}
-        {!vista && (
+        {/* Propiedades: solo aparece con un elemento elegido. */}
+        {!vista && elegido && (
           <aside className="self-start rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 lg:sticky lg:top-16">
-            {elegido ? (
-              <Propiedades
-                e={elegido}
-                secciones={secciones}
-                onCambiar={editar}
-                onMover={moverElemento}
-                onBorrar={borrarElemento}
-                onCerrar={() => setSel(null)}
-                onElegirImagen={() => setEligiendoImagen(true)}
-              />
-            ) : (
-              <div className="flex flex-col gap-2 text-sm text-[var(--fg-muted)]">
-                <p className="font-bold text-[var(--fg)]">Propiedades</p>
-                <p>Pulse un elemento del lienzo para cambiar su texto, su enlace o su imagen.</p>
-                <p>Cada fila tiene arriba sus controles: cómo se divide en columnas, el fondo, subir, bajar o quitarla.</p>
-                <p className="text-xs">Atajos: Supr borra el elemento elegido; ⌘Z / Ctrl+Z deshace.</p>
-              </div>
-            )}
+            <Propiedades
+              e={elegido}
+              secciones={secciones}
+              onCambiar={editar}
+              onMover={moverElemento}
+              onBorrar={borrarElemento}
+              onCerrar={() => setSel(null)}
+              onElegirImagen={() => setEligiendoImagen(true)}
+            />
           </aside>
         )}
       </div>
