@@ -19,7 +19,7 @@ const subscribeGeo = (cb: () => void) => {
   };
 };
 
-// Quien ya se suscribió desde este navegador no vuelve a ver el formulario (en ninguno de sus sitios: barra lateral, pie…).
+// Quien se suscribió desde este navegador no vuelve a ver el formulario durante 30 días (en ninguno de sus sitios: barra lateral, pie…).
 const SUSCRITO = "cg_suscrito";
 const EVENTO_SUSCRITO = "cg-suscrito";
 const suscribirSuscrito = (cb: () => void) => {
@@ -32,7 +32,10 @@ const suscribirSuscrito = (cb: () => void) => {
 };
 const yaSuscrito = () => {
   try {
-    return localStorage.getItem(SUSCRITO) === "1";
+    // Se guarda la fecha del alta y el formulario vuelve a salir pasados 30 días: si la persona no confirmó el correo,
+    // se dio de baja o era una prueba, no se queda sin la invitación para siempre. (Antes era una marca «1» sin fecha.)
+    const v = Number(localStorage.getItem(SUSCRITO));
+    return Number.isFinite(v) && v > 1 && Date.now() - v < 30 * 24 * 3600 * 1000;
   } catch {
     return false;
   }
@@ -58,7 +61,7 @@ export function NewsletterForm({ locale, compacto = false }: { locale: Locale; c
   useEffect(() => {
     if (!state?.ok) return;
     try {
-      localStorage.setItem(SUSCRITO, "1");
+      localStorage.setItem(SUSCRITO, String(Date.now()));
       window.dispatchEvent(new Event(EVENTO_SUSCRITO));
     } catch {
       /* sin almacenamiento: volverá a salir */
