@@ -198,7 +198,7 @@ function MastheadHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extr
         aria-label={t(locale, "nav.sections")}
         className="sticky top-0 z-40 border-y border-[var(--border)] bg-[var(--nav-bg)] sm:static"
       >
-        <div className="lx-navrail mx-auto max-w-[96rem] items-center justify-start gap-x-5 gap-y-2 px-6 py-2.5 text-[0.72rem] uppercase tracking-[0.16em] sm:justify-center xl:gap-x-6">
+        <div className="lx-navrail mx-auto max-w-[96rem] items-center justify-start gap-x-5 gap-y-2 px-6 py-2.5 text-[0.72rem] font-bold uppercase tracking-[0.16em] sm:justify-center xl:gap-x-6">
           {nav.map((n) => (
             <NavMenuItem key={n.href} item={n} locale={locale} className="lx-link lx-ui" />
           ))}
