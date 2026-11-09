@@ -2,6 +2,7 @@ import { siteUrl } from "@/lib/utils";
 import { DEFAULT_NEWSLETTER_DESIGN, type NewsletterSettings } from "@/lib/newsletter/types";
 import { escapeHtml as esc } from "@/lib/escape";
 import { luminosidad, mezclar, profundo, textoSobre } from "@/lib/newsletter/color";
+import { MARFIL, ORO, dobleFilete, ornamento, partirMarca, rotuloFlanqueado } from "@/lib/newsletter/deluxe";
 import { rutaDeNota } from "@/lib/ruta-nota";
 
 /**
@@ -313,8 +314,56 @@ export function renderNewsletterHtml(r: NewsletterRender): string {
       </tr></table></td></tr>${abajo.length ? rotulo("Más notas") + abajo.map((a) => bloqueFila(a, 110, 120)).join("") : ""}`;
   };
 
+  // ── Estilo «gala» (deluxe): jade, marfil y oro. Las piezas de marca (oro, ornamentos, marca partida) viven en deluxe.ts. ──
+  const marca = partirMarca(r.siteName);
+  // Filete dorado suave sobre el cuerpo del correo (color sólido: Outlook no admite transparencias).
+  const filete = mezclar(ORO, d.colorTarjeta, 55);
+  // Texto tenue del pie: legible sobre la página, sea clara u oscura (el gris de siempre en las paletas claras).
+  const tenue = luminosidad(d.colorPagina) < 0.3 ? mezclar("#ffffff", d.colorPagina, 60) : "#7d746a";
+  const espacio = (px: number) => `<div style="height:${px}px;line-height:${px}px;font-size:0">&nbsp;</div>`;
+  // Botón de gala: fondo oscuro, borde y letras doradas en versalitas espaciadas.
+  const botonGala = (a: EmailArticle) =>
+    `<table role="presentation" align="center" cellpadding="0" cellspacing="0"><tr><td style="background:${oscuro};border:1px solid ${ORO};border-radius:${radioBoton}"><a href="${link(a)}" style="display:inline-block;padding:15px 34px;font:700 11px/1 ${SANS};letter-spacing:.24em;text-transform:uppercase;color:${ORO};text-decoration:none">${esc(d.botonTexto)}</a></td></tr></table>`;
+  // Destacada de gala: foto a todo el ancho; debajo, todo centrado y con aire (sección entre filetes, titular grande, resumen en cursiva).
+  const heroGala = (a: EmailArticle) => `
+      ${a.coverImageUrl && d.imagenDestacada ? `<tr><td style="padding:0">${foto(a, 600)}</td></tr>` : ""}
+      <tr><td class="px" align="center" style="padding:40px 44px 0 44px">
+        ${d.mostrarSeccion && a.categoryName ? `<div style="margin:0 0 20px 0">${rotuloFlanqueado(esc(a.categoryName), accent, filete, 11, 30)}</div>` : ""}
+        <h2 class="t-main" style="margin:0 0 18px 0;font:400 ${tamTit(36)}px/1.14 ${TIT};${mayus}color:${d.colorTitulos};text-align:center"><a href="${link(a)}" style="color:inherit;text-decoration:none">${esc(a.title)}</a></h2>
+        <div style="text-align:center">${firma(a)}</div>
+        <p class="t-muted" style="margin:0 0 28px 0;font:italic 400 18px/1.7 ${SERIF};color:${d.colorTexto};text-align:center">${esc(a.excerpt)}</p>
+        ${botonGala(a)}
+      </td></tr>`;
+  // Las demás notas de gala: una fila por nota, con la foto alternando de lado y un filete dorado entre ellas.
+  const filaGala = (a: EmailArticle, i: number, primera: boolean) => {
+    const conFoto = d.miniaturas && !!a.coverImageUrl;
+    const fotoTd = conFoto ? `<td class="col" width="240" valign="middle" style="padding:${i % 2 === 0 ? "0 28px 0 0" : "0 0 0 28px"}">${foto(a, 240)}</td>` : "";
+    const textoTd = `<td class="col" valign="middle" style="padding:0">
+          ${seccion(a, "0 0 8px 0", 10)}
+          <h3 class="t-main" style="margin:0 0 10px 0;font:400 ${tamTit(23)}px/1.22 ${TIT};${mayus}color:${d.colorTitulos}"><a href="${link(a)}" style="color:inherit;text-decoration:none">${esc(a.title)}</a></h3>
+          ${firma(a)}
+          <p class="t-muted" style="margin:0 0 16px 0;font:400 14px/1.7 ${SANS};color:${d.colorTexto}">${esc(recortar(a.excerpt, 130))}</p>
+          <a href="${link(a)}" style="font:700 10px/1 ${SANS};letter-spacing:.22em;text-transform:uppercase;color:${accent};text-decoration:none;border-bottom:1px solid ${ORO};padding-bottom:4px">Seguir leyendo &rarr;</a>
+        </td>`;
+    return `
+      <tr><td class="px" style="padding:${primera ? "36px" : "0"} 40px 0 40px">
+        ${primera ? "" : `<div style="height:1px;line-height:1px;font-size:0;background:${filete};margin:30px 0 30px 0">&nbsp;</div>`}
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>${i % 2 === 0 ? fotoTd + textoTd : textoTd + fotoTd}</tr></table>
+      </td></tr>`;
+  };
+  // Separador de gala: un ornamento dorado y, si se da, un rótulo entre filetes.
+  const separadorGala = (texto?: string) => `
+      <tr><td class="px" align="center" style="padding:46px 40px 0 40px">${ornamento(ORO)}${texto ? `${espacio(18)}${rotuloFlanqueado(esc(texto), accent, filete, 11, 30)}` : ""}</td></tr>`;
+
   // Encabezado de una sección del armado («Última hora», «Colombia»…): más marcado que el rótulo «También en esta edición».
-  const rotuloSeccion = (titulo: string) => `
+  const rotuloSeccion = (titulo: string) =>
+    d.plantilla === "gala"
+      ? `
+      <tr><td class="px" align="center" style="padding:48px 40px 0 40px">
+        ${ornamento(ORO)}
+        <h2 class="t-main" style="margin:18px 0 0 0;font:400 ${tamTit(26)}px/1.15 ${TIT};${mayus}color:${d.colorTitulos};text-align:center">${esc(titulo)}</h2>
+      </td></tr>`
+      : `
       <tr><td class="px" style="padding:38px 32px 0 32px">
         <div style="width:34px;height:4px;background:${accent};margin:0 0 10px 0;border-radius:2px"></div>
         <h2 class="t-main" style="margin:0;font:800 ${tamTit(22)}px/1.15 ${TIT};${mayus}color:${d.colorTitulos}">${esc(titulo)}</h2>
@@ -351,6 +400,11 @@ export function renderNewsletterHtml(r: NewsletterRender): string {
         return (lead ? bloqueGrande(lead, 30, d.imagenDestacada, "", true) : "") + (rest.length ? baldosas(rest) : "");
       case "dossier":
         return lead ? dossier(lead, rest) : rest.map((a) => bloqueFila(a, 110, 120)).join("");
+      case "gala": {
+        // Con destacada, un ornamento (con el rótulo «También en esta edición» si no hay secciones) la separa de las demás; sin ella, las filas empiezan directas.
+        const abre = lead && rest.length ? separadorGala(conRotulos ? "También en esta edición" : undefined) : "";
+        return (lead ? heroGala(lead) : "") + abre + rest.map((a, i) => filaGala(a, i, i === 0)).join("");
+      }
       default:
         return (lead ? bloqueGrande(lead, 28, d.imagenDestacada, "8px 32px 0 32px", d.destacadaColor) : "") + (rest.length ? mas + rest.map((a) => bloqueFila(a, 132, 150)).join("") : "");
     }
@@ -362,7 +416,9 @@ export function renderNewsletterHtml(r: NewsletterRender): string {
 
   // Mensaje de cierre, antes del botón final.
   const cierre = d.cierre.trim()
-    ? `<tr><td class="px" style="padding:30px 32px 0 32px">${paragraphs(d.cierre, `margin:0 0 12px 0;font:italic 400 15px/1.7 ${TIT};color:${d.colorTexto}`)}</td></tr>`
+    ? d.masthead === "gala"
+      ? `<tr><td class="px" align="center" style="padding:46px 44px 0 44px">${paragraphs(d.cierre, `margin:0 0 12px 0;font:italic 400 17px/1.8 ${SERIF};color:${d.colorTexto};text-align:center`)}</td></tr>`
+      : `<tr><td class="px" style="padding:30px 32px 0 32px">${paragraphs(d.cierre, `margin:0 0 12px 0;font:italic 400 15px/1.7 ${TIT};color:${d.colorTexto}`)}</td></tr>`
     : "";
 
   // Cabecera del correo: la «sencilla» va sobre la página; la «banda» y la «gigante» son un bloque de color dentro del correo.
@@ -377,7 +433,19 @@ export function renderNewsletterHtml(r: NewsletterRender): string {
     : "";
   const arriba = `border-radius:${radio}px ${radio}px 0 0`;
   const encabezado =
-    d.masthead === "gigante"
+    d.masthead === "gala"
+      ? `<tr><td class="px" style="background:${oscuro};padding:18px 28px;${arriba}">
+          ${dobleFilete(ORO)}
+          <div style="text-align:center;padding:30px 0 28px 0">
+            <p style="margin:0 0 18px 0;font:700 10px/1.5 ${SANS};letter-spacing:.3em;text-transform:uppercase;color:${ORO}">${etiquetaEdicion}</p>
+            ${logoImg}
+            <a href="${homeUrl}" class="brand" style="font:400 42px/1.05 ${SERIF};letter-spacing:.01em;color:${MARFIL};text-decoration:none">${esc(marca.principal)}</a>
+            ${marca.sub ? `<div style="margin:16px 0 0 0">${rotuloFlanqueado(esc(marca.sub), ORO, ORO, 12, 40)}</div>` : ""}
+            ${r.settings.headerTagline ? `<p style="margin:16px 0 0 0;font:italic 400 14px/1.4 ${SERIF};color:${mezclar(MARFIL, oscuro, 78)}">${esc(r.settings.headerTagline)}</p>` : ""}
+          </div>
+          ${dobleFilete(ORO)}
+        </td></tr>`
+      : d.masthead === "gigante"
       ? `<tr><td class="px" style="background:${accent};padding:34px 32px 30px 32px;${arriba}">
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
             <td valign="middle" align="left">
@@ -409,6 +477,26 @@ export function renderNewsletterHtml(r: NewsletterRender): string {
       ${r.settings.headerTagline ? `<p style="margin:8px 0 0 0;font:italic 400 14px/1.3 ${SERIF};color:#7d746a">${esc(r.settings.headerTagline)}</p>` : ""}
     </td></tr>`;
 
+  // Asunto y saludo de la edición. En «gala» van centrados: el asunto como rótulo en versalitas y el saludo en cursiva.
+  const hayIntro = r.intro.trim().length > 0;
+  const introBloque =
+    d.masthead === "gala"
+      ? `<tr><td class="px" align="center" style="padding:44px 44px ${hayIntro ? "6px" : "0"} 44px">
+          <h1 class="t-main" style="margin:0 0 ${hayIntro ? "20px" : "0"} 0;font:700 12px/1.7 ${SANS};letter-spacing:.24em;text-transform:uppercase;color:${accent};text-align:center">${esc(r.subject)}</h1>
+          ${hayIntro ? paragraphs(r.intro, `margin:0 0 14px 0;font:italic 400 17px/1.8 ${SERIF};color:${d.colorTexto};text-align:center`) : ""}
+        </td></tr>`
+      : `<tr><td class="px" style="padding:30px 32px 6px 32px">
+          <h1 class="t-main" style="margin:0 0 14px 0;font:700 13px/1.4 ${SANS};letter-spacing:.14em;text-transform:uppercase;color:${accent}">${esc(r.subject)}</h1>
+          ${hayIntro ? paragraphs(r.intro, `margin:0 0 14px 0;font:400 16px/1.7 ${SANS};color:${d.colorTexto}`) : ""}
+        </td></tr>`;
+  // Botón de cierre hacia el sitio: en «gala», con un ornamento encima y letras espaciadas.
+  const ctaFinal =
+    d.masthead === "gala"
+      ? `${ornamento(ORO)}${espacio(24)}<table role="presentation" align="center" cellpadding="0" cellspacing="0"><tr><td style="border:1px solid ${accent};border-radius:${radioBoton}"><a href="${homeUrl}?utm_source=boletin&amp;utm_medium=email" style="display:inline-block;padding:15px 32px;font:700 11px/1 ${SANS};letter-spacing:.22em;text-transform:uppercase;color:${accent};text-decoration:none">Ver todas las noticias</a></td></tr></table>`
+      : `<table role="presentation" cellpadding="0" cellspacing="0"><tr><td style="border:2px solid ${accent};border-radius:${radioBoton}">
+            <a href="${homeUrl}?utm_source=boletin&amp;utm_medium=email" style="display:inline-block;padding:11px 24px;font:700 13px/1 ${SANS};color:${accent};text-decoration:none">Ver todas las noticias en ${esc(r.siteName)}</a>
+          </td></tr></table>`;
+
   return `<!doctype html>
 <html lang="es" xmlns="http://www.w3.org/1999/xhtml">
 <head>
@@ -429,7 +517,7 @@ export function renderNewsletterHtml(r: NewsletterRender): string {
     .thumb { display:block !important; width:100% !important; padding:0 0 12px 0 !important; }
     .thumb img { width:100% !important; height:auto !important; }
     .col { display:block !important; width:100% !important; padding:0 0 16px 0 !important; }
-    .brand { font-size:${d.masthead === "gigante" ? "46px" : "24px"} !important; }
+    .brand { font-size:${d.masthead === "gigante" ? "46px" : d.masthead === "gala" ? "30px" : "24px"} !important; }
   }
   @media (prefers-color-scheme: dark) {
     .bg-page { background:#141210 !important; }
@@ -450,26 +538,21 @@ export function renderNewsletterHtml(r: NewsletterRender): string {
   }
   <table role="presentation" class="container" width="600" cellpadding="0" cellspacing="0" style="width:600px;max-width:100%">
     ${encabezadoSencillo}
-    <tr><td class="card" style="background:${d.colorTarjeta};border-radius:${radio}px;${d.franja && !conMasthead ? `border-top:${d.franja}px solid ${accent}` : ""}">
+    <tr><td class="card" style="background:${d.colorTarjeta};border-radius:${radio}px;${d.franja && !conMasthead ? `border-top:${d.franja}px solid ${accent}` : ""}${d.masthead === "gala" ? `border:1px solid ${ORO}` : ""}">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
         ${encabezado}
-        <tr><td class="px" style="padding:30px 32px 6px 32px">
-          <h1 class="t-main" style="margin:0 0 14px 0;font:700 13px/1.4 ${SANS};letter-spacing:.14em;text-transform:uppercase;color:${accent}">${esc(r.subject)}</h1>
-          ${r.intro.trim() ? paragraphs(r.intro, `margin:0 0 14px 0;font:400 16px/1.7 ${SANS};color:${d.colorTexto}`) : ""}
-        </td></tr>
+        ${introBloque}
         ${cuerpoNotas}
         ${cierre}
-        <tr><td class="px" style="padding:36px 32px 34px 32px" align="center">
-          <table role="presentation" cellpadding="0" cellspacing="0"><tr><td style="border:2px solid ${accent};border-radius:${radioBoton}">
-            <a href="${homeUrl}?utm_source=boletin&amp;utm_medium=email" style="display:inline-block;padding:11px 24px;font:700 13px/1 ${SANS};color:${accent};text-decoration:none">Ver todas las noticias en ${esc(r.siteName)}</a>
-          </td></tr></table>
+        <tr><td class="px" style="padding:${d.masthead === "gala" ? "46px 32px 44px 32px" : "36px 32px 34px 32px"}" align="center">
+          ${ctaFinal}
         </td></tr>
       </table>
     </td></tr>
-    <tr><td align="center" class="legal" style="padding:24px 16px 8px 16px;font:400 12px/1.65 ${SANS};color:#7d746a">
+    <tr><td align="center" class="legal" style="padding:24px 16px 8px 16px;font:400 12px/1.65 ${SANS};color:${tenue}">
       <p style="margin:0 0 10px 0">${esc(r.settings.legalText)}</p>
       <p style="margin:0 0 10px 0"><strong>${esc(r.siteName)}</strong>${r.settings.address ? ` · ${esc(r.settings.address)}` : ""}</p>
-      <p style="margin:0"><a href="${esc(r.unsubscribeUrl)}" style="color:#7d746a;text-decoration:underline">Darme de baja</a> &nbsp;·&nbsp; <a href="${homeUrl}" style="color:#7d746a;text-decoration:underline">Ir al sitio</a></p>
+      <p style="margin:0"><a href="${esc(r.unsubscribeUrl)}" style="color:${tenue};text-decoration:underline">Darme de baja</a> &nbsp;·&nbsp; <a href="${homeUrl}" style="color:${tenue};text-decoration:underline">Ir al sitio</a></p>
     </td></tr>
   </table>
 </td></tr></table>

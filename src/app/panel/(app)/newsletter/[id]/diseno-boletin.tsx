@@ -11,8 +11,16 @@ export type DisenoEditable = NewsletterDesign & { acento: string };
 /** Diseño por defecto, para «Restablecer». */
 export const DISENO_POR_DEFECTO: DisenoEditable = { ...DEFAULT_NEWSLETTER_DESIGN, acento: DEFAULT_NEWSLETTER_SETTINGS.accentColor };
 
+/** Estilo «Deluxe» completo (jade, marfil y oro). No incluye los textos: el del botón y el cierre se conservan. */
+const ESTILO_DELUXE: Partial<DisenoEditable> = {
+  plantilla: "gala", masthead: "gala", tipografia: "serif", cabecera: "centrada",
+  colorPagina: "#0a1f19", colorTarjeta: "#fbf8f1", colorTitulos: "#10261e", colorTexto: "#4a463e", acento: "#8c6a2f",
+  franja: 0, esquinas: "rectas", boton: "recto", insignia: false, destacadaColor: false, mostrarSeccion: true, imagenDestacada: true, miniaturas: true, separador: "linea",
+};
+
 // Paletas listas para elegir con un clic.
 const PALETAS: { nombre: string; v: Pick<DisenoEditable, "colorPagina" | "colorTarjeta" | "colorTitulos" | "colorTexto" | "acento"> }[] = [
+  { nombre: "Deluxe", v: { colorPagina: "#0a1f19", colorTarjeta: "#fbf8f1", colorTitulos: "#10261e", colorTexto: "#4a463e", acento: "#8c6a2f" } },
   { nombre: "Clásico", v: { colorPagina: "#f3efe7", colorTarjeta: "#ffffff", colorTitulos: "#1c1712", colorTexto: "#3a342e", acento: "#8a2b1f" } },
   { nombre: "Verde campo", v: { colorPagina: "#eaf1e4", colorTarjeta: "#ffffff", colorTitulos: "#14301c", colorTexto: "#34423a", acento: "#2e8b3f" } },
   { nombre: "Tinta", v: { colorPagina: "#e9ecf1", colorTarjeta: "#ffffff", colorTitulos: "#101828", colorTexto: "#344054", acento: "#1f3f78" } },
@@ -27,6 +35,7 @@ const PALETAS: { nombre: string; v: Pick<DisenoEditable, "colorPagina" | "colorT
 
 // Maquetaciones: cómo se ven las notas. El dibujito es un esquema de bloques.
 const MAQUETAS: { id: DisenoEditable["plantilla"]; nombre: string; ayuda: string }[] = [
+  { id: "gala", nombre: "Gala", ayuda: "Destacada centrada, ornamentos dorados y notas en filas" },
   { id: "bloques", nombre: "Bloques", ayuda: "Paneles de color alternos con la foto a un lado" },
   { id: "mosaico", nombre: "Mosaico", ayuda: "Destacada y baldosas de color en cuadrícula" },
   { id: "dossier", nombre: "Dossier", ayuda: "Nota principal y recuadro «En breve» al lado" },
@@ -43,6 +52,7 @@ function Esquema({ id }: { id: DisenoEditable["plantilla"] }) {
   const b = "rounded-[2px] bg-current opacity-30";
   const t = "rounded-[2px] bg-current opacity-60";
   const marco = "flex w-full flex-col gap-1";
+  if (id === "gala") return (<div className={marco}><div className={`${b} h-5`} /><div className={`${t} mx-auto h-1.5 w-3/5`} /><div className={`${t} mx-auto h-1 w-4/5`} /><div className="flex gap-1"><div className={`${b} h-3 w-6`} /><div className={`${t} mt-1 h-1 flex-1`} /></div><div className="flex gap-1"><div className={`${t} mt-1 h-1 flex-1`} /><div className={`${b} h-3 w-6`} /></div></div>);
   if (id === "bloques") return (<div className={marco}><div className={`${t} h-4`} /><div className="flex gap-1"><div className={`${b} h-5 w-6`} /><div className={`${t} h-5 flex-1`} /></div><div className="flex gap-1"><div className={`${t} h-5 flex-1`} /><div className={`${b} h-5 w-6`} /></div></div>);
   if (id === "mosaico") return (<div className={marco}><div className={`${t} h-4`} /><div className="grid grid-cols-2 gap-1"><div className={`${b} h-5`} /><div className={`${t} h-5`} /><div className={`${t} h-5`} /><div className={`${b} h-5`} /></div></div>);
   if (id === "dossier") return (<div className="flex w-full gap-1"><div className="flex flex-1 flex-col gap-1"><div className={`${b} h-6`} /><div className={`${t} h-1.5 w-4/5`} /><div className={`${t} h-1 w-3/5`} /></div><div className={`${b} w-5`} /></div>);
@@ -157,6 +167,23 @@ export function DisenoBoletin({ valor, alCambiar, puedeEditar }: { valor: Diseno
           {todoCerrado ? "Abrir todas las secciones" : "Recoger todas las secciones"}
         </button>
       </div>
+      {/* Estilo completo en un clic: maquetación, cabecera, paleta y formas a la vez. Los textos (botón, cierre) no se tocan. */}
+      <button
+        type="button"
+        onClick={() => alCambiar({ ...valor, ...ESTILO_DELUXE })}
+        className="flex items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-3 text-left transition hover:border-[var(--accent)]"
+      >
+        <span aria-hidden className="flex h-10 w-14 shrink-0 overflow-hidden rounded border border-black/10">
+          <span className="w-1/3" style={{ background: "#0a1f19" }} />
+          <span className="w-1/3" style={{ background: "#fbf8f1" }} />
+          <span className="w-1/3" style={{ background: "#b8975a" }} />
+        </span>
+        <span>
+          <span className="block text-sm font-semibold">Estilo Deluxe · CONtexto Ganadero Media</span>
+          <span className="block text-xs text-[var(--fg-muted)]">Jade, marfil y oro: cabecera de gala, destacada centrada y notas con aire. Aplica todo de una vez.</span>
+        </span>
+      </button>
+
       <Grupo id="maquetacion" titulo="Maquetación de las notas" ayuda="Cómo se ordenan las notas dentro del correo.">
         <div className="grid grid-cols-2 gap-2">
           {MAQUETAS.map((m) => (
@@ -199,7 +226,7 @@ export function DisenoBoletin({ valor, alCambiar, puedeEditar }: { valor: Diseno
 
       <Grupo id="cabecera" titulo="Cabecera y destacada" ayuda="La portada del correo: tamaño del nombre, número de edición y color de la nota principal.">
         <div className="flex flex-col gap-2.5 text-sm">
-          <div className="flex flex-wrap items-center justify-between gap-2"><span>Cabecera</span><Opciones etiqueta="Estilo de la cabecera" valor={valor.masthead} alElegir={(v) => poner("masthead", v)} opciones={[{ v: "sencillo", t: "Sencilla" }, { v: "banda", t: "Banda de color" }, { v: "gigante", t: "Gigante" }]} /></div>
+          <div className="flex flex-wrap items-center justify-between gap-2"><span>Cabecera</span><Opciones etiqueta="Estilo de la cabecera" valor={valor.masthead} alElegir={(v) => poner("masthead", v)} opciones={[{ v: "sencillo", t: "Sencilla" }, { v: "banda", t: "Banda de color" }, { v: "gigante", t: "Gigante" }, { v: "gala", t: "Gala" }]} /></div>
           <Interruptor texto="Insignia con el número de edición" activo={valor.insignia} alCambiar={(v) => poner("insignia", v)} />
           <Interruptor texto="Destacada sobre un panel de color" activo={valor.destacadaColor} alCambiar={(v) => poner("destacadaColor", v)} />
         </div>

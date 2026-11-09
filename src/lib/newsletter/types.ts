@@ -5,9 +5,10 @@ export type NewsletterDesign = {
   /**
    * Maquetación de las notas: clásica (destacada + lista), editorial (foto a todo el ancho y rejilla de dos columnas), tarjetas
    * (todas en tarjetas de dos columnas), numerada (destacada + lista numerada), revista (todas con foto grande), mínima (solo titulares),
-   * bloques (paneles de color alternos con foto), mosaico (destacada y baldosas de color) o dossier (columna principal y recuadro «en breve»).
+   * bloques (paneles de color alternos con foto), mosaico (destacada y baldosas de color), dossier (columna principal y recuadro «en breve»)
+   * o gala (la «deluxe»: destacada centrada con foto a todo el ancho, ornamentos dorados y las demás notas en filas con la foto alternando de lado).
    */
-  plantilla: "clasica" | "editorial" | "tarjetas" | "numerada" | "revista" | "minima" | "bloques" | "mosaico" | "dossier";
+  plantilla: "clasica" | "editorial" | "tarjetas" | "numerada" | "revista" | "minima" | "bloques" | "mosaico" | "dossier" | "gala";
   /** Tipografía de los titulares (siempre de las que traen todos los clientes de correo). */
   tipografia: "serif" | "sans" | "moderna" | "impacto";
   colorPagina: string;
@@ -21,8 +22,11 @@ export type NewsletterDesign = {
   /** Texto del botón de cada nota destacada. */
   botonTexto: string;
   cabecera: "centrada" | "izquierda";
-  /** Cabecera del correo: sencilla (el nombre sobre la página), banda (franja de color) o gigante (nombre enorme sobre color). */
-  masthead: "sencillo" | "banda" | "gigante";
+  /**
+   * Cabecera del correo: sencilla (el nombre sobre la página), banda (franja de color), gigante (nombre enorme sobre color) o gala (bloque
+   * oscuro con doble filete dorado y la marca centrada, con «MEDIA» aparte).
+   */
+  masthead: "sencillo" | "banda" | "gigante" | "gala";
   /** Insignia redonda con el número de edición, en la banda o la cabecera gigante. */
   insignia: boolean;
   /** La nota destacada va sobre un panel del color de acento, con el texto en claro. */
@@ -119,7 +123,7 @@ export function sanitizeNewsletterDesign(input: unknown): NewsletterDesign {
   const r = (input && typeof input === "object" ? input : {}) as Record<string, unknown>;
   const d = DEFAULT_NEWSLETTER_DESIGN;
   return {
-    plantilla: opcion(r.plantilla, ["clasica", "editorial", "tarjetas", "numerada", "revista", "minima", "bloques", "mosaico", "dossier"] as const, d.plantilla),
+    plantilla: opcion(r.plantilla, ["clasica", "editorial", "tarjetas", "numerada", "revista", "minima", "bloques", "mosaico", "dossier", "gala"] as const, d.plantilla),
     tipografia: opcion(r.tipografia, ["serif", "sans", "moderna", "impacto"] as const, d.tipografia),
     colorPagina: color(r.colorPagina, d.colorPagina),
     colorTarjeta: color(r.colorTarjeta, d.colorTarjeta),
@@ -130,7 +134,7 @@ export function sanitizeNewsletterDesign(input: unknown): NewsletterDesign {
     boton: opcion(r.boton, ["pildora", "redondo", "recto"] as const, d.boton),
     botonTexto: str(r.botonTexto, 40) || d.botonTexto,
     cabecera: opcion(r.cabecera, ["centrada", "izquierda"] as const, d.cabecera),
-    masthead: opcion(r.masthead, ["sencillo", "banda", "gigante"] as const, d.masthead),
+    masthead: opcion(r.masthead, ["sencillo", "banda", "gigante", "gala"] as const, d.masthead),
     insignia: bool(r.insignia, d.insignia),
     destacadaColor: bool(r.destacadaColor, d.destacadaColor),
     mostrarLogo: bool(r.mostrarLogo, d.mostrarLogo),
