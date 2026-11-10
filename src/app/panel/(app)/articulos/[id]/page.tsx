@@ -9,7 +9,8 @@ import Link from "next/link";
 import { ArrowLeft, PenLine, Sparkles } from "lucide-react";
 import { ArticleEditor } from "@/components/article-editor";
 import { ArticleWizard } from "@/components/panel/article-wizard";
-import { editoresActivos, marcarAsignacionAbierta, puedeEnviarAEditor } from "@/lib/notas-asignadas";
+import { destinosActivos, marcarAsignacionAbierta } from "@/lib/notas-asignadas";
+import { envioLibre, puedeEnviarNota } from "@/lib/notas-asignadas-reglas";
 import { escritoresParaElegir, getEstilo } from "@/lib/ai/estilo";
 import { getModelosEditor } from "@/lib/ai-provider";
 import { esNotaPropia } from "@/lib/propiedad-notas";
@@ -113,8 +114,9 @@ export default async function ArticleEditorPage({
           site={await siteChrome()}
           modelosEditor={await getModelosEditor(session!.user.id)}
           esAdmin={session!.user.role === "administrador"}
-          editores={puedeEnviarAEditor(session!.user.role) ? await editoresActivos(session!.user.id) : []}
-          puedeEnviarEditor={puedeEnviarAEditor(session!.user.role)}
+          editores={await destinosActivos(session!.user.role, session!.user.id)}
+          puedeEnviarEditor={puedeEnviarNota(session!.user.role)}
+          envioLibre={envioLibre(session!.user.role)}
           canPublish={canPublish(session!.user.role)}
           canPortada={await tienePermiso(session!.user.id, session!.user.role, "portada")}
           estilo={estilo}
@@ -173,8 +175,9 @@ export default async function ArticleEditorPage({
           site={await siteChrome()}
           modelosEditor={await getModelosEditor(session!.user.id)}
           esAdmin={session!.user.role === "administrador"}
-          editores={puedeEnviarAEditor(session!.user.role) ? await editoresActivos(session!.user.id) : []}
-          puedeEnviarEditor={puedeEnviarAEditor(session!.user.role)}
+          editores={await destinosActivos(session!.user.role, session!.user.id)}
+          puedeEnviarEditor={puedeEnviarNota(session!.user.role)}
+          envioLibre={envioLibre(session!.user.role)}
           status={row.status}
           canPublish={canPublish(session!.user.role)}
           canPortada={await tienePermiso(session!.user.id, session!.user.role, "portada")}

@@ -13,8 +13,9 @@
  */
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-const raiz = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
+const raiz = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const src = path.join(raiz, "src");
 const config = JSON.parse(fs.readFileSync(path.join(raiz, "scripts/modulos.config.json"), "utf8")).modulos;
 const rutaBase = path.join(raiz, "scripts/modulos.baseline.json");

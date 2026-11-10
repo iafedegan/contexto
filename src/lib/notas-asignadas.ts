@@ -2,6 +2,7 @@ import "server-only";
 import { and, eq, inArray, ne, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { articles, siteSettings, users } from "@/db/schema";
+import { destinoPermitido, destinosPara, puedeEnviarNota, type Destino } from "@/lib/notas-asignadas-reglas";
 
 /**
  * Notas que se le dejan a un editor: las preescritas en «Notas para editores» y las que un redactor o un administrador le envía desde el
@@ -26,6 +27,19 @@ export async function editoresActivos(excepto?: string): Promise<{ id: string; n
     .from(users)
     .where(and(eq(users.active, true), inArray(users.role, [...ROLES_QUE_RECIBEN]), ...(excepto ? [ne(users.id, excepto)] : [])));
   return filas.sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
+}
+
+/** Personas activas a las que `role` puede enviarle una nota desde el asistente (un redactor, solo editores; un editor o administrador, todas). */
+export async function destinosActivos(role: string, userId: string): Promise<Destino[]> {
+  if (!puedeEnviarNota(role)) return [];
+  const filas = await db.select({ id: users.id, nombre: users.name, rol: users.role }).from(users).where(eq(users.active, true));
+  return destinosPara(role, userId, filas);
+}
+
+/** Devuelve a la persona activa si `role` puede enviarle una nota; si no, `null`. */
+export async function destinoActivo(role: string, userId: string, id: string): Promise<{ id: string; nombre: string } | null> {
+  const [p] = await db.select({ id: users.id, nombre: users.name, rol: users.role }).from(users).where(and(eq(users.id, id), eq(users.active, true))).limit(1);
+  return p && p.id !== userId && destinoPermitido(role, p.rol) ? { id: p.id, nombre: p.nombre } : null;
 }
 
 /** ¿Puede recibir notas (editor o administrador, activo)? */

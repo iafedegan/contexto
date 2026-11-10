@@ -30,6 +30,7 @@ import {
 import { autosaveDraft, saveArticle } from "@/app/panel/(app)/articulos/actions";
 import { subirMedia } from "./subir-media";
 import { PedirImagen } from "./pedir-imagen";
+import { etiquetaRol } from "@/lib/notas-asignadas-reglas";
 import {
   generateArticleDraft,
   regenerateDraftPart,
@@ -104,6 +105,7 @@ const STEPS_MANUAL = [
   { key: "cuerpo", label: "Cuerpo" },
   { key: "grafica", label: "Gráfica" },
   { key: "seo", label: "Buscadores" },
+  { key: "enviar", label: "Enviar" },
   { key: "vista", label: "Vista previa" },
 ] as const;
 
@@ -138,6 +140,7 @@ export function ArticleWizard({
   esAdmin = false,
   editores = [],
   puedeEnviarEditor = false,
+  envioLibre = false,
 }: {
   categories: (Option & { parentId?: string | null })[];
   authors: Option[];
@@ -170,10 +173,12 @@ export function ArticleWizard({
   modelosEditor?: { modelos: { ref: string; etiqueta: string }[]; predeterminado: string | null; inicial: string | null; sinClave: string[] };
   /** Resultado del último guardado (?guardado=…), para confirmarlo. */
   savedAs?: string;
-  /** Editores activos a los que se puede enviar la nota. */
-  editores?: { id: string; nombre: string }[];
-  /** Administrador o redactor: puede enviar la nota a un editor (paso «Sección y autor»). */
+  /** Personas activas a las que se puede enviar la nota (un redactor, solo editores; un editor o administrador, todas). */
+  editores?: { id: string; nombre: string; rol?: string }[];
+  /** Redactor, editor o administrador: puede enviar la nota a otra persona (paso «Enviar»). */
   puedeEnviarEditor?: boolean;
+  /** Editor o administrador: el destinatario es un especialista, de cualquier rol. */
+  envioLibre?: boolean;
 }) {
   const heading = pieza ? "Tarea del consejo · artículo con IA" : mode === "ia" ? "Nuevo artículo con IA" : "Nuevo artículo";
   const STEPS: readonly { key: StepKey; label: string }[] = mode === "ia" ? STEPS_IA : STEPS_MANUAL;
@@ -1371,26 +1376,6 @@ export function ArticleWizard({
               ) : (
                 <p className="px-1 text-xs text-[var(--fg-muted)]">Tu cuenta no ubica notas en la portada del sitio: un editor lo hace al publicar.</p>
               )}
-              {/* A qué editor se envía la nota (solo administradores y redactores). Se envía al final, desde la vista previa. */}
-              {puedeEnviarEditor && (
-                <div className="rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] px-3.5 py-2.5">
-                  <label htmlFor="enviar-a" className="lx-kicker text-[var(--fg-muted)]" title="Al terminar, la nota queda «En revisión» y le llega a ese editor en «Artículos» y en «Notas para editores».">Enviar a un editor</label>
-                  {editores.length ? (
-                    <div className="mt-1.5 flex flex-wrap gap-2">
-                      <select id="enviar-a" value={enviarA} onChange={(e) => setEnviarA(e.target.value)} className="min-w-0 flex-1 basis-44 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5 text-sm">
-                        <option value="">No enviar a nadie</option>
-                        {editores.map((e) => <option key={e.id} value={e.id}>{e.nombre}</option>)}
-                      </select>
-                      {enviarA && (
-                        <input value={mensajeEditor} onChange={(e) => setMensajeEditor(e.target.value)} maxLength={600} placeholder="Mensaje para el editor (opcional)" aria-label="Mensaje para el editor"
-                          className="min-w-0 flex-[2] basis-56 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5 text-sm" />
-                      )}
-                    </div>
-                  ) : (
-                    <p className="mt-1 text-xs text-[var(--fg-muted)]">No hay editores activos todavía: un administrador los crea en Configuración → Usuarios.</p>
-                  )}
-                </div>
-              )}
             </SectionTree>
           </Step>
         )}
@@ -1604,7 +1589,6 @@ export function ArticleWizard({
                     <p className="mt-1.5 text-xs text-[var(--fg-muted)]">Imagen realista, estilo cine (16:9); no retrata personas reales y se publica rotulada «imagen generada con IA».</p>
                   </details>
                 </div>
-                <PedirImagen articleId={savedId} titulo={title} resumen={excerpt} portadaActual={cover} alUsar={(u) => { setCover(u); setImgError(""); }} />
               </div>
             </section>
             {biblioteca && (
@@ -1649,6 +1633,31 @@ export function ArticleWizard({
               <p className="mt-1 line-clamp-2 text-sm leading-snug text-[#4d5156]">{metaDescription || excerpt || "La descripción de la nota aparecerá aquí."}</p>
             </div>
             </div>
+          </Step>
+        )}
+
+        {current.key === "enviar" && (
+          <Step title="Enviar" hint={puedeEnviarEditor ? "Pídele la imagen a un diseñador (se envía al instante) y elige quién recibe la nota (se envía desde la vista previa). Ambas cosas son opcionales." : "Pídele la imagen a un diseñador si no quieres hacerla tú."}>
+            <PedirImagen articleId={savedId} titulo={title} resumen={excerpt} portadaActual={cover} alUsar={(u) => { setCover(u); setImgError(""); }} />
+            {puedeEnviarEditor && (
+              <div className="rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] px-3.5 py-2.5">
+                <label htmlFor="enviar-a" className="lx-kicker text-[var(--fg-muted)]" title="Al terminar, la nota queda «En revisión» y le llega a esa persona en «Artículos».">{envioLibre ? "Enviar a un especialista" : "Enviar a un editor"}</label>
+                {editores.length ? (
+                  <div className="mt-1.5 flex flex-wrap gap-2">
+                    <select id="enviar-a" value={enviarA} onChange={(e) => setEnviarA(e.target.value)} className="min-w-0 flex-1 basis-44 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5 text-sm">
+                      <option value="">No enviar a nadie</option>
+                      {editores.map((e) => <option key={e.id} value={e.id}>{e.nombre}{envioLibre && e.rol ? ` · ${etiquetaRol(e.rol)}` : ""}</option>)}
+                    </select>
+                    {enviarA && (
+                      <input value={mensajeEditor} onChange={(e) => setMensajeEditor(e.target.value)} maxLength={600} placeholder="Mensaje (opcional)" aria-label="Mensaje para quien la recibe"
+                        className="min-w-0 flex-[2] basis-56 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5 text-sm" />
+                    )}
+                  </div>
+                ) : (
+                  <p className="mt-1 text-xs text-[var(--fg-muted)]">No hay personas activas a las que enviar la nota: un administrador las crea en Configuración → Usuarios.</p>
+                )}
+              </div>
+            )}
           </Step>
         )}
 

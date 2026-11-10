@@ -15,7 +15,8 @@ import { tienePermiso } from "@/lib/permisos-server";
 import { avisarSiUltimaHora } from "@/lib/push";
 import { invalidarCache } from "@/lib/data-cache";
 import { esNotaPropia, exigirNotaPropia } from "@/lib/propiedad-notas";
-import { esEditorActivo, puedeEnviarAEditor, registrarAsignacion } from "@/lib/notas-asignadas";
+import { destinoActivo, registrarAsignacion } from "@/lib/notas-asignadas";
+import { puedeEnviarNota } from "@/lib/notas-asignadas-reglas";
 import { piezaParaEscribir, vincularPieza } from "@/app/panel/(app)/pendientes/consultas";
 
 // Variante para las acciones que responden con un mensaje en vez de lanzar.
@@ -35,11 +36,11 @@ async function requirePublicador() {
 // Guarda una nota desde el formulario: sanea el cuerpo, impide editar notas publicadas a quien no puede publicar, recalcula su embedding y, si se pide, publica, envía a revisión o programa.
 export async function saveArticle(formData: FormData) {
   const user = await requirePermiso("articulos");
-  // «Enviar a un editor» (solo administradores y redactores): se valida ANTES de guardar, para no dejar la nota a medias.
+  // «Enviar» (redactor → editor; editor o administrador → cualquier persona activa): se valida ANTES de guardar, para no dejar la nota a medias.
   const enviarA = String(formData.get("intent") ?? "") === "editor" ? String(formData.get("enviarA") ?? "") : "";
-  const editorDestino = enviarA ? await esEditorActivo(enviarA) : null;
-  if (enviarA && !puedeEnviarAEditor(user.role)) throw new Error("Solo los administradores y los redactores pueden enviar una nota a un editor.");
-  if (enviarA && !editorDestino) throw new Error("Elige un editor activo de la lista.");
+  if (enviarA && !puedeEnviarNota(user.role)) throw new Error("Tu rol no puede enviar notas a otra persona.");
+  const editorDestino = enviarA ? await destinoActivo(user.role, user.id, enviarA) : null;
+  if (enviarA && !editorDestino) throw new Error("Elige a una persona activa de la lista.");
   const id = String(formData.get("id") ?? "");
   const title = String(formData.get("title") ?? "").trim();
   const excerpt = String(formData.get("excerpt") ?? "").trim();
