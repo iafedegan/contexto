@@ -20,7 +20,8 @@ export default async function EnVivoPage() {
         </h1>
         <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[var(--fg-muted)]">
           Mientras la transmisión esté activa, el video de YouTube ocupa el lugar principal de la portada y la nota destacada baja a
-          «Lo último». Al apagarla, la portada vuelve a como estaba.
+          «Lo último». Al apagarla, la portada vuelve a como estaba. Con el modo automático, se enciende sola cuando el canal empieza a
+          transmitir y se apaga cuando termina.
         </p>
       </header>
 
