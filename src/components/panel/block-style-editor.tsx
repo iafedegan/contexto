@@ -33,6 +33,7 @@ export function BlockStyleEditor({
   onClear,
   zone,
   bare = false,
+  parte = "todo",
 }: {
   title: string;
   style: HomeStyle;
@@ -41,7 +42,11 @@ export function BlockStyleEditor({
   zone?: ZoneBundle;
   /** Sin marco ni título: va dentro de otro panel (p. ej. «Más ajustes» de una nota). */
   bare?: boolean;
+  /** «edicion»: dónde está la nota y qué tamaño tiene; «estilo»: fondo, texto y forma; «todo»: las dos. */
+  parte?: "edicion" | "estilo" | "todo";
 }) {
+  const conEdicion = parte !== "estilo";
+  const conEstilo = parte !== "edicion";
   // Campo numérico con su rango.
   const numField = (label: string, value: number | undefined, min: number, max: number, key: keyof HomeStyle, hint?: string) => (
     <div className="flex items-center gap-2">
@@ -83,15 +88,16 @@ export function BlockStyleEditor({
           <p className="mt-1 text-xs text-[var(--fg-muted)]">Arrastra la esquina inferior derecha de la nota en la página para agrandarla.</p>
         </div>
       )}
-      {bare && <p className="text-xs text-[var(--fg-muted)]">También puedes arrastrar la esquina inferior derecha de la nota en la página para agrandarla.</p>}
+      {bare && conEdicion && <p className="text-xs text-[var(--fg-muted)]">Lo más fácil: arrastra la esquina inferior derecha de la nota, en la página, para agrandarla o achicarla.</p>}
 
-      {zone && (
+      {conEdicion && zone && (
         <Group title="Dónde está en la cuadrícula">
           <ZonePanel map={zone.map} style={zone.style} selectedSlug={zone.selectedSlug} onChange={zone.onChange} onSelect={zone.onSelect} onMoveBlock={zone.onMoveBlock} level={zone.level} onLevel={zone.onLevel} />
         </Group>
       )}
 
-      <Group title="Tamaño y posición">
+      {conEdicion && (
+      <Group title="Tamaño y lugar de la nota">
         {numField("Columnas (1–6)", style.colSpan, 1, 6, "colSpan", "solo en cuadrículas")}
         {numField("Columna (inicio)", style.colStart, 1, 6, "colStart", "en cuadrículas")}
         {numField("Fila (inicio)", style.rowStart, 1, 12, "rowStart")}
@@ -112,11 +118,13 @@ export function BlockStyleEditor({
           </select>
         </div>
         <p className="text-xs leading-snug text-[var(--fg-muted)]">
-          «Columnas» solo cambia algo si el bloque está en una cuadrícula (p. ej. «Lo más reciente»). En una lista de una sola columna, como esta, el bloque ya ocupa todo el ancho: úsalo para hacerlo más estrecho con «Ancho (%)».
+          «Columnas» solo cambia algo si la nota está en una cuadrícula. Si va sola en su fila, ya ocupa todo el ancho: con «Ancho (%)» la haces más angosta.
         </p>
         {numField("Alto mínimo (px)", style.height, 60, 1200, "height")}
       </Group>
+      )}
 
+      {conEstilo && (<>
       <Group title="Fondo">
         <ColorRow label="Color de fondo" value={style.bg} onChange={(bg) => onChange({ bg })} />
         <GradientEditor label="Degradado de fondo" value={style.bgGradient} defaults={{ from: "#33401a", to: "#c8dc6c", angle: 135 }} onChange={(bgGradient) => onChange({ bgGradient })} />
@@ -134,8 +142,15 @@ export function BlockStyleEditor({
         {slider("Relleno interior", style.pad, 0, 80, "pad")}
       </Group>
 
-      <button type="button" onClick={onClear} className="inline-flex items-center gap-1.5 self-start rounded-full border border-[var(--border)] px-3 py-1.5 text-xs font-medium hover:border-[var(--accent)] hover:text-[var(--accent)]">
-        <RotateCcw size={12} /> Quitar estos ajustes de la nota
+      </>)}
+
+      <button
+        type="button"
+        // En «Edición» solo se deshace el tamaño y el lugar; el estilo (letras, colores…) se queda como está.
+        onClick={conEdicion && !conEstilo ? () => onChange({ colSpan: undefined, colStart: undefined, rowStart: undefined, widthPct: undefined, blockAlign: undefined, height: undefined }) : onClear}
+        className="inline-flex items-center gap-1.5 self-start rounded-full border border-[var(--border)] px-3 py-1.5 text-xs font-medium hover:border-[var(--accent)] hover:text-[var(--accent)]"
+      >
+        <RotateCcw size={12} /> {conEdicion && !conEstilo ? "Volver al tamaño y lugar originales" : "Quitar estos ajustes de la nota"}
       </button>
     </div>
   );

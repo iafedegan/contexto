@@ -234,6 +234,8 @@ function NotaPanel({
   zone: ZoneBundle;
 }) {
   const [alcance, setAlcance] = useState<"nota" | "todas">("nota");
+  // Dos pestañas, para no mezclar: «Edición» (dónde está la nota y qué tamaño tiene) y «Estilo» (letras, colores, fondo y forma).
+  const [pestana, setPestana] = useState<"edicion" | "estilo">("edicion");
   const { title, style, index } = nota;
   const etiqueta = index >= 0 ? `Nota ${index + 1}` : "Nota";
   return (
@@ -274,16 +276,42 @@ function NotaPanel({
 
       {alcance === "nota" ? (
         <>
+          <div role="tablist" aria-label="Qué quieres cambiar de esta nota" className="grid grid-cols-2 gap-1 rounded-xl bg-[var(--surface-2)] p-1">
+            {(
+              [
+                ["edicion", "Edición", "Dónde está y qué tamaño tiene"],
+                ["estilo", "Estilo", "Letras, colores y forma"],
+              ] as const
+            ).map(([id, nombre, ayuda]) => (
+              <button
+                key={id}
+                type="button"
+                role="tab"
+                aria-selected={pestana === id}
+                onClick={() => setPestana(id)}
+                className={`flex flex-col items-center rounded-lg px-2 py-2 text-center transition ${pestana === id ? "bg-white text-[var(--fg)] shadow-sm" : "text-[var(--fg-muted)] hover:text-[var(--fg)]"}`}
+              >
+                <span className="text-sm font-bold">{nombre}</span>
+                <span className="text-[11px] leading-tight">{ayuda}</span>
+              </button>
+            ))}
+          </div>
+          {pestana === "edicion" ? (
+            <BlockStyleEditor bare parte="edicion" title={title} style={style} onChange={onChange} onClear={onClear} zone={zone} />
+          ) : (
+          <>
           <Inspector style={style} showSpan={index >= 6 && layout.templateId !== "gremial"} showTextPos={index === 0 && layout.templateId === "esmeralda"} showSize={["esmeralda", "revista"].includes(layout.templateId)} showImage={["esmeralda", "revista"].includes(layout.templateId) || (layout.templateId === "clasico" && (index < 2 || index >= 6))} onChange={onChange} onClear={onClear} />
           <details className="group rounded-[var(--radius)] border border-[var(--border)]">
             <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2.5 text-sm font-semibold">
-              Más ajustes de esta nota
-              <span className="ml-auto text-xs font-normal text-[var(--fg-muted)]">posición, fondo, forma…</span>
+              Más estilos de esta nota
+              <span className="ml-auto text-xs font-normal text-[var(--fg-muted)]">fondo, texto, forma…</span>
             </summary>
             <div className="border-t border-[var(--border)] p-3">
-              <BlockStyleEditor bare title={title} style={style} onChange={onChange} onClear={onClear} zone={zone} />
+              <BlockStyleEditor bare parte="estilo" title={title} style={style} onChange={onChange} onClear={onClear} />
             </div>
           </details>
+          </>
+          )}
         </>
       ) : (
         <div className="flex flex-col gap-3">
