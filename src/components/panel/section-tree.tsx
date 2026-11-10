@@ -51,7 +51,11 @@ function buildTree(sections: SectionNode[]): Branch[] {
 export type PaginaDeSeccion = { id: string; titulo: string; slug: string; publicada: boolean; seccionId: string | null };
 const PaginasCtx = createContext<PaginaDeSeccion[] | null>(null);
 
-export function SectionTree({ paginas, ...props }: { sections: SectionNode[]; onSaved: () => void; paginas?: PaginaDeSeccion[] }) {
+/**
+ * `incrustado`: el árbol grande (el diagrama con el detalle al lado) va dentro de la página en lugar del árbol compacto con su
+ * ventana flotante. Es como se ve en Páginas.
+ */
+export function SectionTree({ paginas, ...props }: { sections: SectionNode[]; onSaved: () => void; paginas?: PaginaDeSeccion[]; incrustado?: boolean }) {
   return (
     <PaginasCtx.Provider value={paginas ?? null}>
       <ArbolSecciones {...props} />
@@ -59,7 +63,7 @@ export function SectionTree({ paginas, ...props }: { sections: SectionNode[]; on
   );
 }
 
-function ArbolSecciones({ sections, onSaved }: { sections: SectionNode[]; onSaved: () => void }) {
+function ArbolSecciones({ sections, onSaved, incrustado = false }: { sections: SectionNode[]; onSaved: () => void; incrustado?: boolean }) {
   const tree = useMemo(() => buildTree(sections), [sections]);
   const [open, setOpen] = useState<Set<string>>(new Set());
   const [selected, setSelected] = useState<string | null>(null);
@@ -105,6 +109,11 @@ function ArbolSecciones({ sections, onSaved }: { sections: SectionNode[]; onSave
       drop(id);
     },
   });
+
+  if (incrustado)
+    return (
+      <WideTree tree={tree} sections={sections} selected={selected} onSelect={setSelected} onClose={() => {}} onSaved={onSaved} run={run} busy={busy} msg={msg} incrustado />
+    );
 
   // Abre o cierra una sección del árbol.
   const toggle = (id: string) =>
@@ -361,13 +370,22 @@ function Detail({
         <div>
           <p className="mb-1 text-xs font-semibold">Subsecciones ({kids.length})</p>
           {kids.length > 0 && (
-            <div className="mb-2 flex flex-wrap gap-1.5">
-              {kids.map((c) => (
-                <button key={c.id} type="button" onClick={() => onSelect(c.id)} className="rounded-full border border-[var(--border)] bg-[#f1f5df] px-2.5 py-1 text-xs font-medium hover:border-[var(--accent)]">
-                  {c.name}
-                </button>
+            <ol className="mb-2 flex flex-col gap-1">
+              {kids.map((c, i) => (
+                <li key={c.id} className="flex items-center gap-1 rounded-[var(--radius)] border border-[var(--border)] bg-[#f6f8ec] py-1 pl-2.5 pr-1">
+                  <span className="w-4 text-[11px] font-bold text-[var(--fg-muted)]">{i + 1}</span>
+                  <button type="button" onClick={() => onSelect(c.id)} className="min-w-0 flex-1 truncate text-left text-xs font-semibold hover:text-[var(--accent)]" title={`Abrir ${c.name}`}>
+                    {c.name} <span className="font-normal text-[var(--fg-muted)]">· {c.articleCount}</span>
+                  </button>
+                  <button type="button" disabled={busy || i === 0} onClick={() => run(() => ordenarSeccion(c.id, "arriba"))} aria-label={`Subir ${c.name}`} title="Subir" className="grid size-7 place-items-center rounded-full hover:bg-white disabled:opacity-30">
+                    <ArrowUp size={13} />
+                  </button>
+                  <button type="button" disabled={busy || i === kids.length - 1} onClick={() => run(() => ordenarSeccion(c.id, "abajo"))} aria-label={`Bajar ${c.name}`} title="Bajar" className="grid size-7 place-items-center rounded-full hover:bg-white disabled:opacity-30">
+                    <ArrowDown size={13} />
+                  </button>
+                </li>
               ))}
-            </div>
+            </ol>
           )}
           <NewSection padreId={sel.id} label={`Nueva subsección de ${sel.name}`} run={run} busy={busy} />
         </div>
@@ -446,7 +464,9 @@ function WideTree({
   run,
   busy,
   msg,
+  incrustado = false,
 }: {
+  incrustado?: boolean;
   tree: Branch[];
   sections: SectionNode[];
   selected: string | null;
@@ -459,8 +479,7 @@ function WideTree({
 }) {
   const ROW = 38, NODE_H = 30, PAD = 28;
   const CW = 172, GAP = 66;
-  // Una sección con UNA página: el clic en su caja abre el editor de esa página; la ⚙ abre los datos de la sección.
-  const router = useRouter();
+  // El clic en una caja elige la sección: a la derecha salen sus subsecciones (para ordenarlas), su portada y sus páginas.
   const paginasCtx = useContext(PaginasCtx) ?? [];
 
   // Calco de la barra: 8 secciones, «Buscar» (fijo) y «Más» con el resto.
@@ -546,15 +565,21 @@ function WideTree({
   };
 
   return (
-    <div data-theme="panel-amber" role="dialog" aria-modal="true" aria-label="Árbol de secciones" className="fixed inset-0 z-[300] flex flex-col bg-[#1c2610]/70 p-3 backdrop-blur-sm sm:p-6">
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--bg)] text-[var(--fg)] shadow-2xl">
+    <div
+      data-theme="panel-amber"
+      {...(incrustado ? { "aria-label": "Árbol de secciones" } : { role: "dialog", "aria-modal": true, "aria-label": "Árbol de secciones" })}
+      className={incrustado ? "flex h-[calc(100dvh-11rem)] min-h-[34rem] flex-col" : "fixed inset-0 z-[300] flex flex-col bg-[#1c2610]/70 p-3 backdrop-blur-sm sm:p-6"}
+    >
+      <div className={`flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--bg)] text-[var(--fg)] ${incrustado ? "shadow-sm" : "shadow-2xl"}`}>
         <div className="flex items-center gap-3 border-b border-[var(--border)] bg-[#33401a] px-5 py-3 text-white">
           <Network size={16} />
           <h2 className="text-sm font-bold">Árbol de secciones</h2>
           <span className="hidden text-xs text-white/70 sm:inline">Barra del sitio › sección › subsección. Pulsa una para ver y editar sus datos.</span>
-          <button type="button" onClick={onClose} className="ml-auto inline-flex items-center gap-1.5 rounded-full bg-white px-3.5 py-1.5 text-xs font-semibold text-[#1c2610]">
-            <X size={13} /> Cerrar
-          </button>
+          {!incrustado && (
+            <button type="button" onClick={onClose} className="ml-auto inline-flex items-center gap-1.5 rounded-full bg-white px-3.5 py-1.5 text-xs font-semibold text-[#1c2610]">
+              <X size={13} /> Cerrar
+            </button>
+          )}
         </div>
         <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
           <div className="min-h-0 flex-1 overflow-auto bg-white">
@@ -570,12 +595,12 @@ function WideTree({
                 return (
                   <g
                     key={t.key}
-                    onClick={esPortada ? () => onSelect(PORTADA_ID) : pick ? () => (unica ? router.push(`/panel/paginas/${unica.id}`) : onSelect(pick.id)) : undefined}
+                    onClick={esPortada ? () => onSelect(PORTADA_ID) : pick ? () => onSelect(pick.id) : undefined}
                     className={pick || esPortada ? "cursor-pointer" : undefined}
                     role={pick || esPortada ? "button" : undefined}
-                    aria-label={unica ? `${t.label}: editar su página` : t.label}
+                    aria-label={t.label}
                   >
-                    {pick && <title>{unica ? `${pick.name} · clic para editar su página «${unica.titulo}»` : `${pick.name} · ${pick.articleCount} notas`}</title>}
+                    {pick && <title>{`${pick.name} · ${pick.articleCount} notas${unica ? " · tiene portada propia" : ""}`}</title>}
                     <rect x={x} y={y - NODE_H / 2} width={CW} height={NODE_H} rx={NODE_H / 2} fill={c.fill} stroke={isSel ? "#c9a227" : c.stroke} strokeWidth={isSel ? 3 : 2} strokeDasharray={t.kind === "fixed" ? "4 3" : undefined} />
                     <text x={t.kind === "root" || t.kind === "more" || t.kind === "fixed" ? x + CW / 2 : x + 14} y={y + 4} textAnchor={t.kind === "root" || t.kind === "more" || t.kind === "fixed" ? "middle" : "start"} fontSize="12.5" fontWeight={t.kind === "sub" || t.kind === "fixed" ? 600 : 700} fill={c.text}>
                       {trunc(t.label, 19)}
@@ -585,23 +610,8 @@ function WideTree({
                         {pick.articleCount}
                       </text>
                     )}
-                    {unica && (
-                      <text
-                        x={x + CW - 40}
-                        y={y + 5}
-                        textAnchor="middle"
-                        fontSize="13"
-                        fill={c.num}
-                        className="cursor-pointer"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onSelect(pick!.id);
-                        }}
-                      >
-                        <title>Datos de la sección (nombre, orden, de qué depende)</title>
-                        ⚙
-                      </text>
-                    )}
+                    {/* Punto dorado: la sección ya tiene portada propia (se edita desde el detalle, a la derecha). */}
+                    {unica && <circle cx={x + CW - 44} cy={y} r={4} fill="#c9a227" />}
                   </g>
                 );
               })}

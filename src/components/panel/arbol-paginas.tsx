@@ -9,5 +9,5 @@ import { SectionTree, type PaginaDeSeccion, type SectionNode } from "@/component
  */
 export function ArbolPaginas({ sections, paginas }: { sections: SectionNode[]; paginas: PaginaDeSeccion[] }) {
   const router = useRouter();
-  return <SectionTree sections={sections} paginas={paginas} onSaved={() => router.refresh()} />;
+  return <SectionTree sections={sections} paginas={paginas} onSaved={() => router.refresh()} incrustado />;
 }
