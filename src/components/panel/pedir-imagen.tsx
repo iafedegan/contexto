@@ -55,41 +55,45 @@ export function PedirImagen({ articleId, titulo, resumen, portadaActual, alUsar 
   const pendienteDeEntrega = pedido?.estado === "pendiente";
 
   return (
-    <div className="rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface-2)]/50 p-3">
-      <p className="flex items-center gap-1.5 text-xs font-semibold"><Brush size={13} aria-hidden /> ¿Prefieres que la haga el diseñador?</p>
+    <div className="flex flex-col gap-3 text-sm">
       {!articleId ? (
-        <p className="mt-1.5 text-xs text-[var(--fg-muted)]">Guarda la nota primero y podrás pedirle la imagen.</p>
+        <p className="text-xs text-[var(--fg-muted)]">Guarda la nota primero (se hace sola al escribir el título) y podrás pedirle la imagen.</p>
       ) : !cargado ? (
-        <p className="mt-1.5 inline-flex items-center gap-1.5 text-xs text-[var(--fg-muted)]"><Loader2 size={12} className="animate-spin" /> Cargando…</p>
+        <p className="inline-flex items-center gap-1.5 text-xs text-[var(--fg-muted)]"><Loader2 size={12} className="animate-spin" /> Cargando…</p>
       ) : pendienteDeEntrega ? (
-        <div className="mt-1.5 flex flex-col gap-2 text-xs">
-          <p>Pedida a <strong>{nombreDe(pedido!.disenadorId)}</strong>. Cuando la entregue te aparece aquí y queda puesta en la nota.</p>
+        <div className="flex flex-col gap-2 text-xs">
+          <p className="rounded-[var(--radius)] bg-[var(--surface-2)] px-3 py-2">Pedida a <strong>{nombreDe(pedido!.disenadorId)}</strong>. Cuando la entregue te aparece aquí y queda puesta en la nota.</p>
           <p className="whitespace-pre-line text-[var(--fg-muted)]">{pedido!.indicaciones}</p>
           <button type="button" onClick={cancelar} disabled={pendiente} className="lx-link self-start font-medium">Cancelar el pedido</button>
         </div>
       ) : entregada ? (
-        <div className="mt-1.5 flex flex-col gap-2 text-xs">
+        <div className="flex flex-col gap-2 text-xs">
           <p className="font-medium text-[#16a34a]">✓ El diseñador entregó la imagen.</p>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={pedido!.url} alt="" className="aspect-[16/9] w-full max-w-xs rounded-[var(--radius)] border border-[var(--border)] object-cover" />
           <button type="button" onClick={() => alUsar(pedido!.url!)} className="lx-btn self-start !px-3 !py-1.5 text-xs"><Check size={13} /> Usar esta imagen</button>
         </div>
       ) : (
-        <details className="mt-1.5" onToggle={(e) => { if ((e.currentTarget as HTMLDetailsElement).open && !indicaciones) setIndicaciones(`Imagen de portada para la nota «${titulo || "sin título"}».${resumen ? `\n${resumen.slice(0, 300)}` : ""}`); }}>
-          <summary className="lx-link cursor-pointer text-xs font-medium">Pedir la imagen al diseñador</summary>
-          <div className="mt-2 flex flex-col gap-2">
-            <textarea value={indicaciones} onChange={(e) => setIndicaciones(e.target.value)} rows={4} placeholder="Qué imagen necesitas: la escena, el ambiente, lo que no debe faltar…" className={`${campo} resize-none`} />
-            <select value={disenadorId} onChange={(e) => setDisenadorId(e.target.value)} className={campo} aria-label="Diseñador">
-              <option value="">Cualquier diseñador</option>
-              {disenadores.map((d) => <option key={d.id} value={d.id}>{d.nombre}</option>)}
-            </select>
-            <button type="button" onClick={pedir} disabled={pendiente} className="lx-btn self-start !px-3 !py-1.5 text-xs">
-              {pendiente ? <Loader2 size={13} className="animate-spin" /> : <Brush size={13} />} Enviar pedido
-            </button>
-          </div>
-        </details>
+        <>
+          <select value={disenadorId} onChange={(e) => setDisenadorId(e.target.value)} className={campo} aria-label="Diseñador">
+            <option value="">Cualquier diseñador</option>
+            {disenadores.map((d) => <option key={d.id} value={d.id}>{d.nombre}</option>)}
+          </select>
+          <textarea
+            value={indicaciones}
+            onChange={(e) => setIndicaciones(e.target.value)}
+            onFocus={() => { if (!indicaciones) setIndicaciones(`Imagen de portada para la nota «${titulo || "sin título"}».${resumen ? `\n${resumen.slice(0, 300)}` : ""}`); }}
+            rows={3}
+            placeholder="Qué imagen necesitas: la escena, el ambiente, lo que no debe faltar…"
+            aria-label="Indicaciones para el diseñador"
+            className={`${campo} resize-none`}
+          />
+          <button type="button" onClick={pedir} disabled={pendiente} className="lx-btn self-start">
+            {pendiente ? <Loader2 size={15} className="animate-spin" /> : <Brush size={15} />} Enviar pedido
+          </button>
+        </>
       )}
-      {mensaje && <p role={mensaje.ok ? "status" : "alert"} className={`mt-2 text-xs ${mensaje.ok ? "text-[#16a34a]" : "text-[var(--danger,#b4442e)]"}`}>{mensaje.texto}</p>}
+      {mensaje && <p role={mensaje.ok ? "status" : "alert"} className={`text-xs ${mensaje.ok ? "text-[#16a34a]" : "text-[var(--danger,#b4442e)]"}`}>{mensaje.texto}</p>}
     </div>
   );
 }

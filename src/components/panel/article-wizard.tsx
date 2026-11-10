@@ -22,6 +22,7 @@ import {
   RotateCcw,
   Save,
   Send,
+  Brush,
   PenLine,
   Sparkles,
   Trash2,
@@ -1641,27 +1642,29 @@ export function ArticleWizard({
         )}
 
         {current.key === "enviar" && (
-          <Step title="Enviar" hint={puedeEnviarEditor ? "Pídele la imagen a un diseñador (se envía al instante) y elige quién recibe la nota (se envía desde la vista previa). Ambas cosas son opcionales." : "Pídele la imagen a un diseñador si no quieres hacerla tú."}>
-            <PedirImagen articleId={savedId} titulo={title} resumen={excerpt} portadaActual={cover} alUsar={(u) => { setCover(u); setImgError(""); }} />
-            {puedeEnviarEditor && (
-              <div className="rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] px-3.5 py-2.5">
-                <label htmlFor="enviar-a" className="lx-kicker text-[var(--fg-muted)]" title="Al terminar, la nota queda «En revisión» y le llega a esa persona en «Artículos».">{envioLibre ? "Enviar a un especialista" : "Enviar a un editor"}</label>
-                {editores.length ? (
-                  <div className="mt-1.5 flex flex-wrap gap-2">
-                    <select id="enviar-a" value={enviarA} onChange={(e) => setEnviarA(e.target.value)} className="min-w-0 flex-1 basis-44 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5 text-sm">
-                      <option value="">No enviar a nadie</option>
-                      {editores.map((e) => <option key={e.id} value={e.id}>{e.nombre}{envioLibre && e.rol ? ` · ${etiquetaRol(e.rol)}` : ""}</option>)}
-                    </select>
-                    {enviarA && (
-                      <input value={mensajeEditor} onChange={(e) => setMensajeEditor(e.target.value)} maxLength={600} placeholder="Mensaje (opcional)" aria-label="Mensaje para quien la recibe"
-                        className="min-w-0 flex-[2] basis-56 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5 text-sm" />
-                    )}
-                  </div>
-                ) : (
-                  <p className="mt-1 text-xs text-[var(--fg-muted)]">No hay personas activas a las que enviar la nota: un administrador las crea en Configuración → Usuarios.</p>
-                )}
-              </div>
-            )}
+          <Step ancho="lg" title="Enviar" hint="Opcional. Pide la imagen a un diseñador y elige quién recibe la nota. El pedido de imagen sale al instante; la nota se envía desde la vista previa.">
+            <div className="grid items-stretch gap-4 @2xl:grid-cols-2">
+              <TarjetaEnvio Icono={Brush} titulo="Solicitar la imagen" ayuda="Un diseñador la prepara y te la devuelve a la nota.">
+                <PedirImagen articleId={savedId} titulo={title} resumen={excerpt} portadaActual={cover} alUsar={(u) => { setCover(u); setImgError(""); }} />
+              </TarjetaEnvio>
+              {puedeEnviarEditor ? (
+                <TarjetaEnvio Icono={Send} titulo={envioLibre ? "Enviar la nota a alguien" : "Enviar la nota a un editor"} ayuda="Queda «En revisión» y le llega en «Artículos».">
+                  {editores.length ? (
+                    <div className="flex flex-col gap-3 text-sm">
+                      <select id="enviar-a" value={enviarA} onChange={(e) => setEnviarA(e.target.value)} aria-label="Destinatario" className="w-full rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm outline-none transition focus:border-[var(--accent)]">
+                        <option value="">No enviar a nadie</option>
+                        {editores.map((e) => <option key={e.id} value={e.id}>{e.nombre}{envioLibre && e.rol ? ` · ${etiquetaRol(e.rol)}` : ""}</option>)}
+                      </select>
+                      <textarea value={mensajeEditor} onChange={(e) => setMensajeEditor(e.target.value)} maxLength={600} rows={3} disabled={!enviarA} placeholder={enviarA ? "Mensaje para quien la recibe (opcional)" : "Elige a quién enviarla para dejarle un mensaje"} aria-label="Mensaje para quien la recibe"
+                        className="w-full resize-none rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm outline-none transition placeholder:text-[var(--fg-muted)]/60 focus:border-[var(--accent)] disabled:opacity-60" />
+                      <p className="text-xs text-[var(--fg-muted)]">{editorElegido ? `Se enviará a ${editorElegido.nombre} desde la vista previa.` : "Si no eliges a nadie, la nota sigue contigo."}</p>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-[var(--fg-muted)]">No hay personas activas a las que enviar la nota: un administrador las crea en Configuración → Usuarios.</p>
+                  )}
+                </TarjetaEnvio>
+              ) : null}
+            </div>
           </Step>
         )}
 
@@ -1859,6 +1862,22 @@ function Step({ title, hint, children, ancho = "md", centrado = false }: { title
       </header>
       <div className="flex min-h-0 flex-1 flex-col gap-3.5">{children}</div>
     </div>
+  );
+}
+
+/** Tarjeta del paso «Enviar»: icono, título, ayuda y contenido; las dos tarjetas del paso comparten esta estructura para verse iguales. */
+function TarjetaEnvio({ Icono, titulo, ayuda, children }: { Icono: React.ComponentType<{ size?: number; "aria-hidden"?: boolean }>; titulo: string; ayuda: string; children: React.ReactNode }) {
+  return (
+    <section className="flex min-w-0 flex-col gap-4 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow)] sm:p-5">
+      <header className="flex items-start gap-3">
+        <span className="grid size-10 shrink-0 place-items-center rounded-full bg-[var(--accent)] text-[var(--accent-fg,#fff)]"><Icono size={18} aria-hidden /></span>
+        <div className="min-w-0">
+          <h3 className="text-base font-semibold leading-tight">{titulo}</h3>
+          <p className="mt-0.5 text-xs text-[var(--fg-muted)]">{ayuda}</p>
+        </div>
+      </header>
+      {children}
+    </section>
   );
 }
 
