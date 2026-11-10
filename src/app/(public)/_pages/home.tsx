@@ -79,6 +79,14 @@ async function HomePage({ locale, portadaBorrador }: { locale: Locale; portadaBo
 
   // Portada propia del inicio (página «inicio»): publicada, o el borrador en la vista previa del constructor.
   const inicioPropio = portadaBorrador ?? (await getPaginaPublicada(SLUG_INICIO_SITIO).catch(() => null))?.contenido ?? null;
+  // Cada fila de la portada propia sale arriba de las notas, tras la principal o abajo, según lo que se eligió en el constructor.
+  const filasInicio = (lugar: "arriba" | "tras-principal" | "abajo") => (inicioPropio?.filas ?? []).filter((f) => (f.lugar ?? "arriba") === lugar);
+  const bloqueInicio = (lugar: "tras-principal" | "abajo", clase: string) =>
+    filasInicio(lugar).length > 0 ? (
+      <article className={`${clase} flex flex-col gap-8`}>
+        <PaginaVista contenido={{ filas: filasInicio(lugar) }} notas={notasInicioPropio} />
+      </article>
+    ) : null;
   const notasInicioPropio = inicioPropio ? await notasDeLaPagina(inicioPropio).catch(() => ({})) : {};
 
   const market = await getMarketTicker().catch(() => []);
@@ -252,9 +260,9 @@ async function HomePage({ locale, portadaBorrador }: { locale: Locale; portadaBo
       <AdsBanner zone="home_top" className="mx-auto mb-10" />
 
       {/* La portada propia del inicio, armada en Páginas con el constructor: va arriba de las notas. En la vista previa manda el borrador. */}
-      {inicioPropio && (
+      {filasInicio("arriba").length > 0 && (
         <article className="mb-12 flex flex-col gap-8">
-          <PaginaVista contenido={inicioPropio} notas={notasInicioPropio} />
+          <PaginaVista contenido={{ filas: filasInicio("arriba") }} notas={notasInicioPropio} />
         </article>
       )}
 
@@ -300,6 +308,7 @@ async function HomePage({ locale, portadaBorrador }: { locale: Locale; portadaBo
           {!carrusel && sinSlot && <div className="mt-8">{columnaMovil}</div>}
 
           {car.posicion === "tras-principal" && carruselConColumna && <div className="mt-12">{carruselConColumna}</div>}
+          {bloqueInicio("tras-principal", "mt-12")}
           {extrasEn("tras-principal").map((n, i) => <div key={`tp${i}`} className="mt-12">{n}</div>)}
 
           {/* Billboard entre el bloque destacado y el resto (§9.1). */}
@@ -311,6 +320,7 @@ async function HomePage({ locale, portadaBorrador }: { locale: Locale; portadaBo
       </CardSlugsProvider>
 
       {car.posicion === "abajo" && carruselConColumna && <div className="mt-12">{carruselConColumna}</div>}
+      {bloqueInicio("abajo", "mt-12")}
       {extrasEn("abajo").map((n, i) => <div key={`ab${i}`} className="mt-12">{n}</div>)}
 
       <AdsBanner zone="home_bottom" className="mx-auto mt-14" />

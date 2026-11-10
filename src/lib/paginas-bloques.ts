@@ -51,6 +51,8 @@ export type Fila = {
   fondoImagen?: string;
   espaciado?: "compacto" | "normal" | "amplio";
   vertical?: "arriba" | "centro";
+  /** Solo en la portada del inicio del sitio: dónde sale la fila respecto a las notas (por defecto, arriba de todo). */
+  lugar?: "arriba" | "tras-principal" | "abajo";
 };
 
 /**
@@ -742,6 +744,7 @@ export function sanearPagina(v: unknown): ContenidoPagina {
         fondoImagen: urlSegura(f.fondoImagen) || undefined,
         espaciado: uno(f.espaciado, ["compacto", "normal", "amplio"] as const, "normal"),
         vertical: uno(f.vertical, ["arriba", "centro"] as const, "arriba"),
+        ...(f.lugar === "tras-principal" || f.lugar === "abajo" ? { lugar: f.lugar } : {}),
       }];
     }),
   };

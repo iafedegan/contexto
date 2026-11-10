@@ -508,7 +508,7 @@ export function ConstructorPagina({ pagina, secciones, seccionPortada = null, es
           ) : esInicio ? (
             <header className="mb-6 border-b border-[var(--border)] pb-5">
               <p className="lx-kicker text-[var(--accent)]">◆ Inicio del sitio</p>
-              <p className="mt-1 text-sm text-[var(--fg-muted)]">Menú y cintillo arriba; la portada de notas (destacada, «Lo último», laterales) sigue debajo de lo que armes aquí.</p>
+              <p className="mt-1 text-sm text-[var(--fg-muted)]">Menú y cintillo arriba. En cada fila eliges dónde sale: arriba de las notas, entre las notas (tras la principal) o abajo. Las notas de la portada salen solas.</p>
             </header>
           ) : (
             <>
@@ -530,6 +530,7 @@ export function ConstructorPagina({ pagina, secciones, seccionPortada = null, es
                 indice={fi}
                 total={c.filas.length}
                 vista={vista}
+                esInicio={esInicio}
                 onDivision={(cols) => cambiarDivision(fi, cols)}
                 onEditar={(p) => editarFila(fi, p)}
                 onElegirFondo={() => setElegirImagen(() => (url: string) => editarFila(fi, { fondo: "imagen", fondoImagen: url }))}
@@ -748,9 +749,9 @@ function MiniDivision({ columnas }: { columnas: number[] }) {
 
 /** Una fila del lienzo con su barra de controles. */
 function FilaLienzo({
-  fila, indice, total, vista, children, onDivision, onEditar, onElegirFondo, onMover, onCopiar, onBorrar,
+  fila, indice, total, vista, esInicio, children, onDivision, onEditar, onElegirFondo, onMover, onCopiar, onBorrar,
 }: {
-  fila: Fila; indice: number; total: number; vista: boolean; children: ReactNode;
+  fila: Fila; indice: number; total: number; vista: boolean; esInicio: boolean; children: ReactNode;
   onDivision: (c: number[]) => void; onEditar: (p: Partial<Fila>) => void; onElegirFondo: () => void; onMover: (d: -1 | 1) => void; onCopiar: () => void; onBorrar: () => void;
 }) {
   const [abierto, setAbierto] = useState(false);
@@ -778,6 +779,13 @@ function FilaLienzo({
             </div>
           )}
         </div>
+        {esInicio && (
+          <select value={fila.lugar ?? "arriba"} onChange={(e) => onEditar({ lugar: e.target.value as Fila["lugar"] })} aria-label="Dónde sale la fila en el inicio" className={sel}>
+            <option value="arriba">Arriba de las notas</option>
+            <option value="tras-principal">Entre las notas (tras la principal)</option>
+            <option value="abajo">Abajo de las notas</option>
+          </select>
+        )}
         <select value={fila.fondo ?? "ninguno"} onChange={(e) => (e.target.value === "imagen" && !fila.fondoImagen ? onElegirFondo() : onEditar({ fondo: e.target.value as Fila["fondo"] }))} aria-label="Fondo de la fila" className={sel}>
           <option value="ninguno">Sin fondo</option>
           <option value="suave">Fondo suave</option>
