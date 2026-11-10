@@ -141,9 +141,14 @@ export function sectionElsCss(input: unknown, scope = "[data-site-root]"): strin
   // Piezas que solo toman el COLOR de otra (no su tamaño ni su letra): «14 años» se pinta como el nombre del sitio.
   const soloColor = (s: SectionElStyle, selector: string) => {
     const sel = `:is(${selector})`;
-    if (s.gradient)
+    // El logo en SVG (components/logo-contexto.tsx) toma su color de las variables --logo-*: degradado = de «desde» a «hasta».
+    if (s.gradient) {
       rules.push(`${sel}{background-image:${gradientCss(s.gradient)}!important;-webkit-background-clip:text!important;background-clip:text!important;-webkit-text-fill-color:transparent!important;color:transparent!important;animation:none!important}`);
-    else if (s.color) rules.push(`${sel}{background-image:none!important;color:${s.color}!important;-webkit-text-fill-color:${s.color}!important}`);
+      rules.push(`svg${sel}{background-image:none!important;--logo-oscuro:${s.gradient.from};--logo-medio:${s.gradient.from};--logo-claro:${s.gradient.to}}`);
+    } else if (s.color) {
+      rules.push(`${sel}{background-image:none!important;color:${s.color}!important;-webkit-text-fill-color:${s.color}!important}`);
+      rules.push(`svg${sel}{--logo-oscuro:${s.color};--logo-medio:${s.color};--logo-claro:${s.color}}`);
+    }
   };
   for (const { id } of SECTION_ELS) {
     const s = els[id];

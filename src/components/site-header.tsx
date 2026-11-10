@@ -3,6 +3,7 @@ import type { NavbarId } from "@/lib/template-parts";
 import { ReadingProgress } from "@/components/reading-progress";
 import { LocaleSwitch } from "@/components/locale-switch";
 import { LogoMark } from "@/components/logo-mark";
+import { LogoContexto } from "@/components/logo-contexto";
 import type { Theme } from "@/lib/theme";
 import { DEFAULT_IDENTITY, type SiteIdentity } from "@/lib/site-identity";
 import { DEFAULT_LOCALE, INTL_LOCALE, localePath, t, type Locale } from "@/lib/i18n";
@@ -165,12 +166,9 @@ function MastheadHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extr
         {/* Logo a la izquierda y, a su lado, el nombre. `items-center` en ESTA fila: las líneas y el logo quedan en el centro vertical del título. */}
         <div className="flex items-center justify-center gap-6">
           <span data-titulo-linea className="hidden h-px flex-1 bg-gradient-to-r from-transparent to-[var(--border-strong)] md:block" />
-          {/* El logo oficial (Illustrator, «Variaciones logo CONtexto 2026»): la C con el play, CONTEXTO, GANADERO MEDIA y «— 14 AÑOS —». */}
+          {/* El logo oficial recreado en SVG (components/logo-contexto.tsx; colores con --logo-*): la C con el play, CONTEXTO, GANADERO MEDIA y «— 14 AÑOS —». */}
           <Link href={localePath(locale, "/")} className="flex items-center justify-center">
-            <picture>
-              <source srcSet="/logo/contexto-media-horizontal.webp" type="image/webp" />
-              <img src="/logo/contexto-media-horizontal.png" alt={identity.name} width={1100} height={372} fetchPriority="high" className="block h-[clamp(4.25rem,10cqi,7.25rem)] w-auto" />
-            </picture>
+            <LogoContexto id="web" titulo={identity.name} className="block h-[clamp(4.25rem,10cqi,7.25rem)] w-auto" />
           </Link>
           <span data-titulo-linea className="hidden h-px flex-1 bg-gradient-to-l from-transparent to-[var(--border-strong)] md:block" />
         </div>

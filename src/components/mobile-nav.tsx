@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ChevronDown, ChevronRight, EllipsisVertical, Menu, Moon, Search, UserCircle, X } from "lucide-react";
 import { LogoMark } from "@/components/logo-mark";
+import { LogoContexto } from "@/components/logo-contexto";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { RadioPlayer } from "@/components/radio-player";
 import { InstalarApp } from "@/components/instalar-app";
@@ -128,11 +129,8 @@ export function MobileNav({
       <span aria-hidden />
       <Link href={localePath(locale, "/")} className="flex min-w-0 justify-center text-center">
         <span className="flex min-w-0 flex-col items-center">
-          {/* El logo oficial completo (con «— 14 AÑOS —»), a un alto que cabe en un teléfono de 360 px. */}
-          <picture>
-            <source srcSet="/logo/contexto-media-horizontal.webp" type="image/webp" />
-            <img src="/logo/contexto-media-horizontal.png" alt={name} width={1100} height={372} fetchPriority="high" className="block h-[min(3.4rem,15vw)] w-auto" />
-          </picture>
+          {/* El logo oficial en SVG (con «— 14 AÑOS —»), a un alto que cabe en un teléfono de 360 px. */}
+          <LogoContexto id="movil" titulo={name} className="block h-[min(3.4rem,15vw)] w-auto" />
           {tagline && <span data-titulo-texto data-el="h-lema" className="lx-ui mt-1 block truncate text-[0.62rem] font-semibold uppercase leading-none tracking-[0.14em] text-[var(--fg-muted)]">{tagline}</span>}
           {fecha && <span data-titulo-texto data-el="h-fecha" className="lx-ui mt-1 block truncate text-[0.6rem] font-medium uppercase leading-none tracking-[0.14em] text-[var(--fg-muted)]">{fecha}</span>}
         </span>
