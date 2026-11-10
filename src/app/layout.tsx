@@ -52,7 +52,7 @@ export async function generateMetadata(): Promise<Metadata> {
   ...(verificacion ? { verification: { google: verificacion } } : {}),
   // Instalable como aplicación: el manifiesto lo genera src/app/manifest.ts.
   manifest: "/manifest.webmanifest",
-  appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: identity.name },
+  appleWebApp: { capable: true, statusBarStyle: "black", title: identity.name },
   };
 }
 

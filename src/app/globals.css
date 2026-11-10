@@ -2360,9 +2360,7 @@ body:has(.cg-cintillo-arriba) .cg-cinta-cabecera { display: none; }
 
 /* App instalada (PWA): iOS desenfoca una franja bajo la barra de estado; el cintillo baja un poco para quedar fuera de ella. */
 @media (display-mode: standalone) {
-  /* Las demás páginas empiezan por la cabecera: baja lo mismo para que el logo y la fecha no queden bajo esa franja. */
-  header[data-region="navbar"].cg-pt-seguro { padding-top: calc(env(safe-area-inset-top, 0px) + 2.25rem); }
-  .cg-cintillo-arriba { padding-top: calc(env(safe-area-inset-top, 0px) + 2.25rem) !important; }
+  .cg-cintillo-arriba { padding-top: calc(env(safe-area-inset-top, 0px) + 0.875rem) !important; }
 }
 
 /* Pantallas táctiles: los enlaces de texto del pie y de las migas quedan con al menos ~28 px de alto para el dedo. */
