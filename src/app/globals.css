@@ -2469,8 +2469,7 @@ body:has(.cg-cintillo-arriba) .cg-cinta-cabecera { display: none; }
     border: 0;
     border-radius: 0;
     background: linear-gradient(to top, rgb(0 0 0 / 0.9), rgb(0 0 0 / 0.6) 60%, transparent);
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
+    /* El desenfoque se quita con max-sm:backdrop-blur-none en la tarjeta (aquí el minificador descartaba backdrop-filter:none). */
     box-shadow: none;
     padding: 5rem 1.1rem 1.1rem;
     color: #fff;
