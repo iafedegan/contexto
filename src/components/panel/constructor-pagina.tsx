@@ -618,6 +618,20 @@ export function ConstructorPagina({ pagina, secciones, seccionPortada = null, es
           </div>
 
           {/* Debajo de la portada, las notas de la sección salen solas (como en el sitio). Un clic en una abre su menú: editarla o quitarla de la lista. */}
+          {esInicio && (
+            <section className="mt-8 select-none" aria-label="Portada del sitio">
+              <p className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.12em] text-[var(--fg-muted)]">
+                <span className="h-px flex-1 bg-[var(--border-strong)]" />
+                Debajo sale sola la portada de notas del sitio
+                <span className="h-px flex-1 bg-[var(--border-strong)]" />
+              </p>
+              <div className="relative h-[46rem] overflow-hidden rounded-lg border border-[var(--border)] bg-white">
+                <iframe src="/vista-portada" title="Portada de notas del sitio" tabIndex={-1} className="pointer-events-none h-full w-full" />
+              </div>
+              <p className="mt-1 text-[11px] text-[var(--fg-muted)]">Así se ve hoy la portada. La plantilla, el carrusel y el cintillo se ajustan en «Ajustes de la portada de notas».</p>
+            </section>
+          )}
+
           {seccionPortada && (() => {
             const visibles = seccionPortada.notas.filter((a) => !ocultas.has(a.slug)).slice(0, 9);
             const ficha = notaSel ? seccionPortada.fichas[notaSel.slug] : undefined;
