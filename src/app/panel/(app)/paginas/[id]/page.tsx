@@ -7,7 +7,7 @@ import { articles, categories, paginas } from "@/db/schema";
 import { requirePermiso } from "@/lib/auth";
 import { MAX_OCULTAS, sanearPagina, SLUG_INICIO_SITIO } from "@/lib/paginas-bloques";
 import { ConstructorPagina } from "@/components/panel/constructor-pagina";
-import { getArticlesByCategory } from "@/lib/content";
+import { getArticlesByCategory, getHomepageArticles } from "@/lib/content";
 import { getSiteTheme } from "@/lib/site-theme";
 
 export const dynamic = "force-dynamic";
@@ -40,6 +40,11 @@ export default async function DisenarPagina({ params }: { params: Promise<{ id: 
   const fichas = slugsNotas.length
     ? await db.select({ id: articles.id, slug: articles.slug, titulo: articles.title }).from(articles).where(inArray(articles.slug, slugsNotas)).catch(() => [])
     : [];
+  // El inicio del sitio: debajo de su portada salen solas las notas de la portada, con la plantilla real.
+  const esInicio = p.slug === SLUG_INICIO_SITIO;
+  const [notasInicio, temaInicio] = esInicio
+    ? await Promise.all([getHomepageArticles(13).catch(() => []), getSiteTheme().catch(() => null)])
+    : [null, null];
   return (
     <div className="flex flex-col gap-3">
       <Link href="/panel/paginas" className="inline-flex items-center gap-1.5 self-start rounded-full px-1 py-1 text-sm font-semibold text-[var(--accent)] hover:underline">
@@ -48,7 +53,8 @@ export default async function DisenarPagina({ params }: { params: Promise<{ id: 
       <ConstructorPagina
         pagina={{ id: p.id, titulo: p.titulo, slug: p.slug, descripcion: p.descripcion ?? "", publicada: p.publicada, contenido }}
         secciones={secciones}
-        esInicio={p.slug === SLUG_INICIO_SITIO}
+        esInicio={esInicio}
+        notasInicio={notasInicio ? { tema: temaInicio?.parts.body ?? "esmeralda", notas: notasInicio } : null}
         seccionPortada={
           cat
             ? {
