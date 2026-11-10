@@ -408,7 +408,7 @@ export function EsmeraldaTemplate({
 
   return (
     <div className="flex flex-col gap-10 sm:gap-16">
-      <section className="grid grid-cols-1 gap-7 sm:gap-8 xl:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
+      <section className="grid grid-cols-1 gap-7 sm:gap-8 xl:grid-cols-[minmax(0,1.9fr)_minmax(0,1fr)]">
         <div className="flex min-w-0 flex-col gap-7 sm:gap-8">
           {wrap(lead, <ArticleCard a={lead} locale={locale} variant="lead" priority={interactive} />)}
           {trasPrincipal}
