@@ -165,37 +165,17 @@ function MastheadHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extr
         {/* Logo a la izquierda y, a su lado, el nombre. `items-center` en ESTA fila: las líneas y el logo quedan en el centro vertical del título. */}
         <div className="flex items-center justify-center gap-6">
           <span data-titulo-linea className="hidden h-px flex-1 bg-gradient-to-r from-transparent to-[var(--border-strong)] md:block" />
-          <Link href={localePath(locale, "/")} className="flex items-center justify-center gap-[0.9cqi]">
-            <span data-el="h-nombre" className="lx-display lx-foil block text-[clamp(1.875rem,6.4cqi,3.75rem)] font-semibold leading-none tracking-tight">
-            {/^c/i.test(identity.name) ? (
-              <>
-                {/* El logo hace de «C»: mismo alto que las mayúsculas y la misma lámina dorada del nombre. */}
-                <span
-                  aria-hidden
-                  data-titulo-marca
-                  data-el="h-logo"
-                  className="lx-foil -mr-[0.14em] inline-block size-[1.3em] align-[-0.28em]"
-                  style={{ backgroundClip: "border-box", WebkitBackgroundClip: "border-box", WebkitMask: "url(/logo/contexto-media-emblema.png) center / contain no-repeat", mask: "url(/logo/contexto-media-emblema.png) center / contain no-repeat" }}
-                />
-                <span className="sr-only">{identity.name.charAt(0)}</span>
-                {identity.name.slice(1)}
-              </>
-            ) : (
-              identity.name
-            )}
-            </span>
+          {/* El logo oficial (Illustrator, «Variaciones logo CONtexto 2026»): la C con el play, CONTEXTO, GANADERO MEDIA y «— 14 AÑOS —». */}
+          <Link href={localePath(locale, "/")} className="flex items-center justify-center">
+            <picture>
+              <source srcSet="/logo/contexto-media-horizontal.webp" type="image/webp" />
+              <img src="/logo/contexto-media-horizontal.png" alt={identity.name} width={1100} height={372} fetchPriority="high" className="block h-[clamp(4.25rem,10cqi,7.25rem)] w-auto" />
+            </picture>
           </Link>
           <span data-titulo-linea className="hidden h-px flex-1 bg-gradient-to-l from-transparent to-[var(--border-strong)] md:block" />
         </div>
-        {/* Los 14 años bajo el nombre, en la lámina dorada; luego el lema y, debajo, la fecha. */}
+        {/* Los 14 años ya van dentro del logo; debajo, el lema y la fecha. */}
         <span className="mt-2 flex flex-col items-center gap-y-1">
-          <span data-titulo-texto className="mb-1 flex items-center gap-[1.6cqi]">
-            <span aria-hidden className="h-px w-[5cqi] bg-gradient-to-r from-transparent to-[#c9a24a]" />
-            <span data-color-de="h-nombre" className="lx-display lx-foil pl-[0.28em] text-[clamp(1rem,2.7cqi,1.7rem)] font-bold uppercase leading-none tracking-[0.28em] [font-variant-numeric:lining-nums]">
-              {locale === "en" ? "14 years" : "14 años"}
-            </span>
-            <span aria-hidden className="h-px w-[5cqi] bg-gradient-to-l from-transparent to-[#c9a24a]" />
-          </span>
           {!identity.sinLema && <span data-titulo-texto data-el="h-lema" className="lx-kicker text-[var(--fg-muted)]">{identity.tagline || t(locale, "nav.tagline")}</span>}
           {identity.fecha !== false && <span data-titulo-texto data-el="h-fecha" className="lx-ui text-[0.62rem] font-medium uppercase tracking-[0.18em] text-[var(--fg-muted)]/80">{today}</span>}
         </span>

@@ -128,29 +128,11 @@ export function MobileNav({
       <span aria-hidden />
       <Link href={localePath(locale, "/")} className="flex min-w-0 justify-center text-center">
         <span className="flex min-w-0 flex-col items-center">
-          {/* Sin la escala de titulares del panel (zoom) y con un tamaño que cabe entero en un teléfono de 360 px: nunca «Gan…». */}
-          <span data-el="h-nombre" style={{ zoom: 1 }} className="lx-display lx-foil block whitespace-nowrap text-[min(1.35rem,4.7vw)] font-semibold leading-tight tracking-tight">{/^c/i.test(name) ? (
-              <>
-                {/* El logo hace de «C»: mismo alto que las mayúsculas y la misma lámina dorada del nombre. */}
-                <span
-                  aria-hidden
-                  data-titulo-marca
-                  data-el="h-logo"
-                  className="lx-foil -mr-[0.14em] inline-block size-[1.3em] align-[-0.28em]"
-                  style={{ backgroundClip: "border-box", WebkitBackgroundClip: "border-box", WebkitMask: "url(/logo/contexto-media-emblema.png) center / contain no-repeat", mask: "url(/logo/contexto-media-emblema.png) center / contain no-repeat" }}
-                />
-                <span className="sr-only">{name.charAt(0)}</span>
-                {name.slice(1)}
-              </>
-            ) : (
-              name
-            )}</span>
-          {/* Los 14 años, como en la web: lámina dorada, cifras a la altura de las letras y filetes a los lados. */}
-          <span data-titulo-texto className="mt-1 flex items-center gap-2">
-            <span aria-hidden className="h-px w-5 bg-gradient-to-r from-transparent to-[#c9a24a]" />
-            <span data-color-de="h-nombre" className="lx-display lx-foil pl-[0.28em] text-[0.72rem] font-bold uppercase leading-none tracking-[0.28em] [font-variant-numeric:lining-nums]">{es ? "14 años" : "14 years"}</span>
-            <span aria-hidden className="h-px w-5 bg-gradient-to-l from-transparent to-[#c9a24a]" />
-          </span>
+          {/* El logo oficial completo (con «— 14 AÑOS —»), a un alto que cabe en un teléfono de 360 px. */}
+          <picture>
+            <source srcSet="/logo/contexto-media-horizontal.webp" type="image/webp" />
+            <img src="/logo/contexto-media-horizontal.png" alt={name} width={1100} height={372} fetchPriority="high" className="block h-[min(3.4rem,15vw)] w-auto" />
+          </picture>
           {tagline && <span data-titulo-texto data-el="h-lema" className="lx-ui mt-1 block truncate text-[0.62rem] font-semibold uppercase leading-none tracking-[0.14em] text-[var(--fg-muted)]">{tagline}</span>}
           {fecha && <span data-titulo-texto data-el="h-fecha" className="lx-ui mt-1 block truncate text-[0.6rem] font-medium uppercase leading-none tracking-[0.14em] text-[var(--fg-muted)]">{fecha}</span>}
         </span>
