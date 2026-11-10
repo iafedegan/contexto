@@ -23,7 +23,7 @@ export type ResultadoPagina = { ok: true; id?: string } | { ok: false; error: st
 const RESERVADAS = new Set([
   "articulo", "asistente", "autor", "boletin", "buscar", "categoria", "contacto", "derechos-de-autor", "en", "en-vivo", "feeds", "observatorio",
   "paute-con-nosotros", "politica-de-cookies", "politica-de-ia", "politica-de-privacidad", "politica-editorial", "preguntas-frecuentes",
-  "quienes-somos", "terminos-y-condiciones", "panel", "api", "columna", "sitemap", "manifest", "robots",
+  "quienes-somos", "terminos-y-condiciones", "panel", "api", "vista-portada", "columna", "sitemap", "manifest", "robots",
 ]);
 
 /**

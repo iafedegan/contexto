@@ -12,6 +12,8 @@ import {
 import { borrarPagina, guardarPagina, notasParaVista, publicarPagina } from "@/app/panel/(app)/paginas/actions";
 import { ElementoVista, claseColumna, claseFila, estiloFila, type NotaMini } from "@/components/pagina-vista";
 import { SelectorBiblioteca } from "@/components/panel/selector-biblioteca";
+import { SectionGrid } from "@/components/section/section-layout";
+import type { ArticleListItem } from "@/lib/content";
 import {
   DIVISIONES, ESQUEMAS, PALETA, PLANTILLAS, duplicarElemento, duplicarFila, elementoNuevo, esBloque, filaNueva, nuevoId, rutaPagina,
   type Alinear, type Campo, type ContenidoPagina, type Elemento, type ElementoBloque, type Fila, type TipoElemento, type Valores,
@@ -52,12 +54,14 @@ const copia = (c: ContenidoPagina): ContenidoPagina => JSON.parse(JSON.stringify
  * (o se pulsa para añadirlo a la columna elegida) y los elementos del lienzo se pueden arrastrar entre columnas y filas.
  */
 /** La sección de la que esta página es portada («{seccion}/inicio»): el lienzo la muestra dentro de la sección real. */
-type SeccionPortada = { slug: string; nombre: string; descripcion: string | null } | null;
+type SeccionPortada = { slug: string; nombre: string; descripcion: string | null; total: number; notas: ArticleListItem[]; tema: string } | null;
 
 export function ConstructorPagina({ pagina, secciones, seccionPortada = null }: { pagina: Pagina; secciones: { slug: string; name: string }[]; seccionPortada?: SeccionPortada }) {
   const router = useRouter();
   // Notas reales por sección, para que los bloques de notas (y las notas de la sección, debajo de su portada) se vean como en el sitio.
   const [notasVista, setNotasVista] = useState<Record<string, NotaMini[]>>({});
+  // Vista previa de la portada de una sección: la página real en un marco; el número la recarga después de guardar.
+  const [vistaN, setVistaN] = useState(0);
   const [titulo, setTitulo] = useState(pagina.titulo);
   const [slug, setSlug] = useState(pagina.slug);
   const [slugGuardado, setSlugGuardado] = useState(pagina.slug);
@@ -66,10 +70,10 @@ export function ConstructorPagina({ pagina, secciones, seccionPortada = null }: 
   const [hist, setHist] = useState<{ pasado: ContenidoPagina[]; actual: ContenidoPagina; futuro: ContenidoPagina[] }>({ pasado: [], actual: pagina.contenido, futuro: [] });
   const c = hist.actual;
   const seccionesConNotas = useMemo(() => {
-    const set = new Set<string>(seccionPortada ? [seccionPortada.slug] : []);
+    const set = new Set<string>();
     for (const f of c.filas) for (const celda of f.celdas) for (const e of celda) if (e.tipo === "notas" && e.seccion) set.add(e.seccion);
     return [...set].sort().join(",");
-  }, [c, seccionPortada]);
+  }, [c]);
   useEffect(() => {
     const faltan = seccionesConNotas.split(",").filter((x) => x && !(x in notasVista));
     if (!faltan.length) return;
@@ -355,7 +359,7 @@ export function ConstructorPagina({ pagina, secciones, seccionPortada = null }: 
         <button type="button" onClick={rehacer} disabled={!hist.futuro.length} className={boton}><Redo2 size={14} /> Rehacer</button>
         <div className="mx-1 flex overflow-hidden rounded-lg border border-[var(--border)]">
           <button type="button" onClick={() => setVista(false)} aria-pressed={!vista} className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold ${!vista ? "bg-[var(--accent)] text-[var(--accent-fg)]" : ""}`}><Pencil size={14} /> Armar</button>
-          <button type="button" onClick={() => { setVista(true); setSel(null); }} aria-pressed={vista} className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold ${vista ? "bg-[var(--accent)] text-[var(--accent-fg)]" : ""}`}><Eye size={14} /> Vista previa</button>
+          <button type="button" onClick={() => { setVista(true); setSel(null); if (seccionPortada) guardar(async () => setVistaN((n) => n + 1)); }} aria-pressed={vista} className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold ${vista ? "bg-[var(--accent)] text-[var(--accent-fg)]" : ""}`}><Eye size={14} /> Vista previa</button>
         </div>
         <span className="flex-1" />
         {msg && <span className={`text-sm ${msg.ok ? "text-[#15803d]" : "text-[#b91c1c]"}`}>{msg.t}</span>}
@@ -426,12 +430,35 @@ export function ConstructorPagina({ pagina, secciones, seccionPortada = null }: 
 
         {/* Lienzo */}
         <div className="min-w-0 rounded-xl border border-[var(--border)] bg-[var(--bg)] p-4 sm:p-6" onClick={() => !vista && setSel(null)}>
+          {vista && seccionPortada ? (
+            /* La sección REAL del sitio (menú, filtros, banners, laterales y notas) con esta portada en su lugar. Se guarda antes de mostrarla. */
+            <div className="flex flex-col gap-2">
+              <p className="text-xs text-[var(--fg-muted)]">
+                Así se ve <span className="font-mono">/categoria/{seccionPortada.slug}</span> con esta portada (guardada{publicada ? "" : ", aún en borrador: el público todavía no la ve"}).
+              </p>
+              {vistaN > 0 ? (
+                <iframe key={vistaN} src={`/vista-portada/${pagina.id}?v=${vistaN}`} title={`Vista previa de ${seccionPortada.nombre}`} className="h-[calc(100dvh-14rem)] min-h-[32rem] w-full rounded-lg border border-[var(--border)] bg-white" />
+              ) : (
+                <div className="grid h-64 place-items-center text-sm text-[var(--fg-muted)]"><Loader2 size={18} className="animate-spin" /></div>
+              )}
+            </div>
+          ) : (
+          <>
           {seccionPortada ? (
             /* Como en el sitio: el encabezado de la sección arriba (no el título de la página, que en la sección no se muestra). */
             <header className="mb-6 border-b border-[var(--border)] pb-5">
               <p className="lx-kicker text-[var(--accent)]">◆ Sección</p>
               <h1 className="lx-display mt-1 text-5xl leading-tight tracking-tight">{seccionPortada.nombre}</h1>
-              {seccionPortada.descripcion && <p className="mt-2 text-lg text-[var(--fg-muted)]">{seccionPortada.descripcion}</p>}
+              <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
+                {seccionPortada.descripcion ? <p className="text-lg text-[var(--fg-muted)]">{seccionPortada.descripcion}</p> : <span />}
+                {/* Como en el sitio (aquí no funcionan): cuántas notas, orden y filtro. */}
+                <div aria-hidden className="flex flex-wrap gap-2 text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-[var(--fg-muted)]">
+                  <span className="rounded-full border border-[var(--border-strong)] px-3 py-1.5 text-[var(--accent)]">{seccionPortada.total.toLocaleString("es-CO")} publicaciones</span>
+                  <span className="rounded-full border border-[var(--border)] px-3 py-1.5">Más reciente</span>
+                  <span className="rounded-full border border-[var(--border)] px-3 py-1.5">Más leído</span>
+                  <span className="rounded-full border border-[var(--border)] px-3 py-1.5">☰ Filtrar</span>
+                </div>
+              </div>
             </header>
           ) : (
             <>
@@ -550,14 +577,13 @@ export function ConstructorPagina({ pagina, secciones, seccionPortada = null }: 
                   <span className="h-px flex-1 bg-[var(--border-strong)]" />
                 </p>
               )}
-              <div className={`@container ${vista ? "" : "opacity-55"}`}>
-                <ElementoVista
-                  e={{ id: "notasseccion", tipo: "notas", seccion: seccionPortada.slug, cantidad: 6, estilo: "tarjetas", columnas: 3 }}
-                  notas={notasVista[seccionPortada.slug]}
-                  enEditor
-                />
+              {/* La composición real de la sección en la plantilla del sitio (nota grande, lista numerada, rejilla). */}
+              <div className={vista ? "" : "opacity-60"} onClickCapture={(e) => e.preventDefault()}>
+                <SectionGrid theme={seccionPortada.tema} items={seccionPortada.notas} locale="es" />
               </div>
             </section>
+          )}
+          </>
           )}
         </div>
 

@@ -7,6 +7,8 @@ import { categories, paginas } from "@/db/schema";
 import { requirePermiso } from "@/lib/auth";
 import { sanearPagina } from "@/lib/paginas-bloques";
 import { ConstructorPagina } from "@/components/panel/constructor-pagina";
+import { getArticlesByCategory } from "@/lib/content";
+import { getSiteTheme } from "@/lib/site-theme";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Diseñar página" };
@@ -26,6 +28,10 @@ export default async function DisenarPagina({ params }: { params: Promise<{ id: 
   const [cat] = m
     ? await db.select({ slug: categories.slug, name: categories.name, description: categories.description }).from(categories).where(eq(categories.slug, m[1])).limit(1)
     : [];
+  // Las notas de la sección y la plantilla del sitio: debajo de la portada se ven con la composición real de la sección.
+  const [listado, site] = cat
+    ? await Promise.all([getArticlesByCategory(cat.slug, { limit: 9 }).catch(() => null), getSiteTheme().catch(() => null)])
+    : [null, null];
   return (
     <div className="flex flex-col gap-3">
       <Link href="/panel/paginas" className="inline-flex items-center gap-1.5 self-start rounded-full px-1 py-1 text-sm font-semibold text-[var(--accent)] hover:underline">
@@ -34,7 +40,11 @@ export default async function DisenarPagina({ params }: { params: Promise<{ id: 
       <ConstructorPagina
         pagina={{ id: p.id, titulo: p.titulo, slug: p.slug, descripcion: p.descripcion ?? "", publicada: p.publicada, contenido: sanearPagina(p.contenido) }}
         secciones={secciones}
-        seccionPortada={cat ? { slug: cat.slug, nombre: cat.name, descripcion: cat.description } : null}
+        seccionPortada={
+          cat
+            ? { slug: cat.slug, nombre: cat.name, descripcion: cat.description, total: listado?.total ?? 0, notas: listado?.items.slice(0, 9) ?? [], tema: site?.parts.body ?? "esmeralda" }
+            : null
+        }
       />
     </div>
   );

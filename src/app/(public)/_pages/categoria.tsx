@@ -17,6 +17,7 @@ import { departamentoPorSlug, regionPorSlug } from "@/lib/regiones-colombia";
 import { siteUrl } from "@/lib/utils";
 import { getPaginasDeSeccion, notasDeLaPagina } from "@/lib/paginas";
 import { PaginaVista } from "@/components/pagina-vista";
+import type { ContenidoPagina } from "@/lib/paginas-bloques";
 import { blockStylesCss } from "@/lib/home-style";
 
 /** Sección — plantilla «Cobre & Obsidiana». */
@@ -64,7 +65,7 @@ async function generateMetadataImpl({ params }: Params): Promise<Metadata> {
 }
 
 // Página de una sección: notas con filtros por subsección y fechas, y paginación; 404 si no existe.
-async function CategoryPage({ params, searchParams, locale }: PageProps & { locale: Locale }) {
+async function CategoryPage({ params, searchParams, locale, portadaBorrador }: PageProps & { locale: Locale; portadaBorrador?: ContenidoPagina }) {
   const { slug } = await params;
   const q = (await searchParams) ?? {};
   const { subcategoria, pagina } = q;
@@ -119,7 +120,10 @@ async function CategoryPage({ params, searchParams, locale }: PageProps & { loca
   // Solo la portada propia de la sección («{seccion}/inicio») se muestra entera, con su diseño, arriba de las notas. Las demás páginas son páginas
   // aparte (`/seccion/otra`): aquí solo se enlazan, como tarjetas.
   const inicioSeccion = paginasSeccion.find((p) => p.slug === `${slug}/inicio`);
-  const enLinea = inicioSeccion ? [inicioSeccion] : [];
+  // Vista previa del constructor (/vista-portada): la portada en borrador ocupa su lugar, aunque no esté publicada.
+  const enLinea = portadaBorrador
+    ? [{ slug: `${slug}/inicio`, titulo: "", descripcion: null, contenido: portadaBorrador }]
+    : inicioSeccion ? [inicioSeccion] : [];
   const otrasPaginas = paginasSeccion.filter((p) => p !== inicioSeccion);
   const notasEnLinea = await Promise.all(enLinea.map((p) => notasDeLaPagina(p.contenido).catch(() => ({}))));
   const paginas = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -482,6 +486,11 @@ function paginasVisibles(actual: number, total: number): (number | null)[] {
     previo = n;
   }
   return salida;
+}
+
+/** La sección con una portada en borrador en su lugar (vista previa del constructor). Sin filtros ni caché de por medio. */
+export function VistaPortadaSeccion({ slug, contenido }: { slug: string; contenido: ContenidoPagina }) {
+  return CategoryPage({ params: Promise.resolve({ slug }), searchParams: Promise.resolve({}), locale: "es", portadaBorrador: contenido });
 }
 
 /** Fábrica: la misma página en cualquier idioma de interfaz. */
