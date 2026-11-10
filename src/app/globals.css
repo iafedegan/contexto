@@ -85,9 +85,10 @@ html:not([data-fuentes]) {
   --shadow: 0 1px 0 rgba(216, 181, 88, 0.12);
   --shadow-hover: 0 30px 70px -30px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(216, 181, 88, 0.35);
   --sheen: rgba(216, 181, 88, 0.22);
-  --font-display: var(--f-playfair), Georgia, serif;
-  --font-body: var(--f-inter), system-ui, sans-serif;
-  --font-ui: var(--f-inter), system-ui, sans-serif;
+  /* Como el sitio anterior (contextoganadero.com): titulares en Georgia y textos en Open Sans. */
+  --font-display: Georgia, "Times New Roman", Times, serif;
+  --font-body: var(--f-open-sans), "Open Sans", system-ui, sans-serif;
+  --font-ui: var(--f-open-sans), "Open Sans", system-ui, sans-serif;
 }
 
 /* ------------------------------------------------------------ 2. ARTÍCULO

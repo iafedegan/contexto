@@ -19,6 +19,7 @@ import {
   Cormorant_Garamond,
   Inter_Tight,
   JetBrains_Mono,
+  Open_Sans,
   Jost,
   Marcellus,
   Outfit,
@@ -31,6 +32,8 @@ import {
 
 /** Portada — titulares de alta moda editorial. También se precarga: es la tipografía de los titulares de la plantilla en producción (Esmeralda), y descubrirla recién al leer el CSS retrasaba el LCP. */
 export const playfair = Playfair_Display({ subsets: ["latin"], display: "swap", preload: false, variable: "--f-playfair" });
+/** Texto del sitio público: la misma Open Sans del sitio anterior (contextoganadero.com), para que lectores y marca la reconozcan. */
+export const openSans = Open_Sans({ subsets: ["latin"], display: "swap", preload: false, weight: ["400", "500", "600", "700"], style: ["normal", "italic"], variable: "--f-open-sans" });
 /** UI neutra de alta densidad (portada, buscador, panel). La única que se precarga: la usan casi todos los temas. */
 export const interTight = Inter_Tight({ subsets: ["latin"], display: "swap", preload: false, variable: "--f-inter" });
 /** Artículo — didona de contraste extremo. */
@@ -66,6 +69,7 @@ export const sourceSerif = Source_Serif_4({ subsets: ["latin"], display: "swap",
 
 // Variables CSS de todas las tipografías, para aplicarlas al documento.
 export const fontVariables = [
+  openSans,
   playfair,
   interTight,
   bodoni,

@@ -12,6 +12,8 @@
 export type HomeTitleFont =
   | "display"
   | "sans"
+  | "georgia"
+  | "open-sans"
   | "playfair"
   | "bodoni"
   | "cormorant"
@@ -52,6 +54,7 @@ export const HOME_FONTS: HomeFontOption[] = [
   { id: "sans", label: "Texto del tema", cssVar: "var(--font-ui)", group: "tema" },
 
   // Serif: de alta moda editorial a lectura larga.
+  { id: "georgia", label: "Georgia", cssVar: 'Georgia, "Times New Roman", serif', group: "serif" },
   { id: "playfair", label: "Playfair Display", cssVar: "var(--f-playfair)", group: "serif" },
   { id: "bodoni", label: "Bodoni Moda", cssVar: "var(--f-bodoni)", group: "serif" },
   { id: "cormorant", label: "Cormorant", cssVar: "var(--f-cormorant)", group: "serif" },
@@ -62,6 +65,7 @@ export const HOME_FONTS: HomeFontOption[] = [
   // Sans y monoespaciada.
   { id: "syne", label: "Syne", cssVar: "var(--f-syne)", group: "sans" },
   { id: "grotesk", label: "Space Grotesk", cssVar: "var(--f-grotesk)", group: "sans" },
+  { id: "open-sans", label: "Open Sans", cssVar: "var(--f-open-sans)", group: "sans" },
   { id: "inter", label: "Inter Tight", cssVar: "var(--f-inter)", group: "sans" },
   { id: "jost", label: "Jost", cssVar: "var(--f-jost)", group: "sans" },
   { id: "outfit", label: "Outfit", cssVar: "var(--f-outfit)", group: "sans" },
