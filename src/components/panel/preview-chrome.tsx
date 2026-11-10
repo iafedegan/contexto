@@ -43,6 +43,9 @@ import { recortar } from "@/lib/format";
  * sola cuando el editor cambia algo en la otra pestaña. El formulario flotante
  * «Editar» es el mismo panel «Propiedades» del editor.
  */
+// Hora actual para medir cuándo se editó por última vez (se llama desde manejadores y efectos, no al dibujar).
+const ahora = () => Date.now();
+
 export function PreviewChrome({
   changed,
   changes = [],
@@ -165,7 +168,7 @@ export function PreviewChrome({
 
   // Cada ajuste se guarda en el borrador (y se avisa al editor) y la vista se refresca.
   function persist() {
-    editadoEn.current = Date.now();
+    editadoEn.current = ahora();
     setSaveState("saving");
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(async () => {
@@ -242,7 +245,7 @@ export function PreviewChrome({
 
   // Si el editor cambia el diseño en la otra pestaña, el formulario lo refleja.
   useEffect(() => {
-    if (!timer.current && draft && Date.now() - editadoEn.current > 5000) {
+    if (!timer.current && draft && ahora() - editadoEn.current > 5000) {
       layoutRef.current = draft.layout;
       itemsRef.current = draft.items;
       adDraftsRef.current = draft.adDrafts;

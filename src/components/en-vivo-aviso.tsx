@@ -23,7 +23,8 @@ export function EnVivoAviso() {
     const ruta = window.location.pathname;
     if (ruta.startsWith("/panel") || ruta.startsWith("/vista-") || ruta.startsWith("/en-vivo")) return;
     try {
-      setDescartado(localStorage.getItem(VISTO_KEY) ?? "");
+      const visto = localStorage.getItem(VISTO_KEY) ?? "";
+      queueMicrotask(() => setDescartado(visto));
     } catch {
       /* sin almacenamiento */
     }

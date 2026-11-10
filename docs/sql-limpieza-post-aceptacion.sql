@@ -22,7 +22,7 @@ ALTER TABLE IF EXISTS archivo.articles_meta_title_respaldo ENABLE ROW LEVEL SECU
 -- PASO 2 — Recuperar el espacio de `redirects` (284 filas ocupaban 24 MB por filas muertas de la carga masiva).
 -- VACUUM no corre dentro de una transacción: ejecútalo SOLO, sin otras sentencias en la misma ejecución. Bloquea la tabla unos segundos;
 -- las direcciones antiguas se sirven con la caché de datos, así que el sitio no lo nota.
--- El índice duplicado `redirects_from_idx` lo quita la migración 0024.
+-- El índice duplicado `redirects_from_idx` lo quita la migración 0033.
 -- ============================================================================================================================
 -- VACUUM (FULL, ANALYZE) public.redirects;
 

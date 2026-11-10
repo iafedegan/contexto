@@ -104,7 +104,7 @@ export function CarruselPortada({ config: c, notas }: { config: Required<Carruse
   }, []);
   // Al cambiar el ancho o la configuración, vuelve a una posición válida.
   useEffect(() => {
-    if (idx > maxIdx) ir(maxIdx);
+    if (idx > maxIdx) queueMicrotask(() => ir(maxIdx));
   }, [idx, maxIdx, ir]);
 
   if (notas.length === 0) return null;
@@ -187,6 +187,8 @@ export function CarruselPortada({ config: c, notas }: { config: Required<Carruse
             </span>
           ) : (
             posiciones.map((p, i) => (
+              // `ir` lee refs solo al ejecutarse (clic), no al dibujar: el compilador de React lo marca por error.
+              // eslint-disable-next-line react-hooks/refs
               <button key={p} type="button" aria-label={`Ir a la ${i + 1}`} aria-current={i === pagina ? "true" : undefined} onClick={() => ir(p)} />
             ))
           )}
