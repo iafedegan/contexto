@@ -7,6 +7,7 @@ import { LogoMark } from "@/components/logo-mark";
 import { ToroBot } from "@/components/toro-bot";
 import { useVoz } from "@/components/voz-asistente";
 import { leerCifra, type FilaCifra } from "@/lib/ai/lectura-cifra";
+import { ImagenSitio } from "@/components/ui/imagen-sitio";
 
 // Fuente que respalda una respuesta.
 type Source = {
@@ -257,8 +258,7 @@ export function AssistantChat({ compact = false }: { compact?: boolean }) {
                           className="cg-nota lx-card lx-glass group/n flex gap-3 p-3 transition hover:border-[var(--accent)]"
                         >
                           {s.image && (
-                            // eslint-disable-next-line @next/next/no-img-element -- miniatura remota de la nota; el chat no necesita optimizarla
-                            <img src={s.image} alt="" width={72} height={72} loading="lazy" className="cg-nota-img size-[4.5rem] shrink-0 rounded-[var(--radius)] object-cover" />
+                            <ImagenSitio src={s.image} alt="" sizes="72px" ancho={144} alto={144} className="cg-nota-img size-[4.5rem] shrink-0 rounded-[var(--radius)] object-cover" />
                           )}
                           <span className="min-w-0 flex-1">
                             <span className="lx-kicker block truncate text-[0.68rem] text-[var(--accent)]">

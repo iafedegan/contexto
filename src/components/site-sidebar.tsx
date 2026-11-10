@@ -6,6 +6,7 @@ import { PushToggle } from "@/components/push-toggle";
 import { getMostReadArticles, getUltimaColumnaLafaurie } from "@/lib/content";
 import { t, type Locale } from "@/lib/i18n";
 import { hrefNota } from "@/lib/ruta-nota";
+import { ImagenSitio } from "@/components/ui/imagen-sitio";
 
 /**
  * Barra lateral del §8: más leídas, publicidad, boletín y redes.
@@ -115,8 +116,7 @@ export function ColumnaLafaurie({ locale, columna }: { locale: Locale; columna: 
       <h2 className="lx-kicker text-center border-b border-[var(--border)] pb-2 text-[var(--accent)]">{t(locale, "sidebar.column")}</h2>
       <Link href={hrefNota(locale, columna)} className="group mt-3 block text-center">
         {columna.authorAvatarUrl && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={columna.authorAvatarUrl} alt={columna.authorName ?? ""} width={96} height={96} className="mx-auto mb-3 size-24 rounded-full border border-[var(--border-strong)] object-cover" />
+          <ImagenSitio src={columna.authorAvatarUrl} alt={columna.authorName ?? ""} sizes="96px" ancho={192} alto={192} className="mx-auto mb-3 size-24 rounded-full border border-[var(--border-strong)] object-cover" />
         )}
         <span className="lx-display block text-[1.15rem] leading-snug transition-colors group-hover:text-[var(--accent)]">{columna.title}</span>
         {columna.excerpt && <span className="mx-auto mt-2 line-clamp-4 block max-w-[17rem] text-[0.82rem] leading-snug text-[var(--fg-muted)]">{columna.excerpt}</span>}

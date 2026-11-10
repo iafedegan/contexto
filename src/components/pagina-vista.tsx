@@ -8,6 +8,7 @@ import type { Alinear, ContenidoPagina, Elemento, Fila } from "@/lib/paginas-blo
 import { esBloque, videoIncrustado } from "@/lib/paginas-bloques";
 import { BloqueVista } from "@/components/pagina-bloques-vista";
 import { Carrusel } from "@/components/pagina-interactivos";
+import { ImagenSitio } from "@/components/ui/imagen-sitio";
 
 export type NotaMini = { slug: string; href: string; title: string; excerpt: string | null; coverImageUrl: string | null };
 
@@ -60,8 +61,7 @@ function TarjetaNota({ n }: { n: NotaMini }) {
   return (
     <a href={n.href} className="group flex h-full flex-col overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)]">
       {n.coverImageUrl && (
-        // eslint-disable-next-line @next/next/no-img-element -- portada de la nota
-        <img src={n.coverImageUrl} alt="" loading="lazy" className="aspect-video w-full object-cover transition duration-500 group-hover:scale-105" />
+        <ImagenSitio src={n.coverImageUrl} alt="" sizes="(min-width: 1024px) 33vw, 100vw" ancho={960} alto={540} className="aspect-video w-full object-cover transition duration-500 group-hover:scale-105" />
       )}
       <span className="flex flex-col gap-1.5 p-4">
         <span className="lx-display text-lg leading-snug group-hover:text-[var(--accent)]">{n.title}</span>
@@ -75,8 +75,7 @@ function NotaFila({ n }: { n: NotaMini }) {
   return (
     <a href={n.href} className="group flex gap-3">
       {n.coverImageUrl && (
-        // eslint-disable-next-line @next/next/no-img-element -- miniatura
-        <img src={n.coverImageUrl} alt="" loading="lazy" className="aspect-[4/3] w-28 shrink-0 rounded-lg object-cover" />
+        <ImagenSitio src={n.coverImageUrl} alt="" sizes="112px" ancho={224} alto={168} className="aspect-[4/3] w-28 shrink-0 rounded-lg object-cover" />
       )}
       <span>
         <span className="lx-display block text-lg leading-snug group-hover:text-[var(--accent)]">{n.title}</span>
@@ -125,8 +124,7 @@ export function ElementoVista({ e, notas, enEditor = false }: { e: Elemento; not
       if (!e.url)
         return enEditor ? <div className="grid aspect-video place-items-center rounded-xl border-2 border-dashed border-[var(--border-strong)] text-sm text-[var(--fg-muted)]">Elija una imagen</div> : null;
       const forma = e.redondeo === "circulo" ? "aspect-square rounded-full" : e.redondeo === "no" ? "" : "rounded-xl";
-      // eslint-disable-next-line @next/next/no-img-element -- imágenes de la biblioteca o externas, sin dominio fijo
-      const img = <img src={e.url} alt={e.alt} loading="lazy" className={`w-full object-cover ${forma}`} />;
+      const img = <ImagenSitio src={e.url} alt={e.alt} className={`h-auto w-full object-cover ${forma}`} />;
       return (
         <figure>
           {e.url_enlace ? <a href={e.url_enlace} onClick={enEditor ? (ev) => ev.preventDefault() : undefined}>{img}</a> : img}
@@ -183,8 +181,7 @@ export function ElementoVista({ e, notas, enEditor = false }: { e: Elemento; not
           <div className="grid gap-6 @3xl:grid-cols-[3fr_2fr]">
             <a href={a.href} className="group flex flex-col gap-3">
               {a.coverImageUrl && (
-                // eslint-disable-next-line @next/next/no-img-element -- portada de la nota
-                <img src={a.coverImageUrl} alt="" className="aspect-video w-full rounded-2xl object-cover" />
+                <ImagenSitio src={a.coverImageUrl} alt="" ancho={1280} alto={720} className="aspect-video w-full rounded-2xl object-cover" />
               )}
               <span className="lx-display text-3xl leading-tight group-hover:text-[var(--accent)]">{a.title}</span>
               {a.excerpt && <span className="text-[var(--fg-muted)]">{a.excerpt}</span>}

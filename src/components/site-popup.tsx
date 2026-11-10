@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { X } from "lucide-react";
 import { parseEmbed } from "@/lib/embeds";
 import type { PopupConfig } from "@/lib/popup-types";
+import { ImagenSitio } from "@/components/ui/imagen-sitio";
 
 // Un día en milisegundos.
 const DAY = 86_400_000;
@@ -164,8 +165,7 @@ export function SitePopup({
 function Media({ config }: { config: PopupConfig }) {
   if (!config.mediaUrl) return null;
   if (config.mediaType === "image") {
-    // eslint-disable-next-line @next/next/no-img-element
-    return <img src={config.mediaUrl} alt={config.title} className="size-full object-cover" />;
+    return <ImagenSitio src={config.mediaUrl} alt={config.title} sizes="(min-width: 768px) 40rem, 100vw" ancho={1280} alto={800} className="size-full object-cover" />;
   }
   if (config.mediaType === "video") {
     return <video src={config.mediaUrl} autoPlay muted loop playsInline className="size-full object-cover" />;

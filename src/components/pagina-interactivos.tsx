@@ -6,6 +6,7 @@
  */
 import { Children, useCallback, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
+import { ImagenSitio } from "@/components/ui/imagen-sitio";
 
 /** Carrusel con desplazamiento nativo (se arrastra con el dedo), flechas, puntos y paso automático que se detiene al pasar el ratón. */
 export function Carrusel({ children, porVista = 1, auto = false, segundos = 6, puntos = true, etiqueta = "Carrusel" }: {
@@ -185,11 +186,9 @@ export function Comparacion({ antes, despues, etiqueta1, etiqueta2, proporcion }
   const [x, setX] = useState(50);
   return (
     <div className="relative w-full overflow-hidden rounded-xl bg-[var(--surface-2)]" style={{ aspectRatio: proporcion }}>
-      {/* eslint-disable-next-line @next/next/no-img-element -- imágenes de la biblioteca */}
-      <img src={despues} alt={etiqueta2} className="absolute inset-0 size-full object-cover" />
+      <ImagenSitio src={despues} alt={etiqueta2} className="absolute inset-0 size-full object-cover" />
       <div className="absolute inset-0 overflow-hidden" style={{ clipPath: `inset(0 ${100 - x}% 0 0)` }}>
-        {/* eslint-disable-next-line @next/next/no-img-element -- imágenes de la biblioteca */}
-        <img src={antes} alt={etiqueta1} className="absolute inset-0 size-full object-cover" />
+        <ImagenSitio src={antes} alt={etiqueta1} className="absolute inset-0 size-full object-cover" />
       </div>
       <div className="pointer-events-none absolute inset-y-0 w-0.5 bg-white shadow-[0_0_0_1px_rgba(0,0,0,.2)]" style={{ left: `${x}%` }}>
         <span className="absolute left-1/2 top-1/2 grid size-9 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-white text-black shadow-lg">
@@ -235,8 +234,7 @@ export function Galeria({ fotos, columnas, forma }: { fotos: { url: string; alt:
       <div className={`${forma === "libre" ? `${GAL_COLS[columnas] ?? GAL_COLS[3]} [&>*]:mb-3` : GAL_GRID[columnas] ?? GAL_GRID[3]}`}>
         {fotos.map((f, i) => (
           <button key={i} type="button" onClick={() => setAbierta(i)} className="group block w-full overflow-hidden rounded-lg break-inside-avoid">
-            {/* eslint-disable-next-line @next/next/no-img-element -- imágenes de la biblioteca */}
-            <img src={f.url} alt={f.alt} loading="lazy" className={`w-full object-cover transition duration-500 group-hover:scale-105 ${aspecto}`} />
+            <ImagenSitio src={f.url} alt={f.alt} sizes="(min-width: 1024px) 33vw, 50vw" ancho={960} alto={720} className={`h-auto w-full object-cover transition duration-500 group-hover:scale-105 ${aspecto}`} />
           </button>
         ))}
       </div>

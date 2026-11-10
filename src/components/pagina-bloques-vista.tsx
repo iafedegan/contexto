@@ -13,6 +13,7 @@ import { FacebookIcon, InstagramIcon, LinkedinIcon, WhatsappIcon, XIcon, Youtube
 import { NewsletterForm } from "@/components/newsletter-form";
 import { Carrusel, Cifra, Comparacion, CuentaRegresiva, Galeria, Pestanas } from "@/components/pagina-interactivos";
 import { celdasTabla, num, type ElementoBloque, type Valores } from "@/lib/paginas-bloques";
+import { ImagenSitio } from "@/components/ui/imagen-sitio";
 
 const ICONOS: Record<string, typeof Beef> = {
   Beef, Milk, Wheat, Tractor, Leaf, Sprout, Trees, Mountain, Droplets, Sun, CloudRain, Truck, ShieldCheck, HeartPulse, Stethoscope, Syringe,
@@ -43,8 +44,7 @@ const ALINEAR_FLEX: Record<string, string> = { izquierda: "justify-start", centr
 /** Una imagen o, en el constructor y sin imagen, el recuadro que pide elegirla. */
 function Foto({ url, alt = "", className = "", enEditor, aspecto }: { url: string; alt?: string; className?: string; enEditor?: boolean; aspecto?: string }) {
   if (url)
-    // eslint-disable-next-line @next/next/no-img-element -- imágenes de la biblioteca o externas, sin dominio fijo
-    return <img src={url} alt={alt} loading="lazy" className={`object-cover ${className}`} style={aspecto ? { aspectRatio: aspecto } : undefined} />;
+    return <ImagenSitio src={url} alt={alt} className={`object-cover ${className}`} style={aspecto ? { aspectRatio: aspecto } : undefined} />;
   if (!enEditor) return null;
   return (
     <div className={`grid place-items-center bg-[repeating-linear-gradient(45deg,var(--surface-2),var(--surface-2)_10px,var(--bg)_10px,var(--bg)_20px)] text-[var(--fg-muted)] ${className}`} style={aspecto ? { aspectRatio: aspecto } : undefined}>
@@ -164,8 +164,7 @@ export function BloqueVista({ e, enEditor = false }: { e: ElementoBloque; enEdit
       return (
         <div className={`relative isolate flex overflow-hidden rounded-2xl bg-[#0b2a1c] text-white ${alto} ${centro ? "items-center justify-center text-center" : "items-end"}`}>
           {p.imagen && (
-            // eslint-disable-next-line @next/next/no-img-element -- imagen de la biblioteca
-            <img src={p.imagen} alt="" className="absolute inset-0 -z-10 size-full object-cover" />
+            <ImagenSitio src={p.imagen} alt="" sizes="100vw" ancho={1920} alto={1080} className="absolute inset-0 -z-10 size-full object-cover" />
           )}
           <span className="absolute inset-0 -z-10" style={{ background: `linear-gradient(to top, rgba(0,0,0,${o + 0.1}), rgba(0,0,0,${o * 0.35}))` }} />
           <div className={`flex max-w-3xl flex-col gap-4 p-6 @2xl:p-12 ${centro ? "items-center" : ""}`}>
@@ -343,8 +342,7 @@ export function BloqueVista({ e, enEditor = false }: { e: ElementoBloque; enEdit
       const logo = (it: Valores, k: string) => (
         <Enlace key={k} url={it.url} enEditor={enEditor} ariaLabel={it.nombre} className={`grid h-20 w-36 shrink-0 place-items-center ${p.gris === "si" ? "opacity-70 grayscale transition hover:opacity-100 hover:grayscale-0" : ""}`}>
           {it.imagen ? (
-            // eslint-disable-next-line @next/next/no-img-element -- logo de la biblioteca
-            <img src={it.imagen} alt={it.nombre} loading="lazy" className="max-h-16 max-w-full object-contain" />
+            <ImagenSitio src={it.imagen} alt={it.nombre} sizes="200px" ancho={320} alto={128} className="h-auto max-h-16 w-auto max-w-full object-contain" />
           ) : (
             <span className="lx-ui rounded-lg border border-dashed border-[var(--border-strong)] px-3 py-2 text-xs font-semibold text-[var(--fg-muted)]">{it.nombre || "Logo"}</span>
           )}
@@ -407,8 +405,7 @@ export function BloqueVista({ e, enEditor = false }: { e: ElementoBloque; enEdit
         <div className={`relative isolate overflow-hidden rounded-2xl p-7 @2xl:p-10 ${fondo}`}>
           {p.estilo === "imagen" && p.imagen && (
             <>
-              {/* eslint-disable-next-line @next/next/no-img-element -- imagen de la biblioteca */}
-              <img src={p.imagen} alt="" className="absolute inset-0 -z-10 size-full object-cover" />
+              <ImagenSitio src={p.imagen} alt="" sizes="100vw" ancho={1920} alto={1080} className="absolute inset-0 -z-10 size-full object-cover" />
               <span className="absolute inset-0 -z-10 bg-black/55" />
             </>
           )}

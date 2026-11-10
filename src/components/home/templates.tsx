@@ -16,6 +16,7 @@ import type { HomeLayoutConfig } from "@/db/schema";
 import { cn, formatDate } from "@/lib/utils";
 import { DEFAULT_LOCALE, INTL_LOCALE, categoryLabel, localePath, t, type Locale } from "@/lib/i18n";
 import { hrefNota } from "@/lib/ruta-nota";
+import { ImagenSitio } from "@/components/ui/imagen-sitio";
 
 /**
  * Estos cuatro usan Framer Motion (~160 KB) para sus animaciones. Solo UNA
@@ -773,8 +774,7 @@ export function GremialTemplate({
                 >
                   {a.authorAvatarUrl ? (
                     <div className="relative size-16 overflow-hidden rounded-full">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={a.authorAvatarUrl} alt={a.authorName ?? ""} className="size-full object-cover" />
+                      <ImagenSitio src={a.authorAvatarUrl} alt={a.authorName ?? ""} sizes="64px" ancho={128} alto={128} className="size-full object-cover" />
                     </div>
                   ) : (
                     <span className="lx-display grid size-16 place-items-center rounded-full bg-[var(--accent)] text-xl text-[var(--accent-fg)]">
