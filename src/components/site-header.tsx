@@ -165,13 +165,7 @@ function MastheadHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extr
         {/* Logo a la izquierda y, a su lado, el nombre. `items-center` en ESTA fila: las líneas y el logo quedan en el centro vertical del título. */}
         <div className="flex items-center justify-center gap-6">
           <span data-titulo-linea className="hidden h-px flex-1 bg-gradient-to-r from-transparent to-[var(--border-strong)] md:block" />
-          <Link href={localePath(locale, "/")} className="relative flex items-center justify-center gap-[0.9cqi]">
-            {/* Cinta de aniversario: inclinada sobre la esquina del logo, en la misma lámina dorada del nombre. */}
-            <span
-              className="pointer-events-none absolute -left-[1.2cqi] -top-[0.9cqi] z-10 -rotate-[24deg] whitespace-nowrap text-[clamp(0.6rem,1.7cqi,1rem)] font-extrabold uppercase leading-none tracking-[0.16em] text-[#f0dc9b] [text-shadow:0_1px_3px_rgba(0,0,0,0.7)]"
-            >
-              {locale === "en" ? "14 years" : "14 años"}
-            </span>
+          <Link href={localePath(locale, "/")} className="flex items-center justify-center gap-[0.9cqi]">
             <span data-el="h-nombre" className="lx-display lx-foil block text-[clamp(1.875rem,6.4cqi,3.75rem)] font-semibold leading-none tracking-tight">
             {/^c/i.test(identity.name) ? (
               <>
@@ -193,8 +187,11 @@ function MastheadHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extr
           </Link>
           <span data-titulo-linea className="hidden h-px flex-1 bg-gradient-to-l from-transparent to-[var(--border-strong)] md:block" />
         </div>
-        {/* El lema y, debajo, la fecha. */}
+        {/* Los 14 años bajo el nombre, en la lámina dorada; luego el lema y, debajo, la fecha. */}
         <span className="mt-2 flex flex-col items-center gap-y-1">
+          <span data-titulo-texto className="lx-display lx-foil text-[clamp(0.8rem,2.1cqi,1.35rem)] font-semibold uppercase leading-none tracking-[0.42em] pl-[0.42em]">
+            {locale === "en" ? "14 years" : "14 años"}
+          </span>
           {!identity.sinLema && <span data-titulo-texto data-el="h-lema" className="lx-kicker text-[var(--fg-muted)]">{identity.tagline || t(locale, "nav.tagline")}</span>}
           {identity.fecha !== false && <span data-titulo-texto data-el="h-fecha" className="lx-ui text-[0.62rem] font-medium uppercase tracking-[0.18em] text-[var(--fg-muted)]/80">{today}</span>}
         </span>
