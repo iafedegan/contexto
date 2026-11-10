@@ -189,8 +189,12 @@ function MastheadHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extr
         </div>
         {/* Los 14 años bajo el nombre, en la lámina dorada; luego el lema y, debajo, la fecha. */}
         <span className="mt-2 flex flex-col items-center gap-y-1">
-          <span data-titulo-texto className="lx-display lx-foil text-[clamp(0.8rem,2.1cqi,1.35rem)] font-semibold uppercase leading-none tracking-[0.42em] pl-[0.42em]">
-            {locale === "en" ? "14 years" : "14 años"}
+          <span data-titulo-texto className="mb-1 flex items-center gap-[1.6cqi]">
+            <span aria-hidden className="h-px w-[5cqi] bg-gradient-to-r from-transparent to-[#c9a24a]" />
+            <span className="lx-display lx-foil pl-[0.28em] text-[clamp(1rem,2.7cqi,1.7rem)] font-bold uppercase leading-none tracking-[0.28em] [font-variant-numeric:lining-nums]">
+              {locale === "en" ? "14 years" : "14 años"}
+            </span>
+            <span aria-hidden className="h-px w-[5cqi] bg-gradient-to-l from-transparent to-[#c9a24a]" />
           </span>
           {!identity.sinLema && <span data-titulo-texto data-el="h-lema" className="lx-kicker text-[var(--fg-muted)]">{identity.tagline || t(locale, "nav.tagline")}</span>}
           {identity.fecha !== false && <span data-titulo-texto data-el="h-fecha" className="lx-ui text-[0.62rem] font-medium uppercase tracking-[0.18em] text-[var(--fg-muted)]/80">{today}</span>}
