@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
-import { categories, paginas } from "@/db/schema";
+import { articles, categories, paginas } from "@/db/schema";
 import { requirePermiso } from "@/lib/auth";
-import { sanearPagina } from "@/lib/paginas-bloques";
+import { MAX_OCULTAS, sanearPagina } from "@/lib/paginas-bloques";
 import { ConstructorPagina } from "@/components/panel/constructor-pagina";
 import { getArticlesByCategory } from "@/lib/content";
 import { getSiteTheme } from "@/lib/site-theme";
@@ -28,21 +28,37 @@ export default async function DisenarPagina({ params }: { params: Promise<{ id: 
   const [cat] = m
     ? await db.select({ slug: categories.slug, name: categories.name, description: categories.description }).from(categories).where(eq(categories.slug, m[1])).limit(1)
     : [];
-  // Las notas de la sección y la plantilla del sitio: debajo de la portada se ven con la composición real de la sección.
+  const contenido = sanearPagina(p.contenido);
+  const ocultas = contenido.ocultas ?? [];
+  // Las notas de la sección y la plantilla del sitio: debajo de la portada se ven con la composición real de la sección. Se traen de más
+  // (sin quitar las ocultas) para que, al quitar o volver a mostrar una nota en el lienzo, la lista se complete sin recargar.
   const [listado, site] = cat
-    ? await Promise.all([getArticlesByCategory(cat.slug, { limit: 9 }).catch(() => null), getSiteTheme().catch(() => null)])
+    ? await Promise.all([getArticlesByCategory(cat.slug, { limit: 9 + ocultas.length + 12 }).catch(() => null), getSiteTheme().catch(() => null)])
     : [null, null];
+  // El id (para abrir la nota en el editor) y el título de cada nota que se ve o que se quitó.
+  const slugsNotas = [...new Set([...(listado?.items.map((a) => a.slug) ?? []), ...ocultas])].slice(0, 30 + MAX_OCULTAS);
+  const fichas = slugsNotas.length
+    ? await db.select({ id: articles.id, slug: articles.slug, titulo: articles.title }).from(articles).where(inArray(articles.slug, slugsNotas)).catch(() => [])
+    : [];
   return (
     <div className="flex flex-col gap-3">
       <Link href="/panel/paginas" className="inline-flex items-center gap-1.5 self-start rounded-full px-1 py-1 text-sm font-semibold text-[var(--accent)] hover:underline">
         <ArrowLeft size={15} aria-hidden /> Todas las páginas
       </Link>
       <ConstructorPagina
-        pagina={{ id: p.id, titulo: p.titulo, slug: p.slug, descripcion: p.descripcion ?? "", publicada: p.publicada, contenido: sanearPagina(p.contenido) }}
+        pagina={{ id: p.id, titulo: p.titulo, slug: p.slug, descripcion: p.descripcion ?? "", publicada: p.publicada, contenido }}
         secciones={secciones}
         seccionPortada={
           cat
-            ? { slug: cat.slug, nombre: cat.name, descripcion: cat.description, total: listado?.total ?? 0, notas: listado?.items.slice(0, 9) ?? [], tema: site?.parts.body ?? "esmeralda" }
+            ? {
+                slug: cat.slug,
+                nombre: cat.name,
+                descripcion: cat.description,
+                total: listado?.total ?? 0,
+                notas: listado?.items ?? [],
+                fichas: Object.fromEntries(fichas.map((f) => [f.slug, { id: f.id, titulo: f.titulo }])),
+                tema: site?.parts.body ?? "esmeralda",
+              }
             : null
         }
       />

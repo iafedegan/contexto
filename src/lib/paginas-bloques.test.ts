@@ -69,3 +69,9 @@ test("todos los bloques del esquema están en la paleta", () => {
 test("celdasTabla parte por líneas y por «|»", () => {
   assert.deepEqual(celdasTabla("a | b\n\n c|d "), [["a", "b"], ["c", "d"]]);
 });
+
+test("sanearPagina: notas quitadas de la sección (únicas, sin basura y solo si hay alguna)", () => {
+  assert.deepEqual(sanearPagina({ filas: [], ocultas: ["nota-a", "nota-a", 3, "con espacio", "", "nota-b"] }).ocultas, ["nota-a", "nota-b"]);
+  assert.equal("ocultas" in sanearPagina({ filas: [], ocultas: [] }), false);
+  assert.equal("ocultas" in sanearPagina({ filas: [] }), false);
+});

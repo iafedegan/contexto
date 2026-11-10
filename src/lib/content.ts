@@ -1,7 +1,7 @@
 import "server-only";
 import { cache } from "react";
 import { departamentoPorSlug, regionPorSlug } from "@/lib/regiones-colombia";
-import { and, desc, eq, gt, gte, ilike, inArray, isNull, lte, or, sql, type SQL } from "drizzle-orm";
+import { and, desc, eq, gt, gte, ilike, inArray, isNull, lte, notInArray, or, sql, type SQL } from "drizzle-orm";
 import { db, rowsOf } from "@/db";
 import {
   articles,
@@ -166,6 +166,8 @@ export type CategoryFilters = {
   departamentoSlug?: string;
   /** C-11: `recientes` (por defecto) o `leidos` (más vistas primero). */
   sort?: "recientes" | "leidos";
+  /** Notas (por slug) que no salen en la lista: las que el editor quitó desde la portada de la sección. */
+  excluirSlugs?: string[];
 };
 
 /** Solo nombre y descripción de la sección (metadatos): sin listado ni count(*). */
@@ -212,7 +214,7 @@ export function enCategorias(ids: string[], slugs: string[]): SQL {
 const leerCategoria = cachear(
   "categoria",
   async (categorySlug: string, filters: CategoryFilters): Promise<ListadoCategoria> => {
-  const { limit = 20, offset = 0, subcategorySlug, dateFrom, dateTo, authorSlug, regionSlug, departamentoSlug, sort = "recientes" } = filters;
+  const { limit = 20, offset = 0, subcategorySlug, dateFrom, dateTo, authorSlug, regionSlug, departamentoSlug, sort = "recientes", excluirSlugs } = filters;
 
   const [cat] = await db
     .select({ id: categories.id, name: categories.name, description: categories.description, parentId: categories.parentId })
@@ -242,6 +244,7 @@ const leerCategoria = cachear(
   if (dateFrom) conditions.push(gte(articles.publishedAt, sql`${dateFrom}::date`));
   if (dateTo) conditions.push(lte(articles.publishedAt, sql`(${dateTo}::date + interval '1 day')`));
   if (authorSlug) conditions.push(sql`${articles.authorId} in (select id from authors where slug = ${authorSlug})`);
+  if (excluirSlugs?.length) conditions.push(notInArray(articles.slug, excluirSlugs));
   // La región que fija el editor al clasificar la nota (`secciones`) manda; si no, vale la que reconoció la base en su texto (`zonas`, con índice).
   const region = regionPorSlug(regionSlug);
   if (region) conditions.push(sql`(${articles.secciones} ? ${`region-${region.slug}`} or ${articles.zonas} ? ${`region-${region.slug}`})`);

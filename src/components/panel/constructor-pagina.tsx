@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, useTransition, type DragEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, useTransition, type DragEvent, type MouseEvent as EventoRaton, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -13,6 +13,7 @@ import { borrarPagina, guardarPagina, notasParaVista, publicarPagina } from "@/a
 import { ElementoVista, claseColumna, claseFila, estiloFila, type NotaMini } from "@/components/pagina-vista";
 import { SelectorBiblioteca } from "@/components/panel/selector-biblioteca";
 import { SectionGrid } from "@/components/section/section-layout";
+import { hrefNota } from "@/lib/ruta-nota";
 import type { ArticleListItem } from "@/lib/content";
 import {
   DIVISIONES, ESQUEMAS, PALETA, PLANTILLAS, duplicarElemento, duplicarFila, elementoNuevo, esBloque, filaNueva, nuevoId, rutaPagina,
@@ -54,7 +55,13 @@ const copia = (c: ContenidoPagina): ContenidoPagina => JSON.parse(JSON.stringify
  * (o se pulsa para añadirlo a la columna elegida) y los elementos del lienzo se pueden arrastrar entre columnas y filas.
  */
 /** La sección de la que esta página es portada («{seccion}/inicio»): el lienzo la muestra dentro de la sección real. */
-type SeccionPortada = { slug: string; nombre: string; descripcion: string | null; total: number; notas: ArticleListItem[]; tema: string } | null;
+type SeccionPortada = {
+  slug: string; nombre: string; descripcion: string | null; total: number; notas: ArticleListItem[]; tema: string;
+  /** Por slug: el id de la nota (para abrirla en el editor) y su título (para la lista de notas quitadas). */
+  fichas: Record<string, { id: string; titulo: string }>;
+} | null;
+/** Nota de la sección elegida en el lienzo y dónde está su tarjeta (relativa a la lista de notas), para dibujar el menú encima. */
+type NotaElegida = { slug: string; titulo: string; x: number; y: number; w: number; h: number };
 
 export function ConstructorPagina({ pagina, secciones, seccionPortada = null }: { pagina: Pagina; secciones: { slug: string; name: string }[]; seccionPortada?: SeccionPortada }) {
   const router = useRouter();
@@ -86,6 +93,7 @@ export function ConstructorPagina({ pagina, secciones, seccionPortada = null }: 
     };
   }, [seccionesConNotas, notasVista]);
   const [sel, setSel] = useState<Sel>(null);
+  const [notaSel, setNotaSel] = useState<NotaElegida | null>(null);
   const [celdaActiva, setCeldaActiva] = useState<{ fila: number; celda: number } | null>(pagina.contenido.filas.length ? { fila: 0, celda: 0 } : null);
   const [arrastre, setArrastre] = useState<Arrastre | null>(null);
   const [destino, setDestino] = useState<string | null>(null);
@@ -250,6 +258,36 @@ export function ConstructorPagina({ pagina, secciones, seccionPortada = null }: 
     setSel(null);
   }
 
+  // --- Notas de la sección (debajo de la portada): se pueden quitar de la lista de la sección o abrir en el editor ---
+  const ocultas = useMemo(() => new Set(c.ocultas ?? []), [c]);
+  function quitarNota(slug: string) {
+    cambiar((n) => void (n.ocultas = [...new Set([...(n.ocultas ?? []), slug])]));
+    setNotaSel(null);
+  }
+  function mostrarNota(slug: string) {
+    cambiar((n) => {
+      n.ocultas = (n.ocultas ?? []).filter((x) => x !== slug);
+      if (!n.ocultas.length) delete n.ocultas;
+    });
+  }
+  /** Un clic en la lista de notas elige la nota de esa tarjeta (no navega). */
+  function elegirNota(ev: EventoRaton<HTMLDivElement>) {
+    ev.preventDefault();
+    ev.stopPropagation();
+    if (!seccionPortada) return;
+    const enlace = (ev.target as HTMLElement).closest("a");
+    const caja = ev.currentTarget;
+    if (!enlace || !caja.contains(enlace)) return setNotaSel(null);
+    const ruta = new URL(enlace.href, window.location.href).pathname;
+    const nota = seccionPortada.notas.find((a) => new URL(hrefNota("es", a), window.location.href).pathname === ruta);
+    if (!nota) return setNotaSel(null);
+    const tarjeta = enlace.closest("article, li") ?? enlace;
+    const r = (caja.contains(tarjeta) ? tarjeta : enlace).getBoundingClientRect();
+    const base = caja.getBoundingClientRect();
+    setSel(null);
+    setNotaSel({ slug: nota.slug, titulo: nota.title, x: r.left - base.left, y: r.top - base.top, w: r.width, h: r.height });
+  }
+
   // Teclado: Supr borra el elemento elegido; Cmd/Ctrl+Z deshace; Cmd/Ctrl+D duplica.
   useEffect(() => {
     const f = (e: KeyboardEvent) => {
@@ -265,7 +303,13 @@ export function ConstructorPagina({ pagina, secciones, seccionPortada = null }: 
       } else if ((e.key === "Delete" || e.key === "Backspace") && sel) {
         e.preventDefault();
         borrarElemento();
-      } else if (e.key === "Escape") setSel(null);
+      } else if ((e.key === "Delete" || e.key === "Backspace") && notaSel) {
+        e.preventDefault();
+        quitarNota(notaSel.slug);
+      } else if (e.key === "Escape") {
+        setSel(null);
+        setNotaSel(null);
+      }
     };
     window.addEventListener("keydown", f);
     return () => window.removeEventListener("keydown", f);
@@ -429,7 +473,7 @@ export function ConstructorPagina({ pagina, secciones, seccionPortada = null }: 
         )}
 
         {/* Lienzo */}
-        <div className="min-w-0 rounded-xl border border-[var(--border)] bg-[var(--bg)] p-4 sm:p-6" onClick={() => !vista && setSel(null)}>
+        <div className="min-w-0 rounded-xl border border-[var(--border)] bg-[var(--bg)] p-4 sm:p-6" onClick={() => { if (vista) return; setSel(null); setNotaSel(null); }}>
           {vista && seccionPortada ? (
             /* La sección REAL del sitio (menú, filtros, banners, laterales y notas) con esta portada en su lugar. Se guarda antes de mostrarla. */
             <div className="flex flex-col gap-2">
@@ -511,7 +555,7 @@ export function ConstructorPagina({ pagina, secciones, seccionPortada = null }: 
                                 const dentro = (ev.target as HTMLElement).closest("a");
                                 if (dentro) ev.preventDefault();
                               }}
-                              onClick={(ev) => { ev.stopPropagation(); setSel({ fila: fi, celda: ci, el: e.id }); setCeldaActiva({ fila: fi, celda: ci }); }}
+                              onClick={(ev) => { ev.stopPropagation(); setNotaSel(null); setSel({ fila: fi, celda: ci, el: e.id }); setCeldaActiva({ fila: fi, celda: ci }); }}
                               className={`group relative cursor-pointer rounded-md p-1 outline-2 outline-offset-2 transition ${sel?.el === e.id ? "outline outline-[var(--accent)]" : "hover:outline hover:outline-[var(--border-strong)]"}`}
                             >
                               <span className={`absolute -left-1 -top-3 z-10 items-center gap-1 rounded bg-[var(--accent)] px-1.5 py-0.5 text-[0.65rem] font-bold text-[var(--accent-fg)] ${sel?.el === e.id ? "flex" : "hidden group-hover:flex"}`}>
@@ -567,22 +611,76 @@ export function ConstructorPagina({ pagina, secciones, seccionPortada = null }: 
           )}
           </div>
 
-          {/* Debajo de la portada, las notas de la sección salen solas (como en el sitio): se ven para saber qué hay alrededor. */}
-          {seccionPortada && (
-            <section className={`mt-8 ${vista ? "" : "pointer-events-none select-none"}`} aria-label={`Notas de ${seccionPortada.nombre}`}>
-              {!vista && (
-                <p className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.12em] text-[var(--fg-muted)]">
+          {/* Debajo de la portada, las notas de la sección salen solas (como en el sitio). Un clic en una abre su menú: editarla o quitarla de la lista. */}
+          {seccionPortada && (() => {
+            const visibles = seccionPortada.notas.filter((a) => !ocultas.has(a.slug)).slice(0, 9);
+            const ficha = notaSel ? seccionPortada.fichas[notaSel.slug] : undefined;
+            return (
+              <section className="mt-8 select-none" aria-label={`Notas de ${seccionPortada.nombre}`}>
+                <p className="mb-1 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.12em] text-[var(--fg-muted)]">
                   <span className="h-px flex-1 bg-[var(--border-strong)]" />
-                  Debajo salen solas las notas de {seccionPortada.nombre} (no se editan aquí)
+                  Debajo salen solas las notas de {seccionPortada.nombre}
                   <span className="h-px flex-1 bg-[var(--border-strong)]" />
                 </p>
-              )}
-              {/* La composición real de la sección en la plantilla del sitio (nota grande, lista numerada, rejilla). */}
-              <div className={vista ? "" : "opacity-60"} onClickCapture={(e) => e.preventDefault()}>
-                <SectionGrid theme={seccionPortada.tema} items={seccionPortada.notas} locale="es" />
-              </div>
-            </section>
-          )}
+                <p className="mb-3 text-center text-xs text-[var(--fg-muted)]">Pulse una nota para editarla o quitarla de la lista de la sección.</p>
+                {ocultas.size > 0 && (
+                  <div className="mb-4 flex flex-col gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3" onClick={(e) => e.stopPropagation()}>
+                    <p className="text-xs font-bold">
+                      Quitadas de la sección ({ocultas.size}){" "}
+                      <span className="font-normal text-[var(--fg-muted)]">
+                        · siguen publicadas; no salen en la lista {publicada ? "desde que se guarde" : "cuando esta portada se publique"}
+                      </span>
+                    </p>
+                    <ul className="flex flex-wrap gap-1.5">
+                      {[...ocultas].map((x) => (
+                        <li key={x} className="inline-flex max-w-full items-center gap-1 rounded-full border border-[var(--border)] bg-[var(--bg)] py-0.5 pl-3 pr-1 text-xs">
+                          <span className="truncate">{seccionPortada.fichas[x]?.titulo ?? seccionPortada.notas.find((a) => a.slug === x)?.title ?? x}</span>
+                          <button type="button" onClick={() => mostrarNota(x)} title="Volver a mostrar en la sección" className="inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 font-semibold text-[var(--accent)] hover:bg-[var(--accent)]/10">
+                            <Eye size={12} /> Volver a mostrar
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {/* La composición real de la sección en la plantilla del sitio (nota grande, lista numerada, rejilla). */}
+                <div className="relative">
+                  <div
+                    className="opacity-75 transition hover:opacity-100 [&_a]:cursor-pointer [&_a]:rounded-md [&_a:hover]:outline [&_a:hover]:outline-2 [&_a:hover]:outline-offset-2 [&_a:hover]:outline-[var(--border-strong)]"
+                    onClickCapture={elegirNota}
+                  >
+                    <SectionGrid theme={seccionPortada.tema} items={visibles} locale="es" />
+                  </div>
+                  {notaSel && (
+                    <>
+                      <div aria-hidden className="pointer-events-none absolute rounded-lg outline outline-2 outline-offset-2 outline-[var(--accent)]" style={{ left: notaSel.x, top: notaSel.y, width: notaSel.w, height: notaSel.h }} />
+                      <div
+                        role="menu"
+                        aria-label={`Nota: ${notaSel.titulo}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="absolute z-20 flex w-64 flex-col gap-1 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-2 shadow-xl"
+                        style={{ left: Math.max(0, notaSel.x), top: Math.max(0, notaSel.y) + 8 }}
+                      >
+                        <div className="flex items-start gap-2 px-1 pb-1">
+                          <p className="line-clamp-2 flex-1 text-xs font-bold leading-snug">{notaSel.titulo}</p>
+                          <button type="button" onClick={() => setNotaSel(null)} aria-label="Cerrar" className="grid size-6 shrink-0 place-items-center rounded hover:bg-[var(--surface-2)]"><X size={13} /></button>
+                        </div>
+                        {ficha && (
+                          <a role="menuitem" href={`/panel/articulos/${ficha.id}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm font-semibold hover:bg-[var(--surface-2)]">
+                            <Pencil size={14} /> Editar la nota <ExternalLink size={12} className="ml-auto text-[var(--fg-muted)]" />
+                          </a>
+                        )}
+                        <button role="menuitem" type="button" onClick={() => quitarNota(notaSel.slug)} className="inline-flex items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm font-semibold text-[#b91c1c] hover:bg-[#b91c1c]/10">
+                          <EyeOff size={14} /> Quitar de esta sección
+                        </button>
+                        <p className="px-2 text-[10px] leading-snug text-[var(--fg-muted)]">La nota sigue publicada; solo deja de salir en la lista de {seccionPortada.nombre}. Se puede deshacer.</p>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </section>
+            );
+          })()}
           </>
           )}
         </div>

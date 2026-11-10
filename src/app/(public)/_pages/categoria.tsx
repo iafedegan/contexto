@@ -85,6 +85,11 @@ async function CategoryPage({ params, searchParams, locale, portadaBorrador }: P
   const page = Math.max(1, Number(pagina) || 1);
   const sort = q.orden === "leidos" ? "leidos" : "recientes";
 
+  // Las páginas armadas con el constructor que cuelgan de esta sección. Su portada («{seccion}/inicio») puede quitar notas de la lista:
+  // se leen antes que las notas para no traerlas (en la vista previa del constructor manda la portada en borrador).
+  const todasPaginas = await getPaginasDeSeccion(slug).catch(() => []);
+  const ocultas = (portadaBorrador ?? todasPaginas.find((p) => p.slug === `${slug}/inicio`)?.contenido)?.ocultas ?? [];
+
   const { category, subcategories, items, total, totalAproximado } = await getArticlesByCategory(slug, {
     limit: PAGE_SIZE,
     offset: (page - 1) * PAGE_SIZE,
@@ -95,6 +100,7 @@ async function CategoryPage({ params, searchParams, locale, portadaBorrador }: P
     regionSlug: region,
     departamentoSlug: depto,
     sort,
+    excluirSlugs: ocultas.length ? ocultas : undefined,
   }).catch(() => ({ category: null, subcategories: [], items: [], total: 0, totalAproximado: false }));
   if (!category) notFound();
 
@@ -115,8 +121,8 @@ async function CategoryPage({ params, searchParams, locale, portadaBorrador }: P
         ? { items: "lg:items-center", justify: "lg:justify-center" }
         : { items: "lg:items-end", justify: "lg:justify-end" };
   const filtrando = Boolean(subcategoria || desde || hasta || autor);
-  // Las páginas armadas con el constructor que cuelgan de esta sección (solo en la primera página y sin filtros).
-  const paginasSeccion = !filtrando && page === 1 ? await getPaginasDeSeccion(slug).catch(() => []) : [];
+  // Las páginas de la sección se muestran solo en la primera página y sin filtros.
+  const paginasSeccion = !filtrando && page === 1 ? todasPaginas : [];
   // Solo la portada propia de la sección («{seccion}/inicio») se muestra entera, con su diseño, arriba de las notas. Las demás páginas son páginas
   // aparte (`/seccion/otra`): aquí solo se enlazan, como tarjetas.
   const inicioSeccion = paginasSeccion.find((p) => p.slug === `${slug}/inicio`);

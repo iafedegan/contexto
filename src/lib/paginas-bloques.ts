@@ -53,7 +53,11 @@ export type Fila = {
   vertical?: "arriba" | "centro";
 };
 
-export type ContenidoPagina = { filas: Fila[] };
+/**
+ * `ocultas`: en la portada de una sección, las notas (por su slug) que el editor quitó de la lista de notas de esa sección. La nota sigue
+ * publicada; solo deja de salir en la lista de la sección mientras la portada esté publicada.
+ */
+export type ContenidoPagina = { filas: Fila[]; ocultas?: string[] };
 
 /** Divisiones de fila que ofrece el constructor (en columnas de 12). */
 export const DIVISIONES: { id: string; columnas: number[]; etiqueta: string }[] = [
@@ -716,9 +720,15 @@ function sanearElemento(e: unknown): Elemento | null {
   }
 }
 
+/** Máximo de notas quitadas de la lista de una sección. */
+export const MAX_OCULTAS = 60;
+
 export function sanearPagina(v: unknown): ContenidoPagina {
   const filas = Array.isArray((v as ContenidoPagina | null)?.filas) ? (v as ContenidoPagina).filas : [];
+  const ocultasCrudas = (v as ContenidoPagina | null)?.ocultas;
+  const ocultas = [...new Set((Array.isArray(ocultasCrudas) ? ocultasCrudas : []).filter((x): x is string => typeof x === "string" && /^[^\s]{1,300}$/.test(x)))].slice(0, MAX_OCULTAS);
   return {
+    ...(ocultas.length ? { ocultas } : {}),
     filas: filas.slice(0, MAX_FILAS).flatMap((f): Fila[] => {
       if (!f || typeof f !== "object") return [];
       const cols = (Array.isArray(f.columnas) ? f.columnas : []).map((n) => Math.round(Number(n))).filter((n) => n >= 1 && n <= 12);
