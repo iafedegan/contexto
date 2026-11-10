@@ -273,7 +273,7 @@ export function MobileNav({
         >
           <div className="flex items-center justify-between gap-3 border-b border-[var(--border)] px-4 pb-2 pt-[max(0.5rem,env(safe-area-inset-top))]">
             <Link href={localePath(locale, "/")} onClick={() => setOpen(false)} className="lx-display lx-foil min-w-0 truncate text-lg font-semibold">
-              name
+              {name}
             </Link>
             <button ref={closeRef} type="button" onClick={() => setOpen(false)} aria-label={label.close} className={btn}>
               <X size={22} />
