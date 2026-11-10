@@ -7,7 +7,7 @@ import { createPortal } from "react-dom";
 import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, ExternalLink, Loader2, Maximize2, Network, Pencil, Plus, Trash2, X } from "lucide-react";
 import { SeccionForm } from "@/components/panel/seccion-form";
 import { NuevaPagina } from "@/components/panel/nueva-pagina";
-import { crearPagina } from "@/app/panel/(app)/paginas/actions";
+import { crearInicioDeSeccion } from "@/app/panel/(app)/paginas/actions";
 import { guardarAnchoPortada, leerAnchoPortada } from "@/app/panel/(app)/portada/actions";
 
 // Identificador del nodo «Portada» del árbol (no es una sección).
@@ -566,7 +566,7 @@ function WideTree({
                 const esPortada = t.kind === "portada";
                 const isSel = esPortada ? selected === PORTADA_ID : !!pick && selected === pick.id;
                 const suyas = pick ? paginasCtx.filter((p) => p.seccionId === pick.id) : [];
-                const unica = suyas.length === 1 ? suyas[0] : null;
+                const unica = pick ? suyas.find((p) => p.slug === `${pick.slug}/inicio`) ?? null : null;
                 return (
                   <g
                     key={t.key}
@@ -692,15 +692,15 @@ function DisenarSeccion({ sel, primera }: { sel: SectionNode; primera: PaginaDeS
   const clase = "inline-flex items-center gap-1.5 rounded-full bg-[var(--accent)] px-4 py-2 text-sm font-semibold !text-white hover:opacity-90 disabled:opacity-60";
   return (
     <div>
-      <p className="mb-1 text-xs font-semibold">Página de {sel.name}</p>
+      <p className="mb-1 text-xs font-semibold">Portada de {sel.name}</p>
       <p className="mb-2 text-[11px] leading-snug text-[var(--fg-muted)]">
         {primera
-          ? "Ya tiene una página: ábrela para agregar o cambiar filas, columnas, textos, imágenes y notas."
-          : "Diséñala con el constructor: filas, columnas, textos, imágenes y notas. Queda como borrador hasta que la publiques."}
+          ? "Es lo que se ve arriba al entrar a la sección. Ábrela para agregar o cambiar elementos: filas, columnas, textos, imágenes y notas."
+          : "Diseña lo que se ve al entrar a la sección: filas, columnas, textos, imágenes y notas. Las notas de la sección siguen saliendo debajo. Queda en borrador hasta que la publiques."}
       </p>
       {primera ? (
         <Link href={`/panel/paginas/${primera.id}`} className={clase}>
-          <Pencil size={14} /> Abrir el constructor
+          <Pencil size={14} /> Editar la portada de la sección
         </Link>
       ) : (
         <button
@@ -709,14 +709,14 @@ function DisenarSeccion({ sel, primera }: { sel: SectionNode; primera: PaginaDeS
           onClick={() => {
             setError("");
             start(async () => {
-              const r = await crearPagina(sel.name, sel.id);
+              const r = await crearInicioDeSeccion(sel.id);
               if (r.ok && r.id) router.push(`/panel/paginas/${r.id}`);
               else if (!r.ok) setError(r.error);
             });
           }}
           className={clase}
         >
-          {ocupado ? <Loader2 size={14} className="animate-spin" /> : <Pencil size={14} />} Crear y diseñar la página
+          {ocupado ? <Loader2 size={14} className="animate-spin" /> : <Pencil size={14} />} Diseñar la portada de la sección
         </button>
       )}
       {error && <p className="mt-1 text-xs text-[#b91c1c]">{error}</p>}
@@ -727,13 +727,16 @@ function DisenarSeccion({ sel, primera }: { sel: SectionNode; primera: PaginaDeS
 function PaginasDeLaSeccion({ sel }: { sel: SectionNode }) {
   const todas = useContext(PaginasCtx);
   const suyas = (todas ?? []).filter((p) => p.seccionId === sel.id);
+  // La portada propia de la sección («{seccion}/inicio») va aparte; las demás son páginas independientes.
+  const inicio = suyas.find((p) => p.slug === `${sel.slug}/inicio`) ?? null;
+  const otras = suyas.filter((p) => p !== inicio);
   return (
     <div className="flex flex-col gap-2 rounded-[var(--radius)] border border-dashed border-[var(--border-strong)] p-2.5">
-      <DisenarSeccion sel={sel} primera={suyas[0] ?? null} />
-      {suyas.length > 0 && (
+      <DisenarSeccion sel={sel} primera={inicio} />
+      {otras.length > 0 && (
         <div className="flex flex-col gap-1.5">
-          <p className="text-xs font-semibold">Páginas de {sel.name} ({suyas.length})</p>
-          {suyas.map((p) => (
+          <p className="text-xs font-semibold">Otras páginas de {sel.name} ({otras.length})</p>
+          {otras.map((p) => (
             <div key={p.id} className="flex items-center gap-2 rounded-[var(--radius)] border border-[var(--border)] bg-[#f6f8ec] p-2">
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold">{p.titulo}</p>

@@ -111,7 +111,10 @@ export function ListaPaginas({ paginas, secciones }: { paginas: FilaPagina[]; se
                 <li key={p.id} className="flex items-center gap-3 px-4 py-3 transition hover:bg-[var(--surface-2)]/40">
                   <span aria-hidden title={p.publicada ? "Publicada" : "Borrador"} className={`size-2.5 shrink-0 rounded-full ${p.publicada ? "bg-[#16a34a]" : "bg-[#f2a900]"}`} />
                   <Link href={`/panel/paginas/${p.id}`} className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-semibold">{p.titulo}</span>
+                    <span className="block truncate text-sm font-semibold">
+                      {p.titulo}
+                      {p.seccionId && p.slug.endsWith("/inicio") && <span className="ml-2 rounded-full bg-[var(--accent)]/10 px-2 py-0.5 align-middle text-[11px] font-semibold text-[var(--accent)]">Portada de la sección</span>}
+                    </span>
                     <span className="block truncate font-mono text-xs text-[var(--fg-muted)]">/{p.slug}</span>
                   </Link>
                   <span className={`hidden rounded-full px-2.5 py-0.5 text-xs font-semibold sm:inline ${p.publicada ? "bg-[#16a34a]/15 text-[#15803d]" : "bg-[#f2a900]/20 text-[#8a6200]"}`}>{p.publicada ? "Publicada" : "Borrador"}</span>

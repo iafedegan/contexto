@@ -100,6 +100,24 @@ export async function guardarPagina(
   return { ok: true };
 }
 
+/**
+ * La portada propia de una sección: una página «{seccion}/inicio» que se muestra arriba de las notas cuando se entra a la sección (cada sección tiene
+ * a lo sumo una). Si ya existe, devuelve esa. Las demás páginas de la sección son páginas aparte (`/seccion/otra`) y solo se enlazan desde la sección.
+ */
+export async function crearInicioDeSeccion(seccionId: string): Promise<ResultadoPagina> {
+  const yo = await requirePermiso("portada");
+  const [cat] = await db.select({ slug: categories.slug, name: categories.name }).from(categories).where(eq(categories.id, seccionId)).limit(1);
+  if (!cat) return { ok: false, error: "Esa sección ya no existe." };
+  const slug = `${slugPagina(cat.slug)}/inicio`;
+  const [ya] = await db.select({ id: paginas.id }).from(paginas).where(eq(paginas.slug, slug)).limit(1);
+  if (ya) return { ok: true, id: ya.id };
+  const error = await slugLibre(slug);
+  if (error) return { ok: false, error };
+  const [p] = await db.insert(paginas).values({ titulo: `Portada de ${cat.name}`.slice(0, 160), slug, seccionId, updatedBy: yo.id }).returning({ id: paginas.id });
+  refrescar();
+  return { ok: true, id: p.id };
+}
+
 /** Duplica una página: copia su diseño en una página nueva, en borrador, en la misma sección y con una dirección libre («…-copia»). */
 export async function duplicarPagina(id: string): Promise<ResultadoPagina> {
   const yo = await requirePermiso("portada");

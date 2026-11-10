@@ -116,9 +116,11 @@ async function CategoryPage({ params, searchParams, locale }: PageProps & { loca
   const filtrando = Boolean(subcategoria || desde || hasta || autor);
   // Las páginas armadas con el constructor que cuelgan de esta sección (solo en la primera página y sin filtros).
   const paginasSeccion = !filtrando && page === 1 ? await getPaginasDeSeccion(slug).catch(() => []) : [];
-  // Las primeras se muestran enteras, con el diseño con que se armaron; las demás, como tarjetas.
-  const enLinea = paginasSeccion.slice(0, 3);
-  const otrasPaginas = paginasSeccion.slice(3);
+  // Solo la portada propia de la sección («{seccion}/inicio») se muestra entera, con su diseño, arriba de las notas. Las demás páginas son páginas
+  // aparte (`/seccion/otra`): aquí solo se enlazan, como tarjetas.
+  const inicioSeccion = paginasSeccion.find((p) => p.slug === `${slug}/inicio`);
+  const enLinea = inicioSeccion ? [inicioSeccion] : [];
+  const otrasPaginas = paginasSeccion.filter((p) => p !== inicioSeccion);
   const notasEnLinea = await Promise.all(enLinea.map((p) => notasDeLaPagina(p.contenido).catch(() => ({}))));
   const paginas = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
@@ -355,14 +357,13 @@ async function CategoryPage({ params, searchParams, locale }: PageProps & { loca
 
       {enLinea.map((p, i) => (
         <article key={p.slug} className="mb-12 flex flex-col gap-8">
-          {enLinea.length + otrasPaginas.length > 1 && <h2 className="lx-display text-3xl leading-tight tracking-tight">{p.titulo}</h2>}
           <PaginaVista contenido={p.contenido} notas={notasEnLinea[i]} />
         </article>
       ))}
 
       {otrasPaginas.length > 0 && (
         <section aria-label={locale === "es" ? "Más páginas de esta sección" : "More pages in this section"} className="mb-10">
-          <h2 className="lx-kicker mb-4 text-[var(--accent)]">{locale === "es" ? "Más en esta sección" : "More in this section"}</h2>
+          <h2 className="lx-kicker mb-4 text-[var(--accent)]">{locale === "es" ? "Páginas de esta sección" : "Pages in this section"}</h2>
           <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {otrasPaginas.map((p) => (
               <li key={p.slug}>
