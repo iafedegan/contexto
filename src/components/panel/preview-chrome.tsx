@@ -632,6 +632,24 @@ export function PreviewChrome({
                   />
                   <Bloque titulo="Plantilla" resumen={plantillaActiva(layout)}>
                     <TemplatePicker layout={layout} onPick={(config) => editLayout({ ...layout, ...config, parts: {}, pantallas: {}, sectionFilters: layout.sectionFilters })} compacto />
+                    {/* Ancho de la columna de la nota principal (plantilla «Esmeralda Real», pantallas anchas). */}
+                    <div className="mt-3 rounded-[var(--radius)] border border-[var(--border)] p-3">
+                      <p className="text-sm font-semibold">Ancho de la nota principal</p>
+                      <p className="mb-2 text-xs text-[var(--fg-muted)]">Cuánto ocupa la nota grande y sus tarjetas frente a «Lo último». Solo en pantallas anchas.</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {([["normal", "Normal"], ["ancha", "Ancha"], ["muyAncha", "Muy ancha"]] as const).map(([valor, nombre]) => (
+                          <button
+                            key={valor}
+                            type="button"
+                            aria-pressed={(layout.anchoPrincipal ?? "ancha") === valor}
+                            onClick={() => editLayout({ ...layout, anchoPrincipal: valor })}
+                            className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${(layout.anchoPrincipal ?? "ancha") === valor ? "border-[var(--accent)] bg-[var(--accent)] !text-white" : "border-[var(--border)] hover:border-[var(--accent)]"}`}
+                          >
+                            {nombre}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                     {/* Crear plantilla desde cero, dentro del mismo bloque. */}
                     <details className="mt-3 rounded-[var(--radius)] border border-[var(--border)]">
                       <summary className="cursor-pointer px-3 py-2.5 text-sm font-semibold">Crear una plantilla desde cero</summary>

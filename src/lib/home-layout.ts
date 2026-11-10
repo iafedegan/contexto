@@ -12,6 +12,7 @@ export const DEFAULT_HOME_LAYOUT: Required<HomeLayoutConfig> = {
   breveDirection: "vertical",
   breveColumns: 2,
   riverColumns: 3,
+  anchoPrincipal: "ancha",
   background: { mode: "theme" },
   regions: {},
   pantallas: {},
@@ -35,7 +36,7 @@ export type HomeTemplate = {
   name: string;
   description: string;
   /** Sin `ticker` ni `textos`: elegir una plantilla no debe borrar el cintillo, el carrusel ni los textos de la cabecera que el editor configuró. */
-  config: Omit<Required<HomeLayoutConfig>, "ticker" | "carrusel" | "carruseles" | "textos" | "menuNav" | "pantallas">;
+  config: Omit<Required<HomeLayoutConfig>, "ticker" | "carrusel" | "carruseles" | "textos" | "menuNav" | "pantallas" | "anchoPrincipal">;
 };
 
 /**

@@ -852,6 +852,8 @@ export type HomeLayoutConfig = {
   breveColumns?: number;
   /** Columnas de la cuadrícula "Lo más reciente" en escritorio (2-4). */
   riverColumns?: number;
+  /** Ancho de la columna de la nota principal frente a «Lo último» en «Esmeralda Real» (pantallas anchas). */
+  anchoPrincipal?: "normal" | "ancha" | "muyAncha";
   /** Fondo de la plantilla (color sólido o degradado). */
   background?: HomeBackground;
   /** Estilo por componente: navbar, hero, cuerpo, tarjetas y pie. */

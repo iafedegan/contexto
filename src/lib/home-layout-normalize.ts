@@ -41,5 +41,7 @@ export function normalizeLayout(input: HomeLayoutConfig): HomeLayoutConfig {
   const templateId = HOME_TEMPLATES.find((t) => t.id === input.templateId)?.id;
   // Posición de los filtros de sección: solo vale una de las seis permitidas.
   const sectionFilters = (["cabecera", "izquierda", "centro", "derecha", "barra", "oculto"] as const).find((p) => p === input.sectionFilters);
-  return { ...input, ...(templateId ? { templateId } : {}), regions: sanitizeRegions(input.regions), pantallas: sanitizePantallas(input.pantallas), parts, sectionFilters: sectionFilters ?? "cabecera", ticker: sanitizeTicker(input.ticker), carrusel: sanitizeCarrusel(input.carrusel), carruseles: sanitizeCarruseles(input.carruseles), textos: sanitizeTextos(input.textos), menuNav: sanitizeMenuNavbar(input.menuNav), sectionEls: sanitizeSectionEls(input.sectionEls), zones: sanitizeZones(input.zones) };
+  // Ancho de la columna principal: solo vale uno de los tres.
+  const anchoPrincipal = (["normal", "ancha", "muyAncha"] as const).find((p) => p === input.anchoPrincipal);
+  return { ...input, ...(templateId ? { templateId } : {}), anchoPrincipal: anchoPrincipal ?? "ancha", regions: sanitizeRegions(input.regions), pantallas: sanitizePantallas(input.pantallas), parts, sectionFilters: sectionFilters ?? "cabecera", ticker: sanitizeTicker(input.ticker), carrusel: sanitizeCarrusel(input.carrusel), carruseles: sanitizeCarruseles(input.carruseles), textos: sanitizeTextos(input.textos), menuNav: sanitizeMenuNavbar(input.menuNav), sectionEls: sanitizeSectionEls(input.sectionEls), zones: sanitizeZones(input.zones) };
 }
