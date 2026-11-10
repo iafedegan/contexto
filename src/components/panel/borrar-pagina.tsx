@@ -4,6 +4,7 @@ import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Trash2 } from "lucide-react";
 import { borrarPagina } from "@/app/panel/(app)/paginas/actions";
+import { confirmar } from "@/components/panel/confirmar";
 
 /** Botón de papelera de una fila de la lista de páginas: pide confirmación y la borra. */
 export function BorrarPagina({ id, titulo }: { id: string; titulo: string }) {
@@ -15,8 +16,8 @@ export function BorrarPagina({ id, titulo }: { id: string; titulo: string }) {
       disabled={ocupado}
       aria-label={`Borrar la página ${titulo}`}
       title="Borrar página"
-      onClick={() => {
-        if (!window.confirm(`¿Borrar la página «${titulo}»? No se puede deshacer.`)) return;
+      onClick={async () => {
+        if (!(await confirmar(`¿Borrar la página «${titulo}»? No se puede deshacer.`))) return;
         start(async () => {
           await borrarPagina(id);
           router.refresh();

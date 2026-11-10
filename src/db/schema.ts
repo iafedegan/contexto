@@ -297,13 +297,18 @@ export const superappVisitantes = pgTable(
 
 // Tablas mínimas requeridas por @auth/drizzle-adapter (sesiones JWT no las usan,
 // pero se dejan para permitir SSO futuro sin migración).
-export const sessions = pgTable("sessions", {
-  sessionToken: text("session_token").primaryKey(),
-  userId: uuid("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  expires: timestamp("expires", { withTimezone: true }).notNull(),
-});
+export const sessions = pgTable(
+  "sessions",
+  {
+    sessionToken: text("session_token").primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    expires: timestamp("expires", { withTimezone: true }).notNull(),
+  },
+  // Cerrar las sesiones de una persona (o borrarla) busca por usuario.
+  (t) => [index("sessions_user_idx").on(t.userId)],
+);
 
 export const verificationTokens = pgTable(
   "verification_tokens",
@@ -326,7 +331,7 @@ export const authors = pgTable("authors", {
   // Vínculo opcional a una cuenta del panel (un autor puede no tener login).
   userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
+}, (t) => [index("authors_user_idx").on(t.userId)]);
 
 export const categories = pgTable(
   "categories",
@@ -1069,7 +1074,7 @@ export const mediaAssets = pgTable(
     uploadedBy: uuid("uploaded_by").references(() => users.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index("media_assets_folder_idx").on(t.folderId, t.createdAt)],
+  (t) => [index("media_assets_folder_idx").on(t.folderId, t.createdAt), index("media_assets_uploaded_by_idx").on(t.uploadedBy)],
 );
 
 /** Qué personas ven una carpeta (y todo lo que hay dentro). Administradores y quien gestiona la biblioteca ven todo sin estar aquí. */

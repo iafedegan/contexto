@@ -6,6 +6,7 @@ import { crearEscritor, estadoEstilo, quitarEscritor } from "@/app/panel/(app)/c
 import { EstiloEscritura } from "@/components/panel/estilo-escritura";
 import type { Escritor } from "@/lib/ai/estilo";
 import type { EstiloVista } from "@/lib/ai/estilo-tipos";
+import { confirmar } from "@/components/panel/confirmar";
 
 const nf = new Intl.NumberFormat("es-CO");
 
@@ -81,7 +82,7 @@ export function EstilosEscritores({ escritores: inicial, miId, miEstilo }: { esc
           <h3 className="lx-display flex-1 text-xl font-semibold">{actual?.nombre ?? "Escritor"}{seleccion === miId ? " (yo)" : ""}</h3>
           {pend && <Loader2 size={16} className="animate-spin text-[var(--fg-muted)]" aria-label="Cargando" />}
           {actual?.tipo === "externo" && (
-            <button type="button" disabled={pend} onClick={() => { if (!window.confirm(`¿Quitar a ${actual.nombre} y todo lo que la IA aprendió de él o ella?`)) return; run(async () => { const r = await quitarEscritor(actual.id); setAviso({ ok: r.ok, texto: r.message }); if (r.ok && r.escritores) { setLista(r.escritores); setSeleccion(miId); setEstado(await estadoEstilo()); } }); }} className="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--fg-muted)] underline-offset-2 hover:text-[var(--danger)] hover:underline"><Trash2 size={13} /> Quitar escritor</button>
+            <button type="button" disabled={pend} onClick={async () => { if (!(await confirmar(`¿Quitar a ${actual.nombre} y todo lo que la IA aprendió de él o ella?`))) return; run(async () => { const r = await quitarEscritor(actual.id); setAviso({ ok: r.ok, texto: r.message }); if (r.ok && r.escritores) { setLista(r.escritores); setSeleccion(miId); setEstado(await estadoEstilo()); } }); }} className="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--fg-muted)] underline-offset-2 hover:text-[var(--danger)] hover:underline"><Trash2 size={13} /> Quitar escritor</button>
           )}
         </div>
         {aviso && <p role="status" className={`mb-3 rounded-[var(--radius)] border px-3 py-2 text-sm ${aviso.ok ? "border-[var(--accent-2)]/40 text-[var(--accent-2)]" : "border-[var(--danger)]/40 text-[var(--danger)]"}`}>{aviso.texto}</p>}

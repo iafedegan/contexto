@@ -19,6 +19,7 @@ import {
   DIVISIONES, ESQUEMAS, PALETA, PLANTILLAS, duplicarElemento, duplicarFila, elementoNuevo, esBloque, filaNueva, nuevoId, rutaPagina,
   type Alinear, type Campo, type ContenidoPagina, type Elemento, type ElementoBloque, type Fila, type TipoElemento, type Valores,
 } from "@/lib/paginas-bloques";
+import { confirmar } from "@/components/panel/confirmar";
 
 type Pagina = { id: string; titulo: string; slug: string; descripcion: string; publicada: boolean; contenido: ContenidoPagina };
 type Sel = { fila: number; celda: number; el: string } | null;
@@ -336,8 +337,8 @@ export function ConstructorPagina({ pagina, secciones, seccionPortada = null }: 
       if (r.ok) setPublicada(!publicada);
     });
   }
-  function borrar() {
-    if (!window.confirm(`¿Borrar la página «${titulo}»? No se puede deshacer.`)) return;
+  async function borrar() {
+    if (!(await confirmar(`¿Borrar la página «${titulo}»? No se puede deshacer.`))) return;
     start(async () => {
       await borrarPagina(pagina.id);
       setSucio(false);
@@ -784,7 +785,7 @@ function FilaLienzo({
         <button type="button" onClick={() => onMover(-1)} disabled={indice === 0} aria-label="Subir fila" title="Subir fila" className={btn}><ArrowUp size={14} /></button>
         <button type="button" onClick={() => onMover(1)} disabled={indice === total - 1} aria-label="Bajar fila" title="Bajar fila" className={btn}><ArrowDown size={14} /></button>
         <button type="button" onClick={onCopiar} aria-label="Duplicar fila" title="Duplicar fila" className={btn}><Copy size={14} /></button>
-        <button type="button" onClick={() => window.confirm("¿Quitar esta fila y lo que tiene?") && onBorrar()} aria-label="Quitar fila" title="Quitar fila" className={`${btn} text-[#b91c1c]`}><Trash2 size={14} /></button>
+        <button type="button" onClick={async () => (await confirmar("¿Quitar esta fila y lo que tiene?")) && onBorrar()} aria-label="Quitar fila" title="Quitar fila" className={`${btn} text-[#b91c1c]`}><Trash2 size={14} /></button>
       </div>
       <section className={claseFila(fila)} style={estiloFila(fila)}>{children}</section>
     </div>

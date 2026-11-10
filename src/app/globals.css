@@ -643,6 +643,12 @@ a {
   outline: 2px solid var(--accent);
   outline-offset: 3px;
 }
+/* `outline-none` quita el contorno del foco: en enlaces y elementos enfocables que no son campos de texto (el mapa de regiones, las
+   tarjetas del panel) se devuelve al navegar con teclado, para que se vea dónde está el foco. Los campos de texto ya muestran el cursor. */
+:is(a, button, [tabindex]).outline-none:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
 
 /* ============================ Estructura ================================= */
 

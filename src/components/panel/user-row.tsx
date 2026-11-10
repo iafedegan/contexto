@@ -14,6 +14,7 @@ import {
 } from "@/app/panel/(app)/configuracion/actions";
 import { ROLES } from "@/lib/permisos";
 import { asignarRol } from "@/app/panel/(app)/configuracion/roles-actions";
+import { confirmar } from "@/components/panel/confirmar";
 
 /**
  * Fila de persona. El cambio de rol se aplica al instante (sin botón de
@@ -152,8 +153,8 @@ export function UserRow({
           <button
             type="button"
             disabled={pending}
-            onClick={() => {
-              if (!confirm(`¿Eliminar la cuenta de ${user.name} (${user.email})? No se puede deshacer. Sus artículos se conservan.`)) return;
+            onClick={async () => {
+              if (!(await confirmar(`¿Eliminar la cuenta de ${user.name} (${user.email})? No se puede deshacer. Sus artículos se conservan.`))) return;
               setError(null);
               start(async () => {
                 const r = await deleteUser(user.id);
@@ -295,8 +296,8 @@ export function UserRow({
                   <button
                     type="button"
                     disabled={pending}
-                    onClick={() => {
-                      if (!confirm(`¿Quitar el 2FA de ${user.name}? Tendrá que volver a configurarlo (si se le exige) en su próximo ingreso.`)) return;
+                    onClick={async () => {
+                      if (!(await confirmar(`¿Quitar el 2FA de ${user.name}? Tendrá que volver a configurarlo (si se le exige) en su próximo ingreso.`))) return;
                       start(async () => {
                         const r = await resetUserTotp(user.id);
                         if (!r.ok) setError(r.message);

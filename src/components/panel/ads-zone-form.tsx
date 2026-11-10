@@ -9,6 +9,7 @@ import { useActionState } from "react";
 import { Check, Loader2, TriangleAlert, Trash2 } from "lucide-react";
 import { clearAdsZone, deleteAdsZone, saveAdsZone, type AdsZoneState } from "@/app/panel/(app)/configuracion/ads-actions";
 import type { AdsZoneRow } from "@/lib/ads";
+import { confirmar } from "@/components/panel/confirmar";
 
 export type { AdsZoneRow };
 
@@ -193,8 +194,8 @@ export function AdsZoneForm({
             <button
               type="button"
               disabled={pending}
-              onClick={() => {
-                if (confirm("¿Eliminar este anuncio?")) void deleteAdsZone(zone.key);
+              onClick={async () => {
+                if (await confirmar("¿Eliminar este anuncio?")) void deleteAdsZone(zone.key);
               }}
               className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border)] px-3 py-1.5 text-xs text-[var(--fg-muted)] transition hover:border-[var(--danger,#b4442e)] hover:text-[var(--danger,#b4442e)]"
             >

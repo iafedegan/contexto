@@ -5,6 +5,7 @@ import { crearRol, eliminarRol, guardarRol, guardarRolIncorporado } from "@/app/
 import { PERMISOS, porDefecto, type PermisoId } from "@/lib/permisos";
 import { ROLES_BASE, comoRolPropio, nombreRol, permisoDeRol, type CambiosRoles, type RolPropio } from "@/lib/roles";
 import type { UserRole } from "@/db/schema";
+import { confirmar } from "@/components/panel/confirmar";
 
 // Cantidad de personas por rol, para mostrarla junto al nombre (sin listar a nadie).
 type Conteo = Record<string, number>;
@@ -121,8 +122,8 @@ function RolPropioCard({ rol, personas, incorporado = false }: { rol: RolPropio;
         <button
             type="button"
             disabled={pending}
-            onClick={() => {
-              if (!confirm(`¿Eliminar el rol «${rol.nombre}»? ${personas ? `Las ${personas} personas que lo tienen vuelven a ${nombreRol(rol.base)}.` : ""}`)) return;
+            onClick={async () => {
+              if (!(await confirmar(`¿Eliminar el rol «${rol.nombre}»? ${personas ? `Las ${personas} personas que lo tienen vuelven a ${nombreRol(rol.base)}.` : ""}`))) return;
               start(async () => setMsg((await eliminarRol(rol.id)).message));
             }}
             className="rounded-full border border-red-600/40 px-3 py-1 text-xs font-medium text-red-700 transition hover:bg-red-600/10"

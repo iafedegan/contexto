@@ -4,6 +4,7 @@ import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Trash2 } from "lucide-react";
 import { borrarPlan } from "@/app/panel/(app)/consejo/actions";
+import { confirmar, avisar } from "@/components/panel/confirmar";
 
 /** Botón para borrar un consejo (con confirmación). `volverA` lleva a la lista cuando se borra desde dentro del consejo. */
 export function ConsejoBorrar({ id, titulo, piezas, activo, volverA, etiqueta }: { id: string; titulo: string; piezas: number; activo: boolean; volverA?: string; etiqueta?: boolean }) {
@@ -15,12 +16,12 @@ export function ConsejoBorrar({ id, titulo, piezas, activo, volverA, etiqueta }:
       disabled={pend}
       aria-label={`Borrar ${titulo}`}
       title="Borrar el consejo"
-      onClick={() => {
+      onClick={async () => {
         const aviso = `¿Borrar «${titulo}»?\n\nSe borran sus ${piezas} piezas planificadas.${activo ? " Está ACTIVO: dejará de redactar." : ""} Las notas que ya se redactaron se conservan en Artículos (las ya programadas siguen programadas).`;
-        if (!window.confirm(aviso)) return;
+        if (!(await confirmar(aviso))) return;
         run(async () => {
           const r = await borrarPlan(id);
-          if (!r.ok) return void window.alert(r.message);
+          if (!r.ok) return void avisar(r.message);
           if (volverA) router.push(volverA);
           else router.refresh();
         });

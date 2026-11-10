@@ -15,6 +15,7 @@ import { aLocalBogota, describirCuando } from "@/lib/newsletter/programacion";
 import type { OpcionesAudiencia } from "@/lib/newsletter/audiencia";
 import { DisenoBoletin, type DisenoEditable } from "./diseno-boletin";
 import { descargarPdfBoletin } from "./pdf-boletin";
+import { confirmar } from "@/components/panel/confirmar";
 
 // Contenido editable de la edición.
 type Content = { subject: string; preheader: string; intro: string; items: ItemEdicion[] };
@@ -102,7 +103,7 @@ export function EditionEditor({ id, status, programadaPara, recipients: recipien
   // Envía la edición a los suscriptores por tandas, tras pedir confirmación.
   async function send() {
     const quien = describirAudiencia(aud, (k) => opciones.ciudades.find((x) => x.clave === k)?.nombre ?? k, nombrePais);
-    if (!confirm(`¿Enviar «${c.subject}» a ${recipients} ${recipients === 1 ? "suscriptor" : "suscriptores"} (${quien})? No se puede deshacer.`)) return;
+    if (!(await confirmar(`¿Enviar «${c.subject}» a ${recipients} ${recipients === 1 ? "suscriptor" : "suscriptores"} (${quien})? No se puede deshacer.`))) return;
     setSending(true);
     // Una edición que ya empezó a enviarse está cerrada: solo se reanuda (guardar cambios ya no aplica).
     if (status === "borrador") {
@@ -139,7 +140,7 @@ export function EditionEditor({ id, status, programadaPara, recipients: recipien
   const [redactando, setRedactando] = useState(false);
   const [avisoIa, setAvisoIa] = useState("");
   async function redactarConIa() {
-    if (c.intro.trim() && !confirm("Ya hay un mensaje escrito. ¿Reemplazarlo por el que propone la IA?")) return;
+    if (c.intro.trim() && !(await confirmar("Ya hay un mensaje escrito. ¿Reemplazarlo por el que propone la IA?"))) return;
     setRedactando(true);
     setAvisoIa("");
     try {
@@ -301,7 +302,7 @@ export function EditionEditor({ id, status, programadaPara, recipients: recipien
                   {guardado === "ok" && "Guardado automáticamente ✓"}
                   {guardado === "error" && "No se pudo guardar: pulsa «Guardar borrador»"}
                 </span>
-                <button className="ml-auto text-red-600 underline" disabled={sending} onClick={async () => { if (confirm("¿Eliminar este borrador?")) { await deleteEdition(id); router.push("/panel/newsletter"); } }}>Eliminar borrador</button>
+                <button className="ml-auto text-red-600 underline" disabled={sending} onClick={async () => { if (await confirmar("¿Eliminar este borrador?")) { await deleteEdition(id); router.push("/panel/newsletter"); } }}>Eliminar borrador</button>
               </div>
             </div>
           )}

@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Trash2 } from "lucide-react";
 import { deleteArticle } from "@/app/panel/(app)/articulos/actions";
+import { confirmar } from "@/components/panel/confirmar";
 
 /** Borra un artículo tras confirmar. En uno publicado avisa que sale del sitio. */
 export function DeleteArticleButton({ id, title, published }: { id: string; title: string; published: boolean }) {
@@ -12,11 +13,11 @@ export function DeleteArticleButton({ id, title, published }: { id: string; titl
   const [error, setError] = useState("");
 
   // Pide confirmación y borra la nota.
-  function onDelete() {
+  async function onDelete() {
     const aviso = published
       ? `«${title}» está PUBLICADO: dejará de verse en el sitio y se borrará para siempre.\n\n¿Eliminarlo?`
       : `¿Eliminar «${title}» para siempre? No se puede deshacer.`;
-    if (!window.confirm(aviso)) return;
+    if (!(await confirmar(aviso))) return;
     setError("");
     start(async () => {
       try {

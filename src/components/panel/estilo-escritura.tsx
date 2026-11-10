@@ -12,6 +12,7 @@ import {
   type EstiloResultado,
 } from "@/app/panel/(app)/configuracion/estilo-actions";
 import { ESTILO_LIMITES, type EstiloVista } from "@/lib/ai/estilo-tipos";
+import { confirmar } from "@/components/panel/confirmar";
 
 const nf = new Intl.NumberFormat("es-CO");
 const fecha = (iso: string) => new Intl.DateTimeFormat("es-CO", { day: "numeric", month: "long", year: "numeric", timeZone: "America/Bogota" }).format(new Date(iso));
@@ -217,7 +218,7 @@ export function EstiloEscritura({ inicial, escritorId, nombre, onCambio }: { ini
             <button
               type="button"
               disabled={pendiente}
-              onClick={() => { if (window.confirm(ajeno ? `¿Borrar las muestras y el diagnóstico de ${de}?` : "¿Borrar todas tus muestras y tu diagnóstico?")) correr("borrar", () => borrarMiEstilo(escritorId)); }}
+              onClick={async () => { if (await confirmar(ajeno ? `¿Borrar las muestras y el diagnóstico de ${de}?` : "¿Borrar todas tus muestras y tu diagnóstico?")) correr("borrar", () => borrarMiEstilo(escritorId)); }}
               className="self-start text-xs font-medium text-[var(--fg-muted)] underline-offset-2 transition hover:text-[var(--danger)] hover:underline"
             >
               Borrar mis muestras y mi diagnóstico

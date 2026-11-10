@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { Check, Copy, KeyRound, Trash2 } from "lucide-react";
 import { createApiClient, deleteApiClient, toggleApiClient } from "./actions";
+import { confirmar } from "@/components/panel/confirmar";
 
 // Clave de API tal como se lista en el panel.
 type Client = {
@@ -96,7 +97,7 @@ export function ApiKeysManager({ clients, canManage }: { clients: Client[]; canM
                   <button className="lx-btn-ghost" disabled={pending} onClick={() => start(async () => toggleApiClient(c.id, !c.active))}>
                     {c.active ? "Revocar" : "Reactivar"}
                   </button>
-                  <button className="lx-btn-ghost text-red-600" disabled={pending} onClick={() => { if (confirm(`¿Eliminar la clave de «${c.name}»?`)) start(async () => deleteApiClient(c.id)); }}>
+                  <button className="lx-btn-ghost text-red-600" disabled={pending} onClick={async () => { if (await confirmar(`¿Eliminar la clave de «${c.name}»?`)) start(async () => deleteApiClient(c.id)); }}>
                     <Trash2 size={15} />
                   </button>
                 </div>

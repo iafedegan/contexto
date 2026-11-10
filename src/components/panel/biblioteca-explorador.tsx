@@ -21,6 +21,7 @@ import {
 } from "@/app/panel/(app)/biblioteca/actions";
 import { subirMedia } from "@/components/panel/subir-media";
 import { rutaDe } from "@/lib/biblioteca-acceso";
+import { confirmar } from "@/components/panel/confirmar";
 
 /**
  * Biblioteca de imágenes: árbol de carpetas a la izquierda, archivos a la derecha. Dos usos:
@@ -274,7 +275,7 @@ export function BibliotecaExplorador({ modo, onElegir }: { modo: Modo; onElegir?
                 <button type="button" className={boton} onClick={abrirAcceso}><Users size={15} aria-hidden /> Quién la ve</button>
                 <button type="button" className={boton} onClick={async () => { const n = window.prompt("Nuevo nombre de la carpeta", carpetaActual.name); if (n) await accion(() => renombrarCarpeta({ id: carpetaActual.id, name: n })); }}><Pencil size={15} aria-hidden /> Renombrar</button>
                 <button type="button" className={boton} onClick={() => setMoviendo({ tipo: "carpeta", destino: carpetaActual.parentId ?? "" })}><MoveRight size={15} aria-hidden /> Mover</button>
-                <button type="button" className={boton} onClick={async () => { if (window.confirm(`¿Eliminar la carpeta «${carpetaActual.name}»? Solo se puede si está vacía.`)) { const ok = await accion(() => eliminarCarpeta({ id: carpetaActual.id }), "Carpeta eliminada."); if (ok) abrirCarpeta(carpetaActual.parentId); } }}><Trash2 size={15} aria-hidden /> Eliminar</button>
+                <button type="button" className={boton} onClick={async () => { if (await confirmar(`¿Eliminar la carpeta «${carpetaActual.name}»? Solo se puede si está vacía.`)) { const ok = await accion(() => eliminarCarpeta({ id: carpetaActual.id }), "Carpeta eliminada."); if (ok) abrirCarpeta(carpetaActual.parentId); } }}><Trash2 size={15} aria-hidden /> Eliminar</button>
               </span>
             )}
           </div>
@@ -296,7 +297,7 @@ export function BibliotecaExplorador({ modo, onElegir }: { modo: Modo; onElegir?
             <span className="font-medium">{chosen.length} {chosen.length === 1 ? "marcado" : "marcados"}</span>
             <button type="button" className={boton} onClick={() => setMoviendo({ tipo: "archivos", destino: actual ?? "" })}><MoveRight size={15} aria-hidden /> Mover</button>
             <button type="button" className={boton} onClick={async () => { await navigator.clipboard?.writeText(chosen.map((a) => a.url).join("\n")).catch(() => {}); setAviso("Enlaces copiados."); }}><Link2 size={15} aria-hidden /> Copiar enlaces</button>
-            <button type="button" className={boton} onClick={async () => { if (window.confirm(`¿Quitar ${chosen.length} de la biblioteca? Las notas que ya los usan no se afectan.`)) await accion(() => eliminarActivos({ ids: chosen.map((a) => a.id) }), "Quitados de la biblioteca."); }}><Trash2 size={15} aria-hidden /> Quitar</button>
+            <button type="button" className={boton} onClick={async () => { if (await confirmar(`¿Quitar ${chosen.length} de la biblioteca? Las notas que ya los usan no se afectan.`)) await accion(() => eliminarActivos({ ids: chosen.map((a) => a.id) }), "Quitados de la biblioteca."); }}><Trash2 size={15} aria-hidden /> Quitar</button>
             <button type="button" className="ml-auto text-[var(--fg-muted)] hover:underline" onClick={() => setSeleccion(new Set())}>Quitar marcas</button>
           </div>
         )}

@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { Pencil, Tag, X } from "lucide-react";
 import { eliminarEtiquetaGlobal, etiquetarVarios, guardarEtiquetasSuscriptor, renombrarEtiquetaGlobal } from "./actions";
+import { confirmar } from "@/components/panel/confirmar";
 
 type Aviso = { ok: boolean; texto: string } | null;
 
@@ -170,8 +171,8 @@ export function GestorEtiquetas({ etiquetas, esAdmin }: { etiquetas: { nombre: s
                       aria-label={`Eliminar la etiqueta ${e.nombre}`}
                       title="Eliminar de todos"
                       disabled={pendiente}
-                      onClick={() => {
-                        if (!window.confirm(`¿Quitar «${e.nombre}» de ${e.n} ${e.n === 1 ? "suscriptor" : "suscriptores"}? Los suscriptores no se borran, solo pierden la etiqueta.`)) return;
+                      onClick={async () => {
+                        if (!(await confirmar(`¿Quitar «${e.nombre}» de ${e.n} ${e.n === 1 ? "suscriptor" : "suscriptores"}? Los suscriptores no se borran, solo pierden la etiqueta.`))) return;
                         setAviso(null);
                         empezar(async () => {
                           const r = await eliminarEtiquetaGlobal(e.nombre);

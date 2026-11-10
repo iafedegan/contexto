@@ -192,7 +192,26 @@ export async function hybridSearch(query: string, limit = 20, opciones: { semant
 }
 
 /** Contenido relacionado para la página de artículo (mismo índice unificado). */
-export async function relatedContent(
+export const TAG_RELACIONADAS = "relacionadas";
+
+/**
+ * Notas relacionadas de una nota, guardadas un día en la caché de datos. Antes se calculaban en cada página de nota que se generaba: con
+ * 51 mil notas (y los robots recorriéndolas) era el 80 % del tiempo de la base (2,4 s por consulta). Su etiqueta es propia, así que
+ * publicar una nota no borra las relacionadas de todas las demás: a lo sumo una nota nueva tarda un día en aparecer como relacionada.
+ */
+const relacionadasEnCache = cachear(
+  "relacionadas",
+  (seedText: string, excludeArticleId: string, limit: number, fallbackCategorySlug: string | null) =>
+    calcularRelacionadas(seedText, excludeArticleId, limit, fallbackCategorySlug),
+  { tags: [TAG_RELACIONADAS], segundos: 86_400 },
+);
+export async function relatedContent(seedText: string, excludeArticleId: string, limit = 5, fallbackCategorySlug?: string | null): Promise<SearchHit[]> {
+  const hits = await relacionadasEnCache(seedText, excludeArticleId, limit, fallbackCategorySlug ?? null);
+  // La caché revive las fechas ISO como `Date`; aquí `publishedAt` es texto.
+  return hits.map((h) => ({ ...h, publishedAt: (h.publishedAt as unknown) instanceof Date ? (h.publishedAt as unknown as Date).toISOString() : h.publishedAt }));
+}
+
+async function calcularRelacionadas(
   seedText: string,
   excludeArticleId: string,
   limit = 5,

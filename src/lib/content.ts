@@ -210,6 +210,55 @@ export function enCategorias(ids: string[], slugs: string[]): SQL {
   return (or(porId, lista) ?? sql`false`) as SQL;
 }
 
+/**
+ * Total de notas de una sección con sus filtros (sin página ni orden). Contar las 51 mil notas tardaba 0,4–0,9 s y se repetía por cada
+ * página y cada orden de la misma sección; ahora se cuenta una vez cada 10 minutos por combinación de filtros.
+ */
+const contarCategoria = cachear(
+  "categoria-total",
+  async (categorySlug: string, filters: Omit<CategoryFilters, "limit" | "offset" | "sort">): Promise<number> => {
+    const { subcategorySlug, dateFrom, dateTo, authorSlug, regionSlug, departamentoSlug, excluirSlugs } = filters;
+    const [cat] = await db.select({ id: categories.id }).from(categories).where(eq(categories.slug, categorySlug)).limit(1);
+    if (!cat) return 0;
+    const children = await db.select({ id: categories.id, slug: categories.slug }).from(categories).where(eq(categories.parentId, cat.id));
+    let categoryIds = [cat.id, ...children.map((c) => c.id)];
+    let seccionesSlugs = [categorySlug, ...children.map((c) => c.slug)];
+    if (subcategorySlug) {
+      const match = children.find((c) => c.slug === subcategorySlug);
+      categoryIds = match ? [match.id] : [];
+      seccionesSlugs = match ? [match.slug] : [];
+    }
+    if (!categoryIds.length) return 0;
+    const where = and(...condicionesListado(categoryIds, seccionesSlugs, { dateFrom, dateTo, authorSlug, regionSlug, departamentoSlug, excluirSlugs }));
+    if (regionPorSlug(regionSlug) || departamentoPorSlug(departamentoSlug)) {
+      const r = await db.execute(sql`select count(*)::int as count from (select 1 from ${articles} where ${where} limit ${TOPE_CONTEO_TEXTO}) t`);
+      return Number(rowsOf<{ count: number }>(r)[0]?.count ?? 0);
+    }
+    const [{ count }] = await db.select({ count: sql<number>`count(*)::int` }).from(articles).where(where);
+    return Number(count);
+  },
+  { tags: [TAG_CONTENIDO], segundos: 600 },
+);
+
+/** Condiciones del listado de una sección: publicada, de sus categorías y con los filtros pedidos. */
+function condicionesListado(
+  categoryIds: string[],
+  seccionesSlugs: string[],
+  f: Pick<CategoryFilters, "dateFrom" | "dateTo" | "authorSlug" | "regionSlug" | "departamentoSlug" | "excluirSlugs">,
+): SQL[] {
+  const conditions: SQL[] = [publishedCondition as SQL, enCategorias(categoryIds, seccionesSlugs)];
+  if (f.dateFrom) conditions.push(gte(articles.publishedAt, sql`${f.dateFrom}::date`));
+  if (f.dateTo) conditions.push(lte(articles.publishedAt, sql`(${f.dateTo}::date + interval '1 day')`));
+  if (f.authorSlug) conditions.push(sql`${articles.authorId} in (select id from authors where slug = ${f.authorSlug})`);
+  if (f.excluirSlugs?.length) conditions.push(notInArray(articles.slug, f.excluirSlugs));
+  // La región que fija el editor al clasificar la nota (`secciones`) manda; si no, vale la que reconoció la base en su texto (`zonas`, con índice).
+  const region = regionPorSlug(f.regionSlug);
+  if (region) conditions.push(sql`(${articles.secciones} ? ${`region-${region.slug}`} or ${articles.zonas} ? ${`region-${region.slug}`})`);
+  const depto = departamentoPorSlug(f.departamentoSlug);
+  if (depto) conditions.push(sql`(${articles.secciones} ? ${`depto-${depto.slug}`} or ${articles.zonas} ? ${`depto-${depto.slug}`})`);
+  return conditions;
+}
+
 /** Lectura de una categoría con sus filtros, cacheada entre peticiones (cada combinación de filtros es una entrada). */
 const leerCategoria = cachear(
   "categoria",
@@ -240,17 +289,9 @@ const leerCategoria = cachear(
     seccionesSlugs = match ? [match.slug] : [];
   }
 
-  const conditions = [publishedCondition, enCategorias(categoryIds, seccionesSlugs)];
-  if (dateFrom) conditions.push(gte(articles.publishedAt, sql`${dateFrom}::date`));
-  if (dateTo) conditions.push(lte(articles.publishedAt, sql`(${dateTo}::date + interval '1 day')`));
-  if (authorSlug) conditions.push(sql`${articles.authorId} in (select id from authors where slug = ${authorSlug})`);
-  if (excluirSlugs?.length) conditions.push(notInArray(articles.slug, excluirSlugs));
-  // La región que fija el editor al clasificar la nota (`secciones`) manda; si no, vale la que reconoció la base en su texto (`zonas`, con índice).
   const region = regionPorSlug(regionSlug);
-  if (region) conditions.push(sql`(${articles.secciones} ? ${`region-${region.slug}`} or ${articles.zonas} ? ${`region-${region.slug}`})`);
   const depto = departamentoPorSlug(departamentoSlug);
-  if (depto) conditions.push(sql`(${articles.secciones} ? ${`depto-${depto.slug}`} or ${articles.zonas} ? ${`depto-${depto.slug}`})`);
-  const where = and(...conditions);
+  const where = and(...condicionesListado(categoryIds, seccionesSlugs, { dateFrom, dateTo, authorSlug, regionSlug, departamentoSlug, excluirSlugs }));
 
   const [items, [{ count }]] = await Promise.all([
     categoryIds.length === 0
@@ -266,9 +307,8 @@ const leerCategoria = cachear(
           .offset(offset),
     categoryIds.length === 0
       ? Promise.resolve([{ count: 0 }])
-      : region || depto
-        ? db.execute(sql`select count(*)::int as count from (select 1 from ${articles} where ${where} limit ${TOPE_CONTEO_TEXTO}) t`).then((r) => rowsOf<{ count: number }>(r).map((x) => ({ count: Number(x.count) })))
-        : db.select({ count: sql<number>`count(*)::int` }).from(articles).where(where),
+      : // El total no cambia con la página ni con el orden: se guarda aparte, 10 minutos, una vez por combinación de filtros.
+        contarCategoria(categorySlug, { subcategorySlug, dateFrom, dateTo, authorSlug, regionSlug, departamentoSlug, excluirSlugs }).then((count) => [{ count }]),
   ]);
 
   return {

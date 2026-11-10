@@ -20,6 +20,7 @@ import {
   ordenarSeccion,
   type EstructuraResult,
 } from "@/app/panel/(app)/secciones/actions";
+import { confirmar } from "@/components/panel/confirmar";
 
 // Sección del árbol de navegación.
 export type SectionNode = {
@@ -404,8 +405,8 @@ function Detail({
       <button
         type="button"
         disabled={busy}
-        onClick={() => {
-          if (!window.confirm(`¿Eliminar la sección «${sel.name}»? Solo se puede si no tiene notas ni subsecciones.`)) return;
+        onClick={async () => {
+          if (!(await confirmar(`¿Eliminar la sección «${sel.name}»? Solo se puede si no tiene notas ni subsecciones.`))) return;
           run(async () => {
             const r = await eliminarSeccion(sel.id);
             if (r.ok) onSelect(null);
