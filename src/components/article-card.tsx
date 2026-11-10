@@ -277,7 +277,9 @@ function RailCard({ a, index, locale, soloTexto = false }: { a: ArticleListItem;
       )}
       <div className="min-w-0 flex-1 leading-snug">
         <Kicker a={a} locale={locale} className="text-xs text-[var(--fg-muted)]" />
-        <h3 className="lx-display mt-1.5 text-lg font-medium leading-snug" style={st.title}>
+        {/* En la columna ancha, todos los titulares a 17 px (también los que traen tamaño del panel): la lista se lee pareja y la foto principal,
+            que iguala su alto, no queda casi cuadrada. */}
+        <h3 className={`lx-display mt-1.5 text-lg font-medium leading-snug ${soloTexto ? "xl:!text-[1.0625rem] xl:!leading-snug" : ""}`} style={st.title}>
           <Link href={hrefNota(locale, a)} className="lx-link">
             {a.title}
           </Link>
