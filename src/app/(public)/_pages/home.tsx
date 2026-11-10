@@ -64,7 +64,10 @@ async function HomePage({ locale, portadaBorrador }: { locale: Locale; portadaBo
     );
   }
 
-  const { lead, second, rail, river } = splitHomeSlots(articles);
+  const { lead, second, rail, river: rioCompleto } = splitHomeSlots(articles);
+  // La cuadrícula del final se recorta a filas completas: así no queda una nota sola en la última fila.
+  const colsRio = Math.max(1, layout.riverColumns || 3);
+  const river = rioCompleto.length > colsRio ? rioCompleto.slice(0, rioCompleto.length - (rioCompleto.length % colsRio)) : rioCompleto;
   // Cuerpo de la plantilla compuesta; la paleta sigue siendo `templateId`.
   // Se toma de getSiteTheme (misma fuente que el resto del portal).
   const [site, identity, enVivo] = await Promise.all([getSiteTheme(), getSiteIdentity(), getEnVivo()]);
