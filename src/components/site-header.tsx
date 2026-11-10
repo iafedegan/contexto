@@ -191,7 +191,7 @@ function MastheadHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extr
         <span className="mt-2 flex flex-col items-center gap-y-1">
           <span data-titulo-texto className="mb-1 flex items-center gap-[1.6cqi]">
             <span aria-hidden className="h-px w-[5cqi] bg-gradient-to-r from-transparent to-[#c9a24a]" />
-            <span className="lx-display lx-foil pl-[0.28em] text-[clamp(1rem,2.7cqi,1.7rem)] font-bold uppercase leading-none tracking-[0.28em] [font-variant-numeric:lining-nums]">
+            <span data-color-de="h-nombre" className="lx-display lx-foil pl-[0.28em] text-[clamp(1rem,2.7cqi,1.7rem)] font-bold uppercase leading-none tracking-[0.28em] [font-variant-numeric:lining-nums]">
               {locale === "en" ? "14 years" : "14 años"}
             </span>
             <span aria-hidden className="h-px w-[5cqi] bg-gradient-to-l from-transparent to-[#c9a24a]" />

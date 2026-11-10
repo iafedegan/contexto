@@ -138,10 +138,24 @@ export function sectionElsCss(input: unknown, scope = "[data-site-root]"): strin
       rules.push(`@media(max-width:640px){${all}{font-size:${Math.max(12, Math.round(s.size * 0.7))}px!important}}`);
     }
   };
+  // Piezas que solo toman el COLOR de otra (no su tamaño ni su letra): «14 años» se pinta como el nombre del sitio.
+  const soloColor = (s: SectionElStyle, selector: string) => {
+    const sel = `:is(${selector})`;
+    if (s.gradient)
+      rules.push(`${sel}{background-image:${gradientCss(s.gradient)}!important;-webkit-background-clip:text!important;background-clip:text!important;-webkit-text-fill-color:transparent!important;color:transparent!important;animation:none!important}`);
+    else if (s.color) rules.push(`${sel}{background-image:none!important;color:${s.color}!important;-webkit-text-fill-color:${s.color}!important}`);
+  };
   for (const { id } of SECTION_ELS) {
     const s = els[id];
     if (!s) continue;
     const { claro, oscuro, ...base } = s;
+    if (id === "h-nombre") {
+      // Más peso que los colores de título de la barra (región «navbar»), que si no le ganan.
+      const alias = ` [data-color-de="h-nombre"]:not(#_):not(#_)`;
+      soloColor(base, `${scope}${alias}`);
+      if (claro) soloColor(claro, selectoresDeModo("claro", scope, null, alias));
+      if (oscuro) soloColor(oscuro, selectoresDeModo("oscuro", scope, null, alias));
+    }
     // El menú tiene estilos propios en sus enlaces (y ajustes viejos de «Menú y secciones»): se sube la especificidad para que la pieza mande en todos.
     const peso = id === "h-menu" ? ":not(#_):not(#_)" : "";
     reglas(id, base, `${scope} [data-el="${id}"]${peso}`, true);

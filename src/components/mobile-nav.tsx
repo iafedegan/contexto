@@ -148,7 +148,7 @@ export function MobileNav({
           {/* Los 14 años, como en la web: lámina dorada, cifras a la altura de las letras y filetes a los lados. */}
           <span data-titulo-texto className="mt-1 flex items-center gap-2">
             <span aria-hidden className="h-px w-5 bg-gradient-to-r from-transparent to-[#c9a24a]" />
-            <span className="lx-display lx-foil pl-[0.28em] text-[0.72rem] font-bold uppercase leading-none tracking-[0.28em] [font-variant-numeric:lining-nums]">{es ? "14 años" : "14 years"}</span>
+            <span data-color-de="h-nombre" className="lx-display lx-foil pl-[0.28em] text-[0.72rem] font-bold uppercase leading-none tracking-[0.28em] [font-variant-numeric:lining-nums]">{es ? "14 años" : "14 years"}</span>
             <span aria-hidden className="h-px w-5 bg-gradient-to-l from-transparent to-[#c9a24a]" />
           </span>
           {tagline && <span data-titulo-texto data-el="h-lema" className="lx-ui mt-1 block truncate text-[0.62rem] font-semibold uppercase leading-none tracking-[0.14em] text-[var(--fg-muted)]">{tagline}</span>}
