@@ -19,6 +19,11 @@ const CX = 186, CY = 184, R = 184, r = 122, ABRE = (42 * Math.PI) / 180;
 const pt = (rad: number, ang: number) => `${(CX + rad * Math.cos(ang)).toFixed(2)} ${(CY + rad * Math.sin(ang)).toFixed(2)}`;
 const ANILLO = `M${pt(R, -ABRE)} A${R} ${R} 0 1 0 ${pt(R, ABRE)} L${pt(r, ABRE)} A${r} ${r} 0 1 1 ${pt(r, -ABRE)} Z`;
 const PLAY = "M135 108 L276 184 L135 262 Z";
+// La X del logo: un «>» entero a la izquierda y, separado por un hueco, un «<» sin punta (sus dos brazos sueltos). Medida sobre el original.
+const X_LOGO =
+  "M684 117 L714 117 L747 162.5 L714 208 L684 208 L717 162.5 Z " +
+  "M756 117 L784.5 117 L754 157 L748 148 Z " +
+  "M748 177 L754 168 L784.5 208 L756 208 Z";
 // Filete fino interior (el biselado del original), un poco más adentro del borde del anillo.
 const BISEL = `M${pt(R - 14, -ABRE + 0.06)} A${R - 14} ${R - 14} 0 1 0 ${pt(R - 14, ABRE - 0.06)}`;
 
@@ -65,7 +70,10 @@ export function LogoContexto({ id, titulo = "CONtexto Ganadero Media", className
       <Degradado id={g} />
       <Emblema fill={fill} transform="translate(85 55) scale(0.5707)" />
       <g fill={fill}>
-        <text x="285" y="215" fontSize="138" fontWeight="900" textLength="700" lengthAdjust="spacingAndGlyphs" style={{ fontFamily: "var(--f-montserrat), Montserrat, 'Arial Black', system-ui, sans-serif" }}>ONTEXTO</text>
+        {/* «ONTE» + la X propia del logo (dibujada: no es la de la tipografía) + «TO». */}
+        <text x="285" y="215" fontSize="138" fontWeight="900" textLength="389" lengthAdjust="spacingAndGlyphs" style={{ fontFamily: "var(--f-montserrat), Montserrat, 'Arial Black', system-ui, sans-serif" }}>ONTE</text>
+        <path d={X_LOGO} />
+        <text x="793" y="215" fontSize="138" fontWeight="900" textLength="193" lengthAdjust="spacingAndGlyphs" style={{ fontFamily: "var(--f-montserrat), Montserrat, 'Arial Black', system-ui, sans-serif" }}>TO</text>
         <text x="290" y="298" fontSize="86" fontWeight="400" textLength="675" lengthAdjust="spacingAndGlyphs" style={{ fontFamily: "var(--f-nunito), Nunito, system-ui, sans-serif" }}>GANADERO MEDIA</text>
       </g>
       {conAnios && (
