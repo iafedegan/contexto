@@ -31,7 +31,8 @@ const RESERVADAS = new Set([
 async function slugLibre(slug: string, excepto?: string): Promise<string | null> {
   if (!slug) return "Escriba una dirección (letras, números y guiones; «sección/página» si va dentro de una sección).";
   const [primero, segundo] = slug.split("/");
-  if (RESERVADAS.has(primero) || resolveLegacyTaxonomy(`/${primero}`) || LEGACY_SYSTEM_REDIRECTS[`/${slug}`]) return `La dirección «/${slug}» ya la usa el sitio. Elija otra.`;
+  // El nombre de una sección del sitio anterior solo está tomado como dirección SUELTA (`/mexico`); como primer tramo de «sección/página» es justo lo que se quiere.
+  if (RESERVADAS.has(primero) || (!segundo && resolveLegacyTaxonomy(`/${primero}`)) || LEGACY_SYSTEM_REDIRECTS[`/${slug}`]) return `La dirección «/${slug}» ya la usa el sitio. Elija otra.`;
   if (!segundo) {
     const [cat] = await db.select({ id: categories.id }).from(categories).where(eq(categories.slug, slug)).limit(1);
     if (cat) return `«/${slug}» es el nombre de una sección. Póngale «/${slug}/nombre-de-la-pagina».`;
