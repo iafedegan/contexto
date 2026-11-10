@@ -411,11 +411,11 @@ export function EsmeraldaTemplate({
       {node}
     </EditableCard>
   );
-  // «Lo último» acompaña a la nota principal con cinco titulares, solo texto en pantallas anchas: la columna es angosta y con
+  // «Lo último» acompaña a la nota principal con cuatro titulares (con cinco, la foto estirada hasta su alto quedaba casi cuadrada), solo texto en pantallas anchas: la columna es angosta y con
   // miniatura el titular quedaba en siete u ocho líneas. Lo que no cabe abre «Lo más reciente», que es la rejilla de abajo.
   const todosAside = [second, ...rail].filter((a): a is ArticleListItem => Boolean(a));
-  const aside = todosAside.slice(0, 5);
-  const rio = [...todosAside.slice(5), ...river];
+  const aside = todosAside.slice(0, 4);
+  const rio = [...todosAside.slice(4), ...river];
 
   return (
     <div className="flex flex-col gap-12 sm:gap-20">
@@ -429,7 +429,7 @@ export function EsmeraldaTemplate({
           <h2 className="lx-display mt-2 text-2xl font-semibold tracking-tight md:text-3xl">
             {t(locale, "home.latest")}
           </h2>
-          <div className="mt-5 flex flex-col gap-4 sm:mt-6 sm:gap-5">
+          <div className="mt-5 flex flex-col gap-4 sm:mt-6 sm:gap-5 xl:gap-4">
             {aside.map((a, i) => wrap(a, <ArticleCard a={a} locale={locale} variant="rail" index={i} soloTexto />))}
           </div>
         </aside>

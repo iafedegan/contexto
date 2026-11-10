@@ -269,7 +269,7 @@ function RailCard({ a, index, locale, soloTexto = false }: { a: ArticleListItem;
   const lado = { w: fijo?.imageWidth ?? fijo?.imageHeight ?? pct, h: fijo?.imageHeight ?? fijo?.imageWidth ?? pct };
   const medidasMiniatura: React.CSSProperties | undefined = lado.w && lado.h ? { width: `${lado.w}px`, height: `${lado.h}px` } : undefined;
   return (
-    <article data-bs-root={a.slug} className={`lx-reveal group flex gap-3 border-b border-[var(--border)] pb-4 last:border-0 sm:gap-4 ${soloTexto ? "xl:pb-5" : ""}`}>
+    <article data-bs-root={a.slug} className={`lx-reveal group flex gap-3 border-b border-[var(--border)] pb-4 last:border-0 sm:gap-4 ${soloTexto ? "xl:pb-4" : ""}`}>
       {typeof index === "number" && (
         <span className={`lx-display w-6 shrink-0 text-xl font-semibold text-[var(--accent)] opacity-90 [font-variant-numeric:lining-nums] sm:w-8 sm:text-2xl ${soloTexto ? "xl:w-7 xl:pt-0.5 xl:text-lg xl:opacity-70" : ""}`}>
           {String(index + 1).padStart(2, "0")}
