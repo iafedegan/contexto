@@ -1,4 +1,6 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { categories, paginas } from "@/db/schema";
@@ -20,9 +22,14 @@ export default async function DisenarPagina({ params }: { params: Promise<{ id: 
   ]);
   if (!p) notFound();
   return (
-    <ConstructorPagina
-      pagina={{ id: p.id, titulo: p.titulo, slug: p.slug, descripcion: p.descripcion ?? "", publicada: p.publicada, contenido: sanearPagina(p.contenido) }}
-      secciones={secciones}
-    />
+    <div className="flex flex-col gap-3">
+      <Link href="/panel/paginas" className="inline-flex items-center gap-1.5 self-start rounded-full px-1 py-1 text-sm font-semibold text-[var(--accent)] hover:underline">
+        <ArrowLeft size={15} aria-hidden /> Todas las páginas
+      </Link>
+      <ConstructorPagina
+        pagina={{ id: p.id, titulo: p.titulo, slug: p.slug, descripcion: p.descripcion ?? "", publicada: p.publicada, contenido: sanearPagina(p.contenido) }}
+        secciones={secciones}
+      />
+    </div>
   );
 }

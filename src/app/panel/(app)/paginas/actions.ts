@@ -100,6 +100,26 @@ export async function guardarPagina(
   return { ok: true };
 }
 
+/** Duplica una página: copia su diseño en una página nueva, en borrador, en la misma sección y con una dirección libre («…-copia»). */
+export async function duplicarPagina(id: string): Promise<ResultadoPagina> {
+  const yo = await requirePermiso("portada");
+  const [p] = await db.select().from(paginas).where(eq(paginas.id, id)).limit(1);
+  if (!p) return { ok: false, error: "La página ya no existe." };
+  const tramos = p.slug.split("/");
+  const prefijo = tramos.length > 1 ? `${tramos.slice(0, -1).join("/")}/` : "";
+  const ultimo = tramos[tramos.length - 1].slice(0, 60);
+  let slug = `${prefijo}${ultimo}-copia`;
+  for (let n = 2; (await slugLibre(slug)) && n < 50; n++) slug = `${prefijo}${ultimo}-copia-${n}`;
+  const error = await slugLibre(slug);
+  if (error) return { ok: false, error };
+  const [nueva] = await db
+    .insert(paginas)
+    .values({ titulo: `${p.titulo} (copia)`.slice(0, 160), slug, descripcion: p.descripcion, seccionId: p.seccionId, contenido: p.contenido, publicada: false, updatedBy: yo.id })
+    .returning({ id: paginas.id });
+  refrescar();
+  return { ok: true, id: nueva.id };
+}
+
 /** Publica u oculta la página. */
 export async function publicarPagina(id: string, publicada: boolean): Promise<ResultadoPagina> {
   const yo = await requirePermiso("portada");
