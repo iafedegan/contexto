@@ -22,8 +22,6 @@ import {
   Open_Sans,
   Jost,
   Marcellus,
-  Montserrat,
-  Nunito,
   Outfit,
   Playfair_Display,
   Source_Serif_4,
@@ -70,14 +68,7 @@ export const marcellus = Marcellus({ subsets: ["latin"], display: "swap", preloa
 export const sourceSerif = Source_Serif_4({ subsets: ["latin"], display: "swap", preload: false, variable: "--f-source-serif" });
 
 // Variables CSS de todas las tipografías, para aplicarlas al documento.
-/** Logo de la marca (componente LogoContexto), las letras del logo oficial: CONTEXTO y «14 AÑOS» en Montserrat (900 y 700), GANADERO MEDIA en
- * Nunito 400. Se precargan: el logo está en la cabecera de todas las páginas. */
-export const montserrat = Montserrat({ subsets: ["latin"], display: "swap", weight: ["700", "900"], variable: "--f-montserrat" });
-export const nunito = Nunito({ subsets: ["latin"], display: "swap", weight: ["400"], variable: "--f-nunito" });
-
 export const fontVariables = [
-  montserrat,
-  nunito,
   openSans,
   playfair,
   interTight,
