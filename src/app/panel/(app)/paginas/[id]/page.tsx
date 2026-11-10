@@ -21,6 +21,11 @@ export default async function DisenarPagina({ params }: { params: Promise<{ id: 
     db.select({ slug: categories.slug, name: categories.name }).from(categories).orderBy(categories.sortOrder, categories.name),
   ]);
   if (!p) notFound();
+  // La portada propia de una sección («{seccion}/inicio») se arma viendo la sección real: su encabezado arriba y sus notas debajo.
+  const m = p.slug.match(/^([a-z0-9-]+)\/inicio$/);
+  const [cat] = m
+    ? await db.select({ slug: categories.slug, name: categories.name, description: categories.description }).from(categories).where(eq(categories.slug, m[1])).limit(1)
+    : [];
   return (
     <div className="flex flex-col gap-3">
       <Link href="/panel/paginas" className="inline-flex items-center gap-1.5 self-start rounded-full px-1 py-1 text-sm font-semibold text-[var(--accent)] hover:underline">
@@ -29,6 +34,7 @@ export default async function DisenarPagina({ params }: { params: Promise<{ id: 
       <ConstructorPagina
         pagina={{ id: p.id, titulo: p.titulo, slug: p.slug, descripcion: p.descripcion ?? "", publicada: p.publicada, contenido: sanearPagina(p.contenido) }}
         secciones={secciones}
+        seccionPortada={cat ? { slug: cat.slug, nombre: cat.name, descripcion: cat.description } : null}
       />
     </div>
   );

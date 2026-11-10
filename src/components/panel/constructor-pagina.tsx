@@ -9,8 +9,8 @@ import {
   MailPlus, Map as MapIcon, Megaphone, Milestone, Minus, MousePointerClick, MoveVertical, Newspaper, PanelTop, Pencil, Pilcrow, Plus, Quote, Redo2,
   Rows3, Save, Search, Share2, Sparkles, SquareSplitHorizontal, Table2, Timer, Trash2, Type, Undo2, Users, Video, X, Award, Footprints,
 } from "lucide-react";
-import { borrarPagina, guardarPagina, publicarPagina } from "@/app/panel/(app)/paginas/actions";
-import { ElementoVista, claseColumna, claseFila, estiloFila } from "@/components/pagina-vista";
+import { borrarPagina, guardarPagina, notasParaVista, publicarPagina } from "@/app/panel/(app)/paginas/actions";
+import { ElementoVista, claseColumna, claseFila, estiloFila, type NotaMini } from "@/components/pagina-vista";
 import { SelectorBiblioteca } from "@/components/panel/selector-biblioteca";
 import {
   DIVISIONES, ESQUEMAS, PALETA, PLANTILLAS, duplicarElemento, duplicarFila, elementoNuevo, esBloque, filaNueva, nuevoId, rutaPagina,
@@ -51,8 +51,13 @@ const copia = (c: ContenidoPagina): ContenidoPagina => JSON.parse(JSON.stringify
  * cuadrícula de 12 columnas y a la derecha lo que se puede cambiar del elemento elegido. Se arrastra de la paleta a una columna
  * (o se pulsa para añadirlo a la columna elegida) y los elementos del lienzo se pueden arrastrar entre columnas y filas.
  */
-export function ConstructorPagina({ pagina, secciones }: { pagina: Pagina; secciones: { slug: string; name: string }[] }) {
+/** La sección de la que esta página es portada («{seccion}/inicio»): el lienzo la muestra dentro de la sección real. */
+type SeccionPortada = { slug: string; nombre: string; descripcion: string | null } | null;
+
+export function ConstructorPagina({ pagina, secciones, seccionPortada = null }: { pagina: Pagina; secciones: { slug: string; name: string }[]; seccionPortada?: SeccionPortada }) {
   const router = useRouter();
+  // Notas reales por sección, para que los bloques de notas (y las notas de la sección, debajo de su portada) se vean como en el sitio.
+  const [notasVista, setNotasVista] = useState<Record<string, NotaMini[]>>({});
   const [titulo, setTitulo] = useState(pagina.titulo);
   const [slug, setSlug] = useState(pagina.slug);
   const [slugGuardado, setSlugGuardado] = useState(pagina.slug);
@@ -60,6 +65,22 @@ export function ConstructorPagina({ pagina, secciones }: { pagina: Pagina; secci
   const [publicada, setPublicada] = useState(pagina.publicada);
   const [hist, setHist] = useState<{ pasado: ContenidoPagina[]; actual: ContenidoPagina; futuro: ContenidoPagina[] }>({ pasado: [], actual: pagina.contenido, futuro: [] });
   const c = hist.actual;
+  const seccionesConNotas = useMemo(() => {
+    const set = new Set<string>(seccionPortada ? [seccionPortada.slug] : []);
+    for (const f of c.filas) for (const celda of f.celdas) for (const e of celda) if (e.tipo === "notas" && e.seccion) set.add(e.seccion);
+    return [...set].sort().join(",");
+  }, [c, seccionPortada]);
+  useEffect(() => {
+    const faltan = seccionesConNotas.split(",").filter((x) => x && !(x in notasVista));
+    if (!faltan.length) return;
+    let vigente = true;
+    Promise.all(faltan.map(async (x) => [x, await notasParaVista(x).catch(() => [])] as const)).then((pares) => {
+      if (vigente) setNotasVista((v) => ({ ...v, ...Object.fromEntries(pares) }));
+    });
+    return () => {
+      vigente = false;
+    };
+  }, [seccionesConNotas, notasVista]);
   const [sel, setSel] = useState<Sel>(null);
   const [celdaActiva, setCeldaActiva] = useState<{ fila: number; celda: number } | null>(pagina.contenido.filas.length ? { fila: 0, celda: 0 } : null);
   const [arrastre, setArrastre] = useState<Arrastre | null>(null);
@@ -405,8 +426,25 @@ export function ConstructorPagina({ pagina, secciones }: { pagina: Pagina; secci
 
         {/* Lienzo */}
         <div className="min-w-0 rounded-xl border border-[var(--border)] bg-[var(--bg)] p-4 sm:p-6" onClick={() => !vista && setSel(null)}>
-          <h1 className="lx-display mb-2 text-4xl leading-tight tracking-tight">{titulo || "Sin título"}</h1>
-          {descripcion && <p className="mb-6 text-lg text-[var(--fg-muted)]">{descripcion}</p>}
+          {seccionPortada ? (
+            /* Como en el sitio: el encabezado de la sección arriba (no el título de la página, que en la sección no se muestra). */
+            <header className="mb-6 border-b border-[var(--border)] pb-5">
+              <p className="lx-kicker text-[var(--accent)]">◆ Sección</p>
+              <h1 className="lx-display mt-1 text-5xl leading-tight tracking-tight">{seccionPortada.nombre}</h1>
+              {seccionPortada.descripcion && <p className="mt-2 text-lg text-[var(--fg-muted)]">{seccionPortada.descripcion}</p>}
+            </header>
+          ) : (
+            <>
+              <h1 className="lx-display mb-2 text-4xl leading-tight tracking-tight">{titulo || "Sin título"}</h1>
+              {descripcion && <p className="mb-6 text-lg text-[var(--fg-muted)]">{descripcion}</p>}
+            </>
+          )}
+          <div className={seccionPortada && !vista ? "relative rounded-2xl border-2 border-dashed border-[#c9a227] p-3 pt-8 sm:p-4 sm:pt-9" : ""}>
+          {seccionPortada && !vista && (
+            <span className="absolute -top-3 left-4 rounded-full bg-[#c9a227] px-3 py-1 text-xs font-bold text-[#1c2610]">
+              Tu portada va aquí: entre el título de la sección y sus notas
+            </span>
+          )}
           <div className="flex flex-col gap-6">
             {c.filas.map((f, fi) => (
               <FilaLienzo
@@ -433,7 +471,7 @@ export function ConstructorPagina({ pagina, secciones }: { pagina: Pagina; secci
                     >
                       {f.celdas[ci].map((e) =>
                         vista ? (
-                          <ElementoVista key={e.id} e={e} enEditor />
+                          <ElementoVista key={e.id} e={e} enEditor notas={e.tipo === "notas" ? notasVista[e.seccion] : undefined} />
                         ) : (
                           <div key={e.id} {...zonaSoltar(fi, ci, e.id)} className="relative">
                             {destino === `${fi}:${ci}:${e.id}` && <div className="absolute -top-2.5 left-0 right-0 h-1 rounded bg-[var(--accent)]" />}
@@ -452,7 +490,7 @@ export function ConstructorPagina({ pagina, secciones }: { pagina: Pagina; secci
                               <span className={`absolute -left-1 -top-3 z-10 items-center gap-1 rounded bg-[var(--accent)] px-1.5 py-0.5 text-[0.65rem] font-bold text-[var(--accent-fg)] ${sel?.el === e.id ? "flex" : "hidden group-hover:flex"}`}>
                                 <GripVertical size={11} /> {NOMBRE[e.tipo]}
                               </span>
-                              <ElementoVista e={e} enEditor />
+                              <ElementoVista e={e} enEditor notas={e.tipo === "notas" ? notasVista[e.seccion] : undefined} />
                             </div>
                           </div>
                         ),
@@ -499,6 +537,27 @@ export function ConstructorPagina({ pagina, secciones }: { pagina: Pagina; secci
                 </button>
               )}
             </div>
+          )}
+          </div>
+
+          {/* Debajo de la portada, las notas de la sección salen solas (como en el sitio): se ven para saber qué hay alrededor. */}
+          {seccionPortada && (
+            <section className={`mt-8 ${vista ? "" : "pointer-events-none select-none"}`} aria-label={`Notas de ${seccionPortada.nombre}`}>
+              {!vista && (
+                <p className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.12em] text-[var(--fg-muted)]">
+                  <span className="h-px flex-1 bg-[var(--border-strong)]" />
+                  Debajo salen solas las notas de {seccionPortada.nombre} (no se editan aquí)
+                  <span className="h-px flex-1 bg-[var(--border-strong)]" />
+                </p>
+              )}
+              <div className={`@container ${vista ? "" : "opacity-55"}`}>
+                <ElementoVista
+                  e={{ id: "notasseccion", tipo: "notas", seccion: seccionPortada.slug, cantidad: 6, estilo: "tarjetas", columnas: 3 }}
+                  notas={notasVista[seccionPortada.slug]}
+                  enEditor
+                />
+              </div>
+            </section>
           )}
         </div>
 

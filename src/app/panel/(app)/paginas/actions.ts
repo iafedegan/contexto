@@ -11,7 +11,9 @@ import { categories, paginas } from "@/db/schema";
 import { requirePermiso } from "@/lib/auth";
 import { invalidarCache } from "@/lib/data-cache";
 import { LEGACY_SYSTEM_REDIRECTS, resolveLegacyTaxonomy } from "@/lib/redirects";
-import { getSlugPorRutaOriginal } from "@/lib/content";
+import { getArticlesByCategory, getSlugPorRutaOriginal } from "@/lib/content";
+import { rutaDeNota } from "@/lib/ruta-nota";
+import type { NotaMini } from "@/components/pagina-vista";
 import { rutaPagina, sanearPagina, slugPagina } from "@/lib/paginas-bloques";
 import { TAG_PAGINAS } from "@/lib/paginas";
 
@@ -153,4 +155,19 @@ export async function borrarPagina(id: string): Promise<ResultadoPagina> {
   const [p] = await db.delete(paginas).where(eq(paginas.id, id)).returning({ slug: paginas.slug });
   refrescar(p?.slug);
   return { ok: true };
+}
+
+/**
+ * Notas de una sección para verlas dentro del constructor (los bloques «Notas de una sección» y, en la portada de una sección,
+ * las notas que salen debajo). Solo lectura.
+ */
+export async function notasParaVista(seccion: string): Promise<NotaMini[]> {
+  await requirePermiso("portada");
+  if (!/^[a-z0-9-]{1,100}$/.test(seccion)) return [];
+  try {
+    const l = await getArticlesByCategory(seccion);
+    return l.items.slice(0, 24).map((a) => ({ slug: a.slug, href: rutaDeNota(a), title: a.title, excerpt: a.excerpt, coverImageUrl: a.coverImageUrl }));
+  } catch {
+    return [];
+  }
 }
