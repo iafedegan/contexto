@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useMemo, useState, useTransition } from "react";
+import { createContext, useContext, useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
@@ -8,6 +8,10 @@ import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, ExternalLink, Loader2, M
 import { SeccionForm } from "@/components/panel/seccion-form";
 import { NuevaPagina } from "@/components/panel/nueva-pagina";
 import { crearPagina } from "@/app/panel/(app)/paginas/actions";
+import { guardarAnchoPortada, leerAnchoPortada } from "@/app/panel/(app)/portada/actions";
+
+// Identificador del nodo «Portada» del árbol (no es una sección).
+const PORTADA_ID = "__portada";
 import { NAV_VISIBLE } from "@/lib/nav-limits";
 import {
   crearSeccion,
@@ -460,7 +464,7 @@ function WideTree({
   const paginasCtx = useContext(PaginasCtx) ?? [];
 
   // Calco de la barra: 8 secciones, «Buscar» (fijo) y «Más» con el resto.
-  type TNode = { key: string; label: string; kind: "root" | "item" | "extra" | "fixed" | "more" | "sub"; section?: SectionNode; kids: TNode[] };
+  type TNode = { key: string; label: string; kind: "root" | "item" | "extra" | "fixed" | "more" | "sub" | "portada"; section?: SectionNode; kids: TNode[] };
   // Convierte una sección en un nodo del diagrama.
   const asNode = (br: Branch, kind: "item" | "extra", pos: number | null): TNode => ({
     key: br.node.id,
@@ -482,6 +486,8 @@ function WideTree({
     label: "Barra del sitio",
     kind: "root",
     kids: [
+      // La portada (inicio) no es una sección, pero es lo primero de la barra: aquí se ajusta cómo se ve.
+      { key: PORTADA_ID, label: "Portada · inicio", kind: "portada" as const, kids: [] },
       ...bar.map((b, i) => asNode(b, "item", i + 1)),
       { key: "search", label: "Buscar · fijo", kind: "fixed", kids: [] },
       ...(more.length ? [{ key: "more", label: "Más ▾", kind: "more" as const, kids: more.map((b) => asNode(b, "extra", null)) }] : []),
@@ -524,6 +530,8 @@ function WideTree({
     switch (t.kind) {
       case "root":
         return { fill: "#33401a", stroke: "none", text: "#ffffff", num: "#ffffff" };
+      case "portada":
+        return { fill: "#8a6d12", stroke: "none", text: "#ffffff", num: "#ffffff" };
       case "item":
         return { fill: "#556b2f", stroke: "none", text: "#ffffff", num: "#e6efc4" };
       case "extra":
@@ -555,15 +563,16 @@ function WideTree({
               {placed.map(({ t, x, y }) => {
                 const c = look(t);
                 const pick = t.section;
-                const isSel = !!pick && selected === pick.id;
+                const esPortada = t.kind === "portada";
+                const isSel = esPortada ? selected === PORTADA_ID : !!pick && selected === pick.id;
                 const suyas = pick ? paginasCtx.filter((p) => p.seccionId === pick.id) : [];
                 const unica = suyas.length === 1 ? suyas[0] : null;
                 return (
                   <g
                     key={t.key}
-                    onClick={pick ? () => (unica ? router.push(`/panel/paginas/${unica.id}`) : onSelect(pick.id)) : undefined}
-                    className={pick ? "cursor-pointer" : undefined}
-                    role={pick ? "button" : undefined}
+                    onClick={esPortada ? () => onSelect(PORTADA_ID) : pick ? () => (unica ? router.push(`/panel/paginas/${unica.id}`) : onSelect(pick.id)) : undefined}
+                    className={pick || esPortada ? "cursor-pointer" : undefined}
+                    role={pick || esPortada ? "button" : undefined}
                     aria-label={unica ? `${t.label}: editar su página` : t.label}
                   >
                     {pick && <title>{unica ? `${pick.name} · clic para editar su página «${unica.titulo}»` : `${pick.name} · ${pick.articleCount} notas`}</title>}
@@ -602,7 +611,9 @@ function WideTree({
           <aside className="max-h-[45%] overflow-y-auto border-t border-[var(--border)] p-4 lg:max-h-none lg:w-[24rem] lg:border-l lg:border-t-0">
             <div className="flex flex-col gap-3">
               {msg && <Msg r={msg} />}
-              {sel ? (
+              {selected === PORTADA_ID ? (
+                <DetallePortada />
+              ) : sel ? (
                 <Detail sel={sel} sections={sections} tree={tree} onSelect={onSelect} onSaved={onSaved} run={run} busy={busy} />
               ) : (
                 <p className="text-sm text-[var(--fg-muted)]">Pulsa una sección del árbol para ver de cuál depende y para moverla, ordenarla, agregarle subsecciones, editarla o eliminarla.</p>
@@ -619,6 +630,60 @@ function WideTree({
 }
 
 /** Las páginas del constructor que cuelgan de la sección elegida («Editar página») y el botón para crear otra. */
+// Ajustes de la portada (inicio del sitio) dentro del árbol: el ancho de la nota principal se aplica al momento sobre lo publicado.
+function DetallePortada() {
+  const [ancho, setAncho] = useState<string | null>(null);
+  const [mensaje, setMensaje] = useState<{ ok: boolean; texto: string } | null>(null);
+  const [ocupado, start] = useTransition();
+  useEffect(() => {
+    let vigente = true;
+    leerAnchoPortada().then((a) => vigente && setAncho(a)).catch(() => vigente && setAncho("ancha"));
+    return () => {
+      vigente = false;
+    };
+  }, []);
+  const opciones = [["normal", "Normal"], ["ancha", "Ancha"], ["muyAncha", "Muy ancha"]] as const;
+  return (
+    <div className="flex flex-col gap-3 rounded-[var(--radius)] border border-[var(--border)] p-3">
+      <div>
+        <p className="lx-kicker text-[var(--accent)]">Inicio del sitio</p>
+        <h3 className="text-base font-bold">Portada</h3>
+        <p className="mt-1 text-xs leading-snug text-[var(--fg-muted)]">La página de inicio no es una sección: aquí ajustas cómo se ve.</p>
+      </div>
+      <div>
+        <p className="text-sm font-semibold">Ancho de la nota principal</p>
+        <p className="mb-2 text-[11px] leading-snug text-[var(--fg-muted)]">Cuánto ocupa la nota grande y sus tarjetas frente a «Lo último». Solo en pantallas anchas. Se aplica al sitio al momento.</p>
+        <div className="flex flex-wrap gap-1.5">
+          {opciones.map(([valor, nombre]) => (
+            <button
+              key={valor}
+              type="button"
+              disabled={ocupado || ancho === null}
+              aria-pressed={ancho === valor}
+              onClick={() => {
+                setMensaje(null);
+                start(async () => {
+                  const r = await guardarAnchoPortada(valor);
+                  setMensaje({ ok: r.ok, texto: r.message });
+                  if (r.ok) setAncho(valor);
+                });
+              }}
+              className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition disabled:opacity-60 ${ancho === valor ? "border-[var(--accent)] bg-[var(--accent)] !text-white" : "border-[var(--border)] hover:border-[var(--accent)]"}`}
+            >
+              {nombre}
+            </button>
+          ))}
+          {ocupado && <Loader2 size={14} className="animate-spin self-center" />}
+        </div>
+        {mensaje && <p className={`mt-2 text-xs ${mensaje.ok ? "text-[#15803d]" : "text-[#b91c1c]"}`}>{mensaje.texto}</p>}
+      </div>
+      <Link href="/panel/portada" className="inline-flex items-center gap-1.5 self-start rounded-full bg-[var(--accent)] px-4 py-2 text-sm font-semibold !text-white hover:opacity-90">
+        <Pencil size={14} /> Abrir el editor de la portada
+      </Link>
+    </div>
+  );
+}
+
 // La acción principal de una sección: abrir el constructor sobre ella. Sin página, la crea (borrador, con el nombre de la sección) y la abre.
 function DisenarSeccion({ sel, primera }: { sel: SectionNode; primera: PaginaDeSeccion | null }) {
   const router = useRouter();

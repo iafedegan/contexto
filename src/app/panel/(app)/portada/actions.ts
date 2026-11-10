@@ -82,6 +82,35 @@ async function saveHomeSectionLayout(input: HomeLayoutConfig) {
   revalidatePath("/panel/portada");
 }
 
+type AnchoPrincipal = NonNullable<HomeLayoutConfig["anchoPrincipal"]>;
+
+/** El ancho de la nota principal que tiene HOY la portada publicada (para el árbol de secciones). */
+export async function leerAnchoPortada(): Promise<AnchoPrincipal> {
+  await requirePermiso("portada");
+  const [row] = await db.select({ value: siteSettings.value }).from(siteSettings).where(eq(siteSettings.key, "home_layout")).limit(1);
+  return normalizeLayout((row?.value as HomeLayoutConfig | undefined) ?? {}).anchoPrincipal ?? "ancha";
+}
+
+/**
+ * Cambia el ancho de la nota principal de la portada ya publicada, sin pasar por el borrador del editor (se usa desde el árbol de secciones).
+ * Solo toca ese ajuste: el resto de la configuración queda como estaba.
+ */
+export async function guardarAnchoPortada(valor: string): Promise<{ ok: boolean; message: string }> {
+  await requirePermiso("portada");
+  const ancho = (["normal", "ancha", "muyAncha"] as const).find((a) => a === valor);
+  if (!ancho) return { ok: false, message: "Ese ancho no existe." };
+  const [row] = await db.select({ value: siteSettings.value }).from(siteSettings).where(eq(siteSettings.key, "home_layout")).limit(1);
+  const config = normalizeLayout({ ...((row?.value as HomeLayoutConfig | undefined) ?? {}), anchoPrincipal: ancho });
+  await db
+    .insert(siteSettings)
+    .values({ key: "home_layout", value: config })
+    .onConflictDoUpdate({ target: siteSettings.key, set: { value: config, updatedAt: sql`now()` } });
+  invalidarCache();
+  revalidatePath("/", "layout");
+  revalidatePath("/panel/portada");
+  return { ok: true, message: "Listo: la portada ya usa ese ancho." };
+}
+
 /**
  * Guarda el popup del portal. Se valida entero (URLs, colores, rangos) porque
  * lo pinta cualquier página pública; sube la versión para que el popup nuevo
