@@ -2,7 +2,7 @@
 codigo: CG-DOC-05
 titulo: Seguridad de la información y matriz de controles
 subtitulo: Controles implementados, evidencia verificable, roles y permisos, hallazgos abiertos y recomendaciones
-version: 1.0
+version: 1.1
 audiencia: Auditores de seguridad, oficial de seguridad de FEDEGÁN y contraparte técnica
 fuente: Código del repositorio, pruebas automáticas, base de datos de producción y documento docs/seguridad.md, verificados el 19 de octubre de 2026
 ---
@@ -137,3 +137,18 @@ Los identificadores H-xx corresponden a los hallazgos de la auditoría interna d
 # 7. Gestión de incidentes de seguridad
 
 El procedimiento de respuesta (clasificación, contención, rotación de secretos, comunicación y cierre) está en CG-DOC-06, runbook R-09. Contactos de escalamiento: se completan en el acta de entrega (CG-DOC-07).
+
+# 8. Actualización de controles (noviembre de 2026)
+
+Resultado de la evaluación técnica y de seguridad del 29/10/2026 y de la revisión del 9/11/2026.
+
+| Control | Qué se hizo | Dónde se ve |
+|---|---|---|
+| Dependencias | Next.js 16.4.3 (corrige una vulnerabilidad crítica de ejecución remota en el optimizador de imágenes y una denegación de servicio en Server Actions) e `inngest` 4.26.2 con `zod` 4.6.7. La auditoría de producción (`npm run audit:prod`) queda sin vulnerabilidades altas ni críticas. | `package.json`, CI |
+| Secreto del 2FA | Los secretos TOTP se guardan **cifrados** (AES-256-GCM, formato `v2.`); los guardados antes en texto plano se siguen aceptando y se cifran al volver a activarlos. El alta del 2FA va firmada y caduca. | `src/lib/totp-secreto.ts` |
+| Permisos de la base | Se quitan todos los permisos de las tablas y secuencias a los roles `anon` y `authenticated` (la API pública de Supabase): RLS deja de ser la única barrera. Se fija la ruta de búsqueda de las dos funciones de zonas. | `drizzle/manual/98_endurecer_permisos.sql` |
+| Integridad | Restricciones `CHECK` en artículos, vistas, boletín, clientes de API, consejo y redirecciones; llaves foráneas en lo que pertenece a una cuenta. | migración `0033` |
+| Datos por cuenta | Permisos por persona, plazo de 2FA y bitácora de accesos pasan de JSON suelto en `site_settings` a tablas con llave foránea (`user_permission_overrides`, `user_2fa_grace`, `login_events`). Los accesos se conservan **90 días** (minimización de datos, Ley 1581) y se borran solos. | `src/lib/login-log.ts` |
+| Asistente | El SQL que escribe la IA corre con un rol de la base (`lector_asistente`) que solo lee notas publicadas, secciones y cifras. | migración `0028` |
+
+**Riesgo residual:** las extensiones `vector` y `pg_trgm` viven en el esquema `public` (aviso informativo de Supabase); moverlas exige recrear columnas e índices y no se justifica antes de la salida.

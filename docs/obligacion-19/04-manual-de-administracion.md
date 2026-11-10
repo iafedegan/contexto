@@ -2,7 +2,7 @@
 codigo: CG-DOC-04
 titulo: Manual de administración
 subtitulo: Gestión de personas y permisos, configuración del sitio, IA, correo, analítica, publicidad, API y tareas del administrador
-version: 1.0
+version: 1.1
 audiencia: Administradores del sitio y contraparte técnica de FEDEGÁN
 ---
 
@@ -14,8 +14,8 @@ Relación con otros documentos: el trabajo editorial diario está en CG-DOC-03; 
 
 # 2. Roles y permisos
 
-## 2.1 Los tres roles
-Redactor < Editor < Administrador. Los permisos de cada rol se detallan en CG-DOC-05 (§2) y se resumen aquí:
+## 2.1 Los roles
+Redactor, Diseñador < Editor < Administrador. El **diseñador** tiene el rango de un redactor y además trabaja la portada, las plantillas, las secciones y la biblioteca de imágenes. Además de los cuatro roles de siempre se pueden crear **roles propios** (*Configuración → Personas y roles*): se parte de un rol base, se ajustan sus permisos y se asigna a las personas; al cambiar un rol propio, sus permisos se reaplican a quienes lo tienen. Los permisos de cada rol se detallan en CG-DOC-05 (§2) y se resumen aquí:
 
 | Permiso | Redactor | Editor | Administrador |
 |---|:-:|:-:|:-:|
@@ -23,6 +23,7 @@ Redactor < Editor < Administrador. Los permisos de cada rol se detallan en CG-DO
 | Publicar, programar, despublicar y borrar | — | ✔ | ✔ |
 | Borradores de IA | — | ✔ | ✔ |
 | Avisos, mensajes, portada y plantillas, newsletter, centro de análisis | — | ✔ | ✔ |
+| Biblioteca de imágenes (carpetas, subida y acceso por persona) | Diseñador ✔ | — | ✔ |
 | API pública (claves para terceros) | — | — | ✔ |
 | Personas y roles, identidad del sitio, claves de IA, límites, anuncios | — | — | ✔ |
 
@@ -66,7 +67,9 @@ Además, fuera de Configuración: **Portada y plantillas** (diseño del sitio, a
 5. **Qué datos salen hacia el proveedor:** el texto de las consultas y las fuentes recuperadas. **No** se envían datos personales de suscriptores.
 6. **Costos:** se vigilan en el panel del proveedor de IA y en *Demanda del asistente*. Revisar mensualmente.
 
-# 6. Correo del boletín (Resend)
+# 6. Correo del boletín (Resend o Gmail)
+
+El boletín puede enviarse con **Resend** (abajo) o con la **API de Gmail** (Google Cloud): al enviar con Gmail el sistema no reenvía a quien ya recibió la edición tras un corte y comprueba a diario que la conexión con Google siga viva. Las **etiquetas de suscriptores** (*Newsletter → Suscriptores*) clasifican a las personas y permiten enviar una edición solo a un grupo desde «¿A quién va?». Las ediciones ya enviadas o programadas se pueden borrar.
 
 **Sin esta configuración el boletín no sale ni llegan las confirmaciones de suscripción.** Los envíos fallan con el aviso «El proveedor de correo no está configurado».
 1. Crear una cuenta de Resend a nombre de FEDEGÁN y **verificar el dominio remitente** (por ejemplo `boletin.contextoganadero.com`): Resend entrega los registros **SPF, DKIM y DMARC** que debe publicar quien administra el DNS.
@@ -120,3 +123,15 @@ Un editor o administrador elige la plantilla (seis disponibles) y edita la porta
 # 13. Límites del rol de administrador
 
 El administrador **no** gestiona desde el panel: el alojamiento (Vercel), la base de datos (Supabase), el repositorio (GitHub), el DNS, el Firewall ni las variables de entorno de producción. Esas tareas requieren acceso a los paneles de cada servicio (CG-DOC-07) y siguen los procedimientos de CG-DOC-06.
+
+# 14. Novedades de noviembre de 2026
+
+- **Marca.** El sitio se presenta como **CONtexto Ganadero Media**; el nombre y el logo (la «C» con el botón de reproducir) están fijados en el código y en los íconos de la aplicación y de los correos.
+- **Biblioteca de imágenes.** *Biblioteca* guarda las imágenes en carpetas, con acceso por persona (permiso «Biblioteca de imágenes»). Las imágenes viven en el almacenamiento de Supabase (bucket `media`); **no entran en las copias de la base de datos** (ver CG-DOC-06, procedimiento de respaldo de imágenes).
+- **Páginas y constructor.** Permiso «Portada, plantillas y secciones». Manual editorial, capítulo 16.
+- **Grupo de redacción.** Consejo de redacción y notas para editores en una sola entrada; permiso nuevo para enviar notas a editores (solo administradores y redactores envían).
+- **SuperApp de FEDEGÁN.** El receptor de `/superapp/launch` está apagado hasta configurar las variables de entorno (ver `docs/integracion-superapp.md`). Cuando está activo, *Análisis → SuperApp* muestra las personas que entran desde la SuperApp y los navegadores que usan. Quien entra por la SuperApp no ve los avisos de medición, ubicación ni instalación.
+- **Asistente de lectura.** El asistente público consulta la base con un rol restringido (`lector_asistente`) que solo lee notas publicadas, secciones y cifras del Observatorio. El cupo por cuenta de administrador es de 120 consultas por hora.
+- **Observatorio.** Las cifras se guardan en tablas propias (`observatorio_datos`) además de la copia en `site_settings`.
+
+**Comprobaciones tras un cambio de versión:** entrar al panel con 2FA; abrir *Biblioteca* y subir una imagen de prueba; abrir *Páginas* y la Vista previa de una; enviar una edición de prueba a una sola cuenta.

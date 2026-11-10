@@ -2,7 +2,7 @@
 codigo: CG-DOC-02
 titulo: Documentación de la base de datos
 subtitulo: Motor, topología, modelo de datos, diccionario de datos, integridad, índices, migraciones, retención y verificación
-version: 1.0
+version: 1.1
 audiencia: Auditores, administradores de datos y contraparte técnica de FEDEGÁN
 fuente: Esquema del repositorio (src/db/schema.ts, drizzle/) y consultas de solo lectura a la base de producción, ejecutadas el 19 de octubre de 2026
 ---
@@ -208,3 +208,22 @@ Resultados de referencia (19/10/2026): 51.381 notas migradas con 0 sin ruta orig
 Generado automáticamente desde `src/db/schema.ts` (`npm run docs:bd`): para cada tabla, el módulo dueño, el nombre en el esquema, y cada columna con su tipo y restricciones. Es la referencia que se contrasta con la base de producción mediante las consultas de la sección 11.
 
 <!--DICCIONARIO-->
+
+# 12. Actualización de noviembre de 2026
+
+A 9/11/2026 el esquema tiene **37 tablas** (el diccionario completo se regenera con `npm run docs:bd` en `docs/base-de-datos.md`). Cambios desde el 19/10:
+
+| Migración | Contenido |
+|---|---|
+| `0024`–`0025` | Aviso de tarea nueva; sesiones de la SuperApp (`superapp_sesiones`) |
+| `0026` | Cifras del Observatorio en tablas (`observatorio_datos`) |
+| `0027`–`0028` | Rol de panel «diseñador»; rol de la base `lector_asistente` (solo lectura para el SQL del asistente) |
+| `0029` | Personas y visitantes de la SuperApp (`superapp_personas`, `superapp_visitantes`) |
+| `0030` | Biblioteca de imágenes (`media_folders`, `media_assets`, `media_folder_access`) |
+| `0031` | Páginas del constructor (`paginas`) |
+| `0032` | Etiquetas de suscriptores (`tags` en `newsletter_subscribers`) |
+| `0033` | Restricciones `CHECK` (artículos, vistas, boletín, API, consejo, redirecciones); tablas `user_permission_overrides`, `user_2fa_grace` y `login_events` con llave foránea a `users`; elimina el índice duplicado `redirects_from_idx` |
+
+**Datos por cuenta.** Permisos por persona, plazo de 2FA y bitácora de accesos ya no viven en `site_settings`: están en tablas con llave foránea y borrado en cascada (la bitácora conserva la fila sin vínculo si se elimina la cuenta). **Retención de accesos: 90 días**, depurados al registrar cada acceso. La migración `0033` **copia** los datos viejos y no borra nada; la limpieza de las claves antiguas va aparte, en `docs/sql-limpieza-post-aceptacion.sql`.
+
+**Orden de aplicación en producción** (SQL Editor de Supabase, cada archivo es idempotente): `drizzle/0033_restricciones_y_tablas_de_acceso.sql` y `drizzle/manual/98_endurecer_permisos.sql`, **justo antes** de desplegar el código que los usa.

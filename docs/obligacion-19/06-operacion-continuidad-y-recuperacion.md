@@ -2,7 +2,7 @@
 codigo: CG-DOC-06
 titulo: Operación, continuidad y recuperación
 subtitulo: Procedimientos operativos (runbooks), monitoreo, respaldo y restauración, reconstrucción del entorno y control de cambios
-version: 1.0
+version: 1.1
 audiencia: Operadores, administradores técnicos de FEDEGÁN y auditores de continuidad
 fuente: Configuración del repositorio y del despliegue, historial de operación del proyecto (migración, optimizaciones y diagnósticos del 14 al 19 de octubre de 2026)
 ---
@@ -160,3 +160,18 @@ Pasos: (1) generar el valor nuevo; (2) actualizarlo en Vercel (Production) y, si
 - **Base de datos:** las migraciones son archivos numerados versionados en Git; su aplicación en producción es manual y debe anotarse (fecha, quién, resultado). Ejemplos de la ventana del 14 al 19/10/2026: 0023 (zonas de las notas) y 0024 (aviso de tarea nueva) aplicadas por el contratista el 19/10/2026; `VACUUM (ANALYZE) articles` el 19/10/2026.
 - **Libro de cambios operativos (formato):** fecha · quién · qué cambió (código, migración, variable, DNS) · motivo · verificación · cómo se revierte.
 - **Aprobación de cambios:** cambios que afectan datos de producción o credenciales requieren autorización explícita de FEDEGÁN; los cambios de código siguen el ciclo de R-01.
+
+# 6. Respaldo de la base y de las imágenes (actualización de noviembre de 2026)
+
+| Qué | Cómo está | Qué falta |
+|---|---|---|
+| Base de datos | Copias **físicas diarias** de Supabase (plan Pro), retención de 7 días, restaurables desde *Database → Backups*. Pérdida máxima ante un fallo: hasta 24 horas de datos. | **PITR** (recuperación a un punto en el tiempo): es un complemento de pago de Supabase que se activa en *Database → Backups → Point in time*. Con él la pérdida máxima baja a minutos. Decisión de costo de FEDEGÁN. |
+| Imágenes (bucket `media`) | **No entran en las copias de la base** (Supabase lo avisa en la pantalla de backups). A 9/11/2026: 52.225 archivos, 3,6 GB. | Copia propia con `npm run respaldo:imagenes -- --destino=<carpeta o disco>` (solo lee de Supabase; incremental; deja un `manifiesto.json`). Repetirla cada semana o antes de cambios grandes. |
+
+**Procedimiento de respaldo de imágenes**
+1. Tener `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY` (variables de entorno o `.env.migracion`).
+2. Contar sin descargar: `npm run respaldo:imagenes -- --simulacro`.
+3. Copiar: `npm run respaldo:imagenes -- --destino=/Volumes/Disco/respaldo-media`. Se puede repetir; solo baja lo nuevo.
+4. Comprobar: el resumen final debe decir «fallidos: 0» y el número de archivos debe coincidir con el del simulacro.
+
+**Prueba de restauración (una vez, antes de la salida):** en *Backups* usar «Restore to new project» (crea un proyecto aparte sin tocar producción), comprobar que `articles` tiene el número esperado de notas y borrar el proyecto de prueba. No usar «Restore» sobre la lista de copias, porque reemplaza producción.

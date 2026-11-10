@@ -25,7 +25,8 @@
     "test": "tsx --conditions=react-server --tsconfig tsconfig.json --test \"src/**/*.test.ts\" \"scripts/*.test.ts\"",
     "docs:bd": "node scripts/doc-bd.mjs",
     "smoke": "node scripts/smoke.mjs",
-    "audit:prod": "npm audit --omit=dev --audit-level=high"
+    "audit:prod": "npm audit --omit=dev --audit-level=high",
+    "respaldo:imagenes": "tsx scripts/respaldo-imagenes.ts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^4.0.60",
