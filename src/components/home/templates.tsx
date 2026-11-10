@@ -414,16 +414,18 @@ export function EsmeraldaTemplate({
   // «Lo último» acompaña a la nota principal con cuatro titulares (con cinco, la foto estirada hasta su alto quedaba casi cuadrada), solo texto en pantallas anchas: la columna es angosta y con
   // miniatura el titular quedaba en siete u ocho líneas. Lo que no cabe abre «Lo más reciente», que es la rejilla de abajo.
   const todosAside = [second, ...rail].filter((a): a is ArticleListItem => Boolean(a));
-  const aside = todosAside.slice(0, 4);
-  const rio = [...todosAside.slice(4), ...river];
+  const aside = todosAside.slice(0, 2);
+  const rio = [...todosAside.slice(2), ...river];
 
   return (
     <div className="flex flex-col gap-12 sm:gap-20">
       <section className={`grid grid-cols-1 gap-8 sm:gap-10 xl:gap-12 ${ANCHO_PRINCIPAL[layout.anchoPrincipal] ?? ANCHO_PRINCIPAL.ancha}`}>
         <div className="flex min-w-0 flex-col gap-7 sm:gap-8">
           {/* En pantallas anchas la principal se estira hasta el alto de «Lo último» (la foto se recorta, sin deformarse): sin hueco debajo. */}
-          {wrap(lead, <ArticleCard a={lead} locale={locale} variant="lead" priority={interactive} />, "xl:flex-1 xl:[&>article]:h-full")}
+          {wrap(lead, <ArticleCard a={lead} locale={locale} variant="lead" priority={interactive} />, "xl:flex-1 xl:[&>article]:h-full xl:[&>article]:max-h-[30rem]")}
         </div>
+        {/* En el celular la columna destacada (opinión) va antes de «Lo último». */}
+        {trasPrincipal}
         <aside className="min-w-0 xl:border-l xl:border-[var(--border)] xl:pl-8">
           <p className="lx-kicker text-[var(--accent)]">{t(locale, "home.cover")}</p>
           <h2 className="lx-display mt-2 text-2xl font-semibold tracking-tight md:text-3xl">
@@ -435,8 +437,6 @@ export function EsmeraldaTemplate({
         </aside>
       </section>
 
-      {/* En el celular la columna destacada va después de «Lo último»: primero las noticias, luego la opinión. */}
-      {trasPrincipal}
 
       {/* La rejilla de abajo usa las MISMAS columnas que la apertura: la barra lateral cae justo bajo «Lo último», con su mismo filete. */}
       <div className={lateral ? `grid grid-cols-1 gap-12 lg:grid-cols-[minmax(0,1fr)_19rem] ${ANCHO_PRINCIPAL[layout.anchoPrincipal] ?? ANCHO_PRINCIPAL.ancha}` : ""}>
