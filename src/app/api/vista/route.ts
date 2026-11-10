@@ -39,23 +39,30 @@ export async function POST(req: Request) {
   if (!porNota.allowed || !porIp.allowed) return NextResponse.json({ ok: true, contada: false });
 
   try {
-    const [row] = await db
-      .update(articles)
-      .set({ views: sql`${articles.views} + 1` })
-      .where(eq(articles.slug, slug))
-      .returning({ id: articles.id });
-    if (row) {
-      // Origen de la lectura (UTM o sitio de procedencia): solo un contador, sin datos personales.
-      void registrarFuente(row.id, clasificarFuente({ ...origen, host: new URL(req.url).hostname }));
-      // Agregado diario para la analítica del panel, en hora de Colombia.
-      await db
-        .insert(articleViewsDaily)
-        .values({ articleId: row.id, day: sql`(now() at time zone 'America/Bogota')::date`, views: 1 })
-        .onConflictDoUpdate({
-          target: [articleViewsDaily.articleId, articleViewsDaily.day],
-          set: { views: sql`${articleViewsDaily.views} + 1` },
-        });
-    }
+    // En una nota viral miles de lecturas suman sobre la MISMA fila: si está ocupada más de 300 ms, esta lectura no se cuenta y la conexión
+    // queda libre (antes hacían fila y agotaban las 5 conexiones de la instancia, frenando también las páginas). El contador queda aproximado en un pico.
+    const row = await db.transaction(async (tx) => {
+      await tx.execute(sql`set local lock_timeout = '300ms'`);
+      await tx.execute(sql`set local statement_timeout = '2s'`);
+      const [r] = await tx
+        .update(articles)
+        .set({ views: sql`${articles.views} + 1` })
+        .where(eq(articles.slug, slug))
+        .returning({ id: articles.id });
+      if (r) {
+        // Agregado diario para la analítica del panel, en hora de Colombia.
+        await tx
+          .insert(articleViewsDaily)
+          .values({ articleId: r.id, day: sql`(now() at time zone 'America/Bogota')::date`, views: 1 })
+          .onConflictDoUpdate({
+            target: [articleViewsDaily.articleId, articleViewsDaily.day],
+            set: { views: sql`${articleViewsDaily.views} + 1` },
+          });
+      }
+      return r;
+    });
+    // Origen de la lectura (UTM o sitio de procedencia): solo un contador, sin datos personales.
+    if (row) void registrarFuente(row.id, clasificarFuente({ ...origen, host: new URL(req.url).hostname }));
   } catch {
     // Un fallo del contador nunca debe romper la lectura del artículo.
   }

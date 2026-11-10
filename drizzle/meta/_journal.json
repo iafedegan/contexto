@@ -246,6 +246,13 @@
       "when": 1794317824639,
       "tag": "0034_indices_claves_foraneas",
       "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1794320573510,
+      "tag": "0035_contador_de_lecturas_sin_indice",
+      "breakpoints": true
     }
   ]
 }

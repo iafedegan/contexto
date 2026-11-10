@@ -20,7 +20,10 @@ export { clasificarFuente };
 // Suma una lectura a la fuente indicada del mes actual; si falla, no afecta la lectura.
 export async function registrarFuente(articleId: string, etiqueta: string): Promise<void> {
   try {
-    await db.execute(sql`
+    // Una sola fila por mes para todo el sitio: en un pico, si está ocupada más de 300 ms, este origen no se cuenta (no se hace fila).
+    await db.transaction(async (tx) => {
+      await tx.execute(sql`set local lock_timeout = '300ms'`);
+      await tx.execute(sql`
       insert into site_settings (key, value, updated_at)
       values (${key(claveMes())}, jsonb_build_object(${articleId}::text, jsonb_build_object(${etiqueta}::text, 1)), now())
       on conflict (key) do update set
@@ -32,6 +35,7 @@ export async function registrarFuente(articleId: string, etiqueta: string): Prom
         ),
         updated_at = now()
     `);
+    });
   } catch (err) {
     console.warn("[view-sources]", err);
   }

@@ -427,7 +427,7 @@ export const articles = pgTable(
     index("articles_search_vec_idx").using("gin", t.searchVec),
     index("articles_scheduled_idx").on(t.scheduledFor),
     index("articles_home_position_idx").on(t.homePosition),
-    index("articles_views_idx").on(t.views),
+    // Sin índice en `views`: cada lectura suma 1 y, con índice, Postgres reescribía los 21 índices de la tabla (incluido el de vectores).
     index("articles_breaking_idx").on(t.isBreaking),
     // Reglas que antes solo cumplía la aplicación: la base las exige aunque alguien escriba por otro camino (script, SQL a mano).
     check("articles_views_no_negativas", sql`${t.views} >= 0`),
