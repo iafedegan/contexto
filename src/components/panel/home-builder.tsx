@@ -546,7 +546,7 @@ export function HomeBuilder({
   }
 
   // Elige una plantilla: parte de cero también en los ajustes por pantalla.
-  function pickTemplate(config: Omit<Layout, "ticker" | "carrusel" | "carruseles" | "textos" | "menuNav" | "pantallas">) {
+  function pickTemplate(config: Omit<Layout, "ticker" | "carrusel" | "carruseles" | "textos" | "menuNav" | "pantallas" | "anchoPrincipal">) {
     const teniaComposicion = Object.values(layout.parts ?? {}).some(Boolean);
     patchLayout({ ...config, parts: {}, pantallas: {}, sectionFilters: layout.sectionFilters });
     if (teniaComposicion) {
