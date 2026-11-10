@@ -25,6 +25,9 @@ import { getSiteIdentity } from "@/lib/site-identity";
 import { getEnVivo } from "@/lib/en-vivo";
 import { EnVivoBlock } from "@/components/home/en-vivo-block";
 import { formatMarketValue, getMarketTicker } from "@/lib/market-data";
+import { PaginaVista } from "@/components/pagina-vista";
+import { getPaginaPublicada, notasDeLaPagina } from "@/lib/paginas";
+import { SLUG_INICIO_SITIO, type ContenidoPagina } from "@/lib/paginas-bloques";
 
 /**
  * Portada — generación estática con ISR.
@@ -39,7 +42,7 @@ import { formatMarketValue, getMarketTicker } from "@/lib/market-data";
 export const revalidate = 300;
 
 // Portada: notas con el orden manual, plantilla elegida en el panel, anuncios y franja de indicadores.
-async function HomePage({ locale }: { locale: Locale }) {
+async function HomePage({ locale, portadaBorrador }: { locale: Locale; portadaBorrador?: ContenidoPagina }) {
   let articles: Awaited<ReturnType<typeof getHomepageArticles>> = [];
   let layout = DEFAULT_HOME_LAYOUT;
   try {
@@ -73,6 +76,10 @@ async function HomePage({ locale }: { locale: Locale }) {
     { label: t(locale, "home.specials"), article: articles[2] ?? articles[0] },
     { label: t(locale, "home.featuredColumn"), article: opinion ?? articles[3] ?? articles[0] },
   ].filter((x) => x.article);
+
+  // Portada propia del inicio (página «inicio»): publicada, o el borrador en la vista previa del constructor.
+  const inicioPropio = portadaBorrador ?? (await getPaginaPublicada(SLUG_INICIO_SITIO).catch(() => null))?.contenido ?? null;
+  const notasInicioPropio = inicioPropio ? await notasDeLaPagina(inicioPropio).catch(() => ({})) : {};
 
   const market = await getMarketTicker().catch(() => []);
   // Gremial es "use client" y market-data.ts es server-only: se le pasan los
@@ -244,6 +251,13 @@ async function HomePage({ locale }: { locale: Locale }) {
           activa y vigente (ver src/lib/ads.ts). */}
       <AdsBanner zone="home_top" className="mx-auto mb-10" />
 
+      {/* La portada propia del inicio, armada en Páginas con el constructor: va arriba de las notas. En la vista previa manda el borrador. */}
+      {inicioPropio && (
+        <article className="mb-12 flex flex-col gap-8">
+          <PaginaVista contenido={inicioPropio} notas={notasInicioPropio} />
+        </article>
+      )}
+
       {/* La cinta de destacados es parte de la identidad "diario"; el resto de
           plantillas ya destaca con su propio hero o cuadrícula. */}
       {body === "clasico" && (
@@ -305,6 +319,11 @@ async function HomePage({ locale }: { locale: Locale }) {
   );
 }
 
+
+/** El inicio con una portada en borrador en su lugar (vista previa del constructor). */
+export function VistaPortadaInicio({ contenido }: { contenido: ContenidoPagina }) {
+  return HomePage({ locale: "es", portadaBorrador: contenido });
+}
 
 /** Fábrica: la misma página en cualquier idioma de interfaz. */
 export function makePage(locale: Locale) {

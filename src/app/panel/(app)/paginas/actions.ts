@@ -14,7 +14,7 @@ import { LEGACY_SYSTEM_REDIRECTS, resolveLegacyTaxonomy } from "@/lib/redirects"
 import { getArticlesByCategory, getSlugPorRutaOriginal } from "@/lib/content";
 import { rutaDeNota } from "@/lib/ruta-nota";
 import type { NotaMini } from "@/components/pagina-vista";
-import { rutaPagina, sanearPagina, slugPagina } from "@/lib/paginas-bloques";
+import { rutaPagina, sanearPagina, SLUG_INICIO_SITIO, slugPagina } from "@/lib/paginas-bloques";
 import { TAG_PAGINAS } from "@/lib/paginas";
 
 export type ResultadoPagina = { ok: true; id?: string } | { ok: false; error: string };
@@ -48,7 +48,7 @@ async function slugLibre(slug: string, excepto?: string): Promise<string | null>
 
 function refrescar(slug?: string) {
   invalidarCache(TAG_PAGINAS);
-  if (slug) revalidatePath(`/${slug}`);
+  if (slug) revalidatePath(slug === SLUG_INICIO_SITIO ? "/" : `/${slug}`);
   revalidatePath("/panel/paginas");
 }
 
@@ -116,6 +116,16 @@ export async function crearInicioDeSeccion(seccionId: string): Promise<Resultado
   const error = await slugLibre(slug);
   if (error) return { ok: false, error };
   const [p] = await db.insert(paginas).values({ titulo: `Portada de ${cat.name}`.slice(0, 160), slug, seccionId, updatedBy: yo.id }).returning({ id: paginas.id });
+  refrescar();
+  return { ok: true, id: p.id };
+}
+
+/** La portada propia del inicio del sitio («inicio»): se muestra arriba de las notas de la portada. Si ya existe, devuelve la misma. */
+export async function crearInicioDelSitio(): Promise<ResultadoPagina> {
+  const yo = await requirePermiso("portada");
+  const [ya] = await db.select({ id: paginas.id }).from(paginas).where(eq(paginas.slug, SLUG_INICIO_SITIO)).limit(1);
+  if (ya) return { ok: true, id: ya.id };
+  const [p] = await db.insert(paginas).values({ titulo: "Portada del inicio", slug: SLUG_INICIO_SITIO, updatedBy: yo.id }).returning({ id: paginas.id });
   refrescar();
   return { ok: true, id: p.id };
 }

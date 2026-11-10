@@ -64,7 +64,7 @@ type SeccionPortada = {
 /** Nota de la sección elegida en el lienzo y dónde está su tarjeta (relativa a la lista de notas), para dibujar el menú encima. */
 type NotaElegida = { slug: string; titulo: string; x: number; y: number; w: number; h: number };
 
-export function ConstructorPagina({ pagina, secciones, seccionPortada = null }: { pagina: Pagina; secciones: { slug: string; name: string }[]; seccionPortada?: SeccionPortada }) {
+export function ConstructorPagina({ pagina, secciones, seccionPortada = null, esInicio = false }: { pagina: Pagina; secciones: { slug: string; name: string }[]; seccionPortada?: SeccionPortada; esInicio?: boolean }) {
   const router = useRouter();
   // Notas reales por sección, para que los bloques de notas (y las notas de la sección, debajo de su portada) se vean como en el sitio.
   const [notasVista, setNotasVista] = useState<Record<string, NotaMini[]>>({});
@@ -381,7 +381,7 @@ export function ConstructorPagina({ pagina, secciones, seccionPortada = null }: 
         <label className="flex flex-col gap-1 text-xs font-semibold">
           Dirección (sección/página)
           <span className="flex items-center rounded-lg border border-[var(--border)] bg-[var(--bg)] pl-3 font-mono text-sm">
-            /<input value={slug} onChange={(e) => { setSlug(e.target.value.toLowerCase()); setSucio(true); }} onBlur={() => setSlug(rutaPagina(slug))} className="min-w-0 flex-1 bg-transparent py-2 pr-3 outline-none" maxLength={161} />
+            /<input readOnly={esInicio} title={esInicio ? "La portada del inicio del sitio no tiene dirección propia" : undefined} value={slug} onChange={(e) => { setSlug(e.target.value.toLowerCase()); setSucio(true); }} onBlur={() => setSlug(rutaPagina(slug))} className="min-w-0 flex-1 bg-transparent py-2 pr-3 outline-none" maxLength={161} />
           </span>
         </label>
         <div className="flex items-end gap-2">
@@ -404,7 +404,7 @@ export function ConstructorPagina({ pagina, secciones, seccionPortada = null }: 
         <button type="button" onClick={rehacer} disabled={!hist.futuro.length} className={boton}><Redo2 size={14} /> Rehacer</button>
         <div className="mx-1 flex overflow-hidden rounded-lg border border-[var(--border)]">
           <button type="button" onClick={() => setVista(false)} aria-pressed={!vista} className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold ${!vista ? "bg-[var(--accent)] text-[var(--accent-fg)]" : ""}`}><Pencil size={14} /> Armar</button>
-          <button type="button" onClick={() => { setVista(true); setSel(null); if (seccionPortada) guardar(async () => setVistaN((n) => n + 1)); }} aria-pressed={vista} className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold ${vista ? "bg-[var(--accent)] text-[var(--accent-fg)]" : ""}`}><Eye size={14} /> Vista previa</button>
+          <button type="button" onClick={() => { setVista(true); setSel(null); if (seccionPortada || esInicio) guardar(async () => setVistaN((n) => n + 1)); }} aria-pressed={vista} className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold ${vista ? "bg-[var(--accent)] text-[var(--accent-fg)]" : ""}`}><Eye size={14} /> Vista previa</button>
         </div>
         <span className="flex-1" />
         {msg && <span className={`text-sm ${msg.ok ? "text-[#15803d]" : "text-[#b91c1c]"}`}>{msg.t}</span>}
@@ -475,14 +475,14 @@ export function ConstructorPagina({ pagina, secciones, seccionPortada = null }: 
 
         {/* Lienzo */}
         <div className="min-w-0 rounded-xl border border-[var(--border)] bg-[var(--bg)] p-4 sm:p-6" onClick={() => { if (vista) return; setSel(null); setNotaSel(null); }}>
-          {vista && seccionPortada ? (
+          {vista && (seccionPortada || esInicio) ? (
             /* La sección REAL del sitio (menú, filtros, banners, laterales y notas) con esta portada en su lugar. Se guarda antes de mostrarla. */
             <div className="flex flex-col gap-2">
               <p className="text-xs text-[var(--fg-muted)]">
-                Así se ve <span className="font-mono">/categoria/{seccionPortada.slug}</span> con esta portada (guardada{publicada ? "" : ", aún en borrador: el público todavía no la ve"}).
+                Así se ve {seccionPortada ? <span className="font-mono">/categoria/{seccionPortada.slug}</span> : <span className="font-mono">la página de inicio</span>} con esta portada (guardada{publicada ? "" : ", aún en borrador: el público todavía no la ve"}).
               </p>
               {vistaN > 0 ? (
-                <iframe key={vistaN} src={`/vista-portada/${pagina.id}?v=${vistaN}`} title={`Vista previa de ${seccionPortada.nombre}`} className="h-[calc(100dvh-14rem)] min-h-[32rem] w-full rounded-lg border border-[var(--border)] bg-white" />
+                <iframe key={vistaN} src={`/vista-portada/${pagina.id}?v=${vistaN}`} title={`Vista previa de ${seccionPortada ? seccionPortada.nombre : "la página de inicio"}`} className="h-[calc(100dvh-14rem)] min-h-[32rem] w-full rounded-lg border border-[var(--border)] bg-white" />
               ) : (
                 <div className="grid h-64 place-items-center text-sm text-[var(--fg-muted)]"><Loader2 size={18} className="animate-spin" /></div>
               )}
@@ -505,16 +505,21 @@ export function ConstructorPagina({ pagina, secciones, seccionPortada = null }: 
                 </div>
               </div>
             </header>
+          ) : esInicio ? (
+            <header className="mb-6 border-b border-[var(--border)] pb-5">
+              <p className="lx-kicker text-[var(--accent)]">◆ Inicio del sitio</p>
+              <p className="mt-1 text-sm text-[var(--fg-muted)]">Menú y cintillo arriba; la portada de notas (destacada, «Lo último», laterales) sigue debajo de lo que armes aquí.</p>
+            </header>
           ) : (
             <>
               <h1 className="lx-display mb-2 text-4xl leading-tight tracking-tight">{titulo || "Sin título"}</h1>
               {descripcion && <p className="mb-6 text-lg text-[var(--fg-muted)]">{descripcion}</p>}
             </>
           )}
-          <div className={seccionPortada && !vista ? "relative rounded-2xl border-2 border-dashed border-[#c9a227] p-3 pt-8 sm:p-4 sm:pt-9" : ""}>
-          {seccionPortada && !vista && (
+          <div className={(seccionPortada || esInicio) && !vista ? "relative rounded-2xl border-2 border-dashed border-[#c9a227] p-3 pt-8 sm:p-4 sm:pt-9" : ""}>
+          {(seccionPortada || esInicio) && !vista && (
             <span className="absolute -top-3 left-4 rounded-full bg-[#c9a227] px-3 py-1 text-xs font-bold text-[#1c2610]">
-              Tu portada va aquí: entre el título de la sección y sus notas
+              {esInicio ? "Tu portada va aquí: arriba de las notas de la portada del sitio" : "Tu portada va aquí: entre el título de la sección y sus notas"}
             </span>
           )}
           <div className="flex flex-col gap-6">

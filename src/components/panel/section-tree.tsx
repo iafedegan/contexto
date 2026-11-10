@@ -7,7 +7,7 @@ import { createPortal } from "react-dom";
 import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, ExternalLink, Loader2, Maximize2, Network, Pencil, Plus, Trash2, X } from "lucide-react";
 import { SeccionForm } from "@/components/panel/seccion-form";
 import { NuevaPagina } from "@/components/panel/nueva-pagina";
-import { crearInicioDeSeccion } from "@/app/panel/(app)/paginas/actions";
+import { crearInicioDeSeccion, crearInicioDelSitio } from "@/app/panel/(app)/paginas/actions";
 import { guardarAnchoPortada, leerAnchoPortada } from "@/app/panel/(app)/portada/actions";
 
 // Identificador del nodo «Portada» del árbol (no es una sección).
@@ -643,6 +643,7 @@ function WideTree({
 /** Las páginas del constructor que cuelgan de la sección elegida («Editar página») y el botón para crear otra. */
 // Ajustes de la portada (inicio del sitio) dentro del árbol: el ancho de la nota principal se aplica al momento sobre lo publicado.
 function DetallePortada() {
+  const router = useRouter();
   const [ancho, setAncho] = useState<string | null>(null);
   const [mensaje, setMensaje] = useState<{ ok: boolean; texto: string } | null>(null);
   const [ocupado, start] = useTransition();
@@ -688,8 +689,27 @@ function DetallePortada() {
         </div>
         {mensaje && <p className={`mt-2 text-xs ${mensaje.ok ? "text-[#15803d]" : "text-[#b91c1c]"}`}>{mensaje.texto}</p>}
       </div>
-      <Link href="/panel/portada" className="inline-flex items-center gap-1.5 self-start rounded-full bg-[var(--accent)] px-4 py-2 text-sm font-semibold !text-white hover:opacity-90">
-        <Pencil size={14} /> Abrir el editor de la portada
+      <div>
+        <p className="text-sm font-semibold">Portada de inicio</p>
+        <p className="mb-2 text-[11px] leading-snug text-[var(--fg-muted)]">Diseña lo que se ve arriba al entrar al sitio: filas, columnas, textos, imágenes y notas. La portada de notas sigue saliendo debajo. Queda en borrador hasta que la publiques.</p>
+        <button
+          type="button"
+          disabled={ocupado}
+          onClick={() => {
+            setMensaje(null);
+            start(async () => {
+              const r = await crearInicioDelSitio();
+              if (r.ok && r.id) router.push(`/panel/paginas/${r.id}`);
+              else if (!r.ok) setMensaje({ ok: false, texto: r.error });
+            });
+          }}
+          className="inline-flex items-center gap-1.5 rounded-full bg-[var(--accent)] px-4 py-2 text-sm font-semibold !text-white hover:opacity-90 disabled:opacity-60"
+        >
+          {ocupado ? <Loader2 size={14} className="animate-spin" /> : <Pencil size={14} />} Diseñar la portada de inicio
+        </button>
+      </div>
+      <Link href="/panel/portada" className="inline-flex items-center gap-1.5 self-start rounded-full border border-[var(--border)] px-4 py-2 text-sm font-semibold hover:border-[var(--accent)]">
+        Ajustes de la portada de notas (plantilla, carrusel, cintillo)
       </Link>
     </div>
   );

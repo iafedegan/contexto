@@ -5,7 +5,7 @@ import { eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import { articles, categories, paginas } from "@/db/schema";
 import { requirePermiso } from "@/lib/auth";
-import { MAX_OCULTAS, sanearPagina } from "@/lib/paginas-bloques";
+import { MAX_OCULTAS, sanearPagina, SLUG_INICIO_SITIO } from "@/lib/paginas-bloques";
 import { ConstructorPagina } from "@/components/panel/constructor-pagina";
 import { getArticlesByCategory } from "@/lib/content";
 import { getSiteTheme } from "@/lib/site-theme";
@@ -48,6 +48,7 @@ export default async function DisenarPagina({ params }: { params: Promise<{ id: 
       <ConstructorPagina
         pagina={{ id: p.id, titulo: p.titulo, slug: p.slug, descripcion: p.descripcion ?? "", publicada: p.publicada, contenido }}
         secciones={secciones}
+        esInicio={p.slug === SLUG_INICIO_SITIO}
         seccionPortada={
           cat
             ? {

@@ -4,7 +4,8 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { paginas } from "@/db/schema";
 import { requirePermiso } from "@/lib/auth";
-import { sanearPagina } from "@/lib/paginas-bloques";
+import { sanearPagina, SLUG_INICIO_SITIO } from "@/lib/paginas-bloques";
+import { VistaPortadaInicio } from "../../_pages/home";
 import { VistaPortadaSeccion } from "../../_pages/categoria";
 
 /**
@@ -19,6 +20,7 @@ export default async function VistaPortada({ params }: { params: Promise<{ id: s
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/.test(id)) notFound();
   const [p] = await db.select({ slug: paginas.slug, contenido: paginas.contenido }).from(paginas).where(eq(paginas.id, id)).limit(1);
+  if (p?.slug === SLUG_INICIO_SITIO) return VistaPortadaInicio({ contenido: sanearPagina(p.contenido) });
   const m = p?.slug.match(/^([a-z0-9-]+)\/inicio$/);
   if (!p || !m) notFound();
   return VistaPortadaSeccion({ slug: m[1], contenido: sanearPagina(p.contenido) });

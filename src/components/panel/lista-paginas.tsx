@@ -113,6 +113,7 @@ export function ListaPaginas({ paginas, secciones }: { paginas: FilaPagina[]; se
                   <Link href={`/panel/paginas/${p.id}`} className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-semibold">
                       {p.titulo}
+                      {p.slug === "inicio" && <span className="ml-2 rounded-full bg-[var(--accent)]/10 px-2 py-0.5 align-middle text-[11px] font-semibold text-[var(--accent)]">Portada del inicio</span>}
                       {p.seccionId && p.slug.endsWith("/inicio") && <span className="ml-2 rounded-full bg-[var(--accent)]/10 px-2 py-0.5 align-middle text-[11px] font-semibold text-[var(--accent)]">Portada de la sección</span>}
                     </span>
                     <span className="block truncate font-mono text-xs text-[var(--fg-muted)]">/{p.slug}</span>

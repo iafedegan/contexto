@@ -748,6 +748,9 @@ export function sanearPagina(v: unknown): ContenidoPagina {
 }
 
 /** Un tramo de dirección: minúsculas, números y guiones. */
+/** Dirección interna de la portada del inicio del sitio: una página del constructor que se muestra arriba de las notas de «/». No se sirve suelta. */
+export const SLUG_INICIO_SITIO = "inicio";
+
 export function slugPagina(texto: string): string {
   return texto
     .normalize("NFD")
