@@ -18,7 +18,7 @@ import { hrefNota } from "@/lib/ruta-nota";
 const VAPID_PUBLIC = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? "";
 
 // Barra lateral: notas más leídas, anuncios, boletín, avisos y redes sociales.
-export async function SiteSidebar({ locale, columnaEnMovil = true }: { locale: Locale; /** false: en el celular la columna no se repite aquí porque la pantalla ya la pone bajo el carrusel. */ columnaEnMovil?: boolean }) {
+export async function SiteSidebar({ locale, columnaEnMovil = true, sinColumna = false }: { locale: Locale; /** false: en el celular la columna no se repite aquí porque la pantalla ya la pone bajo el carrusel. */ columnaEnMovil?: boolean; /** true: la pantalla ya la puso arriba, en ningún tamaño se repite aquí. */ sinColumna?: boolean }) {
   const [masLeidas, columna] = await Promise.all([
     getMostReadArticles(5).catch(() => []),
     getUltimaColumnaLafaurie().catch(() => null),
@@ -27,7 +27,7 @@ export async function SiteSidebar({ locale, columnaEnMovil = true }: { locale: L
   return (
     <aside className="flex flex-col gap-8" aria-label={t(locale, "sidebar.mostRead")}>
       {/* La columna del Dr. Lafaurie va siempre primero, antes de las más leídas. En la portada del celular sube bajo el carrusel (ver home.tsx). */}
-      {columna && (
+      {columna && !sinColumna && (
         <div className={columnaEnMovil ? undefined : "max-lg:hidden"}>
           <ColumnaLafaurie locale={locale} columna={columna} />
         </div>

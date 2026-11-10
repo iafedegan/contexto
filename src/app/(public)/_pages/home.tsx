@@ -147,8 +147,10 @@ async function HomePage({ locale }: { locale: Locale }) {
   const extrasEn = (pos: string) => carruseles.map((c, i) => (i > 0 && c.posicion === pos ? nodosCarrusel[i] : null)).filter(Boolean);
   // En el celular la columna del Dr. Lafaurie sube justo debajo del carrusel (en computador sigue en la barra lateral).
   // Sin carrusel, la columna baja justo debajo de la nota principal de la plantilla (las de cuadrícula la reciben después del bloque).
+  // Esmeralda sin carrusel: la columna va arriba de la columna derecha («Lo último») también en el computador, y la barra lateral ya no la repite.
+  const columnaArriba = !carrusel && !["revista", "compacto", "vanguardia", "clasico", "gremial"].includes(body);
   const columnaMovil = (
-    <div className="lg:hidden">
+    <div className={columnaArriba ? undefined : "lg:hidden"}>
       <ColumnaLafaurieSuelta locale={locale} />
     </div>
   );
@@ -279,7 +281,7 @@ async function HomePage({ locale }: { locale: Locale }) {
           ) : body === "gremial" ? (
             <GremialTemplate {...props} trasPrincipal={trasPrincipal} />
           ) : (
-            <EsmeraldaTemplate {...props} trasPrincipal={trasPrincipal} lateral={<SiteSidebar locale={locale} columnaEnMovil={false} />} />
+            <EsmeraldaTemplate {...props} trasPrincipal={trasPrincipal} lateral={<SiteSidebar locale={locale} columnaEnMovil={false} sinColumna={columnaArriba} />} />
           )}
           {!carrusel && sinSlot && <div className="mt-8">{columnaMovil}</div>}
 

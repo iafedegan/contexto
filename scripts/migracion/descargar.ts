@@ -5,7 +5,7 @@
  *
  * Uso: npx tsx scripts/migracion/descargar.ts [--concurrencia=10] [--limite=N] [--refrescar=N]
  */
-import { appendFileSync, createReadStream, existsSync, readdirSync, writeFileSync } from "node:fs";
+import { appendFileSync, createReadStream, existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createInterface } from "node:readline";
 import { join } from "node:path";
 import { CACHE, DIR_HISTORIAS, SITIO_ANTIGUO, pedir, prepararCache } from "./comun";
@@ -16,6 +16,8 @@ const CONCURRENCIA = Number(arg("concurrencia", "10"));
 const LIMITE = Number(arg("limite", "0"));
 // Vuelve a pedir las N notas más recientes del mapa (las que pudieron editarse desde la última descarga), aunque ya estén en la caché.
 const REFRESCAR = Number(arg("refrescar", "0"));
+// Solo las direcciones de este archivo de la caché (una por línea), p. ej. las que lista `nuevas.ts`.
+const SOLO = arg("solo", "");
 
 prepararCache();
 
@@ -58,14 +60,15 @@ async function yaHechas(): Promise<Set<string>> {
 }
 
 async function main() {
-  const urls = await direcciones();
-  writeFileSync(join(CACHE, "urls.txt"), urls.join("\n") + "\n");
+  const urls = SOLO ? readFileSync(join(CACHE, SOLO), "utf8").split("\n").filter(Boolean) : await direcciones();
+  if (!SOLO) writeFileSync(join(CACHE, "urls.txt"), urls.join("\n") + "\n");
   console.log(`Notas en el mapa del sitio: ${urls.length}`);
 
   const hechas = await yaHechas();
   const rutaDe = (u: string) => decodeURIComponent(new URL(u).pathname);
   const recientes = new Set(urls.slice(0, REFRESCAR));
-  let pendientes = urls.filter((u) => recientes.has(u) || !hechas.has(rutaDe(u)));
+  const solo = SOLO ? new Set(readFileSync(join(CACHE, SOLO), "utf8").split("\n").filter(Boolean)) : null;
+  let pendientes = urls.filter((u) => !solo || solo.has(u)).filter((u) => recientes.has(u) || !hechas.has(rutaDe(u)));
   if (LIMITE > 0) pendientes = pendientes.slice(0, LIMITE);
   console.log(`Ya descargadas: ${hechas.size} · por descargar: ${pendientes.length} · concurrencia ${CONCURRENCIA}`);
 

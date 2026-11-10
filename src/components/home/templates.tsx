@@ -421,12 +421,12 @@ export function EsmeraldaTemplate({
     <div className="flex flex-col gap-12 sm:gap-20">
       <section className={`grid grid-cols-1 gap-8 sm:gap-10 xl:gap-12 ${ANCHO_PRINCIPAL[layout.anchoPrincipal] ?? ANCHO_PRINCIPAL.ancha}`}>
         <div className="flex min-w-0 flex-col gap-7 sm:gap-8">
-          {/* En pantallas anchas la principal se estira hasta el alto de «Lo último» (la foto se recorta, sin deformarse): sin hueco debajo. */}
-          {wrap(lead, <ArticleCard a={lead} locale={locale} variant="lead" priority={interactive} />, "xl:flex-1 xl:[&>article]:h-full xl:[&>article]:max-h-[30rem]")}
+          {/* La tarjeta mide lo que mida su texto (la foto es 16:9 en pantallas anchas): un tope de alto recortaba el resumen y la firma. */}
+          {wrap(lead, <ArticleCard a={lead} locale={locale} variant="lead" priority={interactive} />)}
         </div>
-        {/* En el celular la columna destacada (opinión) va antes de «Lo último». */}
-        {trasPrincipal}
         <aside className="min-w-0 xl:border-l xl:border-[var(--border)] xl:pl-8">
+          {/* La columna destacada (opinión) va primero en la columna derecha, antes de «Lo último», en el celular y en el computador. */}
+          {trasPrincipal && <div className="mb-8">{trasPrincipal}</div>}
           <p className="lx-kicker text-[var(--accent)]">{t(locale, "home.cover")}</p>
           <h2 className="lx-display mt-2 text-2xl font-semibold tracking-tight md:text-3xl">
             {t(locale, "home.latest")}

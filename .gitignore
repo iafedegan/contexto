@@ -53,3 +53,6 @@ public/subidas/
 
 # Migración del sitio anterior: caché local de lo descargado (cientos de MB)
 /.migracion-cache/
+
+# caché y respaldos de la migración del sitio anterior (pueden pesar cientos de MB y llevar texto de notas)
+.migracion-cache/

@@ -178,7 +178,7 @@ function LeadCard({ a, priority, locale }: { a: ArticleListItem; priority?: bool
           alt={a.coverImageAlt ?? a.title}
           seed={a.slug}
           label={a.categoryName ?? a.title}
-          ratio="aspect-[4/5] h-full sm:aspect-[16/11]"
+          ratio="aspect-[4/5] h-full sm:aspect-[16/11] xl:aspect-[16/9]"
           priority={priority}
           sizes="(min-width: 1280px) 900px, (min-width: 768px) 60vw, 100vw"
         />
