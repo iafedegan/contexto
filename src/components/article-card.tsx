@@ -52,6 +52,8 @@ type Props = {
   locale?: Locale;
   /** En el celular la tarjeta se compacta para ir de a dos por fila (solo variante «gold»): sin resumen, titular menor. */
   compact?: boolean;
+  /** Solo «rail»: lista limpia, solo texto, en pantallas anchas (la columna es angosta y la miniatura le roba la mitad al titular). */
+  soloTexto?: boolean;
 };
 
 /** Tarjeta editorial. Cada plantilla usa la variante que le corresponde. */
@@ -62,6 +64,7 @@ export function ArticleCard({
   index,
   locale = DEFAULT_LOCALE,
   compact = false,
+  soloTexto = false,
 }: Props) {
   switch (variant) {
     case "lead":
@@ -71,7 +74,7 @@ export function ArticleCard({
     case "pearl":
       return <PearlCard a={a} locale={locale} />;
     case "rail":
-      return <RailCard a={a} index={index} locale={locale} />;
+      return <RailCard a={a} index={index} locale={locale} soloTexto={soloTexto} />;
     default:
       return <GoldCard a={a} priority={priority} locale={locale} compact={compact} />;
   }
@@ -258,7 +261,7 @@ function GoldCard({ a, priority, locale, compact = false }: { a: ArticleListItem
 }
 
 /* ------------------------------------------------- Portada: columna lateral */
-function RailCard({ a, index, locale }: { a: ArticleListItem; index?: number; locale: Locale }) {
+function RailCard({ a, index, locale, soloTexto = false }: { a: ArticleListItem; index?: number; locale: Locale; soloTexto?: boolean }) {
   const st = cardStyle(a, "rail");
   // Sin medidas exactas, el porcentaje del panel encoge la miniatura (140 px es su ancho normal).
   const fijo = estiloFijo(a.homeStyle);
@@ -266,9 +269,9 @@ function RailCard({ a, index, locale }: { a: ArticleListItem; index?: number; lo
   const lado = { w: fijo?.imageWidth ?? fijo?.imageHeight ?? pct, h: fijo?.imageHeight ?? fijo?.imageWidth ?? pct };
   const medidasMiniatura: React.CSSProperties | undefined = lado.w && lado.h ? { width: `${lado.w}px`, height: `${lado.h}px` } : undefined;
   return (
-    <article data-bs-root={a.slug} className="lx-reveal group flex gap-3 border-b border-[var(--border)] pb-4 last:border-0 sm:gap-4">
+    <article data-bs-root={a.slug} className={`lx-reveal group flex gap-3 border-b border-[var(--border)] pb-4 last:border-0 sm:gap-4 ${soloTexto ? "xl:pb-5" : ""}`}>
       {typeof index === "number" && (
-        <span className="lx-display w-6 shrink-0 text-xl font-semibold text-[var(--accent)] opacity-90 sm:w-8 sm:text-2xl">
+        <span className={`lx-display w-6 shrink-0 text-xl font-semibold text-[var(--accent)] opacity-90 [font-variant-numeric:lining-nums] sm:w-8 sm:text-2xl ${soloTexto ? "xl:w-7 xl:pt-0.5 xl:text-lg xl:opacity-70" : ""}`}>
           {String(index + 1).padStart(2, "0")}
         </span>
       )}
@@ -283,7 +286,7 @@ function RailCard({ a, index, locale }: { a: ArticleListItem; index?: number; lo
       </div>
       {/* La miniatura también va en el celular: sin ella «Lo último» era una lista de texto plano. */}
       {!st.hideMedia && (
-      <Link href={hrefNota(locale, a)} className="block max-w-[46%] shrink-0 self-start" aria-hidden tabIndex={-1}>
+      <Link href={hrefNota(locale, a)} className={`block max-w-[46%] shrink-0 self-start ${soloTexto ? "xl:hidden" : ""}`} aria-hidden tabIndex={-1}>
         {/* La miniatura es apaisada (4:3, más grande en el celular); con medidas exactas en el panel toma esas (si solo hay una, es el lado del cuadrado) y el texto, al lado, se acomoda. */}
         <span className={`lx-media block overflow-hidden rounded-[var(--radius)] ${medidasMiniatura ? "max-w-full" : "aspect-[4/3] w-[8.75rem] sm:w-28"}`} style={a.homeStyle?.pantallas ? ({ ["--cg-mini-foto" as string]: "1" } as React.CSSProperties) : medidasMiniatura}>
           <CardMedia

@@ -59,6 +59,8 @@ type TemplateProps = Slots &
     locale?: Locale;
     /** Bloque que va justo debajo de la nota principal (en el celular, la columna del Dr. Lafaurie). Compacto y Vanguardia no lo usan: es una cuadrícula. */
     trasPrincipal?: React.ReactNode;
+    /** Barra lateral del sitio (solo Esmeralda): va junto a «Lo más reciente», no junto a la apertura, para que arriba haya dos columnas y no tres. */
+    lateral?: React.ReactNode;
     /**
      * Indicadores ya formateados para la cabecera de Gremial (el resto de
      * plantillas lo ignora). Van pre-formateados desde el servidor: este
@@ -384,13 +386,14 @@ export function EsmeraldaTemplate({
   layout,
   interactive = true,
   trasPrincipal,
+  lateral,
   locale = DEFAULT_LOCALE,
   builderSelected,
   builderOverIndex,
   builderDragProps,
   builderHasStyle,
 }: TemplateProps) {
-  if (!lead) return null;
+  if (!lead) return lateral ? <>{lateral}</> : null;
   const all = [lead, second, ...rail, ...river].filter((a): a is ArticleListItem => Boolean(a));
   // Posición de una nota dentro de la lista completa.
   const indexOf = (a: ArticleListItem) => all.findIndex((x) => x.slug === a.slug);
@@ -408,36 +411,35 @@ export function EsmeraldaTemplate({
       {node}
     </EditableCard>
   );
-  const aside = [second, ...rail].filter((a): a is ArticleListItem => Boolean(a));
-  // La lista de la derecha es más larga que la nota principal: en pantallas anchas el hueco bajo la principal se rellena con las siguientes notas
-  // (las primeras de «Lo más reciente», que en esas pantallas no se repiten abajo).
-  const relleno = Math.min(river.length, Math.max(0, Math.round((aside.length - 2) * 1.3)));
+  // «Lo último» acompaña a la nota principal con cinco titulares, solo texto en pantallas anchas: la columna es angosta y con
+  // miniatura el titular quedaba en siete u ocho líneas. Lo que no cabe abre «Lo más reciente», que es la rejilla de abajo.
+  const todosAside = [second, ...rail].filter((a): a is ArticleListItem => Boolean(a));
+  const aside = todosAside.slice(0, 5);
+  const rio = [...todosAside.slice(5), ...river];
 
   return (
-    <div className="flex flex-col gap-10 sm:gap-16">
-      <section className={`grid grid-cols-1 gap-7 sm:gap-8 ${ANCHO_PRINCIPAL[layout.anchoPrincipal] ?? ANCHO_PRINCIPAL.ancha}`}>
+    <div className="flex flex-col gap-12 sm:gap-20">
+      <section className={`grid grid-cols-1 gap-8 sm:gap-10 xl:gap-12 ${ANCHO_PRINCIPAL[layout.anchoPrincipal] ?? ANCHO_PRINCIPAL.ancha}`}>
         <div className="flex min-w-0 flex-col gap-7 sm:gap-8">
           {wrap(lead, <ArticleCard a={lead} locale={locale} variant="lead" priority={interactive} />)}
-          {trasPrincipal}
-          {relleno > 0 && (
-            <div className="hidden grid-cols-2 gap-x-6 gap-y-8 xl:grid">
-              {river.slice(0, relleno).map((a) => wrap(a, <ArticleCard a={a} locale={locale} compact />))}
-            </div>
-          )}
         </div>
-        <aside>
+        <aside className="min-w-0 xl:border-l xl:border-[var(--border)] xl:pl-8">
           <p className="lx-kicker text-[var(--accent)]">{t(locale, "home.cover")}</p>
           <h2 className="lx-display mt-2 text-2xl font-semibold tracking-tight md:text-3xl">
             {t(locale, "home.latest")}
           </h2>
           <div className="mt-5 flex flex-col gap-4 sm:mt-6 sm:gap-5">
-            {aside.map((a, i) => wrap(a, <ArticleCard a={a} locale={locale} variant="rail" index={i} />))}
+            {aside.map((a, i) => wrap(a, <ArticleCard a={a} locale={locale} variant="rail" index={i} soloTexto />))}
           </div>
         </aside>
       </section>
 
-      {river.length > 0 && (
-        <section>
+      {/* En el celular la columna destacada va después de «Lo último»: primero las noticias, luego la opinión. */}
+      {trasPrincipal}
+
+      <div className={lateral ? "grid grid-cols-1 gap-12 lg:grid-cols-[minmax(0,1fr)_19rem] xl:gap-14" : ""}>
+      {rio.length > 0 && (
+        <section className="min-w-0">
           <div className="border-b border-[var(--border)] pb-4">
             <p className="lx-kicker text-[var(--accent)]">{t(locale, "home.current")}</p>
             <h2 className="lx-display mt-2 text-2xl font-semibold tracking-tight md:text-3xl">
@@ -445,18 +447,20 @@ export function EsmeraldaTemplate({
             </h2>
           </div>
           {/* Celular: de a dos por fila, con la primera a todo el ancho como nota destacada; desde sm, la rejilla de siempre. */}
-          <div className={cn("mt-6 grid grid-cols-2 gap-3 sm:mt-8 sm:gap-7", RIVER_COLS[layout.riverColumns] ?? RIVER_COLS[3])}>
-            {river.map((a, i) => {
-              const ancha = anchaEnCelular(i, river.length);
+          <div className={cn("mt-6 grid grid-cols-2 gap-3 sm:mt-8 sm:gap-x-7 sm:gap-y-10", RIVER_COLS[layout.riverColumns] ?? RIVER_COLS[3])}>
+            {rio.map((a, i) => {
+              const ancha = anchaEnCelular(i, rio.length);
               return wrap(
                 a,
                 <ArticleCard a={a} locale={locale} compact={!ancha} />,
-                cn(ancha && "max-sm:col-span-2", estiloFijo(a.homeStyle)?.span === 2 && "sm:col-span-2", i < relleno && "xl:hidden"),
+                cn(ancha && "max-sm:col-span-2", estiloFijo(a.homeStyle)?.span === 2 && "sm:col-span-2"),
               );
             })}
           </div>
         </section>
       )}
+      {lateral}
+      </div>
     </div>
   );
 }

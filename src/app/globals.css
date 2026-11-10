@@ -2456,3 +2456,30 @@ body:has(.cg-cintillo-arriba) .cg-cinta-cabecera { display: none; }
     inset 0 140px 130px -130px rgba(255, 255, 255, 0.1),
     18px 0 50px -26px rgba(0, 0, 0, 0.6);
 }
+
+/* Portada en el celular: la nota principal deja ver la foto. En lugar del recuadro de vidrio (que con un titular largo tapaba
+   casi toda la imagen), un degradado oscuro desde abajo y un titular a escala de pantalla pequeña. */
+@media (max-width: 639.98px) {
+  .lead-titulo {
+    font-size: min(var(--lead-fs), 1.6rem);
+    line-height: 1.15;
+  }
+  .lx-card > [data-cg-panel]:not([aria-hidden]) {
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    background: linear-gradient(to top, rgb(0 0 0 / 0.9), rgb(0 0 0 / 0.6) 60%, transparent);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    box-shadow: none;
+    padding: 5rem 1.1rem 1.1rem;
+    color: #fff;
+    --fg: #fff;
+    --fg-muted: rgb(255 255 255 / 0.78);
+    --link: #fff;
+  }
+  .lx-card > [data-cg-panel].self-start:not([aria-hidden]) {
+    background: linear-gradient(to bottom, rgb(0 0 0 / 0.9), rgb(0 0 0 / 0.6) 60%, transparent);
+    padding: 1.1rem 1.1rem 5rem;
+  }
+}

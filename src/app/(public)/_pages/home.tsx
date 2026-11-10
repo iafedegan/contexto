@@ -159,6 +159,7 @@ async function HomePage({ locale }: { locale: Locale }) {
     </>
   ) : null;
   const sinSlot = body === "compacto" || body === "vanguardia";
+  const esEsmeralda = !["revista", "compacto", "vanguardia", "clasico", "gremial"].includes(body);
   const trasPrincipal = carrusel || sinSlot ? undefined : columnaMovil;
   // Cintillo como una cinta de cotizaciones: fondo verde oscuro, nombre en negrita, valor y la variación con flecha verde o roja.
   // Debajo, la cinta de seis colores de la marca (la de la cabecera se oculta cuando está el cintillo, para no repetirla).
@@ -257,7 +258,8 @@ async function HomePage({ locale }: { locale: Locale }) {
         return css ? <style dangerouslySetInnerHTML={{ __html: css }} /> : null;
       })()}
       <CardSlugsProvider slugs={[lead, second, ...rail, ...river].filter((a): a is NonNullable<typeof a> => Boolean(a)).map((a) => a.slug)}>
-      <div className="grid grid-cols-1 gap-12 lg:grid-cols-[minmax(0,1fr)_19rem]">
+      {/* Esmeralda lleva la barra lateral dentro, junto a «Lo más reciente»: arriba, la apertura y «Lo último» respiran a dos columnas. */}
+      <div className={`grid grid-cols-1 gap-12 ${esEsmeralda ? "" : "lg:grid-cols-[minmax(0,1fr)_19rem]"}`}>
         <div className="lx-bleed-off min-w-0">
           {/* Cada plantilla se referencia por su nombre en el JSX (y no por un
               mapa indexado en runtime) para no perder el límite cliente/servidor
@@ -277,7 +279,7 @@ async function HomePage({ locale }: { locale: Locale }) {
           ) : body === "gremial" ? (
             <GremialTemplate {...props} trasPrincipal={trasPrincipal} />
           ) : (
-            <EsmeraldaTemplate {...props} trasPrincipal={trasPrincipal} />
+            <EsmeraldaTemplate {...props} trasPrincipal={trasPrincipal} lateral={<SiteSidebar locale={locale} columnaEnMovil={false} />} />
           )}
           {!carrusel && sinSlot && <div className="mt-8">{columnaMovil}</div>}
 
@@ -288,7 +290,7 @@ async function HomePage({ locale }: { locale: Locale }) {
           <AdsBanner zone="home_billboard" className="mx-auto mt-14" />
         </div>
 
-        <SiteSidebar locale={locale} columnaEnMovil={false} />
+        {!esEsmeralda && <SiteSidebar locale={locale} columnaEnMovil={false} />}
       </div>
       </CardSlugsProvider>
 
