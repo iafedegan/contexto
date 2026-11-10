@@ -19,6 +19,42 @@ Módulo dueño: **acceso** · variable en el esquema: `users`
 | `created_at` | timestamp | obligatorio |
 | `updated_at` | timestamp | obligatorio |
 
+## `user_permission_overrides`
+
+Módulo dueño: **—** · variable en el esquema: `userPermissionOverrides`
+
+| Columna | Tipo | Notas |
+|---|---|---|
+| `user_id` | uuid |  |
+| `permiso` | text | obligatorio |
+| `valor` | boolean | obligatorio |
+| `updated_at` | timestamp | obligatorio |
+
+## `user_2fa_grace`
+
+Módulo dueño: **—** · variable en el esquema: `user2faGrace`
+
+| Columna | Tipo | Notas |
+|---|---|---|
+| `user_id` | uuid |  |
+| `until` | timestamp | obligatorio |
+
+## `login_events`
+
+Módulo dueño: **—** · variable en el esquema: `loginEvents`
+
+| Columna | Tipo | Notas |
+|---|---|---|
+| `id` | uuid | PK |
+| `at` | timestamp | obligatorio |
+| `user_id` | uuid | → users.id |
+| `name` | text | obligatorio |
+| `email` | text | obligatorio |
+| `role` | text | obligatorio |
+| `metodo` | text | obligatorio |
+| `ip` | text | obligatorio |
+| `dispositivo` | text | obligatorio |
+
 ## `passkeys`
 
 Módulo dueño: **acceso** · variable en el esquema: `passkeys`
@@ -36,6 +72,54 @@ Módulo dueño: **acceso** · variable en el esquema: `passkeys`
 | `label` | text |  |
 | `created_at` | timestamp | obligatorio |
 | `last_used_at` | timestamp |  |
+
+## `superapp_sesiones`
+
+Módulo dueño: **—** · variable en el esquema: `superappSesiones`
+
+| Columna | Tipo | Notas |
+|---|---|---|
+| `id` | uuid | PK |
+| `token_hash` | text | obligatorio, único |
+| `audience` | text | obligatorio |
+| `subject` | text | obligatorio |
+| `session_reference` | text | obligatorio |
+| `assurance_level` | integer | obligatorio |
+| `capabilities` | jsonb | obligatorio |
+| `issued_at` | timestamp | obligatorio |
+| `expires_at` | timestamp | obligatorio |
+| `validated_at` | timestamp |  |
+| `revoked_at` | timestamp |  |
+| `correlation_id` | text |  |
+| `created_at` | timestamp | obligatorio |
+
+## `superapp_personas`
+
+Módulo dueño: **—** · variable en el esquema: `superappPersonas`
+
+| Columna | Tipo | Notas |
+|---|---|---|
+| `audience` | text | obligatorio |
+| `subject` | text | obligatorio |
+| `email_cifrado` | text |  |
+| `documento_tipo` | text |  |
+| `documento_cifrado` | text |  |
+| `documento_final` | text |  |
+| `assurance_level` | integer | obligatorio |
+| `subscriber_id` | uuid | → newsletterSubscribers.id |
+| `primera_entrada` | timestamp | obligatorio |
+| `ultima_entrada` | timestamp | obligatorio |
+
+## `superapp_visitantes`
+
+Módulo dueño: **—** · variable en el esquema: `superappVisitantes`
+
+| Columna | Tipo | Notas |
+|---|---|---|
+| `audience` | text | obligatorio |
+| `subject` | text | obligatorio |
+| `visitor_id` | uuid | obligatorio |
+| `linked_at` | timestamp | obligatorio |
 
 ## `sessions`
 
@@ -229,6 +313,7 @@ Módulo dueño: **newsletter** · variable en el esquema: `newsletterSubscribers
 | `signup_country` | text |  |
 | `city` | text |  |
 | `interests` | jsonb | obligatorio |
+| `tags` | jsonb | obligatorio |
 | `signup_lat` | numeric |  |
 | `signup_lon` | numeric |  |
 | `confirmed` | boolean | obligatorio |
@@ -423,3 +508,75 @@ Módulo dueño: **canales** · variable en el esquema: `pushSubscriptions`
 | `auth` | text | obligatorio |
 | `created_at` | timestamp | obligatorio |
 | `last_seen_at` | timestamp | obligatorio |
+
+## `observatorio_datos`
+
+Módulo dueño: **—** · variable en el esquema: `observatorioDatos`
+
+| Columna | Tipo | Notas |
+|---|---|---|
+| `id` | bigserial | PK |
+| `tema` | text | obligatorio |
+| `indicador` | text | obligatorio |
+| `titulo` | text | obligatorio |
+| `unidad` | text | obligatorio |
+| `fuente` | text | obligatorio |
+| `serie` | text | obligatorio |
+| `periodo` | text | obligatorio |
+| `fecha` | date |  |
+| `valor` | doublePrecision | obligatorio |
+| `actualizado_en` | timestamp | obligatorio |
+
+## `media_folders`
+
+Módulo dueño: **—** · variable en el esquema: `mediaFolders`
+
+| Columna | Tipo | Notas |
+|---|---|---|
+| `id` | uuid | PK |
+| `parent_id` | uuid |  |
+| `name` | text | obligatorio |
+| `created_by` | uuid | → users.id |
+| `created_at` | timestamp | obligatorio |
+
+## `media_assets`
+
+Módulo dueño: **—** · variable en el esquema: `mediaAssets`
+
+| Columna | Tipo | Notas |
+|---|---|---|
+| `id` | uuid | PK |
+| `folder_id` | uuid | → mediaFolders.id |
+| `name` | text | obligatorio |
+| `url` | text | obligatorio, único |
+| `kind` | text | obligatorio |
+| `bytes` | integer |  |
+| `uploaded_by` | uuid | → users.id |
+| `created_at` | timestamp | obligatorio |
+
+## `media_folder_access`
+
+Módulo dueño: **—** · variable en el esquema: `mediaFolderAccess`
+
+| Columna | Tipo | Notas |
+|---|---|---|
+| `folder_id` | uuid | obligatorio, → mediaFolders.id |
+| `user_id` | uuid | obligatorio, → users.id |
+| `created_at` | timestamp | obligatorio |
+
+## `paginas`
+
+Módulo dueño: **—** · variable en el esquema: `paginas`
+
+| Columna | Tipo | Notas |
+|---|---|---|
+| `id` | uuid | PK |
+| `slug` | text | obligatorio, único |
+| `titulo` | text | obligatorio |
+| `descripcion` | text |  |
+| `seccion_id` | uuid | → categories.id |
+| `contenido` | jsonb | obligatorio |
+| `publicada` | boolean | obligatorio |
+| `updated_by` | uuid | → users.id |
+| `created_at` | timestamp | obligatorio |
+| `updated_at` | timestamp | obligatorio |

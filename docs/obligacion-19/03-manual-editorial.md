@@ -2,7 +2,7 @@
 codigo: CG-DOC-03
 titulo: Manual editorial
 subtitulo: Guía de uso del panel para redactores y editores: de la idea a la nota publicada, el consejo de redacción, la portada y el boletín
-version: 1.0
+version: 1.1
 audiencia: Redactores y editores de CONtexto Ganadero (y su capacitación, CG-DOC-08)
 ---
 
@@ -156,6 +156,44 @@ La pieza redactada por la IA queda **en revisión** (o programada, si era autom�
 | Una nota programada no salió | El programador externo no está activo | Avisa al administrador (CG-DOC-06, R-07) |
 | Mis pendientes no muestra una tarea | El consejo está en borrador, o la pieza no está asignada a ti | El consejo debe estar **activo**; revisa «¿Quién la escribe?» |
 
-# 14. Glosario
+# 14. Grupo de redacción: consejo, notas para editores y «Mis pendientes»
+
+El **Grupo de redacción** reúne en una sola entrada del menú, con pestañas, el Consejo de redacción (capítulo 8) y **Notas para editores**.
+
+- **Notas para editores.** Un administrador o un redactor puede **preescribir una nota y asignarla al editor que elija** (también a un administrador). El editor solo recibe; no envía. La nota aparece en la lista como «para <editor>». En el asistente de redacción hay además un botón para enviar la nota a un editor sin salir de él.
+- **Mis pendientes.** Es un tablero con tres columnas: **Pendiente, Editando y Publicado**. Reúne las piezas del consejo que te asignaron y las notas que te enviaron. El menú muestra un punto rojo cuando hay una tarea nueva.
+- **Escritor con estilo propio.** En el asistente de redacción puedes elegir el escritor cuyo estilo imita la IA, tanto al redactar como al regenerar.
+
+**Comprobaciones:** al asignar una nota a un editor, a esa persona le aparece en *Mis pendientes* y el menú muestra el punto rojo; al publicarla pasa a la columna **Publicado**.
+
+# 15. Tablero por etapas e imágenes pedidas al diseñador
+
+- En *Artículos* hay una pestaña **Tablero por etapas** que muestra en qué punto está cada nota: con el redactor, esperando la imagen del diseñador, con el editor, programada o publicada (las publicadas, de los últimos 14 días).
+- Desde el paso **Imagen** del asistente puedes **pedir la imagen de portada al diseñador**. El diseñador ve los pedidos en **Imágenes pedidas** y entrega la imagen allí; la nota sigue su curso.
+- El rol **diseñador** tiene el rango de un redactor y además trabaja la portada, las plantillas, las secciones y la biblioteca de imágenes.
+
+# 16. Páginas y constructor
+
+*Páginas* es la lista de todas las páginas del sitio, agrupadas por sección, con su estado a la vista.
+
+1. **Crear:** «Añadir página aquí» dentro de la sección elegida en el árbol del sitio (también en secciones que ya existían en el sitio anterior).
+2. **Diseñar con el constructor:** se arma con **25 tipos de bloques** y plantillas; se divide en filas y columnas y se **arrastran** los elementos. El panel de propiedades solo aparece al elegir un elemento.
+3. **Menú ⋯ de cada página:** ver, duplicar, publicar o despublicar y eliminar.
+4. **Portada propia de una sección:** cada sección puede tener una sola «portada propia» (`{seccion}/inicio`) que se muestra arriba de sus notas. La **Vista previa** muestra la sección real (menú, filtros, banners, laterales y notas) con la portada en su lugar. Las demás páginas de la sección aparecen en «En esta sección».
+5. **Portada del sitio:** se edita **por pantalla** (computador, tableta y celular) y admite varios **carruseles**, cada uno con su lugar (bajo el cintillo, tras «En vivo», tras la nota principal o al final). La cabecera se edita por piezas (nombre, logo, lema, fecha, menú, cintillo) con color, tamaño y letra por modo claro y oscuro.
+
+**Comprobaciones:** una página publicada se ve en su dirección; una despublicada no; una portada propia aparece arriba de las notas de su sección.
+
+# 17. Biblioteca de imágenes
+
+*Biblioteca* guarda las imágenes del sitio en **carpetas**.
+
+- **Subir** imágenes, **renombrarlas, moverlas** y eliminarlas; navegar con paginación y búsqueda.
+- **Ficha de cada imagen:** peso del archivo, metadatos y las notas y periodistas que la usaron.
+- **Acceso por persona:** un administrador asigna cada carpeta a las personas que pueden usarla.
+- **Selector en la imagen de portada:** al elegir la portada de una nota se abre la biblioteca.
+- Requiere el permiso **Biblioteca de imágenes** (por defecto, administrador y diseñador).
+
+# 18. Glosario
 
 **Pauta:** calendario de piezas de la semana. **Ficha de pauta:** las preguntas que se responden antes de redactar. **Pieza o casilla:** una nota prevista dentro de un consejo. **Tema:** idea de una nota con su sección, día y responsable. **Cobertura:** cuántas notas por día lleva una sección. **Responsable:** persona cuyo estilo usa la IA y a quien se asigna la tarea. **SEO:** lo que ve Google (título, descripción y palabras clave). **2FA:** segundo factor de autenticación. **Passkey:** llave de acceso del dispositivo. **Plantilla:** diseño completo del sitio.

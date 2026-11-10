@@ -2,7 +2,7 @@
 codigo: CG-DOC-01
 titulo: Documentación técnica del software
 subtitulo: Arquitectura, componentes, flujos, integraciones, configuración, calidad y despliegue de CONtexto Ganadero
-version: 1.0
+version: 1.1
 audiencia: Auditores, contraparte técnica de FEDEGÁN y equipos que reciban el mantenimiento
 ---
 
@@ -279,3 +279,13 @@ Toda descarga desde una URL externa pasa por `src/lib/safe-fetch.ts`, que bloque
 # 14. Referencias cruzadas
 
 `docs/ARQUITECTURA.md`, `docs/auditoria-acoplamiento.md`, `docs/base-de-datos.md`, `docs/seguridad.md`, `docs/consejo-de-redaccion.md`, `docs/migracion-sitio-anterior.md`, `docs/medicion-core-web-vitals.md`, `docs/validacion-migracion-2026-10-19.md`, `README.md`, `AGENTS.md`.
+
+# 15. Cambios posteriores al 19/10/2026
+
+- **Versión:** Next.js 16.4.3 (seguridad). Migraciones nuevas hasta la `0033`.
+- **Tablas nuevas:** `superapp_sesiones`, `superapp_personas`, `superapp_visitantes` (SuperApp); `observatorio_datos`; `media_folders`, `media_assets`, `media_folder_access` (biblioteca de imágenes); `paginas` (constructor); `user_permission_overrides`, `user_2fa_grace`, `login_events` (cuentas). Los detalles de columnas y relaciones están en CG-DOC-02 (se regenera con `npm run docs:bd`).
+- **Rutas del panel nuevas:** `/panel/paginas`, `/panel/biblioteca`, `/panel/asignaciones` (notas para editores), `/panel/imagenes` (imágenes pedidas), `/panel/pendientes` (tablero) y `/panel/en-vivo`. Públicas: `/superapp/launch`, `/api/superapp/sesion`.
+- **Correo del boletín:** Resend o API de Gmail; etiquetas de suscriptores.
+- **Roles:** rol de panel «diseñador», roles propios y rol de la base `lector_asistente` para el SQL del asistente.
+- **Respaldo de imágenes:** `scripts/respaldo-imagenes.ts` (ver CG-DOC-06, capítulo 6).
+- **Integración continua:** auditoría de dependencias de producción, lint, tipos, pruebas, build y prueba de humo en cada cambio a `main`.
