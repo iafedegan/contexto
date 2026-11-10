@@ -704,7 +704,7 @@ export const redirects = pgTable(
     hits: integer("hits").notNull().default(0),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  // `from_path` ya es la clave primaria: el índice único `redirects_from_idx` duplicaba su índice (migración 0024 lo quita).
+  // `from_path` ya es la clave primaria: el índice único `redirects_from_idx` duplicaba su índice (migración 0033 lo quita).
   (t) => [
     check("redirects_codigo", sql`${t.statusCode} in (301, 302, 307, 308)`),
     check("redirects_sin_bucle", sql`${t.fromPath} <> ${t.toPath}`),

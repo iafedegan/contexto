@@ -11,6 +11,9 @@ import { CARRUSEL_MAX_DIAPOSITIVAS, CARRUSEL_MAX_EXTRA, resumenCarrusel, sanitiz
  * de cada tarjeta, el paso automático, la transición, las flechas, los indicadores y los colores. Los cambios se ven al instante en el
  * lienzo y se publican con «Publicar cambios», como el resto del diseño. Vale para todas las plantillas.
  */
+// Identificador provisional de una diapositiva nueva (se genera al subir la foto, no al dibujar).
+const nuevoId = () => `d-${Math.random().toString(36).slice(2, 8)}`;
+
 export function CarruselEditor({
   value,
   onChange,
@@ -293,7 +296,7 @@ function Diapositivas({ lista, onChange }: { lista: Diapositiva[]; onChange: (d:
       if (!res.ok) return setMsg(res.error);
       if (res.kind !== "imagen") return setMsg("Sube una imagen (JPG, PNG o WebP).");
       if (id) cambiar(id, { imagen: res.url });
-      else onChange([...lista, { id: `d-${Math.random().toString(36).slice(2, 8)}`, imagen: res.url, etiqueta: "", titulo: "", texto: "", enlace: "", nuevaPestana: false }]);
+      else onChange([...lista, { id: nuevoId(), imagen: res.url, etiqueta: "", titulo: "", texto: "", enlace: "", nuevaPestana: false }]);
     } catch {
       setMsg("No se pudo subir la foto.");
     } finally {

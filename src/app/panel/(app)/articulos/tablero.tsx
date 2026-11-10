@@ -10,9 +10,12 @@ import { formatDate } from "@/lib/utils";
 const DIAS_PUBLICADAS = 14;
 const POR_COLUMNA = 40;
 
+// El reloj se lee fuera del cuerpo del componente: es un componente de servidor y se evalúa en cada petición.
+const haceDias = (dias: number) => new Date(Date.now() - dias * 86_400_000);
+
 // Tablero por etapas: en qué punto está cada nota (con el redactor, esperando la imagen del diseñador, con el editor, programada, publicada).
 export async function TableroArticulos({ alcance }: { alcance: SQL | undefined }) {
-  const desde = new Date(Date.now() - DIAS_PUBLICADAS * 86_400_000);
+  const desde = haceDias(DIAS_PUBLICADAS);
   const filtro = and(alcance, or(inArray(articles.status, ["borrador", "en_revision", "programado"]), and(eq(articles.status, "publicado"), gte(articles.publishedAt, desde))));
   const [notas, pedidos] = await Promise.all([
     db

@@ -4,10 +4,10 @@ import { randomBytes } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { eq, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { siteSettings, users, type UserRole } from "@/db/schema";
+import { siteSettings, userPermissionOverrides, users, type UserRole } from "@/db/schema";
 import { requireRole } from "@/lib/auth";
 import { PERMISO_IDS, ROLES, type PermisoId } from "@/lib/permisos";
-import { PERMISOS_KEY, type MapaAjustes } from "@/lib/permisos-server";
+import { type MapaAjustes } from "@/lib/permisos-server";
 import { getCambiosRoles, getRolesAsignados, getRolesPropios } from "@/lib/roles-server";
 import { ROLES_ASIGNADOS_KEY, ROLES_BASE, ROLES_INCORPORADOS_KEY, ROLES_PROPIOS_KEY, ajustesDeRol, comoRolPropio, sanitizeCambiosRoles, sanitizeRolesPropios, type RolPropio } from "@/lib/roles";
 
@@ -18,13 +18,18 @@ async function guardar(key: string, value: unknown) {
   await db.insert(siteSettings).values({ key, value }).onConflictDoUpdate({ target: siteSettings.key, set: { value, updatedAt: sql`now()` } });
 }
 
-// Lee el mapa de ajustes por persona, lo modifica y lo guarda.
+// Lee el mapa de ajustes por persona (tabla `user_permission_overrides`), lo modifica y lo guarda, todo en una transacción que
+// bloquea las filas para que dos cambios de rol a la vez no se pisen.
 async function conAjustes(mut: (m: MapaAjustes) => void) {
-  const [row] = await db.select({ value: siteSettings.value }).from(siteSettings).where(eq(siteSettings.key, PERMISOS_KEY)).limit(1);
-  const v = row?.value;
-  const mapa: MapaAjustes = v && typeof v === "object" && !Array.isArray(v) ? { ...(v as MapaAjustes) } : {};
-  mut(mapa);
-  await guardar(PERMISOS_KEY, mapa);
+  await db.transaction(async (tx) => {
+    const filas = await tx.select().from(userPermissionOverrides).for("update");
+    const mapa: MapaAjustes = {};
+    for (const f of filas) (mapa[f.userId] ??= {})[f.permiso as PermisoId] = f.valor;
+    mut(mapa);
+    await tx.delete(userPermissionOverrides);
+    const nuevas = Object.entries(mapa).flatMap(([userId, a]) => Object.entries(a ?? {}).map(([permiso, valor]) => ({ userId, permiso, valor: Boolean(valor) })));
+    if (nuevas.length) await tx.insert(userPermissionOverrides).values(nuevas);
+  });
 }
 
 // Aplica un rol propio a unas personas: rol base + ajustes que lo reproducen.
