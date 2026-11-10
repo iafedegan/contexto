@@ -15,7 +15,9 @@ import { LogoMark } from "@/components/logo-mark";
 function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
-  const next = params.get("next") ?? "/panel";
+  // Solo rutas de este mismo sitio: con `?next=https://otro-sitio` un enlace trampa llevaría a la persona, recién autenticada, a una copia falsa.
+  const pedido = params.get("next") ?? "";
+  const next = /^\/(?![\/\\])/.test(pedido) ? pedido : "/panel";
   const motivo = params.get("motivo");
   const aviso =
     motivo === "sesion"

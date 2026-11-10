@@ -67,5 +67,7 @@ export async function clearHits(key: string): Promise<void> {
 
 /** IP del cliente tras el proxy de Vercel. */
 export function clientIp(h: Headers): string {
-  return (h.get("x-forwarded-for")?.split(",")[0] ?? h.get("x-real-ip") ?? "0.0.0.0").trim();
+  // En Vercel, `x-vercel-forwarded-for` y `x-real-ip` los pone la plataforma con la IP real; `x-forwarded-for` puede traer una primera
+  // entrada escrita por el propio cliente, y fiarse de ella permitía saltarse el límite por IP cambiándola en cada intento.
+  return (h.get("x-vercel-forwarded-for")?.split(",")[0] ?? h.get("x-real-ip") ?? h.get("x-forwarded-for")?.split(",")[0] ?? "0.0.0.0").trim();
 }

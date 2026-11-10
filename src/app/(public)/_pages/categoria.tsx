@@ -69,7 +69,10 @@ async function CategoryPage({ params, searchParams, locale, portadaBorrador }: P
   const { slug } = await params;
   const q = (await searchParams) ?? {};
   const { subcategoria, pagina } = q;
-  let { desde, hasta } = q;
+  // Fechas solo con el formato del filtro (AAAA-MM-DD): otra cosa se ignora (antes un valor raro hacía fallar la consulta y daba 404).
+  const fecha = (v?: string) => (v && /^\d{4}-\d{2}-\d{2}$/.test(v) && !Number.isNaN(Date.parse(v)) ? v : undefined);
+  let desde = fecha(q.desde);
+  let hasta = fecha(q.hasta);
   const autor = SECCIONES_CON_AUTOR.has(slug) && /^[\w-]{1,80}$/.test(q.autor ?? "") ? q.autor : undefined;
   // Año y mes se convierten en un rango de fechas: «mes» solo cuenta junto con un año.
   const anio = /^\d{4}$/.test(q.anio ?? "") ? Number(q.anio) : undefined;
