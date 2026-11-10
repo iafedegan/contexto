@@ -184,13 +184,18 @@ export function BloqueVista({ e, enEditor = false }: { e: ElementoBloque; enEdit
       );
     }
     case "carrusel": {
-      const vis = items.filter((it) => it.imagen || enEditor);
+      // Una diapositiva sin foto pero con título también se muestra (sobre el degradado de la marca): si no, el carrusel desaparecía entero.
+      const vis = items.filter((it) => it.imagen || it.titulo || it.texto || enEditor);
       if (!vis.length) return enEditor ? <Vacio texto="Agregue diapositivas" /> : null;
       return (
         <Carrusel auto={p.auto === "si" && !enEditor} segundos={num(p.segundos, 2, 20, 6)} etiqueta="Carrusel de imágenes">
           {vis.map((it) => (
             <Enlace key={it._id} url={it.url} enEditor={enEditor} className="relative block overflow-hidden rounded-2xl bg-[#0b2a1c] text-white">
-              <Foto url={it.imagen} enEditor={enEditor} aspecto={p.proporcion} className="w-full" />
+              {it.imagen || enEditor ? (
+                <Foto url={it.imagen} enEditor={enEditor} aspecto={p.proporcion} className="w-full" />
+              ) : (
+                <span aria-hidden className="block w-full bg-gradient-to-br from-[#0b2a1c] via-[#14432c] to-[#3b5d1f]" style={{ aspectRatio: p.proporcion }} />
+              )}
               {p.texto !== "no" && (it.titulo || it.texto) && (
                 <span className={`absolute inset-0 flex flex-col gap-1 p-6 @2xl:p-10 ${p.texto === "centro" ? "items-center justify-center bg-black/40 text-center" : "justify-end bg-gradient-to-t from-black/80 via-black/20 to-transparent"}`}>
                   {it.titulo && <span className="lx-display text-2xl leading-tight @2xl:text-4xl">{it.titulo}</span>}
