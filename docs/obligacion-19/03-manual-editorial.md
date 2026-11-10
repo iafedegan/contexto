@@ -169,7 +169,7 @@ El **Grupo de redacción** reúne en una sola entrada del menú, con pestañas, 
 # 15. Tablero por etapas e imágenes pedidas al diseñador
 
 - En *Artículos* hay una pestaña **Tablero por etapas** que muestra en qué punto está cada nota: con el redactor, esperando la imagen del diseñador, con el editor, programada o publicada (las publicadas, de los últimos 14 días).
-- Desde el paso **Imagen** del asistente puedes **pedir la imagen de portada al diseñador**. El diseñador ve los pedidos en **Imágenes pedidas** y entrega la imagen allí; la nota sigue su curso.
+- Desde el paso **Enviar** del asistente puedes **pedir la imagen de portada al diseñador**. El diseñador ve los pedidos en **Solicitud de imágenes** y entrega la imagen allí; la nota sigue su curso.
 - El rol **diseñador** tiene el rango de un redactor y además trabaja la portada, las plantillas, las secciones y la biblioteca de imágenes.
 
 # 16. Páginas y constructor

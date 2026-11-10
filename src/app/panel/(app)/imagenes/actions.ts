@@ -31,7 +31,7 @@ export async function pedirImagen(input: { articleId: string; indicaciones: stri
 
   await registrarPedido({ articleId, porId: yo.id, disenadorId, indicaciones, estado: "pendiente", fecha: new Date().toISOString() });
   revalidatePath("/panel/imagenes");
-  return { ok: true, message: "Pedido enviado. El diseñador lo verá en «Imágenes pedidas»." };
+  return { ok: true, message: "Pedido enviado. El diseñador lo verá en «Solicitud de imágenes»." };
 }
 
 /** Retira un pedido que sigue pendiente. */

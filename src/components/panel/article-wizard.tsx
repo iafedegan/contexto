@@ -258,7 +258,7 @@ export function ArticleWizard({
   const [mensajeEditor, setMensajeEditor] = useState("");
   const editorElegido = editores.find((e) => e.id === enviarA);
   const [depto, setDepto] = useState(initial?.depto ?? "");
-  const [authorId] = useState(initial?.authorId ?? miAutorId ?? "");
+  const [authorId, setAuthorId] = useState(initial?.authorId ?? miAutorId ?? "");
   // El cuerpo se guarda como HTML (el editor lo muestra ya formateado). Las gráficas viajan como marcador `[[GRAFICA …]]`.
   const [body, setBody] = useState(initial?.body ?? "");
   // Indicaciones del editor para la IA sobre cómo escribir (tono, estructura, qué citar…).
@@ -1376,6 +1376,16 @@ export function ArticleWizard({
               ) : (
                 <p className="px-1 text-xs text-[var(--fg-muted)]">Tu cuenta no ubica notas en la portada del sitio: un editor lo hace al publicar.</p>
               )}
+              {/* Solo el administrador cambia quién firma la nota (el redactor responsable). El servidor lo vuelve a comprobar. */}
+              {esAdmin && authors.length > 0 && (
+                <div className="rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] px-3.5 py-2.5">
+                  <label htmlFor="firma-redactor" className="lx-kicker text-[var(--fg-muted)]" title="Quién firma la nota en el sitio.">Redactor (firma)</label>
+                  <select id="firma-redactor" value={authorId} onChange={(e) => setAuthorId(e.target.value)} className="mt-1.5 w-full rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5 text-sm">
+                    <option value="">Tu usuario, al guardar</option>
+                    {authors.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+                  </select>
+                </div>
+              )}
             </SectionTree>
           </Step>
         )}
@@ -1526,39 +1536,18 @@ export function ArticleWizard({
                   <>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={cover} alt="" className="size-full object-cover" />
-                    <div className="absolute inset-x-0 bottom-0 flex flex-wrap items-center gap-2 bg-gradient-to-t from-black/70 to-transparent p-3 pt-8">
-                      <label className="lx-btn cursor-pointer !px-3 !py-1.5 text-xs">
-                        <ImagePlus size={13} /> Cambiar
-                        <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void onCover(f); }} />
-                      </label>
-                      <button type="button" onClick={() => setBiblioteca(true)} disabled={genImg || uploading} className="lx-btn lx-btn-ghost !border-white/40 !bg-white/10 !px-3 !py-1.5 text-xs !text-white">
-                        <Images size={13} /> Biblioteca
-                      </button>
-                      <button type="button" onClick={makeCover} disabled={genImg || uploading} className="lx-btn lx-btn-ghost !border-white/40 !bg-white/10 !px-3 !py-1.5 text-xs !text-white">
-                        <Sparkles size={13} /> Generar otra
-                      </button>
-                      <button type="button" onClick={() => { setCover(""); setCoverAlt(""); }} className="ml-auto inline-flex items-center gap-1 text-xs font-medium text-white/90 hover:text-white">
-                        <Trash2 size={13} /> Quitar
+                    <div className="absolute inset-x-0 bottom-0 flex items-center justify-end bg-gradient-to-t from-black/60 to-transparent p-3 pt-8">
+                      <button type="button" onClick={() => { setCover(""); setCoverAlt(""); }} className="inline-flex items-center gap-1.5 rounded-full bg-black/45 px-3 py-1.5 text-xs font-medium text-white backdrop-blur transition hover:bg-black/65">
+                        <Trash2 size={13} /> Quitar imagen
                       </button>
                     </div>
                   </>
                 ) : (
                   <div className="grid size-full place-items-center p-4 text-center">
-                    <div className="flex flex-col items-center gap-3">
-                      <ImagePlus size={28} className="text-[var(--fg-muted)]" aria-hidden />
-                      <p className="text-sm font-medium">Arrastra una foto aquí</p>
-                      <div className="flex flex-wrap justify-center gap-2">
-                        <label className="lx-btn cursor-pointer">
-                          <ImagePlus size={15} /> Subir foto
-                          <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void onCover(f); }} />
-                        </label>
-                        <button type="button" onClick={() => setBiblioteca(true)} disabled={genImg || uploading} className="lx-btn lx-btn-ghost">
-                          <Images size={15} /> Elegir de la biblioteca
-                        </button>
-                        <button type="button" onClick={makeCover} disabled={genImg || uploading} className="lx-btn lx-btn-ghost">
-                          <Sparkles size={15} /> Generar con IA
-                        </button>
-                      </div>
+                    <div className="flex flex-col items-center gap-2">
+                      <span className="grid size-14 place-items-center rounded-full bg-[var(--surface)] text-[var(--accent)] shadow-sm"><ImagePlus size={26} aria-hidden /></span>
+                      <p className="text-sm font-semibold">Arrastra una foto aquí</p>
+                      <p className="text-xs text-[var(--fg-muted)]">o usa las opciones de al lado · ideal 16:9, mínimo 1200 px de ancho</p>
                     </div>
                   </div>
                 )}
@@ -1570,25 +1559,40 @@ export function ArticleWizard({
               </div>
               </div>
               <div className="flex min-w-0 flex-col gap-3 text-sm">
-                <p className="text-xs text-[var(--fg-muted)]">{cover ? "Se publica con esta imagen." : "Sin imagen todavía."}</p>
-                {imgError && <p role="alert" className="text-sm text-[var(--danger,#b4442e)]">{imgError}</p>}
-                {cover && (
-                  <input value={coverAlt} onChange={(e) => setCoverAlt(e.target.value)} placeholder="Qué se ve en la foto (texto alternativo)" className={`${input} text-sm`} />
-                )}
-                <div className="flex flex-col gap-2">
-                  <details className="min-w-0">
-                    <summary className="lx-link cursor-pointer text-xs font-medium">Pegar la URL de una imagen</summary>
-                    <input value={cover} onChange={(e) => setCover(e.target.value)} placeholder="https://…" className={`${input} mt-2 text-sm`} />
-                  </details>
-                  <details className="min-w-0">
-                    <summary className="lx-link cursor-pointer text-xs font-medium">Describir la escena para la IA</summary>
-                    <div className="relative mt-2">
-                      <input value={sceneTxt} onChange={(e) => setSceneTxt(e.target.value)} placeholder="Si lo dejas vacío, la IA propone la escena" className={`${input} text-sm !pr-12`} />
-                      <BotonVoz valor={sceneTxt} alCambiar={setSceneTxt} etiqueta="Dictar la escena con la voz" className="absolute right-1 top-1/2 -translate-y-1/2 !size-8" />
-                    </div>
-                    <p className="mt-1.5 text-xs text-[var(--fg-muted)]">Imagen realista, estilo cine (16:9); no retrata personas reales y se publica rotulada «imagen generada con IA».</p>
-                  </details>
+                <div>
+                  <p className="lx-kicker text-[var(--fg-muted)]">{cover ? "Imagen elegida" : "Elige cómo poner la imagen"}</p>
+                  <p className="mt-0.5 text-xs text-[var(--fg-muted)]">{cover ? "Se publica con esta imagen. Puedes cambiarla con cualquiera de estas opciones." : "Todavía no hay imagen: sube una, elígela de la biblioteca o genérala."}</p>
                 </div>
+                {imgError && <p role="alert" className="rounded-[var(--radius)] border border-[var(--danger,#b4442e)]/40 bg-[var(--danger,#b4442e)]/8 px-3 py-2 text-sm text-[var(--danger,#b4442e)]">{imgError}</p>}
+                <div className="flex flex-col gap-2">
+                  <label className="rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] p-3 text-left transition hover:border-[var(--accent)] hover:shadow-[var(--shadow)] focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-60 flex cursor-pointer items-center gap-3">
+                    <span className="grid size-10 shrink-0 place-items-center rounded-full bg-[var(--accent)] text-[var(--accent-fg,#fff)]"><ImagePlus size={18} aria-hidden /></span>
+                    <span className="min-w-0"><span className="block font-semibold">Subir foto</span><span className="block text-xs text-[var(--fg-muted)]">Desde tu computador o teléfono</span></span>
+                    <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void onCover(f); }} />
+                  </label>
+                  <button type="button" onClick={() => setBiblioteca(true)} disabled={genImg || uploading} className="rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] p-3 text-left transition hover:border-[var(--accent)] hover:shadow-[var(--shadow)] focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-60 flex items-center gap-3">
+                    <span className="grid size-10 shrink-0 place-items-center rounded-full bg-[var(--surface-2)] text-[var(--accent)]"><Images size={18} aria-hidden /></span>
+                    <span className="min-w-0"><span className="block font-semibold">Elegir de la biblioteca</span><span className="block text-xs text-[var(--fg-muted)]">Imágenes ya subidas al panel</span></span>
+                  </button>
+                  <button type="button" onClick={makeCover} disabled={genImg || uploading} className="rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] p-3 text-left transition hover:border-[var(--accent)] hover:shadow-[var(--shadow)] focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-60 flex items-center gap-3">
+                    <span className="grid size-10 shrink-0 place-items-center rounded-full bg-[var(--surface-2)] text-[var(--accent)]"><Sparkles size={18} aria-hidden /></span>
+                    <span className="min-w-0"><span className="block font-semibold">{cover ? "Generar otra con IA" : "Generar con IA"}</span><span className="block text-xs text-[var(--fg-muted)]">Realista, 16:9, rotulada «imagen generada con IA»</span></span>
+                  </button>
+                </div>
+                <div className="relative">
+                  <input value={sceneTxt} onChange={(e) => setSceneTxt(e.target.value)} placeholder="Escena para la IA (opcional): si no, ella propone una" aria-label="Escena para la IA" className={`${input} text-sm !pr-12`} />
+                  <BotonVoz valor={sceneTxt} alCambiar={setSceneTxt} etiqueta="Dictar la escena con la voz" className="absolute right-1 top-1/2 -translate-y-1/2 !size-8" />
+                </div>
+                {cover && (
+                  <label className="flex flex-col gap-1">
+                    <span className="lx-kicker text-[var(--fg-muted)]">Texto alternativo</span>
+                    <input value={coverAlt} onChange={(e) => setCoverAlt(e.target.value)} placeholder="Qué se ve en la foto" className={`${input} text-sm`} />
+                  </label>
+                )}
+                <details className="min-w-0">
+                  <summary className="lx-link cursor-pointer text-xs font-medium">Pegar la URL de una imagen</summary>
+                  <input value={cover} onChange={(e) => setCover(e.target.value)} placeholder="https://…" className={`${input} mt-2 text-sm`} />
+                </details>
               </div>
             </section>
             {biblioteca && (

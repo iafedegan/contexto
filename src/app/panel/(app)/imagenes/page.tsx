@@ -10,7 +10,7 @@ import { leerPedidos } from "@/lib/imagenes-pedidas";
 import { pendientesPara, puedeEntregarImagen } from "@/lib/imagenes-pedidas-reglas";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Imágenes pedidas" };
+export const metadata = { title: "Solicitud de imágenes" };
 
 const cuando = (iso: string) => new Intl.DateTimeFormat("es-CO", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "America/Bogota" }).format(new Date(iso));
 
@@ -35,7 +35,7 @@ export default async function ImagenesPedidas() {
     <div className="flex flex-col gap-5 sm:gap-6">
       <header>
         <p className="lx-kicker text-[var(--accent)]">Diseño</p>
-        <h1 className="lx-display mt-1 text-3xl font-semibold tracking-tight sm:text-4xl">Imágenes pedidas</h1>
+        <h1 className="lx-display mt-1 text-3xl font-semibold tracking-tight sm:text-4xl">Solicitud de imágenes</h1>
         <p className="mt-2 max-w-2xl text-[var(--fg-muted)]">
           Las imágenes de portada que los redactores y los editores te piden. Crea la imagen, súbela aquí y entrégala: queda puesta en la nota. Nada se publica solo.
         </p>

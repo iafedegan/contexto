@@ -56,7 +56,7 @@ const GROUPS: Group[] = [
       { href: "/panel", label: "Resumen", hint: "Estado editorial, audiencia y suscriptores" },
       { href: "/panel/articulos", label: "Artículos", hint: "Crear, editar y programar", permiso: "articulos" },
       { href: "/panel/biblioteca", label: "Biblioteca de imágenes", hint: "Carpetas e imágenes para las notas, y quién las ve", permiso: "biblioteca" },
-      { href: "/panel/imagenes", label: "Imágenes pedidas", hint: "Portadas que los redactores le piden al diseñador", permiso: "articulos", roles: ["disenador", "editor", "administrador"] },
+      { href: "/panel/imagenes", label: "Solicitud de imágenes", hint: "Portadas que los redactores le piden al diseñador", permiso: "articulos", roles: ["disenador", "editor", "administrador"] },
       { href: "/panel/pendientes", label: "Mis pendientes", hint: "Piezas del grupo de redacción y notas que te enviaron", roles: ["redactor", "editor", "administrador"] },
       { href: "/panel/consejo", label: "Grupo de redacción", hint: "Consejo de redacción y notas para editores", permiso: "articulos", soloAdmin: true, tambien: ["/panel/asignaciones"] },
       { href: "/panel/asignaciones", label: "Notas para editores", hint: "Preescribir una nota y enviarla a un editor", permiso: "articulos", soloNoAdmin: true, roles: ["redactor"] },
