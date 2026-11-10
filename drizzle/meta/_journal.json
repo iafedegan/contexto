@@ -239,6 +239,13 @@
       "when": 1794327514335,
       "tag": "0033_restricciones_y_tablas_de_acceso",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1794317824639,
+      "tag": "0034_indices_claves_foraneas",
+      "breakpoints": true
     }
   ]
 }

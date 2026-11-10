@@ -206,7 +206,14 @@ const relacionadasEnCache = cachear(
   { tags: [TAG_RELACIONADAS], segundos: 86_400 },
 );
 export async function relatedContent(seedText: string, excludeArticleId: string, limit = 5, fallbackCategorySlug?: string | null): Promise<SearchHit[]> {
-  const hits = await relacionadasEnCache(seedText, excludeArticleId, limit, fallbackCategorySlug ?? null);
+  let hits: SearchHit[];
+  try {
+    hits = await relacionadasEnCache(seedText, excludeArticleId, limit, fallbackCategorySlug ?? null);
+  } catch (e) {
+    // Fuera de Next (scripts y pruebas) no hay caché de datos: se calculan directo.
+    if (!String(e).includes("incrementalCache missing")) throw e;
+    hits = await calcularRelacionadas(seedText, excludeArticleId, limit, fallbackCategorySlug);
+  }
   // La caché revive las fechas ISO como `Date`; aquí `publishedAt` es texto.
   return hits.map((h) => ({ ...h, publishedAt: (h.publishedAt as unknown) instanceof Date ? (h.publishedAt as unknown as Date).toISOString() : h.publishedAt }));
 }
