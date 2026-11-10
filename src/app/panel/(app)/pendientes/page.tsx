@@ -52,6 +52,8 @@ function TarjetaNota({ t }: { t: Tarjeta }) {
 export default async function MisPendientes() {
   const session = await auth();
   if (!session?.user) redirect("/panel/login?motivo=sesion");
+  // El diseñador trabaja desde «Imágenes pedidas»: no tiene tablero de pendientes.
+  if (session.user.role === "disenador") redirect("/panel/imagenes");
   await sincronizarCasillas().catch(() => {});
   const [tarjetas, { nuevas }] = await Promise.all([tableroDe(session.user.id), contarMisPendientes(session.user.id)]);
   const de = (c: Columna) =>
