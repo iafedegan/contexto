@@ -123,9 +123,11 @@ export function MobileNav({
   // Cabecera de app: el logo (misma lámina que el nombre) a la izquierda, el nombre y la fecha a su lado, y a la derecha
   // el botón de opciones. Sin filetes a los lados: en un teléfono solo restaban espacio al nombre.
   const escaparate = (
-    <div className="flex min-w-0 items-center gap-3 px-4 py-2.5">
-      <Link href={localePath(locale, "/")} className="flex min-w-0 flex-1 items-center gap-2.5">
-        <span className="min-w-0">
+    <div className="grid min-w-0 grid-cols-[2.5rem_minmax(0,1fr)_2.5rem] items-center gap-1 px-3 py-2.5">
+      {/* Hueco del mismo ancho que el botón de opciones: así el nombre queda centrado de verdad en la pantalla. */}
+      <span aria-hidden />
+      <Link href={localePath(locale, "/")} className="flex min-w-0 justify-center text-center">
+        <span className="flex min-w-0 flex-col items-center">
           {/* Sin la escala de titulares del panel (zoom) y con un tamaño que cabe entero en un teléfono de 360 px: nunca «Gan…». */}
           <span data-el="h-nombre" style={{ zoom: 1 }} className="lx-display lx-foil block whitespace-nowrap text-[min(1.35rem,4.7vw)] font-semibold leading-tight tracking-tight">{/^c/i.test(name) ? (
               <>
@@ -143,6 +145,12 @@ export function MobileNav({
             ) : (
               name
             )}</span>
+          {/* Los 14 años, como en la web: lámina dorada, cifras a la altura de las letras y filetes a los lados. */}
+          <span data-titulo-texto className="mt-1 flex items-center gap-2">
+            <span aria-hidden className="h-px w-5 bg-gradient-to-r from-transparent to-[#c9a24a]" />
+            <span className="lx-display lx-foil pl-[0.28em] text-[0.72rem] font-bold uppercase leading-none tracking-[0.28em] [font-variant-numeric:lining-nums]">{es ? "14 años" : "14 years"}</span>
+            <span aria-hidden className="h-px w-5 bg-gradient-to-l from-transparent to-[#c9a24a]" />
+          </span>
           {tagline && <span data-titulo-texto data-el="h-lema" className="lx-ui mt-1 block truncate text-[0.62rem] font-semibold uppercase leading-none tracking-[0.14em] text-[var(--fg-muted)]">{tagline}</span>}
           {fecha && <span data-titulo-texto data-el="h-fecha" className="lx-ui mt-1 block truncate text-[0.6rem] font-medium uppercase leading-none tracking-[0.14em] text-[var(--fg-muted)]">{fecha}</span>}
         </span>
@@ -152,7 +160,7 @@ export function MobileNav({
         onClick={() => setMore((v) => !v)}
         aria-expanded={more}
         aria-label={es ? "Más opciones" : "More options"}
-        className="-mr-2 grid size-10 shrink-0 place-items-center rounded-full text-[var(--fg)] active:bg-[var(--surface-2)]"
+        className="grid size-10 shrink-0 place-items-center justify-self-end rounded-full text-[var(--fg)] active:bg-[var(--surface-2)]"
       >
         <EllipsisVertical size={20} />
       </button>
