@@ -2,8 +2,8 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, Check, CheckCircle2, ImagePlus, Loader2, Wand2 } from "lucide-react";
-import { carpetasDeEntrega, entregarImagen } from "@/app/panel/(app)/imagenes/actions";
+import { AlertTriangle, Check, CheckCircle2, ImagePlus, Loader2, Sparkles, Wand2 } from "lucide-react";
+import { carpetasDeEntrega, entregarImagen, generarImagenConIA } from "@/app/panel/(app)/imagenes/actions";
 import { subirMedia } from "./subir-media";
 import { SelectorCarpeta, type CarpetaNodo } from "./selector-carpeta";
 import { VistaPreviaPortada } from "./vista-previa-portada";
@@ -43,6 +43,10 @@ export function EntregaImagen({ articleId, tituloNota = "", resumen = "" }: { ar
   const [ajustando, setAjustando] = useState(false);
   const [vistaAjuste, setVistaAjuste] = useState("");
   const [procesando, setProcesando] = useState(false);
+  // Generar la imagen con IA (Nano Banana Pro).
+  const [escena, setEscena] = useState("");
+  const [generando, setGenerando] = useState(false);
+  const [conIA, setConIA] = useState(false);
   const [subiendo, setSubiendo] = useState(false);
   const [error, setError] = useState("");
   const [pendiente, empezar] = useTransition();
@@ -61,6 +65,7 @@ export function EntregaImagen({ articleId, tituloNota = "", resumen = "" }: { ar
       if (!r.ok) return setError(r.error);
       if (r.kind === "video") return setError("La portada debe ser una imagen.");
       setUrl(r.url);
+      setConIA(false);
       setArchivo(file);
       setAjustando(false);
       setBytes(file.size);
@@ -70,6 +75,29 @@ export function EntregaImagen({ articleId, tituloNota = "", resumen = "" }: { ar
       setError("No se pudo subir la imagen.");
     } finally {
       setSubiendo(false);
+    }
+  }
+
+  // Pide la imagen a la IA: queda subida al almacenamiento; se revisa, se completan los datos y se entrega como cualquier otra.
+  async function generar() {
+    setError("");
+    setGenerando(true);
+    try {
+      const r = await generarImagenConIA({ articleId, escena });
+      if (!r.ok) return setError(r.error);
+      setUrl(r.url);
+      setArchivo(null);
+      setAjustando(false);
+      setMedidas(null);
+      setConIA(true);
+      if (!alt.trim()) setAlt(r.alt);
+      if (!nombre) setNombre(`Portada IA · ${tituloNota}`.slice(0, 60));
+      // El peso se lee de la propia imagen, si el almacenamiento lo permite.
+      try { const b = await (await fetch(r.url)).blob(); setBytes(b.size); } catch { setBytes(0); }
+    } catch {
+      setError("No se pudo generar la imagen. Inténtalo de nuevo.");
+    } finally {
+      setGenerando(false);
     }
   }
 
@@ -139,11 +167,20 @@ export function EntregaImagen({ articleId, tituloNota = "", resumen = "" }: { ar
           {subiendo ? <Loader2 size={13} className="animate-spin" /> : <ImagePlus size={13} />} {url ? "Cambiar imagen" : "Subir imagen"}
           <input type="file" accept="image/*" disabled={subiendo || pendiente} className="hidden" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void alElegir(f); }} />
         </label>
+        {/* Generar con IA: Nano Banana Pro, el modelo de imagen de mayor calidad de Gemini */}
+        <div className="flex flex-col gap-2 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface-2)]/40 p-3">
+          <p className="flex items-center gap-1.5 text-xs font-semibold"><Sparkles size={13} aria-hidden className="text-[var(--accent)]" /> Generar con IA · Nano Banana Pro</p>
+          <textarea value={escena} onChange={(e) => setEscena(e.target.value.slice(0, 600))} rows={3} disabled={generando} placeholder="Describe la escena (opcional). Si lo dejas vacío, la IA parte de la nota." aria-label="Escena para la IA" className={`${campo} resize-none !py-1.5 text-xs`} />
+          <button type="button" onClick={generar} disabled={generando || subiendo || pendiente} className="lx-btn lx-btn-ghost self-start !px-3 !py-1.5 text-xs">
+            {generando ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />} {generando ? "Generando… unos 30 segundos" : url ? "Generar otra con IA" : "Generar con IA"}
+          </button>
+          {conIA && <p className="text-[0.7rem] leading-snug text-[var(--fg-muted)]">Imagen generada con IA: se publica rotulada como tal. Revísala antes de entregarla.</p>}
+        </div>
         {url && medidas && (
           <ul aria-label="Revisión de la imagen" className="flex flex-col gap-1">
             <Requisito ok={medidas.w >= 1200} texto={`${medidas.w} × ${medidas.h} px${medidas.w >= 1200 ? "" : " · Discover pide al menos 1200 px de ancho"}`} />
             <Requisito ok={Math.abs(proporcion - 16 / 9) < 0.06} texto={Math.abs(proporcion - 16 / 9) < 0.06 ? "Proporción 16:9" : "Proporción distinta de 16:9 (ideal para portada y redes)"} />
-            <Requisito ok={bytes <= 1024 * 1024} texto={`Peso ${kb(bytes)}${bytes <= 1024 * 1024 ? "" : " · conviene bajar de 1 MB para que cargue rápido"}`} />
+            {bytes > 0 && <Requisito ok={bytes <= 1024 * 1024} texto={`Peso ${kb(bytes)}${bytes <= 1024 * 1024 ? "" : " · conviene bajar de 1 MB para que cargue rápido"}`} />}
           </ul>
         )}
         {url && archivo && !ajustando && (

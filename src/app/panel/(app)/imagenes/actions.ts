@@ -3,11 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { asc, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { articles, mediaAssets, mediaFolders } from "@/db/schema";
+import { articles, categories, mediaAssets, mediaFolders } from "@/db/schema";
 import { tienePermiso } from "@/lib/permisos-server";
 import { nombreValido } from "@/lib/biblioteca-acceso";
 import { urlPublicaMedia } from "@/lib/media-storage";
 import { requirePermiso } from "@/lib/auth";
+import { generateCoverImageCore, MODELO_IMAGEN_PRO } from "@/lib/ai/portada";
 import { revalidarNotas } from "@/lib/article-ops";
 import { cerrarPedido, disenadoresActivos, esDisenadorActivo, leerPedidos, registrarPedido } from "@/lib/imagenes-pedidas";
 import { pedidoDeNota, urlDeImagenValida, type PedidoImagen } from "@/lib/imagenes-pedidas-reglas";
@@ -99,4 +100,30 @@ export async function entregarImagen(input: { articleId: string; url: string; al
   if (nota.estado === "publicado") await revalidarNotas([articleId]);
   revalidatePath("/panel/imagenes");
   return { ok: true, message: "Imagen entregada y puesta como portada de la nota." };
+}
+
+/**
+ * El diseñador genera la portada con IA (Nano Banana Pro) a partir de la nota y de lo que pidió quien la solicitó. Devuelve la imagen ya subida
+ * al almacenamiento y un texto alternativo que declara que fue generada con IA; no la entrega: el diseñador la revisa, la completa y la entrega.
+ * La nota se lee del servidor (no se confía en lo que mande el navegador) y la cuota de IA se descuenta como en el resto de generaciones.
+ */
+export async function generarImagenConIA(input: { articleId: string; escena?: string }): Promise<{ ok: true; url: string; alt: string; escena: string } | { ok: false; error: string }> {
+  const yo = await requirePermiso("imagenes");
+  const articleId = String(input.articleId ?? "");
+  const [nota] = await db
+    .select({ titulo: articles.title, resumen: articles.excerpt, cuerpo: articles.body, seccion: categories.name })
+    .from(articles)
+    .leftJoin(categories, eq(articles.categoryId, categories.id))
+    .where(eq(articles.id, articleId))
+    .limit(1);
+  if (!nota) return { ok: false, error: "La nota ya no existe." };
+  const r = await generateCoverImageCore(yo.id, {
+    title: nota.titulo,
+    excerpt: nota.resumen,
+    body: nota.cuerpo,
+    section: nota.seccion ?? undefined,
+    scene: String(input.escena ?? "").trim().slice(0, 600) || undefined,
+    modelo: MODELO_IMAGEN_PRO,
+  });
+  return r.ok ? { ok: true, url: r.url, alt: r.alt, escena: r.scene } : r;
 }

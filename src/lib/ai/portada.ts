@@ -24,6 +24,8 @@ export async function generateCoverImageCore(userId: string, input: {
   body?: string;
   /** Escena escrita por el periodista (opcional): manda sobre la que propondría el modelo. */
   scene?: string;
+  /** Modelo de imagen preferido (p. ej. Nano Banana Pro); si no está disponible se cae al elegido en Configuración y luego al de 1K. */
+  modelo?: string;
 }): Promise<CoverImageResult> {
   const title = input.title.trim();
   if (title.length < 5 && !(input.scene ?? "").trim()) {
@@ -62,20 +64,33 @@ export async function generateCoverImageCore(userId: string, input: {
     // Alta resolución (2K ≈ 2752×1536): a pantalla completa una imagen de 1K se pixela. Si el modelo
     // de 2K no está disponible, se cae al anterior (1K) en vez de fallar.
     let image;
+    let costo = COSTO_IMAGEN_USD;
     try {
-      ({ image } = await generateImage({
-        model: imageModel,
-        prompt,
-        aspectRatio: "16:9",
-        providerOptions: { google: { imageConfig: { imageSize: "2K" } } },
-      }));
+      // Primero el modelo preferido (si se pidió uno), luego el elegido en Configuración.
+      const preferido = input.modelo ? await getImageAi(input.modelo) : null;
+      if (preferido && preferido !== "otro-proveedor") {
+        try {
+          ({ image } = await generateImage({ model: preferido, prompt, aspectRatio: "16:9", providerOptions: { google: { imageConfig: { imageSize: "2K" } } } }));
+          costo = COSTO_IMAGEN_PRO_USD;
+        } catch (e) {
+          console.warn("generateCoverImage: falló el modelo preferido, uso el de Configuración:", e);
+        }
+      }
+      if (!image) {
+        ({ image } = await generateImage({
+          model: imageModel,
+          prompt,
+          aspectRatio: "16:9",
+          providerOptions: { google: { imageConfig: { imageSize: "2K" } } },
+        }));
+      }
     } catch (e) {
       console.warn("generateCoverImage: falló el modelo de 2K, uso el de 1K:", e);
       const respaldo = await getImageAi("gemini-2.5-flash-image");
       if (!respaldo || respaldo === "otro-proveedor") throw e;
       ({ image } = await generateImage({ model: respaldo, prompt, aspectRatio: "16:9" }));
     }
-    await registrarCostoIA(userId, COSTO_IMAGEN_USD);
+    await registrarCostoIA(userId, costo);
     // El tipo con el que se guarda lo decide la firma de los bytes, no lo que declare el modelo.
     const up = await subirImagenBytes(image.uint8Array);
     if (!up.ok) return { ok: false, error: up.error };
@@ -93,3 +108,7 @@ export async function generateCoverImageCore(userId: string, input: {
 
 /** Costo estimado por imagen generada (USD); se descuenta de la cuota mensual de la persona. */
 export const COSTO_IMAGEN_USD = 0.12;
+
+/** Nano Banana Pro (Gemini 3 Pro Image): el modelo de imagen de mayor calidad de Gemini; cuesta más por imagen en 2K. */
+export const MODELO_IMAGEN_PRO = "gemini-3-pro-image-preview";
+export const COSTO_IMAGEN_PRO_USD = 0.14;
