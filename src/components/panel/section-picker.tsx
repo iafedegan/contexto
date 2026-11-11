@@ -71,33 +71,61 @@ export function SectionTree({
     return m;
   }, [options, ids]);
   const raices = useMemo(() => options.filter((o) => !o.parentId || !ids.has(o.parentId)), [options, ids]);
-  // Sección principal a la que pertenece una opción.
-  const raizDe = (o: Nodo | undefined) => (o?.parentId && ids.has(o.parentId) ? porId.get(o.parentId) : o);
+  // Sección principal (la raíz del árbol) a la que pertenece una opción, suba cuantos niveles suba.
+  const raizDe = (o: Nodo | undefined) => {
+    let r = o;
+    const vistos = new Set<string>();
+    while (r?.parentId && ids.has(r.parentId) && !vistos.has(r.id)) {
+      vistos.add(r.id);
+      r = porId.get(r.parentId);
+    }
+    return r;
+  };
+  // Todas las subsecciones de una sección, hasta la más profunda, en orden de árbol y con su nivel (1 = hija directa).
+  const descendientes = (r: Nodo): { n: Nodo; d: number }[] => {
+    const salida: { n: Nodo; d: number }[] = [];
+    const vistos = new Set<string>([r.id]);
+    const bajar = (x: Nodo, d: number) => {
+      for (const h of hijos.get(x.id) ?? []) {
+        if (vistos.has(h.id)) continue;
+        vistos.add(h.id);
+        salida.push({ n: h, d });
+        bajar(h, d + 1);
+      }
+    };
+    bajar(r, 1);
+    return salida;
+  };
   const actual = porId.get(value);
-  const padre = actual?.parentId ? porId.get(actual.parentId) : undefined;
   // La rama abierta empieza en la de la sección elegida; si no hay, en la primera sugerida y, si no, en la primera con subsecciones.
   const [rama, setRama] = useState<string | null>(
     () => raizDe(actual)?.id ?? raizDe(porId.get(sugeridas[0]))?.id ?? raices.find((r) => (hijos.get(r.id)?.length ?? 0) > 0)?.id ?? null,
   );
   const ramaNodo = rama ? porId.get(rama) : undefined;
-  const subs = ramaNodo ? (hijos.get(ramaNodo.id) ?? []) : [];
+  const subs = ramaNodo ? descendientes(ramaNodo) : [];
   const t = norm(q.trim());
   // Indica si una sección o alguna de sus subsecciones está elegida.
-  const contiene = (r: Nodo) => value === r.id || (hijos.get(r.id) ?? []).some((h) => h.id === value);
-  // Ruta de una opción: sección principal y subsección.
+  const contiene = (r: Nodo) => value === r.id || descendientes(r).some((h) => h.n.id === value);
+  // Ruta completa de una opción: de la sección principal hasta ella («Colombia › Regiones › Llanos»).
   const ruta = (o: Nodo) => {
-    const p = o.parentId ? porId.get(o.parentId) : undefined;
-    return p ? `${p.name} › ${o.name}` : o.name;
+    const partes = [o.name];
+    const vistos = new Set<string>([o.id]);
+    for (let p = o.parentId ? porId.get(o.parentId) : undefined; p && !vistos.has(p.id); p = p.parentId ? porId.get(p.parentId) : undefined) {
+      vistos.add(p.id);
+      partes.unshift(p.name);
+    }
+    return partes.join(" › ");
   };
 
   /** Opción elegible (sección completa o subsección). */
-  const opcion = (o: Nodo, texto: string, tenue?: boolean) => {
+  const opcion = (o: Nodo, texto: string, tenue?: boolean, nivel = 0) => {
     const activa = value === o.id;
     return (
       <button
         type="button"
         aria-pressed={activa}
         onClick={() => onChange(activa ? "" : o.id)}
+        style={nivel > 1 ? { paddingLeft: `${0.75 + (nivel - 1) * 1.1}rem` } : undefined}
         className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm transition focus-visible:outline-2 focus-visible:outline-[var(--accent)] ${
           activa ? "bg-[var(--accent)] font-semibold text-[var(--accent-fg)] shadow-sm" : `hover:bg-[var(--surface-2)] ${tenue ? "text-[var(--fg-muted)]" : ""}`
         }`}
@@ -109,16 +137,16 @@ export function SectionTree({
     );
   };
   // Subsecciones de una sección, con «Toda la sección» al principio.
-  const itemsSubs = (r: Nodo) => [r, ...(hijos.get(r.id) ?? [])];
+  const itemsSubs = (r: Nodo) => [{ n: r, d: 0 }, ...descendientes(r)];
   // Lista (sin carrusel) de subsecciones, para el despliegue en pantallas angostas.
   const listaSubs = (r: Nodo) => (
     <ul role="radiogroup" aria-label={`Subsecciones de ${r.name}`} className="flex flex-col gap-0.5">
-      {itemsSubs(r).map((h) => <li key={h.id}>{opcion(h, h.id === r.id ? `Toda la sección «${r.name}»` : h.name, h.id === r.id)}</li>)}
+      {itemsSubs(r).map((h) => <li key={h.n.id}>{opcion(h.n, h.d === 0 ? `Toda la sección «${r.name}»` : h.n.name, h.d === 0, h.d)}</li>)}
     </ul>
   );
   // Fila de una sección con sus subsecciones.
   const filaSeccion = (r: Nodo) => {
-    const n = hijos.get(r.id)?.length ?? 0;
+    const n = descendientes(r).length;
     const abierta = rama === r.id;
     const elegida = contiene(r);
     return (
@@ -165,7 +193,7 @@ export function SectionTree({
         <div className="min-w-0 flex-1">
           <p id={`${id}-l`} className="lx-kicker text-[var(--fg-muted)]">1 · Sección elegida</p>
           <p className={`truncate text-sm ${actual ? "font-semibold" : "text-[var(--fg-muted)]"}`} aria-live="polite">
-            {actual ? `${padre ? `${padre.name} › ` : ""}${actual.name}` : "Sin sección · puedes dejarlo para después"}
+            {actual ? ruta(actual) : "Sin sección · puedes dejarlo para después"}
           </p>
           {firma && <p className="truncate text-xs text-[var(--fg-muted)]" title="La nota la firma quien la escribe: tu usuario. No se puede cambiar.">Firma: <strong className="text-[var(--fg)]">{firma}</strong></p>}
         </div>
@@ -267,7 +295,7 @@ export function SectionTree({
                 separacion="gap-0.5"
                 anchoMinimo={120}
                 className="p-2 pt-0"
-                render={(h) => opcion(h, h.id === ramaNodo!.id ? `Toda la sección «${ramaNodo!.name}»` : h.name, h.id === ramaNodo!.id)}
+                render={(h) => opcion(h.n, h.d === 0 ? `Toda la sección «${ramaNodo!.name}»` : h.n.name, h.d === 0, h.d)}
               />
             ) : (
               <p className="flex items-center gap-2 px-3 py-6 text-sm text-[var(--fg-muted)]">
