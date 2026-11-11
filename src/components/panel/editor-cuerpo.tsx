@@ -305,7 +305,7 @@ export function EditorCuerpo({
   const tabClase = (t: Pestana) => `rounded-t-md px-3 py-1.5 text-xs font-semibold transition ${pestana === t ? "bg-white text-[var(--accent)] shadow-[0_-1px_0_var(--border)_inset]" : "text-[var(--fg-muted)] hover:text-[var(--fg)]"}`;
 
   return (
-    <div className={papel ? "flex flex-col bg-white" : "flex min-h-0 flex-1 flex-col overflow-hidden rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] focus-within:border-[var(--accent)]"}>
+    <div style={papel ? ({ "--surface": "#ffffff", "--bg-2": "#f3f4f3", "--surface-2": "#eceeed", "--fg": "#1b1b1b", "--fg-muted": "#5b665f", "--border": "rgba(0,0,0,0.16)", "--border-strong": "rgba(0,0,0,0.3)" } as React.CSSProperties) : undefined} className={papel ? "flex flex-col bg-white text-[#1b1b1b]" : "flex min-h-0 flex-1 flex-col overflow-hidden rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] focus-within:border-[var(--accent)]"}>
       {/* Cinta de herramientas por pestañas, como en Word */}
       <div className={`shrink-0 border-b border-[var(--border)] ${papel ? "sticky top-0 z-10 bg-[#f3f4f3]" : "bg-[var(--surface-2)]/40"}`}>
         <div role="tablist" aria-label="Cinta de herramientas" className="flex items-end gap-1 px-2 pt-1.5">

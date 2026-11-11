@@ -952,7 +952,7 @@ export function ArticleWizard({
         </div>
       )}
 
-      {verComentarios && savedId && <div className="mb-3"><ComentariosNota articleId={savedId} /></div>}
+      {verComentarios && savedId && !ampliado && <div className="mb-3"><ComentariosNota articleId={savedId} /></div>}
       {/* --- Pantalla del paso + panel SEO lateral (escritorio) --- */}
       <div className="flex min-h-0 flex-1 gap-3">
       {/* Sin desplazamiento propio salvo en una ventana demasiado baja (el `auto` solo actúa si no cabe). */}
@@ -1427,8 +1427,12 @@ export function ArticleWizard({
                 <div role="dialog" aria-modal="true" aria-label="Nota ampliada" className="fixed inset-0 z-[70] flex flex-col bg-[#e4e7e5] text-[#1b1b1b]">
                   <div className="flex shrink-0 items-center justify-between gap-3 border-b border-black/10 bg-white px-4 py-2.5 text-[#1b1b1b]">
                     <p className="truncate text-sm font-semibold">{title || "Nota sin título"}</p>
-                    <button type="button" autoFocus onClick={cerrarAmpliado} className="lx-btn lx-btn-ghost !px-3 !py-1.5 text-xs"><Minimize2 size={14} /> Reducir (Esc)</button>
+                    <div className="flex items-center gap-2">
+                      {savedId && <button type="button" onClick={() => setVerComentarios((v) => !v)} className="lx-btn lx-btn-ghost !px-3 !py-1.5 text-xs"><MessageSquare size={14} /> Comentarios{comentariosNuevos > 0 && !verComentarios ? ` (${comentariosNuevos})` : ""}</button>}
+                      <button type="button" autoFocus onClick={cerrarAmpliado} className="lx-btn lx-btn-ghost !px-3 !py-1.5 text-xs"><Minimize2 size={14} /> Reducir (Esc)</button>
+                    </div>
                   </div>
+                  <div className="flex min-h-0 flex-1">
                   <div className="min-h-0 flex-1 overflow-y-auto"><div className="p-3 sm:p-8">
               <article className={`mx-auto w-full ${ampliado ? "max-w-5xl" : "max-w-3xl"} rounded-sm bg-white text-[#1b1b1b] shadow-[0_1px_3px_rgba(0,0,0,.18),0_10px_30px_rgba(0,0,0,.08)]`}>
                     <div className="px-6 pb-2 pt-8 sm:px-14 sm:pt-12">
@@ -1447,6 +1451,8 @@ export function ArticleWizard({
                     </div>
                   </article>
                   </div></div>
+                  {verComentarios && savedId && <aside className="w-[22rem] max-w-[45vw] shrink-0 overflow-y-auto border-l border-black/10 bg-white p-3 text-[#1b1b1b]"><ComentariosNota articleId={savedId} /></aside>}
+                  </div>
                 </div>,
                 ampliado,
               )
