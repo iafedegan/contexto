@@ -49,8 +49,8 @@ function param(sp: Record<string, string | string[] | undefined>, key: string): 
 export default async function ArticlesList({ searchParams }: { searchParams: SearchParams }) {
   await requirePermiso("articulos");
   const session = await auth();
-  // Administradores: todas las notas. Redactores y editores: solo las suyas (las que crearon o llevan su firma).
-  const soloMias = session?.user?.role !== "administrador";
+  // Todas las personas ven todas las notas. Editar, borrar o marcar solo lo hace quien es dueña de la nota (la creó, lleva su firma o se la enviaron) y los administradores.
+  const esAdmin = session?.user?.role === "administrador";
   const alcance = session?.user ? await condicionMisNotas({ id: session.user.id, role: session.user.role }) : undefined;
   const canDelete = session?.user?.role === "editor" || session?.user?.role === "administrador";
   const sp = await searchParams;
@@ -68,7 +68,7 @@ export default async function ArticlesList({ searchParams }: { searchParams: Sea
           </Link>
         </div>
         <TabsArticulos activa="tablero" />
-        <TableroArticulos alcance={alcance} />
+        <TableroArticulos alcance={alcance} esAdmin={esAdmin} />
       </div>
     );
   }
@@ -92,7 +92,6 @@ export default async function ArticlesList({ searchParams }: { searchParams: Sea
 
   // --- Filtros ---
   const where: SQL[] = [];
-  if (alcance) where.push(alcance);
   if (q) {
     const like = `%${q}%`;
     where.push(or(ilike(articles.title, like), ilike(articles.excerpt, like), ilike(articles.slug, like))!);
@@ -156,22 +155,16 @@ export default async function ArticlesList({ searchParams }: { searchParams: Sea
       .where(where.length ? and(...where) : undefined)
       .orderBy(...order)
       .limit(200),
-    // Administración: totales de todo (guardados un minuto). Quien ve solo lo suyo: sus propias notas, que son pocas.
-    alcance
-      ? db
-          .select({
-            total: sql<number>`count(*)::int`,
-            publicados: sql<number>`count(*) filter (where ${articles.status} = 'publicado')::int`,
-            pendientes: sql<number>`count(*) filter (where ${articles.status} in ('borrador', 'en_revision'))::int`,
-            programados: sql<number>`count(*) filter (where ${articles.status} = 'programado')::int`,
-            lecturas: sql<number>`coalesce(sum(${articles.views}), 0)::int`,
-          })
-          .from(articles)
-          .where(alcance)
-          .then((r) => r[0])
-      : resumenGlobalNotas(),
-    soloMias ? Promise.resolve(null) : siteWeekTotals(),
+    // Totales de todo el sitio (guardados un minuto).
+    resumenGlobalNotas(),
+    siteWeekTotals(),
   ]);
+  // Cuáles de estas notas puede abrir para editar (las demás se leen en la vista previa).
+  const propias = esAdmin || !alcance || rows.length === 0
+    ? null
+    : new Set((await db.select({ id: articles.id }).from(articles).where(and(inArray(articles.id, rows.map((r) => r.id)), alcance))).map((r) => r.id));
+  const puedeEditar = (id: string) => esAdmin || (propias?.has(id) ?? false);
+  const enlaceNota = (id: string) => (puedeEditar(id) ? `/panel/articulos/${id}?modo=manual` : `/vista-previa/${id}`);
   // A quién se envió cada nota que sigue en borrador o en revisión (sale en su etiqueta: «En revisión · para …»).
   const para = await destinatariosDe(rows.filter((r) => r.status === "en_revision" || r.status === "borrador").map((r) => r.id));
 
@@ -181,8 +174,7 @@ export default async function ArticlesList({ searchParams }: { searchParams: Sea
   );
 
   const filteredViews = rows.reduce((s, r) => s + Number(r.views), 0);
-  // Con el alcance propio no hay total del sitio: se suman las lecturas de la semana de sus propias notas (sin comparación).
-  const weekTotals = soloMias ? { last7: rows.reduce((t, r) => t + Number(r.weekViews), 0), prev7: 0 } : weekTotalsSitio;
+  const weekTotals = weekTotalsSitio;
   const trend = weekTotals ? pctChange(weekTotals.last7, weekTotals.prev7) : null;
   const top = [...rows].sort((a, b) => Number(b.weekViews) - Number(a.weekViews))[0];
 
@@ -239,7 +231,7 @@ export default async function ArticlesList({ searchParams }: { searchParams: Sea
         </Stat>
         <Stat label="Más leído esta semana" value={top && Number(top.weekViews) > 0 ? nf.format(Number(top.weekViews)) : "—"}>
           {top && Number(top.weekViews) > 0 ? (
-            <Link href={`/panel/articulos/${top.id}?modo=manual`} className="lx-link line-clamp-2">
+            <Link href={enlaceNota(top.id)} className="lx-link line-clamp-2">
               {top.title}
             </Link>
           ) : (
@@ -252,7 +244,7 @@ export default async function ArticlesList({ searchParams }: { searchParams: Sea
         values={{ q, estado, categoria, autor, orden }}
         statuses={Object.entries(STATUS_LABEL).map(([value, label]) => ({ value, label }))}
         categories={categoryOptions}
-        authors={soloMias ? [] : [...auths.map((a) => ({ value: a.id, label: a.name })), { value: "sin-autor", label: "Sin autor" }]}
+        authors={[...auths.map((a) => ({ value: a.id, label: a.name })), { value: "sin-autor", label: "Sin autor" }]}
         sorts={SORTS}
       />
       </div>
@@ -271,7 +263,7 @@ export default async function ArticlesList({ searchParams }: { searchParams: Sea
           const t = pctChange(last7, prev7);
           return (
             <li key={r.id} className="lx-card p-4">
-              <Link href={`/panel/articulos/${r.id}?modo=manual`} className="lx-link block text-base font-semibold leading-snug">
+              <Link href={enlaceNota(r.id)} className="lx-link block text-base font-semibold leading-snug">
                 {r.title}
               </Link>
               <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-[var(--fg-muted)]">
@@ -319,8 +311,8 @@ export default async function ArticlesList({ searchParams }: { searchParams: Sea
                       Ver en el sitio ↗
                     </a>
                   )}
-                  {canDelete && <MarcasNota id={r.id} breaking={r.isBreaking} live={r.isLive} />}
-                  {canDelete && <DeleteArticleButton id={r.id} title={r.title} published={r.status === "publicado"} />}
+                  {canDelete && puedeEditar(r.id) && <MarcasNota id={r.id} breaking={r.isBreaking} live={r.isLive} />}
+                  {canDelete && puedeEditar(r.id) && <DeleteArticleButton id={r.id} title={r.title} published={r.status === "publicado"} />}
                 </div>
               </div>
             </li>
@@ -357,7 +349,7 @@ export default async function ArticlesList({ searchParams }: { searchParams: Sea
               return (
                 <tr key={r.id} className="transition-colors hover:bg-[var(--surface-2)]">
                   <Td>
-                    <Link href={`/panel/articulos/${r.id}?modo=manual`} className="lx-link font-medium">
+                    <Link href={enlaceNota(r.id)} className="lx-link font-medium">
                       {r.title}
                     </Link>
                     <div className="mt-1 flex flex-wrap items-center gap-x-2 text-xs text-[var(--fg-muted)]">
@@ -392,7 +384,7 @@ export default async function ArticlesList({ searchParams }: { searchParams: Sea
                     {r.status === "programado" && r.scheduledFor && (
                       <span className="ml-2 text-xs text-[var(--fg-muted)]">{formatDate(r.scheduledFor)}</span>
                     )}
-                    {canDelete && (
+                    {canDelete && puedeEditar(r.id) && (
                       <div className="mt-2"><MarcasNota id={r.id} breaking={r.isBreaking} live={r.isLive} /></div>
                     )}
                   </Td>
@@ -425,7 +417,7 @@ export default async function ArticlesList({ searchParams }: { searchParams: Sea
                   <Td className="hidden whitespace-nowrap text-[var(--fg-muted)] 2xl:table-cell">{formatDate(r.updatedAt)}</Td>
                   {canDelete && (
                     <Td className="text-right">
-                      <DeleteArticleButton id={r.id} title={r.title} published={r.status === "publicado"} />
+                      {puedeEditar(r.id) && <DeleteArticleButton id={r.id} title={r.title} published={r.status === "publicado"} />}
                     </Td>
                   )}
                 </tr>

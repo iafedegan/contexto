@@ -14,9 +14,9 @@ const POR_COLUMNA = 40;
 const haceDias = (dias: number) => new Date(Date.now() - dias * 86_400_000);
 
 // Tablero por etapas: en qué punto está cada nota (con el redactor, esperando la imagen del diseñador, con el editor, programada, publicada).
-export async function TableroArticulos({ alcance }: { alcance: SQL | undefined }) {
+export async function TableroArticulos({ alcance, esAdmin = false }: { alcance: SQL | undefined; esAdmin?: boolean }) {
   const desde = haceDias(DIAS_PUBLICADAS);
-  const filtro = and(alcance, or(inArray(articles.status, ["borrador", "en_revision", "programado"]), and(eq(articles.status, "publicado"), gte(articles.publishedAt, desde))));
+  const filtro = and(or(inArray(articles.status, ["borrador", "en_revision", "programado"]), and(eq(articles.status, "publicado"), gte(articles.publishedAt, desde))));
   const [notas, pedidos] = await Promise.all([
     db
       .select({ id: articles.id, titulo: articles.title, estado: articles.status, actualizada: articles.updatedAt, publicada: articles.publishedAt, programada: articles.scheduledFor, autor: authors.name, seccion: categories.name })
@@ -28,6 +28,11 @@ export async function TableroArticulos({ alcance }: { alcance: SQL | undefined }
       .limit(400),
     leerPedidos(),
   ]);
+  // Cuáles de estas notas puede abrir para editar; las demás se leen en la vista previa.
+  const propias = esAdmin || !alcance || notas.length === 0
+    ? null
+    : new Set((await db.select({ id: articles.id }).from(articles).where(and(inArray(articles.id, notas.map((n) => n.id)), alcance))).map((r) => r.id));
+  const enlaceNota = (id: string) => (esAdmin || (propias?.has(id) ?? false) ? `/panel/articulos/${id}?modo=manual` : `/vista-previa/${id}`);
   const para = await destinatariosDe(notas.filter((n) => n.estado === "borrador" || n.estado === "en_revision").map((n) => n.id));
   const pendientes = new Map(pedidos.filter((p) => p.estado === "pendiente").map((p) => [p.articleId, p]));
 
@@ -60,7 +65,7 @@ export async function TableroArticulos({ alcance }: { alcance: SQL | undefined }
                 <ul className="flex flex-col gap-2">
                   {lista.slice(0, POR_COLUMNA).map((t) => (
                     <li key={t.id}>
-                      <Link href={`/panel/articulos/${t.id}?modo=manual`} className="block rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] p-2.5 transition hover:border-[var(--accent)]">
+                      <Link href={enlaceNota(t.id)} className="block rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] p-2.5 transition hover:border-[var(--accent)]">
                         <span className="line-clamp-3 text-sm font-semibold leading-snug">{t.titulo}</span>
                         {t.nota && <span className="mt-1 line-clamp-2 block text-xs">{t.nota}</span>}
                         <span className="mt-1.5 block text-xs text-[var(--fg-muted)]">
