@@ -1,7 +1,7 @@
 "use client";
 
 import { useLayoutEffect, useRef, useState } from "react";
-import { BarChart3, Bold, Heading2, Italic, Link2, List, ListOrdered, MessageSquareQuote, Quote, Redo2, RemoveFormatting, Undo2 } from "lucide-react";
+import { BarChart3, Bold, Highlighter, Italic, Link2, List, ListOrdered, Minus, MessageSquareQuote, Quote, Redo2, RemoveFormatting, Replace, Search, Strikethrough, Subscript, Superscript, Table, Underline, Undo2, Unlink, ZoomIn, ZoomOut } from "lucide-react";
 import { decodeSpec, renderChartSvg, svgDataUri } from "@/lib/chart-svg";
 import { escapeHtml } from "@/lib/escape";
 
@@ -45,7 +45,7 @@ function desdeEditor(el: HTMLElement): string {
 }
 
 // Etiquetas que se conservan al pegar desde otra página o desde Word; el resto se aplana a texto.
-const PERMITIDAS = new Set(["P", "H2", "H3", "STRONG", "B", "EM", "I", "UL", "OL", "LI", "BLOCKQUOTE", "A", "BR"]);
+const PERMITIDAS = new Set(["P", "H2", "H3", "H4", "STRONG", "B", "EM", "I", "U", "S", "SUB", "SUP", "MARK", "UL", "OL", "LI", "BLOCKQUOTE", "A", "BR", "TABLE", "THEAD", "TBODY", "TR", "TH", "TD"]);
 
 /** HTML pegado → HTML limpio: solo estructura básica, sin estilos, clases ni scripts. */
 function limpiarPegado(html: string): string {
@@ -87,6 +87,19 @@ function Boton({ titulo, activo, onClick, children }: { titulo: string; activo?:
   );
 }
 
+/** Pestañas de la cinta, como en Word. */
+type Pestana = "inicio" | "insertar" | "revisar";
+const ESTILOS: { valor: string; nombre: string }[] = [
+  { valor: "p", nombre: "Párrafo" },
+  { valor: "h2", nombre: "Título 2" },
+  { valor: "h3", nombre: "Título 3" },
+  { valor: "h4", nombre: "Título 4" },
+  { valor: "blockquote", nombre: "Cita" },
+  { valor: "pre", nombre: "Código" },
+];
+const campoCinta = "rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs outline-none focus:border-[var(--accent)]";
+const Sep = () => <span aria-hidden className="mx-1 h-5 w-px bg-[var(--border)]" />;
+
 export function EditorCuerpo({
   value,
   onChange,
@@ -107,16 +120,22 @@ export function EditorCuerpo({
   // Último HTML que salió del editor: si `value` es otro, el cambio vino de fuera (p. ej. la IA reescribió) y se repinta.
   const ultimo = useRef<string | null>(null);
   const rango = useRef<Range | null>(null);
-  const [activos, setActivos] = useState<{ bold: boolean; italic: boolean; ul: boolean; ol: boolean; h2: boolean; quote: boolean }>({ bold: false, italic: false, ul: false, ol: false, h2: false, quote: false });
+  const [pestana, setPestana] = useState<Pestana>("inicio");
+  const [activos, setActivos] = useState({ bold: false, italic: false, u: false, s: false, sub: false, sup: false, mark: false, ul: false, ol: false, quote: false, bloque: "p", tabla: false });
   const [enlace, setEnlace] = useState<string | null>(null);
   // Infografía: dirección de la imagen y su pie (se piden en línea, como el enlace).
   const [infografia, setInfografia] = useState<{ url: string; pie: string } | null>(null);
+  const [tabla, setTabla] = useState<{ filas: number; cols: number } | null>(null);
+  const [buscar, setBuscar] = useState<{ q: string; r: string; msg: string }>({ q: "", r: "", msg: "" });
+  const [zoom, setZoom] = useState(100);
+  const [caracteres, setCaracteres] = useState(0);
 
   useLayoutEffect(() => {
     const el = caja.current;
     if (!el || value === ultimo.current) return;
     el.innerHTML = paraEditor(value);
     ultimo.current = value;
+    setCaracteres((el.textContent ?? "").length);
   }, [value]);
 
   // Emite el HTML actual hacia fuera.
@@ -125,24 +144,31 @@ export function EditorCuerpo({
     if (!el) return;
     const html = desdeEditor(el);
     ultimo.current = html;
+    setCaracteres((el.textContent ?? "").length);
     onChange(html);
   };
+  const dentroDe = (n: Node | null, selector: string) => !!(n instanceof Element ? n : n?.parentElement)?.closest(selector);
   // Qué formatos tiene el punto donde está el cursor (para marcar los botones).
   const leerEstado = () => {
     const sel = window.getSelection();
     if (!sel?.anchorNode || !caja.current?.contains(sel.anchorNode)) return;
-    const bloque = (n: Node | null) => {
-      for (let e = n instanceof Element ? n : n?.parentElement ?? null; e && e !== caja.current; e = e.parentElement) if (/^(H2|H3|BLOCKQUOTE|LI|P)$/.test(e.tagName)) return e.tagName;
-      return "";
+    const bloqueDe = (n: Node | null) => {
+      for (let e = n instanceof Element ? n : n?.parentElement ?? null; e && e !== caja.current; e = e.parentElement) if (/^(H2|H3|H4|BLOCKQUOTE|PRE|P)$/.test(e.tagName)) return e.tagName.toLowerCase();
+      return "p";
     };
-    const b = bloque(sel.anchorNode);
     setActivos({
       bold: document.queryCommandState("bold"),
       italic: document.queryCommandState("italic"),
+      u: document.queryCommandState("underline"),
+      s: document.queryCommandState("strikeThrough"),
+      sub: document.queryCommandState("subscript"),
+      sup: document.queryCommandState("superscript"),
+      mark: dentroDe(sel.anchorNode, "mark"),
       ul: document.queryCommandState("insertUnorderedList"),
       ol: document.queryCommandState("insertOrderedList"),
-      h2: b === "H2",
-      quote: !!(sel.anchorNode instanceof Node && (sel.anchorNode instanceof Element ? sel.anchorNode : sel.anchorNode.parentElement)?.closest("blockquote")),
+      quote: dentroDe(sel.anchorNode, "blockquote"),
+      bloque: bloqueDe(sel.anchorNode),
+      tabla: dentroDe(sel.anchorNode, "td, th"),
     });
   };
   // Ejecuta una orden de formato y devuelve el foco al texto.
@@ -152,10 +178,36 @@ export function EditorCuerpo({
     emitir();
     leerEstado();
   };
-  // Alterna un bloque (intertítulo o cita): si ya lo es, vuelve a párrafo.
-  const bloque = (tag: "h2" | "blockquote") => {
-    const clave = tag === "h2" ? activos.h2 : activos.quote;
-    orden("formatBlock", clave ? "p" : tag);
+  // Guarda dónde está el cursor (un campo de la cinta le quita el foco al texto) y lo restaura antes de insertar.
+  const guardarRango = () => {
+    const sel = window.getSelection();
+    rango.current = sel && sel.rangeCount && caja.current?.contains(sel.anchorNode) ? sel.getRangeAt(0).cloneRange() : null;
+  };
+  const restaurarRango = () => {
+    caja.current?.focus();
+    const sel = window.getSelection();
+    if (rango.current && sel) {
+      sel.removeAllRanges();
+      sel.addRange(rango.current);
+    }
+  };
+  const bloque = (tag: string) => orden("formatBlock", tag);
+  const alternarBloque = (tag: "blockquote") => orden("formatBlock", activos.quote ? "p" : tag);
+  // Resaltado: envuelve el texto elegido en <mark> (o lo quita si ya está resaltado).
+  const resaltar = () => {
+    const sel = window.getSelection();
+    if (!sel?.rangeCount || !caja.current?.contains(sel.anchorNode)) return;
+    if (activos.mark) {
+      const marca = (sel.anchorNode instanceof Element ? sel.anchorNode : sel.anchorNode?.parentElement)?.closest("mark");
+      if (marca) {
+        marca.replaceWith(...Array.from(marca.childNodes));
+        emitir();
+        leerEstado();
+      }
+      return;
+    }
+    const texto = sel.toString();
+    if (texto) orden("insertHTML", `<mark>${escapeHtml(texto)}</mark>`);
   };
   // Cita destacada: el texto seleccionado (o una frase de ejemplo) en un bloque grande, con su autor debajo.
   const citaDestacada = () => {
@@ -163,110 +215,194 @@ export function EditorCuerpo({
     const texto = sel && caja.current?.contains(sel.anchorNode) ? sel.toString().trim() : "";
     orden("insertHTML", `<blockquote class="cita-destacada"><p>${escapeHtml(texto || "Escribe aquí la frase destacada")}</p><cite>Nombre de quien lo dice</cite></blockquote><p><br></p>`);
   };
-  // Guarda dónde está el cursor y pide los datos de la infografía.
   const abrirInfografia = () => {
-    const sel = window.getSelection();
-    rango.current = sel && sel.rangeCount && caja.current?.contains(sel.anchorNode) ? sel.getRangeAt(0).cloneRange() : null;
+    guardarRango();
     setInfografia({ url: "https://", pie: "" });
   };
-  // Inserta la infografía (imagen a todo el ancho, ampliable, con su pie y fuente) donde estaba el cursor.
+  // Inserta la imagen (a todo el ancho, ampliable, con su pie y fuente) donde estaba el cursor.
   const aplicarInfografia = () => {
     const datos = infografia;
     setInfografia(null);
     if (!datos || !/^https:\/\/\S+$/i.test(datos.url.trim())) return;
-    caja.current?.focus();
-    const sel = window.getSelection();
-    if (rango.current && sel) {
-      sel.removeAllRanges();
-      sel.addRange(rango.current);
-    }
-    const pie = escapeHtml(datos.pie.trim() || "Infografía");
+    restaurarRango();
+    const pie = escapeHtml(datos.pie.trim() || "Imagen");
     orden("insertHTML", `<figure class="infografia"><img src="${escapeHtml(datos.url.trim())}" alt="${pie}" loading="lazy"><figcaption>${pie}</figcaption></figure><p><br></p>`);
   };
-  // Guarda la selección antes de pedir la dirección del enlace (el campo le quita el foco al texto).
   const abrirEnlace = () => {
-    const sel = window.getSelection();
-    rango.current = sel && sel.rangeCount && caja.current?.contains(sel.anchorNode) ? sel.getRangeAt(0).cloneRange() : null;
+    guardarRango();
     setEnlace("https://");
   };
-  // Aplica el enlace a lo que estaba seleccionado.
   const aplicarEnlace = () => {
     const url = (enlace ?? "").trim();
     setEnlace(null);
-    caja.current?.focus();
-    const sel = window.getSelection();
-    if (rango.current && sel) {
-      sel.removeAllRanges();
-      sel.addRange(rango.current);
-    }
+    restaurarRango();
     if (/^(https?:\/\/|mailto:)\S+$/i.test(url) && url !== "https://") document.execCommand("createLink", false, url);
     emitir();
   };
+  // Tabla: la primera fila es de encabezado.
+  const aplicarTabla = () => {
+    const t = tabla;
+    setTabla(null);
+    if (!t) return;
+    restaurarRango();
+    const fila = (celda: "th" | "td") => `<tr>${Array.from({ length: t.cols }, () => `<${celda}><br></${celda}>`).join("")}</tr>`;
+    const cuerpo = Array.from({ length: Math.max(0, t.filas - 1) }, () => fila("td")).join("");
+    orden("insertHTML", `<table><thead>${fila("th")}</thead><tbody>${cuerpo}</tbody></table><p><br></p>`);
+  };
+  // Operaciones sobre la tabla donde está el cursor.
+  const celdaActual = () => {
+    const sel = window.getSelection();
+    return (sel?.anchorNode instanceof Element ? sel.anchorNode : sel?.anchorNode?.parentElement)?.closest("td, th") as HTMLTableCellElement | null;
+  };
+  const sobreTabla = (op: "fila+" | "fila-" | "col+" | "col-" | "borrar") => {
+    const celda = celdaActual();
+    const tr = celda?.parentElement as HTMLTableRowElement | null;
+    const tb = celda?.closest("table");
+    if (!celda || !tr || !tb) return;
+    const idx = celda.cellIndex;
+    if (op === "borrar") tb.remove();
+    if (op === "fila+") {
+      const nueva = tr.cloneNode(true) as HTMLTableRowElement;
+      nueva.querySelectorAll("th, td").forEach((c) => { const td = document.createElement("td"); td.innerHTML = "<br>"; c.replaceWith(td); });
+      (tr.parentElement?.tagName === "THEAD" ? tb.tBodies[0] ?? tr.parentElement : tr.parentElement)?.insertBefore(nueva, tr.parentElement?.tagName === "THEAD" ? tb.tBodies[0]?.firstChild ?? null : tr.nextSibling);
+    }
+    if (op === "fila-" && tb.rows.length > 1) tr.remove();
+    if (op === "col+") Array.from(tb.rows).forEach((r) => { const c = document.createElement(r.parentElement?.tagName === "THEAD" ? "th" : "td"); c.innerHTML = "<br>"; r.insertBefore(c, r.cells[idx + 1] ?? null); });
+    if (op === "col-" && tr.cells.length > 1) Array.from(tb.rows).forEach((r) => r.cells[idx]?.remove());
+    emitir();
+    leerEstado();
+  };
+  // Buscar y reemplazar dentro del cuerpo.
+  const siguiente = () => {
+    if (!buscar.q) return;
+    caja.current?.focus();
+    const w = window as unknown as { find?: (q: string, cs?: boolean, back?: boolean, wrap?: boolean) => boolean };
+    const hallado = w.find ? w.find(buscar.q, false, false, true) : false;
+    setBuscar((b) => ({ ...b, msg: hallado ? "" : "No se encontró." }));
+  };
+  const reemplazarUno = () => {
+    const sel = window.getSelection();
+    if (buscar.q && sel && caja.current?.contains(sel.anchorNode) && sel.toString().toLowerCase() === buscar.q.toLowerCase()) orden("insertText", buscar.r);
+    siguiente();
+  };
+  const reemplazarTodo = () => {
+    const el = caja.current;
+    if (!el || !buscar.q) return;
+    const re = new RegExp(buscar.q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi");
+    let n = 0;
+    const paso = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    const nodos: Text[] = [];
+    for (let t = paso.nextNode(); t; t = paso.nextNode()) nodos.push(t as Text);
+    for (const t of nodos) {
+      if (t.parentElement?.closest("figure.lx-chart")) continue;
+      const nuevo = (t.textContent ?? "").replace(re, () => { n += 1; return buscar.r; });
+      if (nuevo !== t.textContent) t.textContent = nuevo;
+    }
+    setBuscar((b) => ({ ...b, msg: n ? `${n} reemplazo${n === 1 ? "" : "s"}.` : "No se encontró." }));
+    if (n) emitir();
+  };
+
+  const tabClase = (t: Pestana) => `rounded-t-md px-3 py-1.5 text-xs font-semibold transition ${pestana === t ? "bg-white text-[var(--accent)] shadow-[0_-1px_0_var(--border)_inset]" : "text-[var(--fg-muted)] hover:text-[var(--fg)]"}`;
 
   return (
     <div className={papel ? "flex flex-col bg-white" : "flex min-h-0 flex-1 flex-col overflow-hidden rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] focus-within:border-[var(--accent)]"}>
-      <div role="toolbar" aria-label="Formato del texto" className={`flex shrink-0 flex-wrap items-center gap-0.5 border-b border-[var(--border)] px-2 py-1.5 ${papel ? "sticky top-0 z-10 bg-[#f3f4f3]" : ""}`}>
-        <Boton titulo="Deshacer" onClick={() => orden("undo")}><Undo2 size={15} /></Boton>
-        <Boton titulo="Rehacer" onClick={() => orden("redo")}><Redo2 size={15} /></Boton>
-        <span aria-hidden className="mx-1 h-5 w-px bg-[var(--border)]" />
-        <Boton titulo="Intertítulo" activo={activos.h2} onClick={() => bloque("h2")}><Heading2 size={16} /></Boton>
-        <Boton titulo="Negrita (Ctrl+B)" activo={activos.bold} onClick={() => orden("bold")}><Bold size={15} /></Boton>
-        <Boton titulo="Cursiva (Ctrl+I)" activo={activos.italic} onClick={() => orden("italic")}><Italic size={15} /></Boton>
-        <Boton titulo="Cita textual" activo={activos.quote} onClick={() => bloque("blockquote")}><Quote size={15} /></Boton>
-        <Boton titulo="Cita destacada (frase grande con su autor)" onClick={citaDestacada}><MessageSquareQuote size={15} /></Boton>
-        <Boton titulo="Infografía (imagen a todo el ancho con su pie)" onClick={abrirInfografia}><BarChart3 size={15} /></Boton>
-        <span aria-hidden className="mx-1 h-5 w-px bg-[var(--border)]" />
-        <Boton titulo="Lista con viñetas" activo={activos.ul} onClick={() => orden("insertUnorderedList")}><List size={16} /></Boton>
-        <Boton titulo="Lista numerada" activo={activos.ol} onClick={() => orden("insertOrderedList")}><ListOrdered size={16} /></Boton>
-        <Boton titulo="Enlace" onClick={abrirEnlace}><Link2 size={15} /></Boton>
-        <Boton titulo="Quitar formato" onClick={() => orden("removeFormat")}><RemoveFormatting size={15} /></Boton>
-        {enlace !== null && (
-          <span className="ml-1 flex items-center gap-1">
-            <input
-              autoFocus
-              value={enlace}
-              onChange={(e) => setEnlace(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  aplicarEnlace();
-                }
-                if (e.key === "Escape") setEnlace(null);
-              }}
-              aria-label="Dirección del enlace"
-              className="w-56 rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs outline-none focus:border-[var(--accent)]"
-            />
-            <button type="button" onClick={aplicarEnlace} className="lx-link text-xs font-semibold">Aplicar</button>
-          </span>
-        )}
-        {infografia !== null && (
-          <span className="ml-1 flex flex-wrap items-center gap-1">
-            <input
-              autoFocus
-              value={infografia.url}
-              onChange={(e) => setInfografia({ ...infografia, url: e.target.value })}
-              aria-label="Dirección de la imagen de la infografía"
-              placeholder="https://… (imagen)"
-              className="w-52 rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs outline-none focus:border-[var(--accent)]"
-            />
-            <input
-              value={infografia.pie}
-              onChange={(e) => setInfografia({ ...infografia, pie: e.target.value })}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  aplicarInfografia();
-                }
-                if (e.key === "Escape") setInfografia(null);
-              }}
-              aria-label="Pie y fuente de la infografía"
-              placeholder="Pie y fuente"
-              className="w-44 rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs outline-none focus:border-[var(--accent)]"
-            />
-            <button type="button" onClick={aplicarInfografia} className="lx-link text-xs font-semibold">Insertar</button>
-          </span>
-        )}
-        {resumen && <span className="ml-auto pr-1 text-xs tabular-nums text-[var(--fg-muted)]">{resumen}</span>}
+      {/* Cinta de herramientas por pestañas, como en Word */}
+      <div className={`shrink-0 border-b border-[var(--border)] ${papel ? "sticky top-0 z-10 bg-[#f3f4f3]" : "bg-[var(--surface-2)]/40"}`}>
+        <div role="tablist" aria-label="Cinta de herramientas" className="flex items-end gap-1 px-2 pt-1.5">
+          <button type="button" role="tab" aria-selected={pestana === "inicio"} onClick={() => setPestana("inicio")} className={tabClase("inicio")}>Inicio</button>
+          <button type="button" role="tab" aria-selected={pestana === "insertar"} onClick={() => setPestana("insertar")} className={tabClase("insertar")}>Insertar</button>
+          <button type="button" role="tab" aria-selected={pestana === "revisar"} onClick={() => setPestana("revisar")} className={tabClase("revisar")}>Revisar</button>
+          <span className="ml-auto pb-1 pr-1 text-xs tabular-nums text-[var(--fg-muted)]">{resumen ? <>{resumen} · </> : null}{caracteres.toLocaleString("es-CO")} caracteres</span>
+        </div>
+        <div role="toolbar" aria-label="Formato del texto" className="flex min-h-[2.75rem] flex-wrap items-center gap-0.5 border-t border-[var(--border)] bg-white px-2 py-1.5">
+          {pestana === "inicio" && (
+            <>
+              <Boton titulo="Deshacer (Ctrl+Z)" onClick={() => orden("undo")}><Undo2 size={15} /></Boton>
+              <Boton titulo="Rehacer" onClick={() => orden("redo")}><Redo2 size={15} /></Boton>
+              <Sep />
+              <select
+                aria-label="Estilo del párrafo"
+                value={activos.bloque}
+                onMouseDown={(e) => e.stopPropagation()}
+                onChange={(e) => bloque(e.target.value)}
+                className={`${campoCinta} h-8 w-32`}
+              >
+                {ESTILOS.map((e) => <option key={e.valor} value={e.valor}>{e.nombre}</option>)}
+              </select>
+              <Sep />
+              <Boton titulo="Negrita (Ctrl+B)" activo={activos.bold} onClick={() => orden("bold")}><Bold size={15} /></Boton>
+              <Boton titulo="Cursiva (Ctrl+I)" activo={activos.italic} onClick={() => orden("italic")}><Italic size={15} /></Boton>
+              <Boton titulo="Subrayado (Ctrl+U)" activo={activos.u} onClick={() => orden("underline")}><Underline size={15} /></Boton>
+              <Boton titulo="Tachado" activo={activos.s} onClick={() => orden("strikeThrough")}><Strikethrough size={15} /></Boton>
+              <Boton titulo="Subíndice" activo={activos.sub} onClick={() => orden("subscript")}><Subscript size={15} /></Boton>
+              <Boton titulo="Superíndice" activo={activos.sup} onClick={() => orden("superscript")}><Superscript size={15} /></Boton>
+              <Boton titulo="Resaltar el texto elegido" activo={activos.mark} onClick={resaltar}><Highlighter size={15} /></Boton>
+              <Sep />
+              <Boton titulo="Lista con viñetas" activo={activos.ul} onClick={() => orden("insertUnorderedList")}><List size={16} /></Boton>
+              <Boton titulo="Lista numerada" activo={activos.ol} onClick={() => orden("insertOrderedList")}><ListOrdered size={16} /></Boton>
+              <Boton titulo="Cita textual" activo={activos.quote} onClick={() => alternarBloque("blockquote")}><Quote size={15} /></Boton>
+              <Boton titulo="Cita destacada (frase grande con su autor)" onClick={citaDestacada}><MessageSquareQuote size={15} /></Boton>
+              <Sep />
+              <Boton titulo="Quitar formato" onClick={() => orden("removeFormat")}><RemoveFormatting size={15} /></Boton>
+            </>
+          )}
+          {pestana === "insertar" && (
+            <>
+              <Boton titulo="Enlace" onClick={abrirEnlace}><Link2 size={15} /></Boton>
+              <Boton titulo="Quitar enlace" onClick={() => orden("unlink")}><Unlink size={15} /></Boton>
+              <Sep />
+              <Boton titulo="Imagen o infografía (a todo el ancho, con su pie)" onClick={abrirInfografia}><BarChart3 size={15} /></Boton>
+              <Boton titulo="Tabla" onClick={() => { guardarRango(); setTabla({ filas: 3, cols: 3 }); }}><Table size={15} /></Boton>
+              <Boton titulo="Línea separadora" onClick={() => orden("insertHorizontalRule")}><Minus size={16} /></Boton>
+              {activos.tabla && (
+                <>
+                  <Sep />
+                  <span className="text-xs font-semibold text-[var(--fg-muted)]">Tabla:</span>
+                  {([["fila+", "+ Fila"], ["fila-", "− Fila"], ["col+", "+ Columna"], ["col-", "− Columna"], ["borrar", "Borrar tabla"]] as const).map(([op, nombre]) => (
+                    <button key={op} type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => sobreTabla(op)} className="rounded-md border border-[var(--border)] px-2 py-1 text-xs font-medium text-[var(--fg-muted)] transition hover:border-[var(--accent)] hover:text-[var(--fg)]">{nombre}</button>
+                  ))}
+                </>
+              )}
+              {enlace !== null && (
+                <span className="ml-1 flex items-center gap-1">
+                  <input autoFocus value={enlace} onChange={(e) => setEnlace(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); aplicarEnlace(); } if (e.key === "Escape") setEnlace(null); }} aria-label="Dirección del enlace" className={`${campoCinta} w-56`} />
+                  <button type="button" onClick={aplicarEnlace} className="lx-link text-xs font-semibold">Aplicar</button>
+                </span>
+              )}
+              {infografia !== null && (
+                <span className="ml-1 flex flex-wrap items-center gap-1">
+                  <input autoFocus value={infografia.url} onChange={(e) => setInfografia({ ...infografia, url: e.target.value })} aria-label="Dirección de la imagen" placeholder="https://… (imagen)" className={`${campoCinta} w-52`} />
+                  <input value={infografia.pie} onChange={(e) => setInfografia({ ...infografia, pie: e.target.value })} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); aplicarInfografia(); } if (e.key === "Escape") setInfografia(null); }} aria-label="Pie y fuente de la imagen" placeholder="Pie y fuente" className={`${campoCinta} w-44`} />
+                  <button type="button" onClick={aplicarInfografia} className="lx-link text-xs font-semibold">Insertar</button>
+                </span>
+              )}
+              {tabla !== null && (
+                <span className="ml-1 flex flex-wrap items-center gap-1 text-xs">
+                  <label className="flex items-center gap-1">Filas <input type="number" min={1} max={20} value={tabla.filas} onChange={(e) => setTabla({ ...tabla, filas: Math.min(20, Math.max(1, Number(e.target.value) || 1)) })} className={`${campoCinta} w-14`} /></label>
+                  <label className="flex items-center gap-1">Columnas <input type="number" min={1} max={8} value={tabla.cols} onChange={(e) => setTabla({ ...tabla, cols: Math.min(8, Math.max(1, Number(e.target.value) || 1)) })} className={`${campoCinta} w-14`} /></label>
+                  <button type="button" onClick={aplicarTabla} className="lx-link font-semibold">Insertar</button>
+                  <button type="button" onClick={() => setTabla(null)} className="text-[var(--fg-muted)] hover:text-[var(--fg)]">Cancelar</button>
+                </span>
+              )}
+            </>
+          )}
+          {pestana === "revisar" && (
+            <>
+              <Search size={15} aria-hidden className="text-[var(--fg-muted)]" />
+              <input value={buscar.q} onChange={(e) => setBuscar({ ...buscar, q: e.target.value, msg: "" })} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); siguiente(); } }} placeholder="Buscar" aria-label="Buscar en el cuerpo" className={`${campoCinta} w-36`} />
+              <button type="button" onClick={siguiente} className="rounded-md border border-[var(--border)] px-2 py-1 text-xs font-medium text-[var(--fg-muted)] transition hover:border-[var(--accent)] hover:text-[var(--fg)]">Buscar siguiente</button>
+              <Replace size={15} aria-hidden className="ml-1 text-[var(--fg-muted)]" />
+              <input value={buscar.r} onChange={(e) => setBuscar({ ...buscar, r: e.target.value })} placeholder="Reemplazar por" aria-label="Reemplazar por" className={`${campoCinta} w-36`} />
+              <button type="button" onClick={reemplazarUno} className="rounded-md border border-[var(--border)] px-2 py-1 text-xs font-medium text-[var(--fg-muted)] transition hover:border-[var(--accent)] hover:text-[var(--fg)]">Reemplazar</button>
+              <button type="button" onClick={reemplazarTodo} className="rounded-md border border-[var(--border)] px-2 py-1 text-xs font-medium text-[var(--fg-muted)] transition hover:border-[var(--accent)] hover:text-[var(--fg)]">Reemplazar todo</button>
+              {buscar.msg && <span role="status" className="text-xs text-[var(--fg-muted)]">{buscar.msg}</span>}
+              <Sep />
+              <Boton titulo="Reducir el zoom" onClick={() => setZoom((z) => Math.max(80, z - 10))}><ZoomOut size={15} /></Boton>
+              <span className="w-10 text-center text-xs tabular-nums text-[var(--fg-muted)]">{zoom}%</span>
+              <Boton titulo="Aumentar el zoom" onClick={() => setZoom((z) => Math.min(160, z + 10))}><ZoomIn size={15} /></Boton>
+            </>
+          )}
+        </div>
       </div>
       <div
         ref={caja}
@@ -277,12 +413,13 @@ export function EditorCuerpo({
         aria-label="Cuerpo de la nota"
         data-placeholder={placeholder}
         spellCheck
+        style={zoom === 100 ? undefined : { zoom: zoom / 100 }}
         onFocus={() => document.execCommand("defaultParagraphSeparator", false, "p")}
         onInput={emitir}
         onKeyUp={leerEstado}
         onMouseUp={leerEstado}
         onPaste={(e) => {
-          // Se pega solo lo esencial (párrafos, negrita, enlaces…): nada de estilos ni colores de otra página.
+          // Se pega solo lo esencial (párrafos, negrita, tablas, enlaces…): nada de estilos ni colores de otra página o de Word.
           e.preventDefault();
           const html = e.clipboardData.getData("text/html");
           const texto = e.clipboardData.getData("text/plain");
@@ -293,10 +430,12 @@ export function EditorCuerpo({
           emitir();
         }}
         className={`${papel ? "min-h-[20rem] px-1 py-2" : "min-h-0 flex-1 overflow-y-auto px-5 py-4"} text-base leading-relaxed outline-none empty:before:text-[var(--fg-muted)]/60 empty:before:content-[attr(data-placeholder)]
-          [&_p]:my-2.5 [&_h2]:mb-2 [&_h2]:mt-5 [&_h2]:text-xl [&_h2]:font-semibold [&_h3]:mt-4 [&_h3]:font-semibold
+          [&_p]:my-2.5 [&_h2]:mb-2 [&_h2]:mt-5 [&_h2]:text-xl [&_h2]:font-semibold [&_h3]:mt-4 [&_h3]:text-lg [&_h3]:font-semibold [&_h4]:mt-3 [&_h4]:font-semibold
           [&_ul]:my-2.5 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:my-2.5 [&_ol]:list-decimal [&_ol]:pl-6
           [&_blockquote]:my-3 [&_blockquote]:border-l-4 [&_blockquote]:border-[var(--accent)] [&_blockquote]:bg-[var(--surface-2)]/50 [&_blockquote]:px-4 [&_blockquote]:py-2 [&_blockquote]:italic
-          [&_a]:text-[var(--accent)] [&_a]:underline [&_strong]:font-bold
+          [&_a]:text-[var(--accent)] [&_a]:underline [&_strong]:font-bold [&_mark]:bg-yellow-200 [&_mark]:px-0.5 [&_u]:underline [&_s]:line-through [&_sub]:align-sub [&_sub]:text-xs [&_sup]:align-super [&_sup]:text-xs
+          [&_hr]:my-5 [&_hr]:border-[var(--border)] [&_pre]:my-3 [&_pre]:overflow-x-auto [&_pre]:rounded-md [&_pre]:bg-[var(--surface-2)] [&_pre]:p-3 [&_pre]:font-mono [&_pre]:text-sm
+          [&_table]:my-4 [&_table]:w-full [&_table]:border-collapse [&_td]:min-w-12 [&_td]:border [&_td]:border-[var(--border)] [&_td]:px-2 [&_td]:py-1.5 [&_th]:border [&_th]:border-[var(--border)] [&_th]:bg-[var(--surface-2)] [&_th]:px-2 [&_th]:py-1.5 [&_th]:text-left [&_th]:font-semibold
           [&_figure]:my-4 [&_figure_img]:mx-auto [&_figure_img]:max-h-72 [&_figcaption]:mt-1 [&_figcaption]:text-center [&_figcaption]:text-xs [&_figcaption]:text-[var(--fg-muted)]
           [&_details]:my-3 [&_details]:rounded-md [&_details]:border [&_details]:border-[var(--border)] [&_details]:px-3 [&_details]:py-2 [&_summary]:cursor-pointer [&_summary]:text-sm [&_summary]:font-semibold
           [&_iframe]:aspect-video [&_iframe]:w-full`}

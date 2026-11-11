@@ -1322,64 +1322,48 @@ export function ArticleWizard({
         )}
 
         {current.key === "seccion" && (
-          <Step ancho="xl" title="¿Dónde se publica?" hint="Tres decisiones, todas opcionales: 1. la sección (a la derecha), 2. de qué región habla y 3. si va destacada en la portada del sitio.">
-            <SectionTree options={categories} value={categoryId} onChange={setCategoryId} sugeridas={seccionesSugeridas} filas={filasListas(alto, 130, 38)}>
-              {/* Región y departamento de la noticia: alimentan el mapa interactivo de la sección «Regiones». Compacto a propósito: el asistente no hace scroll. */}
-              <div className="rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] px-3.5 py-2.5">
-                <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-                  <p id="reg-nota" className="lx-kicker text-[var(--fg-muted)]" title="A qué región y departamento de Colombia pertenece; así sale en el mapa de «Regiones».">2 · Región de la noticia</p>
-                  {region && (
-                    <label className="flex items-center gap-2 text-xs text-[var(--fg-muted)]">
-                      Departamento
-                      <select value={depto} onChange={(e) => setDepto(e.target.value)} className="rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-sm text-[var(--fg)]">
-                        <option value="">Sin departamento</option>
-                        {DEPARTAMENTOS_FILTRO.filter((d) => d.region === region).map((d) => (
-                          <option key={d.slug} value={d.slug}>{d.nombre}</option>
-                        ))}
-                      </select>
-                    </label>
-                  )}
-                </div>
-                <p className="mt-0.5 text-xs text-[var(--fg-muted)]">¿De qué parte de Colombia habla? Así la nota aparece en el mapa de «Regiones».</p>
-                <div role="radiogroup" aria-labelledby="reg-nota" className="mt-2 flex flex-wrap gap-1.5">
+          <Step ancho="xl" title="¿Dónde se publica?" hint="Tres decisiones, todas opcionales: 1. la sección, 2. la región de la que habla y 3. si va destacada en la portada del sitio.">
+            <SectionTree options={categories} value={categoryId} onChange={setCategoryId} sugeridas={seccionesSugeridas} filas={filasListas(alto, 250, 38)}>
+              {/* 2 · Región y departamento: alimentan el mapa de «Regiones». */}
+              <TarjetaDecision n={2} titulo="¿De qué región habla?" ayuda="Así la nota aparece en el mapa de «Regiones». Si no es de una región, déjalo en «Sin región».">
+                <div id="reg-nota" role="radiogroup" aria-label="Región de la noticia" className="flex flex-wrap gap-1.5">
                   {[{ slug: "", nombre: "Sin región", color: "" }, ...REGIONES_COLOMBIA].map((r) => (
                     <button key={r.slug || "ninguna"} type="button" role="radio" aria-checked={region === r.slug} onClick={() => { setRegion(r.slug); setDepto(""); }}
-                      className={`inline-flex min-h-8 items-center gap-1.5 rounded-full border px-2.5 text-xs font-medium transition ${region === r.slug ? "border-transparent bg-[var(--accent)] text-[var(--accent-fg,#fff)] shadow-sm" : "border-[var(--border)] bg-[var(--surface)] text-[var(--fg-muted)] hover:text-[var(--fg)]"}`}>
+                      className={`inline-flex min-h-8 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition ${region === r.slug ? "border-transparent bg-[var(--accent)] text-[var(--accent-fg,#fff)] shadow-sm" : "border-[var(--border)] bg-[var(--surface)] text-[var(--fg-muted)] hover:text-[var(--fg)]"}`}>
                       {r.color && <span aria-hidden className="size-2 rounded-full" style={{ background: r.color }} />}
                       {r.nombre}
                     </button>
                   ))}
                 </div>
-              </div>
-              {canPortada ? (
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] px-3.5 py-2">
-                  <div className="min-w-0 flex-1 basis-48">
-                    <p id="pt-sitio" className="lx-kicker text-[var(--fg-muted)]" title="Sin destacar: entra a la portada por fecha, como cualquier nota.">3 · Destacar en la portada</p>
-                    {portadaPos === "none" && <p className="text-xs leading-snug text-[var(--fg-muted)]">Normal: entra a la portada por fecha, como cualquier nota.</p>}
-                    {portadaPos !== "none" && (
-                      <p className="text-xs leading-snug text-[var(--fg-muted)]">
-                        {portadaPos === "0" && "Será la nota grande de arriba."}
-                        {portadaPos === "1" && "Irá junto a la principal."}
-                        {portadaPos === "keep" && "Ya tiene un lugar fijado; se conserva."}
-                      </p>
-                    )}
-                  </div>
-                  <div role="radiogroup" aria-labelledby="pt-sitio" className="grid w-full grid-cols-3 gap-1 rounded-full border border-[var(--border)] bg-[var(--surface)] p-1 sm:w-auto">
+                {region && (
+                  <label className="flex items-center gap-2 text-xs text-[var(--fg-muted)]">
+                    Departamento
+                    <select value={depto} onChange={(e) => setDepto(e.target.value)} className="min-w-0 flex-1 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5 text-sm text-[var(--fg)]">
+                      <option value="">Sin departamento</option>
+                      {DEPARTAMENTOS_FILTRO.filter((d) => d.region === region).map((d) => (
+                        <option key={d.slug} value={d.slug}>{d.nombre}</option>
+                      ))}
+                    </select>
+                  </label>
+                )}
+              </TarjetaDecision>
+              {/* 3 · Lugar en la portada del sitio (solo con permiso «portada»). */}
+              <TarjetaDecision n={3} titulo="¿Va destacada en la portada?" ayuda={canPortada ? (portadaPos === "0" ? "Será la nota grande de arriba." : portadaPos === "1" ? "Irá junto a la principal." : portadaPos === "keep" ? "Ya tiene un lugar fijado; se conserva." : "Normal: entra a la portada por fecha, como cualquier nota.") : "Tu cuenta no ubica notas en la portada: un editor lo hace al publicar."}>
+                {canPortada && (
+                  <div id="pt-sitio" role="radiogroup" aria-label="Lugar en la portada del sitio" className="grid w-full grid-cols-3 gap-1 rounded-full border border-[var(--border)] bg-[var(--surface-2)]/60 p-1">
                     {([
                       ["none", "Normal", "Sin destacar", "Entra por fecha, como cualquier nota."],
-                      ["0", "Principal", "Portada principal", "La nota grande de arriba."],
-                      ["1", "Segunda", "Segunda destacada", "Junto a la principal."],
-                    ] as const).map(([v, corto, t, d]) => (
+                      ["0", "Principal", "Principal", "La nota grande de arriba."],
+                      ["1", "Segunda", "Segunda", "Junto a la principal."],
+                    ] as const).map(([v, , t, d]) => (
                       <button key={v} type="button" role="radio" aria-checked={portadaPos === v} title={d} onClick={() => setPortadaPos(v)}
-                        className={`rounded-full px-3 py-1 text-center text-sm font-medium transition sm:px-3.5 ${portadaPos === v ? "bg-[var(--accent)] text-[var(--accent-fg,#fff)] shadow-sm" : "text-[var(--fg-muted)] hover:text-[var(--fg)]"}`}>
-                        <span className="sm:hidden">{corto}</span><span className="hidden sm:inline">{t}</span>
+                        className={`rounded-full px-2 py-1.5 text-center text-sm font-medium transition ${portadaPos === v ? "bg-[var(--accent)] text-[var(--accent-fg,#fff)] shadow-sm" : "text-[var(--fg-muted)] hover:text-[var(--fg)]"}`}>
+                        {t}
                       </button>
                     ))}
                   </div>
-                </div>
-              ) : (
-                <p className="px-1 text-xs text-[var(--fg-muted)]">Tu cuenta no ubica notas en la portada del sitio: un editor lo hace al publicar.</p>
-              )}
+                )}
+              </TarjetaDecision>
             </SectionTree>
           </Step>
         )}
@@ -1881,6 +1865,22 @@ function Step({ title, hint, children, ancho = "md", centrado = false }: { title
       </header>
       <div className="flex min-h-0 flex-1 flex-col gap-3.5">{children}</div>
     </div>
+  );
+}
+
+/** Tarjeta numerada de una decisión (pasos 2 y 3 de «Sección»): círculo con el número, pregunta, ayuda y las opciones. */
+function TarjetaDecision({ n, titulo, ayuda, children }: { n: number; titulo: string; ayuda: string; children?: React.ReactNode }) {
+  return (
+    <section className="flex min-w-0 flex-col gap-3 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow)]">
+      <header className="flex items-start gap-3">
+        <span aria-hidden className="grid size-8 shrink-0 place-items-center rounded-full bg-[var(--accent)] text-sm font-bold text-[var(--accent-fg,#fff)]">{n}</span>
+        <div className="min-w-0">
+          <h3 className="text-base font-semibold leading-tight">{titulo}</h3>
+          <p className="mt-0.5 text-xs text-[var(--fg-muted)]">{ayuda}</p>
+        </div>
+      </header>
+      {children}
+    </section>
   );
 }
 

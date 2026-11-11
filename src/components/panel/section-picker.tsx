@@ -155,15 +155,15 @@ export function SectionTree({
 
   const hayRama = !!ramaNodo && subs.length > 0;
   return (
-    <div className="grid gap-3 @2xl:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] @2xl:items-start">
-      <div className="flex min-w-0 flex-col gap-2.5">
-      {/* Dónde se publicará y quién firma */}
-      <div className="flex items-center gap-3 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] px-3.5 py-2.5">
+    <div className="grid gap-4 @2xl:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] @2xl:items-start">
+      {/* Tarjeta 1: qué sección eligió, las sugeridas y las listas para cambiarla */}
+      <section className="flex min-w-0 flex-col gap-3 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow)]">
+      <div className="flex items-center gap-3">
         <span className={`grid size-9 shrink-0 place-items-center rounded-full ${actual ? "bg-[var(--accent)] text-[var(--accent-fg)]" : "bg-[var(--surface-2)] text-[var(--fg-muted)]"}`}>
           <FolderOpen size={17} aria-hidden />
         </span>
         <div className="min-w-0 flex-1">
-          <p id={`${id}-l`} className="lx-kicker text-[var(--fg-muted)]">1 · Sección donde se publica</p>
+          <p id={`${id}-l`} className="lx-kicker text-[var(--fg-muted)]">1 · Sección elegida</p>
           <p className={`truncate text-sm ${actual ? "font-semibold" : "text-[var(--fg-muted)]"}`} aria-live="polite">
             {actual ? `${padre ? `${padre.name} › ` : ""}${actual.name}` : "Sin sección · puedes dejarlo para después"}
           </p>
@@ -198,9 +198,6 @@ export function SectionTree({
           })}
         </div>
       )}
-
-      {children}
-      </div>
 
       {/* Dos columnas, como el sitio: secciones | subsecciones. Cada lista es un carrusel de `filas` filas por página. */}
       <div className="@container min-w-0 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)]">
@@ -282,6 +279,9 @@ export function SectionTree({
         )}
       </div>
       </div>
+      </section>
+      {/* Decisiones 2 y 3 del asistente (región, portada), una tarjeta cada una */}
+      <div className="flex min-w-0 flex-col gap-4">{children}</div>
     </div>
   );
 }

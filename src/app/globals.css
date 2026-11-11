@@ -1516,6 +1516,9 @@ a {
 }
 
 .prose video { width: 100%; border-radius: var(--radius-lg); margin: 2rem 0; background: #000; }
+/* Formatos que ofrece el editor del panel (Título 4 y resaltado). */
+.prose h4 { margin: 1.6rem 0 0.6rem; font-weight: 700; }
+.prose mark { background: #fff3a3; color: inherit; padding: 0 0.15em; border-radius: 2px; }
 .prose hr { margin: 2.5rem 0; border: 0; height: 1px; background: var(--border); }
 
 /* Contenido pegado desde otros sitios (tablas de precios, vídeos con ancho fijo,
