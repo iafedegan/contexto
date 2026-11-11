@@ -264,7 +264,7 @@ async function HomePage({ locale, portadaBorrador }: { locale: Locale; portadaBo
 
       {/* Zona comercial de portada. No ocupa sitio si no hay creatividad
           activa y vigente (ver src/lib/ads.ts). */}
-      <AdsBanner zone="home_top" className="mx-auto mb-10" />
+      <AdsBanner zone="home_top" className="mx-auto mb-4" />
 
       {/* La portada propia del inicio, armada en Páginas con el constructor: va arriba de las notas. En la vista previa manda el borrador. */}
       {filasInicio("arriba").length > 0 && (
@@ -276,7 +276,7 @@ async function HomePage({ locale, portadaBorrador }: { locale: Locale; portadaBo
       {/* La cinta de destacados es parte de la identidad "diario"; el resto de
           plantillas ya destaca con su propio hero o cuadrícula. */}
       {body === "clasico" && (
-        <div className="mb-10">
+        <div className="mb-6">
           <FeatureStrip items={strip} locale={locale} />
         </div>
       )}

@@ -162,7 +162,7 @@ function MastheadHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extr
       {/* Solo la fila de secciones queda pegada al desplazarse (ver StickyRail). */}
       <StickyRail />
       {/* Contenedor de tamaño propio: el nombre, el emblema y las líneas se escalan con su ancho y se ajustan juntos. */}
-      <div className="mx-auto max-w-7xl px-6 pb-2 pt-2 text-center md:pt-2.5 [container-type:inline-size]">
+      <div className="mx-auto max-w-7xl px-6 pb-1.5 pt-2 text-center md:pt-2.5 [container-type:inline-size]">
         {/* Logo a la izquierda y, a su lado, el nombre. `items-center` en ESTA fila: las líneas y el logo quedan en el centro vertical del título. */}
         <div className="flex items-center justify-center gap-6">
           <span data-titulo-linea className="hidden h-px flex-1 bg-gradient-to-r from-transparent to-[var(--border-strong)] md:block" />
