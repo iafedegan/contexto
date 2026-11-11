@@ -49,7 +49,7 @@ export default async function ImagenesPedidas() {
                 <Link href={`/panel/articulos/${p.articleId}?modo=manual`} className="lx-link text-sm font-semibold">{titulo.get(p.articleId) ?? "Nota"}</Link>
                 <p className="text-xs text-[var(--fg-muted)]">Pedida por {nombre.get(p.porId) ?? "—"} · {cuando(p.fecha)}</p>
                 <p className="mt-2 whitespace-pre-line text-sm">{p.indicaciones}</p>
-                <EntregaImagen articleId={p.articleId} />
+                <EntregaImagen articleId={p.articleId} tituloNota={titulo.get(p.articleId) ?? ""} />
               </li>
             ))}
           </ul>

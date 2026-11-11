@@ -17,6 +17,9 @@ export type PedidoImagen = {
   entregadaPorId?: string;
   /** La imagen que entregó el diseñador. */
   url?: string;
+  /** Texto alternativo y pie de foto (con el crédito) que escribió al entregarla: pasan a la nota junto con la imagen. */
+  alt?: string;
+  pie?: string;
 };
 
 /** Quien puede entregar la imagen pedida: los diseñadores, y los editores y administradores que los reemplazan. */

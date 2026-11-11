@@ -106,7 +106,6 @@ const STEPS_MANUAL = [
   { key: "enviar", label: "Enviar" },
   { key: "seccion", label: "Sección" },
   { key: "documento", label: "Documento" },
-  { key: "cuerpo", label: "Cuerpo" },
   { key: "seo", label: "Buscadores" },
   { key: "vista", label: "Vista previa" },
 ] as const;
@@ -733,7 +732,7 @@ export function ArticleWizard({
   const PART_OF: Partial<Record<StepKey, DraftPart>> = {
     resumen: "excerpt",
     claves: "tags",
-    cuerpo: "body",
+    documento: "body",
     seo: "seo",
   };
 
@@ -901,7 +900,7 @@ export function ArticleWizard({
             </button>
           </div>
         )}
-        {mode === "manual" && PART_OF[current.key] && current.key !== "cuerpo" && (() => {
+        {mode === "manual" && PART_OF[current.key] && current.key !== "documento" && (() => {
           const part = PART_OF[current.key]!;
           const vacio = part === "excerpt" ? !excerpt.trim() : part === "tags" ? tags.length === 0 : !metaTitle.trim() && !metaDescription.trim();
           const que = { excerpt: "el resumen", tags: "las palabras clave", body: "el cuerpo", seo: "la ficha de buscadores" }[part];
@@ -1369,7 +1368,7 @@ export function ArticleWizard({
         )}
 
         {current.key === "documento" && (
-          <Step ancho="xl" title="Tu nota completa" hint="Título, bajada y cuerpo en una sola página, como en Word. Lo que cambies aquí se actualiza en los demás pasos.">
+          <Step ancho="xl" title="Escribe tu nota" hint="Título, bajada y cuerpo en una sola página, con las herramientas de un procesador de texto. Es el paso principal para escribir.">
             <div className="min-h-0 flex-1 overflow-y-auto rounded-[var(--radius-lg)] bg-[#e4e7e5] p-3 sm:p-6">
               <article className="mx-auto w-full max-w-3xl rounded-sm bg-white text-[#1b1b1b] shadow-[0_1px_3px_rgba(0,0,0,.18),0_10px_30px_rgba(0,0,0,.08)]">
                 <div className="px-6 pb-2 pt-8 sm:px-14 sm:pt-12">
@@ -1388,17 +1387,6 @@ export function ArticleWizard({
                 </div>
               </article>
             </div>
-          </Step>
-        )}
-
-        {current.key === "cuerpo" && (
-          <Step ancho="xl" title="Escribe el cuerpo" hint="Escribe sobre el texto ya formateado, como en un procesador de texto: negrita, intertítulos, citas, listas y enlaces desde la barra.">
-            <EditorCuerpo
-              value={body}
-              onChange={setBody}
-              placeholder="Primer párrafo con lo más importante…"
-              resumen={<>{words} palabras · {Math.max(1, Math.round(words / 200))} min</>}
-            />
             {mode === "ia" && generated && (
               // Si el borrador no convence, se le dice a la IA cómo reescribirlo (tono, enfoque, qué citar…).
               <div className="flex shrink-0 flex-wrap items-center gap-2">
@@ -1645,7 +1633,7 @@ export function ArticleWizard({
           <Step ancho="lg" title="Enviar" hint="Opcional. Pide la imagen a un diseñador y, si quieres, envía la nota a otra persona. Cada tarjeta tiene su botón.">
             <div className="grid items-stretch gap-4 @2xl:grid-cols-2">
               <TarjetaEnvio Icono={Brush} titulo="Solicitar la imagen" ayuda="Un diseñador la prepara y te la devuelve a la nota.">
-                <PedirImagen articleId={savedId} titulo={title} resumen={excerpt} portadaActual={cover} alUsar={(u) => { setCover(u); setImgError(""); }} />
+                <PedirImagen articleId={savedId} titulo={title} resumen={excerpt} portadaActual={cover} alUsar={(u, a) => { setCover(u); if (a) setCoverAlt(a); setImgError(""); }} />
               </TarjetaEnvio>
               {puedeEnviarEditor ? (
                 <TarjetaEnvio Icono={Send} titulo={envioLibre ? "Enviar la nota a alguien" : "Enviar la nota a un editor"} ayuda="Queda «En revisión» y le llega en «Artículos».">

@@ -1,9 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { eq } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { articles } from "@/db/schema";
+import { articles, mediaAssets, mediaFolders } from "@/db/schema";
+import { tienePermiso } from "@/lib/permisos-server";
+import { nombreValido, rutaDe } from "@/lib/biblioteca-acceso";
+import { urlPublicaMedia } from "@/lib/media-storage";
 import { requirePermiso } from "@/lib/auth";
 import { revalidarNotas } from "@/lib/article-ops";
 import { cerrarPedido, disenadoresActivos, esDisenadorActivo, leerPedidos, registrarPedido } from "@/lib/imagenes-pedidas";
@@ -42,25 +45,59 @@ export async function cancelarPedido(input: { articleId: string }): Promise<Resp
   return hecho ? { ok: true, message: "Pedido cancelado." } : { ok: false, message: "Ese pedido ya no estaba pendiente." };
 }
 
+/** Las carpetas de la biblioteca donde puede quedar guardada la imagen entregada (solo quien gestiona la biblioteca elige carpeta). */
+export async function carpetasDeEntrega(): Promise<{ gestiona: boolean; carpetas: { id: string; ruta: string }[] }> {
+  const yo = await requirePermiso("articulos");
+  const gestiona = await tienePermiso(yo.id, yo.role, "biblioteca");
+  if (!gestiona) return { gestiona, carpetas: [] };
+  const todas = await db.select({ id: mediaFolders.id, parentId: mediaFolders.parentId, name: mediaFolders.name }).from(mediaFolders).orderBy(asc(mediaFolders.name));
+  const carpetas = todas.map((c) => ({ id: c.id, ruta: rutaDe(todas, c.id).map((x) => x.name).join(" › ") })).sort((a, b) => a.ruta.localeCompare(b.ruta, "es"));
+  return { gestiona, carpetas };
+}
+
 /**
- * El diseñador entrega la imagen: queda como portada de la nota (con su texto alternativo) y el pedido se cierra. Si la nota ya está
- * publicada, se actualiza también el sitio.
+ * El diseñador entrega la imagen: queda como portada de la nota con lo que necesita el buscador (texto alternativo y pie de foto con
+ * crédito), se guarda en la carpeta de la biblioteca que elija y el pedido se cierra. Si la nota ya está publicada, se actualiza
+ * también el sitio.
  */
-export async function entregarImagen(input: { articleId: string; url: string; alt: string }): Promise<Respuesta> {
+export async function entregarImagen(input: { articleId: string; url: string; alt: string; pie?: string; nombre?: string; carpetaId?: string | null; bytes?: number }): Promise<Respuesta> {
   const yo = await requirePermiso("articulos");
   if (!puedeEntregarImagen(yo.role)) return { ok: false, message: "Solo los diseñadores entregan imágenes." };
   const url = String(input.url ?? "").trim();
   if (!urlDeImagenValida(url)) return { ok: false, message: "Sube la imagen antes de entregarla." };
+  const alt = String(input.alt ?? "").trim().slice(0, 300);
+  if (alt.length < 10) return { ok: false, message: "Describe lo que se ve en la imagen (al menos 10 caracteres): Google la usa para entenderla." };
+  const pie = String(input.pie ?? "").trim().slice(0, 300);
   const articleId = String(input.articleId ?? "");
   const [nota] = await db.select({ id: articles.id, estado: articles.status }).from(articles).where(eq(articles.id, articleId)).limit(1);
   if (!nota) return { ok: false, message: "La nota ya no existe." };
 
-  const cerrado = await cerrarPedido(articleId, { estado: "entregada", entregadaEn: new Date().toISOString(), entregadaPorId: yo.id, url });
+  // La carpeta de la biblioteca (solo quien gestiona la biblioteca): se comprueba ANTES de cerrar el pedido.
+  const gestiona = await tienePermiso(yo.id, yo.role, "biblioteca");
+  const carpetaId = gestiona && input.carpetaId ? String(input.carpetaId) : null;
+  if (carpetaId) {
+    const [c] = await db.select({ id: mediaFolders.id }).from(mediaFolders).where(eq(mediaFolders.id, carpetaId)).limit(1);
+    if (!c) return { ok: false, message: "La carpeta elegida ya no existe." };
+  }
+
+  const cerrado = await cerrarPedido(articleId, { estado: "entregada", entregadaEn: new Date().toISOString(), entregadaPorId: yo.id, url, alt, pie });
   if (!cerrado) return { ok: false, message: "Ese pedido ya no estaba pendiente." };
   await db
     .update(articles)
-    .set({ coverImageUrl: url, coverImageAlt: String(input.alt ?? "").trim().slice(0, 300) || null, updatedAt: new Date() })
+    .set({ coverImageUrl: url, coverImageAlt: alt, coverImageCaption: pie || null, updatedAt: new Date() })
     .where(eq(articles.id, articleId));
+
+  // Queda registrada en la biblioteca, en la carpeta elegida y con un nombre que se entienda (solo si es del propio almacenamiento).
+  const base = urlPublicaMedia("");
+  if (gestiona && base && url.startsWith(base) && url.length <= 400) {
+    const nombre = nombreValido(input.nombre) ?? nombreValido(alt.slice(0, 100)) ?? "Imagen de portada";
+    const bytes = Number.isFinite(input.bytes) && (input.bytes as number) > 0 ? Math.round(input.bytes as number) : null;
+    await db
+      .insert(mediaAssets)
+      .values({ folderId: carpetaId, name: nombre, url, kind: "imagen", bytes, uploadedBy: yo.id })
+      .onConflictDoUpdate({ target: mediaAssets.url, set: { folderId: carpetaId, name: nombre } });
+    revalidatePath("/panel/biblioteca");
+  }
   if (nota.estado === "publicado") await revalidarNotas([articleId]);
   revalidatePath("/panel/imagenes");
   return { ok: true, message: "Imagen entregada y puesta como portada de la nota." };
