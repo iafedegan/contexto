@@ -268,7 +268,7 @@ async function HomePage({ locale, portadaBorrador }: { locale: Locale; portadaBo
 
       {/* La portada propia del inicio, armada en Páginas con el constructor: va arriba de las notas. En la vista previa manda el borrador. */}
       {filasInicio("arriba").length > 0 && (
-        <article className="mb-12 flex flex-col gap-8">
+        <article className="mb-4 flex flex-col gap-8">
           <PaginaVista contenido={{ filas: filasInicio("arriba") }} notas={notasInicioPropio} />
         </article>
       )}
