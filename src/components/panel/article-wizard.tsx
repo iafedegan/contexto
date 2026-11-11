@@ -974,7 +974,7 @@ export function ArticleWizard({
       )}
 
       {savedId && <ComentarSeleccion />}
-      {verComentarios && savedId && !ampliado && <div className="mb-3"><ComentariosNota articleId={savedId} /></div>}
+      {verComentarios && savedId && !ampliado && <div className="mb-3"><ComentariosNota articleId={savedId} esAdmin={esAdmin} /></div>}
       {/* --- Pantalla del paso + panel SEO lateral (escritorio) --- */}
       <div className="flex min-h-0 flex-1 gap-3">
       {/* Sin desplazamiento propio salvo en una ventana demasiado baja (el `auto` solo actúa si no cabe). */}
@@ -1473,7 +1473,7 @@ export function ArticleWizard({
                     </div>
                   </article>
                   </div></div>
-                  {verComentarios && savedId && <aside className="w-[22rem] max-w-[45vw] shrink-0 overflow-y-auto border-l border-black/10 bg-white p-3 text-[#1b1b1b]"><ComentariosNota articleId={savedId} /></aside>}
+                  {verComentarios && savedId && <aside className="w-[22rem] max-w-[45vw] shrink-0 overflow-y-auto border-l border-black/10 bg-white p-3 text-[#1b1b1b]"><ComentariosNota articleId={savedId} esAdmin={esAdmin} /></aside>}
                   </div>
                 </div>,
                 ampliado,

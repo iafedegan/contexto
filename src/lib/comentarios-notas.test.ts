@@ -73,3 +73,17 @@ test("un comentario sobre una selección guarda el fragmento citado y se devuelv
   assert.equal(lista[0].cita, "arrancó formalmente el II Ciclo de Vacunación");
   assert.equal(lista[1].cita, null);
 });
+
+test("un comentario se puede editar y borrar; editarlo no lo vuelve a marcar como nuevo", async () => {
+  const id = await nota("nota-edicion", "en_revision", redactor);
+  await comentarios.agregarComentario(id, editor, "Revisar la cifra");
+  await comentarios.marcarLeidos(id, redactor);
+  const [c] = await comentarios.listarComentarios(id, editor);
+  assert.deepEqual(await comentarios.comentarioDe(c.id), { id: c.id, articleId: id, authorId: editor });
+  await comentarios.actualizarComentario(c.id, "Revisar la cifra de predios");
+  assert.equal((await comentarios.listarComentarios(id, editor))[0].texto, "Revisar la cifra de predios");
+  assert.equal((await comentarios.contarSinLeer(redactor, [id])).get(id) ?? 0, 0, "editar no enciende el aviso");
+  await comentarios.eliminarComentario(c.id);
+  assert.equal((await comentarios.listarComentarios(id, editor)).length, 0);
+  assert.equal(await comentarios.comentarioDe(c.id), null);
+});

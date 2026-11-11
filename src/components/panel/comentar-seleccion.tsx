@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { MessageSquarePlus } from "lucide-react";
 
 /** Evento con el que el botón avisa al panel de comentarios que hay un fragmento seleccionado para comentar. */
@@ -31,7 +32,8 @@ export function ComentarSeleccion() {
   }, []);
 
   if (!sel) return null;
-  return (
+  // Se pinta directamente en el <body>: la hoja ampliada es otra capa por encima del panel y, desde dentro del panel, el botón quedaba tapado.
+  return createPortal(
     <button
       type="button"
       // No le quita la selección al texto al pulsarlo.
@@ -40,10 +42,11 @@ export function ComentarSeleccion() {
         window.dispatchEvent(new CustomEvent(EVENTO_COMENTAR, { detail: { texto: sel.texto } }));
         setSel(null);
       }}
-      style={{ position: "fixed", left: sel.x, top: sel.y, zIndex: 90 }}
+      style={{ position: "fixed", left: sel.x, top: sel.y, zIndex: 100 }}
       className="inline-flex items-center gap-1.5 rounded-full bg-[#1b1b1b] px-3 py-1.5 text-xs font-semibold text-white shadow-lg transition hover:bg-black focus-visible:outline-2 focus-visible:outline-offset-2"
     >
       <MessageSquarePlus size={14} aria-hidden /> Comentar selección
-    </button>
+    </button>,
+    document.body,
   );
 }

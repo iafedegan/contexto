@@ -84,7 +84,7 @@ export default async function VistaPreviaPage({
       {/* Comentarios de la revisión: solo con sesión del panel (el enlace firmado es para auditar la página) */}
       {session?.user && (
         <div className="mb-8">
-          <ComentariosNota articleId={a.id} />
+          <ComentariosNota articleId={a.id} esAdmin={session.user.role === "administrador"} />
         </div>
       )}
       {/* Con sesión, el texto de la nota se puede seleccionar y comentar. */}

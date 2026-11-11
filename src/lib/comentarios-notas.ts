@@ -72,3 +72,19 @@ export async function totalSinLeer(persona: { id: string; role: string }): Promi
     return 0;
   }
 }
+
+/** Quién escribió un comentario y en qué nota está; `null` si ya no existe. */
+export async function comentarioDe(id: string): Promise<{ id: string; articleId: string; authorId: string | null } | null> {
+  const [c] = await db.select({ id: articleComments.id, articleId: articleComments.articleId, authorId: articleComments.authorId }).from(articleComments).where(eq(articleComments.id, id)).limit(1);
+  return c ?? null;
+}
+
+/** Cambia el texto de un comentario (ya validado por quien llama). No cuenta como comentario nuevo: conserva su fecha. */
+export async function actualizarComentario(id: string, texto: string): Promise<void> {
+  await db.update(articleComments).set({ body: texto }).where(eq(articleComments.id, id));
+}
+
+/** Borra un comentario (ya validado por quien llama). */
+export async function eliminarComentario(id: string): Promise<void> {
+  await db.delete(articleComments).where(eq(articleComments.id, id));
+}

@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import { Loader2, MessageSquare, Quote, Send, X } from "lucide-react";
-import { comentarNota, comentariosDeNota } from "@/app/panel/(app)/articulos/comentarios-actions";
+import { Loader2, MessageSquare, Pencil, Quote, Send, Trash2, X } from "lucide-react";
+import { borrarComentarioNota, comentarNota, comentariosDeNota, editarComentarioNota } from "@/app/panel/(app)/articulos/comentarios-actions";
+import { confirmar } from "@/components/panel/confirmar";
 import type { Comentario } from "@/lib/comentarios-notas";
 import { EVENTO_COMENTAR } from "@/components/panel/comentar-seleccion";
 
@@ -13,7 +14,7 @@ const cuando = (iso: string) => new Intl.DateTimeFormat("es-CO", { day: "numeric
  * Conversación de la revisión de una nota: quien la tiene a cargo, quien la revisa y el diseñador se dejan comentarios. Al abrirla, los comentarios
  * se dan por leídos (la otra parte ve un aviso en el listado de artículos mientras no los lea).
  */
-export function ComentariosNota({ articleId }: { articleId: string }) {
+export function ComentariosNota({ articleId, esAdmin = false }: { articleId: string; esAdmin?: boolean }) {
   const [lista, setLista] = useState<Comentario[] | null>(null);
   const [texto, setTexto] = useState("");
   const [error, setError] = useState("");
@@ -22,6 +23,8 @@ export function ComentariosNota({ articleId }: { articleId: string }) {
   const caja = useRef<HTMLTextAreaElement>(null);
   // Fragmento de la nota seleccionado para comentar (viaja con el comentario como cita).
   const [cita, setCita] = useState("");
+  // Comentario que se está editando y su texto.
+  const [editando, setEditando] = useState<{ id: string; texto: string } | null>(null);
 
   // Un texto seleccionado en la nota (botón «Comentar selección») queda citado y el cursor pasa a la caja del comentario.
   useEffect(() => {
@@ -52,6 +55,27 @@ export function ComentariosNota({ articleId }: { articleId: string }) {
     if (buscar) buscar.call(window, fragmento.slice(0, 80), false, false, true);
   }
 
+  function guardarEdicion() {
+    if (!editando || !editando.texto.trim()) return;
+    setError("");
+    enviar(async () => {
+      const r = await editarComentarioNota(editando.id, editando.texto);
+      if (!r.ok) return setError(r.message);
+      setLista(r.comentarios);
+      setEditando(null);
+    });
+  }
+
+  async function borrar(id: string) {
+    if (!(await confirmar("¿Borrar este comentario? No se puede deshacer."))) return;
+    setError("");
+    enviar(async () => {
+      const r = await borrarComentarioNota(id);
+      if (!r.ok) return setError(r.message);
+      setLista(r.comentarios);
+    });
+  }
+
   function comentar() {
     const t = texto.trim();
     if (!t) return;
@@ -79,7 +103,25 @@ export function ComentariosNota({ articleId }: { articleId: string }) {
                 <Quote size={11} aria-hidden className="mt-0.5 shrink-0" /> <span className="line-clamp-3">{c.cita}</span>
               </button>
             )}
-            <p className="mt-0.5 whitespace-pre-line break-words">{c.texto}</p>
+            {editando?.id === c.id ? (
+              <div className="mt-1 flex flex-col gap-1.5">
+                <textarea value={editando.texto} onChange={(e) => setEditando({ id: c.id, texto: e.target.value.slice(0, 2000) })} rows={3} autoFocus aria-label="Editar el comentario" className="w-full resize-none rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] px-2.5 py-1.5 text-sm outline-none focus:border-[var(--accent)]" />
+                <div className="flex gap-3 text-xs font-semibold">
+                  <button type="button" onClick={guardarEdicion} disabled={enviando || !editando.texto.trim()} className="lx-link disabled:opacity-50">Guardar</button>
+                  <button type="button" onClick={() => setEditando(null)} className="text-[var(--fg-muted)] hover:text-[var(--fg)]">Cancelar</button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <p className="mt-0.5 whitespace-pre-line break-words">{c.texto}</p>
+                {(c.mio || esAdmin) && (
+                  <p className="mt-1 flex gap-3 text-[0.7rem] text-[var(--fg-muted)]">
+                    {c.mio && <button type="button" onClick={() => setEditando({ id: c.id, texto: c.texto })} className="inline-flex items-center gap-1 hover:text-[var(--accent)]"><Pencil size={11} aria-hidden /> Editar</button>}
+                    <button type="button" onClick={() => void borrar(c.id)} disabled={enviando} className="inline-flex items-center gap-1 hover:text-[var(--danger,#b4442e)]"><Trash2 size={11} aria-hidden /> Borrar</button>
+                  </p>
+                )}
+              </>
+            )}
           </div>
         ))}
         <div ref={fin} />
