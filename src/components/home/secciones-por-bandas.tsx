@@ -8,10 +8,23 @@ import { formatDate } from "@/lib/utils";
 
 /**
  * Inicio «sección por sección»: una franja por sección con su nombre, el enlace «Ver todo →», la nota más reciente en grande (foto a la izquierda,
- * titular y resumen a la derecha) y debajo hasta tres tarjetas. Las franjas alternan de fondo y de color de acento para que se lean como bloques
- * distintos. Solo usa las variables del tema, así que sigue la plantilla y el modo claro u oscuro del sitio.
+ * titular y resumen a la derecha) y debajo hasta tres tarjetas. Cada franja ocupa TODO el ancho de la ventana y alterna de fondo: la primera,
+ * tercera y quinta son blancas (con sus propios colores de texto) y las demás siguen el fondo del tema; el contenido queda en el ancho normal del sitio.
  */
-const ACENTOS = ["var(--accent)", "var(--accent-2)"] as const;
+// Acentos sobre fondo del tema (oscuro) y sobre fondo blanco (más oscuros, para que se lean).
+const ACENTOS_TEMA = ["var(--accent)", "var(--accent-2)"] as const;
+const ACENTOS_BLANCO = ["#0f5132", "#946200"] as const;
+
+// Colores de una franja blanca: se reasignan las variables que usan los textos, bordes y tarjetas de dentro.
+const VARIABLES_BLANCO = {
+  "--fg": "#14201a",
+  "--fg-muted": "#55625a",
+  "--border": "rgba(20,32,26,0.14)",
+  "--surface": "#ffffff",
+  "--surface-2": "#f2f5f2",
+  backgroundColor: "#ffffff",
+  color: "#14201a",
+} as React.CSSProperties;
 
 // Foto de una nota (o su arte de respaldo si no tiene imagen).
 function Foto({ a, className, grande = false }: { a: ArticleListItem; className: string; grande?: boolean }) {
@@ -43,54 +56,59 @@ function Firma({ a, locale }: { a: ArticleListItem; locale: Locale }) {
   );
 }
 
-// Una franja: encabezado, nota principal y tarjetas.
+// Una franja a todo el ancho: encabezado, nota principal y tarjetas.
 function Banda({ banda, indice, locale }: { banda: BandaDeSeccion; indice: number; locale: Locale }) {
   const [principal, ...resto] = banda.notas;
   const tarjetas = resto.slice(0, 3);
-  const acento = ACENTOS[indice % ACENTOS.length];
+  const blanca = indice % 2 === 0;
+  const acento = (blanca ? ACENTOS_BLANCO : ACENTOS_TEMA)[Math.floor(indice / 2) % 2];
   const id = `banda-${banda.slug}`;
   return (
     <section
       aria-labelledby={id}
       data-region="banda-seccion"
-      className={`rounded-[var(--radius-lg)] border border-[var(--border)] px-5 py-8 sm:px-8 ${indice % 2 === 1 ? "bg-[var(--surface-2)]/70" : "bg-[var(--surface)]/50"}`}
+      data-fondo={blanca ? "blanco" : "tema"}
+      className="lx-fullbleed py-10 sm:py-14"
+      style={blanca ? VARIABLES_BLANCO : undefined}
     >
-      <header className="flex items-end justify-between gap-4 border-b border-[var(--border)] pb-4">
-        <h2 id={id} className="lx-display text-3xl italic leading-none sm:text-4xl" style={{ color: acento }}>{banda.nombre}</h2>
-        <Link href={localePath(locale, `/${banda.slug}`)} className="lx-kicker shrink-0 text-xs hover:underline" style={{ color: acento }}>
-          {locale === "en" ? "See all" : "Ver todo"} →
-        </Link>
-      </header>
-
-      {principal && (
-        <article className="group mt-7 grid gap-6 lg:grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)] lg:items-stretch lg:gap-10">
-          <Link href={hrefNota(locale, principal)} className="block" tabIndex={-1} aria-hidden>
-            <Foto a={principal} grande className="aspect-[16/10]" />
+      <div className="shell">
+        <header className="flex items-end justify-between gap-4 border-b border-[var(--border)] pb-4">
+          <h2 id={id} className="lx-display text-3xl italic leading-none sm:text-4xl" style={{ color: acento }}>{banda.nombre}</h2>
+          <Link href={localePath(locale, `/${banda.slug}`)} className="lx-kicker shrink-0 text-xs hover:underline" style={{ color: acento }}>
+            {locale === "en" ? "See all" : "Ver todo"} →
           </Link>
-          <div className="flex min-w-0 flex-col justify-between gap-5">
-            <Link href={hrefNota(locale, principal)} className="entry-link block">
-              <h3 className="lx-display text-2xl font-semibold leading-tight group-hover:underline sm:text-3xl lg:text-[2.1rem]">{principal.title}</h3>
-              <p className="mt-3 line-clamp-4 text-[1.02rem] leading-relaxed text-[var(--fg-muted)]">{principal.excerpt}</p>
-            </Link>
-            <Firma a={principal} locale={locale} />
-          </div>
-        </article>
-      )}
+        </header>
 
-      {tarjetas.length > 0 && (
-        <div className={`mt-9 grid gap-x-6 gap-y-8 ${tarjetas.length === 1 ? "" : tarjetas.length === 2 ? "sm:grid-cols-2" : "sm:grid-cols-3"}`}>
-          {tarjetas.map((a) => (
-            <article key={a.slug} className="group flex min-w-0 flex-col gap-3">
-              <Link href={hrefNota(locale, a)} className="entry-link flex flex-1 flex-col gap-3">
-                <Foto a={a} className="aspect-[3/2]" />
-                <h3 className="lx-display text-lg font-semibold leading-snug group-hover:underline">{a.title}</h3>
-                <p className="line-clamp-3 text-[0.92rem] leading-relaxed text-[var(--fg-muted)]">{a.excerpt}</p>
+        {principal && (
+          <article className="group mt-7 grid gap-6 lg:grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)] lg:items-stretch lg:gap-10">
+            <Link href={hrefNota(locale, principal)} className="block" tabIndex={-1} aria-hidden>
+              <Foto a={principal} grande className="aspect-[16/10]" />
+            </Link>
+            <div className="flex min-w-0 flex-col justify-between gap-5">
+              <Link href={hrefNota(locale, principal)} className="entry-link block">
+                <h3 className="lx-display text-2xl font-semibold leading-tight group-hover:underline sm:text-3xl lg:text-[2.1rem]">{principal.title}</h3>
+                <p className="mt-3 line-clamp-4 text-[1.02rem] leading-relaxed text-[var(--fg-muted)]">{principal.excerpt}</p>
               </Link>
-              <Firma a={a} locale={locale} />
-            </article>
-          ))}
-        </div>
-      )}
+              <Firma a={principal} locale={locale} />
+            </div>
+          </article>
+        )}
+
+        {tarjetas.length > 0 && (
+          <div className={`mt-9 grid gap-x-6 gap-y-8 ${tarjetas.length === 1 ? "" : tarjetas.length === 2 ? "sm:grid-cols-2" : "sm:grid-cols-3"}`}>
+            {tarjetas.map((a) => (
+              <article key={a.slug} className="group flex min-w-0 flex-col gap-3">
+                <Link href={hrefNota(locale, a)} className="entry-link flex flex-1 flex-col gap-3">
+                  <Foto a={a} className="aspect-[3/2]" />
+                  <h3 className="lx-display text-lg font-semibold leading-snug group-hover:underline">{a.title}</h3>
+                  <p className="line-clamp-3 text-[0.92rem] leading-relaxed text-[var(--fg-muted)]">{a.excerpt}</p>
+                </Link>
+                <Firma a={a} locale={locale} />
+              </article>
+            ))}
+          </div>
+        )}
+      </div>
     </section>
   );
 }
@@ -99,7 +117,7 @@ function Banda({ banda, indice, locale }: { banda: BandaDeSeccion; indice: numbe
 export function SeccionesPorBandas({ bandas, locale }: { bandas: BandaDeSeccion[]; locale: Locale }) {
   if (!bandas.length) return null;
   return (
-    <div data-region="bandas-secciones" className="mt-16 flex flex-col gap-10">
+    <div data-region="bandas-secciones" className="mt-16">
       {bandas.map((b, i) => <Banda key={b.slug} banda={b} indice={i} locale={locale} />)}
     </div>
   );
