@@ -3,7 +3,7 @@ import "server-only";
 import { generateImage, generateText } from "ai";
 import { getAiModel, getImageAi } from "@/lib/ai-provider";
 import { subirImagenBytes } from "@/lib/media-upload";
-import { PREFIJO_IMAGEN_IA } from "@/lib/ai-image";
+import { altDeEscena, creditoImagenIA } from "@/lib/ai-image";
 import { registrarCostoIA, registrarUsoIA, verificarCuotaIA } from "@/lib/ai-cuota";
 import { aWebp } from "@/lib/imagen-webp";
 import { construirPrompt, type EstiloEscena } from "@/lib/ai/prompt-escena";
@@ -20,7 +20,7 @@ export type CoverImageResult =
  * sube al mismo almacenamiento que las fotos, etiquetada como generada con IA.
  */
 export type PortadasResult =
-  | { ok: true; imagenes: { url: string }[]; alt: string; scene: string; prompt: string }
+  | { ok: true; imagenes: { url: string }[]; alt: string; /** Crédito de la imagen: la IA que la generó. */ credito: string; scene: string; prompt: string }
   | { ok: false; error: string };
 
 export type EntradaPortada = {
@@ -72,12 +72,14 @@ export async function generarPortadasCore(userId: string, input: EntradaPortada)
 
     // Una imagen: primero el modelo preferido (si se pidió uno) en 2K; si falla, el elegido en Configuración y, como último recurso, el de 1K.
     let costoUnitario = COSTO_IMAGEN_USD;
+    let conPro = false;
     const una = async (): Promise<Uint8Array> => {
       const preferido = input.modelo ? await getImageAi(input.modelo) : null;
       if (preferido && preferido !== "otro-proveedor") {
         try {
           const { image } = await generateImage({ model: preferido, prompt, aspectRatio: "16:9", providerOptions: { google: { imageConfig: { imageSize: "2K" } } } });
           costoUnitario = COSTO_IMAGEN_PRO_USD;
+          conPro = true;
           return image.uint8Array;
         } catch (e) {
           console.warn("generarPortadas: falló el modelo preferido, uso el de Configuración:", e);
@@ -111,7 +113,7 @@ export async function generarPortadasCore(userId: string, input: EntradaPortada)
       if (!up.ok) return { ok: false, error: up.error };
       imagenes.push({ url: up.url });
     }
-    return { ok: true, imagenes, alt: `${PREFIJO_IMAGEN_IA} ${scene}`.slice(0, 300), scene, prompt };
+    return { ok: true, imagenes, alt: altDeEscena(scene), credito: creditoImagenIA(conPro), scene, prompt };
   } catch (err) {
     console.error("generarPortadas:", err);
     const detalle = err && typeof err === "object" && "message" in err ? String((err as Error).message) : "";

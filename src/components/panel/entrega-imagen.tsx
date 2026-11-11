@@ -51,6 +51,7 @@ export function EntregaImagen({ articleId, tituloNota = "", resumen = "" }: { ar
   const [promptUsado, setPromptUsado] = useState("");
   const [generando, setGenerando] = useState(false);
   const [conIA, setConIA] = useState(false);
+  const [datosIA, setDatosIA] = useState<{ alt: string; credito: string } | null>(null);
   const [subiendo, setSubiendo] = useState(false);
   const [error, setError] = useState("");
   const [pendiente, empezar] = useTransition();
@@ -69,6 +70,7 @@ export function EntregaImagen({ articleId, tituloNota = "", resumen = "" }: { ar
       if (!r.ok) return setError(r.error);
       if (r.kind === "video") return setError("La portada debe ser una imagen.");
       setUrl(r.url);
+      if (conIA && datosIA) { if (pie === datosIA.credito) setPie(""); if (alt === datosIA.alt) setAlt(""); }
       setConIA(false);
       setArchivo(file);
       setAjustando(false);
@@ -83,13 +85,14 @@ export function EntregaImagen({ articleId, tituloNota = "", resumen = "" }: { ar
   }
 
   // Elige una de las opciones generadas: pasa a ser la imagen a entregar (se completan los datos y se entrega como cualquier otra).
-  async function elegirOpcion(direccion: string, altIA?: string) {
+  async function elegirOpcion(direccion: string, datosIA?: { alt: string; credito: string }) {
     setUrl(direccion);
     setArchivo(null);
     setAjustando(false);
     setMedidas(null);
     setConIA(true);
-    if (altIA && !alt.trim()) setAlt(altIA);
+    // El texto alternativo y el crédito de una imagen generada son los de la IA (se pueden editar).
+    if (datosIA) { if (!alt.trim() || conIA) setAlt(datosIA.alt); if (!pie.trim() || conIA) setPie(datosIA.credito); }
     if (!nombre) setNombre(`Portada IA · ${tituloNota}`.slice(0, 60));
     // El peso se lee de la propia imagen, si el almacenamiento lo permite.
     try { const b = await (await fetch(direccion)).blob(); setBytes(b.size); } catch { setBytes(0); }
@@ -104,7 +107,8 @@ export function EntregaImagen({ articleId, tituloNota = "", resumen = "" }: { ar
       if (!r.ok) return setError(r.error);
       setOpciones(r.imagenes.map((i) => i.url));
       setPromptUsado(r.prompt);
-      await elegirOpcion(r.imagenes[0].url, r.alt);
+      setDatosIA({ alt: r.alt, credito: r.credito });
+      await elegirOpcion(r.imagenes[0].url, { alt: r.alt, credito: r.credito });
     } catch {
       setError("No se pudo generar la imagen. Inténtalo de nuevo.");
     } finally {
@@ -230,13 +234,13 @@ export function EntregaImagen({ articleId, tituloNota = "", resumen = "" }: { ar
         <label className="flex flex-col gap-1">
           <span className="flex items-baseline justify-between gap-2">
             <span className="lx-kicker text-[var(--fg-muted)]">Texto alternativo *</span>
-            <span className={`text-[0.7rem] tabular-nums ${altOk ? "text-[#16a34a]" : "text-[var(--fg-muted)]"}`}>{alt.trim().length}/125</span>
+            <span className={`text-[0.7rem] tabular-nums ${alt.trim().length > 125 ? "text-[#b45309]" : altOk ? "text-[#16a34a]" : "text-[var(--fg-muted)]"}`} title={alt.trim().length > 125 ? "Más de 125 caracteres: los lectores de pantalla y Google lo leen largo. Conviene resumirlo." : undefined}>{alt.trim().length}/125</span>
           </span>
           <textarea value={alt} onChange={(e) => setAlt(e.target.value.slice(0, 300))} rows={2} placeholder={`Qué se ve, con palabras clave si encajan. Ej.: «Ganado cebú pastando en una finca de los Llanos»`} className={`${campo} resize-none`} />
           <span className="text-xs text-[var(--fg-muted)]">Google lo usa para entender la imagen y es lo que leen los lectores con lector de pantalla. Describe, no repitas el título.</span>
         </label>
         <label className="flex flex-col gap-1">
-          <span className="lx-kicker text-[var(--fg-muted)]">Pie de foto y crédito</span>
+          <span className="lx-kicker text-[var(--fg-muted)]">Pie de foto y crédito{conIA ? " · de la IA" : ""}</span>
           <input value={pie} onChange={(e) => setPie(e.target.value.slice(0, 300))} placeholder="Ganado en la Orinoquía. Foto: Nombre Apellido / CONtexto Ganadero" className={campo} />
           <span className="text-xs text-[var(--fg-muted)]">Se muestra bajo la imagen en la nota. Incluye quién la hizo.</span>
         </label>
@@ -309,7 +313,7 @@ export function EntregaImagen({ articleId, tituloNota = "", resumen = "" }: { ar
           <p className="text-xs font-semibold">Elige una opción</p>
           <div role="radiogroup" aria-label="Opciones generadas" className="grid gap-3 sm:grid-cols-3">
             {opciones.map((u, i) => (
-              <button key={u} type="button" role="radio" aria-checked={url === u} onClick={() => void elegirOpcion(u)} disabled={generando}
+              <button key={u} type="button" role="radio" aria-checked={url === u} onClick={() => void elegirOpcion(u, datosIA ?? undefined)} disabled={generando}
                 className={`group relative overflow-hidden rounded-[var(--radius)] border-2 transition focus-visible:outline-2 focus-visible:outline-offset-2 ${url === u ? "border-[var(--accent)] shadow-[var(--shadow)]" : "border-transparent hover:border-[var(--border-strong,var(--border))]"}`}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={u} alt={`Opción ${i + 1}`} className="aspect-[16/9] w-full object-cover" />
