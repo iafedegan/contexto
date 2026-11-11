@@ -510,6 +510,29 @@ const leerCategoriasPrincipales = cachear(
 /** Solo las categorías de primer nivel (sin padre) — para el navbar. */
 export const getTopLevelCategories = cache(() => leerCategoriasPrincipales());
 
+/** Una franja del inicio: una sección con sus notas más recientes (la primera va grande y las demás como tarjetas). */
+export type BandaDeSeccion = { slug: string; nombre: string; notas: ArticleListItem[] };
+
+/**
+ * Franjas por sección para el inicio (como una portada «sección por sección»): las secciones de primer nivel, en el orden del menú, que tengan
+ * notas recientes. De cada una se toman las `porBanda` más nuevas (incluidas las de sus subsecciones). Una sección necesita al menos `minimo` notas
+ * para tener franja: no se pintan bloques medio vacíos. Se guarda 5 minutos y se renueva al publicar (TAG_CONTENIDO).
+ */
+export const getBandasDeSecciones = cachear(
+  "bandas-secciones",
+  async (max: number, porBanda: number, minimo: number): Promise<BandaDeSeccion[]> => {
+    const raices = await leerCategoriasPrincipales();
+    const salida: BandaDeSeccion[] = [];
+    for (const c of raices) {
+      if (salida.length >= max) break;
+      const { items } = await getArticlesByCategory(c.slug, { limit: porBanda });
+      if (items.length >= minimo) salida.push({ slug: c.slug, nombre: c.name, notas: items });
+    }
+    return salida;
+  },
+  { tags: [TAG_CONTENIDO], segundos: 300 },
+);
+
 /** Subsección del menú; `children` son las de tercer nivel (por ejemplo, los países de Sur América). */
 export type NavHija = { slug: string; name: string; children?: { slug: string; name: string }[] };
 

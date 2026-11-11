@@ -13,7 +13,7 @@ import { CardSlugsProvider } from "@/components/home/card-styles";
 import { blockStylesCss } from "@/lib/home-style";
 import { ColumnaLafaurieSuelta, SiteSidebar } from "@/components/site-sidebar";
 import { SiteShell } from "@/components/site-shell";
-import { getArticlesByCategory, getHomeLayoutConfig, getHomepageArticles, getMostReadArticles, getRecentArticles, PORTADA_NOTAS } from "@/lib/content";
+import { getArticlesByCategory, getBandasDeSecciones, getHomeLayoutConfig, getHomepageArticles, getMostReadArticles, getRecentArticles, PORTADA_NOTAS } from "@/lib/content";
 import { CarruselPortada, type NotaCarrusel } from "@/components/home/carrusel-portada";
 import { sanitizeCarrusel, sanitizeCarruseles } from "@/lib/carrusel";
 import { hrefNota } from "@/lib/ruta-nota";
@@ -24,6 +24,7 @@ import { getSiteTheme } from "@/lib/site-theme";
 import { getSiteIdentity } from "@/lib/site-identity";
 import { getEnVivo } from "@/lib/en-vivo";
 import { EnVivoBlock } from "@/components/home/en-vivo-block";
+import { SeccionesPorBandas } from "@/components/home/secciones-por-bandas";
 import { formatMarketValue, getMarketTicker } from "@/lib/market-data";
 import { PaginaVista } from "@/components/pagina-vista";
 import { getPaginaPublicada, notasDeLaPagina } from "@/lib/paginas";
@@ -91,6 +92,9 @@ async function HomePage({ locale, portadaBorrador }: { locale: Locale; portadaBo
       </article>
     ) : null;
   const notasInicioPropio = inicioPropio ? await notasDeLaPagina(inicioPropio).catch(() => ({})) : {};
+
+  // Franjas «sección por sección» debajo de la portada: las 6 secciones principales con notas suficientes (la más nueva grande y tres tarjetas).
+  const bandas = await getBandasDeSecciones(6, 4, 2).catch(() => []);
 
   const market = await getMarketTicker().catch(() => []);
   // Gremial es "use client" y market-data.ts es server-only: se le pasan los
@@ -321,6 +325,8 @@ async function HomePage({ locale, portadaBorrador }: { locale: Locale; portadaBo
         {!esEsmeralda && <SiteSidebar locale={locale} columnaEnMovil={false} />}
       </div>
       </CardSlugsProvider>
+
+      <SeccionesPorBandas bandas={bandas} locale={locale} />
 
       {car.posicion === "abajo" && carruselConColumna && <div className="mt-12">{carruselConColumna}</div>}
       {bloqueInicio("abajo", "mt-12")}
