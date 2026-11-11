@@ -1778,19 +1778,6 @@ export function ArticleWizard({
               <button type="button" onClick={back} className="lx-link inline-flex items-center gap-1 text-sm">
                 <ArrowLeft size={14} /> Volver a editar
               </button>
-              {canPublish && (
-                <div role="group" aria-label="Distintivos de la nota" className="flex flex-wrap items-center gap-2">
-                  {([
-                    [breaking, setBreaking, "⚡ Última hora", "Barra roja en la portada y aviso por notificación a quienes tienen la app, una sola vez al publicar."],
-                    [live, setLive, "🔴 En desarrollo", "Etiqueta «En vivo» en las tarjetas y en la nota."],
-                  ] as const).map(([activo, cambiar, texto, ayuda]) => (
-                    <button key={texto} type="button" aria-pressed={activo} title={ayuda} onClick={() => cambiar(!activo)}
-                      className={`inline-flex items-center rounded-full border px-3 py-1 text-sm font-medium transition ${activo ? "border-[var(--accent)] bg-[var(--accent)]/12 text-[var(--accent)]" : "border-[var(--border)] hover:border-[var(--accent)]"}`}>
-                      {texto}
-                    </button>
-                  ))}
-                </div>
-              )}
               <p className="lx-kicker ml-auto flex items-center gap-2 text-[var(--accent)]">
                 <Eye size={14} /> Así se verá en el sitio
               </p>
@@ -1873,6 +1860,19 @@ export function ArticleWizard({
               <p role="status" className="w-full rounded-[var(--radius)] border border-[#d97706]/40 bg-[#d97706]/8 px-3 py-2 text-xs text-[#92400e] sm:text-right">
                 Para publicar o programar falta: {[faltaPortada && "la imagen de portada", faltaSeo && `SEO de ${SEO_MINIMO_PUBLICAR} o más (ahora ${audit.score})`].filter(Boolean).join(" y ")}.
               </p>
+            )}
+            {canPublish && (
+              <div role="group" aria-label="Distintivos de la nota" className="flex flex-wrap items-center gap-2">
+                {([
+                  [breaking, setBreaking, "⚡ Última hora", "Barra roja en la portada y aviso por notificación a quienes tienen la app, una sola vez al publicar."],
+                  [live, setLive, "🔴 En desarrollo", "Etiqueta «En vivo» en las tarjetas y en la nota."],
+                ] as const).map(([activo, cambiar, texto, ayuda]) => (
+                  <button key={texto} type="button" aria-pressed={activo} title={ayuda} onClick={() => cambiar(!activo)}
+                    className={`inline-flex items-center rounded-full border px-3 py-1 text-sm font-medium transition ${activo ? "border-[var(--accent)] bg-[var(--accent)]/12 text-[var(--accent)]" : "border-[var(--border)] hover:border-[var(--accent)]"}`}>
+                    {texto}
+                  </button>
+                ))}
+              </div>
             )}
             {canPublish && (
               <div className="relative">
