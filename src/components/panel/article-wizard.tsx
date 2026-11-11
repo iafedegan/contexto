@@ -260,7 +260,7 @@ export function ArticleWizard({
   const [mensajeEditor, setMensajeEditor] = useState("");
   const editorElegido = editores.find((e) => e.id === enviarA);
   const [depto, setDepto] = useState(initial?.depto ?? "");
-  const [authorId, setAuthorId] = useState(initial?.authorId ?? miAutorId ?? "");
+  const [authorId] = useState(initial?.authorId ?? miAutorId ?? "");
   // El cuerpo se guarda como HTML (el editor lo muestra ya formateado). Las gráficas viajan como marcador `[[GRAFICA …]]`.
   const [body, setBody] = useState(initial?.body ?? "");
   // Indicaciones del editor para la IA sobre cómo escribir (tono, estructura, qué citar…).
@@ -1683,16 +1683,6 @@ export function ArticleWizard({
                   )}
                 </TarjetaEnvio>
               ) : null}
-              {esAdmin && authors.length > 0 && (
-                <div className="flex flex-col @2xl:col-span-2 [&>section]:flex-1">
-                <TarjetaEnvio Icono={PenLine} titulo="Redactor que firma" ayuda="Quién aparece como autor de la nota en el sitio. Por defecto, tu usuario.">
-                  <select id="firma-redactor" value={authorId} onChange={(e) => setAuthorId(e.target.value)} aria-label="Redactor que firma" className="w-full rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm outline-none transition focus:border-[var(--accent)]">
-                    <option value="">Tu usuario, al guardar</option>
-                    {authors.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-                  </select>
-                </TarjetaEnvio>
-                </div>
-              )}
             </div>
           </Step>
         )}
