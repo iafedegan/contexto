@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -23,6 +24,8 @@ import {
   Save,
   Send,
   Brush,
+  Maximize2,
+  Minimize2,
   PenLine,
   Sparkles,
   Trash2,
@@ -217,6 +220,14 @@ export function ArticleWizard({
   const [revisando, setRevisando] = useState<number | null>(null);
   const [progAbierto, setProgAbierto] = useState(false);
   const [progFecha, setProgFecha] = useState("");
+  // La hoja del paso «Documento» a pantalla completa (se sale con Esc).
+  const [ampliado, setAmpliado] = useState(false);
+  useEffect(() => {
+    if (!ampliado) return;
+    const alTeclear = (e: KeyboardEvent) => { if (e.key === "Escape") setAmpliado(false); };
+    window.addEventListener("keydown", alTeclear);
+    return () => window.removeEventListener("keydown", alTeclear);
+  }, [ampliado]);
   const [material, setMaterial] = useState<Material[]>([]);
   const [audioError, setAudioError] = useState("");
   // Quiénes intervienen en la grabación (lo declara el editor antes de transcribir) y si es una entrevista.
@@ -1379,8 +1390,40 @@ export function ArticleWizard({
 
         {current.key === "documento" && (
           <Step ancho="xl" title="Escribe tu nota" hint="Título, bajada y cuerpo en una sola página, con las herramientas de un procesador de texto. Es el paso principal para escribir.">
-            <div className="min-h-0 flex-1 overflow-y-auto rounded-[var(--radius-lg)] bg-[#e4e7e5] p-3 sm:p-6">
-              <article className="mx-auto w-full max-w-3xl rounded-sm bg-white text-[#1b1b1b] shadow-[0_1px_3px_rgba(0,0,0,.18),0_10px_30px_rgba(0,0,0,.08)]">
+            <div className="flex shrink-0 justify-end">
+              <button type="button" onClick={() => setAmpliado(true)} className="lx-link inline-flex items-center gap-1.5 text-xs font-semibold"><Maximize2 size={14} aria-hidden /> Ampliar para leer y editar mejor</button>
+            </div>
+            {ampliado ? (
+              createPortal(
+                <div role="dialog" aria-modal="true" aria-label="Nota ampliada" className="fixed inset-0 z-50 flex flex-col bg-[#e4e7e5]">
+                  <div className="flex shrink-0 items-center justify-between gap-3 border-b border-black/10 bg-white px-4 py-2.5">
+                    <p className="truncate text-sm font-semibold">{title || "Nota sin título"}</p>
+                    <button type="button" autoFocus onClick={() => setAmpliado(false)} className="lx-btn lx-btn-ghost !px-3 !py-1.5 text-xs"><Minimize2 size={14} /> Reducir (Esc)</button>
+                  </div>
+                  <div className="min-h-0 flex-1 overflow-y-auto p-3 sm:p-8">
+              <article className={`mx-auto w-full ${ampliado ? "max-w-5xl" : "max-w-3xl"} rounded-sm bg-white text-[#1b1b1b] shadow-[0_1px_3px_rgba(0,0,0,.18),0_10px_30px_rgba(0,0,0,.08)]`}>
+                    <div className="px-6 pb-2 pt-8 sm:px-14 sm:pt-12">
+                      <label className="lx-kicker text-[#6b756f]" htmlFor="doc-titulo">Título</label>
+                      <textarea id="doc-titulo" value={title} onChange={(e) => setTitle(e.target.value)} rows={1} placeholder="Título de la nota"
+                        className="mt-1 w-full resize-none bg-transparent text-3xl font-bold leading-tight outline-none [field-sizing:content] placeholder:text-black/25" />
+                      <label className="lx-kicker mt-5 block text-[#6b756f]" htmlFor="doc-bajada">Bajada (sumario)</label>
+                      <textarea id="doc-bajada" value={excerpt} onChange={(e) => setExcerpt(e.target.value)} rows={2} placeholder="Dos líneas que resuman la nota"
+                        className="mt-1 w-full resize-none bg-transparent text-lg italic leading-snug text-[#3f4a44] outline-none [field-sizing:content] placeholder:text-black/25" />
+                      <hr className="mt-4 border-black/10" />
+                      <p className="lx-kicker mt-4 text-[#6b756f]">Cuerpo</p>
+                    </div>
+                    <div className="px-3 pb-10 sm:px-12">
+                      <EditorCuerpo papel value={body} onChange={setBody} placeholder="Primer párrafo con lo más importante…"
+                        resumen={<>{words} palabras · {Math.max(1, Math.round(words / 200))} min</>} />
+                    </div>
+                  </article>
+                  </div>
+                </div>,
+                document.body,
+              )
+            ) : (
+              <div className="min-h-0 flex-1 overflow-y-auto rounded-[var(--radius-lg)] bg-[#e4e7e5] p-3 sm:p-6">
+              <article className={`mx-auto w-full ${ampliado ? "max-w-5xl" : "max-w-3xl"} rounded-sm bg-white text-[#1b1b1b] shadow-[0_1px_3px_rgba(0,0,0,.18),0_10px_30px_rgba(0,0,0,.08)]`}>
                 <div className="px-6 pb-2 pt-8 sm:px-14 sm:pt-12">
                   <label className="lx-kicker text-[#6b756f]" htmlFor="doc-titulo">Título</label>
                   <textarea id="doc-titulo" value={title} onChange={(e) => setTitle(e.target.value)} rows={1} placeholder="Título de la nota"
@@ -1396,7 +1439,8 @@ export function ArticleWizard({
                     resumen={<>{words} palabras · {Math.max(1, Math.round(words / 200))} min</>} />
                 </div>
               </article>
-            </div>
+              </div>
+            )}
             {mode === "ia" && generated && (
               // Si el borrador no convence, se le dice a la IA cómo reescribirlo (tono, enfoque, qué citar…).
               <div className="flex shrink-0 flex-wrap items-center gap-2">

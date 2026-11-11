@@ -286,17 +286,12 @@ export function SectionTree({
               {hayRama ? `Dentro de ${ramaNodo!.name} · ${subs.length}` : "Subsecciones"}
             </p>
             {hayRama ? (
-              <Carrusel
-                key={ramaNodo!.id}
-                etiqueta={`Subsecciones de ${ramaNodo!.name}`}
-                items={itemsSubs(ramaNodo!)}
-                filas={filas}
-                maxColumnas={1}
-                separacion="gap-0.5"
-                anchoMinimo={120}
-                className="p-2 pt-0"
-                render={(h) => opcion(h.n, h.d === 0 ? `Toda la sección «${ramaNodo!.name}»` : h.n.name, h.d === 0, h.d)}
-              />
+              // Todas las subsecciones a la vez (sin páginas), de todos los niveles y con sangría; si son muchas, la lista se desplaza.
+              <ul key={ramaNodo!.id} role="radiogroup" aria-label={`Subsecciones de ${ramaNodo!.name}`} className="flex max-h-[24rem] flex-col gap-0.5 overflow-y-auto p-2 pt-0">
+                {itemsSubs(ramaNodo!).map((h) => (
+                  <li key={h.n.id}>{opcion(h.n, h.d === 0 ? `Toda la sección «${ramaNodo!.name}»` : h.n.name, h.d === 0, h.d)}</li>
+                ))}
+              </ul>
             ) : (
               <p className="flex items-center gap-2 px-3 py-6 text-sm text-[var(--fg-muted)]">
                 <ChevronLeft size={16} aria-hidden className="shrink-0" />
