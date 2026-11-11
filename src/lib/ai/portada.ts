@@ -5,6 +5,8 @@ import { getAiModel, getImageAi } from "@/lib/ai-provider";
 import { subirImagenBytes } from "@/lib/media-upload";
 import { PREFIJO_IMAGEN_IA } from "@/lib/ai-image";
 import { registrarCostoIA, registrarUsoIA, verificarCuotaIA } from "@/lib/ai-cuota";
+import { aWebp } from "@/lib/imagen-webp";
+import { construirPrompt, type EstiloEscena } from "@/lib/ai/prompt-escena";
 
 // Resultado de generar la portada: dirección de la imagen, texto alternativo y escena usada, o un error.
 export type CoverImageResult =
@@ -12,11 +14,16 @@ export type CoverImageResult =
   | { ok: false; error: string };
 
 /**
- * Genera la portada a partir del tema de la nota: primero el modelo de texto redacta la escena
- * (fotográfica, sin texto, sin personas reales identificables) y luego el modelo de imagen la pinta
- * en 16:9. Se sube al mismo almacenamiento que las fotos y se etiqueta como generada con IA.
+ * Genera la portada a partir del tema de la nota: primero el modelo de texto redacta la escena (fotográfica, sin texto, sin personas reales
+ * identificables) y luego el modelo de imagen la pinta en 16:9 con la dirección de arte elegida (tratamiento, cámara, plano, luz y ambiente, ensamblados
+ * en un prompt profesional por `construirPrompt`). Puede devolver varias opciones para elegir. Cada una se convierte a WebP 16:9 de peso liviano y se
+ * sube al mismo almacenamiento que las fotos, etiquetada como generada con IA.
  */
-export async function generateCoverImageCore(userId: string, input: {
+export type PortadasResult =
+  | { ok: true; imagenes: { url: string }[]; alt: string; scene: string; prompt: string }
+  | { ok: false; error: string };
+
+export type EntradaPortada = {
   title: string;
   excerpt?: string;
   section?: string;
@@ -26,7 +33,13 @@ export async function generateCoverImageCore(userId: string, input: {
   scene?: string;
   /** Modelo de imagen preferido (p. ej. Nano Banana Pro); si no está disponible se cae al elegido en Configuración y luego al de 1K. */
   modelo?: string;
-}): Promise<CoverImageResult> {
+  /** Dirección de arte (tratamiento, cámara, plano, luz, ambiente y notas). Sin ella, el estilo de siempre. */
+  estilo?: Partial<EstiloEscena>;
+  /** Cuántas opciones generar (1 a 4). */
+  cantidad?: number;
+};
+
+export async function generarPortadasCore(userId: string, input: EntradaPortada): Promise<PortadasResult> {
   const title = input.title.trim();
   if (title.length < 5 && !(input.scene ?? "").trim()) {
     return { ok: false, error: "Escribe primero el título de la nota (o describe la escena) para generar la imagen." };
@@ -36,6 +49,7 @@ export async function generateCoverImageCore(userId: string, input: {
   if (imageModel === "otro-proveedor") {
     return { ok: false, error: "Las imágenes se generan con Gemini: pídele a un administrador que elija Google (Gemini) en Configuración → Inteligencia artificial." };
   }
+  const cantidad = Math.min(4, Math.max(1, Math.round(input.cantidad ?? 1)));
   const text = await getAiModel();
   try {
     const cuota = await verificarCuotaIA(userId);
@@ -54,52 +68,64 @@ export async function generateCoverImageCore(userId: string, input: {
     }
     if (!scene) scene = `Escena fotográfica que ilustra fielmente el tema: ${title}`;
 
-    const prompt =
-      `Fotografía fotorrealista con estética de fotograma de cine que ilustra la noticia «${title}»${input.excerpt ? ` (${input.excerpt.slice(0, 220)})` : ""}. La imagen debe mostrar de forma inequívoca el tema de la nota, no una escena genérica: ${scene}. ` +
-      "Máxima nitidez y detalle, resolución muy alta, sin compresión ni pixelado. Iluminación natural cinematográfica (luz dorada o contraluz suave), lente anamórfica de 35 mm, poca profundidad de campo, " +
-      "grano de película sutil, colores naturales y ricos, composición editorial amplia en formato horizontal 16:9. " +
-      "Muestra únicamente lo que describe la escena y nada más: no agregues animales, personas, paisajes ni elementos que la escena no mencione. " +
-      "Sin texto, sin letras, sin logotipos, sin marcas de agua. Sin personas reales identificables.";
+    const prompt = construirPrompt({ titulo: title, resumen: input.excerpt, escena: scene, estilo: input.estilo });
 
-    // Alta resolución (2K ≈ 2752×1536): a pantalla completa una imagen de 1K se pixela. Si el modelo
-    // de 2K no está disponible, se cae al anterior (1K) en vez de fallar.
-    let image;
-    let costo = COSTO_IMAGEN_USD;
-    try {
-      // Primero el modelo preferido (si se pidió uno), luego el elegido en Configuración.
+    // Una imagen: primero el modelo preferido (si se pidió uno) en 2K; si falla, el elegido en Configuración y, como último recurso, el de 1K.
+    let costoUnitario = COSTO_IMAGEN_USD;
+    const una = async (): Promise<Uint8Array> => {
       const preferido = input.modelo ? await getImageAi(input.modelo) : null;
       if (preferido && preferido !== "otro-proveedor") {
         try {
-          ({ image } = await generateImage({ model: preferido, prompt, aspectRatio: "16:9", providerOptions: { google: { imageConfig: { imageSize: "2K" } } } }));
-          costo = COSTO_IMAGEN_PRO_USD;
+          const { image } = await generateImage({ model: preferido, prompt, aspectRatio: "16:9", providerOptions: { google: { imageConfig: { imageSize: "2K" } } } });
+          costoUnitario = COSTO_IMAGEN_PRO_USD;
+          return image.uint8Array;
         } catch (e) {
-          console.warn("generateCoverImage: falló el modelo preferido, uso el de Configuración:", e);
+          console.warn("generarPortadas: falló el modelo preferido, uso el de Configuración:", e);
         }
       }
-      if (!image) {
-        ({ image } = await generateImage({
-          model: imageModel,
-          prompt,
-          aspectRatio: "16:9",
-          providerOptions: { google: { imageConfig: { imageSize: "2K" } } },
-        }));
+      try {
+        const { image } = await generateImage({ model: imageModel, prompt, aspectRatio: "16:9", providerOptions: { google: { imageConfig: { imageSize: "2K" } } } });
+        return image.uint8Array;
+      } catch (e) {
+        console.warn("generarPortadas: falló el modelo de 2K, uso el de 1K:", e);
+        const respaldo = await getImageAi("gemini-2.5-flash-image");
+        if (!respaldo || respaldo === "otro-proveedor") throw e;
+        const { image } = await generateImage({ model: respaldo, prompt, aspectRatio: "16:9" });
+        return image.uint8Array;
       }
-    } catch (e) {
-      console.warn("generateCoverImage: falló el modelo de 2K, uso el de 1K:", e);
-      const respaldo = await getImageAi("gemini-2.5-flash-image");
-      if (!respaldo || respaldo === "otro-proveedor") throw e;
-      ({ image } = await generateImage({ model: respaldo, prompt, aspectRatio: "16:9" }));
+    };
+    // Las opciones se piden a la vez; si alguna falla, se entregan las que salieron.
+    const resultados = await Promise.allSettled(Array.from({ length: cantidad }, () => una()));
+    const hechas = resultados.flatMap((r) => (r.status === "fulfilled" ? [r.value] : []));
+    if (!hechas.length) {
+      const primero = resultados.find((r): r is PromiseRejectedResult => r.status === "rejected");
+      throw primero?.reason ?? new Error("El modelo de imagen no respondió.");
     }
-    await registrarCostoIA(userId, costo);
-    // El tipo con el que se guarda lo decide la firma de los bytes, no lo que declare el modelo.
-    const up = await subirImagenBytes(image.uint8Array);
-    if (!up.ok) return { ok: false, error: up.error };
-    return { ok: true, url: up.url, alt: `${PREFIJO_IMAGEN_IA} ${scene}`.slice(0, 300), scene };
+    await registrarCostoIA(userId, costoUnitario * hechas.length);
+
+    // Cada opción queda lista para publicar: WebP, 16:9 exacto, ≥ 1200 px de ancho y de peso liviano. El tipo lo decide la firma de los bytes (H-22).
+    const imagenes: { url: string }[] = [];
+    for (const bytes of hechas) {
+      const lista = await aWebp(bytes);
+      const up = await subirImagenBytes(lista.bytes);
+      if (!up.ok) return { ok: false, error: up.error };
+      imagenes.push({ url: up.url });
+    }
+    return { ok: true, imagenes, alt: `${PREFIJO_IMAGEN_IA} ${scene}`.slice(0, 300), scene, prompt };
   } catch (err) {
-    console.error("generateCoverImage:", err);
+    console.error("generarPortadas:", err);
     const detalle = err && typeof err === "object" && "message" in err ? String((err as Error).message) : "";
     return { ok: false, error: detalle ? `No se pudo generar la imagen: ${detalle.slice(0, 220)}` : "El modelo de imagen no respondió." };
   }
+}
+
+/** Una sola portada (el asistente de redacción, Telegram y el consejo de redacción): lo mismo que `generarPortadasCore` con una opción. */
+export async function generateCoverImageCore(
+  userId: string,
+  input: Omit<EntradaPortada, "cantidad">,
+): Promise<CoverImageResult> {
+  const r = await generarPortadasCore(userId, { ...input, cantidad: 1 });
+  return r.ok ? { ok: true, url: r.imagenes[0].url, alt: r.alt, scene: r.scene } : r;
 }
 
 /* --------------------------------------------------------------------------

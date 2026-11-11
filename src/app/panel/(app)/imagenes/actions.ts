@@ -8,7 +8,8 @@ import { tienePermiso } from "@/lib/permisos-server";
 import { nombreValido } from "@/lib/biblioteca-acceso";
 import { urlPublicaMedia } from "@/lib/media-storage";
 import { requirePermiso } from "@/lib/auth";
-import { generateCoverImageCore, MODELO_IMAGEN_PRO } from "@/lib/ai/portada";
+import { generarPortadasCore, MODELO_IMAGEN_PRO } from "@/lib/ai/portada";
+import { estiloValido } from "@/lib/ai/prompt-escena";
 import { revalidarNotas } from "@/lib/article-ops";
 import { cerrarPedido, disenadoresActivos, esDisenadorActivo, leerPedidos, registrarPedido } from "@/lib/imagenes-pedidas";
 import { pedidoDeNota, urlDeImagenValida, type PedidoImagen } from "@/lib/imagenes-pedidas-reglas";
@@ -103,11 +104,11 @@ export async function entregarImagen(input: { articleId: string; url: string; al
 }
 
 /**
- * El diseñador genera la portada con IA (Nano Banana Pro) a partir de la nota y de lo que pidió quien la solicitó. Devuelve la imagen ya subida
- * al almacenamiento y un texto alternativo que declara que fue generada con IA; no la entrega: el diseñador la revisa, la completa y la entrega.
- * La nota se lee del servidor (no se confía en lo que mande el navegador) y la cuota de IA se descuenta como en el resto de generaciones.
+ * El diseñador genera con IA (Nano Banana Pro) tres opciones de portada a partir de la nota, de lo que pidió quien la solicitó y de la dirección de arte
+ * que elija (tratamiento, cámara, plano, luz y ambiente). Devuelve las opciones ya subidas, en WebP 16:9, y el prompt armado; no entrega nada: el diseñador elige
+ * una, completa los datos y la entrega. La nota se lee del servidor (no se confía en lo que mande el navegador), el estilo se sanea y la cuota de IA se descuenta.
  */
-export async function generarImagenConIA(input: { articleId: string; escena?: string }): Promise<{ ok: true; url: string; alt: string; escena: string } | { ok: false; error: string }> {
+export async function generarImagenesConIA(input: { articleId: string; escena?: string; estilo?: unknown; cantidad?: number }): Promise<{ ok: true; imagenes: { url: string }[]; alt: string; escena: string; prompt: string } | { ok: false; error: string }> {
   const yo = await requirePermiso("imagenes");
   const articleId = String(input.articleId ?? "");
   const [nota] = await db
@@ -117,13 +118,15 @@ export async function generarImagenConIA(input: { articleId: string; escena?: st
     .where(eq(articles.id, articleId))
     .limit(1);
   if (!nota) return { ok: false, error: "La nota ya no existe." };
-  const r = await generateCoverImageCore(yo.id, {
+  const r = await generarPortadasCore(yo.id, {
     title: nota.titulo,
     excerpt: nota.resumen,
     body: nota.cuerpo,
     section: nota.seccion ?? undefined,
     scene: String(input.escena ?? "").trim().slice(0, 600) || undefined,
     modelo: MODELO_IMAGEN_PRO,
+    estilo: estiloValido(input.estilo),
+    cantidad: Math.min(3, Math.max(1, Math.round(Number(input.cantidad) || 3))),
   });
-  return r.ok ? { ok: true, url: r.url, alt: r.alt, escena: r.scene } : r;
+  return r.ok ? { ok: true, imagenes: r.imagenes, alt: r.alt, escena: r.scene, prompt: r.prompt } : r;
 }

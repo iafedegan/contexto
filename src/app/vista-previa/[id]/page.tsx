@@ -19,6 +19,7 @@ import { auth } from "@/lib/auth";
 import { verifyPreviewToken } from "@/lib/preview-token";
 import { puedeVerNota } from "@/lib/propiedad-notas";
 import { ComentariosNota } from "@/components/panel/comentarios-nota";
+import { ComentarSeleccion } from "@/components/panel/comentar-seleccion";
 import { redirect } from "next/navigation";
 
 // Se calcula en cada petición, nunca durante la compilación.
@@ -86,7 +87,11 @@ export default async function VistaPreviaPage({
           <ComentariosNota articleId={a.id} />
         </div>
       )}
-      <ArticleDocument a={a} related={related} locale="es" preview theme={site.parts.body} />
+      {/* Con sesión, el texto de la nota se puede seleccionar y comentar. */}
+      <div {...(session?.user ? { "data-comentable": "" } : {})}>
+        <ArticleDocument a={a} related={related} locale="es" preview theme={site.parts.body} />
+      </div>
+      {session?.user && <ComentarSeleccion />}
     </SiteShell>
   );
 }

@@ -92,9 +92,17 @@ export async function renderizarPortada(archivo: File, ajuste: Ajuste, ancho: nu
   return salida;
 }
 
-/** El lienzo como archivo JPEG listo para subir. */
+/** El lienzo como archivo listo para subir: WebP si el navegador sabe generarlo (pesa mucho menos) y, si no, JPEG. */
 export function aArchivo(lienzo: HTMLCanvasElement, nombre: string): Promise<File> {
+  const base = nombre.replace(/\.[a-z0-9]+$/i, "");
   return new Promise((resolver, rechazar) => {
-    lienzo.toBlob((b) => (b ? resolver(new File([b], nombre, { type: "image/jpeg" })) : rechazar(new Error("No se pudo generar la imagen."))), "image/jpeg", 0.88);
+    lienzo.toBlob(
+      (webp) => {
+        if (webp && webp.type === "image/webp") return resolver(new File([webp], `${base}.webp`, { type: "image/webp" }));
+        lienzo.toBlob((jpg) => (jpg ? resolver(new File([jpg], `${base}.jpg`, { type: "image/jpeg" })) : rechazar(new Error("No se pudo generar la imagen."))), "image/jpeg", 0.88);
+      },
+      "image/webp",
+      0.86,
+    );
   });
 }

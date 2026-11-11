@@ -64,3 +64,12 @@ test("cada persona ve solo lo que tiene a cargo, lo que debe revisar o su imagen
   // El administrador, todas.
   assert.equal(await puede(borradorAjeno, admin, "administrador"), true);
 });
+
+test("un comentario sobre una selección guarda el fragmento citado y se devuelve con él", async () => {
+  const id = await nota("nota-con-cita", "en_revision", redactor);
+  await comentarios.agregarComentario(id, editor, "Este dato necesita fuente", "arrancó formalmente el II Ciclo de Vacunación");
+  await comentarios.agregarComentario(id, editor, "Comentario general");
+  const lista = await comentarios.listarComentarios(id, redactor);
+  assert.equal(lista[0].cita, "arrancó formalmente el II Ciclo de Vacunación");
+  assert.equal(lista[1].cita, null);
+});

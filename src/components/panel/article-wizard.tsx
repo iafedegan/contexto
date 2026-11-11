@@ -8,6 +8,7 @@
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { ComentariosNota } from "@/components/panel/comentarios-nota";
+import { ComentarSeleccion, EVENTO_COMENTAR } from "@/components/panel/comentar-seleccion";
 import { DEPARTAMENTOS_FILTRO, REGIONES_COLOMBIA, departamentoPorSlug } from "@/lib/regiones-colombia";
 import Link from "next/link";
 import {
@@ -235,6 +236,19 @@ export function ArticleWizard({
   // La hoja del paso «Documento» a pantalla completa (se sale con Esc).
   // Panel de comentarios de la revisión (se abre desde la cabecera).
   const [verComentarios, setVerComentarios] = useState(false);
+  const comentariosAbiertos = useRef(false);
+  useEffect(() => { comentariosAbiertos.current = verComentarios; }, [verComentarios]);
+  // «Comentar selección»: si el panel está cerrado, se abre y el evento se repite cuando ya está montado, para que el fragmento llegue a la caja.
+  useEffect(() => {
+    const alComentar = (e: Event) => {
+      if (comentariosAbiertos.current) return;
+      const detalle = (e as CustomEvent).detail;
+      setVerComentarios(true);
+      setTimeout(() => window.dispatchEvent(new CustomEvent(EVENTO_COMENTAR, { detail: detalle })), 250);
+    };
+    window.addEventListener(EVENTO_COMENTAR, alComentar);
+    return () => window.removeEventListener(EVENTO_COMENTAR, alComentar);
+  }, []);
   const [ampliado, setAmpliado] = useState<HTMLElement | null>(null);
   const abrirAmpliado = () => {
     const tema = document.querySelector<HTMLElement>("main[data-theme]") ?? document.querySelector<HTMLElement>("[data-theme]");
@@ -959,6 +973,7 @@ export function ArticleWizard({
         </div>
       )}
 
+      {savedId && <ComentarSeleccion />}
       {verComentarios && savedId && !ampliado && <div className="mb-3"><ComentariosNota articleId={savedId} /></div>}
       {/* --- Pantalla del paso + panel SEO lateral (escritorio) --- */}
       <div className="flex min-h-0 flex-1 gap-3">
@@ -1441,7 +1456,7 @@ export function ArticleWizard({
                   </div>
                   <div className="flex min-h-0 flex-1">
                   <div className="min-h-0 flex-1 overflow-y-auto"><div className="p-3 sm:p-8">
-              <article className={`mx-auto w-full ${ampliado ? "max-w-5xl" : "max-w-3xl"} rounded-sm bg-white text-[#1b1b1b] shadow-[0_1px_3px_rgba(0,0,0,.18),0_10px_30px_rgba(0,0,0,.08)]`}>
+              <article data-comentable className={`mx-auto w-full ${ampliado ? "max-w-5xl" : "max-w-3xl"} rounded-sm bg-white text-[#1b1b1b] shadow-[0_1px_3px_rgba(0,0,0,.18),0_10px_30px_rgba(0,0,0,.08)]`}>
                     <div className="px-6 pb-2 pt-8 sm:px-14 sm:pt-12">
                       <label className="lx-kicker text-[#6b756f]" htmlFor="doc-titulo">Título</label>
                       <textarea id="doc-titulo" value={title} onChange={(e) => setTitle(e.target.value)} rows={1} placeholder="Título de la nota"
@@ -1465,7 +1480,7 @@ export function ArticleWizard({
               )
             ) : (
               <div className="min-h-0 flex-1 overflow-y-auto rounded-[var(--radius-lg)] bg-[#e4e7e5]"><div className="p-3 sm:p-6">
-              <article className={`mx-auto w-full ${ampliado ? "max-w-5xl" : "max-w-3xl"} rounded-sm bg-white text-[#1b1b1b] shadow-[0_1px_3px_rgba(0,0,0,.18),0_10px_30px_rgba(0,0,0,.08)]`}>
+              <article data-comentable className={`mx-auto w-full ${ampliado ? "max-w-5xl" : "max-w-3xl"} rounded-sm bg-white text-[#1b1b1b] shadow-[0_1px_3px_rgba(0,0,0,.18),0_10px_30px_rgba(0,0,0,.08)]`}>
                 <div className="px-6 pb-2 pt-8 sm:px-14 sm:pt-12">
                   <label className="lx-kicker text-[#6b756f]" htmlFor="doc-titulo">Título</label>
                   <textarea id="doc-titulo" value={title} onChange={(e) => setTitle(e.target.value)} rows={1} placeholder="Título de la nota"

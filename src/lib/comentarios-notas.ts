@@ -8,24 +8,26 @@ import { condicionVisibles } from "@/lib/propiedad-notas";
  * Comentarios de la revisión de una nota. Quien tiene a cargo la nota, quien la revisa y el diseñador con una imagen por hacer los ven y pueden
  * responder; la otra parte recibe un aviso (el número de comentarios sin leer) en el listado de artículos y en el menú.
  */
-export type Comentario = { id: string; texto: string; fecha: string; autor: string; autorRol: string; mio: boolean };
+export type Comentario = { id: string; texto: string; /** Fragmento de la nota al que se refiere (si se comentó una selección). */ cita: string | null; fecha: string; autor: string; autorRol: string; mio: boolean };
+
+export const MAX_CITA = 600;
 
 export const MAX_COMENTARIO = 2000;
 
 /** Los comentarios de una nota, del más antiguo al más nuevo. */
 export async function listarComentarios(articleId: string, userId: string): Promise<Comentario[]> {
   const filas = await db
-    .select({ id: articleComments.id, texto: articleComments.body, fecha: articleComments.createdAt, autorId: articleComments.authorId, autor: users.name, rol: users.role })
+    .select({ id: articleComments.id, texto: articleComments.body, cita: articleComments.quote, fecha: articleComments.createdAt, autorId: articleComments.authorId, autor: users.name, rol: users.role })
     .from(articleComments)
     .leftJoin(users, eq(users.id, articleComments.authorId))
     .where(eq(articleComments.articleId, articleId))
     .orderBy(asc(articleComments.createdAt));
-  return filas.map((f) => ({ id: f.id, texto: f.texto, fecha: f.fecha.toISOString(), autor: f.autor ?? "Persona eliminada", autorRol: f.rol ?? "", mio: f.autorId === userId }));
+  return filas.map((f) => ({ id: f.id, texto: f.texto, cita: f.cita, fecha: f.fecha.toISOString(), autor: f.autor ?? "Persona eliminada", autorRol: f.rol ?? "", mio: f.autorId === userId }));
 }
 
 /** Deja un comentario (ya validado por quien llama) y lo da por leído para su autor. */
-export async function agregarComentario(articleId: string, userId: string, texto: string): Promise<void> {
-  await db.insert(articleComments).values({ articleId, authorId: userId, body: texto });
+export async function agregarComentario(articleId: string, userId: string, texto: string, cita?: string | null): Promise<void> {
+  await db.insert(articleComments).values({ articleId, authorId: userId, body: texto, quote: cita || null });
   await marcarLeidos(articleId, userId);
 }
 

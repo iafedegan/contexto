@@ -3,10 +3,11 @@
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, Check, CheckCircle2, ImagePlus, Loader2, Sparkles, Wand2 } from "lucide-react";
-import { carpetasDeEntrega, entregarImagen, generarImagenConIA } from "@/app/panel/(app)/imagenes/actions";
+import { carpetasDeEntrega, entregarImagen, generarImagenesConIA } from "@/app/panel/(app)/imagenes/actions";
 import { subirMedia } from "./subir-media";
 import { SelectorCarpeta, type CarpetaNodo } from "./selector-carpeta";
 import { VistaPreviaPortada } from "./vista-previa-portada";
+import { AMBIENTES, CAMARAS, ESTILO_POR_DEFECTO, LUCES, PLANOS, TRATAMIENTOS, type EstiloEscena } from "@/lib/ai/prompt-escena";
 import { ANCHO_PORTADA, aArchivo, renderizarPortada, type Ajuste } from "./ajustar-imagen";
 
 const campo = "w-full rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm outline-none transition focus:border-[var(--accent)] placeholder:text-[var(--fg-muted)]/50";
@@ -45,6 +46,9 @@ export function EntregaImagen({ articleId, tituloNota = "", resumen = "" }: { ar
   const [procesando, setProcesando] = useState(false);
   // Generar la imagen con IA (Nano Banana Pro).
   const [escena, setEscena] = useState("");
+  const [estilo, setEstilo] = useState<EstiloEscena>(ESTILO_POR_DEFECTO);
+  const [opciones, setOpciones] = useState<string[]>([]);
+  const [promptUsado, setPromptUsado] = useState("");
   const [generando, setGenerando] = useState(false);
   const [conIA, setConIA] = useState(false);
   const [subiendo, setSubiendo] = useState(false);
@@ -78,22 +82,29 @@ export function EntregaImagen({ articleId, tituloNota = "", resumen = "" }: { ar
     }
   }
 
-  // Pide la imagen a la IA: queda subida al almacenamiento; se revisa, se completan los datos y se entrega como cualquier otra.
+  // Elige una de las opciones generadas: pasa a ser la imagen a entregar (se completan los datos y se entrega como cualquier otra).
+  async function elegirOpcion(direccion: string, altIA?: string) {
+    setUrl(direccion);
+    setArchivo(null);
+    setAjustando(false);
+    setMedidas(null);
+    setConIA(true);
+    if (altIA && !alt.trim()) setAlt(altIA);
+    if (!nombre) setNombre(`Portada IA · ${tituloNota}`.slice(0, 60));
+    // El peso se lee de la propia imagen, si el almacenamiento lo permite.
+    try { const b = await (await fetch(direccion)).blob(); setBytes(b.size); } catch { setBytes(0); }
+  }
+
+  // Pide tres opciones a la IA con la dirección de arte elegida (Nano Banana Pro): ya salen en WebP, 16:9 y de peso liviano.
   async function generar() {
     setError("");
     setGenerando(true);
     try {
-      const r = await generarImagenConIA({ articleId, escena });
+      const r = await generarImagenesConIA({ articleId, escena, estilo, cantidad: 3 });
       if (!r.ok) return setError(r.error);
-      setUrl(r.url);
-      setArchivo(null);
-      setAjustando(false);
-      setMedidas(null);
-      setConIA(true);
-      if (!alt.trim()) setAlt(r.alt);
-      if (!nombre) setNombre(`Portada IA · ${tituloNota}`.slice(0, 60));
-      // El peso se lee de la propia imagen, si el almacenamiento lo permite.
-      try { const b = await (await fetch(r.url)).blob(); setBytes(b.size); } catch { setBytes(0); }
+      setOpciones(r.imagenes.map((i) => i.url));
+      setPromptUsado(r.prompt);
+      await elegirOpcion(r.imagenes[0].url, r.alt);
     } catch {
       setError("No se pudo generar la imagen. Inténtalo de nuevo.");
     } finally {
@@ -123,7 +134,7 @@ export function EntregaImagen({ articleId, tituloNota = "", resumen = "" }: { ar
     setProcesando(true);
     try {
       const lienzo = await renderizarPortada(archivo, ajuste, ANCHO_PORTADA);
-      const nuevo = await aArchivo(lienzo, `${nombreLegible(archivo.name) || "portada"}-16x9.jpg`);
+      const nuevo = await aArchivo(lienzo, `${nombreLegible(archivo.name) || "portada"}-16x9`);
       const r = await subirMedia(nuevo);
       if (!r.ok) return setError(r.error);
       if (r.kind === "video") return setError("El resultado no es una imagen.");
@@ -167,15 +178,6 @@ export function EntregaImagen({ articleId, tituloNota = "", resumen = "" }: { ar
           {subiendo ? <Loader2 size={13} className="animate-spin" /> : <ImagePlus size={13} />} {url ? "Cambiar imagen" : "Subir imagen"}
           <input type="file" accept="image/*" disabled={subiendo || pendiente} className="hidden" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void alElegir(f); }} />
         </label>
-        {/* Generar con IA: Nano Banana Pro, el modelo de imagen de mayor calidad de Gemini */}
-        <div className="flex flex-col gap-2 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface-2)]/40 p-3">
-          <p className="flex items-center gap-1.5 text-xs font-semibold"><Sparkles size={13} aria-hidden className="text-[var(--accent)]" /> Generar con IA · Nano Banana Pro</p>
-          <textarea value={escena} onChange={(e) => setEscena(e.target.value.slice(0, 600))} rows={3} disabled={generando} placeholder="Describe la escena (opcional). Si lo dejas vacío, la IA parte de la nota." aria-label="Escena para la IA" className={`${campo} resize-none !py-1.5 text-xs`} />
-          <button type="button" onClick={generar} disabled={generando || subiendo || pendiente} className="lx-btn lx-btn-ghost self-start !px-3 !py-1.5 text-xs">
-            {generando ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />} {generando ? "Generando… unos 30 segundos" : url ? "Generar otra con IA" : "Generar con IA"}
-          </button>
-          {conIA && <p className="text-[0.7rem] leading-snug text-[var(--fg-muted)]">Imagen generada con IA: se publica rotulada como tal. Revísala antes de entregarla.</p>}
-        </div>
         {url && medidas && (
           <ul aria-label="Revisión de la imagen" className="flex flex-col gap-1">
             <Requisito ok={medidas.w >= 1200} texto={`${medidas.w} × ${medidas.h} px${medidas.w >= 1200 ? "" : " · Discover pide al menos 1200 px de ancho"}`} />
@@ -250,6 +252,81 @@ export function EntregaImagen({ articleId, tituloNota = "", resumen = "" }: { ar
         {url && !altOk && <p className="-mt-1 text-xs text-[var(--fg-muted)]">Falta el texto alternativo para poder entregar.</p>}
       </div>
     </div>
+
+    {/* Dirección de arte y generación con IA: tres opciones para elegir, con el prompt armado profesionalmente */}
+    <section aria-label="Generar con IA" className="flex flex-col gap-3 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface-2)]/40 p-3 sm:p-4">
+      <header>
+        <h3 className="flex items-center gap-1.5 text-sm font-semibold"><Sparkles size={14} aria-hidden className="text-[var(--accent)]" /> Generar con IA · Nano Banana Pro</h3>
+        <p className="mt-0.5 text-xs text-[var(--fg-muted)]">Elige cómo se ve y la IA propone tres opciones. Cada una sale en WebP, 16:9 y de peso liviano, lista para publicar.</p>
+      </header>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+            <label className="flex min-w-0 flex-col gap-1">
+              <span className="lx-kicker text-[var(--fg-muted)]">Tratamiento</span>
+              <select value={estilo.tratamiento} onChange={(e) => setEstilo((x) => ({ ...x, tratamiento: e.target.value as never }))} disabled={generando} className={campo}>
+                {TRATAMIENTOS.map((o) => <option key={o.id} value={o.id}>{o.nombre}</option>)}
+              </select>
+            </label>
+            <label className="flex min-w-0 flex-col gap-1">
+              <span className="lx-kicker text-[var(--fg-muted)]">Cámara y lente</span>
+              <select value={estilo.camara} onChange={(e) => setEstilo((x) => ({ ...x, camara: e.target.value as never }))} disabled={generando} className={campo}>
+                {CAMARAS.map((o) => <option key={o.id} value={o.id}>{o.nombre}</option>)}
+              </select>
+            </label>
+            <label className="flex min-w-0 flex-col gap-1">
+              <span className="lx-kicker text-[var(--fg-muted)]">Plano</span>
+              <select value={estilo.plano} onChange={(e) => setEstilo((x) => ({ ...x, plano: e.target.value as never }))} disabled={generando} className={campo}>
+                {PLANOS.map((o) => <option key={o.id} value={o.id}>{o.nombre}</option>)}
+              </select>
+            </label>
+            <label className="flex min-w-0 flex-col gap-1">
+              <span className="lx-kicker text-[var(--fg-muted)]">Luz</span>
+              <select value={estilo.luz} onChange={(e) => setEstilo((x) => ({ ...x, luz: e.target.value as never }))} disabled={generando} className={campo}>
+                {LUCES.map((o) => <option key={o.id} value={o.id}>{o.nombre}</option>)}
+              </select>
+            </label>
+            <label className="flex min-w-0 flex-col gap-1">
+              <span className="lx-kicker text-[var(--fg-muted)]">Ambiente</span>
+              <select value={estilo.ambiente} onChange={(e) => setEstilo((x) => ({ ...x, ambiente: e.target.value as never }))} disabled={generando} className={campo}>
+                {AMBIENTES.map((o) => <option key={o.id} value={o.id}>{o.nombre}</option>)}
+              </select>
+            </label>
+      </div>
+      <div className="grid gap-3 md:grid-cols-2">
+        <label className="flex flex-col gap-1">
+          <span className="lx-kicker text-[var(--fg-muted)]">Escena (opcional)</span>
+          <textarea value={escena} onChange={(e) => setEscena(e.target.value.slice(0, 600))} rows={2} disabled={generando} placeholder="Qué debe verse. Si lo dejas vacío, la IA parte de la nota y de lo que se pidió." className={`${campo} resize-none`} />
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className="lx-kicker text-[var(--fg-muted)]">Indicaciones adicionales (opcional)</span>
+          <textarea value={estilo.notas} onChange={(e) => setEstilo((x) => ({ ...x, notas: e.target.value.slice(0, 400) }))} rows={2} disabled={generando} placeholder="Ej.: cerca de madera, neblina en el fondo, sin personas…" className={`${campo} resize-none`} />
+        </label>
+      </div>
+      <button type="button" onClick={generar} disabled={generando || subiendo || pendiente} className="lx-btn self-start">
+        {generando ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />} {generando ? "Generando 3 opciones… unos 40 segundos" : opciones.length ? "Generar 3 opciones nuevas" : "Generar 3 opciones"}
+      </button>
+      {opciones.length > 0 && (
+        <div className="flex flex-col gap-2">
+          <p className="text-xs font-semibold">Elige una opción</p>
+          <div role="radiogroup" aria-label="Opciones generadas" className="grid gap-3 sm:grid-cols-3">
+            {opciones.map((u, i) => (
+              <button key={u} type="button" role="radio" aria-checked={url === u} onClick={() => void elegirOpcion(u)} disabled={generando}
+                className={`group relative overflow-hidden rounded-[var(--radius)] border-2 transition focus-visible:outline-2 focus-visible:outline-offset-2 ${url === u ? "border-[var(--accent)] shadow-[var(--shadow)]" : "border-transparent hover:border-[var(--border-strong,var(--border))]"}`}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={u} alt={`Opción ${i + 1}`} className="aspect-[16/9] w-full object-cover" />
+                <span className={`absolute left-2 top-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold ${url === u ? "bg-[var(--accent)] text-[var(--accent-fg,#fff)]" : "bg-black/55 text-white"}`}>{url === u && <Check size={11} />} Opción {i + 1}</span>
+              </button>
+            ))}
+          </div>
+          {conIA && <p className="text-[0.7rem] leading-snug text-[var(--fg-muted)]">Imagen generada con IA: se publica rotulada como tal. Revísala antes de entregarla.</p>}
+          {promptUsado && (
+            <details className="text-xs">
+              <summary className="lx-link cursor-pointer font-medium">Ver el prompt armado</summary>
+              <p className="mt-1.5 whitespace-pre-line rounded-[var(--radius)] bg-[var(--surface)] p-2.5 leading-relaxed text-[var(--fg-muted)]">{promptUsado}</p>
+            </details>
+          )}
+        </div>
+      )}
+    </section>
     {url && <VistaPreviaPortada url={url} titulo={tituloNota || "Título de la nota"} resumen={resumen} pie={pie} alt={alt} />}
     <a href={`/vista-previa/${articleId}`} target="_blank" rel="noopener noreferrer" className="lx-link self-start text-xs font-medium">Ver la nota completa en una pestaña nueva →</a>
     </div>

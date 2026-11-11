@@ -453,11 +453,14 @@ export const articleComments = pgTable(
       .references(() => articles.id, { onDelete: "cascade" }),
     authorId: uuid("author_id").references(() => users.id, { onDelete: "set null" }),
     body: text("body").notNull(),
+    /** Fragmento de la nota que se seleccionó al comentar (opcional): se muestra como cita y sirve para volver a ubicarlo en el texto. */
+    quote: text("quote"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
     index("article_comments_article_idx").on(t.articleId, t.createdAt),
     check("article_comments_body_largo", sql`char_length(${t.body}) between 1 and 2000`),
+    check("article_comments_quote_largo", sql`${t.quote} is null or char_length(${t.quote}) <= 600`),
   ],
 );
 
