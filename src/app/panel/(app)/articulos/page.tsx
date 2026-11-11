@@ -5,7 +5,8 @@ import { db } from "@/db";
 import { articles, articleViewsDaily, authors, categories } from "@/db/schema";
 import { Badge, Button } from "@/components/ui";
 import { auth, requirePermiso } from "@/lib/auth";
-import { condicionMisNotas } from "@/lib/propiedad-notas";
+import { contarSinLeer } from "@/lib/comentarios-notas";
+import { condicionMisNotas, condicionVisibles } from "@/lib/propiedad-notas";
 import { DeleteArticleButton } from "@/components/panel/delete-article-button";
 import { MarcasNota } from "@/components/panel/marcas-nota";
 import { ArticleFilters } from "@/components/panel/article-filters";
@@ -49,8 +50,11 @@ function param(sp: Record<string, string | string[] | undefined>, key: string): 
 export default async function ArticlesList({ searchParams }: { searchParams: SearchParams }) {
   await requirePermiso("articulos");
   const session = await auth();
-  // Todas las personas ven todas las notas. Editar, borrar o marcar solo lo hace quien es dueña de la nota (la creó, lleva su firma o se la enviaron) y los administradores.
+  // Cada persona ve las notas que tiene a cargo, las que debe revisar (editor) o con una imagen por hacer (diseñador); los administradores, todas.
+  // Editar, borrar o marcar solo lo hace quien es dueña de la nota (la creó, lleva su firma o se la enviaron) y los administradores.
   const esAdmin = session?.user?.role === "administrador";
+  const soloMias = !esAdmin;
+  const visibles = session?.user ? await condicionVisibles({ id: session.user.id, role: session.user.role }) : undefined;
   const alcance = session?.user ? await condicionMisNotas({ id: session.user.id, role: session.user.role }) : undefined;
   const canDelete = session?.user?.role === "editor" || session?.user?.role === "administrador";
   const sp = await searchParams;
@@ -68,7 +72,7 @@ export default async function ArticlesList({ searchParams }: { searchParams: Sea
           </Link>
         </div>
         <TabsArticulos activa="tablero" />
-        <TableroArticulos alcance={alcance} esAdmin={esAdmin} />
+        <TableroArticulos alcance={alcance} visibles={visibles} esAdmin={esAdmin} />
       </div>
     );
   }
@@ -92,6 +96,7 @@ export default async function ArticlesList({ searchParams }: { searchParams: Sea
 
   // --- Filtros ---
   const where: SQL[] = [];
+  if (visibles) where.push(visibles);
   if (q) {
     const like = `%${q}%`;
     where.push(or(ilike(articles.title, like), ilike(articles.excerpt, like), ilike(articles.slug, like))!);
@@ -155,9 +160,21 @@ export default async function ArticlesList({ searchParams }: { searchParams: Sea
       .where(where.length ? and(...where) : undefined)
       .orderBy(...order)
       .limit(200),
-    // Totales de todo el sitio (guardados un minuto).
-    resumenGlobalNotas(),
-    siteWeekTotals(),
+    // Administración: totales de todo (guardados un minuto). Quien ve solo parte: los de lo que ve, que son pocas notas.
+    visibles
+      ? db
+          .select({
+            total: sql<number>`count(*)::int`,
+            publicados: sql<number>`count(*) filter (where ${articles.status} = 'publicado')::int`,
+            pendientes: sql<number>`count(*) filter (where ${articles.status} in ('borrador', 'en_revision'))::int`,
+            programados: sql<number>`count(*) filter (where ${articles.status} = 'programado')::int`,
+            lecturas: sql<number>`coalesce(sum(${articles.views}), 0)::int`,
+          })
+          .from(articles)
+          .where(visibles)
+          .then((r) => r[0])
+      : resumenGlobalNotas(),
+    soloMias ? Promise.resolve(null) : siteWeekTotals(),
   ]);
   // Cuáles de estas notas puede abrir para editar (las demás se leen en la vista previa).
   const propias = esAdmin || !alcance || rows.length === 0
@@ -165,6 +182,9 @@ export default async function ArticlesList({ searchParams }: { searchParams: Sea
     : new Set((await db.select({ id: articles.id }).from(articles).where(and(inArray(articles.id, rows.map((r) => r.id)), alcance))).map((r) => r.id));
   const puedeEditar = (id: string) => esAdmin || (propias?.has(id) ?? false);
   const enlaceNota = (id: string) => (puedeEditar(id) ? `/panel/articulos/${id}?modo=manual` : `/vista-previa/${id}`);
+  // Comentarios de la revisión sin leer, por nota: el aviso junto al estado.
+  const sinLeer = session?.user ? await contarSinLeer(session.user.id, rows.map((r) => r.id)).catch(() => new Map<string, number>()) : new Map<string, number>();
+  const avisoComentarios = (id: string) => { const n = sinLeer.get(id) ?? 0; return n > 0 ? (<Link href={enlaceNota(id)} className="inline-flex items-center gap-1 rounded-full bg-red-600 px-2 py-0.5 text-xs font-semibold text-white" title="Comentarios nuevos en esta nota">💬 {n} {n === 1 ? "comentario nuevo" : "comentarios nuevos"}</Link>) : null; };
   // A quién se envió cada nota que sigue en borrador o en revisión (sale en su etiqueta: «En revisión · para …»).
   const para = await destinatariosDe(rows.filter((r) => r.status === "en_revision" || r.status === "borrador").map((r) => r.id));
 
@@ -174,7 +194,8 @@ export default async function ArticlesList({ searchParams }: { searchParams: Sea
   );
 
   const filteredViews = rows.reduce((s, r) => s + Number(r.views), 0);
-  const weekTotals = weekTotalsSitio;
+  // Con un alcance limitado no hay total del sitio: se suman las lecturas de la semana de lo que ve (sin comparación).
+  const weekTotals = soloMias ? { last7: rows.reduce((t, r) => t + Number(r.weekViews), 0), prev7: 0 } : weekTotalsSitio;
   const trend = weekTotals ? pctChange(weekTotals.last7, weekTotals.prev7) : null;
   const top = [...rows].sort((a, b) => Number(b.weekViews) - Number(a.weekViews))[0];
 
@@ -244,7 +265,7 @@ export default async function ArticlesList({ searchParams }: { searchParams: Sea
         values={{ q, estado, categoria, autor, orden }}
         statuses={Object.entries(STATUS_LABEL).map(([value, label]) => ({ value, label }))}
         categories={categoryOptions}
-        authors={[...auths.map((a) => ({ value: a.id, label: a.name })), { value: "sin-autor", label: "Sin autor" }]}
+        authors={soloMias ? [] : [...auths.map((a) => ({ value: a.id, label: a.name })), { value: "sin-autor", label: "Sin autor" }]}
         sorts={SORTS}
       />
       </div>
@@ -279,6 +300,7 @@ export default async function ArticlesList({ searchParams }: { searchParams: Sea
                 <Badge className={r.status === "publicado" ? "border-[var(--border-strong)] text-[var(--accent)]" : ""}>
                   {STATUS_LABEL[r.status] ?? r.status}{(r.status === "en_revision" || r.status === "borrador") && para.get(r.id) ? ` · para ${para.get(r.id)}` : ""}
                 </Badge>
+                {avisoComentarios(r.id)}
                 {r.status === "programado" && r.scheduledFor && (
                   <span className="text-xs text-[var(--fg-muted)]">{formatDate(r.scheduledFor)}</span>
                 )}
@@ -381,6 +403,7 @@ export default async function ArticlesList({ searchParams }: { searchParams: Sea
                     >
                       {STATUS_LABEL[r.status] ?? r.status}{(r.status === "en_revision" || r.status === "borrador") && para.get(r.id) ? ` · para ${para.get(r.id)}` : ""}
                     </Badge>
+                    {sinLeer.get(r.id) ? <div className="mt-2">{avisoComentarios(r.id)}</div> : null}
                     {r.status === "programado" && r.scheduledFor && (
                       <span className="ml-2 text-xs text-[var(--fg-muted)]">{formatDate(r.scheduledFor)}</span>
                     )}

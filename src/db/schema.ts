@@ -440,6 +440,42 @@ export const articles = pgTable(
   ],
 );
 
+/**
+ * Comentarios de la revisión de una nota: el redactor, el editor que la revisa o el diseñador dejan notas sobre la nota y la otra parte las ve
+ * como una notificación en el listado de artículos. Pertenecen a la nota (se van con ella).
+ */
+export const articleComments = pgTable(
+  "article_comments",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    articleId: uuid("article_id")
+      .notNull()
+      .references(() => articles.id, { onDelete: "cascade" }),
+    authorId: uuid("author_id").references(() => users.id, { onDelete: "set null" }),
+    body: text("body").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("article_comments_article_idx").on(t.articleId, t.createdAt),
+    check("article_comments_body_largo", sql`char_length(${t.body}) between 1 and 2000`),
+  ],
+);
+
+/** Hasta cuándo leyó cada persona los comentarios de una nota: lo posterior, escrito por otra persona, cuenta como nuevo. */
+export const articleCommentReads = pgTable(
+  "article_comment_reads",
+  {
+    articleId: uuid("article_id")
+      .notNull()
+      .references(() => articles.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    lastReadAt: timestamp("last_read_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.articleId, t.userId] }), index("article_comment_reads_user_idx").on(t.userId)],
+);
+
 // Lecturas agregadas por artículo y día (analítica del panel). La alimenta el
 // mismo beacon que `articles.views`; solo guarda un entero por día, nunca
 // datos del visitante.

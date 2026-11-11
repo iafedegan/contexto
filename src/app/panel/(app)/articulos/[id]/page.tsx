@@ -9,6 +9,7 @@ import Link from "next/link";
 import { ArrowLeft, PenLine, Sparkles } from "lucide-react";
 import { ArticleEditor } from "@/components/article-editor";
 import { ArticleWizard } from "@/components/panel/article-wizard";
+import { contarSinLeer } from "@/lib/comentarios-notas";
 import { asignacionDe, destinosActivos, marcarAsignacionAbierta } from "@/lib/notas-asignadas";
 import { envioLibre, puedeEnviarNota } from "@/lib/notas-asignadas-reglas";
 import { escritoresParaElegir, getEstilo } from "@/lib/ai/estilo";
@@ -182,6 +183,7 @@ export default async function ArticleEditorPage({
           puedeEnviarEditor={puedeEnviarNota(session!.user.role)}
           envioLibre={envioLibre(session!.user.role)}
           enviadoA={enviadoA}
+          comentariosNuevos={(await contarSinLeer(session!.user.id, [id]).catch(() => new Map<string, number>())).get(id) ?? 0}
           status={row.status}
           canPublish={canPublish(session!.user.role)}
           canPortada={await tienePermiso(session!.user.id, session!.user.role, "portada")}

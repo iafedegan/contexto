@@ -3,6 +3,8 @@ import { and, eq, inArray, or, type SQL } from "drizzle-orm";
 import { db } from "@/db";
 import { articles, authors } from "@/db/schema";
 import { notasAsignadasA } from "@/lib/notas-asignadas";
+import { leerPedidos } from "@/lib/imagenes-pedidas";
+import { pendientesPara } from "@/lib/imagenes-pedidas-reglas";
 
 /**
  * Quién ve y toca qué notas: los administradores todas; el resto de las personas (redactor y editor), solo las SUYAS — las que
@@ -38,4 +40,31 @@ export async function esNotaPropia(p: Persona, articleId: string): Promise<boole
 /** Lanza si la nota es de otra persona. */
 export async function exigirNotaPropia(p: Persona, articleId: string): Promise<void> {
   if (!(await esNotaPropia(p, articleId))) throw new Error("Solo puedes ver y modificar tus propias notas.");
+}
+
+/**
+ * Qué notas VE una persona (listado de artículos y vista previa), que es más que lo que puede EDITAR (`condicionMisNotas`):
+ * los administradores todas; los demás, las que tienen a cargo (las suyas y las que les enviaron), y además
+ *  - el editor, todas las que están «En revisión» (las que le toca revisar);
+ *  - el diseñador, aquellas a las que tiene una imagen por hacer (o ya entregó).
+ * `undefined` = sin límite (administrador).
+ */
+export async function condicionVisibles(p: Persona): Promise<SQL | undefined> {
+  if (p.role === "administrador") return undefined;
+  const propias = await condicionMisNotas(p);
+  const extras: SQL[] = [];
+  if (p.role === "editor") extras.push(eq(articles.status, "en_revision"));
+  if (p.role === "disenador") {
+    const pedidos = await leerPedidos().catch(() => []);
+    const ids = [...new Set([...pendientesPara(pedidos, p.id, p.role).map((x) => x.articleId), ...pedidos.filter((x) => x.entregadaPorId === p.id).map((x) => x.articleId)])];
+    if (ids.length) extras.push(inArray(articles.id, ids));
+  }
+  return or(...(propias ? [propias] : []), ...extras);
+}
+
+/** ¿Puede la persona ver esta nota (listado, vista previa, comentarios)? Los administradores sí; una nota que no existe, no. */
+export async function puedeVerNota(p: Persona, articleId: string): Promise<boolean> {
+  const cond = await condicionVisibles(p);
+  const [fila] = await db.select({ id: articles.id }).from(articles).where(and(eq(articles.id, articleId), cond)).limit(1);
+  return Boolean(fila);
 }

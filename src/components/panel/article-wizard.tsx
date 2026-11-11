@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
-import { DEPARTAMENTOS_FILTRO, REGIONES_COLOMBIA, departamentoPorSlug, regionPorSlug } from "@/lib/regiones-colombia";
+import { ComentariosNota } from "@/components/panel/comentarios-nota";
+import { DEPARTAMENTOS_FILTRO, REGIONES_COLOMBIA, departamentoPorSlug } from "@/lib/regiones-colombia";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -26,6 +27,7 @@ import {
   Send,
   Brush,
   Maximize2,
+  MessageSquare,
   Minimize2,
   PenLine,
   Sparkles,
@@ -140,6 +142,7 @@ export function ArticleWizard({
   estiloInfo = null,
   escritores = [],
   savedAs,
+  comentariosNuevos = 0,
   modelosEditor,
   esAdmin = false,
   editores = [],
@@ -178,6 +181,8 @@ export function ArticleWizard({
   modelosEditor?: { modelos: { ref: string; etiqueta: string }[]; predeterminado: string | null; inicial: string | null; sinClave: string[] };
   /** Resultado del último guardado (?guardado=…), para confirmarlo. */
   savedAs?: string;
+  /** Comentarios de la revisión que la persona todavía no ha leído. */
+  comentariosNuevos?: number;
   /** Personas activas a las que se puede enviar la nota (un redactor, solo editores; un editor o administrador, todas). */
   editores?: { id: string; nombre: string; rol?: string }[];
   /** Redactor, editor o administrador: puede enviar la nota a otra persona (paso «Enviar»). */
@@ -221,12 +226,26 @@ export function ArticleWizard({
   const [progAbierto, setProgAbierto] = useState(false);
   const [progFecha, setProgFecha] = useState("");
   // La hoja del paso «Documento» a pantalla completa (se sale con Esc).
-  const [ampliado, setAmpliado] = useState(false);
+  // Panel de comentarios de la revisión (se abre desde la cabecera).
+  const [verComentarios, setVerComentarios] = useState(false);
+  const [ampliado, setAmpliado] = useState<HTMLElement | null>(null);
+  const abrirAmpliado = () => {
+    const tema = document.querySelector<HTMLElement>("main[data-theme]") ?? document.querySelector<HTMLElement>("[data-theme]");
+    const caja = document.createElement("div");
+    if (tema) {
+      caja.setAttribute("data-theme", tema.getAttribute("data-theme") ?? "");
+      caja.setAttribute("style", tema.getAttribute("style") ?? "");
+    }
+    caja.className = "text-[var(--fg)]";
+    document.body.appendChild(caja);
+    setAmpliado(caja);
+  };
+  const cerrarAmpliado = () => setAmpliado((caja) => { caja?.remove(); return null; });
   useEffect(() => {
     if (!ampliado) return;
-    const alTeclear = (e: KeyboardEvent) => { if (e.key === "Escape") setAmpliado(false); };
+    const alTeclear = (e: KeyboardEvent) => { if (e.key === "Escape") { ampliado.remove(); setAmpliado(null); } };
     window.addEventListener("keydown", alTeclear);
-    return () => window.removeEventListener("keydown", alTeclear);
+    return () => { window.removeEventListener("keydown", alTeclear); ampliado.remove(); };
   }, [ampliado]);
   const [material, setMaterial] = useState<Material[]>([]);
   const [audioError, setAudioError] = useState("");
@@ -432,7 +451,6 @@ export function ArticleWizard({
     else { const d = departamentoPorSlug(id.slice(2)); if (!d) return; setRegion(d.region); setDepto(d.slug); }
     setCategoryId(regionesId);
   };
-  const sufijoRegion = categoryId && categoryId === regionesId && region ? ` › ${regionPorSlug(region)?.nombre ?? ""}${depto ? ` › ${departamentoPorSlug(depto)?.nombre ?? ""}` : ""}` : "";
 
   // Qué impide avanzar desde cada paso (solo título y resumen son obligatorios).
   const blocker: Record<string, string | null> = {
@@ -903,6 +921,12 @@ export function ArticleWizard({
               {autoEstado === "omitido" && "Nota publicada: guarda con los botones"}
               {autoEstado === "idle" && title.trim().length < 5 && "Se guarda al escribir el título"}
             </span>
+            {savedId && (
+              <button type="button" onClick={() => setVerComentarios((v) => !v)} aria-expanded={verComentarios} className="lx-link relative inline-flex items-center gap-1 font-medium">
+                <MessageSquare size={13} aria-hidden /> Comentarios
+                {comentariosNuevos > 0 && !verComentarios && <span className="ml-0.5 rounded-full bg-red-600 px-1.5 text-[0.65rem] font-bold leading-4 text-white">{comentariosNuevos}</span>}
+              </button>
+            )}
             {initial ? (
               <Link href={`/panel/articulos/${initial.id}`} className="lx-link">
                 Editor completo
@@ -928,6 +952,7 @@ export function ArticleWizard({
         </div>
       )}
 
+      {verComentarios && savedId && <div className="mb-3"><ComentariosNota articleId={savedId} /></div>}
       {/* --- Pantalla del paso + panel SEO lateral (escritorio) --- */}
       <div className="flex min-h-0 flex-1 gap-3">
       {/* Sin desplazamiento propio salvo en una ventana demasiado baja (el `auto` solo actúa si no cabe). */}
@@ -1363,17 +1388,16 @@ export function ArticleWizard({
         )}
 
         {current.key === "seccion" && (
-          <Step ancho="xl" title="¿Dónde se publica?" hint="Dos decisiones, ambas opcionales: 1. la sección y subsección donde se publica y 2. si va destacada en la portada del sitio.">
+          <Step ancho="xl" title="¿Dónde se publica?" hint="Dos decisiones, ambas opcionales: 1. si va destacada en la portada del sitio y 2. la sección y subsección donde se publica.">
             <SectionTree
               options={categories}
               value={categoryId}
-              onChange={(id) => { setCategoryId(id); if (id !== regionesId) { setRegion(""); setDepto(""); } }}
+              onChange={(id) => { setCategoryId(id); setRegion(""); setDepto(""); }}
               sugeridas={seccionesSugeridas}
               extra={regionesId ? { categoriaId: regionesId, items: itemsRegiones, value: valorRegion, onPick: elegirRegion } : undefined}
-              sufijoRuta={sufijoRegion}
             >
               {/* 3 · Lugar en la portada del sitio (solo con permiso «portada»). */}
-              <TarjetaDecision n={2} titulo="¿Va destacada en la portada?" ayuda={canPortada ? (portadaPos === "0" ? "Será la nota grande de arriba." : portadaPos === "1" ? "Irá junto a la principal." : portadaPos === "keep" ? "Ya tiene un lugar fijado; se conserva." : "Normal: entra a la portada por fecha, como cualquier nota.") : "Tu cuenta no ubica notas en la portada: un editor lo hace al publicar."}>
+              <TarjetaDecision n={1} titulo="¿Va destacada en la portada?" ayuda={canPortada ? (portadaPos === "0" ? "Será la nota grande de arriba." : portadaPos === "1" ? "Irá junto a la principal." : portadaPos === "keep" ? "Ya tiene un lugar fijado; se conserva." : "Normal: entra a la portada por fecha, como cualquier nota.") : "Tu cuenta no ubica notas en la portada: un editor lo hace al publicar."}>
                 {canPortada && (
                   <div id="pt-sitio" role="radiogroup" aria-label="Lugar en la portada del sitio" className="grid w-full grid-cols-3 gap-1 rounded-full border border-[var(--border)] bg-[var(--surface-2)]/60 p-1">
                     {([
@@ -1396,16 +1420,16 @@ export function ArticleWizard({
         {current.key === "documento" && (
           <Step ancho="xl" title="Escribe tu nota" hint="Título, bajada y cuerpo en una sola página, con las herramientas de un procesador de texto. Es el paso principal para escribir.">
             <div className="flex shrink-0 justify-end">
-              <button type="button" onClick={() => setAmpliado(true)} className="lx-link inline-flex items-center gap-1.5 text-xs font-semibold"><Maximize2 size={14} aria-hidden /> Ampliar para leer y editar mejor</button>
+              <button type="button" onClick={abrirAmpliado} className="lx-link inline-flex items-center gap-1.5 text-xs font-semibold"><Maximize2 size={14} aria-hidden /> Ampliar para leer y editar mejor</button>
             </div>
             {ampliado ? (
               createPortal(
-                <div role="dialog" aria-modal="true" aria-label="Nota ampliada" className="fixed inset-0 z-50 flex flex-col bg-[#e4e7e5]">
-                  <div className="flex shrink-0 items-center justify-between gap-3 border-b border-black/10 bg-white px-4 py-2.5">
+                <div role="dialog" aria-modal="true" aria-label="Nota ampliada" className="fixed inset-0 z-[70] flex flex-col bg-[#e4e7e5] text-[#1b1b1b]">
+                  <div className="flex shrink-0 items-center justify-between gap-3 border-b border-black/10 bg-white px-4 py-2.5 text-[#1b1b1b]">
                     <p className="truncate text-sm font-semibold">{title || "Nota sin título"}</p>
-                    <button type="button" autoFocus onClick={() => setAmpliado(false)} className="lx-btn lx-btn-ghost !px-3 !py-1.5 text-xs"><Minimize2 size={14} /> Reducir (Esc)</button>
+                    <button type="button" autoFocus onClick={cerrarAmpliado} className="lx-btn lx-btn-ghost !px-3 !py-1.5 text-xs"><Minimize2 size={14} /> Reducir (Esc)</button>
                   </div>
-                  <div className="min-h-0 flex-1 overflow-y-auto p-3 sm:p-8">
+                  <div className="min-h-0 flex-1 overflow-y-auto"><div className="p-3 sm:p-8">
               <article className={`mx-auto w-full ${ampliado ? "max-w-5xl" : "max-w-3xl"} rounded-sm bg-white text-[#1b1b1b] shadow-[0_1px_3px_rgba(0,0,0,.18),0_10px_30px_rgba(0,0,0,.08)]`}>
                     <div className="px-6 pb-2 pt-8 sm:px-14 sm:pt-12">
                       <label className="lx-kicker text-[#6b756f]" htmlFor="doc-titulo">Título</label>
@@ -1422,12 +1446,12 @@ export function ArticleWizard({
                         resumen={<>{words} palabras · {Math.max(1, Math.round(words / 200))} min</>} />
                     </div>
                   </article>
-                  </div>
+                  </div></div>
                 </div>,
-                document.body,
+                ampliado,
               )
             ) : (
-              <div className="min-h-0 flex-1 overflow-y-auto rounded-[var(--radius-lg)] bg-[#e4e7e5] p-3 sm:p-6">
+              <div className="min-h-0 flex-1 overflow-y-auto rounded-[var(--radius-lg)] bg-[#e4e7e5]"><div className="p-3 sm:p-6">
               <article className={`mx-auto w-full ${ampliado ? "max-w-5xl" : "max-w-3xl"} rounded-sm bg-white text-[#1b1b1b] shadow-[0_1px_3px_rgba(0,0,0,.18),0_10px_30px_rgba(0,0,0,.08)]`}>
                 <div className="px-6 pb-2 pt-8 sm:px-14 sm:pt-12">
                   <label className="lx-kicker text-[#6b756f]" htmlFor="doc-titulo">Título</label>
@@ -1444,7 +1468,7 @@ export function ArticleWizard({
                     resumen={<>{words} palabras · {Math.max(1, Math.round(words / 200))} min</>} />
                 </div>
               </article>
-              </div>
+              </div></div>
             )}
             {mode === "ia" && generated && (
               // Si el borrador no convence, se le dice a la IA cómo reescribirlo (tono, enfoque, qué citar…).

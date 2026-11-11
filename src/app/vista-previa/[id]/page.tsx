@@ -17,6 +17,8 @@ import { getArticleForPreview } from "@/lib/content";
 import { relatedContent } from "@/lib/search";
 import { auth } from "@/lib/auth";
 import { verifyPreviewToken } from "@/lib/preview-token";
+import { puedeVerNota } from "@/lib/propiedad-notas";
+import { ComentariosNota } from "@/components/panel/comentarios-nota";
 import { redirect } from "next/navigation";
 
 // Se calcula en cada petición, nunca durante la compilación.
@@ -47,9 +49,11 @@ export default async function VistaPreviaPage({
   const { id } = await params;
   const { t } = await searchParams;
 
+  const session = await auth();
   if (!verifyPreviewToken(id, t)) {
-    const session = await auth();
     if (!session?.user) redirect(`/panel/login?next=/vista-previa/${id}`);
+    // Con sesión, solo las notas que la persona tiene a cargo, debe revisar o tiene una imagen por hacer (los administradores, todas).
+    if (!(await puedeVerNota({ id: session.user.id, role: session.user.role }, id))) notFound();
   }
   const a = await getArticleForPreview(id).catch(() => null);
   if (!a) notFound();
@@ -76,6 +80,12 @@ export default async function VistaPreviaPage({
           Volver al editor
         </a>
       </div>
+      {/* Comentarios de la revisión: solo con sesión del panel (el enlace firmado es para auditar la página) */}
+      {session?.user && (
+        <div className="mb-8">
+          <ComentariosNota articleId={a.id} />
+        </div>
+      )}
       <ArticleDocument a={a} related={related} locale="es" preview theme={site.parts.body} />
     </SiteShell>
   );
