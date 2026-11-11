@@ -58,24 +58,8 @@ export default async function ArticlesList({ searchParams }: { searchParams: Sea
   const alcance = session?.user ? await condicionMisNotas({ id: session.user.id, role: session.user.role }) : undefined;
   const canDelete = session?.user?.role === "editor" || session?.user?.role === "administrador";
   const sp = await searchParams;
-  // Vista de tablero: en qué etapa está cada nota (redactor, diseñador, editor…). La lista de siempre sigue en la otra pestaña.
-  if (param(sp, "vista") === "tablero") {
-    return (
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-wrap items-center justify-between gap-3 pt-3">
-          <div>
-            <p className="lx-kicker text-[var(--accent)]">Contenido</p>
-            <h1 className="lx-display text-2xl font-semibold tracking-tight">Artículos</h1>
-          </div>
-          <Link href="/panel/articulos/nuevo">
-            <Button>Nuevo artículo</Button>
-          </Link>
-        </div>
-        <TabsArticulos activa="tablero" />
-        <TableroArticulos alcance={alcance} visibles={visibles} esAdmin={esAdmin} />
-      </div>
-    );
-  }
+  // Vista de tablero: en qué etapa está cada nota (redactor, diseñador, editor…). Comparte con la lista el encabezado, las cifras y los filtros.
+  const esTablero = param(sp, "vista") === "tablero";
   const q = param(sp, "q").slice(0, 120);
   const estado = articles.status.enumValues.includes(param(sp, "estado") as Status)
     ? (param(sp, "estado") as Status)
@@ -95,20 +79,20 @@ export default async function ArticlesList({ searchParams }: { searchParams: Sea
   ]);
 
   // --- Filtros ---
-  const where: SQL[] = [];
-  if (visibles) where.push(visibles);
+  // Lo que respetan la lista y el tablero (búsqueda, categoría y autor); el estado y el orden solo los usa la lista.
+  const filtrosBarra: SQL[] = [];
   if (q) {
     const like = `%${q}%`;
-    where.push(or(ilike(articles.title, like), ilike(articles.excerpt, like), ilike(articles.slug, like))!);
+    filtrosBarra.push(or(ilike(articles.title, like), ilike(articles.excerpt, like), ilike(articles.slug, like))!);
   }
-  if (estado) where.push(eq(articles.status, estado));
   if (categoria) {
     // Una sección incluye también sus subcategorías.
     const ids = [categoria, ...cats.filter((c) => c.parentId === categoria).map((c) => c.id)];
-    where.push(inArray(articles.categoryId, ids));
+    filtrosBarra.push(inArray(articles.categoryId, ids));
   }
-  if (autor === "sin-autor") where.push(sql`${articles.authorId} is null`);
-  else if (autor) where.push(eq(articles.authorId, autor));
+  if (autor === "sin-autor") filtrosBarra.push(sql`${articles.authorId} is null`);
+  else if (autor) filtrosBarra.push(eq(articles.authorId, autor));
+  const where: SQL[] = [...(visibles ? [visibles] : []), ...filtrosBarra, ...(estado && !esTablero ? [eq(articles.status, estado)] : [])];
 
   // Lecturas de los últimos 7 días por artículo (solo si la tabla diaria existe).
   const week = daily
@@ -215,7 +199,7 @@ export default async function ArticlesList({ searchParams }: { searchParams: Sea
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="pt-3 lg:-mb-2"><TabsArticulos activa="lista" /></div>
+      <div className="pt-3 lg:-mb-2"><TabsArticulos activa={esTablero ? "tablero" : "lista"} /></div>
       {/* --- Título, resumen y filtros: fijos bajo la cabecera del panel --- */}
       <div className="z-30 -mx-2 flex flex-col gap-2 rounded-b-[var(--radius)] bg-white px-2 pb-2 pt-3 lg:sticky lg:top-[var(--panel-header-h,61px)]">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -267,9 +251,14 @@ export default async function ArticlesList({ searchParams }: { searchParams: Sea
         categories={categoryOptions}
         authors={soloMias ? [] : [...auths.map((a) => ({ value: a.id, label: a.name })), { value: "sin-autor", label: "Sin autor" }]}
         sorts={SORTS}
+        tablero={esTablero}
       />
       </div>
 
+      {esTablero ? (
+        <TableroArticulos alcance={alcance} visibles={visibles} filtros={filtrosBarra} esAdmin={esAdmin} />
+      ) : (
+        <>
       <p className="text-sm text-[var(--fg-muted)]">
         {nf.format(rows.length)} {rows.length === 1 ? "artículo" : "artículos"}
         {rows.length === 200 && " (se muestran los 200 primeros)"} · {nf.format(filteredViews)} lecturas
@@ -456,6 +445,8 @@ export default async function ArticlesList({ searchParams }: { searchParams: Sea
           </tbody>
         </table>
       </div>
+        </>
+      )}
     </div>
   );
 }

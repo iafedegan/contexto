@@ -16,17 +16,20 @@ export function ArticleFilters({
   categories,
   authors,
   sorts,
+  tablero = false,
 }: {
   values: { q: string; estado: string; categoria: string; autor: string; orden: string };
   statuses: Option[];
   categories: Option[];
   authors: Option[];
   sorts: Option[];
+  /** En el tablero por etapas no hay estado ni orden que elegir (las columnas ya son las etapas): se piden solo búsqueda, categoría y autor, y la vista se conserva. */
+  tablero?: boolean;
 }) {
   const form = useRef<HTMLFormElement>(null);
   // Envía el formulario de filtros.
   const submit = () => form.current?.requestSubmit();
-  const active = Boolean(values.q || values.estado || values.categoria || values.autor);
+  const active = Boolean(values.q || (!tablero && values.estado) || values.categoria || values.autor);
 
   // Selector de un filtro que envía el formulario al cambiar.
   const select = (name: string, value: string, label: string, options: Option[], all?: string) => (
@@ -59,17 +62,18 @@ export function ArticleFilters({
           className="lx-input !py-1.5 !px-3 !text-sm leading-normal"
         />
       </label>
-      {select("estado", values.estado, "Estado", statuses, "Todos")}
+      {tablero && <input type="hidden" name="vista" value="tablero" />}
+      {!tablero && select("estado", values.estado, "Estado", statuses, "Todos")}
       {select("categoria", values.categoria, "Categoría", categories, "Todas")}
       {/* Sin lista de autores (quien solo ve sus notas) no hay nada que elegir. */}
       {authors.length > 0 && select("autor", values.autor, "Autor", authors, "Todos")}
-      {select("orden", values.orden, "Ordenar por", sorts)}
+      {!tablero && select("orden", values.orden, "Ordenar por", sorts)}
       <div className="col-span-2 flex items-end gap-2 sm:col-span-4 lg:col-span-1">
         <button type="submit" className="lx-btn flex-1 !py-2 lg:flex-none">
           Filtrar
         </button>
         {active && (
-          <Link href="/panel/articulos" className="lx-link whitespace-nowrap py-1 text-sm">
+          <Link href={tablero ? "/panel/articulos?vista=tablero" : "/panel/articulos"} className="lx-link whitespace-nowrap py-1 text-sm">
             Limpiar
           </Link>
         )}

@@ -14,9 +14,9 @@ const POR_COLUMNA = 40;
 const haceDias = (dias: number) => new Date(Date.now() - dias * 86_400_000);
 
 // Tablero por etapas: en qué punto está cada nota (con el redactor, esperando la imagen del diseñador, con el editor, programada, publicada).
-export async function TableroArticulos({ alcance, visibles, esAdmin = false }: { alcance: SQL | undefined; visibles: SQL | undefined; esAdmin?: boolean }) {
+export async function TableroArticulos({ alcance, visibles, filtros = [], esAdmin = false }: { alcance: SQL | undefined; visibles: SQL | undefined; /** Filtros de la barra (búsqueda, categoría, autor) que el tablero respeta. */ filtros?: SQL[]; esAdmin?: boolean }) {
   const desde = haceDias(DIAS_PUBLICADAS);
-  const filtro = and(visibles, or(inArray(articles.status, ["borrador", "en_revision", "programado"]), and(eq(articles.status, "publicado"), gte(articles.publishedAt, desde))));
+  const filtro = and(visibles, ...filtros, or(inArray(articles.status, ["borrador", "en_revision", "programado"]), and(eq(articles.status, "publicado"), gte(articles.publishedAt, desde))));
   const [notas, pedidos] = await Promise.all([
     db
       .select({ id: articles.id, titulo: articles.title, estado: articles.status, actualizada: articles.updatedAt, publicada: articles.publishedAt, programada: articles.scheduledFor, autor: authors.name, seccion: categories.name })
