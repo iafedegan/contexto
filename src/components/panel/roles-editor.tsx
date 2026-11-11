@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { crearRol, eliminarRol, guardarRol, guardarRolIncorporado } from "@/app/panel/(app)/configuracion/roles-actions";
-import { PERMISOS, porDefecto, type PermisoId } from "@/lib/permisos";
+import { GRUPOS_PERMISOS, PERMISOS, porDefecto, type PermisoId } from "@/lib/permisos";
 import { ROLES_BASE, comoRolPropio, nombreRol, permisoDeRol, type CambiosRoles, type RolPropio } from "@/lib/roles";
 import type { UserRole } from "@/db/schema";
 import { confirmar } from "@/components/panel/confirmar";
@@ -91,15 +91,23 @@ function RolPropioCard({ rol, personas, incorporado = false }: { rol: RolPropio;
         )}
         <span className="text-xs text-[var(--fg-muted)]">{incorporado ? "" : `basado en ${nombreRol(rol.base)} · `}{personas} {personas === 1 ? "persona" : "personas"}</span>
       </div>
-      <div className="mt-3 grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
-        {PERMISOS.map((p) => (
-          <label key={p.id} className="flex cursor-pointer items-start gap-2.5 text-sm">
-            <input type="checkbox" checked={marcas[p.id] ?? false} onChange={(e) => setMarcas((m) => ({ ...m, [p.id]: e.target.checked }))} className="mt-0.5 size-4 accent-[var(--accent)]" />
-            <span>
-              <span className="block font-medium">{p.label}</span>
-              <span className="block text-xs text-[var(--fg-muted)]">{p.hint}</span>
-            </span>
-          </label>
+      {/* Las casillas van por apartado del menú, igual que en la barra lateral del panel */}
+      <div className="mt-3 flex flex-col gap-4">
+        {GRUPOS_PERMISOS.map((g) => (
+          <fieldset key={g}>
+            <legend className="lx-kicker mb-2 text-[var(--fg-muted)]">{g}</legend>
+            <div className="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
+              {PERMISOS.filter((p) => p.grupo === g).map((p) => (
+                <label key={p.id} className="flex cursor-pointer items-start gap-2.5 text-sm">
+                  <input type="checkbox" checked={marcas[p.id] ?? false} onChange={(e) => setMarcas((m) => ({ ...m, [p.id]: e.target.checked }))} className="mt-0.5 size-4 accent-[var(--accent)]" />
+                  <span>
+                    <span className="block font-medium">{p.label}</span>
+                    <span className="block text-xs text-[var(--fg-muted)]">{p.hint}</span>
+                  </span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
         ))}
       </div>
       <div className="mt-4 flex flex-wrap items-center gap-2">

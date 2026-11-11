@@ -56,7 +56,6 @@ import {
 } from "@/app/panel/(app)/articulos/ai-actions";
 import { EditorCuerpo, expandirGraficas } from "@/components/panel/editor-cuerpo";
 import { SectionTree } from "@/components/panel/section-picker";
-import { DEPARTAMENTOS_FILTRO, REGIONES_COLOMBIA } from "@/lib/regiones-colombia";
 import { Carrusel, filasListas, useAltoVentana } from "@/components/panel/carrusel";
 import { textoDeSegmentos, type Material, type Participante, type Segmento } from "@/lib/material-types";
 import { participantesListos, SegmentosEditor } from "@/components/panel/entrevista-editor";
@@ -267,7 +266,7 @@ export function ArticleWizard({
   const [tags, setTags] = useState<string[]>(initial?.tags ?? []);
   const [tagDraft, setTagDraft] = useState("");
   const [categoryId, setCategoryId] = useState(initial?.categoryId ?? pieza?.categoryId ?? "");
-  const [region, setRegion] = useState(initial?.region ?? "");
+  const [region] = useState(initial?.region ?? "");
   // A qué editor se envía la nota al terminar (vacío = a nadie) y el mensaje que le llega con ella.
   const [envio, setEnvio] = useState(enviadoA);
   const [enviarA, setEnviarA] = useState("");
@@ -275,7 +274,7 @@ export function ArticleWizard({
   const [cancelando, cancelarT] = useTransition();
   const [errorEnvio, setErrorEnvio] = useState("");
   const editorElegido = editores.find((e) => e.id === enviarA);
-  const [depto, setDepto] = useState(initial?.depto ?? "");
+  const [depto] = useState(initial?.depto ?? "");
   const [authorId] = useState(initial?.authorId ?? miAutorId ?? "");
   // El cuerpo se guarda como HTML (el editor lo muestra ya formateado). Las gráficas viajan como marcador `[[GRAFICA …]]`.
   const [body, setBody] = useState(initial?.body ?? "");
@@ -1342,33 +1341,10 @@ export function ArticleWizard({
         )}
 
         {current.key === "seccion" && (
-          <Step ancho="xl" title="¿Dónde se publica?" hint="Tres decisiones, todas opcionales: 1. la sección, 2. la región de la que habla y 3. si va destacada en la portada del sitio.">
-            <SectionTree options={categories} value={categoryId} onChange={setCategoryId} sugeridas={seccionesSugeridas} filas={filasListas(alto, 250, 38)}>
-              {/* 2 · Región y departamento: alimentan el mapa de «Regiones». */}
-              <TarjetaDecision n={2} titulo="¿De qué región habla?" ayuda="Así la nota aparece en el mapa de «Regiones». Si no es de una región, déjalo en «Sin región».">
-                <div id="reg-nota" role="radiogroup" aria-label="Región de la noticia" className="flex flex-wrap gap-1.5">
-                  {[{ slug: "", nombre: "Sin región", color: "" }, ...REGIONES_COLOMBIA].map((r) => (
-                    <button key={r.slug || "ninguna"} type="button" role="radio" aria-checked={region === r.slug} onClick={() => { setRegion(r.slug); setDepto(""); }}
-                      className={`inline-flex min-h-8 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition ${region === r.slug ? "border-transparent bg-[var(--accent)] text-[var(--accent-fg,#fff)] shadow-sm" : "border-[var(--border)] bg-[var(--surface)] text-[var(--fg-muted)] hover:text-[var(--fg)]"}`}>
-                      {r.color && <span aria-hidden className="size-2 rounded-full" style={{ background: r.color }} />}
-                      {r.nombre}
-                    </button>
-                  ))}
-                </div>
-                {region && (
-                  <label className="flex items-center gap-2 text-xs text-[var(--fg-muted)]">
-                    Departamento
-                    <select value={depto} onChange={(e) => setDepto(e.target.value)} className="min-w-0 flex-1 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5 text-sm text-[var(--fg)]">
-                      <option value="">Sin departamento</option>
-                      {DEPARTAMENTOS_FILTRO.filter((d) => d.region === region).map((d) => (
-                        <option key={d.slug} value={d.slug}>{d.nombre}</option>
-                      ))}
-                    </select>
-                  </label>
-                )}
-              </TarjetaDecision>
+          <Step ancho="xl" title="¿Dónde se publica?" hint="Dos decisiones, ambas opcionales: 1. la sección y subsección donde se publica y 2. si va destacada en la portada del sitio.">
+            <SectionTree options={categories} value={categoryId} onChange={setCategoryId} sugeridas={seccionesSugeridas}>
               {/* 3 · Lugar en la portada del sitio (solo con permiso «portada»). */}
-              <TarjetaDecision n={3} titulo="¿Va destacada en la portada?" ayuda={canPortada ? (portadaPos === "0" ? "Será la nota grande de arriba." : portadaPos === "1" ? "Irá junto a la principal." : portadaPos === "keep" ? "Ya tiene un lugar fijado; se conserva." : "Normal: entra a la portada por fecha, como cualquier nota.") : "Tu cuenta no ubica notas en la portada: un editor lo hace al publicar."}>
+              <TarjetaDecision n={2} titulo="¿Va destacada en la portada?" ayuda={canPortada ? (portadaPos === "0" ? "Será la nota grande de arriba." : portadaPos === "1" ? "Irá junto a la principal." : portadaPos === "keep" ? "Ya tiene un lugar fijado; se conserva." : "Normal: entra a la portada por fecha, como cualquier nota.") : "Tu cuenta no ubica notas en la portada: un editor lo hace al publicar."}>
                 {canPortada && (
                   <div id="pt-sitio" role="radiogroup" aria-label="Lugar en la portada del sitio" className="grid w-full grid-cols-3 gap-1 rounded-full border border-[var(--border)] bg-[var(--surface-2)]/60 p-1">
                     {([
@@ -1942,15 +1918,15 @@ function Step({ title, hint, children, ancho = "md", centrado = false }: { title
 /** Tarjeta numerada de una decisión (pasos 2 y 3 de «Sección»): círculo con el número, pregunta, ayuda y las opciones. */
 function TarjetaDecision({ n, titulo, ayuda, children }: { n: number; titulo: string; ayuda: string; children?: React.ReactNode }) {
   return (
-    <section className="flex min-w-0 flex-col gap-3 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow)]">
-      <header className="flex items-start gap-3">
+    <section className="flex min-w-0 flex-col gap-3 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow)] md:flex-row md:items-center md:justify-between md:gap-8">
+      <header className="flex min-w-0 items-start gap-3">
         <span aria-hidden className="grid size-8 shrink-0 place-items-center rounded-full bg-[var(--accent)] text-sm font-bold text-[var(--accent-fg,#fff)]">{n}</span>
         <div className="min-w-0">
           <h3 className="text-base font-semibold leading-tight">{titulo}</h3>
           <p className="mt-0.5 text-xs text-[var(--fg-muted)]">{ayuda}</p>
         </div>
       </header>
-      {children}
+      {children && <div className="md:w-[24rem] md:shrink-0">{children}</div>}
     </section>
   );
 }

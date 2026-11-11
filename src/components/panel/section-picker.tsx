@@ -2,7 +2,6 @@
 
 import { useId, useMemo, useState } from "react";
 import { Check, ChevronLeft, ChevronRight, FolderOpen, Search } from "lucide-react";
-import { Carrusel } from "@/components/panel/carrusel";
 
 // Opción de un selector: id y nombre.
 type Opcion = { id: string; name: string };
@@ -45,7 +44,6 @@ export function SectionTree({
   onChange,
   sugeridas = [],
   firma,
-  filas = 8,
   children,
 }: {
   options: Nodo[];
@@ -54,8 +52,6 @@ export function SectionTree({
   sugeridas?: string[];
   /** Quién firma la nota: se muestra junto a «Se publicará en». */
   firma?: string;
-  /** Filas que caben por página en cada lista (el resto se recorre con el carrusel). */
-  filas?: number;
   /** Contenido propio del asistente que va justo debajo de «Se publicará en» (p. ej. el lugar en la portada). */
   children?: React.ReactNode;
 }) {
@@ -183,7 +179,7 @@ export function SectionTree({
 
   const hayRama = !!ramaNodo && subs.length > 0;
   return (
-    <div className="grid gap-4 @2xl:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] @2xl:items-start">
+    <div className="flex flex-col gap-5">
       {/* Tarjeta 1: qué sección eligió, las sugeridas y las listas para cambiarla */}
       <section className="flex min-w-0 flex-col gap-3 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow)]">
       <div className="flex items-center gap-3">
@@ -227,80 +223,55 @@ export function SectionTree({
         </div>
       )}
 
-      {/* Dos columnas, como el sitio: secciones | subsecciones. Cada lista es un carrusel de `filas` filas por página. */}
-      <div className="@container min-w-0 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)]">
-      <div className={`grid ${t ? "" : "@sm:grid-cols-2"}`}>
-        <div className={`flex min-w-0 flex-col ${t ? "" : "@sm:border-r @sm:border-[var(--border)]"}`}>
-          <div className="relative p-2 pb-1">
-            <Search size={15} aria-hidden className="pointer-events-none absolute left-5 top-1/2 -translate-y-1/2 text-[var(--fg-muted)]" />
-            <input
-              type="search"
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key !== "Enter") return;
-                e.preventDefault(); // dentro del formulario del asistente: no enviar
-                if (coincidencias.length === 1) onChange(coincidencias[0].id);
-              }}
-              placeholder={`Buscar entre ${options.length} secciones…`}
-              aria-label="Buscar sección o subsección"
-              className="w-full rounded-full border border-[var(--border)] bg-[var(--surface)] py-2 pl-9 pr-4 text-sm outline-none transition focus:border-[var(--accent)]"
-            />
-          </div>
-          {t ? (
-            coincidencias.length === 0 ? (
-              <p className="px-3 py-4 text-center text-sm text-[var(--fg-muted)]">Nada coincide con «{q}».</p>
-            ) : (
-              <Carrusel
-                key={t}
-                etiqueta="Resultados de la búsqueda"
-                items={coincidencias}
-                filas={filas}
-                maxColumnas={1}
-                separacion="gap-0.5"
-                anchoMinimo={120}
-                className="p-2 pt-1"
-                render={(o) => opcion(o, ruta(o))}
-              />
-            )
-          ) : (
-            <>
-              <p className="lx-kicker px-4 pb-1 pt-2 text-[var(--fg-muted)]">Secciones · {raices.length}</p>
-              <Carrusel
-                etiqueta="Secciones"
-                items={raices}
-                filas={filas}
-                maxColumnas={1}
-                separacion="gap-0.5"
-                anchoMinimo={120}
-                paginaInicial={Math.max(0, Math.floor(raices.findIndex((r) => r.id === rama) / filas))}
-                className="p-2 pt-0"
-                render={filaSeccion}
-              />
-            </>
-          )}
+      {/* Buscador y, debajo, dos listas alineadas (secciones | su contenido), cada una con el mismo alto y su propio desplazamiento. */}
+      <div className="@container min-w-0 overflow-hidden rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)]">
+        <div className="relative border-b border-[var(--border)] bg-[var(--bg-2)] p-2.5">
+          <Search size={15} aria-hidden className="pointer-events-none absolute left-6 top-1/2 -translate-y-1/2 text-[var(--fg-muted)]" />
+          <input
+            type="search"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key !== "Enter") return;
+              e.preventDefault(); // dentro del formulario del asistente: no enviar
+              if (coincidencias.length === 1) onChange(coincidencias[0].id);
+            }}
+            placeholder={`Buscar entre ${options.length} secciones y subsecciones…`}
+            aria-label="Buscar sección o subsección"
+            className="w-full rounded-full border border-[var(--border)] bg-[var(--surface)] py-2 pl-9 pr-4 text-sm outline-none transition focus:border-[var(--accent)]"
+          />
         </div>
-        {!t && (
-          <div className="hidden @sm:block" aria-live="polite">
-            <p className="lx-kicker truncate px-4 pb-1 pt-[3.5rem] text-[var(--fg-muted)]">
-              {hayRama ? `Dentro de ${ramaNodo!.name} · ${subs.length}` : "Subsecciones"}
-            </p>
-            {hayRama ? (
-              // Todas las subsecciones a la vez (sin páginas), de todos los niveles y con sangría; si son muchas, la lista se desplaza.
-              <ul key={ramaNodo!.id} role="radiogroup" aria-label={`Subsecciones de ${ramaNodo!.name}`} className="flex max-h-[24rem] flex-col gap-0.5 overflow-y-auto p-2 pt-0">
-                {itemsSubs(ramaNodo!).map((h) => (
-                  <li key={h.n.id}>{opcion(h.n, h.d === 0 ? `Toda la sección «${ramaNodo!.name}»` : h.n.name, h.d === 0, h.d)}</li>
-                ))}
-              </ul>
-            ) : (
-              <p className="flex items-center gap-2 px-3 py-6 text-sm text-[var(--fg-muted)]">
-                <ChevronLeft size={16} aria-hidden className="shrink-0" />
-                {ramaNodo ? `«${ramaNodo.name}» no tiene subsecciones.` : "Elige una sección para ver lo que contiene."}
+        {t ? (
+          <ul className="max-h-[22rem] overflow-y-auto p-2" aria-label="Resultados de la búsqueda">
+            {coincidencias.length === 0 && <li className="px-3 py-6 text-center text-sm text-[var(--fg-muted)]">Nada coincide con «{q}».</li>}
+            {coincidencias.map((o) => <li key={o.id}>{opcion(o, ruta(o))}</li>)}
+          </ul>
+        ) : (
+          <div className="grid @sm:grid-cols-2">
+            <div className="flex min-w-0 flex-col @sm:border-r @sm:border-[var(--border)]">
+              <p className="lx-kicker border-b border-[var(--border)] px-4 py-2.5 text-[var(--fg-muted)]">Secciones · {raices.length}</p>
+              <div className="max-h-[22rem] overflow-y-auto p-2">{raices.map(filaSeccion)}</div>
+            </div>
+            <div className="hidden min-w-0 flex-col @sm:flex" aria-live="polite">
+              <p className="lx-kicker truncate border-b border-[var(--border)] px-4 py-2.5 text-[var(--fg-muted)]">
+                {hayRama ? `Dentro de ${ramaNodo!.name} · ${subs.length}` : "Subsecciones"}
               </p>
-            )}
+              {hayRama ? (
+                // Todas las subsecciones a la vez, de todos los niveles y con sangría.
+                <ul key={ramaNodo!.id} role="radiogroup" aria-label={`Subsecciones de ${ramaNodo!.name}`} className="flex max-h-[22rem] flex-col gap-0.5 overflow-y-auto p-2">
+                  {itemsSubs(ramaNodo!).map((h) => (
+                    <li key={h.n.id}>{opcion(h.n, h.d === 0 ? `Toda la sección «${ramaNodo!.name}»` : h.n.name, h.d === 0, h.d)}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="flex items-center gap-2 px-4 py-6 text-sm text-[var(--fg-muted)]">
+                  <ChevronLeft size={16} aria-hidden className="shrink-0" />
+                  {ramaNodo ? `«${ramaNodo.name}» no tiene subsecciones.` : "Elige una sección para ver lo que contiene."}
+                </p>
+              )}
+            </div>
           </div>
         )}
-      </div>
       </div>
       </section>
       {/* Decisiones 2 y 3 del asistente (región, portada), una tarjeta cada una */}

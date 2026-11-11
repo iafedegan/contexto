@@ -15,7 +15,7 @@ export const metadata = { title: "Diseñar página" };
 
 // El constructor de una página: filas, columnas y elementos que se arrastran.
 export default async function DisenarPagina({ params }: { params: Promise<{ id: string }> }) {
-  await requirePermiso("portada");
+  await requirePermiso("paginas");
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/.test(id)) notFound();
   const [[p], secciones] = await Promise.all([

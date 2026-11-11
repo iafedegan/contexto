@@ -18,17 +18,26 @@ export const ROLES: UserRole[] = ["redactor", "disenador", "editor", "administra
 
 // Catálogo de permisos con el rol mínimo que los tiene por defecto.
 export const PERMISOS = [
-  { id: "articulos", label: "Redactar artículos", hint: "Crear y editar artículos y mandarlos a revisión", min: "redactor" },
-  { id: "publicar", label: "Publicar y eliminar artículos", hint: "Publicar, programar, despublicar y borrar", min: "editor" },
-  { id: "borradores_ia", label: "Borradores de IA", hint: "Revisar, aprobar y descartar lo que propone la IA", min: "editor" },
-  { id: "avisos", label: "Avisos", hint: "Crear y retirar avisos del sitio", min: "editor" },
-  { id: "mensajes", label: "Mensajes recibidos", hint: "Leer contacto y solicitudes de pauta", min: "editor" },
-  { id: "portada", label: "Portada, plantillas y secciones", hint: "Diseño del sitio, orden y menú de secciones", min: "administrador" },
-  { id: "newsletter", label: "Newsletter", hint: "Ediciones, envíos y suscriptores", min: "editor" },
-  { id: "analitica", label: "Centro de análisis", hint: "Qué leen, cuándo, desde dónde, y cómo crece la base de suscriptores", min: "editor" },
-  { id: "biblioteca", label: "Biblioteca de imágenes", hint: "Crear carpetas, subir imágenes y asignarlas a personas", min: "administrador" },
-  { id: "api", label: "API pública", hint: "Claves para terceros", min: "administrador" },
-] as const satisfies readonly { id: string; label: string; hint: string; min: UserRole }[];
+  { id: "articulos", label: "Redactar artículos", hint: "Crear y editar artículos y mandarlos a revisión", min: "redactor", grupo: "Redactor" },
+  { id: "publicar", label: "Publicar y eliminar artículos", hint: "Publicar, programar, despublicar y borrar", min: "editor", grupo: "Redactor" },
+  { id: "borradores_ia", label: "Borradores de IA", hint: "Revisar, aprobar y descartar lo que propone la IA", min: "editor", grupo: "Redactor" },
+  { id: "avisos", label: "Avisos", hint: "Crear y retirar avisos del sitio", min: "editor", grupo: "Redactor" },
+  { id: "mensajes", label: "Mensajes recibidos", hint: "Leer contacto y solicitudes de pauta", min: "editor", grupo: "Configuración" },
+  { id: "portada", label: "Portada, plantillas y secciones", hint: "Diseño del sitio, orden y menú de secciones", min: "administrador", grupo: "Diseño" },
+  { id: "newsletter", label: "Newsletter", hint: "Ediciones, envíos y suscriptores", min: "editor", grupo: "Redactor" },
+  { id: "analitica", label: "Centro de análisis", hint: "Qué leen, cuándo, desde dónde, y cómo crece la base de suscriptores", min: "editor", grupo: "Configuración" },
+  { id: "biblioteca", label: "Biblioteca de imágenes", hint: "Crear carpetas, subir imágenes y asignarlas a personas", min: "administrador", grupo: "Redactor" },
+  { id: "api", label: "API pública", hint: "Claves para terceros", min: "administrador", grupo: "Configuración" },
+  // Entradas del menú que antes no se podían activar ni apagar por rol.
+  { id: "resumen", label: "Resumen del panel", hint: "Estado editorial, audiencia y notas más leídas", min: "redactor", grupo: "Redactor" },
+  { id: "pendientes", label: "Mis pendientes", hint: "Piezas del grupo de redacción y notas que te enviaron", min: "redactor", grupo: "Redactor" },
+  { id: "imagenes", label: "Solicitud de imágenes", hint: "Recibir las portadas que piden los redactores y entregarlas", min: "redactor", grupo: "Redactor" },
+  { id: "notas_editores", label: "Notas para editores", hint: "Preescribir una nota y enviarla a un editor", min: "redactor", grupo: "Redactor" },
+  { id: "paginas", label: "Páginas", hint: "Crear páginas y armarlas con el constructor", min: "administrador", grupo: "Diseño" },
+] as const satisfies readonly { id: string; label: string; hint: string; min: UserRole; /** Apartado del menú del panel al que pertenece. */ grupo: "Diseño" | "Redactor" | "Configuración" }[];
+
+/** Apartados del menú, en el orden en que se muestran las casillas. */
+export const GRUPOS_PERMISOS = ["Diseño", "Redactor", "Configuración"] as const;
 
 // Identificador de un permiso.
 export type PermisoId = (typeof PERMISOS)[number]["id"];
@@ -53,7 +62,12 @@ export function exige2fa(role: UserRole, ajustes: Ajustes | undefined): boolean 
 export function porDefecto(role: UserRole, id: PermisoId): boolean {
   const p = PERMISOS.find((x) => x.id === id)!;
   // El diseñador tiene el rango de un redactor, pero además toca la portada, las plantillas y las secciones.
-  if (role === "disenador" && (id === "portada" || id === "biblioteca")) return true;
+  if (role === "disenador" && (id === "portada" || id === "biblioteca" || id === "paginas")) return true;
+  // Las entradas del menú que no siguen el rango: la solicitud de imágenes la reciben diseñadores, editores y administradores; «Mis pendientes»
+  // no es para el diseñador (trabaja desde su solicitud de imágenes); las notas para editores las envían los redactores.
+  if (id === "imagenes") return role !== "redactor";
+  if (id === "pendientes") return role !== "disenador";
+  if (id === "notas_editores") return role === "redactor" || role === "administrador";
   return RANGO[role] >= RANGO[p.min];
 }
 

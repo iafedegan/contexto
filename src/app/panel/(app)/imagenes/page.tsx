@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { inArray } from "drizzle-orm";
 import { db } from "@/db";
 import { articles, users } from "@/db/schema";
@@ -7,7 +6,7 @@ import { requirePermiso } from "@/lib/auth";
 import { Card } from "@/components/ui";
 import { EntregaImagen } from "@/components/panel/entrega-imagen";
 import { leerPedidos } from "@/lib/imagenes-pedidas";
-import { pendientesPara, puedeEntregarImagen } from "@/lib/imagenes-pedidas-reglas";
+import { pendientesPara } from "@/lib/imagenes-pedidas-reglas";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Solicitud de imágenes" };
@@ -16,8 +15,7 @@ const cuando = (iso: string) => new Intl.DateTimeFormat("es-CO", { day: "numeric
 
 // Las imágenes de portada que le piden al diseñador: las pendientes con su formulario de entrega y las últimas entregadas.
 export default async function ImagenesPedidas() {
-  const yo = await requirePermiso("articulos");
-  if (!puedeEntregarImagen(yo.role)) redirect("/panel");
+  const yo = await requirePermiso("imagenes");
   const todos = await leerPedidos();
   const pendientes = pendientesPara(todos, yo.id, yo.role);
   const entregadas = todos.filter((p) => p.estado === "entregada").sort((a, b) => (b.entregadaEn ?? "").localeCompare(a.entregadaEn ?? "")).slice(0, 8);

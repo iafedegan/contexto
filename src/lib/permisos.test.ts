@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { efectivo, efectivos, exige2fa, porDefecto, RANGO, enPlazoDosPasos } from "@/lib/permisos";
+import { efectivo, efectivos, exige2fa, GRUPOS_PERMISOS, PERMISOS, porDefecto, RANGO, enPlazoDosPasos } from "@/lib/permisos";
 
 test("los rangos van de redactor a administrador", () => {
   assert.ok(RANGO.redactor < RANGO.editor && RANGO.editor < RANGO.administrador);
@@ -41,4 +41,28 @@ test("el plazo de gracia del segundo factor vence solo", () => {
   assert.equal(enPlazoDosPasos(plazos, "c", ahora).activo, false);
   assert.equal(enPlazoDosPasos(plazos, "z", ahora).activo, false);
   assert.equal(enPlazoDosPasos(undefined, "a", ahora).activo, false);
+});
+
+test("las entradas nuevas del menú siguen lo que cada rol veía antes", () => {
+  // Solicitud de imágenes: diseñador, editor y administrador, no el redactor.
+  assert.equal(porDefecto("redactor", "imagenes"), false);
+  assert.equal(porDefecto("disenador", "imagenes"), true);
+  assert.equal(porDefecto("editor", "imagenes"), true);
+  // Mis pendientes: todos menos el diseñador.
+  assert.equal(porDefecto("disenador", "pendientes"), false);
+  assert.equal(porDefecto("redactor", "pendientes"), true);
+  assert.equal(porDefecto("editor", "pendientes"), true);
+  // Notas para editores: las envía el redactor.
+  assert.equal(porDefecto("redactor", "notas_editores"), true);
+  assert.equal(porDefecto("editor", "notas_editores"), false);
+  // Páginas: el diseñador (como la portada) y el administrador.
+  assert.equal(porDefecto("disenador", "paginas"), true);
+  assert.equal(porDefecto("redactor", "paginas"), false);
+  assert.equal(porDefecto("editor", "paginas"), false);
+  // El resumen lo ven todos.
+  assert.equal(porDefecto("redactor", "resumen"), true);
+});
+
+test("cada permiso pertenece a un apartado del menú", () => {
+  for (const p of PERMISOS) assert.ok(GRUPOS_PERMISOS.includes(p.grupo), `${p.id} sin apartado`);
 });

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { CalendarClock, CircleCheck, ClipboardList, PenLine, Send, Sparkles, type LucideIcon } from "lucide-react";
 import { auth } from "@/lib/auth";
+import { tienePermiso } from "@/lib/permisos-server";
 import { MarcarVistos } from "@/components/panel/marcar-vistos";
 import { sincronizarCasillas } from "@/lib/ai/consejo-ejecucion";
 import { contarMisPendientes } from "./consultas";
@@ -52,8 +53,8 @@ function TarjetaNota({ t }: { t: Tarjeta }) {
 export default async function MisPendientes() {
   const session = await auth();
   if (!session?.user) redirect("/panel/login?motivo=sesion");
-  // El diseñador trabaja desde «Solicitud de imágenes»: no tiene tablero de pendientes.
-  if (session.user.role === "disenador") redirect("/panel/imagenes");
+  // Solo con el permiso «Mis pendientes» (el diseñador, por defecto, trabaja desde «Solicitud de imágenes»).
+  if (!(await tienePermiso(session.user.id, session.user.role, "pendientes"))) redirect("/panel");
   await sincronizarCasillas().catch(() => {});
   const [tarjetas, { nuevas }] = await Promise.all([tableroDe(session.user.id), contarMisPendientes(session.user.id)]);
   const de = (c: Columna) =>

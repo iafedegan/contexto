@@ -57,7 +57,7 @@ function refrescar(slug?: string) {
  * `/{seccion}/{pagina}` (como las notas del sitio); si no, `/{pagina}`.
  */
 export async function crearPagina(titulo: string, seccionId: string | null): Promise<ResultadoPagina> {
-  const yo = await requirePermiso("portada");
+  const yo = await requirePermiso("paginas");
   const t = titulo.trim().slice(0, 160);
   if (!t) return { ok: false, error: "Escriba el nombre de la página." };
   let prefijo = "";
@@ -85,7 +85,7 @@ export async function guardarPagina(
   id: string,
   datos: { titulo: string; slug: string; descripcion: string; contenido: unknown },
 ): Promise<ResultadoPagina> {
-  const yo = await requirePermiso("portada");
+  const yo = await requirePermiso("paginas");
   const titulo = datos.titulo.trim().slice(0, 160);
   if (!titulo) return { ok: false, error: "La página necesita un título." };
   const slug = rutaPagina(datos.slug);
@@ -107,7 +107,7 @@ export async function guardarPagina(
  * a lo sumo una). Si ya existe, devuelve esa. Las demás páginas de la sección son páginas aparte (`/seccion/otra`) y solo se enlazan desde la sección.
  */
 export async function crearInicioDeSeccion(seccionId: string): Promise<ResultadoPagina> {
-  const yo = await requirePermiso("portada");
+  const yo = await requirePermiso("paginas");
   const [cat] = await db.select({ slug: categories.slug, name: categories.name }).from(categories).where(eq(categories.id, seccionId)).limit(1);
   if (!cat) return { ok: false, error: "Esa sección ya no existe." };
   const slug = `${slugPagina(cat.slug)}/inicio`;
@@ -122,7 +122,7 @@ export async function crearInicioDeSeccion(seccionId: string): Promise<Resultado
 
 /** La portada propia del inicio del sitio («inicio»): se muestra arriba de las notas de la portada. Si ya existe, devuelve la misma. */
 export async function crearInicioDelSitio(): Promise<ResultadoPagina> {
-  const yo = await requirePermiso("portada");
+  const yo = await requirePermiso("paginas");
   const [ya] = await db.select({ id: paginas.id }).from(paginas).where(eq(paginas.slug, SLUG_INICIO_SITIO)).limit(1);
   if (ya) return { ok: true, id: ya.id };
   const [p] = await db.insert(paginas).values({ titulo: "Portada del inicio", slug: SLUG_INICIO_SITIO, updatedBy: yo.id }).returning({ id: paginas.id });
@@ -132,7 +132,7 @@ export async function crearInicioDelSitio(): Promise<ResultadoPagina> {
 
 /** Duplica una página: copia su diseño en una página nueva, en borrador, en la misma sección y con una dirección libre («…-copia»). */
 export async function duplicarPagina(id: string): Promise<ResultadoPagina> {
-  const yo = await requirePermiso("portada");
+  const yo = await requirePermiso("paginas");
   const [p] = await db.select().from(paginas).where(eq(paginas.id, id)).limit(1);
   if (!p) return { ok: false, error: "La página ya no existe." };
   const tramos = p.slug.split("/");
@@ -152,7 +152,7 @@ export async function duplicarPagina(id: string): Promise<ResultadoPagina> {
 
 /** Publica u oculta la página. */
 export async function publicarPagina(id: string, publicada: boolean): Promise<ResultadoPagina> {
-  const yo = await requirePermiso("portada");
+  const yo = await requirePermiso("paginas");
   const [p] = await db.update(paginas).set({ publicada, updatedBy: yo.id, updatedAt: new Date() }).where(eq(paginas.id, id)).returning({ slug: paginas.slug });
   if (!p) return { ok: false, error: "La página ya no existe." };
   refrescar(p.slug);
@@ -161,7 +161,7 @@ export async function publicarPagina(id: string, publicada: boolean): Promise<Re
 
 /** Borra la página. */
 export async function borrarPagina(id: string): Promise<ResultadoPagina> {
-  await requirePermiso("portada");
+  await requirePermiso("paginas");
   const [p] = await db.delete(paginas).where(eq(paginas.id, id)).returning({ slug: paginas.slug });
   refrescar(p?.slug);
   return { ok: true };
@@ -172,7 +172,7 @@ export async function borrarPagina(id: string): Promise<ResultadoPagina> {
  * las notas que salen debajo). Solo lectura.
  */
 export async function notasParaVista(seccion: string): Promise<NotaMini[]> {
-  await requirePermiso("portada");
+  await requirePermiso("paginas");
   if (!/^[a-z0-9-]{1,100}$/.test(seccion)) return [];
   try {
     const l = await getArticlesByCategory(seccion);

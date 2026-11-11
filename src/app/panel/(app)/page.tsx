@@ -14,6 +14,7 @@ import {
   ScanSearch,
   ChevronRight,
 } from "lucide-react";
+import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { tienePermiso } from "@/lib/permisos-server";
 import { TabsResumen } from "@/components/panel/tabs-resumen";
@@ -56,6 +57,13 @@ export default async function PanelHome() {
     siteDailySeries(7),
     masLeidasDelMes(),
   ]);
+
+  // Un rol sin «Resumen» entra por la primera pantalla que sí tiene.
+  if (session?.user && !(await tienePermiso(session.user.id, session.user.role, "resumen"))) {
+    for (const [permiso, ruta] of [["articulos", "/panel/articulos"], ["imagenes", "/panel/imagenes"], ["pendientes", "/panel/pendientes"], ["biblioteca", "/panel/biblioteca"]] as const) {
+      if (await tienePermiso(session.user.id, session.user.role, permiso)) redirect(ruta);
+    }
+  }
 
   const st = Object.fromEntries(byStatus.map((r) => [r.status, r.n])) as Record<string, number>;
   const change = week ? pctChange(week.last7, week.prev7) : null;

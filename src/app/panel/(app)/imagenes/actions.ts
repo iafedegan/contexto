@@ -10,7 +10,7 @@ import { urlPublicaMedia } from "@/lib/media-storage";
 import { requirePermiso } from "@/lib/auth";
 import { revalidarNotas } from "@/lib/article-ops";
 import { cerrarPedido, disenadoresActivos, esDisenadorActivo, leerPedidos, registrarPedido } from "@/lib/imagenes-pedidas";
-import { pedidoDeNota, puedeEntregarImagen, urlDeImagenValida, type PedidoImagen } from "@/lib/imagenes-pedidas-reglas";
+import { pedidoDeNota, urlDeImagenValida, type PedidoImagen } from "@/lib/imagenes-pedidas-reglas";
 
 type Respuesta = { ok: boolean; message: string };
 
@@ -60,8 +60,7 @@ export async function carpetasDeEntrega(): Promise<{ gestiona: boolean; carpetas
  * también el sitio.
  */
 export async function entregarImagen(input: { articleId: string; url: string; alt: string; pie?: string; nombre?: string; carpetaId?: string | null; bytes?: number }): Promise<Respuesta> {
-  const yo = await requirePermiso("articulos");
-  if (!puedeEntregarImagen(yo.role)) return { ok: false, message: "Solo los diseñadores entregan imágenes." };
+  const yo = await requirePermiso("imagenes");
   const url = String(input.url ?? "").trim();
   if (!urlDeImagenValida(url)) return { ok: false, message: "Sube la imagen antes de entregarla." };
   const alt = String(input.alt ?? "").trim().slice(0, 300);

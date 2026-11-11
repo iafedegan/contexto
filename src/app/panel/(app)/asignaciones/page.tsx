@@ -37,7 +37,7 @@ function Fila({ f, de }: { f: FilaAsignada; de: "por" | "para" }) {
 
 // Preescribir una nota y asignarla al editor que se elija, y ver lo que le asignaron a uno y lo que uno asignó.
 export default async function NotasParaEditores() {
-  const yo = await requirePermiso("articulos");
+  const yo = await requirePermiso("notas_editores");
   // Envían los administradores y los redactores; el editor recibe. Cualquier otro rol no tiene nada que hacer aquí.
   const envia = puedeEnviarAEditor(yo.role);
   const recibe = recibeNotas(yo.role);

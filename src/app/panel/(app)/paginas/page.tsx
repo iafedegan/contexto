@@ -11,7 +11,7 @@ export const metadata = { title: "Páginas" };
 
 // Las páginas armadas con el constructor: crear, editar, publicar, duplicar y eliminar desde una sola lista.
 export default async function Paginas() {
-  await requirePermiso("portada");
+  await requirePermiso("paginas");
   const [lista, secciones, arbol] = await Promise.all([
     db
       .select({ id: paginas.id, titulo: paginas.titulo, slug: paginas.slug, publicada: paginas.publicada, updatedAt: paginas.updatedAt, seccion: categories.name, seccionId: paginas.seccionId })
