@@ -22,6 +22,7 @@ export const PERMISOS = [
   { id: "publicar", label: "Publicar y eliminar artículos", hint: "Publicar, programar, despublicar y borrar", min: "editor", grupo: "Redactor" },
   { id: "borradores_ia", label: "Borradores de IA", hint: "Revisar, aprobar y descartar lo que propone la IA", min: "editor", grupo: "Redactor" },
   { id: "avisos", label: "Avisos", hint: "Crear y retirar avisos del sitio", min: "editor", grupo: "Redactor" },
+  { id: "en_vivo", label: "En vivo", hint: "Transmisión de YouTube en la portada", min: "editor", grupo: "Redactor" },
   { id: "mensajes", label: "Mensajes recibidos", hint: "Leer contacto y solicitudes de pauta", min: "editor", grupo: "Configuración" },
   { id: "portada", label: "Portada, plantillas y secciones", hint: "Diseño del sitio, orden y menú de secciones", min: "administrador", grupo: "Diseño" },
   { id: "newsletter", label: "Newsletter", hint: "Ediciones, envíos y suscriptores", min: "editor", grupo: "Redactor" },

@@ -18,7 +18,7 @@ export type EnVivoState = { ok: boolean; message: string } | null;
  * Solo quien puede enviar avisos. Leer y escribir la fila va en una transacción con FOR UPDATE: el cron del modo automático escribe la misma.
  */
 export async function guardarEnVivo(_prev: EnVivoState, formData: FormData): Promise<EnVivoState> {
-  await requirePermiso("avisos");
+  await requirePermiso("en_vivo");
 
   const quiereActivar = formData.get("activo") === "on";
   const auto = formData.get("auto") === "on";
@@ -68,7 +68,7 @@ export async function guardarEnVivo(_prev: EnVivoState, formData: FormData): Pro
 
 /** «Revisar ahora»: hace en el momento lo que el cron hace cada 2 minutos. */
 export async function revisarEnVivoAhora(): Promise<EnVivoState> {
-  await requirePermiso("avisos");
+  await requirePermiso("en_vivo");
   const r = await aplicarEnVivoAutomatico().catch(() => null);
   revalidatePath("/panel/en-vivo");
   if (!r) return { ok: false, message: "No se pudo revisar el canal ahora. Prueba de nuevo en un momento." };

@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 // Pantalla para encender la transmisión en vivo de la portada (exige el permiso «avisos»).
 export default async function EnVivoPage() {
-  await requirePermiso("avisos");
+  await requirePermiso("en_vivo");
   const inicial = await getEnVivo();
 
   return (

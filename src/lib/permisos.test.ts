@@ -66,3 +66,9 @@ test("las entradas nuevas del menú siguen lo que cada rol veía antes", () => {
 test("cada permiso pertenece a un apartado del menú", () => {
   for (const p of PERMISOS) assert.ok(GRUPOS_PERMISOS.includes(p.grupo), `${p.id} sin apartado`);
 });
+
+test("«En vivo» es un permiso propio, como «Avisos»: lo tienen por defecto los editores", () => {
+  assert.equal(porDefecto("redactor", "en_vivo"), false);
+  assert.equal(porDefecto("editor", "en_vivo"), true);
+  assert.equal(porDefecto("disenador", "en_vivo"), false);
+});
