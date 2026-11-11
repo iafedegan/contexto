@@ -100,7 +100,7 @@ export function ComentariosNota({ articleId, esAdmin = false }: { articleId: str
             <p className="text-[0.7rem] text-[var(--fg-muted)]"><strong className="text-[var(--fg)]">{c.mio ? "Tú" : c.autor}</strong>{c.autorRol ? ` · ${ROL[c.autorRol] ?? c.autorRol}` : ""} · {cuando(c.fecha)}</p>
             {c.cita && (
               <button type="button" onClick={() => irACita(c.cita!)} title="Ubicar este fragmento en el texto" className="mt-1 flex w-full items-start gap-1.5 rounded border-l-2 border-[var(--accent)] bg-black/5 px-2 py-1 text-left text-xs italic text-[var(--fg-muted)] hover:bg-black/10">
-                <Quote size={11} aria-hidden className="mt-0.5 shrink-0" /> <span className="line-clamp-3">{c.cita}</span>
+                <Quote size={11} aria-hidden className="mt-0.5 shrink-0" /> <span className="line-clamp-2">{c.cita}</span>
               </button>
             )}
             {editando?.id === c.id ? (

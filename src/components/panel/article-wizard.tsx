@@ -236,6 +236,9 @@ export function ArticleWizard({
   // La hoja del paso «Documento» a pantalla completa (se sale con Esc).
   // Panel de comentarios de la revisión (se abre desde la cabecera).
   const [verComentarios, setVerComentarios] = useState(false);
+  // Comentarios nuevos que la persona aún no ha leído: ponen en rojo el círculo del paso «Documento» hasta que abre los comentarios.
+  const [nuevos, setNuevos] = useState(comentariosNuevos);
+  const abrirComentarios = () => { setVerComentarios(true); setNuevos(0); };
   const comentariosAbiertos = useRef(false);
   useEffect(() => { comentariosAbiertos.current = verComentarios; }, [verComentarios]);
   // «Comentar selección»: si el panel está cerrado, se abre y el evento se repite cuando ya está montado, para que el fragmento llegue a la caja.
@@ -243,7 +246,7 @@ export function ArticleWizard({
     const alComentar = (e: Event) => {
       if (comentariosAbiertos.current) return;
       const detalle = (e as CustomEvent).detail;
-      setVerComentarios(true);
+      abrirComentarios();
       setTimeout(() => window.dispatchEvent(new CustomEvent(EVENTO_COMENTAR, { detail: detalle })), 250);
     };
     window.addEventListener(EVENTO_COMENTAR, alComentar);
@@ -943,9 +946,9 @@ export function ArticleWizard({
               {autoEstado === "idle" && title.trim().length < 5 && "Se guarda al escribir el título"}
             </span>
             {savedId && (
-              <button type="button" onClick={() => setVerComentarios((v) => !v)} aria-expanded={verComentarios} className="lx-link relative inline-flex items-center gap-1 font-medium">
+              <button type="button" onClick={() => (verComentarios ? setVerComentarios(false) : abrirComentarios())} aria-expanded={verComentarios} className="lx-link relative inline-flex items-center gap-1 font-medium">
                 <MessageSquare size={13} aria-hidden /> Comentarios
-                {comentariosNuevos > 0 && !verComentarios && <span className="ml-0.5 rounded-full bg-red-600 px-1.5 text-[0.65rem] font-bold leading-4 text-white">{comentariosNuevos}</span>}
+                {nuevos > 0 && !verComentarios && <span aria-hidden className="ml-0.5 size-2 rounded-full bg-red-600" />}
               </button>
             )}
             {initial ? (
@@ -963,7 +966,7 @@ export function ArticleWizard({
           </span>
         </div>
         <div className="mt-2.5">
-          <WizardStepper pasos={STEPS} actual={step} onGo={goTo} />
+          <WizardStepper pasos={STEPS} actual={step} onGo={(i) => { goTo(i); if (nuevos > 0 && STEPS[i].key === "documento") abrirComentarios(); }} avisos={{ documento: nuevos }} />
         </div>
       </div>
 
@@ -974,7 +977,13 @@ export function ArticleWizard({
       )}
 
       {savedId && <ComentarSeleccion />}
-      {verComentarios && savedId && !ampliado && <div className="mb-3"><ComentariosNota articleId={savedId} esAdmin={esAdmin} /></div>}
+      {verComentarios && savedId && !ampliado && (
+        // Cajón flotante: no mueve el contenido; se cierra con la equis.
+        <div className="fixed bottom-20 right-4 z-40 flex max-h-[70vh] w-[min(26rem,calc(100vw-2rem))] flex-col overflow-y-auto rounded-[var(--radius-lg)] shadow-2xl">
+          <button type="button" onClick={() => setVerComentarios(false)} aria-label="Cerrar los comentarios" className="absolute right-3 top-3 z-10 rounded-full p-1 text-[var(--fg-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)]"><X size={15} /></button>
+          <ComentariosNota articleId={savedId} esAdmin={esAdmin} />
+        </div>
+      )}
       {/* --- Pantalla del paso + panel SEO lateral (escritorio) --- */}
       <div className="flex min-h-0 flex-1 gap-3">
       {/* Sin desplazamiento propio salvo en una ventana demasiado baja (el `auto` solo actúa si no cabe). */}
@@ -1450,7 +1459,7 @@ export function ArticleWizard({
                   <div className="flex shrink-0 items-center justify-between gap-3 border-b border-black/10 bg-white px-4 py-2.5 text-[#1b1b1b]">
                     <p className="truncate text-sm font-semibold">{title || "Nota sin título"}</p>
                     <div className="flex items-center gap-2">
-                      {savedId && <button type="button" onClick={() => setVerComentarios((v) => !v)} className="lx-btn lx-btn-ghost !px-3 !py-1.5 text-xs"><MessageSquare size={14} /> Comentarios{comentariosNuevos > 0 && !verComentarios ? ` (${comentariosNuevos})` : ""}</button>}
+                      {savedId && <button type="button" onClick={() => (verComentarios ? setVerComentarios(false) : abrirComentarios())} className="lx-btn lx-btn-ghost !px-3 !py-1.5 text-xs"><MessageSquare size={14} /> Comentarios{nuevos > 0 && !verComentarios ? <span aria-hidden className="ml-1 size-2 rounded-full bg-red-600" /> : null}</button>}
                       <button type="button" autoFocus onClick={cerrarAmpliado} className="lx-btn lx-btn-ghost !px-3 !py-1.5 text-xs"><Minimize2 size={14} /> Reducir (Esc)</button>
                     </div>
                   </div>
