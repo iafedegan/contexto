@@ -101,12 +101,12 @@ const STEPS_MANUAL = [
   { key: "titulo", label: "Título" },
   { key: "resumen", label: "Resumen" },
   { key: "claves", label: "Palabras clave" },
+  { key: "documento", label: "Documento" },
   { key: "portada", label: "Imagen" },
   { key: "grafica", label: "Gráfica" },
-  { key: "enviar", label: "Enviar" },
   { key: "seccion", label: "Sección" },
-  { key: "documento", label: "Documento" },
   { key: "seo", label: "Buscadores" },
+  { key: "enviar", label: "Enviar" },
   { key: "vista", label: "Vista previa" },
 ] as const;
 
@@ -142,6 +142,7 @@ export function ArticleWizard({
   editores = [],
   puedeEnviarEditor = false,
   envioLibre = false,
+  enviadoA = null,
 }: {
   categories: (Option & { parentId?: string | null })[];
   authors: Option[];
@@ -180,6 +181,8 @@ export function ArticleWizard({
   puedeEnviarEditor?: boolean;
   /** Editor o administrador: el destinatario es un especialista, de cualquier rol. */
   envioLibre?: boolean;
+  /** A quién se envió ya esta nota (lo leído del servidor), con su mensaje y la fecha. */
+  enviadoA?: { editorId: string; nombre: string; mensaje: string; fecha: string } | null;
 }) {
   const heading = pieza ? "Tarea del consejo · artículo con IA" : mode === "ia" ? "Nuevo artículo con IA" : "Nuevo artículo";
   const STEPS: readonly { key: StepKey; label: string }[] = mode === "ia" ? STEPS_IA : STEPS_MANUAL;
@@ -255,8 +258,8 @@ export function ArticleWizard({
   const [categoryId, setCategoryId] = useState(initial?.categoryId ?? pieza?.categoryId ?? "");
   const [region, setRegion] = useState(initial?.region ?? "");
   // A qué editor se envía la nota al terminar (vacío = a nadie) y el mensaje que le llega con ella.
-  const [enviarA, setEnviarA] = useState("");
-  const [mensajeEditor, setMensajeEditor] = useState("");
+  const [enviarA, setEnviarA] = useState(enviadoA?.editorId ?? "");
+  const [mensajeEditor, setMensajeEditor] = useState(enviadoA?.mensaje ?? "");
   const editorElegido = editores.find((e) => e.id === enviarA);
   const [depto, setDepto] = useState(initial?.depto ?? "");
   const [authorId] = useState(initial?.authorId ?? miAutorId ?? "");
@@ -1637,6 +1640,12 @@ export function ArticleWizard({
               </TarjetaEnvio>
               {puedeEnviarEditor ? (
                 <TarjetaEnvio Icono={Send} titulo={envioLibre ? "Enviar la nota a alguien" : "Enviar la nota a un editor"} ayuda="Queda «En revisión» y le llega en «Artículos».">
+                  {enviadoA && (
+                    <p className="rounded-[var(--radius)] bg-[var(--surface-2)] px-3 py-2 text-xs">
+                      <span className="font-semibold text-[#16a34a]">✓ Enviada a {enviadoA.nombre}</span>
+                      <span className="text-[var(--fg-muted)]"> · {new Intl.DateTimeFormat("es-CO", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "America/Bogota" }).format(new Date(enviadoA.fecha))}</span>
+                    </p>
+                  )}
                   {editores.length ? (
                     <div className="flex flex-col gap-3 text-sm">
                       <select id="enviar-a" value={enviarA} onChange={(e) => setEnviarA(e.target.value)} aria-label="Destinatario" className="w-full rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm outline-none transition focus:border-[var(--accent)]">
@@ -1646,7 +1655,7 @@ export function ArticleWizard({
                       <textarea value={mensajeEditor} onChange={(e) => setMensajeEditor(e.target.value)} maxLength={600} rows={3} disabled={!enviarA} placeholder={enviarA ? "Mensaje para quien la recibe (opcional)" : "Elige a quién enviarla para dejarle un mensaje"} aria-label="Mensaje para quien la recibe"
                         className="w-full resize-none rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm outline-none transition placeholder:text-[var(--fg-muted)]/60 focus:border-[var(--accent)] disabled:opacity-60" />
                       <button type="submit" name="intent" value="editor" disabled={!editorElegido} className="lx-btn self-start disabled:cursor-not-allowed disabled:opacity-60 disabled:saturate-50">
-                        <Send size={15} /> {editorElegido ? `Enviar a ${editorElegido.nombre}` : "Enviar la nota"}
+                        <Send size={15} /> {editorElegido ? `${enviadoA?.editorId === editorElegido.id ? "Reenviar a" : "Enviar a"} ${editorElegido.nombre}` : "Enviar la nota"}
                       </button>
                       <p className="text-xs text-[var(--fg-muted)]">{editorElegido ? "Guarda la nota y se la deja en «Artículos»." : "Elige a quién enviarla. Si no eliges a nadie, la nota sigue contigo."}</p>
                     </div>

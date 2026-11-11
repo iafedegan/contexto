@@ -87,6 +87,16 @@ export async function destinatariosDe(articleIds: string[]): Promise<Map<string,
   return porNota;
 }
 
+/** A quién se envió una nota (la entrega más reciente), con su nombre; `null` si no se ha enviado a nadie. */
+export async function asignacionDe(articleId: string): Promise<{ editorId: string; nombre: string; mensaje: string; fecha: string } | null> {
+  const [row] = await db.select({ value: siteSettings.value }).from(siteSettings).where(eq(siteSettings.key, ASIGNADAS_KEY)).limit(1);
+  const lista = (Array.isArray(row?.value) ? (row.value as Asignacion[]) : []).filter((a) => a.articleId === articleId);
+  const ultima = [...lista].sort((x, y) => y.fecha.localeCompare(x.fecha))[0];
+  if (!ultima) return null;
+  const [persona] = await db.select({ nombre: users.name }).from(users).where(eq(users.id, ultima.editorId)).limit(1);
+  return { editorId: ultima.editorId, nombre: persona?.nombre ?? "otra persona", mensaje: ultima.mensaje ?? "", fecha: ultima.fecha };
+}
+
 /** Estados en los que una nota enviada sigue pendiente para el editor. */
 export const ESTADOS_PENDIENTES = ["borrador", "en_revision"] as const;
 

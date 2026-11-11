@@ -9,7 +9,7 @@ import Link from "next/link";
 import { ArrowLeft, PenLine, Sparkles } from "lucide-react";
 import { ArticleEditor } from "@/components/article-editor";
 import { ArticleWizard } from "@/components/panel/article-wizard";
-import { destinosActivos, marcarAsignacionAbierta } from "@/lib/notas-asignadas";
+import { asignacionDe, destinosActivos, marcarAsignacionAbierta } from "@/lib/notas-asignadas";
 import { envioLibre, puedeEnviarNota } from "@/lib/notas-asignadas-reglas";
 import { escritoresParaElegir, getEstilo } from "@/lib/ai/estilo";
 import { getModelosEditor } from "@/lib/ai-provider";
@@ -137,6 +137,8 @@ export default async function ArticleEditorPage({
     best: Awaited<ReturnType<typeof bestDay>>;
   } | null = null;
 
+  // A quién se envió ya esta nota (para que el paso «Enviar» lo muestre al recargar).
+  let enviadoA: Awaited<ReturnType<typeof asignacionDe>> = null;
   if (!isNew) {
     const [row] = await db.select().from(articles).where(eq(articles.id, id)).limit(1);
     if (!row) notFound();
@@ -144,6 +146,7 @@ export default async function ArticleEditorPage({
     if (!(await esNotaPropia({ id: session!.user.id, role: session!.user.role }, id))) redirect("/panel/articulos");
     // Si se la enviaron a esta persona, queda como abierta: en «Mis pendientes» pasa de «Pendiente» a «Editando».
     await marcarAsignacionAbierta(id, session!.user.id).catch(() => {});
+    enviadoA = await asignacionDe(id).catch(() => null);
     initial = {
       id: row.id,
       title: row.title,
@@ -178,6 +181,7 @@ export default async function ArticleEditorPage({
           editores={await destinosActivos(session!.user.role, session!.user.id)}
           puedeEnviarEditor={puedeEnviarNota(session!.user.role)}
           envioLibre={envioLibre(session!.user.role)}
+          enviadoA={enviadoA}
           status={row.status}
           canPublish={canPublish(session!.user.role)}
           canPortada={await tienePermiso(session!.user.id, session!.user.role, "portada")}
