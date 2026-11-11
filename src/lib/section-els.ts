@@ -160,8 +160,6 @@ export function sectionElsCss(input: unknown, scope = "[data-site-root]"): strin
       soloColor(base, `${scope}${alias}`);
       if (claro) soloColor(claro, selectoresDeModo("claro", scope, null, alias));
       if (oscuro) soloColor(oscuro, selectoresDeModo("oscuro", scope, null, alias));
-      // En modo claro el logo en SVG va siempre en dorado (el degradado de marca), sin importar el color guardado para el texto de la pieza.
-      rules.push(`svg:is(${selectoresDeModo("claro", scope, null, alias)}){--logo-oscuro:#8a6624;--logo-medio:#c9a24a;--logo-claro:#f6e9b4}`);
     }
     // El menú tiene estilos propios en sus enlaces (y ajustes viejos de «Menú y secciones»): se sube la especificidad para que la pieza mande en todos.
     const peso = id === "h-menu" ? ":not(#_):not(#_)" : "";
