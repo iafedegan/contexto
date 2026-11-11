@@ -1,9 +1,11 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { AlertTriangle, ArrowRight, CheckCircle2, Clock, Download, Mail, MailPlus, Newspaper, Search, Settings2, Sparkles, Tag, UserMinus, Users } from "lucide-react";
 import { and, desc, ilike, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { newsletterEditions, newsletterSubscribers } from "@/db/schema";
-import { requirePermiso } from "@/lib/auth";
+import { requireRole } from "@/lib/auth";
+import { tienePermiso } from "@/lib/permisos-server";
 import { getGoogleHealth } from "@/lib/newsletter/health";
 import { getNewsletterSettings, getProviderStatus } from "@/lib/newsletter/settings";
 import { confirmarSuscriptor, createEdition, deleteSubscriber, unsubscribeSubscriber } from "./actions";
@@ -24,7 +26,10 @@ const fmt = (d: Date | null) => (d ? new Intl.DateTimeFormat("es-CO", { dateStyl
 
 // Pantalla del boletín en pestañas: ediciones, suscriptores y ajustes (exige el permiso «newsletter»).
 export default async function NewsletterPage({ searchParams }: { searchParams: Promise<{ tab?: string; q?: string; etiqueta?: string }> }) {
-  const user = await requirePermiso("newsletter");
+  // La pantalla se abre con «Newsletter» (ediciones) o con «Suscriptores»; cada pestaña exige su propio permiso.
+  const user = await requireRole("redactor");
+  const [puedeNews, puedeSubs] = await Promise.all([tienePermiso(user.id, user.role, "newsletter"), tienePermiso(user.id, user.role, "suscriptores")]);
+  if (!puedeNews && !puedeSubs) redirect("/panel");
   const { tab = "ediciones", q = "", etiqueta = "" } = await searchParams;
   const [counts] = await db
     .select({
@@ -40,12 +45,13 @@ export default async function NewsletterPage({ searchParams }: { searchParams: P
   const esAdmin = user.role === "administrador";
   // «Ajustes» (remitente y clave del correo) es solo de administradores: a los demás ni se les muestra.
   const tabs = [
-    ["ediciones", "Ediciones", Newspaper, totalEdiciones],
-    ["suscriptores", "Suscriptores", Users, counts.activos + counts.pendientes],
-    ...(esAdmin ? ([["ajustes", "Ajustes", Settings2, null]] as const) : []),
+    ...(puedeNews ? ([["ediciones", "Ediciones", Newspaper, totalEdiciones]] as const) : []),
+    ...(puedeSubs ? ([["suscriptores", "Suscriptores", Users, counts.activos + counts.pendientes]] as const) : []),
+    ...(esAdmin && puedeNews ? ([["ajustes", "Ajustes", Settings2, null]] as const) : []),
   ] as const;
   // Quien no es administrador y abre ?tab=ajustes a mano vuelve a las ediciones.
-  const pestana = tab === "ajustes" && !esAdmin ? "ediciones" : tab;
+  // Y quien abre una pestaña que no tiene a mano, vuelve a la primera que sí tiene.
+  const pestana = tabs.some(([id]) => id === tab) ? tab : tabs[0][0];
   // Cada indicador con su ícono y su tono, para leerlos de un vistazo.
   const indicadores = [
     { l: "Activos", v: counts.activos, ayuda: "reciben el boletín", Icono: CheckCircle2, tono: "text-[#15803d] bg-[#16a34a]/12" },

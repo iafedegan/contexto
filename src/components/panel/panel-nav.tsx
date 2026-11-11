@@ -81,7 +81,7 @@ const GROUPS: Group[] = [
         href: "/panel/newsletter?tab=suscriptores",
         label: "Suscriptores",
         hint: "Boletín: altas, bajas y confirmados",
-        permiso: "newsletter",
+        permiso: "suscriptores",
       },
       {
         href: "/panel/mensajes",

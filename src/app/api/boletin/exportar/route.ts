@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 /** CSV de suscriptores (solo editores). Neutraliza fórmulas para que Excel no las ejecute. */
 export async function GET() {
-  await requirePermiso("newsletter");
+  await requirePermiso("suscriptores");
   const rows = await db.select().from(newsletterSubscribers).orderBy(desc(newsletterSubscribers.createdAt));
   // Celda CSV entre comillas; si parece una fórmula, antepone un apóstrofo.
   const cell = (v: string) => `"${(/^[=+\-@]/.test(v) ? `'${v}` : v).replace(/"/g, '""')}"`;

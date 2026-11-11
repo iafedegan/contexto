@@ -284,7 +284,7 @@ export async function deleteGmailCredentials(): Promise<void> {
 // --- Suscriptores --------------------------------------------------------
 
 export async function unsubscribeSubscriber(id: string): Promise<void> {
-  await requirePermiso("newsletter");
+  await requirePermiso("suscriptores");
   await db.update(newsletterSubscribers).set({ unsubscribedAt: new Date() }).where(eq(newsletterSubscribers.id, id));
   REVALIDATE();
 }
@@ -320,7 +320,7 @@ const personas = (n: number) => `${n} ${n === 1 ? "suscriptor" : "suscriptores"}
 
 /** Fija las etiquetas de UNA persona (sustituye su lista). */
 export async function guardarEtiquetasSuscriptor(id: string, etiquetas: unknown): Promise<{ ok: boolean; message: string; etiquetas: string[] }> {
-  await requirePermiso("newsletter");
+  await requirePermiso("suscriptores");
   if (!UUID.test(id)) return { ok: false, message: "Suscriptor no válido.", etiquetas: [] };
   const guardadas = await fijarEtiquetas(id, etiquetas);
   if (!guardadas) return { ok: false, message: "Ese suscriptor ya no existe.", etiquetas: [] };
@@ -330,7 +330,7 @@ export async function guardarEtiquetasSuscriptor(id: string, etiquetas: unknown)
 
 /** Pone o quita una etiqueta a las personas marcadas (hasta 1.000 a la vez). */
 export async function etiquetarVarios(ids: unknown, etiqueta: unknown, modo: "agregar" | "quitar"): Promise<{ ok: boolean; message: string }> {
-  await requirePermiso("newsletter");
+  await requirePermiso("suscriptores");
   const lista = Array.isArray(ids) ? [...new Set(ids.filter((x): x is string => typeof x === "string" && UUID.test(x)))].slice(0, MAX_MASIVO) : [];
   if (lista.length === 0) return { ok: false, message: "Marca al menos un suscriptor." };
   if (!limpiarEtiqueta(etiqueta)) return { ok: false, message: "Escribe el nombre de la etiqueta." };

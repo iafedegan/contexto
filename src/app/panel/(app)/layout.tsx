@@ -138,7 +138,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
         {!debeActivar2fa && (
           <div className="flex shrink-0 flex-col gap-3">
             <PanelSidebarNav role={session.user.role} permisos={permisos} pendientes={misTareas.total} notas={misNotas} imagenes={misImagenes} comentarios={misComentarios} />
-            <UsoIaBarra variante="lateral" />
+            {permisos.includes("uso_ia") && <UsoIaBarra variante="lateral" />}
           </div>
         )}
         <div className="mt-auto flex shrink-0 items-center justify-between gap-2 whitespace-nowrap border-t border-white/10 pt-4 text-sm opacity-0 transition-opacity duration-150 group-hover/sb:opacity-100 group-focus-within/sb:opacity-100">
@@ -174,7 +174,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
 
           {!debeActivar2fa && (
             <PanelNav role={session.user.role} permisos={permisos} pendientes={misTareas.total} notas={misNotas} imagenes={misImagenes} comentarios={misComentarios}>
-              <UsoIaBarra variante="movil" />
+              {permisos.includes("uso_ia") && <UsoIaBarra variante="movil" />}
               {cuenta}
             </PanelNav>
           )}

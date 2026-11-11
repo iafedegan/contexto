@@ -35,6 +35,8 @@ export const PERMISOS = [
   { id: "imagenes", label: "Solicitud de imágenes", hint: "Recibir las portadas que piden los redactores y entregarlas", min: "redactor", grupo: "Redactor" },
   { id: "notas_editores", label: "Notas para editores", hint: "Preescribir una nota y enviarla a un editor", min: "redactor", grupo: "Redactor" },
   { id: "paginas", label: "Páginas", hint: "Crear páginas y armarlas con el constructor", min: "administrador", grupo: "Diseño" },
+  { id: "suscriptores", label: "Suscriptores", hint: "Ver a los suscriptores del boletín, darlos de baja, etiquetarlos y exportarlos", min: "editor", grupo: "Configuración" },
+  { id: "uso_ia", label: "Uso de IA", hint: "Ver en el menú lo gastado en IA del mes por modelo", min: "redactor", grupo: "Configuración" },
 ] as const satisfies readonly { id: string; label: string; hint: string; min: UserRole; /** Apartado del menú del panel al que pertenece. */ grupo: "Diseño" | "Redactor" | "Configuración" }[];
 
 /** Apartados del menú, en el orden en que se muestran las casillas. */

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { ChevronRight } from "lucide-react";
 import { crearRol, eliminarRol, guardarRol, guardarRolIncorporado } from "@/app/panel/(app)/configuracion/roles-actions";
 import { GRUPOS_PERMISOS, PERMISOS, porDefecto, type PermisoId } from "@/lib/permisos";
 import { ROLES_BASE, comoRolPropio, nombreRol, permisoDeRol, type CambiosRoles, type RolPropio } from "@/lib/roles";
@@ -74,6 +75,9 @@ export function RolesEditor({ propios, conteo, cambios }: { propios: RolPropio[]
   );
 }
 
+// Roles que están desplegados (se recuerdan aunque la tarjeta se vuelva a pintar al guardar).
+const abiertos = new Set<string>();
+
 // Tarjeta de un rol propio: nombre, casillas de permisos, guardar y eliminar.
 function RolPropioCard({ rol, personas, incorporado = false }: { rol: RolPropio; personas: number; incorporado?: boolean }) {
   const [nombre, setNombre] = useState(rol.nombre);
@@ -81,16 +85,27 @@ function RolPropioCard({ rol, personas, incorporado = false }: { rol: RolPropio;
   const [msg, setMsg] = useState("");
   const [pending, start] = useTransition();
 
+  const activos = Object.values(marcas).filter(Boolean).length;
   return (
-    <div className="rounded-[var(--radius)] border border-[var(--border)] p-4">
-      <div className="flex flex-wrap items-center gap-2">
-        {incorporado ? (
-          <span className="text-sm font-semibold capitalize">{rol.nombre}</span>
-        ) : (
-          <input value={nombre} onChange={(e) => setNombre(e.target.value)} maxLength={40} className="lx-input py-1.5 text-sm font-semibold" style={{ width: "14rem" }} />
-        )}
+    // Cada rol es un desplegable cerrado: el encabezado muestra cuántos permisos tiene y se abre para editarlos.
+    <details
+      open={abiertos.has(rol.id)}
+      onToggle={(e) => { if (e.currentTarget.open) abiertos.add(rol.id); else abiertos.delete(rol.id); }}
+      className="group rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)]"
+    >
+      <summary className="flex cursor-pointer list-none flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3.5 [&::-webkit-details-marker]:hidden">
+        <ChevronRight size={16} aria-hidden className="shrink-0 text-[var(--fg-muted)] transition-transform group-open:rotate-90" />
+        <span className="text-sm font-semibold capitalize">{nombre || rol.nombre}</span>
         <span className="text-xs text-[var(--fg-muted)]">{incorporado ? "" : `basado en ${nombreRol(rol.base)} · `}{personas} {personas === 1 ? "persona" : "personas"}</span>
-      </div>
+        <span className="ml-auto rounded-full bg-[var(--accent)]/12 px-2.5 py-0.5 text-xs font-semibold tabular-nums text-[var(--accent)]">{activos} de {PERMISOS.length} permisos</span>
+      </summary>
+      <div className="border-t border-[var(--border)] p-4">
+      {!incorporado && (
+        <label className="mb-3 flex flex-wrap items-center gap-2 text-xs text-[var(--fg-muted)]">
+          Nombre del rol
+          <input value={nombre} onChange={(e) => setNombre(e.target.value)} maxLength={40} className="lx-input py-1.5 text-sm font-semibold text-[var(--fg)]" style={{ width: "14rem" }} />
+        </label>
+      )}
       {/* Las casillas van por apartado del menú, igual que en la barra lateral del panel */}
       <div className="mt-3 flex flex-col gap-4">
         {GRUPOS_PERMISOS.map((g) => (
@@ -141,6 +156,7 @@ function RolPropioCard({ rol, personas, incorporado = false }: { rol: RolPropio;
         )}
         {msg && <span className="text-xs text-[var(--accent)]" role="status">{msg}</span>}
       </div>
-    </div>
+      </div>
+    </details>
   );
 }

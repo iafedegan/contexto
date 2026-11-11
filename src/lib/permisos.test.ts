@@ -72,3 +72,11 @@ test("«En vivo» es un permiso propio, como «Avisos»: lo tienen por defecto l
   assert.equal(porDefecto("editor", "en_vivo"), true);
   assert.equal(porDefecto("disenador", "en_vivo"), false);
 });
+
+test("«Suscriptores» y «Uso de IA» son permisos propios con sus valores de siempre", () => {
+  // Suscriptores: antes iba con el newsletter (editores y administradores).
+  assert.equal(porDefecto("redactor", "suscriptores"), false);
+  assert.equal(porDefecto("editor", "suscriptores"), true);
+  // Uso de IA: lo veía todo el equipo.
+  for (const rol of ["redactor", "disenador", "editor", "administrador"] as const) assert.equal(porDefecto(rol, "uso_ia"), true);
+});

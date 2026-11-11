@@ -1,5 +1,10 @@
 "use client";
 
+/**
+ * Asistente de redacción paso a paso (manual y con IA): título, resumen, palabras clave, documento, imagen, gráfica, sección, buscadores, envío y vista
+ * previa. Guarda el borrador solo mientras se escribe, muestra el SEO en vivo y reúne las acciones finales (guardar, enviar, programar y publicar).
+ */
+
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { ComentariosNota } from "@/components/panel/comentarios-nota";
@@ -27,6 +32,8 @@ import {
   Send,
   Brush,
   Maximize2,
+  Radio,
+  Zap,
   MessageSquare,
   Minimize2,
   PenLine,
@@ -1864,12 +1871,13 @@ export function ArticleWizard({
             {canPublish && (
               <div role="group" aria-label="Distintivos de la nota" className="flex flex-wrap items-center gap-2">
                 {([
-                  [breaking, setBreaking, "⚡ Última hora", "Barra roja en la portada y aviso por notificación a quienes tienen la app, una sola vez al publicar."],
-                  [live, setLive, "🔴 En desarrollo", "Etiqueta «En vivo» en las tarjetas y en la nota."],
-                ] as const).map(([activo, cambiar, texto, ayuda]) => (
+                  [breaking, setBreaking, Zap, "Última hora", "Barra roja en la portada y aviso por notificación a quienes tienen la app, una sola vez al publicar."],
+                  [live, setLive, Radio, "En desarrollo", "Etiqueta «En vivo» en las tarjetas y en la nota."],
+                ] as const).map(([activo, cambiar, Icono, texto, ayuda]) => (
+                  // Mismo botón que «Programar» y «Guardar borrador»; encendido, se marca con el color del sitio.
                   <button key={texto} type="button" aria-pressed={activo} title={ayuda} onClick={() => cambiar(!activo)}
-                    className={`inline-flex items-center rounded-full border px-3 py-1 text-sm font-medium transition ${activo ? "border-[var(--accent)] bg-[var(--accent)]/12 text-[var(--accent)]" : "border-[var(--border)] hover:border-[var(--accent)]"}`}>
-                    {texto}
+                    className={`lx-btn lx-btn-ghost ${activo ? "!border-[var(--accent)] !bg-[var(--accent)]/12 !text-[var(--accent)]" : ""}`}>
+                    <Icono size={15} /> {texto}
                   </button>
                 ))}
               </div>
