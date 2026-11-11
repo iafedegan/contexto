@@ -24,11 +24,12 @@ export default async function ImagenesPedidas() {
   const visibles = [...pendientes, ...entregadas];
   const [notas, personas] = visibles.length
     ? await Promise.all([
-        db.select({ id: articles.id, titulo: articles.title }).from(articles).where(inArray(articles.id, visibles.map((p) => p.articleId))),
+        db.select({ id: articles.id, titulo: articles.title, resumen: articles.excerpt }).from(articles).where(inArray(articles.id, visibles.map((p) => p.articleId))),
         db.select({ id: users.id, nombre: users.name }).from(users).where(inArray(users.id, [...new Set(visibles.flatMap((p) => [p.porId, p.entregadaPorId ?? p.porId]))])),
       ])
     : [[], []];
   const titulo = new Map(notas.map((n) => [n.id, n.titulo]));
+  const resumen = new Map(notas.map((n) => [n.id, n.resumen]));
   const nombre = new Map(personas.map((p) => [p.id, p.nombre]));
 
   return (
@@ -49,7 +50,7 @@ export default async function ImagenesPedidas() {
                 <Link href={`/panel/articulos/${p.articleId}?modo=manual`} className="lx-link text-sm font-semibold">{titulo.get(p.articleId) ?? "Nota"}</Link>
                 <p className="text-xs text-[var(--fg-muted)]">Pedida por {nombre.get(p.porId) ?? "—"} · {cuando(p.fecha)}</p>
                 <p className="mt-2 whitespace-pre-line text-sm">{p.indicaciones}</p>
-                <EntregaImagen articleId={p.articleId} tituloNota={titulo.get(p.articleId) ?? ""} />
+                <EntregaImagen articleId={p.articleId} tituloNota={titulo.get(p.articleId) ?? ""} resumen={resumen.get(p.articleId) ?? ""} />
               </li>
             ))}
           </ul>
@@ -69,6 +70,7 @@ export default async function ImagenesPedidas() {
                   <span className="block truncate font-medium">{titulo.get(p.articleId) ?? "Nota"}</span>
                   <span className="block text-xs text-[var(--fg-muted)]">{nombre.get(p.entregadaPorId ?? "") ?? "—"} · {p.entregadaEn ? cuando(p.entregadaEn) : ""}</span>
                 </span>
+                <a href={`/vista-previa/${p.articleId}`} target="_blank" rel="noopener noreferrer" className="lx-link shrink-0 text-xs font-semibold">Ver cómo quedó en la nota →</a>
               </li>
             ))}
           </ul>
