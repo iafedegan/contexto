@@ -92,6 +92,7 @@ export function EditorCuerpo({
   onChange,
   placeholder,
   resumen,
+  papel = false,
 }: {
   /** Cuerpo en HTML. */
   value: string;
@@ -99,6 +100,8 @@ export function EditorCuerpo({
   placeholder?: string;
   /** Texto de la derecha de la barra (p. ej. «378 palabras · 2 min»). */
   resumen?: React.ReactNode;
+  /** Aspecto de página de Word: sin marco propio, barra fija arriba y el desplazamiento lo da quien lo contiene. */
+  papel?: boolean;
 }) {
   const caja = useRef<HTMLDivElement>(null);
   // Último HTML que salió del editor: si `value` es otro, el cambio vino de fuera (p. ej. la IA reescribió) y se repinta.
@@ -201,8 +204,8 @@ export function EditorCuerpo({
   };
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] focus-within:border-[var(--accent)]">
-      <div role="toolbar" aria-label="Formato del texto" className="flex shrink-0 flex-wrap items-center gap-0.5 border-b border-[var(--border)] px-2 py-1.5">
+    <div className={papel ? "flex flex-col bg-white" : "flex min-h-0 flex-1 flex-col overflow-hidden rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] focus-within:border-[var(--accent)]"}>
+      <div role="toolbar" aria-label="Formato del texto" className={`flex shrink-0 flex-wrap items-center gap-0.5 border-b border-[var(--border)] px-2 py-1.5 ${papel ? "sticky top-0 z-10 bg-[#f3f4f3]" : ""}`}>
         <Boton titulo="Deshacer" onClick={() => orden("undo")}><Undo2 size={15} /></Boton>
         <Boton titulo="Rehacer" onClick={() => orden("redo")}><Redo2 size={15} /></Boton>
         <span aria-hidden className="mx-1 h-5 w-px bg-[var(--border)]" />
@@ -289,14 +292,14 @@ export function EditorCuerpo({
           document.execCommand("insertHTML", false, limpio);
           emitir();
         }}
-        className="min-h-0 flex-1 overflow-y-auto px-5 py-4 text-base leading-relaxed outline-none empty:before:text-[var(--fg-muted)]/60 empty:before:content-[attr(data-placeholder)]
+        className={`${papel ? "min-h-[20rem] px-1 py-2" : "min-h-0 flex-1 overflow-y-auto px-5 py-4"} text-base leading-relaxed outline-none empty:before:text-[var(--fg-muted)]/60 empty:before:content-[attr(data-placeholder)]
           [&_p]:my-2.5 [&_h2]:mb-2 [&_h2]:mt-5 [&_h2]:text-xl [&_h2]:font-semibold [&_h3]:mt-4 [&_h3]:font-semibold
           [&_ul]:my-2.5 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:my-2.5 [&_ol]:list-decimal [&_ol]:pl-6
           [&_blockquote]:my-3 [&_blockquote]:border-l-4 [&_blockquote]:border-[var(--accent)] [&_blockquote]:bg-[var(--surface-2)]/50 [&_blockquote]:px-4 [&_blockquote]:py-2 [&_blockquote]:italic
           [&_a]:text-[var(--accent)] [&_a]:underline [&_strong]:font-bold
           [&_figure]:my-4 [&_figure_img]:mx-auto [&_figure_img]:max-h-72 [&_figcaption]:mt-1 [&_figcaption]:text-center [&_figcaption]:text-xs [&_figcaption]:text-[var(--fg-muted)]
           [&_details]:my-3 [&_details]:rounded-md [&_details]:border [&_details]:border-[var(--border)] [&_details]:px-3 [&_details]:py-2 [&_summary]:cursor-pointer [&_summary]:text-sm [&_summary]:font-semibold
-          [&_iframe]:aspect-video [&_iframe]:w-full"
+          [&_iframe]:aspect-video [&_iframe]:w-full`}
       />
     </div>
   );

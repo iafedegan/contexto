@@ -103,7 +103,8 @@ const STEPS_MANUAL = [
   { key: "claves", label: "Palabras clave" },
   { key: "portada", label: "Imagen" },
   { key: "enviar", label: "Enviar" },
-  { key: "seccion", label: "Sección y autor" },
+  { key: "seccion", label: "Sección" },
+  { key: "documento", label: "Documento" },
   { key: "cuerpo", label: "Cuerpo" },
   { key: "grafica", label: "Gráfica" },
   { key: "seo", label: "Buscadores" },
@@ -1321,12 +1322,12 @@ export function ArticleWizard({
         )}
 
         {current.key === "seccion" && (
-          <Step ancho="xl" title="Sección y autor" hint="Dónde se publica y quién firma. Puedes dejarlo para después.">
-            <SectionTree options={categories} value={categoryId} onChange={setCategoryId} sugeridas={seccionesSugeridas} firma={authorName ?? "tu usuario, al guardar"} filas={filasListas(alto, 130, 38)}>
+          <Step ancho="xl" title="¿Dónde se publica?" hint="Tres decisiones, todas opcionales: 1. la sección (a la derecha), 2. de qué región habla y 3. si va destacada en la portada del sitio.">
+            <SectionTree options={categories} value={categoryId} onChange={setCategoryId} sugeridas={seccionesSugeridas} filas={filasListas(alto, 130, 38)}>
               {/* Región y departamento de la noticia: alimentan el mapa interactivo de la sección «Regiones». Compacto a propósito: el asistente no hace scroll. */}
               <div className="rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] px-3.5 py-2.5">
                 <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-                  <p id="reg-nota" className="lx-kicker text-[var(--fg-muted)]" title="A qué región y departamento de Colombia pertenece; así sale en el mapa de «Regiones».">Región de la noticia</p>
+                  <p id="reg-nota" className="lx-kicker text-[var(--fg-muted)]" title="A qué región y departamento de Colombia pertenece; así sale en el mapa de «Regiones».">2 · Región de la noticia</p>
                   {region && (
                     <label className="flex items-center gap-2 text-xs text-[var(--fg-muted)]">
                       Departamento
@@ -1339,7 +1340,8 @@ export function ArticleWizard({
                     </label>
                   )}
                 </div>
-                <div role="radiogroup" aria-labelledby="reg-nota" className="mt-1.5 flex flex-wrap gap-1.5">
+                <p className="mt-0.5 text-xs text-[var(--fg-muted)]">¿De qué parte de Colombia habla? Así la nota aparece en el mapa de «Regiones».</p>
+                <div role="radiogroup" aria-labelledby="reg-nota" className="mt-2 flex flex-wrap gap-1.5">
                   {[{ slug: "", nombre: "Sin región", color: "" }, ...REGIONES_COLOMBIA].map((r) => (
                     <button key={r.slug || "ninguna"} type="button" role="radio" aria-checked={region === r.slug} onClick={() => { setRegion(r.slug); setDepto(""); }}
                       className={`inline-flex min-h-8 items-center gap-1.5 rounded-full border px-2.5 text-xs font-medium transition ${region === r.slug ? "border-transparent bg-[var(--accent)] text-[var(--accent-fg,#fff)] shadow-sm" : "border-[var(--border)] bg-[var(--surface)] text-[var(--fg-muted)] hover:text-[var(--fg)]"}`}>
@@ -1352,7 +1354,8 @@ export function ArticleWizard({
               {canPortada ? (
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] px-3.5 py-2">
                   <div className="min-w-0 flex-1 basis-48">
-                    <p id="pt-sitio" className="lx-kicker text-[var(--fg-muted)]" title="Sin destacar: entra a la portada por fecha, como cualquier nota.">En la portada del sitio</p>
+                    <p id="pt-sitio" className="lx-kicker text-[var(--fg-muted)]" title="Sin destacar: entra a la portada por fecha, como cualquier nota.">3 · Destacar en la portada</p>
+                    {portadaPos === "none" && <p className="text-xs leading-snug text-[var(--fg-muted)]">Normal: entra a la portada por fecha, como cualquier nota.</p>}
                     {portadaPos !== "none" && (
                       <p className="text-xs leading-snug text-[var(--fg-muted)]">
                         {portadaPos === "0" && "Será la nota grande de arriba."}
@@ -1377,17 +1380,30 @@ export function ArticleWizard({
               ) : (
                 <p className="px-1 text-xs text-[var(--fg-muted)]">Tu cuenta no ubica notas en la portada del sitio: un editor lo hace al publicar.</p>
               )}
-              {/* Solo el administrador cambia quién firma la nota (el redactor responsable). El servidor lo vuelve a comprobar. */}
-              {esAdmin && authors.length > 0 && (
-                <div className="rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] px-3.5 py-2.5">
-                  <label htmlFor="firma-redactor" className="lx-kicker text-[var(--fg-muted)]" title="Quién firma la nota en el sitio.">Redactor (firma)</label>
-                  <select id="firma-redactor" value={authorId} onChange={(e) => setAuthorId(e.target.value)} className="mt-1.5 w-full rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5 text-sm">
-                    <option value="">Tu usuario, al guardar</option>
-                    {authors.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-                  </select>
-                </div>
-              )}
             </SectionTree>
+          </Step>
+        )}
+
+        {current.key === "documento" && (
+          <Step ancho="xl" title="Tu nota completa" hint="Título, bajada y cuerpo en una sola página, como en Word. Lo que cambies aquí se actualiza en los demás pasos.">
+            <div className="min-h-0 flex-1 overflow-y-auto rounded-[var(--radius-lg)] bg-[#e4e7e5] p-3 sm:p-6">
+              <article className="mx-auto w-full max-w-3xl rounded-sm bg-white text-[#1b1b1b] shadow-[0_1px_3px_rgba(0,0,0,.18),0_10px_30px_rgba(0,0,0,.08)]">
+                <div className="px-6 pb-2 pt-8 sm:px-14 sm:pt-12">
+                  <label className="lx-kicker text-[#6b756f]" htmlFor="doc-titulo">Título</label>
+                  <textarea id="doc-titulo" value={title} onChange={(e) => setTitle(e.target.value)} rows={1} placeholder="Título de la nota"
+                    className="mt-1 w-full resize-none bg-transparent text-3xl font-bold leading-tight outline-none [field-sizing:content] placeholder:text-black/25" />
+                  <label className="lx-kicker mt-5 block text-[#6b756f]" htmlFor="doc-bajada">Bajada (sumario)</label>
+                  <textarea id="doc-bajada" value={excerpt} onChange={(e) => setExcerpt(e.target.value)} rows={2} placeholder="Dos líneas que resuman la nota"
+                    className="mt-1 w-full resize-none bg-transparent text-lg italic leading-snug text-[#3f4a44] outline-none [field-sizing:content] placeholder:text-black/25" />
+                  <hr className="mt-4 border-black/10" />
+                  <p className="lx-kicker mt-4 text-[#6b756f]">Cuerpo</p>
+                </div>
+                <div className="px-3 pb-10 sm:px-12">
+                  <EditorCuerpo papel value={body} onChange={setBody} placeholder="Primer párrafo con lo más importante…"
+                    resumen={<>{words} palabras · {Math.max(1, Math.round(words / 200))} min</>} />
+                </div>
+              </article>
+            </div>
           </Step>
         )}
 
@@ -1642,7 +1658,7 @@ export function ArticleWizard({
         )}
 
         {current.key === "enviar" && (
-          <Step ancho="lg" title="Enviar" hint="Opcional. Pide la imagen a un diseñador y elige quién recibe la nota. El pedido de imagen sale al instante; la nota se envía desde la vista previa.">
+          <Step ancho="lg" title="Enviar" hint="Opcional. Pide la imagen a un diseñador y, si quieres, envía la nota a otra persona. Cada tarjeta tiene su botón.">
             <div className="grid items-stretch gap-4 @2xl:grid-cols-2">
               <TarjetaEnvio Icono={Brush} titulo="Solicitar la imagen" ayuda="Un diseñador la prepara y te la devuelve a la nota.">
                 <PedirImagen articleId={savedId} titulo={title} resumen={excerpt} portadaActual={cover} alUsar={(u) => { setCover(u); setImgError(""); }} />
@@ -1657,13 +1673,26 @@ export function ArticleWizard({
                       </select>
                       <textarea value={mensajeEditor} onChange={(e) => setMensajeEditor(e.target.value)} maxLength={600} rows={3} disabled={!enviarA} placeholder={enviarA ? "Mensaje para quien la recibe (opcional)" : "Elige a quién enviarla para dejarle un mensaje"} aria-label="Mensaje para quien la recibe"
                         className="w-full resize-none rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm outline-none transition placeholder:text-[var(--fg-muted)]/60 focus:border-[var(--accent)] disabled:opacity-60" />
-                      <p className="text-xs text-[var(--fg-muted)]">{editorElegido ? `Se enviará a ${editorElegido.nombre} desde la vista previa.` : "Si no eliges a nadie, la nota sigue contigo."}</p>
+                      <button type="submit" name="intent" value="editor" disabled={!editorElegido} className="lx-btn self-start disabled:cursor-not-allowed disabled:opacity-60 disabled:saturate-50">
+                        <Send size={15} /> {editorElegido ? `Enviar a ${editorElegido.nombre}` : "Enviar la nota"}
+                      </button>
+                      <p className="text-xs text-[var(--fg-muted)]">{editorElegido ? "Guarda la nota y se la deja en «Artículos»." : "Elige a quién enviarla. Si no eliges a nadie, la nota sigue contigo."}</p>
                     </div>
                   ) : (
                     <p className="text-xs text-[var(--fg-muted)]">No hay personas activas a las que enviar la nota: un administrador las crea en Configuración → Usuarios.</p>
                   )}
                 </TarjetaEnvio>
               ) : null}
+              {esAdmin && authors.length > 0 && (
+                <div className="flex flex-col @2xl:col-span-2 [&>section]:flex-1">
+                <TarjetaEnvio Icono={PenLine} titulo="Redactor que firma" ayuda="Quién aparece como autor de la nota en el sitio. Por defecto, tu usuario.">
+                  <select id="firma-redactor" value={authorId} onChange={(e) => setAuthorId(e.target.value)} aria-label="Redactor que firma" className="w-full rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm outline-none transition focus:border-[var(--accent)]">
+                    <option value="">Tu usuario, al guardar</option>
+                    {authors.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+                  </select>
+                </TarjetaEnvio>
+                </div>
+              )}
             </div>
           </Step>
         )}

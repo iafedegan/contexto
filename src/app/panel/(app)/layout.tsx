@@ -18,6 +18,7 @@ import { getAjustes, getPlazos2fa } from "@/lib/permisos-server";
 import { getSiteTheme } from "@/lib/site-theme";
 import { colorPanel } from "@/lib/panel-tema";
 import { contarNotasPendientes } from "@/lib/notas-asignadas";
+import { contarImagenesPendientes } from "@/lib/imagenes-pedidas";
 
 /** Panel editorial — plantilla «Grafito & Jade». */
 export const dynamic = "force-dynamic";
@@ -43,7 +44,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
   // Por id y, si el id de la sesión no aparece, por correo (como requireRole):
   // sin esto una sesión con id desfasado se saltaba la exigencia de 2FA.
   // La cuenta y los ajustes de permisos se piden a la vez (y la cuenta ya viene resuelta de la sesión: no es otro viaje).
-  const [yoPorId, ajustes, cabeceras, sitio, plazos, misTareas, misNotas] = await Promise.all([cuentaPorId(session.user.id), getAjustes(), headers(), getSiteTheme(), getPlazos2fa(), contarMisPendientes(session.user.id), contarNotasPendientes(session.user.id)]);
+  const [yoPorId, ajustes, cabeceras, sitio, plazos, misTareas, misNotas, misImagenes] = await Promise.all([cuentaPorId(session.user.id), getAjustes(), headers(), getSiteTheme(), getPlazos2fa(), contarMisPendientes(session.user.id), contarNotasPendientes(session.user.id), contarImagenesPendientes(session.user.id, session.user.role)]);
   // La barra lleva el color principal de la plantilla que usa el sitio (se cambia en Portada y plantillas).
   const marca = colorPanel(sitio.theme);
   const estiloMarca = { "--accent": marca.acento, "--accent-2": marca.acento, "--border-strong": marca.acento, "--link": marca.acento, "--accent-fg": "#101611",
@@ -135,7 +136,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
         {/* «Uso de IA» va justo debajo del grupo Configuración (último del menú); el pie (Ver sitio / Salir) se queda al fondo. */}
         {!debeActivar2fa && (
           <div className="flex shrink-0 flex-col gap-3">
-            <PanelSidebarNav role={session.user.role} permisos={permisos} pendientes={misTareas.total} notas={misNotas} />
+            <PanelSidebarNav role={session.user.role} permisos={permisos} pendientes={misTareas.total} notas={misNotas} imagenes={misImagenes} />
             <UsoIaBarra variante="lateral" />
           </div>
         )}
@@ -171,7 +172,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
           </Link>
 
           {!debeActivar2fa && (
-            <PanelNav role={session.user.role} permisos={permisos} pendientes={misTareas.total} notas={misNotas}>
+            <PanelNav role={session.user.role} permisos={permisos} pendientes={misTareas.total} notas={misNotas} imagenes={misImagenes}>
               <UsoIaBarra variante="movil" />
               {cuenta}
             </PanelNav>

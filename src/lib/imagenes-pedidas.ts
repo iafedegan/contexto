@@ -2,7 +2,7 @@ import "server-only";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { siteSettings, users } from "@/db/schema";
-import type { PedidoImagen } from "@/lib/imagenes-pedidas-reglas";
+import { pendientesPara, type PedidoImagen } from "@/lib/imagenes-pedidas-reglas";
 
 /**
  * Imágenes que se le piden al diseñador. Se anotan en `site_settings` (una lista, un pedido por nota; sin migración), igual que las notas
@@ -54,4 +54,14 @@ export async function disenadoresActivos(): Promise<{ id: string; nombre: string
 export async function esDisenadorActivo(id: string): Promise<boolean> {
   const [d] = await db.select({ id: users.id }).from(users).where(and(eq(users.id, id), eq(users.active, true), eq(users.role, "disenador"))).limit(1);
   return !!d;
+}
+
+/** Cuántos pedidos de imagen esperan a un diseñador (los dirigidos a él y los abiertos): el punto rojo del menú. Otros roles y errores, 0. */
+export async function contarImagenesPendientes(userId: string, role: string): Promise<number> {
+  if (role !== "disenador") return 0;
+  try {
+    return pendientesPara(await leerPedidos(), userId, role).length;
+  } catch {
+    return 0;
+  }
 }

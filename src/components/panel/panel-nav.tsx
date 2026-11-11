@@ -100,7 +100,7 @@ const GROUPS: Group[] = [
 ];
 
 // Grupos y elementos que la persona puede ver según su rol y permisos.
-function gruposVisibles(role: string, permisos: string[], pendientes = 0, notas = 0) {
+function gruposVisibles(role: string, permisos: string[], pendientes = 0, notas = 0, imagenes = 0) {
   const esAdmin = role === "administrador";
   // Lo que el rol no puede usar ni se muestra (el servidor además lo exige).
   return GROUPS.map((g) => ({
@@ -109,7 +109,9 @@ function gruposVisibles(role: string, permisos: string[], pendientes = 0, notas 
       .filter((i) => (!i.soloAdmin || esAdmin) && (!i.soloNoAdmin || !esAdmin) && (!i.roles || i.roles.includes(role)) && (!i.permiso || permisos.includes(i.permiso)))
       .map((i) => (esAdmin || !i.paraOtros ? i : { ...i, ...i.paraOtros }))
       // Un solo punto rojo, en «Mis pendientes»: las piezas del grupo de redacción y las notas que le enviaron a la persona.
-      .map((i) => (i.href === "/panel/pendientes" && pendientes + notas > 0 ? { ...i, badge: pendientes + notas } : i)),
+      .map((i) => (i.href === "/panel/pendientes" && pendientes + notas > 0 ? { ...i, badge: pendientes + notas } : i))
+      // Punto rojo del diseñador: los pedidos de imagen que le tocan.
+      .map((i) => (i.href === "/panel/imagenes" && imagenes > 0 ? { ...i, badge: imagenes } : i)),
   })).filter((g) => g.items.length > 0);
 }
 
@@ -132,8 +134,8 @@ const ICONOS: Record<string, typeof Circle> = {
 };
 
 /** Barra lateral de escritorio (≥ lg): navegación vertical agrupada, con la sección activa resaltada. */
-export function PanelSidebarNav({ role, permisos, pendientes = 0, notas = 0 }: { role: string; permisos: string[]; pendientes?: number; notas?: number }) {
-  const groups = gruposVisibles(role, permisos, pendientes, notas);
+export function PanelSidebarNav({ role, permisos, pendientes = 0, notas = 0, imagenes = 0 }: { role: string; permisos: string[]; pendientes?: number; notas?: number; imagenes?: number }) {
+  const groups = gruposVisibles(role, permisos, pendientes, notas, imagenes);
   const pathname = usePathname();
   const { abierto, alternar } = useGruposMenu(grupoDe(groups, pathname));
   return (
@@ -186,13 +188,13 @@ export function PanelSidebarNav({ role, permisos, pendientes = 0, notas = 0 }: {
 }
 
 // Menú lateral del panel, filtrado por rol y permisos.
-export function PanelNav({ role, permisos, pendientes = 0, notas = 0, children }: { role: string; permisos: string[]; pendientes?: number; notas?: number; children?: React.ReactNode }) {
-  const groups = gruposVisibles(role, permisos, pendientes, notas);
+export function PanelNav({ role, permisos, pendientes = 0, notas = 0, imagenes = 0, children }: { role: string; permisos: string[]; pendientes?: number; notas?: number; imagenes?: number; children?: React.ReactNode }) {
+  const groups = gruposVisibles(role, permisos, pendientes, notas, imagenes);
 
   return (
     <>
     {/* Debajo de `lg` los tres desplegables no caben: menú móvil con todas las secciones y la cuenta. */}
-    <PanelMobileMenu groups={groups} alerta={pendientes + notas > 0}>{children}</PanelMobileMenu>
+    <PanelMobileMenu groups={groups} alerta={pendientes + notas + imagenes > 0}>{children}</PanelMobileMenu>
     </>
   );
 }

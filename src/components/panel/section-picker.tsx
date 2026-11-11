@@ -163,7 +163,7 @@ export function SectionTree({
           <FolderOpen size={17} aria-hidden />
         </span>
         <div className="min-w-0 flex-1">
-          <p id={`${id}-l`} className="lx-kicker text-[var(--fg-muted)]">Se publicará en</p>
+          <p id={`${id}-l`} className="lx-kicker text-[var(--fg-muted)]">1 · Sección donde se publica</p>
           <p className={`truncate text-sm ${actual ? "font-semibold" : "text-[var(--fg-muted)]"}`} aria-live="polite">
             {actual ? `${padre ? `${padre.name} › ` : ""}${actual.name}` : "Sin sección · puedes dejarlo para después"}
           </p>
