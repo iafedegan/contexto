@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
+import { DEPARTAMENTOS_FILTRO, REGIONES_COLOMBIA, departamentoPorSlug, regionPorSlug } from "@/lib/regiones-colombia";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -266,7 +267,7 @@ export function ArticleWizard({
   const [tags, setTags] = useState<string[]>(initial?.tags ?? []);
   const [tagDraft, setTagDraft] = useState("");
   const [categoryId, setCategoryId] = useState(initial?.categoryId ?? pieza?.categoryId ?? "");
-  const [region] = useState(initial?.region ?? "");
+  const [region, setRegion] = useState(initial?.region ?? "");
   // A qué editor se envía la nota al terminar (vacío = a nadie) y el mensaje que le llega con ella.
   const [envio, setEnvio] = useState(enviadoA);
   const [enviarA, setEnviarA] = useState("");
@@ -274,7 +275,7 @@ export function ArticleWizard({
   const [cancelando, cancelarT] = useTransition();
   const [errorEnvio, setErrorEnvio] = useState("");
   const editorElegido = editores.find((e) => e.id === enviarA);
-  const [depto] = useState(initial?.depto ?? "");
+  const [depto, setDepto] = useState(initial?.depto ?? "");
   const [authorId] = useState(initial?.authorId ?? miAutorId ?? "");
   // El cuerpo se guarda como HTML (el editor lo muestra ya formateado). Las gráficas viajan como marcador `[[GRAFICA …]]`.
   const [body, setBody] = useState(initial?.body ?? "");
@@ -411,6 +412,27 @@ export function ArticleWizard({
       .map((c) => c.id);
   }, [categories, title, excerpt, tags]);
   const authorName = authors.find((a) => a.id === authorId)?.name;
+  // «Regiones» (Colombia › Regiones): sus subsecciones son las regiones y los departamentos, que no son secciones del sitio sino un dato de la nota.
+  const regionesId = useMemo(() => {
+    const norm = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+    const candidatas = categories.filter((c) => norm(c.name) === "regiones");
+    return (candidatas.find((c) => norm(categories.find((p) => p.id === c.parentId)?.name ?? "") === "colombia") ?? candidatas[0])?.id ?? "";
+  }, [categories]);
+  const itemsRegiones = useMemo(
+    () => REGIONES_COLOMBIA.flatMap((r) => [
+      { id: `r:${r.slug}`, nombre: r.nombre, nivel: 1 },
+      ...DEPARTAMENTOS_FILTRO.filter((d) => d.region === r.slug).map((d) => ({ id: `d:${d.slug}`, nombre: d.nombre, nivel: 2 })),
+    ]),
+    [],
+  );
+  const valorRegion = depto ? `d:${depto}` : region ? `r:${region}` : "";
+  const elegirRegion = (id: string) => {
+    if (id === valorRegion) { setRegion(""); setDepto(""); return; }
+    if (id.startsWith("r:")) { setRegion(id.slice(2)); setDepto(""); }
+    else { const d = departamentoPorSlug(id.slice(2)); if (!d) return; setRegion(d.region); setDepto(d.slug); }
+    setCategoryId(regionesId);
+  };
+  const sufijoRegion = categoryId && categoryId === regionesId && region ? ` › ${regionPorSlug(region)?.nombre ?? ""}${depto ? ` › ${departamentoPorSlug(depto)?.nombre ?? ""}` : ""}` : "";
 
   // Qué impide avanzar desde cada paso (solo título y resumen son obligatorios).
   const blocker: Record<string, string | null> = {
@@ -1342,7 +1364,14 @@ export function ArticleWizard({
 
         {current.key === "seccion" && (
           <Step ancho="xl" title="¿Dónde se publica?" hint="Dos decisiones, ambas opcionales: 1. la sección y subsección donde se publica y 2. si va destacada en la portada del sitio.">
-            <SectionTree options={categories} value={categoryId} onChange={setCategoryId} sugeridas={seccionesSugeridas}>
+            <SectionTree
+              options={categories}
+              value={categoryId}
+              onChange={(id) => { setCategoryId(id); if (id !== regionesId) { setRegion(""); setDepto(""); } }}
+              sugeridas={seccionesSugeridas}
+              extra={regionesId ? { categoriaId: regionesId, items: itemsRegiones, value: valorRegion, onPick: elegirRegion } : undefined}
+              sufijoRuta={sufijoRegion}
+            >
               {/* 3 · Lugar en la portada del sitio (solo con permiso «portada»). */}
               <TarjetaDecision n={2} titulo="¿Va destacada en la portada?" ayuda={canPortada ? (portadaPos === "0" ? "Será la nota grande de arriba." : portadaPos === "1" ? "Irá junto a la principal." : portadaPos === "keep" ? "Ya tiene un lugar fijado; se conserva." : "Normal: entra a la portada por fecha, como cualquier nota.") : "Tu cuenta no ubica notas en la portada: un editor lo hace al publicar."}>
                 {canPortada && (

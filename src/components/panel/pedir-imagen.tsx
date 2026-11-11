@@ -20,6 +20,8 @@ export function PedirImagen({ articleId, titulo, resumen, portadaActual, alUsar 
   const [indicaciones, setIndicaciones] = useState("");
   const [disenadorId, setDisenadorId] = useState("");
   const [mensaje, setMensaje] = useState<{ ok: boolean; texto: string } | null>(null);
+  // Quien ya recibió su imagen puede decidir pedir otra: el formulario no se ofrece por defecto.
+  const [otra, setOtra] = useState(false);
   const [pendiente, empezar] = useTransition();
 
   useEffect(() => {
@@ -53,6 +55,9 @@ export function PedirImagen({ articleId, titulo, resumen, portadaActual, alUsar 
 
   const entregada = pedido?.estado === "entregada" && pedido.url && pedido.url !== portadaActual;
   const pendienteDeEntrega = pedido?.estado === "pendiente";
+  // La imagen entregada ya está puesta en la nota.
+  const aplicada = pedido?.estado === "entregada" && Boolean(pedido.url) && pedido.url === portadaActual;
+  const fechaEntrega = pedido?.entregadaEn ? new Intl.DateTimeFormat("es-CO", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "America/Bogota" }).format(new Date(pedido.entregadaEn)) : "";
 
   return (
     <div className="flex flex-col gap-3 text-sm">
@@ -73,8 +78,22 @@ export function PedirImagen({ articleId, titulo, resumen, portadaActual, alUsar 
           <img src={pedido!.url} alt="" className="aspect-[16/9] w-full max-w-xs rounded-[var(--radius)] border border-[var(--border)] object-cover" />
           <button type="button" onClick={() => alUsar(pedido!.url!, pedido!.alt)} className="lx-btn self-start !px-3 !py-1.5 text-xs"><Check size={13} /> Usar esta imagen</button>
         </div>
+      ) : aplicada && !otra ? (
+        // El pedido ya se cumplió: nada que enviar. Para pedir otra imagen hay que decidirlo con el botón.
+        <div className="flex flex-col gap-3 text-xs">
+          <div className="flex items-center gap-3 rounded-[var(--radius)] bg-[var(--surface-2)] p-2.5">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={pedido!.url} alt="" className="aspect-[16/9] w-24 shrink-0 rounded object-cover" />
+            <p className="min-w-0">
+              <span className="font-semibold text-[#16a34a]">✓ Solicitud cumplida</span><br />
+              El diseñador entregó la imagen{fechaEntrega ? ` el ${fechaEntrega}` : ""} y ya es la portada de la nota.
+            </p>
+          </div>
+          <button type="button" onClick={() => setOtra(true)} className="lx-btn lx-btn-ghost self-start !px-3 !py-1.5 text-xs"><Brush size={13} /> Hacer una nueva solicitud de imagen</button>
+        </div>
       ) : (
         <>
+          {otra && <p className="rounded-[var(--radius)] border border-[#d97706]/40 bg-[#d97706]/8 px-3 py-2 text-xs text-[#92400e]">Ya hay una imagen entregada. Si pides otra, reemplazará a la actual cuando el diseñador la entregue. <button type="button" onClick={() => setOtra(false)} className="lx-link font-semibold">Mantener la actual</button></p>}
           <select value={disenadorId} onChange={(e) => setDisenadorId(e.target.value)} className={campo} aria-label="Diseñador">
             <option value="">Cualquier diseñador</option>
             {disenadores.map((d) => <option key={d.id} value={d.id}>{d.nombre}</option>)}

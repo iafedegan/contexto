@@ -43,6 +43,8 @@ export function SectionTree({
   value,
   onChange,
   sugeridas = [],
+  extra,
+  sufijoRuta = "",
   firma,
   children,
 }: {
@@ -50,6 +52,10 @@ export function SectionTree({
   value: string;
   onChange: (id: string) => void;
   sugeridas?: string[];
+  /** Subsecciones que no son secciones del sitio (p. ej. las regiones y departamentos de «Regiones»): se muestran bajo la sección `categoriaId` y, al elegirlas, quien llama decide qué guarda. */
+  extra?: { categoriaId: string; items: { id: string; nombre: string; nivel: number }[]; value: string; onPick: (id: string) => void };
+  /** Texto que se añade a la ruta de la sección elegida (p. ej. « › Caribe › Atlántico»). */
+  sufijoRuta?: string;
   /** Quién firma la nota: se muestra junto a «Se publicará en». */
   firma?: string;
   /** Contenido propio del asistente que va justo debajo de «Se publicará en» (p. ej. el lugar en la portada). */
@@ -133,16 +139,40 @@ export function SectionTree({
     );
   };
   // Subsecciones de una sección, con «Toda la sección» al principio.
-  const itemsSubs = (r: Nodo) => [{ n: r, d: 0 }, ...descendientes(r)];
+  type ItemSub = { n: Nodo; d: number; v?: undefined } | { v: { id: string; nombre: string }; d: number; n?: undefined };
+  const itemsSubs = (r: Nodo): ItemSub[] => {
+    const base: ItemSub[] = [{ n: r, d: 0 }, ...descendientes(r)];
+    if (!extra) return base;
+    const i = base.findIndex((x) => x.n?.id === extra.categoriaId);
+    if (i < 0) return base;
+    return [...base.slice(0, i + 1), ...extra.items.map((it) => ({ v: it, d: base[i].d + it.nivel })), ...base.slice(i + 1)];
+  };
+  // Una subsección que no es una sección del sitio (región o departamento).
+  const opcionExtra = (v: { id: string; nombre: string }, nivel: number) => {
+    const activa = extra?.value === v.id;
+    return (
+      <button
+        type="button"
+        aria-pressed={activa}
+        onClick={() => extra?.onPick(v.id)}
+        style={nivel > 1 ? { paddingLeft: `${0.75 + (nivel - 1) * 1.1}rem` } : undefined}
+        className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm transition focus-visible:outline-2 focus-visible:outline-[var(--accent)] ${activa ? "bg-[var(--accent)] font-semibold text-[var(--accent-fg)] shadow-sm" : "hover:bg-[var(--surface-2)]"}`}
+      >
+        <Marca on={activa} fuerte />
+        <span className="min-w-0 flex-1 truncate">{v.nombre}</span>
+      </button>
+    );
+  };
+  const filaSub = (h: ItemSub, r: Nodo) => (h.v ? opcionExtra(h.v, h.d) : opcion(h.n, h.d === 0 ? `Toda la sección «${r.name}»` : h.n.name, h.d === 0, h.d));
   // Lista (sin carrusel) de subsecciones, para el despliegue en pantallas angostas.
   const listaSubs = (r: Nodo) => (
     <ul role="radiogroup" aria-label={`Subsecciones de ${r.name}`} className="flex flex-col gap-0.5">
-      {itemsSubs(r).map((h) => <li key={h.n.id}>{opcion(h.n, h.d === 0 ? `Toda la sección «${r.name}»` : h.n.name, h.d === 0, h.d)}</li>)}
+      {itemsSubs(r).map((h) => <li key={h.n?.id ?? h.v!.id}>{filaSub(h, r)}</li>)}
     </ul>
   );
   // Fila de una sección con sus subsecciones.
   const filaSeccion = (r: Nodo) => {
-    const n = descendientes(r).length;
+    const n = itemsSubs(r).length - 1;
     const abierta = rama === r.id;
     const elegida = contiene(r);
     return (
@@ -189,7 +219,7 @@ export function SectionTree({
         <div className="min-w-0 flex-1">
           <p id={`${id}-l`} className="lx-kicker text-[var(--fg-muted)]">1 · Sección elegida</p>
           <p className={`truncate text-sm ${actual ? "font-semibold" : "text-[var(--fg-muted)]"}`} aria-live="polite">
-            {actual ? ruta(actual) : "Sin sección · puedes dejarlo para después"}
+            {actual ? `${ruta(actual)}${sufijoRuta}` : "Sin sección · puedes dejarlo para después"}
           </p>
           {firma && <p className="truncate text-xs text-[var(--fg-muted)]" title="La nota la firma quien la escribe: tu usuario. No se puede cambiar.">Firma: <strong className="text-[var(--fg)]">{firma}</strong></p>}
         </div>
@@ -254,13 +284,13 @@ export function SectionTree({
             </div>
             <div className="hidden min-w-0 flex-col @sm:flex" aria-live="polite">
               <p className="lx-kicker truncate border-b border-[var(--border)] px-4 py-2.5 text-[var(--fg-muted)]">
-                {hayRama ? `Dentro de ${ramaNodo!.name} · ${subs.length}` : "Subsecciones"}
+                {hayRama ? `Dentro de ${ramaNodo!.name} · ${itemsSubs(ramaNodo!).length - 1}` : "Subsecciones"}
               </p>
               {hayRama ? (
                 // Todas las subsecciones a la vez, de todos los niveles y con sangría.
                 <ul key={ramaNodo!.id} role="radiogroup" aria-label={`Subsecciones de ${ramaNodo!.name}`} className="flex max-h-[22rem] flex-col gap-0.5 overflow-y-auto p-2">
                   {itemsSubs(ramaNodo!).map((h) => (
-                    <li key={h.n.id}>{opcion(h.n, h.d === 0 ? `Toda la sección «${ramaNodo!.name}»` : h.n.name, h.d === 0, h.d)}</li>
+                    <li key={h.n?.id ?? h.v!.id}>{filaSub(h, ramaNodo!)}</li>
                   ))}
                 </ul>
               ) : (
