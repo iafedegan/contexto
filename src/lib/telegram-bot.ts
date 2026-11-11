@@ -3,7 +3,7 @@ import { asc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { articles, authors, categories, users } from "@/db/schema";
 import { canPublish } from "@/lib/auth";
-import { auditArticle, scoreLabel } from "@/lib/seo-audit";
+import { auditArticle, scoreLabel, SEO_MINIMO_PUBLICAR } from "@/lib/seo-audit";
 import { aplicarTipo, encodeSpec, TIPOS_GRAFICA, type ChartSpec, type TipoGrafica } from "@/lib/chart-svg";
 import {
   generateArticleDraftCore, generateChartCore, generateCoverImageCore, leerEnlacesCore, regenerateDraftPartCore,
@@ -1226,12 +1226,16 @@ async function finales(c: Ctx, v: string) {
       ok(Boolean(c.e.coverUrl), "Foto de portada"),
       ok((c.e.body ?? "").includes("data-chart="), "Gráfica con datos (si la nota tiene cifras)"),
       ok(true, "Firma (autor)"),
-      ok(a.score >= 75, `Puntuación SEO ≥ 75 (ahora ${a.score})`),
+      ok(a.score >= SEO_MINIMO_PUBLICAR, `Puntuación SEO ≥ ${SEO_MINIMO_PUBLICAR} (ahora ${a.score}); sin ella no se publica`),
     ].join("\n")}\n\n¿Cuándo se publica?`, [[{ texto: "Próximo lunes · 8:00 p. m.", dato: `p:lunes:${tk(c)}` }], [{ texto: "Mañana · 7:00 a. m.", dato: `p:man_am:${tk(c)}` }, { texto: "Mañana · 8:00 p. m.", dato: `p:man_pm:${tk(c)}` }], [{ texto: "Otra fecha…", dato: `p:otra:${tk(c)}` }], [{ texto: "⬅️ Atrás", dato: "x:" }]]));
   }
   if (v === "pub") return void (await mostrar(c, `⚠️ ¿Publicar <b>ahora</b> «${esc(recorta(c.e.title ?? "", 100))}»?\nSaldrá en el sitio de inmediato.`, [[{ texto: "✅ Sí, publicar", dato: `f:ok:${tk(c)}` }, { texto: "Cancelar", dato: "x:" }]]));
   if (v === "ok") {
-    await publicarCore(c.e.articleId);
+    try {
+      await publicarCore(c.e.articleId);
+    } catch (err) {
+      return fallo(c, `⚠️ ${esc(err instanceof Error ? err.message : "No se pudo publicar.")}`);
+    }
     const [a] = await db.select({ slug: articles.slug, status: articles.status, firma: authors.name }).from(articles).leftJoin(authors, eq(articles.authorId, authors.id)).where(eq(articles.id, c.e.articleId)).limit(1);
     if (!a || a.status !== "publicado") return fallo(c, "No pude confirmar la publicación. Revisa la nota con /estado o en el panel.");
     c.e.fase = "idle"; await fin(c);

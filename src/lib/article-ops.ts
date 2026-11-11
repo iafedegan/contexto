@@ -5,6 +5,7 @@ import { db } from "@/db";
 import { agentDrafts, articles, authors, categories } from "@/db/schema";
 import { embed } from "@/lib/embeddings";
 import { sanitizeArticleHtml } from "@/lib/sanitize";
+import { auditArticle, SEO_MINIMO_PUBLICAR } from "@/lib/seo-audit";
 import { emitir } from "@/lib/eventos";
 import { slugify } from "@/lib/utils";
 import { autorDeUsuario } from "@/lib/user-authors";
@@ -158,8 +159,50 @@ export async function enviarARevisionCore(articleId: string) {
   if (!fila) throw new Error("Solo una nota en borrador puede enviarse a revisión.");
 }
 
+/**
+ * Requisitos para que una nota salga al sitio: su imagen de portada y una puntuación SEO de al menos `SEO_MINIMO_PUBLICAR`. Se calcula
+ * con la misma auditoría que ve el redactor en el asistente. Devuelve los motivos legibles si no se cumplen.
+ */
+export async function requisitosDePublicacion(articleId: string): Promise<{ ok: boolean; score: number; motivos: string[] }> {
+  const [a] = await db
+    .select({ title: articles.title, excerpt: articles.excerpt, body: articles.body, metaTitle: articles.metaTitle, metaDescription: articles.metaDescription, tags: articles.tags, coverImageUrl: articles.coverImageUrl, coverImageAlt: articles.coverImageAlt, autor: authors.name })
+    .from(articles)
+    .leftJoin(authors, eq(articles.authorId, authors.id))
+    .where(eq(articles.id, articleId))
+    .limit(1);
+  if (!a) return { ok: false, score: 0, motivos: ["La nota ya no existe."] };
+  const r = auditArticle({
+    title: a.title,
+    excerpt: a.excerpt,
+    body: a.body,
+    metaTitle: a.metaTitle ?? "",
+    metaDescription: a.metaDescription ?? "",
+    tags: a.tags ?? [],
+    focus: a.tags?.[0] || a.title,
+    coverImageUrl: a.coverImageUrl,
+    coverImageAlt: a.coverImageAlt,
+    authorName: a.autor ?? "",
+  });
+  const motivos: string[] = [];
+  if (!a.coverImageUrl) motivos.push("falta la imagen de portada");
+  if (r.score < SEO_MINIMO_PUBLICAR) {
+    const fallan = r.items.filter((i) => !i.ok).slice(0, 3).map((i) => i.text);
+    motivos.push(`el SEO está en ${r.score}/100 y se necesita ${SEO_MINIMO_PUBLICAR} o más${fallan.length ? ` (falta: ${fallan.join("; ")})` : ""}`);
+  }
+  return { ok: motivos.length === 0, score: r.score, motivos };
+}
+
+/** Lanza si la nota no cumple los requisitos de publicación. */
+export async function exigirRequisitosDePublicacion(articleId: string) {
+  const r = await requisitosDePublicacion(articleId);
+  if (!r.ok) throw new Error(`No se puede publicar todavía: ${r.motivos.join(" y ")}.`);
+}
+
 // Publica una nota ya autorizada: cambia el estado, recalcula su embedding, revalida el sitio y avisa si es de última hora.
 export async function publicarCore(articleId: string) {
+  // Una nota que ya está publicada se actualiza sin volver a exigirle los requisitos; las demás los cumplen o no salen.
+  const [actual] = await db.select({ status: articles.status }).from(articles).where(eq(articles.id, articleId)).limit(1);
+  if (actual?.status !== "publicado") await exigirRequisitosDePublicacion(articleId);
   await db
     .update(articles)
     .set({ status: "publicado", publishedAt: sql`coalesce(${articles.publishedAt}, now())`, scheduledFor: null, updatedAt: sql`now()` })
@@ -173,6 +216,7 @@ export async function publicarCore(articleId: string) {
 export async function programarCore(articleId: string, isoDateTime: string) {
   const when = new Date(isoDateTime);
   if (Number.isNaN(when.getTime()) || when.getTime() < Date.now()) throw new Error("La fecha de programación debe ser futura.");
+  await exigirRequisitosDePublicacion(articleId);
   await db.update(articles).set({ status: "programado", scheduledFor: when, updatedAt: sql`now()` }).where(eq(articles.id, articleId));
 }
 

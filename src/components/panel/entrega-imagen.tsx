@@ -2,9 +2,10 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, Check, CheckCircle2, FolderOpen, ImagePlus, Loader2 } from "lucide-react";
+import { AlertTriangle, Check, CheckCircle2, ImagePlus, Loader2 } from "lucide-react";
 import { carpetasDeEntrega, entregarImagen } from "@/app/panel/(app)/imagenes/actions";
 import { subirMedia } from "./subir-media";
+import { SelectorCarpeta, type CarpetaNodo } from "./selector-carpeta";
 
 const campo = "w-full rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm outline-none transition focus:border-[var(--accent)] placeholder:text-[var(--fg-muted)]/50";
 
@@ -33,7 +34,7 @@ export function EntregaImagen({ articleId, tituloNota = "" }: { articleId: strin
   const [pie, setPie] = useState("");
   const [nombre, setNombre] = useState("");
   const [carpetaId, setCarpetaId] = useState("");
-  const [carpetas, setCarpetas] = useState<{ id: string; ruta: string }[]>([]);
+  const [carpetas, setCarpetas] = useState<CarpetaNodo[]>([]);
   const [gestiona, setGestiona] = useState(false);
   const [subiendo, setSubiendo] = useState(false);
   const [error, setError] = useState("");
@@ -117,16 +118,7 @@ export function EntregaImagen({ articleId, tituloNota = "" }: { articleId: strin
           <span className="lx-kicker text-[var(--fg-muted)]">Nombre en la biblioteca</span>
           <input value={nombre} onChange={(e) => setNombre(e.target.value.slice(0, 120))} placeholder={tituloNota ? `Portada · ${tituloNota}`.slice(0, 60) : "ganado-cebu-llanos-portada"} className={campo} />
         </label>
-        {gestiona && (
-          <label className="flex flex-col gap-1">
-            <span className="lx-kicker flex items-center gap-1.5 text-[var(--fg-muted)]"><FolderOpen size={13} aria-hidden /> Carpeta donde se guarda</span>
-            <select value={carpetaId} onChange={(e) => setCarpetaId(e.target.value)} className={campo}>
-              <option value="">Sin carpeta (raíz de la biblioteca)</option>
-              {carpetas.map((c) => <option key={c.id} value={c.id}>{c.ruta}</option>)}
-            </select>
-            <span className="text-xs text-[var(--fg-muted)]">La imagen queda en la biblioteca, en esta carpeta, además de ser la portada de la nota.</span>
-          </label>
-        )}
+        {gestiona && <SelectorCarpeta carpetas={carpetas} value={carpetaId} onChange={setCarpetaId} />}
         {error && <p role="alert" className="text-sm text-[var(--danger,#b4442e)]">{error}</p>}
         <button type="button" onClick={entregar} disabled={!url || !altOk || subiendo || pendiente} className="lx-btn self-start disabled:cursor-not-allowed disabled:opacity-50">
           {pendiente ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />} Entregar y poner en la nota

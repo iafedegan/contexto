@@ -9,6 +9,9 @@
  * el navegador mientras se escribe y también el servidor si hace falta.
  */
 
+/** Puntuación SEO mínima para que una nota se publique o se programe (además de tener su imagen de portada). */
+export const SEO_MINIMO_PUBLICAR = 90;
+
 export type AuditSeverity = "error" | "aviso" | "ok";
 
 // Un criterio de la auditoría SEO: si se cumple, su explicación y a qué grupo pertenece.

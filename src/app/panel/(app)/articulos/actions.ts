@@ -4,7 +4,7 @@ import { departamentoPorSlug, regionPorSlug } from "@/lib/regiones-colombia";
 import { revalidatePath } from "next/cache";
 import { sanitizeArticleHtml } from "@/lib/sanitize";
 import { redirect } from "next/navigation";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { articles } from "@/db/schema";
 import { canPublish, requirePermiso } from "@/lib/auth";
@@ -15,7 +15,7 @@ import { tienePermiso } from "@/lib/permisos-server";
 import { avisarSiUltimaHora } from "@/lib/push";
 import { invalidarCache } from "@/lib/data-cache";
 import { esNotaPropia, exigirNotaPropia } from "@/lib/propiedad-notas";
-import { destinoActivo, registrarAsignacion } from "@/lib/notas-asignadas";
+import { asignacionDe, destinoActivo, quitarAsignacion, registrarAsignacion } from "@/lib/notas-asignadas";
 import { puedeEnviarNota } from "@/lib/notas-asignadas-reglas";
 import { piezaParaEscribir, vincularPieza } from "@/app/panel/(app)/pendientes/consultas";
 
@@ -153,6 +153,24 @@ export async function saveArticle(formData: FormData) {
     redirect(`/panel/articulos/${articleId}?modo=${desde}&paso=vista&guardado=${intent || "borrador"}`);
   }
   redirect(`/panel/articulos/${articleId}?guardado=1`);
+}
+
+/**
+ * Cancela el envío de una nota a otra persona: la nota deja de estar en su lista y, si estaba «En revisión» por ese envío, vuelve a borrador.
+ * Lo puede hacer quien la envió y los administradores.
+ */
+export async function cancelarEnvio(articleId: string): Promise<{ ok: boolean; message: string }> {
+  const user = await requirePermiso("articulos");
+  const id = String(articleId ?? "");
+  const envio = await asignacionDe(id);
+  if (!envio) return { ok: false, message: "Esta nota no está enviada a nadie." };
+  if (user.role !== "administrador" && envio.porId !== user.id) return { ok: false, message: "Solo quien la envió puede cancelar el envío." };
+  await quitarAsignacion(id);
+  await db.update(articles).set({ status: "borrador", updatedAt: sql`now()` }).where(and(eq(articles.id, id), eq(articles.status, "en_revision")));
+  revalidatePath("/panel/asignaciones");
+  revalidatePath("/panel/articulos");
+  revalidatePath(`/panel/articulos/${id}`);
+  return { ok: true, message: "Envío cancelado." };
 }
 
 // Pasa un borrador a revisión; sobre una nota publicada falla para no sacarla del sitio (la regla vive en `enviarARevisionCore`).

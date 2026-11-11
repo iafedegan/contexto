@@ -76,8 +76,51 @@ test("programar exige una fecha futura y válida", async () => {
   const [n] = await bd.db.insert(schema.articles).values({ slug: "a-programar", title: "a", excerpt: "e", body: "<p>x</p>", status: "borrador" }).returning({ id: schema.articles.id });
   await assert.rejects(() => ops.programarCore(n.id, new Date(Date.now() - 60_000).toISOString()), /futura/);
   await assert.rejects(() => ops.programarCore(n.id, "no es una fecha"), /futura/);
-  await ops.programarCore(n.id, new Date(Date.now() + 3600_000).toISOString());
-  assert.equal((await bd.db.select({ s: schema.articles.status }).from(schema.articles).where(eq(schema.articles.id, n.id)))[0].s, "programado");
+  // La fecha es válida, pero la nota no cumple los requisitos (portada y SEO): no se programa.
+  await assert.rejects(() => ops.programarCore(n.id, new Date(Date.now() + 3600_000).toISOString()), /portada/);
+  assert.equal((await bd.db.select({ s: schema.articles.status }).from(schema.articles).where(eq(schema.articles.id, n.id)))[0].s, "borrador");
+});
+
+// Una nota que cumple: portada con texto alternativo, firma, cuerpo con sustancia, ficha bien escrita y una fuente enlazada.
+async function notaCompleta(slug: string) {
+  const [autor] = await bd.db.insert(schema.authors).values({ name: "Autora de prueba", slug: `autora-${slug}` }).returning({ id: schema.authors.id });
+  const frase = "El mercado del ganado gordo registró alzas esta semana en las principales subastas del país según los ganaderos consultados";
+  const parrafos = Array.from({ length: 4 }, () => `<p>${frase}. ${frase}. ${frase}.</p>`).join("");
+  const [n] = await bd.db
+    .insert(schema.articles)
+    .values({
+      slug,
+      title: "El precio del ganado gordo sube en las subastas",
+      excerpt: "Los ganaderos reportan alzas sostenidas en las subastas de la semana y esperan que continúen durante el mes.",
+      body: `${parrafos}<p>Fuente: <a href="https://www.fedegan.org.co">Fedegán</a>.</p>`,
+      metaTitle: "Precio del ganado gordo sube en las subastas",
+      metaDescription: "Los ganaderos reportan alzas sostenidas en las subastas de la semana y esperan que continúen durante el mes.",
+      tags: ["ganado", "precios"],
+      coverImageUrl: "https://example.com/portada.jpg",
+      coverImageAlt: "Ganado gordo en una subasta",
+      authorId: autor.id,
+      status: "borrador",
+    })
+    .returning({ id: schema.articles.id });
+  return n.id;
+}
+
+test("una nota sin imagen de portada o con SEO bajo no se publica ni se programa", async () => {
+  const [n] = await bd.db.insert(schema.articles).values({ slug: "sin-requisitos", title: "a", excerpt: "e", body: "<p>x</p>", status: "borrador" }).returning({ id: schema.articles.id });
+  const r = await ops.requisitosDePublicacion(n.id);
+  assert.equal(r.ok, false);
+  assert.ok(r.motivos.some((m) => /portada/.test(m)));
+  await assert.rejects(() => ops.publicarCore(n.id), /No se puede publicar/);
+  assert.equal((await bd.db.select({ s: schema.articles.status }).from(schema.articles).where(eq(schema.articles.id, n.id)))[0].s, "borrador");
+});
+
+test("una nota con portada y SEO de 90 o más sí cumple y se puede programar", async () => {
+  const id = await notaCompleta("nota-completa");
+  const r = await ops.requisitosDePublicacion(id);
+  assert.ok(r.score >= 90, `el SEO debería ser ≥ 90 (es ${r.score}: ${r.motivos.join("; ")})`);
+  assert.equal(r.ok, true);
+  await ops.programarCore(id, new Date(Date.now() + 3600_000).toISOString());
+  assert.equal((await bd.db.select({ s: schema.articles.status }).from(schema.articles).where(eq(schema.articles.id, id)))[0].s, "programado");
 });
 
 test("los distintivos avisan si la nota ya no existe", async () => {

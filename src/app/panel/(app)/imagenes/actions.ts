@@ -5,7 +5,7 @@ import { asc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { articles, mediaAssets, mediaFolders } from "@/db/schema";
 import { tienePermiso } from "@/lib/permisos-server";
-import { nombreValido, rutaDe } from "@/lib/biblioteca-acceso";
+import { nombreValido } from "@/lib/biblioteca-acceso";
 import { urlPublicaMedia } from "@/lib/media-storage";
 import { requirePermiso } from "@/lib/auth";
 import { revalidarNotas } from "@/lib/article-ops";
@@ -46,12 +46,11 @@ export async function cancelarPedido(input: { articleId: string }): Promise<Resp
 }
 
 /** Las carpetas de la biblioteca donde puede quedar guardada la imagen entregada (solo quien gestiona la biblioteca elige carpeta). */
-export async function carpetasDeEntrega(): Promise<{ gestiona: boolean; carpetas: { id: string; ruta: string }[] }> {
+export async function carpetasDeEntrega(): Promise<{ gestiona: boolean; carpetas: { id: string; parentId: string | null; name: string }[] }> {
   const yo = await requirePermiso("articulos");
   const gestiona = await tienePermiso(yo.id, yo.role, "biblioteca");
   if (!gestiona) return { gestiona, carpetas: [] };
-  const todas = await db.select({ id: mediaFolders.id, parentId: mediaFolders.parentId, name: mediaFolders.name }).from(mediaFolders).orderBy(asc(mediaFolders.name));
-  const carpetas = todas.map((c) => ({ id: c.id, ruta: rutaDe(todas, c.id).map((x) => x.name).join(" › ") })).sort((a, b) => a.ruta.localeCompare(b.ruta, "es"));
+  const carpetas = await db.select({ id: mediaFolders.id, parentId: mediaFolders.parentId, name: mediaFolders.name }).from(mediaFolders).orderBy(asc(mediaFolders.name));
   return { gestiona, carpetas };
 }
 

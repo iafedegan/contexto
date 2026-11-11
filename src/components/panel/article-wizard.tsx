@@ -28,7 +28,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { autosaveDraft, saveArticle } from "@/app/panel/(app)/articulos/actions";
+import { autosaveDraft, cancelarEnvio, saveArticle } from "@/app/panel/(app)/articulos/actions";
 import { subirMedia } from "./subir-media";
 import { PedirImagen } from "./pedir-imagen";
 import { etiquetaRol } from "@/lib/notas-asignadas-reglas";
@@ -69,7 +69,7 @@ import { TarjetaModelo } from "@/components/panel/tarjeta-modelo";
 import { duracionWav, esVideo, ExtraerAudioError, extraerAudioDeVideo, partirWav } from "@/lib/audio-extract";
 import { aplicarTipo, encodeSpec, renderChartSvg, TIPOS_GRAFICA, type ChartSpec, type TipoGrafica } from "@/lib/chart-svg";
 import { InteractiveChart } from "@/components/interactive-chart";
-import { auditArticle, scoreLabel, type AuditItem, type AuditResult } from "@/lib/seo-audit";
+import { auditArticle, SEO_MINIMO_PUBLICAR, scoreLabel, type AuditItem, type AuditResult } from "@/lib/seo-audit";
 import { ESTADO_LABEL as STATUS_LABEL } from "@/lib/estados";
 
 // Opción de un selector: id y nombre.
@@ -182,7 +182,7 @@ export function ArticleWizard({
   /** Editor o administrador: el destinatario es un especialista, de cualquier rol. */
   envioLibre?: boolean;
   /** A quién se envió ya esta nota (lo leído del servidor), con su mensaje y la fecha. */
-  enviadoA?: { editorId: string; nombre: string; mensaje: string; fecha: string } | null;
+  enviadoA?: { editorId: string; porId?: string; nombre: string; mensaje: string; fecha: string } | null;
 }) {
   const heading = pieza ? "Tarea del consejo · artículo con IA" : mode === "ia" ? "Nuevo artículo con IA" : "Nuevo artículo";
   const STEPS: readonly { key: StepKey; label: string }[] = mode === "ia" ? STEPS_IA : STEPS_MANUAL;
@@ -258,8 +258,11 @@ export function ArticleWizard({
   const [categoryId, setCategoryId] = useState(initial?.categoryId ?? pieza?.categoryId ?? "");
   const [region, setRegion] = useState(initial?.region ?? "");
   // A qué editor se envía la nota al terminar (vacío = a nadie) y el mensaje que le llega con ella.
-  const [enviarA, setEnviarA] = useState(enviadoA?.editorId ?? "");
-  const [mensajeEditor, setMensajeEditor] = useState(enviadoA?.mensaje ?? "");
+  const [envio, setEnvio] = useState(enviadoA);
+  const [enviarA, setEnviarA] = useState("");
+  const [mensajeEditor, setMensajeEditor] = useState("");
+  const [cancelando, cancelarT] = useTransition();
+  const [errorEnvio, setErrorEnvio] = useState("");
   const editorElegido = editores.find((e) => e.id === enviarA);
   const [depto, setDepto] = useState(initial?.depto ?? "");
   const [authorId] = useState(initial?.authorId ?? miAutorId ?? "");
@@ -302,6 +305,10 @@ export function ArticleWizard({
       }),
     [title, excerpt, bodyHtml, metaTitle, metaDescription, tags, cover, coverAlt, authorId, authors],
   );
+  // Una nota solo se publica o se programa con su imagen de portada y el SEO en el mínimo exigido (el servidor lo vuelve a comprobar).
+  const faltaPortada = !cover;
+  const faltaSeo = audit.score < SEO_MINIMO_PUBLICAR;
+  const puedeSalir = !faltaPortada && !faltaSeo;
   // Autoguardado: a cada cambio (con una pausa) y al cambiar de paso se guarda el borrador, sin salir del asistente.
   const [savedId, setSavedId] = useState(initial?.id ?? "");
   const [autoEstado, setAutoEstado] = useState<"idle" | "guardando" | "guardado" | "error" | "omitido">("idle");
@@ -1640,13 +1647,31 @@ export function ArticleWizard({
               </TarjetaEnvio>
               {puedeEnviarEditor ? (
                 <TarjetaEnvio Icono={Send} titulo={envioLibre ? "Enviar la nota a alguien" : "Enviar la nota a un editor"} ayuda="Queda «En revisión» y le llega en «Artículos».">
-                  {enviadoA && (
-                    <p className="rounded-[var(--radius)] bg-[var(--surface-2)] px-3 py-2 text-xs">
-                      <span className="font-semibold text-[#16a34a]">✓ Enviada a {enviadoA.nombre}</span>
-                      <span className="text-[var(--fg-muted)]"> · {new Intl.DateTimeFormat("es-CO", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "America/Bogota" }).format(new Date(enviadoA.fecha))}</span>
-                    </p>
-                  )}
-                  {editores.length ? (
+                  {envio ? (
+                    // Ya enviada: se ve como el pedido de imagen, con la opción de cancelar el envío.
+                    <div className="flex flex-col gap-2 text-xs">
+                      <p className="rounded-[var(--radius)] bg-[var(--surface-2)] px-3 py-2">
+                        Enviada a <strong>{envio.nombre}</strong> · {new Intl.DateTimeFormat("es-CO", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "America/Bogota" }).format(new Date(envio.fecha))}. Quedó «En revisión» y le llega en «Artículos».
+                      </p>
+                      {envio.mensaje && <p className="whitespace-pre-line text-[var(--fg-muted)]">{envio.mensaje}</p>}
+                      {errorEnvio && <p role="alert" className="text-[var(--danger,#b4442e)]">{errorEnvio}</p>}
+                      <button
+                        type="button"
+                        disabled={cancelando}
+                        onClick={() => {
+                          setErrorEnvio("");
+                          cancelarT(async () => {
+                            const r = await cancelarEnvio(savedId);
+                            if (!r.ok) return setErrorEnvio(r.message);
+                            setEnvio(null);
+                          });
+                        }}
+                        className="lx-link self-start font-medium"
+                      >
+                        {cancelando ? "Cancelando…" : "Cancelar el envío"}
+                      </button>
+                    </div>
+                  ) : editores.length ? (
                     <div className="flex flex-col gap-3 text-sm">
                       <select id="enviar-a" value={enviarA} onChange={(e) => setEnviarA(e.target.value)} aria-label="Destinatario" className="w-full rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm outline-none transition focus:border-[var(--accent)]">
                         <option value="">No enviar a nadie</option>
@@ -1655,7 +1680,7 @@ export function ArticleWizard({
                       <textarea value={mensajeEditor} onChange={(e) => setMensajeEditor(e.target.value)} maxLength={600} rows={3} disabled={!enviarA} placeholder={enviarA ? "Mensaje para quien la recibe (opcional)" : "Elige a quién enviarla para dejarle un mensaje"} aria-label="Mensaje para quien la recibe"
                         className="w-full resize-none rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm outline-none transition placeholder:text-[var(--fg-muted)]/60 focus:border-[var(--accent)] disabled:opacity-60" />
                       <button type="submit" name="intent" value="editor" disabled={!editorElegido} className="lx-btn self-start disabled:cursor-not-allowed disabled:opacity-60 disabled:saturate-50">
-                        <Send size={15} /> {editorElegido ? `${enviadoA?.editorId === editorElegido.id ? "Reenviar a" : "Enviar a"} ${editorElegido.nombre}` : "Enviar la nota"}
+                        <Send size={15} /> {editorElegido ? `Enviar a ${editorElegido.nombre}` : "Enviar la nota"}
                       </button>
                       <p className="text-xs text-[var(--fg-muted)]">{editorElegido ? "Guarda la nota y se la deja en «Artículos»." : "Elige a quién enviarla. Si no eliges a nadie, la nota sigue contigo."}</p>
                     </div>
@@ -1765,6 +1790,11 @@ export function ArticleWizard({
                 ✓ {savedAs === "publicar" ? "Publicado" : savedAs === "programar" ? "Programado" : savedAs === "revision" ? "Enviado a revisión" : savedAs === "editor" ? "Enviado al editor" : "Guardado"}
               </span>
             )}
+            {canPublish && !puedeSalir && status !== "publicado" && (
+              <p role="status" className="w-full rounded-[var(--radius)] border border-[#d97706]/40 bg-[#d97706]/8 px-3 py-2 text-xs text-[#92400e] sm:text-right">
+                Para publicar o programar falta: {[faltaPortada && "la imagen de portada", faltaSeo && `SEO de ${SEO_MINIMO_PUBLICAR} o más (ahora ${audit.score})`].filter(Boolean).join(" y ")}.
+              </p>
+            )}
             {canPublish && (
               <div className="relative">
                 <input type="hidden" name="programarPara" value={progFecha} />
@@ -1786,12 +1816,12 @@ export function ArticleWizard({
                         [Boolean(cover), "Foto de portada"],
                         [bodyHtml.includes("[[GRAFICA"), "Gráfica con datos (si la nota tiene cifras)"],
                         [Boolean(authorId), "Firma (autor)"],
-                        [audit.score >= 75, `Puntuación SEO ≥ 75 (ahora ${audit.score})`],
+                        [audit.score >= SEO_MINIMO_PUBLICAR, `Puntuación SEO ≥ ${SEO_MINIMO_PUBLICAR} (ahora ${audit.score})`],
                       ].map(([ok, txt]) => (
                         <li key={String(txt)} className={ok ? "text-[#16a34a]" : "text-[var(--fg-muted)]"}>{ok ? "✓" : "○"} {txt as string}</li>
                       ))}
                     </ul>
-                    <button type="submit" name="intent" value="programar" disabled={!progFecha} className="lx-btn mt-3 w-full justify-center disabled:opacity-50">
+                    <button type="submit" name="intent" value="programar" disabled={!progFecha || !puedeSalir} className="lx-btn mt-3 w-full justify-center disabled:opacity-50">
                       <CalendarClock size={15} /> Programar para {progFecha ? progFecha.replace("T", " · ") : "…"}
                     </button>
                   </div>
@@ -1808,7 +1838,7 @@ export function ArticleWizard({
               </button>
             )}
             {canPublish ? (
-              <button type="submit" name="intent" value="publicar" className="lx-btn">
+              <button type="submit" name="intent" value="publicar" disabled={status !== "publicado" && !puedeSalir} title={status !== "publicado" && !puedeSalir ? "Falta la imagen de portada o el SEO mínimo" : undefined} className="lx-btn disabled:cursor-not-allowed disabled:opacity-50 disabled:saturate-50">
                 <Send size={15} /> {status === "publicado" ? "Guardar y actualizar" : "Publicar"}
               </button>
             ) : !editorElegido ? (

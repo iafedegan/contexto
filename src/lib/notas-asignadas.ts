@@ -88,13 +88,18 @@ export async function destinatariosDe(articleIds: string[]): Promise<Map<string,
 }
 
 /** A quién se envió una nota (la entrega más reciente), con su nombre; `null` si no se ha enviado a nadie. */
-export async function asignacionDe(articleId: string): Promise<{ editorId: string; nombre: string; mensaje: string; fecha: string } | null> {
+export async function asignacionDe(articleId: string): Promise<{ editorId: string; porId: string; nombre: string; mensaje: string; fecha: string } | null> {
   const [row] = await db.select({ value: siteSettings.value }).from(siteSettings).where(eq(siteSettings.key, ASIGNADAS_KEY)).limit(1);
   const lista = (Array.isArray(row?.value) ? (row.value as Asignacion[]) : []).filter((a) => a.articleId === articleId);
   const ultima = [...lista].sort((x, y) => y.fecha.localeCompare(x.fecha))[0];
   if (!ultima) return null;
   const [persona] = await db.select({ nombre: users.name }).from(users).where(eq(users.id, ultima.editorId)).limit(1);
-  return { editorId: ultima.editorId, nombre: persona?.nombre ?? "otra persona", mensaje: ultima.mensaje ?? "", fecha: ultima.fecha };
+  return { editorId: ultima.editorId, porId: ultima.porId, nombre: persona?.nombre ?? "otra persona", mensaje: ultima.mensaje ?? "", fecha: ultima.fecha };
+}
+
+/** Quita la asignación de una nota (cancelar el envío). Una sola sentencia, como el resto de escrituras de la lista. */
+export async function quitarAsignacion(articleId: string): Promise<void> {
+  await db.execute(sql`update site_settings set value = coalesce((select jsonb_agg(e) from jsonb_array_elements(value) e where e->>'articleId' <> ${articleId}), '[]'::jsonb), updated_at = now() where key = ${ASIGNADAS_KEY}`);
 }
 
 /** Estados en los que una nota enviada sigue pendiente para el editor. */

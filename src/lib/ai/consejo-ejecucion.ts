@@ -18,7 +18,7 @@ import { encodeSpec } from "@/lib/chart-svg";
 import { canPublish } from "@/lib/auth";
 import { autorDeUsuario } from "@/lib/user-authors";
 import { tienePermiso } from "@/lib/permisos-server";
-import { enviarARevisionCore, guardarBorradorCore, programarCore, publicarCore } from "@/lib/article-ops";
+import { enviarARevisionCore, guardarBorradorCore, programarCore, publicarCore, requisitosDePublicacion } from "@/lib/article-ops";
 import { completarFichaCore } from "@/lib/ai/consejo-ia";
 import { briefParaPrompt, evaluarFicha, fichaParaPrompt, sanearConfig, sanearFicha, tocaRedactar, type EstadoCasilla } from "@/lib/consejo/plan";
 
@@ -111,7 +111,7 @@ async function redactar(c: Casilla, plan: Plan): Promise<void> {
     const [u] = await db.select({ role: users.role }).from(users).where(eq(users.id, userId)).limit(1);
     const puede = !!u && canPublish(u.role) && (await tienePermiso(userId, u.role, "publicar"));
     const control = pasaControl(d);
-    if (puede && control.ok) {
+    if (puede && control.ok && (await requisitosDePublicacion(g.id)).ok) {
       // Si la hora ya pasó (el plan se activó tarde), sale en un par de minutos.
       const cuando = c.publishAt.getTime() > Date.now() + 60_000 ? c.publishAt : new Date(Date.now() + 120_000);
       await programarCore(g.id, cuando.toISOString());
@@ -185,12 +185,17 @@ export async function sincronizarCasillas(planId?: string): Promise<void> {
 export async function aprobarCasilla(slotId: string): Promise<{ ok: boolean; message: string }> {
   const [c] = await db.select().from(editorialSlots).where(eq(editorialSlots.id, slotId)).limit(1);
   if (!c?.articleId) return { ok: false, message: "Esta casilla todavía no tiene borrador." };
-  if (c.publishAt.getTime() > Date.now() + 60_000) {
-    await programarCore(c.articleId, c.publishAt.toISOString());
-    await poner(c.id, "programada", { error: null });
-    return { ok: true, message: "Aprobada: se publicará a su hora." };
+  try {
+    if (c.publishAt.getTime() > Date.now() + 60_000) {
+      await programarCore(c.articleId, c.publishAt.toISOString());
+      await poner(c.id, "programada", { error: null });
+      return { ok: true, message: "Aprobada: se publicará a su hora." };
+    }
+    await publicarCore(c.articleId);
+    await poner(c.id, "publicada", { error: null });
+    return { ok: true, message: "Aprobada: como su hora ya pasó, se publicó ahora." };
+  } catch (err) {
+    // No cumple imagen o SEO: la casilla sigue en revisión hasta que se corrija la nota.
+    return { ok: false, message: err instanceof Error ? err.message : "No se pudo aprobar." };
   }
-  await publicarCore(c.articleId);
-  await poner(c.id, "publicada", { error: null });
-  return { ok: true, message: "Aprobada: como su hora ya pasó, se publicó ahora." };
 }
