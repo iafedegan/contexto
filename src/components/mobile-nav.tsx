@@ -222,6 +222,26 @@ export function MobileNav({
       {bar}
       {/* En el celular el menú y la lupa viven en la barra de abajo y esta queda con solo el nombre: el modo claro/oscuro va aquí, a la vista. */}
 
+      {/* Masthead (Esmeralda): la barra verde FEDEGÁN de la web, con la casa y las secciones que se deslizan de lado. */}
+      {look === "masthead" && (
+        <nav
+          aria-label={t(locale, "nav.sections")}
+          className="cg-navmovil flex items-center gap-1 overflow-x-auto px-2 py-1.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
+          <Link href={localePath(locale, "/")} aria-label={name} className="grid size-9 shrink-0 place-items-center text-[#0d2318]">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden>
+              <path d="M12 3 2 12h3v8h5v-5h4v5h5v-8h3z" />
+            </svg>
+          </Link>
+          {nav
+            .filter((n) => n.href.replace(/\/+$/, "") !== localePath(locale, "/").replace(/\/+$/, ""))
+            .map((n) => (
+              <Link key={n.href} href={n.href} className="shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-[0.72rem] font-semibold uppercase tracking-[0.06em] text-[#0d2318] active:bg-white/40">
+                {n.label}
+              </Link>
+            ))}
+        </nav>
+      )}
       {/* Cinta de seis colores, como en la web. */}
       <div aria-hidden className="cg-cinta-cabecera flex h-[2px] w-full">
         {["#d9a41a", "#f7eea1", "#138984", "#003e41", "#138984", "#d9a41a"].map((c) => (

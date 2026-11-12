@@ -437,7 +437,7 @@ export function EsmeraldaTemplate({
         {/* En pantallas anchas es la columna izquierda (la principal crece hasta igualar a la derecha; debajo, las destacadas). En el celular
             la columna se «disuelve» (contents) para poder ordenar: principal, columna derecha y, al final, las destacadas. */}
         <div className="flex min-w-0 flex-col gap-5 max-xl:contents xl:self-stretch">
-          <div className="min-w-0 max-xl:order-1 [&>*]:h-full">{wrap(lead, <ArticleCard a={lead} locale={locale} variant="cine" priority={interactive} />)}</div>
+          <div className="min-w-0 max-xl:order-1 xl:flex-1 [&>*]:h-full">{wrap(lead, <ArticleCard a={lead} locale={locale} variant="cine" priority={interactive} />)}</div>
         </div>
         <aside className="flex min-w-0 flex-col gap-4 max-xl:order-2">
           {/* La columna destacada (opinión) va primero en la columna derecha, antes de «Lo último», en el celular y en el computador. */}

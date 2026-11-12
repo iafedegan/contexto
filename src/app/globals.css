@@ -2511,8 +2511,8 @@ nav.cg-navfed .lx-link {
   padding: 0.5rem 0.7rem;
   border-radius: 9999px;
   font-size: 0.74rem;
-  font-weight: 800;
-  letter-spacing: 0.1em;
+  font-weight: 600;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   font-family: Arial, "Helvetica Neue", Helvetica, sans-serif !important;
   color: #0d2318 !important;
@@ -2527,7 +2527,7 @@ nav.cg-navfed div:has(> [aria-expanded="true"]) > .lx-link { background: rgba(25
 nav.cg-navfed .lx-navrail { column-gap: 0.1rem !important; padding: 0 1rem !important; min-height: 50px; align-items: center; }
 nav.cg-navfed .lx-link + button[aria-haspopup="menu"] { margin-left: -1.25rem; position: relative; opacity: 1; color: #0d2318; }
 nav.cg-navfed .lx-link:has(+ button[aria-haspopup="menu"]) { padding-right: 1.5rem; }
-nav.cg-navfed .lx-navrail > div > button[aria-haspopup="menu"]:not(.lx-link + *) { padding: 0.5rem 0.7rem; border-radius: 9999px; font-size: 0.74rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; font-family: Arial, "Helvetica Neue", Helvetica, sans-serif; color: #0d2318; }
+nav.cg-navfed .lx-navrail > div > button[aria-haspopup="menu"]:not(.lx-link + *) { padding: 0.5rem 0.7rem; border-radius: 9999px; font-size: 0.74rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; font-family: Arial, "Helvetica Neue", Helvetica, sans-serif; color: #0d2318; }
 .lx-iconos button, .lx-iconos a { border-radius: 9999px; background: rgba(255, 255, 255, 0.12); }
 .lx-iconos button:hover, .lx-iconos a:hover { background: rgba(255, 255, 255, 0.24); }
 /* Submenús: verde de FEDEGÁN, letra oscura, esquinas redondeadas. */
@@ -2732,4 +2732,11 @@ nav.cg-navfed div[role="menu"][class*="overflow-y-auto"] {
 .lead-cine-izq { background: linear-gradient(to top, rgba(2, 22, 20, 0.92) 0%, rgba(2, 22, 20, 0.6) 45%, rgba(2, 22, 20, 0) 80%); }
 @media (min-width: 640px) {
   .lead-cine-izq { background: linear-gradient(to right, rgba(2, 22, 20, 0.9) 0%, rgba(2, 22, 20, 0.62) 38%, rgba(2, 22, 20, 0) 72%); }
+}
+
+/* Barra de secciones del celular (Esmeralda): el mismo verde de FEDEGÁN y filetes dorados que la del computador. */
+nav.cg-navmovil {
+  background:
+    linear-gradient(90deg, transparent 0%, #d9a41a 15%, #f7eea1 50%, #d9a41a 85%, transparent 100%) top / 100% 2px no-repeat,
+    linear-gradient(180deg, #86d058 0%, #72bf44 100%) #72bf44 !important;
 }
