@@ -72,7 +72,7 @@ function Banda({ banda, indice, locale }: { banda: BandaDeSeccion; indice: numbe
       style={blanca ? VARIABLES_BLANCO : undefined}
     >
       <div className="shell">
-        <header className="flex items-end justify-between gap-4 border-b border-[var(--border)] pb-4">
+        <header className="cg-scroll-titulo flex items-end justify-between gap-4 border-b border-[var(--border)] pb-4">
           <h2 id={id} className="lx-display text-3xl italic leading-none sm:text-4xl" style={{ color: acento }}>{banda.nombre}</h2>
           <Link href={localePath(locale, `/${banda.slug}`)} className="lx-kicker shrink-0 text-xs hover:underline" style={{ color: acento }}>
             {locale === "en" ? "See all" : "Ver todo"} →
@@ -80,8 +80,8 @@ function Banda({ banda, indice, locale }: { banda: BandaDeSeccion; indice: numbe
         </header>
 
         {principal && (
-          <article className="group mt-7 grid gap-6 lg:grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)] lg:items-stretch lg:gap-10">
-            <Link href={hrefNota(locale, principal)} className="block" tabIndex={-1} aria-hidden>
+          <article className="cg-scroll-sube group mt-7 grid gap-6 lg:grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)] lg:items-stretch lg:gap-10">
+            <Link href={hrefNota(locale, principal)} className="cg-scroll-foto block" tabIndex={-1} aria-hidden>
               <Foto a={principal} grande className="aspect-[16/10]" />
             </Link>
             <div className="flex min-w-0 flex-col justify-between gap-5">
@@ -97,7 +97,7 @@ function Banda({ banda, indice, locale }: { banda: BandaDeSeccion; indice: numbe
         {tarjetas.length > 0 && (
           <div className={`mt-9 grid gap-x-6 gap-y-8 ${tarjetas.length === 1 ? "" : tarjetas.length === 2 ? "sm:grid-cols-2" : "sm:grid-cols-3"}`}>
             {tarjetas.map((a) => (
-              <article key={a.slug} className="group flex min-w-0 flex-col gap-3">
+              <article key={a.slug} className="cg-scroll-sube group flex min-w-0 flex-col gap-3">
                 <Link href={hrefNota(locale, a)} className="entry-link flex flex-1 flex-col gap-3">
                   <Foto a={a} className="aspect-[3/2]" />
                   <h3 className="lx-display text-lg font-semibold leading-snug group-hover:underline">{a.title}</h3>

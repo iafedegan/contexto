@@ -2630,3 +2630,52 @@ nav.cg-navfed div[role="menu"][class*="overflow-y-auto"] {
 @media (hover: hover) {
   .cg-columna:hover { border-color: var(--accent); box-shadow: var(--shadow-hover); }
 }
+
+/* ====== Efecto al hacer scroll en las franjas por sección de la portada (components/home/secciones-por-bandas.tsx) ======
+   Ligado al desplazamiento (animation-timeline: view()): cada pieza termina de aparecer cuando entra en pantalla, así que al subir
+   la página las notas «suben» a su sitio y al volver atrás se deshacen. El título de la sección entra desde la izquierda, la foto
+   principal se abre desde un recorte con un leve zoom y las tarjetas suben una tras otra. Navegadores sin soporte y quien pide menos
+   movimiento ven todo quieto. Las franjas están bajo el pliegue: no afecta el primer pintado. */
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    .cg-scroll-titulo {
+      animation: cg-scroll-titulo linear both;
+      animation-timeline: view();
+      animation-range: entry 0% cover 25%;
+    }
+    .cg-scroll-sube {
+      animation: cg-scroll-sube linear both;
+      animation-timeline: view();
+      animation-range: entry 0% cover 30%;
+    }
+    /* Las tarjetas de una fila no llegan juntas: cada una un poco después que la anterior. */
+    .cg-scroll-sube:nth-child(2) { animation-range: entry 10% cover 36%; }
+    .cg-scroll-sube:nth-child(3) { animation-range: entry 20% cover 42%; }
+    .cg-scroll-foto > * {
+      animation: cg-scroll-foto linear both;
+      animation-timeline: view();
+      animation-range: entry 0% cover 40%;
+    }
+    .cg-scroll-foto img {
+      animation: cg-scroll-zoom linear both;
+      animation-timeline: view();
+      animation-range: entry 0% exit 0%;
+    }
+  }
+}
+@keyframes cg-scroll-titulo {
+  from { opacity: 0; transform: translateX(-48px); letter-spacing: 0.08em; }
+  to { opacity: 1; transform: none; }
+}
+@keyframes cg-scroll-sube {
+  from { opacity: 0; transform: translateY(70px) scale(0.96); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes cg-scroll-foto {
+  from { clip-path: inset(14% 10% 14% 10% round 1rem); }
+  to { clip-path: inset(0 0 0 0 round 0); }
+}
+@keyframes cg-scroll-zoom {
+  from { transform: scale(1.18); }
+  to { transform: scale(1); }
+}
