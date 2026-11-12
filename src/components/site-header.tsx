@@ -188,7 +188,7 @@ function MastheadHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extr
 
       <nav data-el="h-menu"
         aria-label={t(locale, "nav.sections")}
-        className="sticky top-0 z-40 border-y border-[var(--border)] bg-[var(--nav-bg)] sm:static"
+        className="cg-navfed sticky top-0 z-40 border-y border-[var(--border)] bg-[var(--nav-bg)] sm:static"
         // Verde de FEDEGÁN (el del menú de fedegan.org.co) en los dos modos, con texto oscuro para que se lea.
         style={{ "--nav-bg": "#72bf44", "--fg": "#0d2318", "--fg-muted": "#1f3a28", "--border": "rgba(13,35,24,0.22)" } as React.CSSProperties}
       >
@@ -198,7 +198,7 @@ function MastheadHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extr
           ))}
           <MoreMenu locale={locale} extra={extra} />
           {/* Idioma, modo, radio e instalar: pequeños y discretos, al final de la barra y no en una franja propia. */}
-          <span className="flex items-center gap-0.5 border-l border-[var(--border)] pl-3 text-[var(--fg-muted)] opacity-80 transition-opacity hover:opacity-100 focus-within:opacity-100">
+          <span className="lx-iconos flex items-center gap-1.5 pl-3 text-[#0d2318]">
             <LocaleSwitch locale={locale} compacto />
             <ThemeToggle locale={locale} className="!size-8 pointer-coarse:!size-11" />
             {identity.radioStreamUrl && <RadioPlayer src={identity.radioStreamUrl} locale={locale} />}
