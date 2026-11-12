@@ -77,7 +77,7 @@ export function BentoTile({
       onMouseMove={handleMove}
       onMouseLeave={handleLeave}
       style={{ rotateX, rotateY, transformPerspective: 900 }}
-      className={cn("group relative", tilt === "left" && "sm:-rotate-1", tilt === "right" && "sm:rotate-1", className)}
+      className={cn("cg-reveal group relative", tilt === "left" && "sm:-rotate-1", tilt === "right" && "sm:rotate-1", className)}
     >
       <Wrapper
         {...wrapperProps}
@@ -108,14 +108,16 @@ export function BentoTile({
         )}
 
         {/* El borde superior reserva el sitio de la etiqueta: las filas crecen con el contenido (minmax) y el texto no la pisa. */}
-        <div className={cn("relative z-[1] p-3 pt-11 sm:p-4 sm:pt-14", size === "xl" && "sm:p-6 sm:pt-16")}>
+        {/* En las fichas grandes (con resumen) el texto va en una tarjeta de vidrio: titular pequeño en reposo; al pasar el puntero crece y sale el resumen. */}
+        <div className={cn("relative z-[1] p-3 pt-11 sm:p-4 sm:pt-14", size === "xl" && "sm:p-6 sm:pt-16", showDek && "m-2 rounded-2xl border border-white/10 bg-[rgba(3,12,8,0.62)] pt-3 backdrop-blur-md max-sm:backdrop-blur-none sm:m-3 sm:pt-4")}>
           <h3
             className={cn(
+              showDek && "lead-titulo",
               "font-[family-name:var(--font-sans)] font-extrabold tracking-tight text-white",
               // Un titular larguísimo se recorta con puntos suspensivos en vez de estirar la ficha sin límite.
               size === "xl" ? "line-clamp-5" : size === "lg" ? "line-clamp-4" : "line-clamp-3 sm:line-clamp-4",
             )}
-            style={titleStyle}
+            style={showDek ? { ...titleStyle, fontSize: undefined, ["--lead-fs" as string]: titleStyle.fontSize } : titleStyle}
           >
             {a.title}
           </h3>

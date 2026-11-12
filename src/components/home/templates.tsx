@@ -670,19 +670,24 @@ export function GremialTemplate({
           /* Foto, degradado y texto comparten UNA celda: la tarjeta mide lo que mida lo
              mayor entre el 16:9 (separador) y el texto. Con alto fijo y el texto anclado
              abajo, un titular largo se salía por arriba y quedaba recortado. */
-          <GremialCardLink a={lead} locale={locale} interactive={interactive} className="group relative grid min-h-[21rem] overflow-hidden rounded-[var(--radius-lg)] bg-[#0b0d10] sm:min-h-0 [&>*]:col-start-1 [&>*]:row-start-1">
+          <GremialCardLink a={lead} locale={locale} interactive={interactive} className="cg-reveal group relative grid min-h-[21rem] overflow-hidden rounded-[var(--radius-lg)] bg-[#0b0d10] sm:min-h-0 [&>*]:col-start-1 [&>*]:row-start-1">
             <div className="absolute inset-0">
               <GremialThumb a={lead} sizes="(min-width: 1024px) 60vw, 100vw" priority={interactive} />
             </div>
             <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent" />
             <div aria-hidden className="hidden w-full sm:block sm:aspect-[16/9]" />
-            <div className="relative self-end p-5 sm:p-8">
+            {/* Tarjeta de vidrio: titular pequeño en reposo; al pasar el puntero crece y salen el resumen y el botón. */}
+            <div className="relative m-3 max-w-[46rem] self-end justify-self-start rounded-[var(--radius-lg)] border border-white/10 bg-[rgba(3,12,8,0.7)] p-4 shadow-[0_12px_36px_rgba(0,0,0,0.35)] backdrop-blur-md backdrop-saturate-150 max-sm:backdrop-blur-none sm:m-5 sm:p-6">
               <GremialTag a={lead} locale={locale} />
-              <h1 className="lx-display mt-3 line-clamp-4 text-2xl font-bold leading-tight text-white sm:line-clamp-none sm:text-3xl md:text-4xl" style={homeStyleTitleCss(lead.homeStyle, 36, 1.25)}>{lead.title}</h1>
-              <p className="mt-3 hidden max-w-2xl line-clamp-2 text-sm text-white/85 sm:block sm:text-base">{lead.excerpt}</p>
-              <span className="mt-4 inline-flex items-center gap-2 rounded-[var(--radius)] bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--accent-fg)] transition group-hover:opacity-90">
-                {t(locale, "home.readNews")} →
-              </span>
+              <h1 className="lead-titulo lx-display mt-3 font-bold leading-tight text-white" style={{ ...homeStyleTitleCss(lead.homeStyle, 36, 1.25), fontSize: undefined, ["--lead-fs" as string]: homeStyleTitleCss(lead.homeStyle, 36, 1.25).fontSize }}>{lead.title}</h1>
+              <div className="lead-detalle">
+                <div className="min-h-0 overflow-hidden">
+                  <p className="mt-3 hidden max-w-2xl line-clamp-2 text-sm text-white/85 sm:block sm:text-base">{lead.excerpt}</p>
+                  <span className="mt-4 inline-flex items-center gap-2 rounded-[var(--radius)] bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--accent-fg)] transition group-hover:opacity-90">
+                    {t(locale, "home.readNews")} →
+                  </span>
+                </div>
+              </div>
             </div>
           </GremialCardLink>,
         )}

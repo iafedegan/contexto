@@ -908,7 +908,9 @@ a {
     transition: grid-template-rows 0.4s var(--ease-lux), opacity 0.3s ease;
   }
   .lx-card:hover .lead-detalle,
-  .lx-card:focus-within .lead-detalle {
+  .lx-card:focus-within .lead-detalle,
+  .cg-reveal:hover .lead-detalle,
+  .cg-reveal:focus-within .lead-detalle {
     grid-template-rows: 1fr;
     opacity: 1;
   }
@@ -925,7 +927,9 @@ a {
     transition: font-size 0.4s var(--ease-lux);
   }
   .lx-card:hover .lead-titulo,
-  .lx-card:focus-within .lead-titulo {
+  .lx-card:focus-within .lead-titulo,
+  .cg-reveal:hover .lead-titulo,
+  .cg-reveal:focus-within .lead-titulo {
     font-size: var(--lead-fs);
   }
 }

@@ -110,18 +110,22 @@ export function FormatoDeSeccion({ formato, items, locale }: { formato: FormatoS
   // Especiales: dossier.
   return (
     <div className="flex flex-col gap-10" data-formato="especiales">
-      <article className="relative isolate overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border)]">
-        <Link href={hrefNota(locale, lead)} className="block">
+      <article className="cg-reveal group relative isolate overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border)]">
+        <Link href={hrefNota(locale, lead)} className="block" aria-label={lead.title} tabIndex={-1}>
           <CardMedia src={lead.coverImageUrl} alt={lead.coverImageAlt ?? lead.title} seed={lead.slug} label={lead.categoryName} ratio="aspect-[4/5] sm:aspect-[21/9]" priority sizes="100vw" />
         </Link>
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
-        <div className="absolute inset-x-0 bottom-0 p-6 text-white sm:p-10">
-          <p className="lx-kicker inline-flex items-center gap-1.5 rounded-full bg-black/55 px-3 py-1 text-white backdrop-blur-sm"><Sparkles size={13} aria-hidden className="text-[var(--accent)]" /> Especial</p>
-          <h2 className="lx-display mt-2 max-w-4xl text-3xl font-semibold leading-[1.08] sm:text-5xl">
-            <Link href={hrefNota(locale, lead)} className="pointer-events-auto hover:text-[var(--accent)]">{lead.title}</Link>
+        {/* Tarjeta de vidrio: en reposo solo la etiqueta y un titular pequeño (se aprecia la foto); al pasar el puntero crece el titular y salen el resumen y la firma. */}
+        <div className="absolute bottom-0 left-0 m-3 max-w-[46rem] rounded-[var(--radius-lg)] border border-white/10 bg-[rgba(3,12,8,0.7)] p-4 text-white shadow-[0_12px_36px_rgba(0,0,0,0.35)] backdrop-blur-md backdrop-saturate-150 max-sm:backdrop-blur-none sm:m-6 sm:p-6">
+          <p className="lx-kicker inline-flex items-center gap-1.5 rounded-full bg-black/55 px-3 py-1 text-white"><Sparkles size={13} aria-hidden className="text-[var(--accent)]" /> Especial</p>
+          <h2 className="lead-titulo lx-display mt-2 font-semibold leading-[1.08]" style={{ ["--lead-fs" as string]: "clamp(1.75rem, 3.4vw, 3rem)" }}>
+            <Link href={hrefNota(locale, lead)} className="hover:text-[var(--accent)]">{lead.title}</Link>
           </h2>
-          {lead.excerpt && <p className="mt-3 hidden max-w-2xl text-base leading-relaxed text-white/80 sm:block">{lead.excerpt}</p>}
-          <p className="mt-3 text-xs text-white/70">{meta(lead)}</p>
+          <div className="lead-detalle">
+            <div className="min-h-0 overflow-hidden">
+              {lead.excerpt && <p className="mt-3 hidden max-w-2xl text-base leading-relaxed text-white/85 sm:block">{lead.excerpt}</p>}
+              <p className="mt-3 text-xs text-white/75">{meta(lead)}</p>
+            </div>
+          </div>
         </div>
       </article>
       {resto.length > 0 && (
