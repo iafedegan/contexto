@@ -2707,3 +2707,12 @@ nav.cg-navfed div[role="menu"][class*="overflow-y-auto"] {
 @media (prefers-reduced-motion: reduce) {
   .cg-mastil, .cg-mastil-interior, .cg-escudo { transition: none !important; }
 }
+
+/* Hueco bajo las destacadas (portada Esmeralda): en pantallas anchas el carrusel se estira a la altura que le deja la columna derecha. */
+@media (min-width: 1280px) {
+  .cg-hueco .cg-car { max-width: none; margin: 0; height: 100%; display: flex; flex-direction: column; }
+  .cg-hueco .cg-car-marco { flex: 1; min-height: 0; }
+  .cg-hueco .cg-car-pista, .cg-hueco .cg-car-item, .cg-hueco .cg-car-tarjeta { height: 100%; }
+  .cg-hueco .cg-car-img { height: 100%; aspect-ratio: auto; }
+  .cg-hueco .cg-car-img img { aspect-ratio: auto !important; }
+}

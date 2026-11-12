@@ -83,7 +83,15 @@ async function HomePage({ locale, portadaBorrador }: { locale: Locale; portadaBo
   // Portada propia del inicio (página «inicio»): publicada, o el borrador en la vista previa del constructor.
   const inicioPropio = portadaBorrador ?? (await getPaginaPublicada(SLUG_INICIO_SITIO).catch(() => null))?.contenido ?? null;
   // Cada fila de la portada propia sale arriba de las notas, tras la principal o abajo, según lo que se eligió en el constructor.
-  const filasInicio = (lugar: "arriba" | "tras-principal" | "abajo") => (inicioPropio?.filas ?? []).filter((f) => (f.lugar ?? "arriba") === lugar);
+  // Esmeralda: las filas del inicio que son solo carruseles (p. ej. TV y fotos de Fedegán) suben al hueco bajo las destacadas, de a dos, en vez de
+  // salir donde se pusieron en el constructor.
+  const esFilaDeCarruseles = (f: ContenidoPagina["filas"][number]) => {
+    const els = f.celdas.flat();
+    return els.length > 0 && els.every((e) => e.tipo === "carrusel");
+  };
+  const enHuecoCarruseles = !["revista", "compacto", "vanguardia", "clasico", "gremial"].includes(body);
+  const filasCarrusel = enHuecoCarruseles ? (inicioPropio?.filas ?? []).filter(esFilaDeCarruseles) : [];
+  const filasInicio = (lugar: "arriba" | "tras-principal" | "abajo") => (inicioPropio?.filas ?? []).filter((f) => (f.lugar ?? "arriba") === lugar && !filasCarrusel.includes(f));
   const bloqueInicio = (lugar: "tras-principal" | "abajo", clase: string) =>
     filasInicio(lugar).length > 0 ? (
       <article className={`${clase} flex flex-col gap-8`}>
@@ -160,7 +168,8 @@ async function HomePage({ locale, portadaBorrador }: { locale: Locale; portadaBo
   // Esmeralda sin carrusel: la columna va arriba de la columna derecha («Lo último») también en el computador, y la barra lateral ya no la repite.
   const esEsmeralda = !["revista", "compacto", "vanguardia", "clasico", "gremial"].includes(body);
   // Esmeralda: todos los carruseles activos van en el hueco que queda bajo las dos destacadas, de a dos y compactos (en vez de a todo el ancho).
-  const hueco = esEsmeralda ? nodosCarrusel.filter(Boolean) : [];
+  // Si el inicio propio trae filas de carruseles, esas van al hueco (otras noticias, no las del banner); si no, el carrusel de notas de la portada.
+  const hueco = !esEsmeralda ? [] : filasCarrusel.length ? [<PaginaVista key="car" contenido={{ filas: filasCarrusel }} notas={notasInicioPropio} />] : nodosCarrusel.filter(Boolean);
   const carrusel = esEsmeralda ? null : carruselPropio;
   // ¿Hay columna que mostrar? (lectura cacheada; la misma que hace la tarjeta). Esmeralda reparte distinto la apertura según haya o no.
   const hayColumna = Boolean(await getUltimaColumnaLafaurie().catch(() => null));
