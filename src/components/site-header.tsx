@@ -197,7 +197,7 @@ function MastheadHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extr
         // Verde de FEDEGÁN (el del menú de fedegan.org.co) en los dos modos, con texto oscuro para que se lea.
         style={{ "--nav-bg": "#72bf44", "--fg": "#0d2318", "--fg-muted": "#1f3a28", "--border": "rgba(13,35,24,0.22)" } as React.CSSProperties}
       >
-        <div className="lx-navrail mx-auto max-w-[96rem] items-center justify-start gap-x-5 gap-y-2 px-6 py-2.5 text-[0.72rem] font-bold uppercase tracking-[0.16em] sm:justify-center xl:gap-x-6">
+        <div className="lx-navrail mx-auto max-w-[125rem] items-center justify-start gap-x-5 gap-y-2 px-6 py-2.5 text-[0.72rem] font-bold uppercase tracking-[0.16em] sm:justify-center xl:gap-x-6">
           <EnPortada locale={locale} donde="resto">
             {/* Escudo a la izquierda (en las secciones el logo grande se esconde y el cintillo de cifras queda arriba). */}
             <Link href={localePath(locale, "/")} aria-label={identity.name} className="mr-3 flex size-11 items-center justify-center rounded-full bg-[#0d2318] p-2 ring-2 ring-[#b8892f]/70">

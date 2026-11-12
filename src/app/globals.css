@@ -482,7 +482,8 @@ html:not([data-fuentes]) {
   --brand-fg: var(--accent-fg);
   --font-sans: var(--font-ui);
   --font-serif: var(--font-body);
-  --maxw: min(96rem, 94vw);
+  /* Casi todo el ancho de la pantalla (hasta 2000 px en monitores enormes, donde un renglón tan largo ya no se lee). */
+  --maxw: min(125rem, 100%);
 }
 
 
@@ -1301,7 +1302,7 @@ a {
   width: 100%;
   max-width: var(--maxw);
   margin-inline: auto;
-  padding-inline: clamp(1rem, 4vw, 2.5rem);
+  padding-inline: clamp(1rem, 2.2vw, 2.5rem);
 }
 
 .kicker {
