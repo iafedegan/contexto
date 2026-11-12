@@ -67,6 +67,23 @@ export function LogoContexto({ id, titulo = "CONtexto Ganadero Media", className
       <Emblema fill={fill} />
       <path d={ONTEXTO} fill={fill} />
       <path d={GANADERO_MEDIA} fill={fill} />
+      {/* Brillo: una franja de luz inclinada que recorre el logo, recortada a sus letras (se ve solo sobre el dorado). Ver `.logo-brillo` en globals.css. */}
+      <defs>
+        <clipPath id={`${g}-forma`}>
+          <path d={C} />
+          <path d={PLAY} />
+          <path d={ONTEXTO} />
+          <path d={GANADERO_MEDIA} />
+        </clipPath>
+        <linearGradient id={`${g}-luz`} x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stopColor="#fff" stopOpacity="0" />
+          <stop offset="0.5" stopColor="#fff" stopOpacity="0.85" />
+          <stop offset="1" stopColor="#fff" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <g clipPath={`url(#${g}-forma)`} aria-hidden>
+        <g transform="skewX(-20)"><rect className="logo-brillo" x="40" y="40" width="130" height="340" fill={`url(#${g}-luz)`} /></g>
+      </g>
       {conAnios && (
         <>
           <path d={ANIOS} fill="var(--logo-medio, #c9a24a)" />

@@ -2534,3 +2534,11 @@ nav.cg-navfed [role="menu"] > div {
 }
 nav.cg-navfed [role="menu"] .lx-ui { letter-spacing: 0.01em; font-size: 0.9rem; font-weight: 500; }
 nav.cg-navfed .lx-link[aria-current] { color: #0d2318 !important; -webkit-text-fill-color: #0d2318 !important; background: rgba(255, 255, 255, 0.4); }
+
+/* Brillo que recorre el logo (components/logo-contexto.tsx): una pasada de luz cada ~5 s. Quien pide menos movimiento no lo ve. */
+.logo-brillo { animation: logo-brillo 5s ease-in-out infinite; }
+@keyframes logo-brillo {
+  0% { transform: translateX(0); }
+  32%, 100% { transform: translateX(1150px); }
+}
+@media (prefers-reduced-motion: reduce) { .logo-brillo { animation: none; opacity: 0; } }
