@@ -253,11 +253,16 @@ export function SectionGrid({ theme, items, locale }: { theme: string; items: Ar
       return (
         <div className="flex flex-col gap-14">
           <section className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
-            <ArticleCard a={lead} locale={locale} variant="lead" priority />
+            {/* Efecto al hacer scroll (globals.css, «cg-scroll-*»): las notas suben a su sitio a medida que entran en pantalla. */}
+            <div className="cg-scroll-foto min-w-0">
+              <ArticleCard a={lead} locale={locale} variant="lead" priority />
+            </div>
             {rail.length > 0 && (
               <div className="flex flex-col gap-5">
                 {rail.map((a, i) => (
-                  <ArticleCard key={a.slug} a={a} locale={locale} variant="rail" index={i} />
+                  <div key={a.slug} className="cg-scroll-sube">
+                    <ArticleCard a={a} locale={locale} variant="rail" index={i} />
+                  </div>
                 ))}
               </div>
             )}
@@ -267,7 +272,7 @@ export function SectionGrid({ theme, items, locale }: { theme: string; items: Ar
               {grid.map((a, i) => {
                 const ancha = anchaEnCelular(i, grid.length);
                 return (
-                  <div key={a.slug} className={ancha ? "max-sm:col-span-2" : undefined}>
+                  <div key={a.slug} className={`cg-scroll-sube ${ancha ? "max-sm:col-span-2" : ""}`}>
                     <ArticleCard a={a} locale={locale} variant="gold" index={i} compact={!ancha} />
                   </div>
                 );
@@ -281,7 +286,9 @@ export function SectionGrid({ theme, items, locale }: { theme: string; items: Ar
       return (
         <div className="grid grid-cols-1 gap-7 sm:grid-cols-2 lg:grid-cols-3">
           {items.map((a, i) => (
-            <ArticleCard key={a.slug} a={a} locale={locale} variant="copper" index={i} />
+            <div key={a.slug} className="cg-scroll-sube">
+              <ArticleCard a={a} locale={locale} variant="copper" index={i} />
+            </div>
           ))}
         </div>
       );
