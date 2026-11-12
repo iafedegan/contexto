@@ -8,7 +8,7 @@ import { DEFAULT_LOCALE, INTL_LOCALE, categoryLabel, localePath, type Locale } f
 import { hrefNota } from "@/lib/ruta-nota";
 
 // Variantes visuales de la tarjeta de nota.
-export type CardVariant = "lead" | "gold" | "copper" | "pearl" | "rail" | "cine" | "destacada" | "ultimo";
+export type CardVariant = "lead" | "gold" | "copper" | "pearl" | "rail" | "cine" | "destacada" | "ultimo" | "mosaico" | "leido";
 
 /**
  * Tamaño base del titular por variante, en px. El estilo por tarjeta fijado en
@@ -25,6 +25,8 @@ const TITLE_PX: Record<CardVariant, number> = {
   cine: 44,
   destacada: 18,
   ultimo: 17,
+  mosaico: 22,
+  leido: 16,
 };
 
 /** Estilo resuelto de una tarjeta: titular, imagen y densidad del bloque. */
@@ -79,6 +81,10 @@ export function ArticleCard({
       return <DestacadaCard a={a} locale={locale} />;
     case "ultimo":
       return <UltimoCard a={a} index={index} locale={locale} />;
+    case "mosaico":
+      return <MosaicoCard a={a} locale={locale} />;
+    case "leido":
+      return <LeidoCard a={a} index={index} locale={locale} />;
     case "copper":
       return <CopperCard a={a} index={index} locale={locale} />;
     case "pearl":
@@ -285,9 +291,10 @@ function CineCard({ a, priority, locale }: { a: ArticleListItem; priority?: bool
             </p>
           )}
           <span className={`mt-4 flex items-center gap-4 md:mt-5 ${st.textDerecha ? "flex-row-reverse" : ""}`}>
-            {/* La flecha es un adorno: toda la tarjeta ya es el enlace del titular. */}
-            <span aria-hidden className="grid size-10 shrink-0 place-items-center rounded-full bg-[var(--accent)] text-lg text-[var(--accent-fg,#0b1a12)] transition-transform duration-500 group-hover:translate-x-1">
-              →
+            {/* El botón es un adorno: toda la tarjeta ya es el enlace del titular. */}
+            <span aria-hidden className="inline-flex items-center gap-2.5 rounded-full border border-[var(--accent)] px-5 py-2.5 text-[0.95rem] font-semibold text-white transition-colors duration-300 group-hover:bg-[var(--accent)] group-hover:text-[var(--accent-fg,#0b1a12)]">
+              {locale === "en" ? "Read full story" : "Leer nota completa"}
+              <span className="transition-transform duration-500 group-hover:translate-x-1">→</span>
             </span>
             {a.authorName && (
               <span className="lx-ui min-w-0 text-[0.8rem] leading-tight text-white/85">
@@ -357,6 +364,57 @@ function UltimoCard({ a, index, locale }: { a: ArticleListItem; index?: number; 
           <CardMedia src={a.coverImageUrl} alt="" seed={a.slug} label={a.categoryName ?? a.title} ratio="aspect-[4/3]" sizes="96px" />
         </span>
       )}
+    </article>
+  );
+}
+
+/* ------------------- Portada Esmeralda: tres notas bajo la apertura (mosaico) */
+/** Foto a toda la tarjeta con el velo oscuro abajo: sección en pastilla, titular y una flecha circular. */
+function MosaicoCard({ a, locale }: { a: ArticleListItem; locale: Locale }) {
+  const st = cardStyle(a, "mosaico");
+  return (
+    <article data-bs-root={a.slug} className="lx-card lx-reveal group relative grid h-full grid-cols-[minmax(0,1fr)] overflow-hidden [&>*]:col-start-1 [&>*]:row-start-1">
+      <div className="lx-shine pointer-events-none absolute inset-0 z-[3]" />
+      <Link href={hrefNota(locale, a)} className="block" aria-label={a.title} tabIndex={-1} style={st.imageBox}>
+        <CardMedia src={a.coverImageUrl} alt={a.coverImageAlt ?? a.title} seed={a.slug} label={a.categoryName ?? a.title} ratio="aspect-[16/11] h-full" sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw" />
+      </Link>
+      <div aria-hidden className="pointer-events-none z-[1] bg-gradient-to-t from-[rgba(2,22,20,0.94)] via-[rgba(2,22,20,0.42)] to-transparent" />
+      <div className="relative z-[4] flex items-end justify-between gap-3 self-end p-4 text-white sm:p-5">
+        <div className="flex min-w-0 flex-col items-start gap-2">
+          <Kicker a={a} locale={locale} className="whitespace-nowrap rounded-full bg-[var(--accent)] px-3 !text-[0.64rem] !tracking-[0.16em] text-[var(--accent-fg,#0b1a12)]" />
+          <h3 className="lx-display line-clamp-3 text-balance font-semibold leading-tight [text-shadow:0_2px_14px_rgba(0,0,0,0.5)]" style={{ ...st.title, color: st.title.color ?? "#ffffff" }}>
+            <Link href={hrefNota(locale, a)} className="after:absolute after:inset-0 after:z-[2]">
+              {a.title}
+            </Link>
+          </h3>
+        </div>
+        <span aria-hidden className="grid size-10 shrink-0 place-items-center rounded-full border border-white/70 text-lg transition-all duration-500 group-hover:translate-x-1 group-hover:border-[var(--accent)] group-hover:bg-[var(--accent)] group-hover:text-[var(--accent-fg,#0b1a12)]">
+          →
+        </span>
+      </div>
+    </article>
+  );
+}
+
+/* ------------------------------------ Portada Esmeralda: «Lo más leído» */
+/** Renglón compacto: número dorado, titular y miniatura. */
+function LeidoCard({ a, index, locale }: { a: ArticleListItem; index?: number; locale: Locale }) {
+  const st = cardStyle(a, "leido");
+  return (
+    <article data-bs-root={a.slug} className="group relative flex items-center gap-3.5 py-3">
+      {typeof index === "number" && (
+        <span aria-hidden className="lx-display w-8 shrink-0 text-[1.5rem] font-semibold leading-none text-[var(--accent)] [font-variant-numeric:lining-nums]">
+          {String(index + 1).padStart(2, "0")}
+        </span>
+      )}
+      <h3 className="lx-display line-clamp-3 min-w-0 flex-1 font-medium leading-snug" style={st.title}>
+        <Link href={hrefNota(locale, a)} className="transition-colors hover:text-[var(--link)] after:absolute after:inset-0 after:z-[2]">
+          {a.title}
+        </Link>
+      </h3>
+      <span className="lx-media block w-20 shrink-0 overflow-hidden rounded-[var(--radius)] ring-1 ring-[var(--border)] sm:w-24">
+        <CardMedia src={a.coverImageUrl} alt="" seed={a.slug} label={a.categoryName ?? a.title} ratio="aspect-[4/3]" sizes="96px" />
+      </span>
     </article>
   );
 }

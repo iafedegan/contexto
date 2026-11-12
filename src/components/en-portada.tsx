@@ -54,3 +54,20 @@ export function EscudoSecciones({ locale, children }: { locale: Locale; children
     </div>
   );
 }
+
+/** El botón de inicio de la barra verde (casa sobre crema): solo en la portada; en las secciones lo reemplaza el escudo. */
+export function BotonInicio({ locale, etiqueta }: { locale: Locale; etiqueta: string }) {
+  const esPortada = useEsPortada(locale);
+  if (!esPortada) return null;
+  return (
+    <a
+      href={localePath(locale, "/")}
+      aria-label={etiqueta}
+      className="mr-2 grid h-10 w-14 place-items-center rounded-lg bg-[#fbe9b0] text-[#003e41] shadow-sm transition-colors hover:bg-white"
+    >
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden>
+        <path d="M12 3 2 12h3v8h5v-5h4v5h5v-8h3z" />
+      </svg>
+    </a>
+  );
+}

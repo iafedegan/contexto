@@ -173,6 +173,7 @@ async function HomePage({ locale, portadaBorrador }: { locale: Locale; portadaBo
   const carrusel = esEsmeralda ? null : carruselPropio;
   // ¿Hay columna que mostrar? (lectura cacheada; la misma que hace la tarjeta). Esmeralda reparte distinto la apertura según haya o no.
   const hayColumna = Boolean(await getUltimaColumnaLafaurie().catch(() => null));
+  const masLeidas = esEsmeralda ? await getMostReadArticles(3).catch(() => []) : [];
   const columnaArriba = !carrusel && !["revista", "compacto", "vanguardia", "clasico", "gremial"].includes(body);
   const columnaMovil = (
     <div className={columnaArriba ? undefined : "lg:hidden"}>
@@ -257,7 +258,7 @@ async function HomePage({ locale, portadaBorrador }: { locale: Locale; portadaBo
           ) : body === "gremial" ? (
             <GremialTemplate {...props} trasPrincipal={trasPrincipal} />
           ) : (
-            <EsmeraldaTemplate {...props} trasPrincipal={trasPrincipal} conColumna={hayColumna} hueco={hueco.length ? hueco : undefined} lateral={<SiteSidebar locale={locale} columnaEnMovil={false} sinColumna={columnaArriba} />} />
+            <EsmeraldaTemplate {...props} trasPrincipal={trasPrincipal} conColumna={hayColumna} hueco={hueco.length ? hueco : undefined} masLeidas={masLeidas} lateral={<SiteSidebar locale={locale} columnaEnMovil={false} sinColumna={columnaArriba} />} />
           )}
           {!carrusel && sinSlot && <div className="mt-8">{columnaMovil}</div>}
 

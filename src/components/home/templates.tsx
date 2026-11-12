@@ -67,6 +67,8 @@ type TemplateProps = Slots &
     conColumna?: boolean;
     /** Barra lateral del sitio (solo Esmeralda): va junto a «Lo más reciente», no junto a la apertura, para que arriba haya dos columnas y no tres. */
     lateral?: React.ReactNode;
+    /** Solo Esmeralda: las notas más leídas (las tres primeras van en la columna derecha de la apertura). */
+    masLeidas?: ArticleListItem[];
     /**
      * Indicadores ya formateados para la cabecera de Gremial (el resto de
      * plantillas lo ignora). Van pre-formateados desde el servidor: este
@@ -392,9 +394,9 @@ export function EsmeraldaTemplate({
   layout,
   interactive = true,
   trasPrincipal,
-  conColumna = false,
   hueco,
   lateral,
+  masLeidas,
   locale = DEFAULT_LOCALE,
   builderSelected,
   builderOverIndex,
@@ -419,54 +421,55 @@ export function EsmeraldaTemplate({
       {node}
     </EditableCard>
   );
-  // La apertura reparte las cinco notas que siguen a la principal. Con la columna destacada a la derecha (que ya ocupa su alto), dos van
-  // como tarjetas apaisadas bajo la principal y tres en «Lo último»; sin ella, las cinco van en la lista. Así las dos columnas miden
-  // parecido y la foto principal, que se estira hasta igualarlas, no queda ni cuadrada ni con un hueco debajo.
+  // Apertura: la principal a la izquierda; a la derecha, la columna destacada y «Lo más leído». Debajo, tres notas en mosaico a todo el ancho.
   const base = [second, ...rail, ...river].filter((a): a is ArticleListItem => Boolean(a));
-  const hayColumna = conColumna && Boolean(trasPrincipal);
-  // Ya no van las dos tarjetas destacadas bajo la principal: ese espacio es para los carruseles.
-  const destacadas: ArticleListItem[] = [];
-  // Con columna: cuatro renglones en «Lo último» (01-04), que dejan el alto justo para el hueco de la izquierda; sin ella, la lista se alarga.
-  const ultimos = base.slice(destacadas.length, destacadas.length + (hayColumna ? 4 : 6));
-  const rio = base.slice(destacadas.length + ultimos.length);
+  const mosaico = base.slice(0, 3);
+  const colsRio = Number(layout.riverColumns) || 3;
+  const restoRio = base.slice(mosaico.length);
+  // La cuadrícula de abajo se recorta a filas completas.
+  const rio = restoRio.length > colsRio ? restoRio.slice(0, restoRio.length - (restoRio.length % colsRio)) : restoRio;
+  const leidas = (masLeidas ?? []).slice(0, 3);
 
   return (
     <div className="flex flex-col gap-12 sm:gap-20">
+      <div className="flex flex-col gap-5 sm:gap-6">
       <section className={`grid grid-cols-1 gap-7 sm:gap-8 xl:items-start xl:gap-0 ${ANCHO_PRINCIPAL[layout.anchoPrincipal] ?? ANCHO_PRINCIPAL.ancha}`}>
         {/* En pantallas anchas es la columna izquierda (la principal crece hasta igualar a la derecha; debajo, las destacadas). En el celular
             la columna se «disuelve» (contents) para poder ordenar: principal, columna derecha y, al final, las destacadas. */}
         <div className="flex min-w-0 flex-col gap-5 max-xl:contents xl:self-stretch xl:pr-8">
           <div className="min-w-0 max-xl:order-1 [&>*]:h-full">{wrap(lead, <ArticleCard a={lead} locale={locale} variant="cine" priority={interactive} />)}</div>
-          {destacadas.length > 0 && (
-            <div className="grid min-w-0 grid-cols-1 gap-4 max-xl:order-3 sm:grid-cols-2 sm:gap-5">
-              {destacadas.map((a) => wrap(a, <ArticleCard a={a} locale={locale} variant="destacada" />))}
-            </div>
-          )}
-          {hueco && hueco.length > 0 && (
-            // Los carruseles del hueco miden todos lo mismo (ver `.cg-hueco` en globals.css), así van parejos aunque vengan de fuentes distintas.
-            <div className={`cg-hueco grid min-w-0 grid-cols-1 content-start items-start gap-4 max-xl:order-4 sm:gap-5 ${hueco.length > 1 ? "sm:grid-cols-2" : ""}`}>
-              {hueco.map((n, i) => <div key={i} className="min-w-0">{n}</div>)}
-            </div>
-          )}
         </div>
         <aside className="flex min-w-0 flex-col gap-7 max-xl:order-2 xl:border-l xl:border-[var(--border)] xl:pl-8">
           {/* La columna destacada (opinión) va primero en la columna derecha, antes de «Lo último», en el celular y en el computador. */}
           {trasPrincipal && <div className="empty:hidden [&>div:empty]:hidden">{trasPrincipal}</div>}
-          <div className="flex flex-1 flex-col">
-            <header className="relative border-b border-[var(--border)] pb-3.5 after:absolute after:-bottom-px after:left-0 after:h-[3px] after:w-14 after:bg-[var(--accent)]">
-              <p className="lx-kicker flex items-center gap-2.5 text-[var(--accent)]">
-                <span aria-hidden className="cg-latido" />
-                {t(locale, "home.cover")}
-              </p>
-              <h2 className="lx-display mt-2 text-2xl font-semibold tracking-tight md:text-3xl">{t(locale, "home.latest")}</h2>
-            </header>
-            {/* La lista reparte el alto que sobre: los renglones quedan parejos hasta el pie de la foto principal. */}
-            <div className="cg-ultimos flex flex-1 flex-col justify-between">
-              {ultimos.map((a, i) => wrap(a, <ArticleCard a={a} locale={locale} variant="ultimo" index={i} />))}
+          {leidas.length > 0 && (
+            <div className="cg-leidas flex flex-1 flex-col">
+              <header className="relative border-b border-[var(--border)] pb-3 after:absolute after:-bottom-px after:left-0 after:h-[3px] after:w-14 after:bg-[var(--accent)]">
+                <h2 className="lx-kicker flex items-center gap-2.5 text-[var(--accent)]">
+                  <span aria-hidden className="cg-latido" />
+                  {locale === "en" ? "Most read" : "Lo más leído"}
+                </h2>
+              </header>
+              <div className="flex flex-1 flex-col justify-between divide-y divide-[var(--border)]">
+                {leidas.map((a, i) => wrap(a, <ArticleCard a={a} locale={locale} variant="leido" index={i} />))}
+              </div>
             </div>
-          </div>
+          )}
         </aside>
       </section>
+
+      {mosaico.length > 0 && (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-5">
+          {mosaico.map((a) => wrap(a, <ArticleCard a={a} locale={locale} variant="mosaico" />))}
+        </div>
+      )}
+      {hueco && hueco.length > 0 && (
+        // Los carruseles del hueco miden todos lo mismo (ver `.cg-hueco` en globals.css), así van parejos aunque vengan de fuentes distintas.
+        <div className={`cg-hueco grid min-w-0 grid-cols-1 content-start items-start gap-4 sm:gap-5 ${hueco.length > 1 ? "sm:grid-cols-2" : ""}`}>
+          {hueco.map((n, i) => <div key={i} className="min-w-0">{n}</div>)}
+        </div>
+      )}
+      </div>
 
 
       {/* La rejilla de abajo usa las MISMAS columnas que la apertura: la barra lateral cae justo bajo «Lo último», con su mismo filete. */}

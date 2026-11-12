@@ -14,8 +14,9 @@ import { RadioPlayer } from "@/components/radio-player";
 import { InstalarApp } from "@/components/instalar-app";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { StickyRail } from "@/components/sticky-rail";
-import { EscudoSecciones, MastilPortada } from "@/components/en-portada";
+import { BotonInicio, EscudoSecciones, MastilPortada } from "@/components/en-portada";
 import { cn } from "@/lib/utils";
+import { FacebookIcon, InstagramIcon, LinkedinIcon, YoutubeIcon } from "@/components/social-icons";
 
 // Elemento de la navegación: dirección y etiqueta.
 export type NavItem = { href: string; label: string; children?: NavItem[] };
@@ -165,7 +166,23 @@ function MastheadHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extr
 
       <MastilPortada locale={locale}>
       {/* Contenedor de tamaño propio: el nombre, el emblema y las líneas se escalan con su ancho y se ajustan juntos. */}
-      <div className="mx-auto max-w-7xl px-6 pb-5 pt-5 text-center md:pb-6 md:pt-7 [container-type:inline-size]">
+      <div className="mx-auto max-w-7xl px-6 pb-5 pt-3 text-center md:pb-6 md:pt-4 [container-type:inline-size]">
+        {/* Franja superior: la fecha a la izquierda y las redes a la derecha. */}
+        <div className="mb-3 flex items-center justify-between gap-4 text-[var(--fg-muted)]">
+          {identity.fecha !== false ? <span data-titulo-texto data-el="h-fecha" className="lx-ui text-[0.7rem] font-medium capitalize tracking-[0.06em]">{today}</span> : <span />}
+          <span className="flex items-center gap-3.5">
+            {[
+              { n: "YouTube", h: "https://www.youtube.com/@contextoganadero", I: YoutubeIcon },
+              { n: "Instagram", h: "https://www.instagram.com/contextoganadero", I: InstagramIcon },
+              { n: "Facebook", h: "https://www.facebook.com/contextoganadero", I: FacebookIcon },
+              { n: "LinkedIn", h: "https://www.linkedin.com/company/fedegan", I: LinkedinIcon },
+            ].map(({ n, h, I }) => (
+              <a key={n} href={h} target="_blank" rel="noopener noreferrer" aria-label={n} className="transition-colors hover:text-[var(--accent)]">
+                <I size={16} />
+              </a>
+            ))}
+          </span>
+        </div>
         {/* Logo a la izquierda y, a su lado, el nombre. `items-center` en ESTA fila: las líneas y el logo quedan en el centro vertical del título. */}
         <div className="flex items-center justify-center gap-6">
           <span data-titulo-linea className="hidden h-px flex-1 bg-gradient-to-r from-transparent to-[var(--border-strong)] md:block" />
@@ -178,7 +195,6 @@ function MastheadHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extr
         {/* Los 14 años ya van dentro del logo; debajo, el lema y la fecha. */}
         <span className="mt-1 flex flex-col items-center gap-y-0.5">
           {!identity.sinLema && <span data-titulo-texto data-el="h-lema" className="lx-kicker text-[var(--fg-muted)]">{identity.tagline || t(locale, "nav.tagline")}</span>}
-          {identity.fecha !== false && <span data-titulo-texto data-el="h-fecha" className="lx-ui text-[0.62rem] font-medium uppercase tracking-[0.18em] text-[var(--fg-muted)]/80">{today}</span>}
         </span>
       </div>
 
@@ -195,9 +211,10 @@ function MastheadHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extr
         aria-label={t(locale, "nav.sections")}
         className="cg-navfed sticky top-0 z-40 border-y border-[var(--border)] bg-[var(--nav-bg)] sm:static"
         // Turquesa #138984 del Manual de Identidad Visual en los dos modos, con texto blanco.
-        style={{ "--nav-bg": "#138984", "--fg": "#ffffff", "--fg-muted": "rgba(255,255,255,0.82)", "--border": "rgba(255,255,255,0.28)" } as React.CSSProperties}
+        style={{ "--fg": "#ffffff", "--fg-muted": "rgba(255,255,255,0.82)", "--border": "rgba(255,255,255,0.28)" } as React.CSSProperties}
       >
         <div className="lx-navrail mx-auto max-w-[125rem] items-center justify-start gap-x-5 gap-y-2 px-6 py-2.5 text-[0.72rem] font-bold uppercase tracking-[0.16em] sm:justify-center xl:gap-x-6">
+          <BotonInicio locale={locale} etiqueta={identity.name} />
           <EscudoSecciones locale={locale}>
             {/* Escudo a la izquierda (en las secciones el logo grande se esconde y el cintillo de cifras queda arriba). */}
             <Link href={localePath(locale, "/")} aria-label={identity.name} className="mr-3 flex size-11 items-center justify-center rounded-full bg-[#022327] p-2 ring-2 ring-[#d9a41a]/80">
