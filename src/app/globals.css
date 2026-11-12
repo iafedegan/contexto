@@ -2496,26 +2496,33 @@ body:has(.cg-cintillo-arriba) .cg-cinta-cabecera { display: none; }
 /* ====== Barra de secciones al estilo FEDEGÁN (portada): verde con degradado, letras anchas en negrita, «píldora» al pasar el puntero,
    iconos en círculos y submenús en verde oscuro con letra blanca. Solo afecta a `nav.cg-navfed` del encabezado de la portada. ====== */
 nav.cg-navfed {
-  background: linear-gradient(180deg, #86d058 0%, #72bf44 100%) !important;
+  /* Filete dorado arriba (3 px) y abajo (2 px), más claro al centro y que se desvanece en los extremos, como el de FEDEGÁN. */
+  background:
+    linear-gradient(90deg, transparent 0%, #b8892f 15%, #f6e9b4 50%, #b8892f 85%, transparent 100%) top / 100% 3px no-repeat,
+    linear-gradient(90deg, transparent 0%, #b8892f 15%, #f6e9b4 50%, #b8892f 85%, transparent 100%) bottom / 100% 2px no-repeat,
+    linear-gradient(180deg, #86d058 0%, #72bf44 100%) !important;
   border-color: transparent !important;
 }
 nav.cg-navfed .lx-link {
   display: inline-flex;
   align-items: center;
-  padding: 0.55rem 1.05rem;
+  padding: 0.5rem 0.7rem;
   border-radius: 9999px;
-  font-size: 0.78rem;
+  font-size: 0.9rem;
   font-weight: 800;
-  letter-spacing: 0.17em;
+  letter-spacing: 0.08em;
   color: #0d2318 !important;
+  -webkit-text-fill-color: #0d2318 !important;
   transition: background-color 0.2s;
 }
 nav.cg-navfed .lx-link::after { display: none; }
 nav.cg-navfed .lx-link:hover,
 nav.cg-navfed [aria-expanded="true"] ~ .lx-link,
 nav.cg-navfed div:has(> [aria-expanded="true"]) > .lx-link { background: rgba(255, 255, 255, 0.4); }
-nav.cg-navfed button[aria-haspopup="menu"] { margin-left: -1.35rem; position: relative; opacity: 1; color: #0d2318; }
-nav.cg-navfed .lx-link:has(+ button[aria-haspopup="menu"]) { padding-right: 1.9rem; }
+nav.cg-navfed .lx-navrail { column-gap: 0.1rem !important; padding-left: 1rem; padding-right: 1rem; }
+nav.cg-navfed .lx-link + button[aria-haspopup="menu"] { margin-left: -1.25rem; position: relative; opacity: 1; color: #0d2318; }
+nav.cg-navfed .lx-link:has(+ button[aria-haspopup="menu"]) { padding-right: 1.5rem; }
+nav.cg-navfed .lx-navrail > div > button[aria-haspopup="menu"]:not(.lx-link + *) { padding: 0.5rem 0.7rem; border-radius: 9999px; font-size: 0.9rem; font-weight: 800; letter-spacing: 0.08em; color: #0d2318; }
 .lx-iconos button, .lx-iconos a { border-radius: 9999px; background: rgba(255, 255, 255, 0.12); }
 .lx-iconos button:hover, .lx-iconos a:hover { background: rgba(255, 255, 255, 0.24); }
 /* Submenús: verde oscuro, letra blanca, esquinas redondeadas. */
@@ -2526,4 +2533,4 @@ nav.cg-navfed [role="menu"] > div {
   background: #10291d; color: #ffffff;
 }
 nav.cg-navfed [role="menu"] .lx-ui { letter-spacing: 0.01em; font-size: 0.9rem; font-weight: 500; }
-nav.cg-navfed .lx-link[aria-current] { color: #0d2318 !important; background: rgba(255, 255, 255, 0.4); }
+nav.cg-navfed .lx-link[aria-current] { color: #0d2318 !important; -webkit-text-fill-color: #0d2318 !important; background: rgba(255, 255, 255, 0.4); }
