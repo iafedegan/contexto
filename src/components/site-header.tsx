@@ -210,8 +210,8 @@ function MastheadHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extr
       <nav data-el="h-menu"
         aria-label={t(locale, "nav.sections")}
         className="cg-navfed sticky top-0 z-40 border-y border-[var(--border)] bg-[var(--nav-bg)] sm:static"
-        // Turquesa #138984 del Manual de Identidad Visual en los dos modos, con texto blanco.
-        style={{ "--fg": "#ffffff", "--fg-muted": "rgba(255,255,255,0.82)", "--border": "rgba(255,255,255,0.28)" } as React.CSSProperties}
+        // Verde de FEDEGÁN (el del menú de fedegan.org.co) en los dos modos, con texto oscuro para que se lea.
+        style={{ "--fg": "#0d2318", "--fg-muted": "#1f3a28", "--border": "rgba(13,35,24,0.22)" } as React.CSSProperties}
       >
         <div className="lx-navrail mx-auto max-w-[125rem] items-center justify-start gap-x-5 gap-y-2 px-6 py-2.5 text-[0.72rem] font-bold uppercase tracking-[0.16em] sm:justify-center xl:gap-x-6">
           <BotonInicio locale={locale} etiqueta={identity.name} />
@@ -221,7 +221,8 @@ function MastheadHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extr
               <LogoContexto id="escudo" variante="emblema" titulo={identity.name} className="block h-full w-auto" />
             </Link>
           </EscudoSecciones>
-          {nav.map((n) => (
+          {/* «Portada» sobra: el botón de la casa (o el escudo) ya lleva al inicio. */}
+          {nav.filter((n) => n.href.replace(/\/+$/, "") !== localePath(locale, "/").replace(/\/+$/, "")).map((n) => (
             <NavMenuItem key={n.href} item={n} locale={locale} className="lx-link lx-ui" />
           ))}
           <MoreMenu

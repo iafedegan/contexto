@@ -433,20 +433,20 @@ export function EsmeraldaTemplate({
   return (
     <div className="flex flex-col gap-12 sm:gap-20">
       <div className="flex flex-col gap-5 sm:gap-6">
-      <section className={`grid grid-cols-1 gap-7 sm:gap-8 xl:items-start xl:gap-0 ${ANCHO_PRINCIPAL[layout.anchoPrincipal] ?? ANCHO_PRINCIPAL.ancha}`}>
+      <section className={`grid grid-cols-1 gap-7 sm:gap-8 xl:items-stretch xl:gap-5 ${ANCHO_PRINCIPAL[layout.anchoPrincipal] ?? ANCHO_PRINCIPAL.ancha}`}>
         {/* En pantallas anchas es la columna izquierda (la principal crece hasta igualar a la derecha; debajo, las destacadas). En el celular
             la columna se «disuelve» (contents) para poder ordenar: principal, columna derecha y, al final, las destacadas. */}
-        <div className="flex min-w-0 flex-col gap-5 max-xl:contents xl:self-stretch xl:pr-8">
+        <div className="flex min-w-0 flex-col gap-5 max-xl:contents xl:self-stretch">
           <div className="min-w-0 max-xl:order-1 [&>*]:h-full">{wrap(lead, <ArticleCard a={lead} locale={locale} variant="cine" priority={interactive} />)}</div>
         </div>
-        <aside className="flex min-w-0 flex-col gap-7 max-xl:order-2 xl:border-l xl:border-[var(--border)] xl:pl-8">
+        <aside className="flex min-w-0 flex-col gap-4 max-xl:order-2">
           {/* La columna destacada (opinión) va primero en la columna derecha, antes de «Lo último», en el celular y en el computador. */}
           {trasPrincipal && <div className="empty:hidden [&>div:empty]:hidden">{trasPrincipal}</div>}
           {leidas.length > 0 && (
-            <div className="cg-leidas flex flex-1 flex-col">
-              <header className="relative border-b border-[var(--border)] pb-3 after:absolute after:-bottom-px after:left-0 after:h-[3px] after:w-14 after:bg-[var(--accent)]">
-                <h2 className="lx-kicker flex items-center gap-2.5 text-[var(--accent)]">
-                  <span aria-hidden className="cg-latido" />
+            <div className="cg-leidas flex flex-1 flex-col overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border-strong)] bg-[var(--bg-2)]">
+              <header className="border-b border-[var(--border)] px-4 py-3">
+                <h2 className="lx-kicker flex items-center gap-2.5 !text-[0.85rem] text-[var(--accent)]">
+                  <svg aria-hidden viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M4 20V11h4v9zm6 0V4h4v16zm6 0v-6h4v6z" /></svg>
                   {locale === "en" ? "Most read" : "Lo más leído"}
                 </h2>
               </header>

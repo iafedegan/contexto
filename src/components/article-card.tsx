@@ -241,9 +241,8 @@ function LeadCard({ a, priority, locale }: { a: ArticleListItem; priority?: bool
  */
 function CineCard({ a, priority, locale }: { a: ArticleListItem; priority?: boolean; locale: Locale }) {
   const st = cardStyle(a, "cine");
-  const posicion = `${st.textArriba ? "self-start" : "self-end"} ${st.textDerecha ? "justify-self-end items-end text-right" : "justify-self-start"}`;
   return (
-    <article data-bs-root={a.slug} className={`lx-card lead-cine ${priority ? "" : "lx-reveal"} group relative grid h-full grid-cols-[minmax(0,1fr)] [&>*]:col-start-1 [&>*]:row-start-1`}>
+    <article data-bs-root={a.slug} className={`lx-card lead-cine ${priority ? "" : "lx-reveal"} group relative grid h-full grid-cols-[minmax(0,1fr)] overflow-hidden [&>*]:col-start-1 [&>*]:row-start-1`}>
       <div className="lx-shine pointer-events-none absolute inset-0 z-[3]" />
       <Link href={hrefNota(locale, a)} className="block" aria-label={a.title} tabIndex={-1} style={st.imageBox}>
         <CardMedia
@@ -251,60 +250,29 @@ function CineCard({ a, priority, locale }: { a: ArticleListItem; priority?: bool
           alt={a.coverImageAlt ?? a.title}
           seed={a.slug}
           label={a.categoryName ?? a.title}
-          ratio="aspect-[4/5] h-full sm:aspect-[16/10] xl:aspect-[2/1] xl:max-h-[calc(100dvh-23rem)] xl:min-h-[20rem]"
+          ratio="aspect-[4/5] h-full sm:aspect-[16/10] xl:aspect-[2.15/1] xl:max-h-[calc(100dvh-23rem)] xl:min-h-[20rem]"
           priority={priority}
           sizes="(min-width: 1280px) 900px, (min-width: 768px) 60vw, 100vw"
         />
       </Link>
-      {/* Velo: oscurece solo la franja donde va el texto y deja limpia el resto de la foto. */}
-      <div aria-hidden className={`lead-cine-velo pointer-events-none z-[1] ${st.textArriba ? "lead-cine-velo-arriba" : ""}`} />
-      <div
-        data-cg-panel
-        className={`relative z-[4] m-3 flex w-auto max-w-[44rem] flex-col rounded-[var(--radius-lg)] border border-white/10 bg-[rgba(3,12,8,0.7)] p-4 text-white shadow-[0_12px_36px_rgba(0,0,0,0.35)] backdrop-blur-md backdrop-saturate-150 [--fg-muted:rgba(255,255,255,0.84)] [--fg:#ffffff] max-sm:backdrop-blur-none md:m-5 md:p-6 ${posicion}`}
-      >
-        {/* Si no caben en un renglón (celular), la fecha baja entera: ni la pastilla ni la fecha se parten. */}
-        <span className={`flex flex-wrap items-center gap-x-3 gap-y-2 ${st.textDerecha ? "justify-end" : ""}`}>
-          <Kicker a={a} locale={locale} className="whitespace-nowrap rounded-full bg-[var(--accent)] px-3 !text-[0.66rem] !tracking-[0.18em] text-[var(--accent-fg,#0b1a12)] shadow-[0_6px_18px_-6px_rgba(0,0,0,0.6)]" />
-          {a.publishedAt && (
-            <>
-              <span aria-hidden className="h-px w-7 bg-white/45 max-sm:hidden" />
-              <time dateTime={a.publishedAt.toISOString()} className="lx-ui whitespace-nowrap text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-white/85">
-                {formatDate(a.publishedAt, INTL_LOCALE[locale])}
-              </time>
-            </>
-          )}
-        </span>
+      {/* Velo: oscuro a la izquierda (donde va el texto) y limpio a la derecha; en el celular, desde abajo. */}
+      <div aria-hidden className="lead-cine-izq pointer-events-none z-[1]" />
+      {/* El texto va directo sobre la foto, sin caja: sección, titular con filete dorado a la izquierda y el botón de lectura. */}
+      <div className="relative z-[4] flex max-w-[34rem] flex-col items-start gap-4 self-end p-5 text-white sm:max-w-[56%] sm:self-center sm:p-8 md:gap-5 md:p-10">
+        <Kicker a={a} locale={locale} className="whitespace-nowrap rounded-full bg-[var(--accent)] px-4 py-1 !text-[0.68rem] !tracking-[0.14em] text-[var(--accent-fg,#0b1a12)]" />
         <h2
-          className="lead-titulo lx-display mt-3.5 text-balance font-semibold tracking-tight [text-shadow:0_2px_18px_rgba(0,0,0,0.55)] md:mt-4"
-          style={{ ...st.title, fontSize: undefined, color: st.title.color ?? "#ffffff", ["--lead-fs" as string]: st.title.fontSize }}
+          className="lx-display border-l-[3px] border-[var(--accent)] pl-4 text-balance font-bold leading-[1.05] tracking-tight [text-shadow:0_2px_18px_rgba(0,0,0,0.55)]"
+          style={{ ...st.title, fontSize: "clamp(1.7rem, 3.1vw, 3.1rem)", color: st.title.color ?? "#ffffff" }}
         >
-          <Link href={hrefNota(locale, a)} className="decoration-[var(--accent)] decoration-2 underline-offset-[6px] after:absolute after:inset-0 after:z-[2] group-hover:underline">
+          <Link href={hrefNota(locale, a)} className="after:absolute after:inset-0 after:z-[2]">
             {a.title}
           </Link>
         </h2>
-        {/* Con ratón, en reposo solo se ve la sección y el titular; el resumen y la firma aparecen al pasar el puntero (en pantallas táctiles, siempre). */}
-        <div className="lead-detalle">
-          <div className="min-h-0 overflow-hidden">
-          {!st.hideExcerpt && (
-            <p data-cg-resumen className={`mt-3 hidden max-w-2xl text-[0.95rem] leading-relaxed text-white/85 sm:block md:text-base ${st.excerptClamp} ${st.textDerecha ? "ml-auto" : ""}`}>
-              {a.excerpt}
-            </p>
-          )}
-          <span className={`mt-4 flex items-center gap-4 md:mt-5 ${st.textDerecha ? "flex-row-reverse" : ""}`}>
-            {/* El botón es un adorno: toda la tarjeta ya es el enlace del titular. */}
-            <span aria-hidden className="inline-flex items-center gap-2.5 rounded-full border border-[var(--accent)] px-5 py-2.5 text-[0.95rem] font-semibold text-white transition-colors duration-300 group-hover:bg-[var(--accent)] group-hover:text-[var(--accent-fg,#0b1a12)]">
-              {locale === "en" ? "Read full story" : "Leer nota completa"}
-              <span className="transition-transform duration-500 group-hover:translate-x-1">→</span>
-            </span>
-            {a.authorName && (
-              <span className="lx-ui min-w-0 text-[0.8rem] leading-tight text-white/85">
-                <span className="block text-[0.62rem] font-semibold uppercase tracking-[0.18em] text-white/60">{locale === "en" ? "By" : "Por"}</span>
-                <span className="block truncate font-semibold text-white">{a.authorName}</span>
-              </span>
-            )}
-          </span>
-          </div>
-        </div>
+        {/* El botón es un adorno: toda la tarjeta ya es el enlace del titular. */}
+        <span aria-hidden className="inline-flex items-center gap-2.5 rounded-full border border-[var(--accent)] px-5 py-2.5 text-[0.95rem] font-semibold text-white transition-colors duration-300 group-hover:bg-[var(--accent)] group-hover:text-[var(--accent-fg,#0b1a12)]">
+          {locale === "en" ? "Read full story" : "Leer nota completa"}
+          <span className="transition-transform duration-500 group-hover:translate-x-1">→</span>
+        </span>
       </div>
     </article>
   );
@@ -401,13 +369,13 @@ function MosaicoCard({ a, locale }: { a: ArticleListItem; locale: Locale }) {
 function LeidoCard({ a, index, locale }: { a: ArticleListItem; index?: number; locale: Locale }) {
   const st = cardStyle(a, "leido");
   return (
-    <article data-bs-root={a.slug} className="group relative flex items-center gap-3.5 py-3">
+    <article data-bs-root={a.slug} className="group relative flex items-center gap-3.5 px-4 py-3">
       {typeof index === "number" && (
         <span aria-hidden className="lx-display w-8 shrink-0 text-[1.5rem] font-semibold leading-none text-[var(--accent)] [font-variant-numeric:lining-nums]">
           {String(index + 1).padStart(2, "0")}
         </span>
       )}
-      <h3 className="lx-display line-clamp-3 min-w-0 flex-1 font-medium leading-snug" style={st.title}>
+      <h3 className="lx-ui line-clamp-3 min-w-0 flex-1 font-medium leading-snug" style={{ ...st.title, fontSize: "0.92rem" }}>
         <Link href={hrefNota(locale, a)} className="transition-colors hover:text-[var(--link)] after:absolute after:inset-0 after:z-[2]">
           {a.title}
         </Link>

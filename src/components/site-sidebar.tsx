@@ -136,7 +136,7 @@ export async function ColumnaLafaurieSuelta({ locale, tarjeta = false }: { local
 function ColumnaTarjeta({ locale, columna }: { locale: Locale; columna: NonNullable<Awaited<ReturnType<typeof getUltimaColumnaLafaurie>>> }) {
   return (
     <section className="cg-columna group">
-      <Link href={hrefNota(locale, columna)} className="flex items-start gap-4 p-5 sm:gap-5 sm:p-6">
+      <Link href={hrefNota(locale, columna)} className="flex items-center gap-4 p-4 sm:gap-5">
         {columna.authorAvatarUrl && (
           <ImagenSitio
             src={columna.authorAvatarUrl}
@@ -149,13 +149,8 @@ function ColumnaTarjeta({ locale, columna }: { locale: Locale; columna: NonNulla
         )}
         <span className="min-w-0 flex-1">
           <span className="lx-kicker block !text-[0.66rem] text-[var(--accent)]">{t(locale, "sidebar.column")}</span>
-          <span className="lx-display mt-1.5 block text-[1.3rem] font-semibold leading-[1.2] transition-colors group-hover:text-[var(--link)]">{columna.title}</span>
-          {columna.authorName && <span className="lx-ui mt-2 block text-[0.78rem] font-semibold text-[var(--fg)]">{columna.authorName}</span>}
-          {columna.excerpt && <span className="mt-1 line-clamp-2 block text-[0.8rem] leading-snug text-[var(--fg-muted)]">{columna.excerpt}</span>}
-          <span className="lx-ui mt-3 inline-flex items-center gap-2 text-[0.7rem] font-bold uppercase tracking-[0.16em] text-[var(--accent)]">
-            {locale === "en" ? "Read the column" : "Leer la columna"}
-            <span aria-hidden className="transition-transform duration-500 group-hover:translate-x-1">→</span>
-          </span>
+          <span className="lx-display mt-1 block text-[1.25rem] font-semibold leading-[1.15] transition-colors group-hover:text-[var(--link)]">{columna.title}</span>
+          {columna.authorName && <span className="lx-ui mt-1.5 block text-[0.8rem] text-[var(--fg-muted)]">{locale === "en" ? "By" : "Por"} {columna.authorName}</span>}
         </span>
       </Link>
     </section>

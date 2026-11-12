@@ -2502,7 +2502,7 @@ nav.cg-navfed {
   background:
     linear-gradient(90deg, transparent 0%, #d9a41a 15%, #f7eea1 50%, #d9a41a 85%, transparent 100%) top / 100% 3px no-repeat,
     linear-gradient(90deg, transparent 0%, #d9a41a 15%, #f7eea1 50%, #d9a41a 85%, transparent 100%) bottom / 100% 2px no-repeat,
-    linear-gradient(180deg, #19a09a 0%, #138984 100%) !important;
+    linear-gradient(180deg, #86d058 0%, #72bf44 100%) !important;
   border-color: transparent !important;
 }
 nav.cg-navfed .lx-link {
@@ -2515,19 +2515,19 @@ nav.cg-navfed .lx-link {
   letter-spacing: 0.1em;
   text-transform: uppercase;
   font-family: Arial, "Helvetica Neue", Helvetica, sans-serif !important;
-  color: #ffffff !important;
-  -webkit-text-fill-color: #ffffff !important;
+  color: #0d2318 !important;
+  -webkit-text-fill-color: #0d2318 !important;
   transition: background-color 0.2s;
 }
 nav.cg-navfed .lx-link::after { display: none; }
 nav.cg-navfed .lx-link:hover,
 nav.cg-navfed [aria-expanded="true"] ~ .lx-link,
-nav.cg-navfed div:has(> [aria-expanded="true"]) > .lx-link { background: rgba(255, 255, 255, 0.2); }
+nav.cg-navfed div:has(> [aria-expanded="true"]) > .lx-link { background: rgba(255, 255, 255, 0.4); }
 /* Alto de la barra: 52 px (con el filete dorado). */
 nav.cg-navfed .lx-navrail { column-gap: 0.1rem !important; padding: 0 1rem !important; min-height: 50px; align-items: center; }
-nav.cg-navfed .lx-link + button[aria-haspopup="menu"] { margin-left: -1.25rem; position: relative; opacity: 1; color: #ffffff; }
+nav.cg-navfed .lx-link + button[aria-haspopup="menu"] { margin-left: -1.25rem; position: relative; opacity: 1; color: #0d2318; }
 nav.cg-navfed .lx-link:has(+ button[aria-haspopup="menu"]) { padding-right: 1.5rem; }
-nav.cg-navfed .lx-navrail > div > button[aria-haspopup="menu"]:not(.lx-link + *) { padding: 0.5rem 0.7rem; border-radius: 9999px; font-size: 0.74rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; font-family: Arial, "Helvetica Neue", Helvetica, sans-serif; color: #ffffff; }
+nav.cg-navfed .lx-navrail > div > button[aria-haspopup="menu"]:not(.lx-link + *) { padding: 0.5rem 0.7rem; border-radius: 9999px; font-size: 0.74rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; font-family: Arial, "Helvetica Neue", Helvetica, sans-serif; color: #0d2318; }
 .lx-iconos button, .lx-iconos a { border-radius: 9999px; background: rgba(255, 255, 255, 0.12); }
 .lx-iconos button:hover, .lx-iconos a:hover { background: rgba(255, 255, 255, 0.24); }
 /* Submenús: verde oscuro, letra blanca, esquinas redondeadas. */
@@ -2535,10 +2535,10 @@ nav.cg-navfed [role="menu"] > div {
   --nav-bg: #003e41; --fg: #ffffff; --fg-muted: #bcdcd9; --accent: #f7eea1;
   --border-strong: rgba(255, 255, 255, 0.1); --surface-2: rgba(255, 255, 255, 0.08);
   border-radius: 1.1rem; border-color: rgba(255, 255, 255, 0.08);
-  background: #003e41; color: #ffffff;
+  background: #003e41; color: #0d2318;
 }
 nav.cg-navfed [role="menu"] .lx-ui { letter-spacing: 0.01em; font-size: 0.9rem; font-weight: 500; }
-nav.cg-navfed .lx-link[aria-current] { color: #ffffff !important; -webkit-text-fill-color: #ffffff !important; background: rgba(255, 255, 255, 0.22); }
+nav.cg-navfed .lx-link[aria-current] { color: #0d2318 !important; -webkit-text-fill-color: #0d2318 !important; background: rgba(255, 255, 255, 0.4); }
 
 /* Brillo que recorre el logo (components/logo-contexto.tsx): una pasada de luz cada ~5 s. Quien pide menos movimiento no lo ve. */
 .logo-brillo { animation: logo-brillo 5s ease-in-out infinite; }
@@ -2727,12 +2727,9 @@ nav.cg-navfed div[role="menu"][class*="overflow-y-auto"] {
 .logo-modo-oscuro { display: none; }
 :is(html[data-dark="1"], html:not([data-dark]) :is([data-theme="home"],[data-theme="esmeralda"],[data-theme="revista"],[data-theme="vanguardia"])) .logo-modo-claro { display: none; }
 :is(html[data-dark="1"], html:not([data-dark]) :is([data-theme="home"],[data-theme="esmeralda"],[data-theme="revista"],[data-theme="vanguardia"])) .logo-modo-oscuro { display: block; }
-/* Barra de secciones: verde oscuro en modo oscuro, turquesa del manual en modo claro. */
-nav.cg-navfed { --nav-bg: #138984; }
-:is(html[data-dark="1"], html:not([data-dark]) :is([data-theme="home"],[data-theme="esmeralda"],[data-theme="revista"],[data-theme="vanguardia"])) nav.cg-navfed { --nav-bg: #003e41; }
-:is(html[data-dark="1"], html:not([data-dark]) :is([data-theme="home"],[data-theme="esmeralda"],[data-theme="revista"],[data-theme="vanguardia"])) nav.cg-navfed {
-  background:
-    linear-gradient(90deg, transparent 0%, #d9a41a 15%, #f7eea1 50%, #d9a41a 85%, transparent 100%) top / 100% 3px no-repeat,
-    linear-gradient(90deg, transparent 0%, #d9a41a 15%, #f7eea1 50%, #d9a41a 85%, transparent 100%) bottom / 100% 2px no-repeat,
-    linear-gradient(180deg, #05494c 0%, #003e41 100%) !important;
+
+/* Apertura Esmeralda: velo a la izquierda para el texto sobre la foto (en el celular, desde abajo). */
+.lead-cine-izq { background: linear-gradient(to top, rgba(2, 22, 20, 0.92) 0%, rgba(2, 22, 20, 0.6) 45%, rgba(2, 22, 20, 0) 80%); }
+@media (min-width: 640px) {
+  .lead-cine-izq { background: linear-gradient(to right, rgba(2, 22, 20, 0.9) 0%, rgba(2, 22, 20, 0.62) 38%, rgba(2, 22, 20, 0) 72%); }
 }
