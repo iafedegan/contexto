@@ -166,10 +166,9 @@ function MastheadHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extr
 
       <MastilPortada locale={locale}>
       {/* Contenedor de tamaño propio: el nombre, el emblema y las líneas se escalan con su ancho y se ajustan juntos. */}
-      <div className="mx-auto max-w-7xl px-6 pb-5 pt-3 text-center md:pb-6 md:pt-4 [container-type:inline-size]">
-        {/* Franja superior: la fecha a la izquierda y las redes a la derecha. */}
-        <div className="mb-3 flex items-center justify-between gap-4 text-[var(--fg-muted)]">
-          {identity.fecha !== false ? <span data-titulo-texto data-el="h-fecha" className="lx-ui text-[0.7rem] font-medium capitalize tracking-[0.06em]">{today}</span> : <span />}
+      <div className="relative mx-auto max-w-7xl px-6 pb-3 pt-3 text-center md:pb-4 md:pt-3 [container-type:inline-size]">
+        {/* Las redes, en la esquina superior derecha sin ocupar alto; la fecha va bajo el logo. */}
+        <div className="absolute right-6 top-3 z-10 flex items-center text-[var(--fg-muted)]">
           <span className="flex items-center gap-3.5">
             {[
               { n: "YouTube", h: "https://www.youtube.com/@contextoganadero", I: YoutubeIcon },
@@ -194,6 +193,7 @@ function MastheadHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extr
         </div>
         {/* Los 14 años ya van dentro del logo; debajo, el lema y la fecha. */}
         <span className="mt-1 flex flex-col items-center gap-y-0.5">
+          {identity.fecha !== false && <span data-titulo-texto data-el="h-fecha" className="lx-ui text-[0.7rem] font-medium capitalize tracking-[0.06em] text-[var(--accent)]">{today}</span>}
           {!identity.sinLema && <span data-titulo-texto data-el="h-lema" className="lx-kicker text-[var(--fg-muted)]">{identity.tagline || t(locale, "nav.tagline")}</span>}
         </span>
       </div>

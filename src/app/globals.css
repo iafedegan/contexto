@@ -2530,12 +2530,12 @@ nav.cg-navfed .lx-link:has(+ button[aria-haspopup="menu"]) { padding-right: 1.5r
 nav.cg-navfed .lx-navrail > div > button[aria-haspopup="menu"]:not(.lx-link + *) { padding: 0.5rem 0.7rem; border-radius: 9999px; font-size: 0.74rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; font-family: Arial, "Helvetica Neue", Helvetica, sans-serif; color: #0d2318; }
 .lx-iconos button, .lx-iconos a { border-radius: 9999px; background: rgba(255, 255, 255, 0.12); }
 .lx-iconos button:hover, .lx-iconos a:hover { background: rgba(255, 255, 255, 0.24); }
-/* Submenús: verde oscuro, letra blanca, esquinas redondeadas. */
+/* Submenús: verde de FEDEGÁN, letra oscura, esquinas redondeadas. */
 nav.cg-navfed [role="menu"] > div {
-  --nav-bg: #003e41; --fg: #ffffff; --fg-muted: #bcdcd9; --accent: #f7eea1;
-  --border-strong: rgba(255, 255, 255, 0.1); --surface-2: rgba(255, 255, 255, 0.08);
-  border-radius: 1.1rem; border-color: rgba(255, 255, 255, 0.08);
-  background: #003e41; color: #0d2318;
+  --nav-bg: #72bf44; --fg: #0d2318; --fg-muted: #1f3a28; --accent: #0d2318;
+  --border: rgba(13, 35, 24, 0.18); --border-strong: rgba(13, 35, 24, 0.2); --surface-2: rgba(255, 255, 255, 0.3);
+  border-radius: 1.1rem; border-color: rgba(13, 35, 24, 0.18);
+  background: #72bf44; color: #0d2318;
 }
 nav.cg-navfed [role="menu"] .lx-ui { letter-spacing: 0.01em; font-size: 0.9rem; font-weight: 500; }
 nav.cg-navfed .lx-link[aria-current] { color: #0d2318 !important; -webkit-text-fill-color: #0d2318 !important; background: rgba(255, 255, 255, 0.4); }
@@ -2548,11 +2548,11 @@ nav.cg-navfed .lx-link[aria-current] { color: #0d2318 !important; -webkit-text-f
 }
 @media (prefers-reduced-motion: reduce) { .logo-brillo { animation: none; opacity: 0; } }
 /* Iconos dentro de la barra verde (secciones): círculos claros como en la barra de FEDEGÁN. */
-/* El menú «Más» también va en verde oscuro con letra blanca, como los submenús. */
+/* El menú «Más» también va en verde de FEDEGÁN con letra oscura, como los submenús. */
 nav.cg-navfed div[role="menu"][class*="overflow-y-auto"] {
-  --nav-bg: #003e41; --fg: #ffffff; --fg-muted: #bcdcd9; --accent: #f7eea1;
-  --border: rgba(255, 255, 255, 0.12); --border-strong: rgba(255, 255, 255, 0.1); --surface-2: rgba(255, 255, 255, 0.08);
-  border-radius: 1.1rem; background: #003e41; color: #ffffff;
+  --nav-bg: #72bf44; --fg: #0d2318; --fg-muted: #1f3a28; --accent: #0d2318;
+  --border: rgba(13, 35, 24, 0.18); --border-strong: rgba(13, 35, 24, 0.2); --surface-2: rgba(255, 255, 255, 0.3);
+  border-radius: 1.1rem; background: #72bf44; color: #0d2318;
 }
 
 /* ====== Apertura de la portada Esmeralda (components/article-card.tsx: CineCard, DestacadaCard, UltimoCard). ====== */
