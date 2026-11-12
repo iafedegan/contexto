@@ -4,9 +4,9 @@ import { departamentoPorSlug, regionPorSlug } from "@/lib/regiones-colombia";
 import { revalidatePath } from "next/cache";
 import { sanitizeArticleHtml } from "@/lib/sanitize";
 import { redirect } from "next/navigation";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { articles } from "@/db/schema";
+import { articles, categories } from "@/db/schema";
 import { canPublish, requirePermiso } from "@/lib/auth";
 import { slugify } from "@/lib/utils";
 import { autorDeUsuario } from "@/lib/user-authors";
@@ -62,16 +62,30 @@ export async function saveArticle(formData: FormData) {
   if (!title || !excerpt) throw new Error("Título y resumen son obligatorios.");
 
   // Región de Colombia (`region-<slug>` dentro de `secciones`, junto a las demás secciones de la nota). Ausente = no tocar.
+  // Otras secciones donde TAMBIÉN aparece la nota (`otras`: direcciones de sección separadas por comas) se guardan en el mismo arreglo. Ausente = no tocar.
   const regionForm = formData.get("region");
+  const otrasForm = formData.get("otras");
   let secciones: string[] | undefined;
-  if (regionForm !== null) {
-    const r = String(regionForm);
-    const quiere = regionPorSlug(r)?.slug;
+  if (regionForm !== null || otrasForm !== null) {
     const [prev] = id ? await db.select({ s: articles.secciones }).from(articles).where(eq(articles.id, id)).limit(1) : [];
-    // El departamento solo vale si pertenece a la región elegida.
-    const d = departamentoPorSlug(String(formData.get("depto") ?? ""));
-    const dep = d && d.region === quiere ? d.slug : undefined;
-    secciones = [...(prev?.s ?? []).filter((x) => !x.startsWith("region-") && !x.startsWith("depto-")), ...(quiere ? [`region-${quiere}`] : []), ...(dep ? [`depto-${dep}`] : [])];
+    const previas = prev?.s ?? [];
+    const esDato = (x: string) => x.startsWith("region-") || x.startsWith("depto-");
+    let datos = previas.filter(esDato);
+    let otras = previas.filter((x) => !esDato(x));
+    if (regionForm !== null) {
+      const quiere = regionPorSlug(String(regionForm))?.slug;
+      // El departamento solo vale si pertenece a la región elegida.
+      const d = departamentoPorSlug(String(formData.get("depto") ?? ""));
+      const dep = d && d.region === quiere ? d.slug : undefined;
+      datos = [...(quiere ? [`region-${quiere}`] : []), ...(dep ? [`depto-${dep}`] : [])];
+    }
+    if (otrasForm !== null) {
+      const pedidas = [...new Set(String(otrasForm).split(",").map((x) => x.trim()).filter((x) => /^[a-z0-9-]+$/.test(x)))].slice(0, 12);
+      // Solo secciones que existen, y no la principal (ya es de ella).
+      const validas = pedidas.length ? await db.select({ id: categories.id, slug: categories.slug }).from(categories).where(inArray(categories.slug, pedidas)) : [];
+      otras = validas.filter((c) => c.id !== categoryId).map((c) => c.slug);
+    }
+    secciones = [...otras, ...datos];
   }
 
   const values = {

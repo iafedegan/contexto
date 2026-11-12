@@ -99,6 +99,8 @@ export type WizardInitial = {
   categoryId: string | null;
   region?: string | null;
   depto?: string | null;
+  /** Direcciones de las otras secciones donde también aparece la nota. */
+  otras?: string[];
   authorId: string | null;
   coverImageUrl: string | null;
   coverImageAlt: string | null;
@@ -159,7 +161,7 @@ export function ArticleWizard({
   envioLibre = false,
   enviadoA = null,
 }: {
-  categories: (Option & { parentId?: string | null })[];
+  categories: (Option & { parentId?: string | null; slug?: string })[];
   authors: Option[];
   /** Ficha de autor de la persona con sesión iniciada: es siempre la firma de la nota. */
   miAutorId?: string | null;
@@ -315,6 +317,9 @@ export function ArticleWizard({
   const [tagDraft, setTagDraft] = useState("");
   const [categoryId, setCategoryId] = useState(initial?.categoryId ?? pieza?.categoryId ?? "");
   const [region, setRegion] = useState(initial?.region ?? "");
+  // Otras secciones donde también aparece la nota (direcciones).
+  const [otras, setOtras] = useState<string[]>(initial?.otras ?? []);
+  const [buscaOtras, setBuscaOtras] = useState("");
   // A qué editor se envía la nota al terminar (vacío = a nadie) y el mensaje que le llega con ella.
   const [envio, setEnvio] = useState(enviadoA);
   const [enviarA, setEnviarA] = useState("");
@@ -945,6 +950,7 @@ export function ArticleWizard({
       <input type="hidden" name="tags" value={tags.join(", ")} />
       <input type="hidden" name="categoryId" value={categoryId} />
       <input type="hidden" name="region" value={region} />
+      <input type="hidden" name="otras" value={otras.join(",")} />
       <input type="hidden" name="depto" value={region ? depto : ""} />
       <input type="hidden" name="authorId" value={authorId} />
       <input type="hidden" name="coverImageUrl" value={cover} />
@@ -1488,6 +1494,49 @@ export function ArticleWizard({
                   </div>
                 )}
               </TarjetaDecision>
+              {/* Otras secciones: la nota sale también en ellas (además de la principal que se eligió arriba). */}
+              <section className="flex min-w-0 flex-col gap-3 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow)]">
+                <header>
+                  <h3 className="text-base font-semibold leading-tight">¿Aparece también en otras secciones?</h3>
+                  <p className="mt-0.5 text-xs text-[var(--fg-muted)]">Opcional. Elige las que quieras: la nota saldrá en cada una, además de en la sección principal.</p>
+                </header>
+                {otras.length > 0 && (
+                  <ul className="flex flex-wrap gap-1.5" aria-label="Otras secciones elegidas">
+                    {otras.map((sl) => {
+                      const c = categories.find((x) => x.slug === sl);
+                      const padre = c?.parentId ? categories.find((x) => x.id === c.parentId)?.name : undefined;
+                      return (
+                        <li key={sl} className="inline-flex items-center gap-1 rounded-full bg-[var(--accent)] py-1 pl-3 pr-1.5 text-xs font-medium text-[var(--accent-fg,#fff)]">
+                          {padre ? `${padre} › ` : ""}{c?.name ?? sl}
+                          <button type="button" onClick={() => setOtras((a) => a.filter((x) => x !== sl))} aria-label={`Quitar ${c?.name ?? sl}`} className="grid size-5 place-items-center rounded-full transition hover:bg-black/20"><X size={12} aria-hidden /></button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+                <input value={buscaOtras} onChange={(e) => setBuscaOtras(e.target.value)} placeholder="Buscar sección o subsección…" aria-label="Buscar otra sección" className={`${input} text-sm`} />
+                <ul className="max-h-56 overflow-y-auto rounded-[var(--radius)] border border-[var(--border)]">
+                  {categories
+                    .filter((c) => c.slug && c.id !== categoryId)
+                    .map((c) => ({ c, padre: c.parentId ? categories.find((x) => x.id === c.parentId)?.name : undefined }))
+                    .filter(({ c, padre }) => {
+                      const q = buscaOtras.trim().normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
+                      return !q || `${padre ?? ""} ${c.name}`.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase().includes(q);
+                    })
+                    .slice(0, 80)
+                    .map(({ c, padre }) => {
+                      const on = otras.includes(c.slug!);
+                      return (
+                        <li key={c.id}>
+                          <label className="flex cursor-pointer items-center gap-2.5 px-3 py-2 text-sm transition hover:bg-[var(--surface-2)]">
+                            <input type="checkbox" checked={on} onChange={() => setOtras((a) => (on ? a.filter((x) => x !== c.slug) : [...a, c.slug!].slice(0, 12)))} className="size-4 accent-[var(--accent)]" />
+                            <span className={padre ? "" : "font-semibold"}>{padre ? <span className="text-[var(--fg-muted)]">{padre} › </span> : null}{c.name}</span>
+                          </label>
+                        </li>
+                      );
+                    })}
+                </ul>
+              </section>
             </SectionTree>
           </Step>
         )}

@@ -923,7 +923,7 @@ a {
 
 @media (hover: hover) {
   .lead-titulo {
-    font-size: calc(var(--lead-fs) * 0.6);
+    font-size: max(1.05rem, calc(var(--lead-fs) * 0.4));
     transition: font-size 0.4s var(--ease-lux);
   }
   .lx-card:hover .lead-titulo,

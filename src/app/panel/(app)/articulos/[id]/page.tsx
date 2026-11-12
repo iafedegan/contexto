@@ -41,6 +41,8 @@ type Initial = {
   categoryId: string | null;
   /** Región de Colombia a la que se clasifica la nota (guardada como `region-<slug>` en `secciones`). */
   region: string | null;
+  /** Otras secciones (direcciones) donde también aparece la nota. */
+  otras?: string[];
   depto: string | null;
   authorId: string | null;
   metaTitle: string | null;
@@ -95,7 +97,7 @@ export default async function ArticleEditorPage({
   const escritores = (await escritoresParaElegir({ id: session!.user.id, role: session!.user.role })).filter((e) => e.conDiagnostico && e.activo).map((e) => ({ id: e.id, nombre: e.nombre, propio: e.id === session!.user.id }));
   const estilo: "activo" | "apagado" | "sin" = est.diagnostico ? (est.activo ? "activo" : "apagado") : "sin";
   const [cats, auths] = await Promise.all([
-    db.select({ id: categories.id, name: categories.name, parentId: categories.parentId }).from(categories).orderBy(asc(categories.sortOrder), asc(categories.name)),
+    db.select({ id: categories.id, name: categories.name, parentId: categories.parentId, slug: categories.slug }).from(categories).orderBy(asc(categories.sortOrder), asc(categories.name)),
     db.select({ id: authors.id, name: authors.name }).from(authors).orderBy(asc(authors.name)),
   ]);
 
@@ -156,6 +158,7 @@ export default async function ArticleEditorPage({
       categoryId: row.categoryId,
       region: (row.secciones.find((x) => x.startsWith("region-")) ?? "").slice(7) || null,
       depto: (row.secciones.find((x) => x.startsWith("depto-")) ?? "").slice(6) || null,
+      otras: row.secciones.filter((x) => !x.startsWith("region-") && !x.startsWith("depto-")),
       authorId: row.authorId,
       metaTitle: row.metaTitle,
       metaDescription: row.metaDescription,
@@ -200,6 +203,7 @@ export default async function ArticleEditorPage({
             categoryId: row.categoryId,
             region: (row.secciones.find((x) => x.startsWith("region-")) ?? "").slice(7) || null,
       depto: (row.secciones.find((x) => x.startsWith("depto-")) ?? "").slice(6) || null,
+      otras: row.secciones.filter((x) => !x.startsWith("region-") && !x.startsWith("depto-")),
             authorId: row.authorId,
             coverImageUrl: row.coverImageUrl,
             coverImageAlt: row.coverImageAlt,
