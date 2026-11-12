@@ -189,6 +189,8 @@ function MastheadHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extr
       <nav data-el="h-menu"
         aria-label={t(locale, "nav.sections")}
         className="sticky top-0 z-40 border-y border-[var(--border)] bg-[var(--nav-bg)] sm:static"
+        // Verde de FEDEGÁN (el del menú de fedegan.org.co) en los dos modos, con texto oscuro para que se lea.
+        style={{ "--nav-bg": "#72bf44", "--fg": "#0d2318", "--fg-muted": "#1f3a28", "--border": "rgba(13,35,24,0.22)" } as React.CSSProperties}
       >
         <div className="lx-navrail mx-auto max-w-[96rem] items-center justify-start gap-x-5 gap-y-2 px-6 py-2.5 text-[0.72rem] font-bold uppercase tracking-[0.16em] sm:justify-center xl:gap-x-6">
           {nav.map((n) => (
