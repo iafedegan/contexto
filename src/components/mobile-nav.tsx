@@ -224,7 +224,7 @@ export function MobileNav({
 
       {/* Cinta de seis colores, como en la web. */}
       <div aria-hidden className="cg-cinta-cabecera flex h-[2px] w-full">
-        {["#f2a900", "#b5124f", "#00587c", "#6a9fc0", "#e5214f", "#5a8f9e"].map((c) => (
+        {["#d9a41a", "#f7eea1", "#138984", "#003e41", "#138984", "#d9a41a"].map((c) => (
           <span key={c} className="cg-cinta-tramo h-full flex-1" style={{ "--c": c } as React.CSSProperties} />
         ))}
       </div>

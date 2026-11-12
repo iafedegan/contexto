@@ -24,9 +24,9 @@ const FONDO: Record<string, string> = {
   ninguno: "",
   suave: "rounded-2xl bg-[var(--surface-2)]",
   acento: "rounded-2xl bg-[var(--accent)] text-[var(--accent-fg)] [--fg:var(--accent-fg)] [--fg-muted:var(--accent-fg)]",
-  oscuro: `rounded-2xl bg-[#0b2a1c] ${OSCURO}`,
-  degradado: `rounded-2xl bg-gradient-to-br from-[#0b2a1c] via-[#14432c] to-[#3b5d1f] ${OSCURO}`,
-  imagen: `relative isolate overflow-hidden rounded-2xl bg-[#0b2a1c] bg-cover bg-center ${OSCURO}`,
+  oscuro: `rounded-2xl bg-[#022327] ${OSCURO}`,
+  degradado: `rounded-2xl bg-gradient-to-br from-[#022327] via-[#003e41] to-[#138984] ${OSCURO}`,
+  imagen: `relative isolate overflow-hidden rounded-2xl bg-[#022327] bg-cover bg-center ${OSCURO}`,
 };
 const RELLENO: Record<string, string> = { compacto: "p-4 sm:p-5", normal: "p-6 sm:p-8", amplio: "p-8 sm:p-14" };
 const HUECO: Record<string, string> = { compacto: "gap-4 md:gap-5", normal: "gap-6 md:gap-8", amplio: "gap-8 md:gap-12" };

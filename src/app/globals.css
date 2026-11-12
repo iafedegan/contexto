@@ -67,28 +67,29 @@ html:not([data-fuentes]) {
    "Esmeralda Real": obsidiana verde, pan de oro, didona de portada.        */
 [data-theme="home"],
 [data-theme="esmeralda"] {
+  /* Paleta del Manual de Identidad Visual: #022327 (fondo), #003e41 (superficies), #138984 (turquesa), #d9a41a (dorado) y #f7eea1 (brillo). */
   color-scheme: dark;
-  --bg: #05100b;
-  --bg-2: #081a12;
-  --surface: rgba(255, 255, 255, 0.035);
-  --surface-2: rgba(201, 162, 39, 0.07);
-  --fg: #f4f2e9;
-  --fg-muted: #9fb7a8;
-  --border: rgba(201, 162, 39, 0.22);
-  --border-strong: rgba(201, 162, 39, 0.5);
-  --accent: #d8b558;
-  --accent-2: #2f9c62;
-  --accent-fg: #08140d;
-  --link: #e7cf8c;
+  --bg: #022327;
+  --bg-2: #003e41;
+  --surface: rgba(255, 255, 255, 0.04);
+  --surface-2: rgba(217, 164, 26, 0.1);
+  --fg: #ffffff;
+  --fg-muted: #a9cfcc;
+  --border: rgba(217, 164, 26, 0.26);
+  --border-strong: rgba(217, 164, 26, 0.55);
+  --accent: #d9a41a;
+  --accent-2: #138984;
+  --accent-fg: #022327;
+  --link: #f7eea1;
   --radius: 0.25rem;
   --radius-lg: 0.35rem;
-  --shadow: 0 1px 0 rgba(216, 181, 88, 0.12);
-  --shadow-hover: 0 30px 70px -30px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(216, 181, 88, 0.35);
-  --sheen: rgba(216, 181, 88, 0.22);
-  /* Como el sitio anterior (contextoganadero.com): titulares en Georgia y textos en Open Sans. */
+  --shadow: 0 1px 0 rgba(217, 164, 26, 0.14);
+  --shadow-hover: 0 30px 70px -30px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(217, 164, 26, 0.4);
+  --sheen: rgba(247, 238, 161, 0.22);
+  /* Tipografía web del manual: títulos en Georgia Regular y cuerpo en Arial Regular. */
   --font-display: Georgia, "Times New Roman", Times, serif;
-  --font-body: var(--f-open-sans), "Open Sans", system-ui, sans-serif;
-  --font-ui: var(--f-open-sans), "Open Sans", system-ui, sans-serif;
+  --font-body: Arial, "Helvetica Neue", Helvetica, sans-serif;
+  --font-ui: Arial, "Helvetica Neue", Helvetica, sans-serif;
 }
 
 /* ------------------------------------------------------------ 2. ARTÍCULO
@@ -2497,11 +2498,11 @@ body:has(.cg-cintillo-arriba) .cg-cinta-cabecera { display: none; }
 /* ====== Barra de secciones al estilo FEDEGÁN (portada): verde con degradado, letras anchas en negrita, «píldora» al pasar el puntero,
    iconos en círculos y submenús en verde oscuro con letra blanca. Solo afecta a `nav.cg-navfed` del encabezado de la portada. ====== */
 nav.cg-navfed {
-  /* Filete dorado arriba (3 px) y abajo (2 px), más claro al centro y que se desvanece en los extremos, como el de FEDEGÁN. */
+  /* Filete dorado arriba (3 px) y abajo (2 px), más claro al centro y que se desvanece en los extremos; el cuerpo, en el turquesa del manual. */
   background:
-    linear-gradient(90deg, transparent 0%, #b8892f 15%, #f6e9b4 50%, #b8892f 85%, transparent 100%) top / 100% 3px no-repeat,
-    linear-gradient(90deg, transparent 0%, #b8892f 15%, #f6e9b4 50%, #b8892f 85%, transparent 100%) bottom / 100% 2px no-repeat,
-    linear-gradient(180deg, #86d058 0%, #72bf44 100%) !important;
+    linear-gradient(90deg, transparent 0%, #d9a41a 15%, #f7eea1 50%, #d9a41a 85%, transparent 100%) top / 100% 3px no-repeat,
+    linear-gradient(90deg, transparent 0%, #d9a41a 15%, #f7eea1 50%, #d9a41a 85%, transparent 100%) bottom / 100% 2px no-repeat,
+    linear-gradient(180deg, #19a09a 0%, #138984 100%) !important;
   border-color: transparent !important;
 }
 nav.cg-navfed .lx-link {
@@ -2513,31 +2514,31 @@ nav.cg-navfed .lx-link {
   font-weight: 800;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  font-family: "Segoe UI", "Segoe UI Variable", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif !important;
-  color: #0d2318 !important;
-  -webkit-text-fill-color: #0d2318 !important;
+  font-family: Arial, "Helvetica Neue", Helvetica, sans-serif !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
   transition: background-color 0.2s;
 }
 nav.cg-navfed .lx-link::after { display: none; }
 nav.cg-navfed .lx-link:hover,
 nav.cg-navfed [aria-expanded="true"] ~ .lx-link,
-nav.cg-navfed div:has(> [aria-expanded="true"]) > .lx-link { background: rgba(255, 255, 255, 0.4); }
+nav.cg-navfed div:has(> [aria-expanded="true"]) > .lx-link { background: rgba(255, 255, 255, 0.2); }
 /* Alto de la barra: 52 px (con el filete dorado). */
 nav.cg-navfed .lx-navrail { column-gap: 0.1rem !important; padding: 0 1rem !important; min-height: 50px; align-items: center; }
-nav.cg-navfed .lx-link + button[aria-haspopup="menu"] { margin-left: -1.25rem; position: relative; opacity: 1; color: #0d2318; }
+nav.cg-navfed .lx-link + button[aria-haspopup="menu"] { margin-left: -1.25rem; position: relative; opacity: 1; color: #ffffff; }
 nav.cg-navfed .lx-link:has(+ button[aria-haspopup="menu"]) { padding-right: 1.5rem; }
-nav.cg-navfed .lx-navrail > div > button[aria-haspopup="menu"]:not(.lx-link + *) { padding: 0.5rem 0.7rem; border-radius: 9999px; font-size: 0.74rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; font-family: "Segoe UI", "Segoe UI Variable", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif; color: #0d2318; }
+nav.cg-navfed .lx-navrail > div > button[aria-haspopup="menu"]:not(.lx-link + *) { padding: 0.5rem 0.7rem; border-radius: 9999px; font-size: 0.74rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; font-family: Arial, "Helvetica Neue", Helvetica, sans-serif; color: #ffffff; }
 .lx-iconos button, .lx-iconos a { border-radius: 9999px; background: rgba(255, 255, 255, 0.12); }
 .lx-iconos button:hover, .lx-iconos a:hover { background: rgba(255, 255, 255, 0.24); }
 /* Submenús: verde oscuro, letra blanca, esquinas redondeadas. */
 nav.cg-navfed [role="menu"] > div {
-  --nav-bg: #10291d; --fg: #ffffff; --fg-muted: #c3d3c9; --accent: #9be06a;
+  --nav-bg: #003e41; --fg: #ffffff; --fg-muted: #bcdcd9; --accent: #f7eea1;
   --border-strong: rgba(255, 255, 255, 0.1); --surface-2: rgba(255, 255, 255, 0.08);
   border-radius: 1.1rem; border-color: rgba(255, 255, 255, 0.08);
-  background: #10291d; color: #ffffff;
+  background: #003e41; color: #ffffff;
 }
 nav.cg-navfed [role="menu"] .lx-ui { letter-spacing: 0.01em; font-size: 0.9rem; font-weight: 500; }
-nav.cg-navfed .lx-link[aria-current] { color: #0d2318 !important; -webkit-text-fill-color: #0d2318 !important; background: rgba(255, 255, 255, 0.4); }
+nav.cg-navfed .lx-link[aria-current] { color: #ffffff !important; -webkit-text-fill-color: #ffffff !important; background: rgba(255, 255, 255, 0.22); }
 
 /* Brillo que recorre el logo (components/logo-contexto.tsx): una pasada de luz cada ~5 s. Quien pide menos movimiento no lo ve. */
 .logo-brillo { animation: logo-brillo 5s ease-in-out infinite; }
@@ -2549,9 +2550,9 @@ nav.cg-navfed .lx-link[aria-current] { color: #0d2318 !important; -webkit-text-f
 /* Iconos dentro de la barra verde (secciones): círculos claros como en la barra de FEDEGÁN. */
 /* El menú «Más» también va en verde oscuro con letra blanca, como los submenús. */
 nav.cg-navfed div[role="menu"][class*="overflow-y-auto"] {
-  --nav-bg: #10291d; --fg: #ffffff; --fg-muted: #c3d3c9; --accent: #9be06a;
+  --nav-bg: #003e41; --fg: #ffffff; --fg-muted: #bcdcd9; --accent: #f7eea1;
   --border: rgba(255, 255, 255, 0.12); --border-strong: rgba(255, 255, 255, 0.1); --surface-2: rgba(255, 255, 255, 0.08);
-  border-radius: 1.1rem; background: #10291d; color: #ffffff;
+  border-radius: 1.1rem; background: #003e41; color: #ffffff;
 }
 
 /* ====== Apertura de la portada Esmeralda (components/article-card.tsx: CineCard, DestacadaCard, UltimoCard). ====== */

@@ -14,7 +14,7 @@ import { VARIABLES_BLANCO } from "@/lib/portada-franja-blanca";
  */
 // Acentos sobre fondo del tema (oscuro) y sobre fondo blanco (más oscuros, para que se lean).
 const ACENTOS_TEMA = ["var(--accent)", "var(--accent-2)"] as const;
-const ACENTOS_BLANCO = ["#0f5132", "#946200"] as const;
+const ACENTOS_BLANCO = ["#0b6b67", "#8a6200"] as const;
 
 
 // Foto de una nota (o su arte de respaldo si no tiene imagen).

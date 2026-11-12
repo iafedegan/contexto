@@ -184,7 +184,7 @@ function MastheadHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extr
 
       {/* Cinta de seis colores bajo el nombre del sitio y encima del menú. */}
       <div aria-hidden className="cg-cinta-cabecera flex h-[2px] w-full">
-        {["#f2a900", "#b5124f", "#00587c", "#6a9fc0", "#e5214f", "#5a8f9e"].map((c) => (
+        {["#d9a41a", "#f7eea1", "#138984", "#003e41", "#138984", "#d9a41a"].map((c) => (
           <span key={c} className="cg-cinta-tramo h-full flex-1" style={{ "--c": c } as React.CSSProperties} />
         ))}
       </div>
@@ -194,13 +194,13 @@ function MastheadHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extr
       <nav data-el="h-menu"
         aria-label={t(locale, "nav.sections")}
         className="cg-navfed sticky top-0 z-40 border-y border-[var(--border)] bg-[var(--nav-bg)] sm:static"
-        // Verde de FEDEGÁN (el del menú de fedegan.org.co) en los dos modos, con texto oscuro para que se lea.
-        style={{ "--nav-bg": "#72bf44", "--fg": "#0d2318", "--fg-muted": "#1f3a28", "--border": "rgba(13,35,24,0.22)" } as React.CSSProperties}
+        // Turquesa #138984 del Manual de Identidad Visual en los dos modos, con texto blanco.
+        style={{ "--nav-bg": "#138984", "--fg": "#ffffff", "--fg-muted": "rgba(255,255,255,0.82)", "--border": "rgba(255,255,255,0.28)" } as React.CSSProperties}
       >
         <div className="lx-navrail mx-auto max-w-[125rem] items-center justify-start gap-x-5 gap-y-2 px-6 py-2.5 text-[0.72rem] font-bold uppercase tracking-[0.16em] sm:justify-center xl:gap-x-6">
           <EscudoSecciones locale={locale}>
             {/* Escudo a la izquierda (en las secciones el logo grande se esconde y el cintillo de cifras queda arriba). */}
-            <Link href={localePath(locale, "/")} aria-label={identity.name} className="mr-3 flex size-11 items-center justify-center rounded-full bg-[#0d2318] p-2 ring-2 ring-[#b8892f]/70">
+            <Link href={localePath(locale, "/")} aria-label={identity.name} className="mr-3 flex size-11 items-center justify-center rounded-full bg-[#022327] p-2 ring-2 ring-[#d9a41a]/80">
               <LogoContexto id="escudo" variante="emblema" titulo={identity.name} className="block h-full w-auto" />
             </Link>
           </EscudoSecciones>

@@ -18,7 +18,7 @@ export async function CintilloMercado({ locale }: { locale: Locale }) {
   }).filter((p) => p.tipo === "mercado");
   if (piezas.length === 0) return null;
   return (
-  <div data-region="cintillo" data-el="h-cintillo" className="cg-cintillo-arriba bg-[#0b2a1c] pt-[env(safe-area-inset-top)] text-white [--fg:#ffffff]">
+  <div data-region="cintillo" data-el="h-cintillo" className="cg-cintillo-arriba bg-[#003e41] pt-[env(safe-area-inset-top)] text-white [--fg:#ffffff]">
     <div className="overflow-hidden py-2">
       {(() => {
         // Una vuelta lo bastante larga para llenar pantallas anchas: si hay pocos datos, se repiten seguidos.
@@ -62,7 +62,7 @@ export async function CintilloMercado({ locale }: { locale: Locale }) {
       })()}
     </div>
     <div aria-hidden className="flex h-[2px] w-full">
-      {["#f2a900", "#b5124f", "#00587c", "#6a9fc0", "#e5214f", "#5a8f9e"].map((c) => (
+      {["#d9a41a", "#f7eea1", "#138984", "#003e41", "#138984", "#d9a41a"].map((c) => (
         <span key={c} className="cg-cinta-tramo h-full flex-1" style={{ "--c": c } as React.CSSProperties} />
       ))}
     </div>

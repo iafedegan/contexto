@@ -69,7 +69,7 @@ function Boton({ texto, url, enEditor, variante = "lleno", claro = false }: { te
   const cls =
     variante === "borde"
       ? claro ? "border-2 border-white/80 text-white hover:bg-white hover:text-black" : "border-2 border-[var(--accent)] text-[var(--accent)] hover:bg-[var(--accent)] hover:text-[var(--accent-fg)]"
-      : claro ? "bg-white text-[#0b2a1c] hover:bg-white/90" : "bg-[var(--accent)] text-[var(--accent-fg)] hover:opacity-90";
+      : claro ? "bg-white text-[#022327] hover:bg-white/90" : "bg-[var(--accent)] text-[var(--accent-fg)] hover:opacity-90";
   return (
     <Enlace url={url || "#"} enEditor={enEditor} className={`lx-ui inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-bold transition ${cls}`}>
       {texto}
@@ -100,7 +100,7 @@ const NOMBRE_RED: Record<string, string> = { facebook: "Facebook", instagram: "I
 function Tarjeta({ it, estilo, proporcion, enEditor }: { it: Valores; estilo: string; proporcion: string; enEditor?: boolean }) {
   if (estilo === "superpuesta")
     return (
-      <Enlace url={it.url} enEditor={enEditor} className="group relative isolate flex h-full min-h-64 flex-col justify-end overflow-hidden rounded-2xl bg-[#0b2a1c] p-5 text-white">
+      <Enlace url={it.url} enEditor={enEditor} className="group relative isolate flex h-full min-h-64 flex-col justify-end overflow-hidden rounded-2xl bg-[#022327] p-5 text-white">
         <Foto url={it.imagen} enEditor={enEditor} className="absolute inset-0 -z-10 size-full transition duration-500 group-hover:scale-105" />
         <span className="absolute inset-0 -z-10 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
         <span className="flex flex-col gap-1.5">
@@ -162,7 +162,7 @@ export function BloqueVista({ e, enEditor = false }: { e: ElementoBloque; enEdit
       const o = num(p.oscurecer, 0, 90, 45) / 100;
       const centro = p.alinear === "centro";
       return (
-        <div className={`relative isolate flex overflow-hidden rounded-2xl bg-[#0b2a1c] text-white ${alto} ${centro ? "items-center justify-center text-center" : "items-end"}`}>
+        <div className={`relative isolate flex overflow-hidden rounded-2xl bg-[#022327] text-white ${alto} ${centro ? "items-center justify-center text-center" : "items-end"}`}>
           {p.imagen && (
             <ImagenSitio src={p.imagen} alt="" sizes="100vw" ancho={1920} alto={1080} className="absolute inset-0 -z-10 size-full object-cover" />
           )}
@@ -189,11 +189,11 @@ export function BloqueVista({ e, enEditor = false }: { e: ElementoBloque; enEdit
       return (
         <Carrusel auto={p.auto === "si" && !enEditor} segundos={num(p.segundos, 2, 20, 6)} etiqueta="Carrusel de imágenes">
           {vis.map((it) => (
-            <Enlace key={it._id} url={it.url} enEditor={enEditor} className="relative block overflow-hidden rounded-2xl bg-[#0b2a1c] text-white">
+            <Enlace key={it._id} url={it.url} enEditor={enEditor} className="relative block overflow-hidden rounded-2xl bg-[#022327] text-white">
               {it.imagen || enEditor ? (
                 <Foto url={it.imagen} enEditor={enEditor} aspecto={p.proporcion} className="w-full" />
               ) : (
-                <span aria-hidden className="block w-full bg-gradient-to-br from-[#0b2a1c] via-[#14432c] to-[#3b5d1f]" style={{ aspectRatio: p.proporcion }} />
+                <span aria-hidden className="block w-full bg-gradient-to-br from-[#022327] via-[#003e41] to-[#138984]" style={{ aspectRatio: p.proporcion }} />
               )}
               {p.texto !== "no" && (it.titulo || it.texto) && (
                 <span className={`absolute inset-0 flex flex-col gap-1 p-6 @2xl:p-10 ${p.texto === "centro" ? "items-center justify-center bg-black/40 text-center" : "justify-end bg-gradient-to-t from-black/80 via-black/20 to-transparent"}`}>
@@ -395,9 +395,9 @@ export function BloqueVista({ e, enEditor = false }: { e: ElementoBloque; enEdit
     }
     case "llamado": {
       const fondo =
-        p.estilo === "oscuro" ? "bg-[#0b2a1c] text-white"
+        p.estilo === "oscuro" ? "bg-[#022327] text-white"
         : p.estilo === "suave" ? "bg-[var(--surface-2)]"
-        : p.estilo === "imagen" ? "bg-[#0b2a1c] text-white"
+        : p.estilo === "imagen" ? "bg-[#022327] text-white"
         : "bg-[var(--accent)] text-[var(--accent-fg)]";
       const claro = p.estilo === "oscuro" || p.estilo === "imagen" || p.estilo === "acento" || !p.estilo;
       const centro = p.alinear === "centro";
