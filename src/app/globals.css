@@ -2715,5 +2715,6 @@ nav.cg-navfed div[role="menu"][class*="overflow-y-auto"] {
 .cg-hueco .cg-car { max-width: none; margin: 0; }
 .cg-hueco .cg-car-img { height: var(--alto-car); aspect-ratio: auto; }
 .cg-hueco .cg-car-img img { aspect-ratio: auto !important; }
-.cg-hueco [aria-roledescription="diapositiva"] > a > :first-child { height: var(--alto-car); aspect-ratio: auto !important; }
+.cg-hueco [aria-roledescription="diapositiva"] > :is(a, div, span) > :first-child { height: var(--alto-car); aspect-ratio: auto !important; }
+.cg-hueco [aria-roledescription="diapositiva"] > :is(a, div, span) { height: var(--alto-car); }
 .cg-hueco [aria-roledescription="diapositiva"] img, .cg-hueco .cg-car-img img { width: 100%; height: 100%; object-fit: cover; }
