@@ -136,7 +136,7 @@ export async function ColumnaLafaurieSuelta({ locale, tarjeta = false }: { local
 function ColumnaTarjeta({ locale, columna }: { locale: Locale; columna: NonNullable<Awaited<ReturnType<typeof getUltimaColumnaLafaurie>>> }) {
   return (
     <section className="cg-columna group">
-      <Link href={hrefNota(locale, columna)} className="flex items-center gap-4 p-4 sm:gap-5">
+      <Link href={hrefNota(locale, columna)} className="flex items-center gap-4 p-3 sm:gap-4">
         {columna.authorAvatarUrl && (
           <ImagenSitio
             src={columna.authorAvatarUrl}
@@ -144,7 +144,7 @@ function ColumnaTarjeta({ locale, columna }: { locale: Locale; columna: NonNulla
             sizes="88px"
             ancho={176}
             alto={176}
-            className="size-[4.75rem] shrink-0 rounded-full object-cover ring-2 ring-[var(--accent)] ring-offset-[3px] ring-offset-[var(--bg-2)] sm:size-[5.5rem]"
+            className="size-[4rem] shrink-0 rounded-full object-cover ring-2 ring-[var(--accent)] ring-offset-[3px] ring-offset-[var(--bg-2)] sm:size-[4.5rem]"
           />
         )}
         <span className="min-w-0 flex-1">

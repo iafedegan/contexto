@@ -250,7 +250,7 @@ function CineCard({ a, priority, locale }: { a: ArticleListItem; priority?: bool
           alt={a.coverImageAlt ?? a.title}
           seed={a.slug}
           label={a.categoryName ?? a.title}
-          ratio="aspect-[4/5] h-full sm:aspect-[16/10] xl:aspect-auto xl:min-h-[20rem]"
+          ratio="aspect-[4/5] h-full sm:aspect-[16/10] xl:aspect-auto xl:min-h-[16rem]"
           priority={priority}
           sizes="(min-width: 1280px) 900px, (min-width: 768px) 60vw, 100vw"
         />
@@ -258,11 +258,11 @@ function CineCard({ a, priority, locale }: { a: ArticleListItem; priority?: bool
       {/* Velo: oscuro a la izquierda (donde va el texto) y limpio a la derecha; en el celular, desde abajo. */}
       <div aria-hidden className="lead-cine-izq pointer-events-none z-[1]" />
       {/* El texto va directo sobre la foto, sin caja: sección, titular con filete dorado a la izquierda y el botón de lectura. */}
-      <div className="relative z-[4] flex max-w-[34rem] flex-col items-start gap-4 self-end p-5 text-white sm:max-w-[56%] sm:self-center sm:p-8 md:gap-5 md:p-10">
+      <div className="relative z-[4] flex max-w-[34rem] flex-col items-start gap-4 self-end p-5 text-white sm:max-w-[56%] sm:self-center sm:p-6 md:gap-4 md:p-8">
         <Kicker a={a} locale={locale} className="whitespace-nowrap rounded-full bg-[var(--accent)] px-4 py-1 !text-[0.68rem] !tracking-[0.14em] text-[var(--accent-fg,#0b1a12)]" />
         <h2
           className="lx-display border-l-[3px] border-[var(--accent)] pl-4 text-balance font-bold leading-[1.05] tracking-tight [text-shadow:0_2px_18px_rgba(0,0,0,0.55)]"
-          style={{ ...st.title, fontSize: "clamp(1.7rem, 3.1vw, 3.1rem)", color: st.title.color ?? "#ffffff" }}
+          style={{ ...st.title, fontSize: "clamp(1.5rem, 2.4vw, 2.5rem)", color: st.title.color ?? "#ffffff" }}
         >
           <Link href={hrefNota(locale, a)} className="after:absolute after:inset-0 after:z-[2]">
             {a.title}
@@ -344,7 +344,7 @@ function MosaicoCard({ a, locale }: { a: ArticleListItem; locale: Locale }) {
     <article data-bs-root={a.slug} className="lx-card lx-reveal group relative grid h-full grid-cols-[minmax(0,1fr)] overflow-hidden [&>*]:col-start-1 [&>*]:row-start-1">
       <div className="lx-shine pointer-events-none absolute inset-0 z-[3]" />
       <Link href={hrefNota(locale, a)} className="block" aria-label={a.title} tabIndex={-1} style={st.imageBox}>
-        <CardMedia src={a.coverImageUrl} alt={a.coverImageAlt ?? a.title} seed={a.slug} label={a.categoryName ?? a.title} ratio="aspect-[16/11] h-full" sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw" />
+        <CardMedia src={a.coverImageUrl} alt={a.coverImageAlt ?? a.title} seed={a.slug} label={a.categoryName ?? a.title} ratio="aspect-[16/9] h-full" sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw" />
       </Link>
       <div aria-hidden className="pointer-events-none z-[1] bg-gradient-to-t from-[rgba(2,22,20,0.94)] via-[rgba(2,22,20,0.42)] to-transparent" />
       <div className="relative z-[4] flex items-end justify-between gap-3 self-end p-4 text-white sm:p-5">
@@ -369,19 +369,19 @@ function MosaicoCard({ a, locale }: { a: ArticleListItem; locale: Locale }) {
 function LeidoCard({ a, index, locale }: { a: ArticleListItem; index?: number; locale: Locale }) {
   const st = cardStyle(a, "leido");
   return (
-    <article data-bs-root={a.slug} className="group relative flex items-center gap-3.5 px-4 py-3">
+    <article data-bs-root={a.slug} className="group relative flex items-center gap-3 px-4 py-2">
       {typeof index === "number" && (
         <span aria-hidden className="lx-display w-8 shrink-0 text-[1.5rem] font-semibold leading-none text-[var(--accent)] [font-variant-numeric:lining-nums]">
           {String(index + 1).padStart(2, "0")}
         </span>
       )}
-      <h3 className="lx-ui line-clamp-3 min-w-0 flex-1 font-medium leading-snug" style={{ ...st.title, fontSize: "0.92rem" }}>
+      <h3 className="lx-ui line-clamp-2 min-w-0 flex-1 font-medium leading-snug" style={{ ...st.title, fontSize: "0.88rem" }}>
         <Link href={hrefNota(locale, a)} className="transition-colors hover:text-[var(--link)] after:absolute after:inset-0 after:z-[2]">
           {a.title}
         </Link>
       </h3>
-      <span className="lx-media block w-20 shrink-0 overflow-hidden rounded-[var(--radius)] ring-1 ring-[var(--border)] sm:w-24">
-        <CardMedia src={a.coverImageUrl} alt="" seed={a.slug} label={a.categoryName ?? a.title} ratio="aspect-[4/3]" sizes="96px" />
+      <span className="lx-media block w-16 shrink-0 overflow-hidden rounded-[var(--radius)] ring-1 ring-[var(--border)] sm:w-[4.5rem]">
+        <CardMedia src={a.coverImageUrl} alt="" seed={a.slug} label={a.categoryName ?? a.title} ratio="aspect-[4/3]" sizes="72px" />
       </span>
     </article>
   );

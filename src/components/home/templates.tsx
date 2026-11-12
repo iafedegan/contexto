@@ -444,7 +444,7 @@ export function EsmeraldaTemplate({
           {trasPrincipal && <div className="hidden has-[section]:block">{trasPrincipal}</div>}
           {leidas.length > 0 && (
             <div className="cg-leidas flex flex-1 flex-col overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border-strong)] bg-[var(--bg-2)]">
-              <header className="border-b border-[var(--border)] px-4 py-3">
+              <header className="border-b border-[var(--border)] px-4 py-2.5">
                 <h2 className="lx-kicker flex items-center gap-2.5 !text-[0.85rem] text-[var(--accent)]">
                   <svg aria-hidden viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M4 20V11h4v9zm6 0V4h4v16zm6 0v-6h4v6z" /></svg>
                   {locale === "en" ? "Most read" : "Lo más leído"}
