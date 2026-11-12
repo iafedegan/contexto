@@ -144,7 +144,10 @@ async function HomePage({ locale, portadaBorrador }: { locale: Locale; portadaBo
         fecha: a.publishedAt ? formatDate(a.publishedAt, INTL_LOCALE[locale]) : null,
       }));
     const notasCar = car.propiasPosicion === "antes" ? [...propias, ...delSitio] : [...delSitio, ...propias];
-    return notasCar.length ? <CarruselPortada key={clave} config={car} notas={notasCar} /> : null;
+    // Esmeralda los pone de a dos en el hueco bajo las destacadas: una diapositiva a la vez, título sobre la foto y proporción 3:2 (más altos que anchos de banda).
+    const enHueco = !["revista", "compacto", "vanguardia", "clasico", "gremial"].includes(body);
+    const config = enHueco ? { ...car, visiblesEscritorio: 1, visiblesTableta: 1, visiblesCelular: 1, estilo: "superpuesta" as const, aspecto: "3:2" as const, ancho: 1800 } : car;
+    return notasCar.length ? <CarruselPortada key={clave} config={config} notas={notasCar} /> : null;
   };
   const nodosCarrusel = await Promise.all(carruseles.map((c, i) => construirCarrusel(c, i)));
   const car = carruseles[0];

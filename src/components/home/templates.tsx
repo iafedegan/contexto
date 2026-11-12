@@ -421,18 +421,19 @@ export function EsmeraldaTemplate({
   // La apertura reparte las cinco notas que siguen a la principal. Con la columna destacada a la derecha (que ya ocupa su alto), dos van
   // como tarjetas apaisadas bajo la principal y tres en «Lo último»; sin ella, las cinco van en la lista. Así las dos columnas miden
   // parecido y la foto principal, que se estira hasta igualarlas, no queda ni cuadrada ni con un hueco debajo.
-  const todosAside = [second, ...rail].filter((a): a is ArticleListItem => Boolean(a));
+  const base = [second, ...rail, ...river].filter((a): a is ArticleListItem => Boolean(a));
   const hayColumna = conColumna && Boolean(trasPrincipal);
-  const destacadas = hayColumna ? todosAside.slice(0, 2) : [];
-  const ultimos = todosAside.slice(destacadas.length, destacadas.length + (hayColumna ? 3 : 5));
-  const rio = [...todosAside.slice(destacadas.length + ultimos.length), ...river];
+  const destacadas = hayColumna ? base.slice(0, 2) : [];
+  // Con columna: cuatro renglones en «Lo último» (01-04), que dejan el alto justo para el hueco de la izquierda; sin ella, la lista se alarga.
+  const ultimos = base.slice(destacadas.length, destacadas.length + (hayColumna ? 4 : 6));
+  const rio = base.slice(destacadas.length + ultimos.length);
 
   return (
     <div className="flex flex-col gap-12 sm:gap-20">
       <section className={`grid grid-cols-1 gap-7 sm:gap-8 xl:items-start xl:gap-0 ${ANCHO_PRINCIPAL[layout.anchoPrincipal] ?? ANCHO_PRINCIPAL.ancha}`}>
         {/* En pantallas anchas es la columna izquierda (la principal crece hasta igualar a la derecha; debajo, las destacadas). En el celular
             la columna se «disuelve» (contents) para poder ordenar: principal, columna derecha y, al final, las destacadas. */}
-        <div className="flex min-w-0 flex-col gap-5 max-xl:contents xl:pr-8">
+        <div className="flex min-w-0 flex-col gap-5 max-xl:contents xl:self-stretch xl:pr-8">
           <div className="min-w-0 max-xl:order-1 [&>*]:h-full">{wrap(lead, <ArticleCard a={lead} locale={locale} variant="cine" priority={interactive} />)}</div>
           {destacadas.length > 0 && (
             <div className="grid min-w-0 grid-cols-1 gap-4 max-xl:order-3 sm:grid-cols-2 sm:gap-5">
@@ -440,7 +441,7 @@ export function EsmeraldaTemplate({
             </div>
           )}
           {hueco && hueco.length > 0 && (
-            <div className={`grid min-w-0 grid-cols-1 gap-4 max-xl:order-4 sm:gap-5 ${hueco.length > 1 ? "sm:grid-cols-2" : ""} xl:[&>*]:max-w-full`}>
+            <div className={`grid min-w-0 grid-cols-1 content-start gap-4 max-xl:order-4 sm:gap-5 xl:flex-1 ${hueco.length > 1 ? "sm:grid-cols-2" : ""}`}>
               {hueco.map((n, i) => <div key={i} className="min-w-0">{n}</div>)}
             </div>
           )}
