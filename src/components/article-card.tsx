@@ -276,23 +276,28 @@ function CineCard({ a, priority, locale }: { a: ArticleListItem; priority?: bool
             {a.title}
           </Link>
         </h2>
-        {!st.hideExcerpt && (
-          <p data-cg-resumen className={`mt-3 hidden max-w-2xl text-[0.95rem] leading-relaxed text-white/85 sm:block md:text-base ${st.excerptClamp} ${st.textDerecha ? "ml-auto" : ""}`}>
-            {a.excerpt}
-          </p>
-        )}
-        <span className={`mt-4 flex items-center gap-4 md:mt-5 ${st.textDerecha ? "flex-row-reverse" : ""}`}>
-          {/* La flecha es un adorno: toda la tarjeta ya es el enlace del titular. */}
-          <span aria-hidden className="grid size-10 shrink-0 place-items-center rounded-full bg-[var(--accent)] text-lg text-[var(--accent-fg,#0b1a12)] transition-transform duration-500 group-hover:translate-x-1">
-            →
-          </span>
-          {a.authorName && (
-            <span className="lx-ui min-w-0 text-[0.8rem] leading-tight text-white/85">
-              <span className="block text-[0.62rem] font-semibold uppercase tracking-[0.18em] text-white/60">{locale === "en" ? "By" : "Por"}</span>
-              <span className="block truncate font-semibold text-white">{a.authorName}</span>
-            </span>
+        {/* Con ratón, en reposo solo se ve la sección y el titular; el resumen y la firma aparecen al pasar el puntero (en pantallas táctiles, siempre). */}
+        <div className="lead-detalle">
+          <div className="min-h-0 overflow-hidden">
+          {!st.hideExcerpt && (
+            <p data-cg-resumen className={`mt-3 hidden max-w-2xl text-[0.95rem] leading-relaxed text-white/85 sm:block md:text-base ${st.excerptClamp} ${st.textDerecha ? "ml-auto" : ""}`}>
+              {a.excerpt}
+            </p>
           )}
-        </span>
+          <span className={`mt-4 flex items-center gap-4 md:mt-5 ${st.textDerecha ? "flex-row-reverse" : ""}`}>
+            {/* La flecha es un adorno: toda la tarjeta ya es el enlace del titular. */}
+            <span aria-hidden className="grid size-10 shrink-0 place-items-center rounded-full bg-[var(--accent)] text-lg text-[var(--accent-fg,#0b1a12)] transition-transform duration-500 group-hover:translate-x-1">
+              →
+            </span>
+            {a.authorName && (
+              <span className="lx-ui min-w-0 text-[0.8rem] leading-tight text-white/85">
+                <span className="block text-[0.62rem] font-semibold uppercase tracking-[0.18em] text-white/60">{locale === "en" ? "By" : "Por"}</span>
+                <span className="block truncate font-semibold text-white">{a.authorName}</span>
+              </span>
+            )}
+          </span>
+          </div>
+        </div>
       </div>
     </article>
   );

@@ -2554,8 +2554,8 @@ nav.cg-navfed div[role="menu"][class*="overflow-y-auto"] {
 }
 
 /* ====== Apertura de la portada Esmeralda (components/article-card.tsx: CineCard, DestacadaCard, UltimoCard). ====== */
-/* El titular de la apertura «de cine» va siempre a su tamaño completo (la tarjeta de vidrio anterior lo encogía en reposo). */
-.lead-cine .lead-titulo { font-size: var(--lead-fs); line-height: 1.08; }
+/* Con ratón la apertura «de cine» descansa con el titular pequeño y la foto limpia; al pasar el puntero el velo se cierra y sale todo el texto. */
+.lead-cine .lead-titulo { line-height: 1.08; }
 /* Velo: oscuro donde va el texto y transparente hacia el centro de la foto. Arriba, el mismo velo invertido. */
 .lead-cine-velo {
   background:
@@ -2563,6 +2563,10 @@ nav.cg-navfed div[role="menu"][class*="overflow-y-auto"] {
     linear-gradient(to bottom, rgba(3, 12, 8, 0.28) 0%, rgba(3, 12, 8, 0) 22%);
 }
 .lead-cine-velo-arriba { transform: scaleY(-1); }
+@media (hover: hover) {
+  .lead-cine-velo { opacity: 0.55; transition: opacity 0.5s var(--ease-lux); }
+  .lead-cine:hover .lead-cine-velo, .lead-cine:focus-within .lead-cine-velo { opacity: 1; }
+}
 /* Filete de acento que crece bajo la foto al pasar el puntero. */
 .lead-cine::after {
   content: "";
