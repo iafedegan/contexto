@@ -1,16 +1,56 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { localePath, type Locale } from "@/lib/i18n";
 
-/**
- * Muestra a sus hijos solo en la portada (`donde="portada"`) o solo en el resto de páginas (`donde="resto"`). La cabecera de la portada
- * usa esto: en la portada va el logo grande; al entrar a una sección se esconde y la barra verde lleva el escudo a la izquierda.
- */
-export function EnPortada({ locale, donde, children }: { locale: Locale; donde: "portada" | "resto"; children: React.ReactNode }) {
+/** ¿Estamos en la portada? (el editor de /panel/portada —su lienzo es /vista-portada— y la vista previa cuentan como portada). */
+function useEsPortada(locale: Locale): boolean {
   const ruta = (usePathname() ?? "/").replace(/\/+$/, "") || "/";
   const inicio = localePath(locale, "/").replace(/\/+$/, "") || "/";
-  // El editor de /panel/portada (su lienzo es /vista-portada) y la vista previa muestran la portada tal como está en producción.
-  const esPortada = ruta === inicio || ruta === "/" || ruta === "/vista-portada" || ruta.startsWith("/panel") || ruta.startsWith("/vista-previa");
-  return (donde === "portada") === esPortada ? <>{children}</> : null;
+  return ruta === inicio || ruta === "/" || ruta === "/vista-portada" || ruta.startsWith("/panel") || ruta.startsWith("/vista-previa");
+}
+
+/** Dónde estaba el lector en la navegación anterior (solo en el navegador; vive mientras no se recargue la página). */
+let estabaEnPortada: boolean | null = null;
+
+/**
+ * Cada página pinta su propia cabecera, así que al navegar el componente se vuelve a crear. Para que el cambio se anime, arranca en el estado
+ * de la página ANTERIOR y, un instante después, pasa al de la actual: la transición de CSS hace el resto. En la primera carga (sin página
+ * anterior) arranca ya en su estado, sin animación.
+ */
+function useEstadoAnimado(locale: Locale): boolean {
+  const esPortada = useEsPortada(locale);
+  const [mostrando, setMostrando] = useState(() => (typeof window !== "undefined" && estabaEnPortada !== null ? estabaEnPortada : esPortada));
+  useEffect(() => {
+    estabaEnPortada = esPortada;
+    if (mostrando === esPortada) return;
+    // Un temporizador corto y no `requestAnimationFrame`: en una pestaña en segundo plano éste se pausa y la cabecera se quedaría a medias.
+    const id = setTimeout(() => setMostrando(esPortada), 40);
+    return () => clearTimeout(id);
+  }, [esPortada, mostrando]);
+  return mostrando;
+}
+
+/**
+ * El logo grande de la cabecera: se esconde con una animación (se pliega hacia arriba y se desvanece) al ir de la portada a una sección,
+ * y vuelve a desplegarse al regresar. Siempre está montado, así que la transición va en los dos sentidos; ver `.cg-mastil` en globals.css.
+ */
+export function MastilPortada({ locale, children }: { locale: Locale; children: React.ReactNode }) {
+  const esPortada = useEstadoAnimado(locale);
+  return (
+    <div className="cg-mastil" data-oculto={!esPortada} aria-hidden={!esPortada}>
+      <div className="cg-mastil-interior">{children}</div>
+    </div>
+  );
+}
+
+/** El escudo de la barra verde: aparece (se ensancha y se enciende) al entrar a una sección y se esconde al volver a la portada. */
+export function EscudoSecciones({ locale, children }: { locale: Locale; children: React.ReactNode }) {
+  const esPortada = useEstadoAnimado(locale);
+  return (
+    <div className="cg-escudo" data-oculto={esPortada} aria-hidden={esPortada}>
+      <div className="cg-escudo-interior">{children}</div>
+    </div>
+  );
 }

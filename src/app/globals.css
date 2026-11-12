@@ -2680,3 +2680,30 @@ nav.cg-navfed div[role="menu"][class*="overflow-y-auto"] {
   from { transform: scale(1.18); }
   to { transform: scale(1); }
 }
+
+/* ====== Cabecera animada entre portada y secciones (components/en-portada.tsx) ======
+   El logo grande se pliega hacia arriba (altura 1fr → 0fr) mientras se desvanece; el escudo de la barra verde se ensancha y se enciende.
+   Al regresar a la portada, todo al revés. Quien pide menos movimiento ve el cambio sin animación. */
+.cg-mastil {
+  display: grid;
+  grid-template-rows: 1fr;
+  opacity: 1;
+  transition: grid-template-rows 0.7s var(--ease-lux), opacity 0.45s ease;
+}
+.cg-mastil-interior { min-height: 0; overflow: hidden; }
+.cg-mastil[data-oculto="true"] { grid-template-rows: 0fr; opacity: 0; pointer-events: none; }
+.cg-mastil[data-oculto="true"] .cg-mastil-interior { visibility: hidden; transition: visibility 0s 0.7s; }
+.cg-escudo {
+  display: grid;
+  grid-template-columns: 1fr;
+  max-width: 3.75rem;
+  opacity: 1;
+  transform: scale(1);
+  transition: max-width 0.6s var(--ease-lux), opacity 0.5s ease 0.15s, transform 0.6s var(--ease-lux) 0.1s;
+}
+.cg-escudo-interior { min-width: 0; overflow: visible; }
+.cg-escudo[data-oculto="true"] { max-width: 0; opacity: 0; transform: scale(0.4); pointer-events: none; transition-delay: 0s; }
+.cg-escudo[data-oculto="true"] .cg-escudo-interior { visibility: hidden; }
+@media (prefers-reduced-motion: reduce) {
+  .cg-mastil, .cg-mastil-interior, .cg-escudo { transition: none !important; }
+}

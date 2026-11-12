@@ -14,7 +14,7 @@ import { RadioPlayer } from "@/components/radio-player";
 import { InstalarApp } from "@/components/instalar-app";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { StickyRail } from "@/components/sticky-rail";
-import { EnPortada } from "@/components/en-portada";
+import { EscudoSecciones, MastilPortada } from "@/components/en-portada";
 import { cn } from "@/lib/utils";
 
 // Elemento de la navegación: dirección y etiqueta.
@@ -163,7 +163,7 @@ function MastheadHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extr
       {/* Solo la fila de secciones queda pegada al desplazarse (ver StickyRail). */}
       <StickyRail />
 
-      <EnPortada locale={locale} donde="portada">
+      <MastilPortada locale={locale}>
       {/* Contenedor de tamaño propio: el nombre, el emblema y las líneas se escalan con su ancho y se ajustan juntos. */}
       <div className="mx-auto max-w-7xl px-6 pb-5 pt-5 text-center md:pb-6 md:pt-7 [container-type:inline-size]">
         {/* Logo a la izquierda y, a su lado, el nombre. `items-center` en ESTA fila: las líneas y el logo quedan en el centro vertical del título. */}
@@ -189,7 +189,7 @@ function MastheadHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extr
         ))}
       </div>
 
-      </EnPortada>
+      </MastilPortada>
 
       <nav data-el="h-menu"
         aria-label={t(locale, "nav.sections")}
@@ -198,12 +198,12 @@ function MastheadHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extr
         style={{ "--nav-bg": "#72bf44", "--fg": "#0d2318", "--fg-muted": "#1f3a28", "--border": "rgba(13,35,24,0.22)" } as React.CSSProperties}
       >
         <div className="lx-navrail mx-auto max-w-[125rem] items-center justify-start gap-x-5 gap-y-2 px-6 py-2.5 text-[0.72rem] font-bold uppercase tracking-[0.16em] sm:justify-center xl:gap-x-6">
-          <EnPortada locale={locale} donde="resto">
+          <EscudoSecciones locale={locale}>
             {/* Escudo a la izquierda (en las secciones el logo grande se esconde y el cintillo de cifras queda arriba). */}
             <Link href={localePath(locale, "/")} aria-label={identity.name} className="mr-3 flex size-11 items-center justify-center rounded-full bg-[#0d2318] p-2 ring-2 ring-[#b8892f]/70">
               <LogoContexto id="escudo" variante="emblema" titulo={identity.name} className="block h-full w-auto" />
             </Link>
-          </EnPortada>
+          </EscudoSecciones>
           {nav.map((n) => (
             <NavMenuItem key={n.href} item={n} locale={locale} className="lx-link lx-ui" />
           ))}
