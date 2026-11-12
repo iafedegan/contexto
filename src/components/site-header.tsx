@@ -175,7 +175,7 @@ function MastheadHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extr
           <span data-titulo-linea className="hidden h-px flex-1 bg-gradient-to-r from-transparent to-[var(--border-strong)] md:block" />
           {/* El logo oficial recreado en SVG (components/logo-contexto.tsx; colores con --logo-*): la C con el play, CONTEXTO, GANADERO MEDIA y «— 14 AÑOS —». */}
           <Link href={localePath(locale, "/")} className="flex items-center justify-center">
-            <LogoContexto id="web" titulo={identity.name} className="block h-[clamp(3rem,6.4cqi,4.6rem)] w-auto" />
+            <LogoContexto id="web" pieza="h-logo" titulo={identity.name} className="block h-[clamp(3rem,6.4cqi,4.6rem)] w-auto" />
           </Link>
           <span data-titulo-linea className="hidden h-px flex-1 bg-gradient-to-l from-transparent to-[var(--border-strong)] md:block" />
         </div>

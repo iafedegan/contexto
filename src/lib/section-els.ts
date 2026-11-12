@@ -107,11 +107,13 @@ export function sectionElsCss(input: unknown, scope = "[data-site-root]"): strin
     }
     // El logo es una máscara pintada con su fondo: «tamaño» es su alto y el color (o degradado) es el fondo, no el de las letras.
     if (id === "h-logo") {
+      // El logo actual es un SVG con su propio color (variables --logo-*, ver `soloColor`): a él solo le toca el alto; el fondo es del emblema antiguo.
+      if (s.size !== undefined) rules.push(`svg${sel}{height:${s.size}px!important}`);
       const l: string[] = [];
       if (s.size !== undefined) l.push(`height:${s.size}px!important`);
       if (s.gradient) l.push(`background:${gradientCss(s.gradient)}!important`, "animation:none!important");
       else if (s.color) l.push(`background:${s.color}!important`, "animation:none!important");
-      if (l.length) rules.push(`${sel}{${l.join(";")}}`);
+      if (l.length) rules.push(`${sel}:not(svg){${l.join(";")}}`);
       return;
     }
     const d: string[] = [];

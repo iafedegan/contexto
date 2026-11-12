@@ -12,7 +12,7 @@
  * `id` debe ser distinto en cada logo de la misma página (el degradado se referencia por id y uno oculto con display:none no pinta).
  */
 
-type Props = { id: string; titulo?: string; className?: string; variante?: "horizontal" | "emblema"; conAnios?: boolean };
+type Props = { id: string; titulo?: string; className?: string; variante?: "horizontal" | "emblema"; conAnios?: boolean; /** Pieza del editor de la cabecera a la que responde (p. ej. «h-logo»: su alto). */ pieza?: string };
 
 // Trazos del original, en el lienzo de la versión horizontal (1080 × 437, y hacia abajo).
 const C = "M90.32 160.58 C90.32 219.06 134.96 261.73 194.85 261.73 L194.85 261.73 C225.65 261.73 252.2 250.99 270.28 230.65 L270.28 230.65 L251.92 212.85 C236.66 228.95 218.02 236.58 196.26 236.58 L196.26 236.58 C151.62 236.58 118.57 204.37 118.57 160.58 L118.57 160.58 C118.57 116.79 151.62 84.58 196.26 84.58 L196.26 84.58 C218.02 84.58 236.66 91.93 251.92 108.03 L251.92 108.03 L270.28 90.23 C252.2 69.89 225.65 59.44 195.13 59.44 L195.13 59.44 C134.96 59.44 90.32 102.1 90.32 160.58";
@@ -50,18 +50,18 @@ function Emblema({ fill }: { fill: string }) {
   );
 }
 
-export function LogoContexto({ id, titulo = "CONtexto Ganadero Media", className, variante = "horizontal", conAnios = true }: Props) {
+export function LogoContexto({ id, titulo = "CONtexto Ganadero Media", className, variante = "horizontal", conAnios = true, pieza }: Props) {
   const g = `logo-oro-${id}`;
   const fill = `url(#${g})`;
   if (variante === "emblema")
     return (
-      <svg viewBox="84 54 192 214" role="img" aria-label={titulo} className={className} data-color-de="h-nombre">
+      <svg viewBox="84 54 192 214" role="img" aria-label={titulo} className={className} data-color-de="h-nombre" data-el={pieza}>
         <Degradado id={g} />
         <Emblema fill={fill} />
       </svg>
     );
   return (
-    <svg viewBox={conAnios ? "80 52 906 312" : "80 52 906 252"} role="img" aria-label={titulo} className={className} data-color-de="h-nombre">
+    <svg viewBox={conAnios ? "80 52 906 312" : "80 52 906 252"} role="img" aria-label={titulo} className={className} data-color-de="h-nombre" data-el={pieza}>
       <title>{titulo}</title>
       <Degradado id={g} />
       <Emblema fill={fill} />
