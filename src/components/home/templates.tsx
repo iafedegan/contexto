@@ -426,11 +426,11 @@ export function EsmeraldaTemplate({
 
   return (
     <div className="flex flex-col gap-12 sm:gap-20">
-      <section className={`grid grid-cols-1 gap-7 sm:gap-8 xl:gap-0 ${ANCHO_PRINCIPAL[layout.anchoPrincipal] ?? ANCHO_PRINCIPAL.ancha}`}>
+      <section className={`grid grid-cols-1 gap-7 sm:gap-8 xl:items-start xl:gap-0 ${ANCHO_PRINCIPAL[layout.anchoPrincipal] ?? ANCHO_PRINCIPAL.ancha}`}>
         {/* En pantallas anchas es la columna izquierda (la principal crece hasta igualar a la derecha; debajo, las destacadas). En el celular
             la columna se «disuelve» (contents) para poder ordenar: principal, columna derecha y, al final, las destacadas. */}
         <div className="flex min-w-0 flex-col gap-5 max-xl:contents xl:pr-8">
-          <div className="min-w-0 max-xl:order-1 xl:flex-1 [&>*]:h-full">{wrap(lead, <ArticleCard a={lead} locale={locale} variant="cine" priority={interactive} />)}</div>
+          <div className="min-w-0 max-xl:order-1 [&>*]:h-full">{wrap(lead, <ArticleCard a={lead} locale={locale} variant="cine" priority={interactive} />)}</div>
           {destacadas.length > 0 && (
             <div className="grid min-w-0 grid-cols-1 gap-4 max-xl:order-3 sm:grid-cols-2 sm:gap-5">
               {destacadas.map((a) => wrap(a, <ArticleCard a={a} locale={locale} variant="destacada" />))}
