@@ -2716,3 +2716,13 @@ nav.cg-navfed div[role="menu"][class*="overflow-y-auto"] {
   .cg-hueco .cg-car-img { height: 100%; aspect-ratio: auto; }
   .cg-hueco .cg-car-img img { aspect-ratio: auto !important; }
 }
+/* Lo mismo para los carruseles de las filas armadas en el constructor de páginas (components/pagina-interactivos.tsx): cada contenedor que
+   lleva un carrusel mide el 100 % del hueco, y la foto de cada diapositiva llena su alto en vez de guardar su proporción. */
+@media (min-width: 1280px) {
+  .cg-hueco :is(div, section, article):has([aria-roledescription="carrusel"]) { height: 100%; }
+  .cg-hueco [aria-roledescription="carrusel"] { display: flex; flex-direction: column; height: 100%; }
+  .cg-hueco [aria-roledescription="carrusel"] > div:first-child { flex: 1; min-height: 0; }
+  .cg-hueco [aria-roledescription="diapositiva"], .cg-hueco [aria-roledescription="diapositiva"] > a { height: 100%; }
+  .cg-hueco [aria-roledescription="diapositiva"] > a > :first-child { height: 100%; aspect-ratio: auto !important; }
+  .cg-hueco [aria-roledescription="diapositiva"] img { height: 100%; width: 100%; object-fit: cover; }
+}
