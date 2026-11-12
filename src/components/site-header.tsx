@@ -218,7 +218,7 @@ function MastheadHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extr
           <BotonInicio locale={locale} etiqueta={identity.name} />
           <EscudoSecciones locale={locale}>
             {/* Escudo a la izquierda (en las secciones el logo grande se esconde y el cintillo de cifras queda arriba). */}
-            <Link href={localePath(locale, "/")} aria-label={identity.name} className="mr-3 flex size-11 items-center justify-center rounded-full bg-[#022327] p-2 ring-2 ring-[#d9a41a]/80">
+            <Link href={localePath(locale, "/")} aria-label={identity.name} className="flex size-9 items-center justify-center rounded-full bg-[#022327] p-1.5 ring-2 ring-[#d9a41a]/80">
               <LogoContexto id="escudo" variante="emblema" titulo={identity.name} className="block h-full w-auto" />
             </Link>
           </EscudoSecciones>
