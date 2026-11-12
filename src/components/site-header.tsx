@@ -164,13 +164,6 @@ function MastheadHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extr
       <StickyRail />
 
       <EnPortada locale={locale} donde="portada">
-      {/* Idioma, modo, radio e instalar: en la esquina del encabezado. En las secciones van dentro de la barra verde. */}
-      <span className="lx-iconos absolute right-5 top-2 z-10 hidden items-center gap-1.5 text-[var(--fg)] lg:flex">
-          <LocaleSwitch locale={locale} compacto />
-          <ThemeToggle locale={locale} className="!size-8 pointer-coarse:!size-11" />
-          {identity.radioStreamUrl && <RadioPlayer src={identity.radioStreamUrl} locale={locale} />}
-          <InstalarApp locale={locale} variante="mini" />
-        </span>
       {/* Contenedor de tamaño propio: el nombre, el emblema y las líneas se escalan con su ancho y se ajustan juntos. */}
       <div className="mx-auto max-w-7xl px-6 pb-1.5 pt-2 text-center md:pt-2.5 [container-type:inline-size]">
         {/* Logo a la izquierda y, a su lado, el nombre. `items-center` en ESTA fila: las líneas y el logo quedan en el centro vertical del título. */}
@@ -214,13 +207,18 @@ function MastheadHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extr
           {nav.map((n) => (
             <NavMenuItem key={n.href} item={n} locale={locale} className="lx-link lx-ui" />
           ))}
-          <MoreMenu locale={locale} extra={extra} />
-          <EnPortada locale={locale} donde="resto"><span className="lx-iconos ml-2 flex items-center gap-1.5 text-[#0d2318]">
-          <LocaleSwitch locale={locale} compacto />
-          <ThemeToggle locale={locale} className="!size-8 pointer-coarse:!size-11" />
-          {identity.radioStreamUrl && <RadioPlayer src={identity.radioStreamUrl} locale={locale} />}
-          <InstalarApp locale={locale} variante="mini" />
-        </span></EnPortada>
+          <MoreMenu
+            locale={locale}
+            extra={extra}
+            acciones={
+              <>
+                <LocaleSwitch locale={locale} compacto />
+                <ThemeToggle locale={locale} className="!size-8 pointer-coarse:!size-11" />
+                {identity.radioStreamUrl && <RadioPlayer src={identity.radioStreamUrl} locale={locale} />}
+                <InstalarApp locale={locale} variante="mini" />
+              </>
+            }
+          />
           
         </div>
       </nav>

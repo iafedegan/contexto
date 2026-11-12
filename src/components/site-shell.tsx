@@ -9,6 +9,7 @@ import { AdsBanner } from "@/components/ads-banner";
 import { SiteHeader, type NavItem } from "@/components/site-header";
 import { MobileTabBar } from "@/components/mobile-tab-bar";
 import { SiteFooter } from "@/components/site-footer";
+import { CintilloMercado } from "@/components/cintillo-mercado";
 import type { Theme } from "@/lib/theme";
 import { DEFAULT_LOCALE, categoryLabel, t, type Locale } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
@@ -120,7 +121,7 @@ export async function SiteShell({
       {ultimaHora && /^[a-z0-9-]+$/.test(ultimaHora.slug) && <style dangerouslySetInnerHTML={{ __html: estiloUltimaHora(ultimaHora.slug, t(locale, "breaking.label")) }} />}
       {/* En el celular el cintillo y la cabecera quedan fijos arriba al hacer scroll; en pantallas grandes el envoltorio no existe (contents) y la barra de secciones conserva su propio sticky. */}
       <div className="sticky top-0 z-50 lg:contents">
-        {topBar}
+        {topBar ?? <CintilloMercado locale={locale} />}
         <SiteHeader theme={theme} nav={nav} extraNav={sinOcultas(extraNav, site.menuNav)} locale={locale} identity={conTextos(identity, site.textos)} variant={site.parts.navbar} />
       </div>
       {aboveMain}

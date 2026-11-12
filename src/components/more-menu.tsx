@@ -15,8 +15,11 @@ import { cn } from "@/lib/utils";
 export function MoreMenu({
   locale,
   extra = [],
+  acciones,
 }: {
   locale: Locale;
+  /** Botones sueltos (idioma, modo claro/oscuro, radio, instalar la app): van en una fila dentro del menú. */
+  acciones?: React.ReactNode;
   /** Secciones que no caben en la barra principal (N-04). `cls` permite ocultar una a partir de cierto ancho
    *  (p. ej. `xl:hidden`: a ese ancho ya cabe en la propia barra y no hace falta repetirla aquí). */
   extra?: { href: string; label: string; cls?: string }[];
@@ -69,6 +72,7 @@ export function MoreMenu({
           // transparentaba y el menú no se podía leer.
           className="absolute right-0 top-full z-[60] mt-1 max-h-[70dvh] w-[min(16rem,calc(100vw-2rem))] overflow-y-auto overflow-x-hidden rounded-[var(--radius)] border border-[var(--border-strong)] bg-[var(--nav-bg)] py-2 text-left text-[var(--fg)] opacity-100 shadow-[0_24px_60px_-20px_rgba(0,0,0,0.6)]"
         >
+          {acciones && <div className="lx-iconos flex flex-wrap items-center gap-1.5 border-b border-[var(--border)] px-4 pb-2.5 pt-1.5 text-[var(--fg)]">{acciones}</div>}
           {extra.length > 0 && (
             <>
               {extra.map((e) => (

@@ -10,6 +10,7 @@ import { localePath, type Locale } from "@/lib/i18n";
 export function EnPortada({ locale, donde, children }: { locale: Locale; donde: "portada" | "resto"; children: React.ReactNode }) {
   const ruta = (usePathname() ?? "/").replace(/\/+$/, "") || "/";
   const inicio = localePath(locale, "/").replace(/\/+$/, "") || "/";
-  const esPortada = ruta === inicio || ruta === "/";
+  // El editor de /panel/portada y la vista previa muestran la portada tal como está en producción.
+  const esPortada = ruta === inicio || ruta === "/" || ruta.startsWith("/panel") || ruta.startsWith("/vista-previa");
   return (donde === "portada") === esPortada ? <>{children}</> : null;
 }

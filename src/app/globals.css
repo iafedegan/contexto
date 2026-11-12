@@ -2546,5 +2546,9 @@ nav.cg-navfed .lx-link[aria-current] { color: #0d2318 !important; -webkit-text-f
 }
 @media (prefers-reduced-motion: reduce) { .logo-brillo { animation: none; opacity: 0; } }
 /* Iconos dentro de la barra verde (secciones): círculos claros como en la barra de FEDEGÁN. */
-nav.cg-navfed .lx-iconos button, nav.cg-navfed .lx-iconos a { background: rgba(255, 255, 255, 0.4); }
-nav.cg-navfed .lx-iconos button:hover, nav.cg-navfed .lx-iconos a:hover { background: rgba(255, 255, 255, 0.6); }
+/* El menú «Más» también va en verde oscuro con letra blanca, como los submenús. */
+nav.cg-navfed div[role="menu"][class*="overflow-y-auto"] {
+  --nav-bg: #10291d; --fg: #ffffff; --fg-muted: #c3d3c9; --accent: #9be06a;
+  --border: rgba(255, 255, 255, 0.12); --border-strong: rgba(255, 255, 255, 0.1); --surface-2: rgba(255, 255, 255, 0.08);
+  border-radius: 1.1rem; background: #10291d; color: #ffffff;
+}

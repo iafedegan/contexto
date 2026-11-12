@@ -18,7 +18,6 @@ import { CarruselPortada, type NotaCarrusel } from "@/components/home/carrusel-p
 import { sanitizeCarrusel, sanitizeCarruseles } from "@/lib/carrusel";
 import { hrefNota } from "@/lib/ruta-nota";
 import { formatDate } from "@/lib/utils";
-import { duracionDelCintillo, piezasDelCintillo, sanitizeTicker } from "@/lib/cintillo";
 import { DEFAULT_HOME_LAYOUT, splitHomeSlots } from "@/lib/home-layout";
 import { getSiteTheme } from "@/lib/site-theme";
 import { getSiteIdentity } from "@/lib/site-identity";
@@ -104,21 +103,6 @@ async function HomePage({ locale, portadaBorrador }: { locale: Locale; portadaBo
     .map((m) => ({ key: m.key as "trm" | "cattle", label: t(locale, `market.${m.key}`), value: formatMarketValue(m) }));
   const props = { lead, second, rail, river, layout, locale, market: marketFormatted };
 
-  // Cintillo configurable desde /panel/portada: qué lleva (titulares, indicadores, mensajes propios) y a qué velocidad.
-  const ticker = sanitizeTicker(layout.ticker);
-  const notasCintillo =
-    ticker.fuente === "recientes"
-      ? await getRecentArticles(Math.max(1, ticker.cantidad)).catch(() => [])
-      : ticker.fuente === "seccion" && ticker.seccion
-        ? await getArticlesByCategory(ticker.seccion, { limit: Math.max(1, ticker.cantidad) }).then((r) => r.items).catch(() => [])
-        : articles;
-  const piezas = ticker.activo
-    ? piezasDelCintillo(ticker, {
-        mercado: market.map((m) => ({ key: m.key, texto: `${t(locale, `market.${m.key}`)} ${formatMarketValue(m)}`, etiqueta: t(locale, `market.${m.key}`), valor: formatMarketValue(m), cambio: m.previousValue ? ((m.value - m.previousValue) / m.previousValue) * 100 : null })),
-        notas: notasCintillo,
-        // Solo información financiera (como una cinta de cotizaciones): sin titulares ni mensajes.
-      }).filter((p) => p.tipo === "mercado")
-    : [];
   // Carrusel de notas (todas las plantillas): de dónde salen, cuántas y dónde se pone se decide en /panel/portada.
   const carruseles = [sanitizeCarrusel(layout.carrusel), ...sanitizeCarruseles(layout.carruseles)];
   const construirCarrusel = async (car: ReturnType<typeof sanitizeCarrusel>, clave: number): Promise<React.ReactNode> => {
@@ -185,67 +169,12 @@ async function HomePage({ locale, portadaBorrador }: { locale: Locale; portadaBo
   const sinSlot = body === "compacto" || body === "vanguardia";
   const esEsmeralda = !["revista", "compacto", "vanguardia", "clasico", "gremial"].includes(body);
   const trasPrincipal = carrusel || sinSlot ? undefined : columnaMovil;
-  // Cintillo como una cinta de cotizaciones: fondo verde oscuro, nombre en negrita, valor y la variación con flecha verde o roja.
-  // Debajo, la cinta de seis colores de la marca (la de la cabecera se oculta cuando está el cintillo, para no repetirla).
-  const cintillo =
-    piezas.length > 0 ? (
-      <div data-region="cintillo" data-el="h-cintillo" className="cg-cintillo-arriba bg-[#0b2a1c] pt-[env(safe-area-inset-top)] text-white [--fg:#ffffff]">
-        <div className="overflow-hidden py-2">
-          {(() => {
-            // Una vuelta lo bastante larga para llenar pantallas anchas: si hay pocos datos, se repiten seguidos.
-            const largo = piezas.reduce((n, p) => n + (p.etiqueta ? p.etiqueta.length + (p.valor?.length ?? 0) + 8 : p.texto.length), 0) || 1;
-            const veces = Math.max(1, Math.ceil(320 / largo));
-            const vuelta = Array.from({ length: veces }, () => piezas).flat();
-            const pieza = (p: (typeof piezas)[number], i: number) =>
-              p.tipo === "mercado" && p.etiqueta ? (
-                <span key={`${p.clave}-${i}`} className="flex items-center gap-2 whitespace-nowrap tabular-nums">
-                  <span className="font-bold">{p.etiqueta}</span>
-                  <span className="opacity-90">{p.valor}</span>
-                  {typeof p.cambio === "number" && Number.isFinite(p.cambio) && (
-                    <span className="font-bold">
-                      {/* Solo la flecha lleva el verde o el rojo; el número sigue el color de letra del cintillo. */}
-                      <span data-color-propio className="text-[color:var(--color-propio)]" style={{ "--color-propio": p.cambio >= 0 ? "#4ade80" : "#f87171" } as React.CSSProperties}>
-                        {p.cambio >= 0 ? "▲" : "▼"}
-                      </span>{" "}
-                      {Math.abs(p.cambio).toLocaleString(locale === "en" ? "en-US" : "es-CO", { maximumFractionDigits: 2, minimumFractionDigits: 2 })}%
-                    </span>
-                  )}
-                </span>
-              ) : (
-                <span key={`${p.clave}-${i}`} className={`flex items-center gap-2 whitespace-nowrap ${p.tipo === "nota" ? "" : "font-bold"}`}>
-                  <span className="text-[0.6rem] text-[#f2a900]">◆</span>
-                  {p.texto}
-                </span>
-              );
-            return (
-              <div
-                className="lx-marquee !gap-0 items-center text-[0.8rem] font-medium text-[color:var(--cin,#ffffff)]"
-                style={{ "--lx-marquee-s": `${duracionDelCintillo(vuelta, ticker.velocidad)}s`, ...(ticker.color ? { "--cin": ticker.color } : {}) } as React.CSSProperties}
-              >
-                {/* Dos copias idénticas, cada una con su espacio final: al avanzar media tira la segunda queda justo donde empezó la primera y reinicia sin salto. */}
-                {[0, 1].map((k) => (
-                  <div key={k} aria-hidden={k === 1} className="flex shrink-0 items-center gap-8 pr-8">
-                    {vuelta.map(pieza)}
-                  </div>
-                ))}
-              </div>
-            );
-          })()}
-        </div>
-        <div aria-hidden className="flex h-[2px] w-full">
-          {["#f2a900", "#b5124f", "#00587c", "#6a9fc0", "#e5214f", "#5a8f9e"].map((c) => (
-            <span key={c} className="cg-cinta-tramo h-full flex-1" style={{ "--c": c } as React.CSSProperties} />
-          ))}
-        </div>
-      </div>
-    ) : undefined;
 
   return (
     <SiteShell
       theme={site.theme}
       style={site.style}
       locale={locale} variant="portada"
-      topBar={cintillo}
       aboveMain={
         <>
           {car.posicion === "arriba" && carruselConColumna && <div className="mt-4">{carruselConColumna}</div>}
