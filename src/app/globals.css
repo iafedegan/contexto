@@ -2747,3 +2747,23 @@ nav.cg-navmovil {
 /* Escudo de las secciones: más pequeño y pegado al borde izquierdo de la barra (no empuja el menú). */
 nav.cg-navfed { position: relative; }
 nav.cg-navfed .cg-escudo { position: absolute; left: 1.5rem; top: 50%; margin-top: -1.125rem; }
+
+/* Pie de página de Esmeralda en computador: el verde de FEDEGÁN (como la barra de secciones); en celular y tableta, verde oscuro. */
+@media (min-width: 1024px) {
+  :is([data-theme="home"], [data-theme="esmeralda"]) footer[data-region="footer"] {
+    --bg-2: #72bf44; --nav-bg: #72bf44; --surface: rgba(255, 255, 255, 0.25); --surface-2: rgba(255, 255, 255, 0.3);
+    --fg: #0d2318; --fg-muted: #1f3a28; --accent: #0d2318; --link: #0d2318;
+    --border: rgba(13, 35, 24, 0.22); --border-strong: rgba(13, 35, 24, 0.35);
+    background: linear-gradient(180deg, #86d058 0%, #72bf44 100%);
+    color: #0d2318;
+  }
+}
+
+/* Celular y tableta (Esmeralda): cabecera, cintillo y barra inferior en el mismo verde oscuro del computador, no en el verde azulado del tema. */
+@media (max-width: 1023.98px) {
+  :is([data-theme="home"], [data-theme="esmeralda"]) { --nav-bg: #071c13; }
+  :is([data-theme="home"], [data-theme="esmeralda"]) .cg-cintillo-arriba { background-color: #071c13 !important; }
+}
+@media (max-width: 1023.98px) {
+  :is([data-theme="home"], [data-theme="esmeralda"]) footer[data-region="footer"] { --bg-2: #071c13; background: #071c13; }
+}
