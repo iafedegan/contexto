@@ -17,6 +17,7 @@ import {
   suggestTopicIdeasCore,
   searchNewsAboutCore,
   generateCoverImageCore,
+  generarPortadaDesdeFotosCore,
   transcribirEntrevistaCore,
   crearSubidaAudioCore,
   transcribirEntrevistaSubidaCore,
@@ -94,6 +95,12 @@ export async function searchNewsAbout(...args: Parameters<typeof searchNewsAbout
 export async function generateCoverImage(...args: Parameters<typeof generateCoverImageCore> extends [string, ...infer R] ? R : never) {
   const user = await requirePermiso("articulos");
   return generateCoverImageCore(user.id, ...args);
+}
+
+// Compone la portada con hasta 3 fotos subidas, el contexto de la nota y la instrucción escrita. Mismo permiso y cuota que la portada normal.
+export async function generarPortadaConFotos(...args: Parameters<typeof generarPortadaDesdeFotosCore> extends [string, ...infer R] ? R : never) {
+  const user = await requirePermiso("articulos");
+  return generarPortadaDesdeFotosCore(user.id, ...args);
 }
 
 // Transcribe una entrevista enviada como archivo. Exige el permiso «articulos» y delega en la función núcleo, que descuenta la cuota de IA.

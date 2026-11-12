@@ -6,6 +6,8 @@ import { subirImagenBytes } from "@/lib/media-upload";
 import { altDeEscena, creditoImagenIA } from "@/lib/ai-image";
 import { registrarCostoIA, registrarUsoIA, verificarCuotaIA } from "@/lib/ai-cuota";
 import { aWebp } from "@/lib/imagen-webp";
+import { tipoPorFirma } from "@/lib/media-firma";
+import { urlPublicaMedia } from "@/lib/media-storage";
 import { construirPrompt, type EstiloEscena } from "@/lib/ai/prompt-escena";
 
 // Resultado de generar la portada: dirección de la imagen, texto alternativo y escena usada, o un error.
@@ -37,6 +39,8 @@ export type EntradaPortada = {
   estilo?: Partial<EstiloEscena>;
   /** Cuántas opciones generar (1 a 4). */
   cantidad?: number;
+  /** Fotos de referencia (hasta 3): el modelo las combina con lo que cuenta la nota para componer la imagen. */
+  referencias?: Uint8Array[];
 };
 
 export async function generarPortadasCore(userId: string, input: EntradaPortada): Promise<PortadasResult> {
@@ -68,7 +72,12 @@ export async function generarPortadasCore(userId: string, input: EntradaPortada)
     }
     if (!scene) scene = `Escena fotográfica que ilustra fielmente el tema: ${title}`;
 
-    const prompt = construirPrompt({ titulo: title, resumen: input.excerpt, escena: scene, estilo: input.estilo });
+    const textoPrompt = construirPrompt({ titulo: title, resumen: input.excerpt, escena: scene, estilo: input.estilo });
+    const refs = input.referencias?.slice(0, 3) ?? [];
+    // Con fotos de referencia el modelo las recibe junto al texto: debe usarlas como material (sujetos, lugar, objetos) y no copiar una sola.
+    const prompt = refs.length
+      ? { text: `${textoPrompt}\n\nFOTOS ADJUNTAS (${refs.length}): úsalas como material visual real de la nota. Combina lo que se ve en ellas (sujetos, lugar, objetos, ambiente) en UNA sola imagen nueva y coherente que cumpla la escena pedida; no hagas un collage ni copies una sola foto tal cual. Sin texto en la imagen.`, images: refs }
+      : textoPrompt;
 
     // Una imagen: primero el modelo preferido (si se pidió uno) en 2K; si falla, el elegido en Configuración y, como último recurso, el de 1K.
     let costoUnitario = COSTO_IMAGEN_USD;
@@ -113,12 +122,53 @@ export async function generarPortadasCore(userId: string, input: EntradaPortada)
       if (!up.ok) return { ok: false, error: up.error };
       imagenes.push({ url: up.url });
     }
-    return { ok: true, imagenes, alt: altDeEscena(scene), credito: creditoImagenIA(conPro), scene, prompt };
+    return { ok: true, imagenes, alt: altDeEscena(scene), credito: creditoImagenIA(conPro), scene, prompt: textoPrompt };
   } catch (err) {
     console.error("generarPortadas:", err);
     const detalle = err && typeof err === "object" && "message" in err ? String((err as Error).message) : "";
     return { ok: false, error: detalle ? `No se pudo generar la imagen: ${detalle.slice(0, 220)}` : "El modelo de imagen no respondió." };
   }
+}
+
+const MAX_BYTES_REFERENCIA = 12 * 1024 * 1024;
+
+/**
+ * Portada compuesta a partir de hasta 3 fotos que subió la persona (ya están en nuestro bucket «media») y de la nota. Solo se aceptan direcciones del
+ * propio bucket (no se descarga nada de fuera), cada archivo debe ser una imagen de verdad (por su firma) y la instrucción escrita manda sobre la escena.
+ */
+export async function generarPortadaDesdeFotosCore(
+  userId: string,
+  input: Omit<EntradaPortada, "cantidad" | "referencias" | "scene" | "modelo"> & { fotos: string[]; instruccion?: string },
+): Promise<CoverImageResult> {
+  const base = urlPublicaMedia("");
+  const urls = [...new Set((input.fotos ?? []).map(String))].slice(0, 3);
+  if (!base || !urls.length) return { ok: false, error: "Sube al menos una foto (máximo tres) para componer la imagen." };
+  const referencias: Uint8Array[] = [];
+  for (const u of urls) {
+    if (!u.startsWith(base)) return { ok: false, error: "Solo se pueden usar fotos subidas al panel." };
+    try {
+      const res = await fetch(u, { signal: AbortSignal.timeout(20_000) });
+      if (!res.ok) return { ok: false, error: "No se pudo leer una de las fotos." };
+      const bytes = new Uint8Array(await res.arrayBuffer());
+      if (bytes.length > MAX_BYTES_REFERENCIA) return { ok: false, error: "Una foto pesa más de 12 MB: sube una más liviana." };
+      if (tipoPorFirma(bytes)?.kind !== "imagen") return { ok: false, error: "Uno de los archivos no es una imagen válida." };
+      referencias.push(bytes);
+    } catch {
+      return { ok: false, error: "No se pudo leer una de las fotos." };
+    }
+  }
+  const r = await generarPortadasCore(userId, {
+    title: input.title,
+    excerpt: input.excerpt,
+    section: input.section,
+    body: input.body,
+    scene: (input.instruccion ?? "").trim().slice(0, 600) || undefined,
+    modelo: MODELO_IMAGEN_PRO,
+    estilo: input.estilo,
+    cantidad: 1,
+    referencias,
+  });
+  return r.ok ? { ok: true, url: r.imagenes[0].url, alt: r.alt, scene: r.scene } : r;
 }
 
 /** Una sola portada (el asistente de redacción, Telegram y el consejo de redacción): lo mismo que `generarPortadasCore` con una opción. */

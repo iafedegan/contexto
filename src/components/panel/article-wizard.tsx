@@ -54,6 +54,7 @@ import {
   autollenarPreguntas,
   searchNewsAbout,
   generateCoverImage,
+  generarPortadaConFotos,
   transcribirEntrevista,
   crearSubidaAudio,
   transcribirEntrevistaSubida,
@@ -283,6 +284,9 @@ export function ArticleWizard({
   const [urlsError, setUrlsError] = useState("");
   const [urlsBusy, startUrls] = useTransition();
   const [sceneTxt, setSceneTxt] = useState("");
+  // Fotos de referencia (máximo 3) con las que la IA compone la portada.
+  const [fotosRef, setFotosRef] = useState<string[]>([]);
+  const [subiendoRef, setSubiendoRef] = useState(false);
   const [imgError, setImgError] = useState("");
   // Ventana para elegir la imagen de portada entre las carpetas de la biblioteca.
   const [biblioteca, setBiblioteca] = useState(false);
@@ -743,6 +747,46 @@ export function ArticleWizard({
         body: bodyHtml,
         section: categories.find((c) => c.id === categoryId)?.name,
         scene: sceneTxt,
+      });
+      if (!res.ok) return setImgError(res.error);
+      setCover(res.url);
+      setCoverAlt(res.alt);
+    });
+  }
+
+  // Sube fotos de referencia (hasta completar 3) para componer la portada.
+  async function onFotosRef(files: FileList | File[]) {
+    setImgError("");
+    const lista = Array.from(files).filter((f) => f.type.startsWith("image/")).slice(0, 3 - fotosRef.length);
+    if (!lista.length) return;
+    setSubiendoRef(true);
+    try {
+      const subidas: string[] = [];
+      for (const f of lista) {
+        const res = await subirMedia(f);
+        if (!res.ok) { setImgError(res.error); break; }
+        if (res.kind === "video") { setImgError("Solo fotos: un video no sirve de referencia."); break; }
+        subidas.push(res.url);
+      }
+      if (subidas.length) setFotosRef((a) => [...a, ...subidas].slice(0, 3));
+    } catch {
+      setImgError("No se pudo subir la foto.");
+    } finally {
+      setSubiendoRef(false);
+    }
+  }
+
+  // Compone la portada con las fotos de referencia, la nota y lo que escribió la persona.
+  function makeCoverConFotos() {
+    setImgError("");
+    startImg(async () => {
+      const res = await generarPortadaConFotos({
+        title,
+        excerpt,
+        body: bodyHtml,
+        section: categories.find((c) => c.id === categoryId)?.name,
+        fotos: fotosRef,
+        instruccion: sceneTxt,
       });
       if (!res.ok) return setImgError(res.error);
       setCover(res.url);
@@ -1689,8 +1733,30 @@ export function ArticleWizard({
                   </button>
                 </div>
                 <div className="relative">
-                  <input value={sceneTxt} onChange={(e) => setSceneTxt(e.target.value)} placeholder="Escena para la IA (opcional): si no, ella propone una" aria-label="Escena para la IA" className={`${input} text-sm !pr-12`} />
+                  <input value={sceneTxt} onChange={(e) => setSceneTxt(e.target.value)} placeholder="Qué quieres obtener (opcional): si no, la IA propone una escena" aria-label="Escena para la IA" className={`${input} text-sm !pr-12`} />
                   <BotonVoz valor={sceneTxt} alCambiar={setSceneTxt} etiqueta="Dictar la escena con la voz" className="absolute right-1 top-1/2 -translate-y-1/2 !size-8" />
+                </div>
+                <div className="flex flex-col gap-2 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] p-3">
+                  <p className="font-semibold">Componer con mis fotos</p>
+                  <p className="text-xs text-[var(--fg-muted)]">Sube hasta 3 fotos. La IA las combina con lo que cuenta la nota y con lo que escribas arriba para crear la imagen.</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    {fotosRef.map((u) => (
+                      <div key={u} className="relative aspect-square overflow-hidden rounded-[var(--radius)] border border-[var(--border)]">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={u} alt="Foto de referencia" className="size-full object-cover" />
+                        <button type="button" onClick={() => setFotosRef((a) => a.filter((x) => x !== u))} aria-label="Quitar esta foto" className="absolute right-1 top-1 grid size-6 place-items-center rounded-full bg-black/60 text-white transition hover:bg-black/80"><Trash2 size={12} /></button>
+                      </div>
+                    ))}
+                    {fotosRef.length < 3 && (
+                      <label className="grid aspect-square cursor-pointer place-items-center rounded-[var(--radius)] border border-dashed border-[var(--border)] text-[var(--fg-muted)] transition hover:border-[var(--accent)] hover:text-[var(--accent)]">
+                        {subiendoRef ? <Loader2 size={18} className="animate-spin" /> : <span className="flex flex-col items-center gap-1 text-xs"><ImagePlus size={18} aria-hidden />Añadir</span>}
+                        <input type="file" accept="image/*" multiple disabled={subiendoRef || genImg} className="hidden" onChange={(e) => { const f = e.target.files; if (f) void onFotosRef(f); e.target.value = ""; }} />
+                      </label>
+                    )}
+                  </div>
+                  <button type="button" onClick={makeCoverConFotos} disabled={genImg || uploading || subiendoRef || !fotosRef.length} className="inline-flex items-center justify-center gap-2 rounded-full bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--accent-fg,#fff)] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50">
+                    {genImg ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} aria-hidden />} Crear imagen con mis fotos
+                  </button>
                 </div>
                 {cover && (
                   <label className="flex flex-col gap-1">
