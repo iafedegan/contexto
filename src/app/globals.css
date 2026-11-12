@@ -2740,3 +2740,6 @@ nav.cg-navmovil {
     linear-gradient(90deg, transparent 0%, #d9a41a 15%, #f7eea1 50%, #d9a41a 85%, transparent 100%) top / 100% 2px no-repeat,
     linear-gradient(180deg, #86d058 0%, #72bf44 100%) #72bf44 !important;
 }
+
+/* Cintillo de cotizaciones en modo oscuro: el mismo verde oscuro que la cabecera y la página (no el verde azulado fijo). */
+:is(html[data-dark="1"], html:not([data-dark]) :is([data-theme="home"],[data-theme="esmeralda"],[data-theme="revista"],[data-theme="vanguardia"])) .cg-cintillo-arriba { background-color: var(--nav-bg) !important; }

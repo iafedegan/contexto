@@ -22,7 +22,7 @@ import { PERSONAJES, esperaDeGesto, personajeValido, siguienteGesto, siguientePe
 const CLAVE = "cg_toro_pos";
 // Ancho del avatar (84 px en pantallas chicas y 112 px en las grandes); el alto sale de la proporción del dibujo de cada personaje. El ganadero es de
 // cuerpo completo y más alto, así que se dibuja un poco más angosto para no tapar tanto la página.
-const ancho = (anchoPantalla: number, personaje: PersonajeId = "toro") => Math.round((anchoPantalla >= 640 ? 112 : 84) * (personaje === "ganadero" ? 0.82 : 1));
+const ancho = (anchoPantalla: number, personaje: PersonajeId = "toro") => Math.round((anchoPantalla >= 640 ? 78 : 60) * (personaje === "ganadero" ? 0.82 : 1));
 const alto = (anchoPantalla: number, personaje: PersonajeId = "toro") => Math.round((ancho(anchoPantalla, personaje) * PERSONAJES[personaje].alto) / PERSONAJES[personaje].ancho);
 
 // Lugar guardado del toro (`null`: su esquina de siempre). Se lee una vez y se avisa a los suscritos al cambiar.

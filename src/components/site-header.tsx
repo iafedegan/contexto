@@ -175,13 +175,13 @@ function MastheadHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extr
             { n: "YouTube", h: "https://www.youtube.com/@contextoganadero", I: YoutubeIcon },
             { n: "LinkedIn", h: "https://www.linkedin.com/company/fedegan", I: LinkedinIcon },
           ].map(({ n, h, I }) => (
-            <a key={n} href={h} target="_blank" rel="noopener noreferrer" aria-label={n} className="grid size-11 place-items-center rounded-full bg-white/10 text-[var(--accent)] transition-colors hover:bg-[var(--accent)] hover:text-[var(--accent-fg,#022327)]">
+            <a key={n} href={h} target="_blank" rel="noopener noreferrer" aria-label={n} className="grid size-11 place-items-center rounded-full bg-white/10 !text-[#d9a41a] transition-colors hover:bg-[#d9a41a] hover:!text-[#022327]">
               <I size={17} />
             </a>
           ))}
         </div>
         <div className="absolute bottom-3 right-6 z-10 hidden items-center md:flex">
-          <ThemeToggle locale={locale} className="!size-11 rounded-full border border-[var(--border-strong)]" />
+          <ThemeToggle locale={locale} className="!size-11 rounded-full border border-[#d9a41a]/55 !text-[#d9a41a]" />
         </div>
         {/* Logo a la izquierda y, a su lado, el nombre. `items-center` en ESTA fila: las líneas y el logo quedan en el centro vertical del título. */}
         <div className="flex items-center justify-center gap-6">
@@ -229,12 +229,11 @@ function MastheadHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extr
           <MoreMenu
             locale={locale}
             extra={extra}
+            app={<InstalarApp locale={locale} variante="pildora" />}
             acciones={
               <>
                 <LocaleSwitch locale={locale} compacto />
-                <ThemeToggle locale={locale} className="!size-8 pointer-coarse:!size-11" />
                 {identity.radioStreamUrl && <RadioPlayer src={identity.radioStreamUrl} locale={locale} />}
-                <InstalarApp locale={locale} variante="mini" />
               </>
             }
           />
