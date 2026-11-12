@@ -238,7 +238,7 @@ async function HomePage({ locale, portadaBorrador }: { locale: Locale; portadaBo
       <CardSlugsProvider slugs={[lead, second, ...rail, ...river].filter((a): a is NonNullable<typeof a> => Boolean(a)).map((a) => a.slug)}>
       {/* Esmeralda lleva la barra lateral dentro, junto a «Lo más reciente»: arriba, la apertura y «Lo último» respiran a dos columnas. */}
       <div className={`grid grid-cols-1 gap-12 ${esEsmeralda ? "" : "lg:grid-cols-[minmax(0,1fr)_19rem]"}`}>
-        <div className="lx-bleed-off min-w-0">
+        <div className={esEsmeralda ? "min-w-0" : "lx-bleed-off min-w-0"}>
           {/* Cada plantilla se referencia por su nombre en el JSX (y no por un
               mapa indexado en runtime) para no perder el límite cliente/servidor
               que Next resuelve de forma estática. */}
@@ -273,7 +273,7 @@ async function HomePage({ locale, portadaBorrador }: { locale: Locale; portadaBo
       </div>
       </CardSlugsProvider>
 
-      <SeccionesPorBandas bandas={bandas} locale={locale} />
+      <SeccionesPorBandas bandas={bandas} locale={locale} primeraEnTema={esEsmeralda} />
 
       {car.posicion === "abajo" && carruselConColumna && <div className="mt-12">{carruselConColumna}</div>}
       {bloqueInicio("abajo", "mt-12")}

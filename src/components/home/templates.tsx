@@ -14,6 +14,7 @@ import type { ArticleListItem } from "@/lib/content";
 import { BREVE_COLS, RIVER_COLS, anchaEnCelular, type HomeTemplateId } from "@/lib/home-layout";
 import type { HomeLayoutConfig } from "@/db/schema";
 import { cn, formatDate } from "@/lib/utils";
+import { VARIABLES_BLANCO } from "@/lib/portada-franja-blanca";
 import { DEFAULT_LOCALE, INTL_LOCALE, categoryLabel, localePath, t, type Locale } from "@/lib/i18n";
 import { hrefNota } from "@/lib/ruta-nota";
 import { ImagenSitio } from "@/components/ui/imagen-sitio";
@@ -472,6 +473,9 @@ export function EsmeraldaTemplate({
 
 
       {/* La rejilla de abajo usa las MISMAS columnas que la apertura: la barra lateral cae justo bajo «Lo último», con su mismo filete. */}
+      {/* «Lo más reciente» + «Para leer»: franja de fondo BLANCO a todo el ancho; las franjas por sección que siguen alternan (verde, blanco…). */}
+      <div className="lx-fullbleed -mb-8 py-10 sm:-mb-12 sm:py-14" style={VARIABLES_BLANCO} data-fondo="blanco" data-region="franja-reciente">
+      <div className="shell">
       <div className={lateral ? `grid grid-cols-1 gap-12 lg:grid-cols-[minmax(0,1fr)_19rem] ${ANCHO_PRINCIPAL[layout.anchoPrincipal] ?? ANCHO_PRINCIPAL.ancha}` : ""}>
       {rio.length > 0 && (
         <section className="min-w-0">
@@ -504,6 +508,8 @@ export function EsmeraldaTemplate({
           {lateral}
         </div>
       )}
+      </div>
+      </div>
       </div>
     </div>
   );

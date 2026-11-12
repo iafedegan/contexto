@@ -5,6 +5,7 @@ import type { ArticleListItem, BandaDeSeccion } from "@/lib/content";
 import { INTL_LOCALE, localePath, type Locale } from "@/lib/i18n";
 import { hrefNota } from "@/lib/ruta-nota";
 import { formatDate } from "@/lib/utils";
+import { VARIABLES_BLANCO } from "@/lib/portada-franja-blanca";
 
 /**
  * Inicio «sección por sección»: una franja por sección con su nombre, el enlace «Ver todo →», la nota más reciente en grande (foto a la izquierda,
@@ -15,16 +16,6 @@ import { formatDate } from "@/lib/utils";
 const ACENTOS_TEMA = ["var(--accent)", "var(--accent-2)"] as const;
 const ACENTOS_BLANCO = ["#0f5132", "#946200"] as const;
 
-// Colores de una franja blanca: se reasignan las variables que usan los textos, bordes y tarjetas de dentro.
-const VARIABLES_BLANCO = {
-  "--fg": "#14201a",
-  "--fg-muted": "#55625a",
-  "--border": "rgba(20,32,26,0.14)",
-  "--surface": "#ffffff",
-  "--surface-2": "#f2f5f2",
-  backgroundColor: "#ffffff",
-  color: "#14201a",
-} as React.CSSProperties;
 
 // Foto de una nota (o su arte de respaldo si no tiene imagen).
 function Foto({ a, className, grande = false }: { a: ArticleListItem; className: string; grande?: boolean }) {
@@ -57,10 +48,11 @@ function Firma({ a, locale }: { a: ArticleListItem; locale: Locale }) {
 }
 
 // Una franja a todo el ancho: encabezado, nota principal y tarjetas.
-function Banda({ banda, indice, locale }: { banda: BandaDeSeccion; indice: number; locale: Locale }) {
+function Banda({ banda, indice, locale, primeraEnTema }: { banda: BandaDeSeccion; indice: number; locale: Locale; primeraEnTema: boolean }) {
   const [principal, ...resto] = banda.notas;
   const tarjetas = resto.slice(0, 3);
-  const blanca = indice % 2 === 0;
+  // Normalmente la primera franja es blanca; si la franja anterior de la portada ya es blanca («Lo más reciente»), la primera sigue el tema.
+  const blanca = (indice + (primeraEnTema ? 1 : 0)) % 2 === 0;
   const acento = (blanca ? ACENTOS_BLANCO : ACENTOS_TEMA)[Math.floor(indice / 2) % 2];
   const id = `banda-${banda.slug}`;
   return (
@@ -114,11 +106,11 @@ function Banda({ banda, indice, locale }: { banda: BandaDeSeccion; indice: numbe
 }
 
 /** Las franjas por sección del inicio (nada si no hay ninguna con notas suficientes). */
-export function SeccionesPorBandas({ bandas, locale }: { bandas: BandaDeSeccion[]; locale: Locale }) {
+export function SeccionesPorBandas({ bandas, locale, primeraEnTema = false }: { bandas: BandaDeSeccion[]; locale: Locale; primeraEnTema?: boolean }) {
   if (!bandas.length) return null;
   return (
-    <div data-region="bandas-secciones" className="mt-16">
-      {bandas.map((b, i) => <Banda key={b.slug} banda={b} indice={i} locale={locale} />)}
+    <div data-region="bandas-secciones" className={primeraEnTema ? "mt-0" : "mt-16"}>
+      {bandas.map((b, i) => <Banda key={b.slug} banda={b} indice={i} locale={locale} primeraEnTema={primeraEnTema} />)}
     </div>
   );
 }
