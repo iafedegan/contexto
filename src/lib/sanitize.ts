@@ -13,7 +13,11 @@ import sanitizeHtml from "sanitize-html";
  * Únicos orígenes de contenido incrustable: vídeo (ver src/lib/embeds.ts), el reproductor de audio de SoundCloud (cientos de notas del sitio
  * anterior lo traen) y los juegos y diccionarios propios que aloja `static.contextoganadero.com`.
  */
-const IFRAME_HOSTS = ["www.youtube-nocookie.com", "player.vimeo.com", "w.soundcloud.com", "static.contextoganadero.com"];
+const IFRAME_HOSTS = [
+  "www.youtube-nocookie.com", "player.vimeo.com", "w.soundcloud.com", "static.contextoganadero.com",
+  // Publicaciones de redes sociales (páginas de incrustación oficiales; ver src/lib/embeds.ts).
+  "platform.twitter.com", "www.instagram.com", "www.facebook.com", "www.tiktok.com", "www.linkedin.com",
+];
 
 // Lista blanca de etiquetas, atributos y esquemas permitidos en el cuerpo de una nota; todo lo demás se elimina.
 const OPTIONS: sanitizeHtml.IOptions = {
@@ -34,12 +38,14 @@ const OPTIONS: sanitizeHtml.IOptions = {
     iframe: ["src", "title", "loading", "allow", "allowfullscreen", "referrerpolicy", "width", "height"],
     th: ["colspan", "rowspan", "scope"],
     td: ["colspan", "rowspan"],
-    figure: ["class", "data-chart"],
+    figure: ["class", "data-chart", "style"],
     blockquote: ["class"],
     span: ["class"],
     div: ["class"],
   },
-  allowedClasses: { figure: ["lx-embed", "lx-chart", "infografia"], blockquote: ["cita-destacada"], span: ["*"], div: ["*"] },
+  // Solo se admite el ancho de la figura (porcentaje o px): el tamaño que elige quien incrusta el video.
+  allowedStyles: { figure: { width: [/^\d{1,3}(\.\d+)?%$/, /^\d{2,4}px$/] } },
+  allowedClasses: { figure: ["lx-embed", "lx-embed-social", "lx-chart", "infografia"], blockquote: ["cita-destacada"], span: ["*"], div: ["*"] },
   allowedSchemes: ["https", "http", "mailto", "tel"],
   allowedSchemesByTag: { img: ["https", "http", "data"], video: ["https", "http"], audio: ["https", "http"], source: ["https", "http"] },
   allowProtocolRelative: false,

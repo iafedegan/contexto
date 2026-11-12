@@ -1,9 +1,10 @@
 "use client";
 
 import { useLayoutEffect, useRef, useState } from "react";
-import { BarChart3, Bold, Highlighter, Italic, Link2, List, ListOrdered, Minus, MessageSquareQuote, Quote, Redo2, RemoveFormatting, Replace, Search, Strikethrough, Subscript, Superscript, Table, Underline, Undo2, Unlink, ZoomIn, ZoomOut } from "lucide-react";
+import { BarChart3, Bold, Clapperboard, Highlighter, Italic, Link2, List, ListOrdered, Minus, MessageSquareQuote, Quote, Redo2, RemoveFormatting, Replace, Search, Strikethrough, Subscript, Superscript, Table, Underline, Undo2, Unlink, ZoomIn, ZoomOut } from "lucide-react";
 import { decodeSpec, renderChartSvg, svgDataUri } from "@/lib/chart-svg";
 import { escapeHtml } from "@/lib/escape";
+import { embedHtml, incrustarEnlaces, NOMBRE_EMBED, parseEmbed } from "@/lib/embeds";
 
 /**
  * Editor del cuerpo tipo procesador de texto: se escribe sobre el texto ya formateado (negrita, intertítulos, listas,
@@ -27,7 +28,7 @@ export function expandirGraficas(html: string): string {
 
 /** Cuerpo guardado → HTML que se pinta en el editor (las gráficas, como bloques que no se editan por dentro). */
 function paraEditor(html: string): string {
-  return expandirGraficas(html).replace(/<figure class="lx-chart"/g, '<figure contenteditable="false" class="lx-chart"');
+  return incrustarEnlaces(expandirGraficas(html)).replace(/<figure class="(lx-chart|lx-embed)/g, '<figure contenteditable="false" class="$1');
 }
 
 /** HTML del editor → cuerpo guardado: las gráficas vuelven a su marcador y se quitan los restos del editor. */
@@ -38,6 +39,11 @@ function desdeEditor(el: HTMLElement): string {
     const alt = f.querySelector("img")?.getAttribute("alt") ?? "";
     const fuente = f.querySelector("figcaption")?.textContent ?? "";
     f.replaceWith(copia.ownerDocument.createTextNode(`[[GRAFICA ${datos} | ${alt} | ${fuente}]]`));
+  });
+  // Los videos y publicaciones incrustados se ven en el editor como bloques que no se editan por dentro: se limpian las marcas del editor.
+  copia.querySelectorAll("figure.lx-embed").forEach((f) => {
+    f.removeAttribute("contenteditable");
+    f.classList.remove("cg-embed-sel");
   });
   // Al escribir, el navegador deja un <br> suelto en el campo vacío.
   const html = copia.innerHTML.replace(/^(<br\s*\/?>|\s)+$/i, "");
@@ -126,6 +132,10 @@ export function EditorCuerpo({
   // Infografía: dirección de la imagen y su pie (se piden en línea, como el enlace).
   const [infografia, setInfografia] = useState<{ url: string; pie: string } | null>(null);
   const [tabla, setTabla] = useState<{ filas: number; cols: number } | null>(null);
+  // Video o publicación de una red social: dirección y ancho (% del texto) que se piden en línea; y la ya insertada que está seleccionada para cambiarle el tamaño.
+  const [video, setVideo] = useState<{ url: string; ancho: number; error: string } | null>(null);
+  const [embedSel, setEmbedSel] = useState<{ ancho: number } | null>(null);
+  const embedEl = useRef<HTMLElement | null>(null);
   const [buscar, setBuscar] = useState<{ q: string; r: string; msg: string }>({ q: "", r: "", msg: "" });
   const [zoom, setZoom] = useState(100);
   const [caracteres, setCaracteres] = useState(0);
@@ -227,6 +237,48 @@ export function EditorCuerpo({
     restaurarRango();
     const pie = escapeHtml(datos.pie.trim() || "Imagen");
     orden("insertHTML", `<figure class="infografia"><img src="${escapeHtml(datos.url.trim())}" alt="${pie}" loading="lazy"><figcaption>${pie}</figcaption></figure><p><br></p>`);
+  };
+  const abrirVideo = () => {
+    guardarRango();
+    setVideo({ url: "https://", ancho: 100, error: "" });
+  };
+  // Inserta el video o la publicación (YouTube, Vimeo, X, Instagram, Facebook, TikTok, LinkedIn) donde estaba el cursor, ya dibujado y con el ancho elegido.
+  const aplicarVideo = () => {
+    const datos = video;
+    if (!datos) return;
+    const e = parseEmbed(datos.url);
+    if (!e) return setVideo({ ...datos, error: "No se reconoce el enlace. Pega uno de YouTube, Vimeo, X, Instagram, Facebook, TikTok o LinkedIn." });
+    setVideo(null);
+    restaurarRango();
+    const html = embedHtml(e, NOMBRE_EMBED[e.tipo], { ancho: datos.ancho, pie: "Pie · Fuente" }).replace('<figure class="', '<figure contenteditable="false" class="');
+    orden("insertHTML", `${html}<p><br></p>`);
+  };
+  // Cambia el ancho (% del texto) del video seleccionado.
+  const anchoVideo = (n: number) => {
+    const el = embedEl.current;
+    if (!el) return;
+    const ancho = Math.round(Math.min(100, Math.max(20, n)));
+    if (ancho >= 100) el.removeAttribute("style");
+    else el.style.width = `${ancho}%`;
+    setEmbedSel({ ancho });
+    emitir();
+  };
+  const quitarVideo = () => {
+    embedEl.current?.remove();
+    embedEl.current = null;
+    setEmbedSel(null);
+    emitir();
+  };
+  // Al hacer clic en un video del cuerpo se selecciona (sus controles salen en «Insertar»).
+  const alHacerClic = (e: React.MouseEvent<HTMLDivElement>) => {
+    const f = (e.target as Element).closest?.("figure.lx-embed") as HTMLElement | null;
+    caja.current?.querySelectorAll("figure.cg-embed-sel").forEach((x) => x.classList.remove("cg-embed-sel"));
+    if (!f) { embedEl.current = null; return setEmbedSel(null); }
+    f.classList.add("cg-embed-sel");
+    const m = (f.getAttribute("style") ?? "").match(/width:\s*([\d.]+)%/);
+    embedEl.current = f;
+    setEmbedSel({ ancho: m ? Math.round(Number(m[1])) : 100 });
+    setPestana("insertar");
   };
   const abrirEnlace = () => {
     guardarRango();
@@ -352,6 +404,7 @@ export function EditorCuerpo({
               <Boton titulo="Quitar enlace" onClick={() => orden("unlink")}><Unlink size={15} /></Boton>
               <Sep />
               <Boton titulo="Imagen o infografía (a todo el ancho, con su pie)" onClick={abrirInfografia}><BarChart3 size={15} /></Boton>
+              <Boton titulo="Video o publicación de una red social (YouTube, Vimeo, X, Instagram, Facebook, TikTok, LinkedIn)" onClick={abrirVideo}><Clapperboard size={15} /></Boton>
               <Boton titulo="Tabla" onClick={() => { guardarRango(); setTabla({ filas: 3, cols: 3 }); }}><Table size={15} /></Boton>
               <Boton titulo="Línea separadora" onClick={() => orden("insertHorizontalRule")}><Minus size={16} /></Boton>
               {activos.tabla && (
@@ -374,6 +427,30 @@ export function EditorCuerpo({
                   <input autoFocus value={infografia.url} onChange={(e) => setInfografia({ ...infografia, url: e.target.value })} aria-label="Dirección de la imagen" placeholder="https://… (imagen)" className={`${campoCinta} w-52`} />
                   <input value={infografia.pie} onChange={(e) => setInfografia({ ...infografia, pie: e.target.value })} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); aplicarInfografia(); } if (e.key === "Escape") setInfografia(null); }} aria-label="Pie y fuente de la imagen" placeholder="Pie y fuente" className={`${campoCinta} w-44`} />
                   <button type="button" onClick={aplicarInfografia} className="lx-link text-xs font-semibold">Insertar</button>
+                </span>
+              )}
+              {video !== null && (
+                <span className="ml-1 flex flex-wrap items-center gap-1 text-xs">
+                  <input autoFocus value={video.url} onChange={(e) => setVideo({ ...video, url: e.target.value, error: "" })} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); aplicarVideo(); } if (e.key === "Escape") setVideo(null); }} aria-label="Dirección del video o de la publicación" placeholder="https://… (YouTube, Instagram, X, TikTok…)" className={`${campoCinta} w-64`} />
+                  <label className="flex items-center gap-1">Ancho
+                    <select value={video.ancho} onChange={(e) => setVideo({ ...video, ancho: Number(e.target.value) })} className={campoCinta}>
+                      {[[40, "Pequeño"], [60, "Mediano"], [80, "Grande"], [100, "Completo"]].map(([v, n]) => <option key={v} value={v}>{n} · {v}%</option>)}
+                    </select>
+                  </label>
+                  <button type="button" onClick={aplicarVideo} className="lx-link font-semibold">Insertar</button>
+                  <button type="button" onClick={() => setVideo(null)} className="text-[var(--fg-muted)] hover:text-[var(--fg)]">Cancelar</button>
+                  {video.error && <span role="alert" className="text-[var(--danger,#b4442e)]">{video.error}</span>}
+                </span>
+              )}
+              {embedSel !== null && (
+                <span className="ml-1 flex flex-wrap items-center gap-2 text-xs">
+                  <Sep />
+                  <span className="font-semibold text-[var(--fg-muted)]">Video seleccionado:</span>
+                  <label className="flex items-center gap-1.5">Ancho
+                    <input type="range" min={20} max={100} step={5} value={embedSel.ancho} onChange={(e) => anchoVideo(Number(e.target.value))} aria-label="Ancho del video en porcentaje del texto" className="w-28 accent-[var(--accent)]" />
+                    <span className="w-9 tabular-nums">{embedSel.ancho}%</span>
+                  </label>
+                  <button type="button" onClick={quitarVideo} className="rounded-md border border-[var(--border)] px-2 py-1 font-medium text-[var(--fg-muted)] transition hover:border-[var(--danger,#b4442e)] hover:text-[var(--danger,#b4442e)]">Quitar</button>
                 </span>
               )}
               {tabla !== null && (
@@ -429,6 +506,7 @@ export function EditorCuerpo({
           document.execCommand("insertHTML", false, limpio);
           emitir();
         }}
+        onClick={alHacerClic}
         className={`${papel ? "min-h-[20rem] px-1 py-2" : "min-h-0 flex-1 overflow-y-auto px-5 py-4"} text-base leading-relaxed outline-none empty:before:text-[var(--fg-muted)]/60 empty:before:content-[attr(data-placeholder)]
           [&_p]:my-2.5 [&_h2]:mb-2 [&_h2]:mt-5 [&_h2]:text-xl [&_h2]:font-semibold [&_h3]:mt-4 [&_h3]:text-lg [&_h3]:font-semibold [&_h4]:mt-3 [&_h4]:font-semibold
           [&_ul]:my-2.5 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:my-2.5 [&_ol]:list-decimal [&_ol]:pl-6
@@ -438,7 +516,7 @@ export function EditorCuerpo({
           [&_table]:my-4 [&_table]:w-full [&_table]:border-collapse [&_td]:min-w-12 [&_td]:border [&_td]:border-[var(--border)] [&_td]:px-2 [&_td]:py-1.5 [&_th]:border [&_th]:border-[var(--border)] [&_th]:bg-[var(--surface-2)] [&_th]:px-2 [&_th]:py-1.5 [&_th]:text-left [&_th]:font-semibold
           [&_figure]:my-4 [&_figure_img]:mx-auto [&_figure_img]:max-h-72 [&_figcaption]:mt-1 [&_figcaption]:text-center [&_figcaption]:text-xs [&_figcaption]:text-[var(--fg-muted)]
           [&_details]:my-3 [&_details]:rounded-md [&_details]:border [&_details]:border-[var(--border)] [&_details]:px-3 [&_details]:py-2 [&_summary]:cursor-pointer [&_summary]:text-sm [&_summary]:font-semibold
-          [&_iframe]:aspect-video [&_iframe]:w-full`}
+          [&_iframe]:aspect-video [&_iframe]:w-full [&_iframe]:pointer-events-none [&_figure.lx-embed]:mx-auto [&_figure.lx-embed]:cursor-pointer [&_figure.lx-embed-social_iframe]:aspect-auto [&_figure.cg-embed-sel]:outline [&_figure.cg-embed-sel]:outline-2 [&_figure.cg-embed-sel]:outline-offset-4 [&_figure.cg-embed-sel]:outline-[var(--accent)]`}
       />
     </div>
   );

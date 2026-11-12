@@ -61,7 +61,7 @@ export function cabeceraCsp(
     // 'self': el editor de portada enmarca /vista-portada del propio sitio.
     dir(
       "frame-src",
-      ["'self'", "https://www.youtube-nocookie.com", "https://player.vimeo.com", "https://w.soundcloud.com", "https://static.contextoganadero.com", "https://challenges.cloudflare.com", "https://www.googletagmanager.com", "https://*.doubleclick.net", "https://*.googlesyndication.com", "https://*.google.com"],
+      ["'self'", "https://www.youtube-nocookie.com", "https://player.vimeo.com", "https://w.soundcloud.com", "https://static.contextoganadero.com", "https://platform.twitter.com", "https://www.instagram.com", "https://www.facebook.com", "https://www.tiktok.com", "https://www.linkedin.com", "https://challenges.cloudflare.com", "https://www.googletagmanager.com", "https://*.doubleclick.net", "https://*.googlesyndication.com", "https://*.google.com"],
       "CSP_FRAME_SRC_EXTRA",
     ),
     "worker-src 'self' blob:",

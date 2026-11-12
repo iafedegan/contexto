@@ -1,5 +1,6 @@
 import { INTL_LOCALE, categoryLabel, localePath, t, type Locale } from "@/lib/i18n";
 import { sanitizeArticleHtml } from "@/lib/sanitize";
+import { incrustarEnlaces } from "@/lib/embeds";
 import { ArticleBody } from "@/components/article-body";
 import { notFound } from "next/navigation";
 import Link from "next/link";
@@ -180,7 +181,7 @@ export function ArticleDocument({
           <ReaderMode
             title={a.title}
             excerpt={a.excerpt}
-            body={sanitizeArticleHtml(a.body)}
+            body={sanitizeArticleHtml(incrustarEnlaces(a.body))}
             cover={a.coverImageUrl}
             coverAlt={a.coverImageAlt}
             kicker={a.categorySlug ? categoryLabel(locale, a.categorySlug, a.categoryName ?? "") : undefined}
@@ -232,7 +233,7 @@ export function ArticleDocument({
         <div data-el="n-body">
           <ArticleBody
             className={ARTICLE_BODY_CLASS[theme] ?? "prose prose-drop mt-12 !max-w-none"}
-            html={sanitizeArticleHtml(a.body)}
+            html={sanitizeArticleHtml(incrustarEnlaces(a.body))}
           />
         </div>
 
