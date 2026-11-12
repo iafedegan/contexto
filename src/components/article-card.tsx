@@ -254,7 +254,7 @@ function CineCard({ a, priority, locale }: { a: ArticleListItem; priority?: bool
       <div aria-hidden className={`lead-cine-velo pointer-events-none z-[1] ${st.textArriba ? "lead-cine-velo-arriba" : ""}`} />
       <div
         data-cg-panel
-        className={`relative z-[4] flex w-full max-w-[54rem] flex-col p-5 text-white [--fg-muted:rgba(255,255,255,0.84)] [--fg:#ffffff] sm:p-7 lg:p-9 ${posicion}`}
+        className={`relative z-[4] m-3 flex w-auto max-w-[44rem] flex-col rounded-[var(--radius-lg)] border border-white/10 bg-[rgba(3,12,8,0.7)] p-4 text-white shadow-[0_12px_36px_rgba(0,0,0,0.35)] backdrop-blur-md backdrop-saturate-150 [--fg-muted:rgba(255,255,255,0.84)] [--fg:#ffffff] max-sm:backdrop-blur-none md:m-5 md:p-6 ${posicion}`}
       >
         {/* Si no caben en un renglón (celular), la fecha baja entera: ni la pastilla ni la fecha se parten. */}
         <span className={`flex flex-wrap items-center gap-x-3 gap-y-2 ${st.textDerecha ? "justify-end" : ""}`}>

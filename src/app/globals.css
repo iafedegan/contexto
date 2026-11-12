@@ -2564,7 +2564,7 @@ nav.cg-navfed div[role="menu"][class*="overflow-y-auto"] {
 }
 .lead-cine-velo-arriba { transform: scaleY(-1); }
 @media (hover: hover) {
-  .lead-cine-velo { opacity: 0.55; transition: opacity 0.5s var(--ease-lux); }
+  .lead-cine-velo { opacity: 0.3; transition: opacity 0.5s var(--ease-lux); }
   .lead-cine:hover .lead-cine-velo, .lead-cine:focus-within .lead-cine-velo { opacity: 1; }
 }
 /* Filete de acento que crece bajo la foto al pasar el puntero. */
