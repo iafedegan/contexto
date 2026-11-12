@@ -167,20 +167,21 @@ function MastheadHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extr
       <MastilPortada locale={locale}>
       {/* Contenedor de tamaño propio: el nombre, el emblema y las líneas se escalan con su ancho y se ajustan juntos. */}
       <div className="relative mx-auto max-w-7xl px-6 pb-3 pt-3 text-center md:pb-4 md:pt-3 [container-type:inline-size]">
-        {/* Las redes, en la esquina superior derecha sin ocupar alto; la fecha va bajo el logo. */}
-        <div className="absolute right-6 top-3 z-10 flex items-center text-[var(--fg-muted)]">
-          <span className="flex items-center gap-3.5">
-            {[
-              { n: "YouTube", h: "https://www.youtube.com/@contextoganadero", I: YoutubeIcon },
-              { n: "Instagram", h: "https://www.instagram.com/contextoganadero", I: InstagramIcon },
-              { n: "Facebook", h: "https://www.facebook.com/contextoganadero", I: FacebookIcon },
-              { n: "LinkedIn", h: "https://www.linkedin.com/company/fedegan", I: LinkedinIcon },
-            ].map(({ n, h, I }) => (
-              <a key={n} href={h} target="_blank" rel="noopener noreferrer" aria-label={n} className="transition-colors hover:text-[var(--accent)]">
-                <I size={16} />
-              </a>
-            ))}
-          </span>
+        {/* Como en FEDEGÁN: las redes en círculos abajo a la izquierda y el modo claro/oscuro abajo a la derecha, a la altura de la fecha. */}
+        <div className="absolute bottom-3 left-6 z-10 hidden items-center gap-3 md:flex">
+          {[
+            { n: "Facebook", h: "https://www.facebook.com/contextoganadero", I: FacebookIcon },
+            { n: "Instagram", h: "https://www.instagram.com/contextoganadero", I: InstagramIcon },
+            { n: "YouTube", h: "https://www.youtube.com/@contextoganadero", I: YoutubeIcon },
+            { n: "LinkedIn", h: "https://www.linkedin.com/company/fedegan", I: LinkedinIcon },
+          ].map(({ n, h, I }) => (
+            <a key={n} href={h} target="_blank" rel="noopener noreferrer" aria-label={n} className="grid size-11 place-items-center rounded-full bg-white/10 text-[var(--accent)] transition-colors hover:bg-[var(--accent)] hover:text-[var(--accent-fg,#022327)]">
+              <I size={17} />
+            </a>
+          ))}
+        </div>
+        <div className="absolute bottom-3 right-6 z-10 hidden items-center md:flex">
+          <ThemeToggle locale={locale} className="!size-11 rounded-full border border-[var(--border-strong)]" />
         </div>
         {/* Logo a la izquierda y, a su lado, el nombre. `items-center` en ESTA fila: las líneas y el logo quedan en el centro vertical del título. */}
         <div className="flex items-center justify-center gap-6">
@@ -193,8 +194,8 @@ function MastheadHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extr
         </div>
         {/* Los 14 años ya van dentro del logo; debajo, el lema y la fecha. */}
         <span className="mt-1 flex flex-col items-center gap-y-0.5">
-          {identity.fecha !== false && <span data-titulo-texto data-el="h-fecha" className="lx-ui text-[0.7rem] font-medium capitalize tracking-[0.06em] text-[var(--accent)]">{today}</span>}
           {!identity.sinLema && <span data-titulo-texto data-el="h-lema" className="lx-kicker text-[var(--fg-muted)]">{identity.tagline || t(locale, "nav.tagline")}</span>}
+          {identity.fecha !== false && <span data-titulo-texto data-el="h-fecha" className="lx-ui text-[0.7rem] font-medium uppercase tracking-[0.18em] text-[var(--accent)]">{today}</span>}
         </span>
       </div>
 
