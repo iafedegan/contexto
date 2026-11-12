@@ -8,7 +8,7 @@ import { tienePermiso } from "@/lib/permisos-server";
 import { nombreValido } from "@/lib/biblioteca-acceso";
 import { urlPublicaMedia } from "@/lib/media-storage";
 import { requirePermiso } from "@/lib/auth";
-import { generarPortadasCore, MODELO_IMAGEN_PRO } from "@/lib/ai/portada";
+import { generarPortadasCore, leerReferencias, MODELO_IMAGEN_PRO } from "@/lib/ai/portada";
 import { estiloValido } from "@/lib/ai/prompt-escena";
 import { revalidarNotas } from "@/lib/article-ops";
 import { cerrarPedido, disenadoresActivos, esDisenadorActivo, leerPedidos, registrarPedido } from "@/lib/imagenes-pedidas";
@@ -108,7 +108,7 @@ export async function entregarImagen(input: { articleId: string; url: string; al
  * que elija (tratamiento, cámara, plano, luz y ambiente). Devuelve las opciones ya subidas, en WebP 16:9, y el prompt armado; no entrega nada: el diseñador elige
  * una, completa los datos y la entrega. La nota se lee del servidor (no se confía en lo que mande el navegador), el estilo se sanea y la cuota de IA se descuenta.
  */
-export async function generarImagenesConIA(input: { articleId: string; escena?: string; estilo?: unknown; cantidad?: number }): Promise<{ ok: true; imagenes: { url: string }[]; alt: string; credito: string; escena: string; prompt: string } | { ok: false; error: string }> {
+export async function generarImagenesConIA(input: { articleId: string; escena?: string; estilo?: unknown; cantidad?: number; /** Hasta 3 fotos subidas al panel que la IA combina con la nota. */ fotos?: string[] }): Promise<{ ok: true; imagenes: { url: string }[]; alt: string; credito: string; escena: string; prompt: string } | { ok: false; error: string }> {
   const yo = await requirePermiso("imagenes");
   const articleId = String(input.articleId ?? "");
   const [nota] = await db
@@ -118,6 +118,8 @@ export async function generarImagenesConIA(input: { articleId: string; escena?: 
     .where(eq(articles.id, articleId))
     .limit(1);
   if (!nota) return { ok: false, error: "La nota ya no existe." };
+  const lectura = await leerReferencias(input.fotos);
+  if (!lectura.ok) return lectura;
   const r = await generarPortadasCore(yo.id, {
     title: nota.titulo,
     excerpt: nota.resumen,
@@ -127,6 +129,7 @@ export async function generarImagenesConIA(input: { articleId: string; escena?: 
     modelo: MODELO_IMAGEN_PRO,
     estilo: estiloValido(input.estilo),
     cantidad: Math.min(3, Math.max(1, Math.round(Number(input.cantidad) || 3))),
+    referencias: lectura.referencias.length ? lectura.referencias : undefined,
   });
   return r.ok ? { ok: true, imagenes: r.imagenes, alt: r.alt, credito: r.credito, escena: r.scene, prompt: r.prompt } : r;
 }

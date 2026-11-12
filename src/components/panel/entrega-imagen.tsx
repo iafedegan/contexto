@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, Check, CheckCircle2, ImagePlus, Loader2, Sparkles, Wand2 } from "lucide-react";
+import { AlertTriangle, Check, CheckCircle2, ImagePlus, Loader2, Sparkles, Trash2, Wand2 } from "lucide-react";
 import { carpetasDeEntrega, entregarImagen, generarImagenesConIA } from "@/app/panel/(app)/imagenes/actions";
 import { subirMedia } from "./subir-media";
 import { SelectorCarpeta, type CarpetaNodo } from "./selector-carpeta";
@@ -46,6 +46,9 @@ export function EntregaImagen({ articleId, tituloNota = "", resumen = "" }: { ar
   const [procesando, setProcesando] = useState(false);
   // Generar la imagen con IA (Nano Banana Pro).
   const [escena, setEscena] = useState("");
+  // Fotos de referencia (máximo 3) que la IA combina con la nota.
+  const [fotosRef, setFotosRef] = useState<string[]>([]);
+  const [subiendoRef, setSubiendoRef] = useState(false);
   const [estilo, setEstilo] = useState<EstiloEscena>(ESTILO_POR_DEFECTO);
   const [opciones, setOpciones] = useState<string[]>([]);
   const [promptUsado, setPromptUsado] = useState("");
@@ -98,12 +101,34 @@ export function EntregaImagen({ articleId, tituloNota = "", resumen = "" }: { ar
     try { const b = await (await fetch(direccion)).blob(); setBytes(b.size); } catch { setBytes(0); }
   }
 
+  // Sube fotos de referencia hasta completar 3.
+  async function alElegirReferencias(files: FileList) {
+    setError("");
+    const lista = Array.from(files).filter((f) => f.type.startsWith("image/")).slice(0, 3 - fotosRef.length);
+    if (!lista.length) return;
+    setSubiendoRef(true);
+    try {
+      const subidas: string[] = [];
+      for (const f of lista) {
+        const r = await subirMedia(f);
+        if (!r.ok) { setError(r.error); break; }
+        if (r.kind === "video") { setError("Solo fotos: un video no sirve de referencia."); break; }
+        subidas.push(r.url);
+      }
+      if (subidas.length) setFotosRef((a) => [...a, ...subidas].slice(0, 3));
+    } catch {
+      setError("No se pudo subir la foto.");
+    } finally {
+      setSubiendoRef(false);
+    }
+  }
+
   // Pide tres opciones a la IA con la dirección de arte elegida (Nano Banana Pro): ya salen en WebP, 16:9 y de peso liviano.
   async function generar() {
     setError("");
     setGenerando(true);
     try {
-      const r = await generarImagenesConIA({ articleId, escena, estilo, cantidad: 3 });
+      const r = await generarImagenesConIA({ articleId, escena, estilo, cantidad: 3, fotos: fotosRef });
       if (!r.ok) return setError(r.error);
       setOpciones(r.imagenes.map((i) => i.url));
       setPromptUsado(r.prompt);
@@ -305,7 +330,26 @@ export function EntregaImagen({ articleId, tituloNota = "", resumen = "" }: { ar
           <textarea value={estilo.notas} onChange={(e) => setEstilo((x) => ({ ...x, notas: e.target.value.slice(0, 400) }))} rows={2} disabled={generando} placeholder="Ej.: cerca de madera, neblina en el fondo, sin personas…" className={`${campo} resize-none`} />
         </label>
       </div>
-      <button type="button" onClick={generar} disabled={generando || subiendo || pendiente} className="lx-btn self-start">
+      <div className="flex flex-col gap-2">
+        <span className="lx-kicker text-[var(--fg-muted)]">Fotos de referencia (opcional, máximo 3)</span>
+        <p className="text-xs text-[var(--fg-muted)]">La IA las combina con la nota y con la escena que escribas para componer las opciones.</p>
+        <div className="flex flex-wrap gap-2">
+          {fotosRef.map((u) => (
+            <div key={u} className="relative size-24 overflow-hidden rounded-[var(--radius)] border border-[var(--border)]">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={u} alt="Foto de referencia" className="size-full object-cover" />
+              <button type="button" onClick={() => setFotosRef((a) => a.filter((x) => x !== u))} disabled={generando} aria-label="Quitar esta foto" className="absolute right-1 top-1 grid size-6 place-items-center rounded-full bg-black/60 text-white transition hover:bg-black/80"><Trash2 size={12} /></button>
+            </div>
+          ))}
+          {fotosRef.length < 3 && (
+            <label className="grid size-24 cursor-pointer place-items-center rounded-[var(--radius)] border border-dashed border-[var(--border)] text-[var(--fg-muted)] transition hover:border-[var(--accent)] hover:text-[var(--accent)]">
+              {subiendoRef ? <Loader2 size={18} className="animate-spin" /> : <span className="flex flex-col items-center gap-1 text-xs"><ImagePlus size={18} aria-hidden />Añadir</span>}
+              <input type="file" accept="image/*" multiple disabled={subiendoRef || generando} className="hidden" onChange={(e) => { const f = e.target.files; if (f) void alElegirReferencias(f); e.target.value = ""; }} />
+            </label>
+          )}
+        </div>
+      </div>
+      <button type="button" onClick={generar} disabled={generando || subiendo || subiendoRef || pendiente} className="lx-btn self-start">
         {generando ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />} {generando ? "Generando 3 opciones… unos 40 segundos" : opciones.length ? "Generar 3 opciones nuevas" : "Generar 3 opciones"}
       </button>
       {opciones.length > 0 && (

@@ -133,16 +133,13 @@ export async function generarPortadasCore(userId: string, input: EntradaPortada)
 const MAX_BYTES_REFERENCIA = 12 * 1024 * 1024;
 
 /**
- * Portada compuesta a partir de hasta 3 fotos que subió la persona (ya están en nuestro bucket «media») y de la nota. Solo se aceptan direcciones del
- * propio bucket (no se descarga nada de fuera), cada archivo debe ser una imagen de verdad (por su firma) y la instrucción escrita manda sobre la escena.
+ * Lee las fotos de referencia (hasta 3) que la persona subió al panel. Solo se aceptan direcciones del propio bucket «media» (no se descarga nada de
+ * fuera) y cada archivo debe ser una imagen de verdad (por su firma).
  */
-export async function generarPortadaDesdeFotosCore(
-  userId: string,
-  input: Omit<EntradaPortada, "cantidad" | "referencias" | "scene" | "modelo"> & { fotos: string[]; instruccion?: string },
-): Promise<CoverImageResult> {
+export async function leerReferencias(fotos: unknown): Promise<{ ok: true; referencias: Uint8Array[] } | { ok: false; error: string }> {
   const base = urlPublicaMedia("");
-  const urls = [...new Set((input.fotos ?? []).map(String))].slice(0, 3);
-  if (!base || !urls.length) return { ok: false, error: "Sube al menos una foto (máximo tres) para componer la imagen." };
+  const urls = Array.isArray(fotos) ? [...new Set(fotos.map(String))].slice(0, 3) : [];
+  if (!base) return { ok: false, error: "Falta configurar el almacenamiento de imágenes." };
   const referencias: Uint8Array[] = [];
   for (const u of urls) {
     if (!u.startsWith(base)) return { ok: false, error: "Solo se pueden usar fotos subidas al panel." };
@@ -157,6 +154,17 @@ export async function generarPortadaDesdeFotosCore(
       return { ok: false, error: "No se pudo leer una de las fotos." };
     }
   }
+  return { ok: true, referencias };
+}
+
+/** Portada compuesta a partir de hasta 3 fotos subidas y de la nota; la instrucción escrita manda sobre la escena. */
+export async function generarPortadaDesdeFotosCore(
+  userId: string,
+  input: Omit<EntradaPortada, "cantidad" | "referencias" | "scene" | "modelo"> & { fotos: string[]; instruccion?: string },
+): Promise<CoverImageResult> {
+  if (!(input.fotos ?? []).length) return { ok: false, error: "Sube al menos una foto (máximo tres) para componer la imagen." };
+  const lectura = await leerReferencias(input.fotos);
+  if (!lectura.ok) return lectura;
   const r = await generarPortadasCore(userId, {
     title: input.title,
     excerpt: input.excerpt,
@@ -166,7 +174,7 @@ export async function generarPortadaDesdeFotosCore(
     modelo: MODELO_IMAGEN_PRO,
     estilo: input.estilo,
     cantidad: 1,
-    referencias,
+    referencias: lectura.referencias,
   });
   return r.ok ? { ok: true, url: r.imagenes[0].url, alt: r.alt, scene: r.scene } : r;
 }
