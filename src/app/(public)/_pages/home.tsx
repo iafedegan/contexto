@@ -13,7 +13,7 @@ import { CardSlugsProvider } from "@/components/home/card-styles";
 import { blockStylesCss } from "@/lib/home-style";
 import { ColumnaLafaurieSuelta, SiteSidebar } from "@/components/site-sidebar";
 import { SiteShell } from "@/components/site-shell";
-import { getArticlesByCategory, getBandasDeSecciones, getHomeLayoutConfig, getHomepageArticles, getMostReadArticles, getRecentArticles, PORTADA_NOTAS } from "@/lib/content";
+import { getArticlesByCategory, getBandasDeSecciones, getHomeLayoutConfig, getHomepageArticles, getMostReadArticles, getRecentArticles, getUltimaColumnaLafaurie, PORTADA_NOTAS } from "@/lib/content";
 import { CarruselPortada, type NotaCarrusel } from "@/components/home/carrusel-portada";
 import { sanitizeCarrusel, sanitizeCarruseles } from "@/lib/carrusel";
 import { hrefNota } from "@/lib/ruta-nota";
@@ -154,10 +154,13 @@ async function HomePage({ locale, portadaBorrador }: { locale: Locale; portadaBo
   // En el celular la columna del Dr. Lafaurie sube justo debajo del carrusel (en computador sigue en la barra lateral).
   // Sin carrusel, la columna baja justo debajo de la nota principal de la plantilla (las de cuadrícula la reciben después del bloque).
   // Esmeralda sin carrusel: la columna va arriba de la columna derecha («Lo último») también en el computador, y la barra lateral ya no la repite.
+  const esEsmeralda = !["revista", "compacto", "vanguardia", "clasico", "gremial"].includes(body);
+  // ¿Hay columna que mostrar? (lectura cacheada; la misma que hace la tarjeta). Esmeralda reparte distinto la apertura según haya o no.
+  const hayColumna = Boolean(await getUltimaColumnaLafaurie().catch(() => null));
   const columnaArriba = !carrusel && !["revista", "compacto", "vanguardia", "clasico", "gremial"].includes(body);
   const columnaMovil = (
     <div className={columnaArriba ? undefined : "lg:hidden"}>
-      <ColumnaLafaurieSuelta locale={locale} />
+      <ColumnaLafaurieSuelta locale={locale} tarjeta={esEsmeralda} />
     </div>
   );
   const carruselConColumna = carrusel ? (
@@ -167,7 +170,6 @@ async function HomePage({ locale, portadaBorrador }: { locale: Locale; portadaBo
     </>
   ) : null;
   const sinSlot = body === "compacto" || body === "vanguardia";
-  const esEsmeralda = !["revista", "compacto", "vanguardia", "clasico", "gremial"].includes(body);
   const trasPrincipal = carrusel || sinSlot ? undefined : columnaMovil;
 
   return (
@@ -239,7 +241,7 @@ async function HomePage({ locale, portadaBorrador }: { locale: Locale; portadaBo
           ) : body === "gremial" ? (
             <GremialTemplate {...props} trasPrincipal={trasPrincipal} />
           ) : (
-            <EsmeraldaTemplate {...props} trasPrincipal={trasPrincipal} lateral={<SiteSidebar locale={locale} columnaEnMovil={false} sinColumna={columnaArriba} />} />
+            <EsmeraldaTemplate {...props} trasPrincipal={trasPrincipal} conColumna={hayColumna} lateral={<SiteSidebar locale={locale} columnaEnMovil={false} sinColumna={columnaArriba} />} />
           )}
           {!carrusel && sinSlot && <div className="mt-8">{columnaMovil}</div>}
 

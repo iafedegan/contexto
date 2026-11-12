@@ -2552,3 +2552,77 @@ nav.cg-navfed div[role="menu"][class*="overflow-y-auto"] {
   --border: rgba(255, 255, 255, 0.12); --border-strong: rgba(255, 255, 255, 0.1); --surface-2: rgba(255, 255, 255, 0.08);
   border-radius: 1.1rem; background: #10291d; color: #ffffff;
 }
+
+/* ====== Apertura de la portada Esmeralda (components/article-card.tsx: CineCard, DestacadaCard, UltimoCard). ====== */
+/* El titular de la apertura «de cine» va siempre a su tamaño completo (la tarjeta de vidrio anterior lo encogía en reposo). */
+.lead-cine .lead-titulo { font-size: var(--lead-fs); line-height: 1.08; }
+/* Velo: oscuro donde va el texto y transparente hacia el centro de la foto. Arriba, el mismo velo invertido. */
+.lead-cine-velo {
+  background:
+    linear-gradient(to top, rgba(3, 12, 8, 0.94) 0%, rgba(3, 12, 8, 0.78) 22%, rgba(3, 12, 8, 0.36) 48%, rgba(3, 12, 8, 0) 70%),
+    linear-gradient(to bottom, rgba(3, 12, 8, 0.28) 0%, rgba(3, 12, 8, 0) 22%);
+}
+.lead-cine-velo-arriba { transform: scaleY(-1); }
+/* Filete de acento que crece bajo la foto al pasar el puntero. */
+.lead-cine::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0 0;
+  z-index: 5;
+  height: 3px;
+  background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 35%, transparent));
+  transform: scaleX(0.12);
+  transform-origin: left;
+  transition: transform 0.7s var(--ease-lux);
+}
+@media (hover: hover) {
+  .lead-cine:hover::after { transform: scaleX(1); }
+  /* La apertura no se levanta como las tarjetas pequeñas: es demasiado grande y movía media portada. */
+  .lx-card.lead-cine:hover { transform: none; }
+  .cg-ultimos article:hover .lx-media img,
+  .cg-ultimos article:hover .lx-media .lx-art { transform: scale(1.06); }
+}
+/* Lista «Lo último»: renglones separados por un filete, sin el del final. */
+.cg-ultimos > * + * { border-top: 1px solid var(--border); }
+/* Punto que late junto al rótulo de la lista. */
+.cg-latido { position: relative; display: inline-block; width: 0.5rem; height: 0.5rem; border-radius: 9999px; background: var(--accent); }
+.cg-latido::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--accent);
+  animation: cg-latido 2.2s ease-out infinite;
+}
+@keyframes cg-latido {
+  0% { transform: scale(1); opacity: 0.7; }
+  70%, 100% { transform: scale(3.2); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) { .cg-latido::after { animation: none; } }
+/* Tarjeta de la columna destacada: lámina con un tinte del acento y unas comillas grandes de fondo. */
+.cg-columna {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  background:
+    radial-gradient(120% 140% at 0% 0%, color-mix(in srgb, var(--accent) 16%, transparent) 0%, transparent 58%),
+    var(--bg-2);
+  transition: border-color 0.4s, box-shadow 0.4s;
+}
+.cg-columna::before {
+  content: "\201C";
+  position: absolute;
+  right: 0.6rem;
+  top: -1.6rem;
+  z-index: -1;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 9rem;
+  line-height: 1;
+  color: color-mix(in srgb, var(--accent) 16%, transparent);
+  pointer-events: none;
+}
+@media (hover: hover) {
+  .cg-columna:hover { border-color: var(--accent); box-shadow: var(--shadow-hover); }
+}

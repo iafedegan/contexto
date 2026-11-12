@@ -193,6 +193,8 @@ function reglasDeTarjeta(s: HomeStyle, en: (interior: string) => string): string
   if (s.size === "sm") out.push(`${en(`:is([style*="--cg-caja-foto"],[style*="--cg-mini-foto"],[data-cg-resumen])`)}{display:none!important}`);
   if (s.size === "lg") out.push(`${en("[data-cg-resumen]")}{-webkit-line-clamp:4!important;line-clamp:4!important}`);
   if (s.textPos) {
+    // En la apertura «de cine» el velo oscuro sigue al texto: si el texto sube, el velo se voltea.
+    out.push(`${en(".lead-cine-velo")}{transform:scaleY(-1)!important}`);
     out.push(`${en("[data-cg-panel]")}{align-self:start!important;justify-self:${s.textPos === "arriba-der" ? "end" : "start"}!important${s.textPos === "arriba-der" ? ";text-align:right!important" : ""}}`);
   }
   return out;

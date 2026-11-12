@@ -8,7 +8,7 @@ import { DEFAULT_LOCALE, INTL_LOCALE, categoryLabel, localePath, type Locale } f
 import { hrefNota } from "@/lib/ruta-nota";
 
 // Variantes visuales de la tarjeta de nota.
-export type CardVariant = "lead" | "gold" | "copper" | "pearl" | "rail";
+export type CardVariant = "lead" | "gold" | "copper" | "pearl" | "rail" | "cine" | "destacada" | "ultimo";
 
 /**
  * Tamaño base del titular por variante, en px. El estilo por tarjeta fijado en
@@ -21,6 +21,10 @@ const TITLE_PX: Record<CardVariant, number> = {
   copper: 24,
   pearl: 24,
   rail: 18,
+  // Apertura de Esmeralda: la principal «de cine», las dos destacadas bajo ella y la lista «Lo último».
+  cine: 44,
+  destacada: 18,
+  ultimo: 17,
 };
 
 /** Estilo resuelto de una tarjeta: titular, imagen y densidad del bloque. */
@@ -28,7 +32,7 @@ function cardStyle(a: ArticleListItem, variant: CardVariant) {
   const fijo = estiloFijo(a.homeStyle);
   const size = fijo?.size ?? null;
   return {
-    title: homeStyleTitleCss(a.homeStyle, TITLE_PX[variant] * factorTamano(a.homeStyle), variant === "lead" ? 1.08 : 1.2),
+    title: homeStyleTitleCss(a.homeStyle, TITLE_PX[variant] * factorTamano(a.homeStyle), variant === "lead" || variant === "cine" ? 1.08 : 1.2),
     // Caja de la imagen elegida en el panel (porcentaje o medidas exactas) y si trae alto fijo.
     // Dónde va el texto sobre la foto (solo la nota principal): abajo a lo ancho, o arriba en una esquina.
     textArriba: fijo?.textPos === "arriba-izq" || fijo?.textPos === "arriba-der",
@@ -69,6 +73,12 @@ export function ArticleCard({
   switch (variant) {
     case "lead":
       return <LeadCard a={a} priority={priority} locale={locale} />;
+    case "cine":
+      return <CineCard a={a} priority={priority} locale={locale} />;
+    case "destacada":
+      return <DestacadaCard a={a} locale={locale} />;
+    case "ultimo":
+      return <UltimoCard a={a} index={index} locale={locale} />;
     case "copper":
       return <CopperCard a={a} index={index} locale={locale} />;
     case "pearl":
@@ -213,6 +223,135 @@ function LeadCard({ a, priority, locale }: { a: ArticleListItem; priority?: bool
           <div className="min-h-0 overflow-hidden">{detalle}</div>
         </div>
       </div>
+    </article>
+  );
+}
+
+/* ------------------------------ Portada Esmeralda: apertura «de cine» */
+/**
+ * La nota principal a toda la foto: sin caja de vidrio, el texto va directo sobre la imagen con un velo oscuro que nace del borde
+ * (abajo, o arriba si el editor puso el texto arriba). Sección en una pastilla del color de acento, titular a su tamaño completo,
+ * resumen y firma siempre a la vista, y una flecha que invita a entrar. El texto es siempre claro: el velo es oscuro en los dos modos.
+ */
+function CineCard({ a, priority, locale }: { a: ArticleListItem; priority?: boolean; locale: Locale }) {
+  const st = cardStyle(a, "cine");
+  const posicion = `${st.textArriba ? "self-start" : "self-end"} ${st.textDerecha ? "justify-self-end items-end text-right" : "justify-self-start"}`;
+  return (
+    <article data-bs-root={a.slug} className={`lx-card lead-cine ${priority ? "" : "lx-reveal"} group relative grid h-full grid-cols-[minmax(0,1fr)] [&>*]:col-start-1 [&>*]:row-start-1`}>
+      <div className="lx-shine pointer-events-none absolute inset-0 z-[3]" />
+      <Link href={hrefNota(locale, a)} className="block" aria-label={a.title} tabIndex={-1} style={st.imageBox}>
+        <CardMedia
+          src={a.coverImageUrl}
+          alt={a.coverImageAlt ?? a.title}
+          seed={a.slug}
+          label={a.categoryName ?? a.title}
+          ratio="aspect-[4/5] h-full sm:aspect-[16/10] xl:aspect-[16/9]"
+          priority={priority}
+          sizes="(min-width: 1280px) 900px, (min-width: 768px) 60vw, 100vw"
+        />
+      </Link>
+      {/* Velo: oscurece solo la franja donde va el texto y deja limpia el resto de la foto. */}
+      <div aria-hidden className={`lead-cine-velo pointer-events-none z-[1] ${st.textArriba ? "lead-cine-velo-arriba" : ""}`} />
+      <div
+        data-cg-panel
+        className={`relative z-[4] flex w-full max-w-[54rem] flex-col p-5 text-white [--fg-muted:rgba(255,255,255,0.84)] [--fg:#ffffff] sm:p-7 lg:p-9 ${posicion}`}
+      >
+        {/* Si no caben en un renglón (celular), la fecha baja entera: ni la pastilla ni la fecha se parten. */}
+        <span className={`flex flex-wrap items-center gap-x-3 gap-y-2 ${st.textDerecha ? "justify-end" : ""}`}>
+          <Kicker a={a} locale={locale} className="whitespace-nowrap rounded-full bg-[var(--accent)] px-3 !text-[0.66rem] !tracking-[0.18em] text-[var(--accent-fg,#0b1a12)] shadow-[0_6px_18px_-6px_rgba(0,0,0,0.6)]" />
+          {a.publishedAt && (
+            <>
+              <span aria-hidden className="h-px w-7 bg-white/45 max-sm:hidden" />
+              <time dateTime={a.publishedAt.toISOString()} className="lx-ui whitespace-nowrap text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-white/85">
+                {formatDate(a.publishedAt, INTL_LOCALE[locale])}
+              </time>
+            </>
+          )}
+        </span>
+        <h2
+          className="lead-titulo lx-display mt-3.5 text-balance font-semibold tracking-tight [text-shadow:0_2px_18px_rgba(0,0,0,0.55)] md:mt-4"
+          style={{ ...st.title, fontSize: undefined, color: st.title.color ?? "#ffffff", ["--lead-fs" as string]: st.title.fontSize }}
+        >
+          <Link href={hrefNota(locale, a)} className="decoration-[var(--accent)] decoration-2 underline-offset-[6px] after:absolute after:inset-0 after:z-[2] group-hover:underline">
+            {a.title}
+          </Link>
+        </h2>
+        {!st.hideExcerpt && (
+          <p data-cg-resumen className={`mt-3 hidden max-w-2xl text-[0.95rem] leading-relaxed text-white/85 sm:block md:text-base ${st.excerptClamp} ${st.textDerecha ? "ml-auto" : ""}`}>
+            {a.excerpt}
+          </p>
+        )}
+        <span className={`mt-4 flex items-center gap-4 md:mt-5 ${st.textDerecha ? "flex-row-reverse" : ""}`}>
+          {/* La flecha es un adorno: toda la tarjeta ya es el enlace del titular. */}
+          <span aria-hidden className="grid size-10 shrink-0 place-items-center rounded-full bg-[var(--accent)] text-lg text-[var(--accent-fg,#0b1a12)] transition-transform duration-500 group-hover:translate-x-1">
+            →
+          </span>
+          {a.authorName && (
+            <span className="lx-ui min-w-0 text-[0.8rem] leading-tight text-white/85">
+              <span className="block text-[0.62rem] font-semibold uppercase tracking-[0.18em] text-white/60">{locale === "en" ? "By" : "Por"}</span>
+              <span className="block truncate font-semibold text-white">{a.authorName}</span>
+            </span>
+          )}
+        </span>
+      </div>
+    </article>
+  );
+}
+
+/* -------------------- Portada Esmeralda: destacadas bajo la principal */
+/** Tarjeta apaisada: la foto a la izquierda y, al lado, sección, titular y firma. Van de a dos bajo la nota principal. */
+function DestacadaCard({ a, locale }: { a: ArticleListItem; locale: Locale }) {
+  const st = cardStyle(a, "destacada");
+  return (
+    <article data-bs-root={a.slug} className="lx-card lx-reveal group flex h-full items-stretch">
+      <div className="lx-shine pointer-events-none absolute inset-0 z-[3]" />
+      {!st.hideMedia && (
+        <Link href={hrefNota(locale, a)} className="relative block w-[38%] max-w-[13rem] shrink-0" aria-hidden tabIndex={-1}>
+          <CardMedia src={a.coverImageUrl} alt="" seed={a.slug} label={a.categoryName ?? a.title} ratio="h-full min-h-[7.5rem]" sizes="(min-width: 640px) 210px, 38vw" />
+        </Link>
+      )}
+      <div className="flex min-w-0 flex-1 flex-col gap-1.5 p-4 sm:p-5">
+        <Kicker a={a} locale={locale} className="!text-[0.66rem] text-[var(--accent)]" />
+        <h3 className="lx-display line-clamp-4 text-lg font-semibold leading-snug" style={st.title}>
+          <Link href={hrefNota(locale, a)} className="transition-colors hover:text-[var(--link)] after:absolute after:inset-0 after:z-[2]">
+            {a.title}
+          </Link>
+        </h3>
+        {/* Una sola línea: la firma se corta con puntos suspensivos antes que partir la fecha en dos renglones. */}
+        <p className="mt-auto truncate pt-2 text-xs text-[var(--fg-muted)]">
+          {a.publishedAt ? formatDate(a.publishedAt, INTL_LOCALE[locale]) : ""}
+          {a.authorName && ` · ${a.authorName}`}
+        </p>
+      </div>
+    </article>
+  );
+}
+
+/* ----------------------------- Portada Esmeralda: lista «Lo último» */
+/** Renglón de la lista: número, sección, titular y fecha, con una miniatura a la derecha. El número se enciende al pasar el puntero. */
+function UltimoCard({ a, index, locale }: { a: ArticleListItem; index?: number; locale: Locale }) {
+  const st = cardStyle(a, "ultimo");
+  return (
+    <article data-bs-root={a.slug} className="lx-reveal group relative flex items-start gap-3.5 py-4 sm:gap-4">
+      {typeof index === "number" && (
+        <span aria-hidden className="lx-display w-8 shrink-0 text-[1.7rem] font-semibold leading-none text-[color-mix(in_srgb,var(--accent)_55%,transparent)] transition-colors duration-300 [font-variant-numeric:lining-nums] group-hover:text-[var(--accent)]">
+          {String(index + 1).padStart(2, "0")}
+        </span>
+      )}
+      <div className="min-w-0 flex-1">
+        <Kicker a={a} locale={locale} className="!text-[0.64rem] text-[var(--accent)]" />
+        <h3 className="lx-display mt-1 line-clamp-3 text-[1.0625rem] font-medium leading-snug" style={st.title}>
+          <Link href={hrefNota(locale, a)} className="transition-colors hover:text-[var(--link)] after:absolute after:inset-0 after:z-[2]">
+            {a.title}
+          </Link>
+        </h3>
+        <Meta a={a} locale={locale} className="mt-1.5" compact />
+      </div>
+      {!st.hideMedia && (
+        <span className="lx-media block w-[5.5rem] shrink-0 overflow-hidden rounded-[var(--radius)] ring-1 ring-[var(--border)] sm:w-24">
+          <CardMedia src={a.coverImageUrl} alt="" seed={a.slug} label={a.categoryName ?? a.title} ratio="aspect-[4/3]" sizes="96px" />
+        </span>
+      )}
     </article>
   );
 }

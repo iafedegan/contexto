@@ -60,6 +60,8 @@ type TemplateProps = Slots &
     locale?: Locale;
     /** Bloque que va justo debajo de la nota principal (en el celular, la columna del Dr. Lafaurie). Compacto y Vanguardia no lo usan: es una cuadrícula. */
     trasPrincipal?: React.ReactNode;
+    /** Solo Esmeralda: hay columna destacada arriba de «Lo último» (decide cuántas notas van en la lista y cuántas bajo la principal). */
+    conColumna?: boolean;
     /** Barra lateral del sitio (solo Esmeralda): va junto a «Lo más reciente», no junto a la apertura, para que arriba haya dos columnas y no tres. */
     lateral?: React.ReactNode;
     /**
@@ -387,6 +389,7 @@ export function EsmeraldaTemplate({
   layout,
   interactive = true,
   trasPrincipal,
+  conColumna = false,
   lateral,
   locale = DEFAULT_LOCALE,
   builderSelected,
@@ -412,28 +415,43 @@ export function EsmeraldaTemplate({
       {node}
     </EditableCard>
   );
-  // «Lo último» acompaña a la nota principal con cuatro titulares (con cinco, la foto estirada hasta su alto quedaba casi cuadrada), solo texto en pantallas anchas: la columna es angosta y con
-  // miniatura el titular quedaba en siete u ocho líneas. Lo que no cabe abre «Lo más reciente», que es la rejilla de abajo.
+  // La apertura reparte las cinco notas que siguen a la principal. Con la columna destacada a la derecha (que ya ocupa su alto), dos van
+  // como tarjetas apaisadas bajo la principal y tres en «Lo último»; sin ella, las cinco van en la lista. Así las dos columnas miden
+  // parecido y la foto principal, que se estira hasta igualarlas, no queda ni cuadrada ni con un hueco debajo.
   const todosAside = [second, ...rail].filter((a): a is ArticleListItem => Boolean(a));
-  const aside = todosAside.slice(0, 2);
-  const rio = [...todosAside.slice(2), ...river];
+  const hayColumna = conColumna && Boolean(trasPrincipal);
+  const destacadas = hayColumna ? todosAside.slice(0, 2) : [];
+  const ultimos = todosAside.slice(destacadas.length, destacadas.length + (hayColumna ? 3 : 5));
+  const rio = [...todosAside.slice(destacadas.length + ultimos.length), ...river];
 
   return (
     <div className="flex flex-col gap-12 sm:gap-20">
-      <section className={`grid grid-cols-1 gap-8 sm:gap-10 xl:gap-12 ${ANCHO_PRINCIPAL[layout.anchoPrincipal] ?? ANCHO_PRINCIPAL.ancha}`}>
-        <div className="flex min-w-0 flex-col gap-7 sm:gap-8">
-          {/* La tarjeta mide lo que mida su texto (la foto es 16:9 en pantallas anchas): un tope de alto recortaba el resumen y la firma. */}
-          {wrap(lead, <ArticleCard a={lead} locale={locale} variant="lead" priority={interactive} />)}
+      <section className={`grid grid-cols-1 gap-7 sm:gap-8 xl:gap-0 ${ANCHO_PRINCIPAL[layout.anchoPrincipal] ?? ANCHO_PRINCIPAL.ancha}`}>
+        {/* En pantallas anchas es la columna izquierda (la principal crece hasta igualar a la derecha; debajo, las destacadas). En el celular
+            la columna se «disuelve» (contents) para poder ordenar: principal, columna derecha y, al final, las destacadas. */}
+        <div className="flex min-w-0 flex-col gap-5 max-xl:contents xl:pr-8">
+          <div className="min-w-0 max-xl:order-1 xl:flex-1 [&>*]:h-full">{wrap(lead, <ArticleCard a={lead} locale={locale} variant="cine" priority={interactive} />)}</div>
+          {destacadas.length > 0 && (
+            <div className="grid min-w-0 grid-cols-1 gap-4 max-xl:order-3 sm:grid-cols-2 sm:gap-5">
+              {destacadas.map((a) => wrap(a, <ArticleCard a={a} locale={locale} variant="destacada" />))}
+            </div>
+          )}
         </div>
-        <aside className="min-w-0 xl:border-l xl:border-[var(--border)] xl:pl-8">
+        <aside className="flex min-w-0 flex-col gap-7 max-xl:order-2 xl:border-l xl:border-[var(--border)] xl:pl-8">
           {/* La columna destacada (opinión) va primero en la columna derecha, antes de «Lo último», en el celular y en el computador. */}
-          {trasPrincipal && <div className="mb-8">{trasPrincipal}</div>}
-          <p className="lx-kicker text-[var(--accent)]">{t(locale, "home.cover")}</p>
-          <h2 className="lx-display mt-2 text-2xl font-semibold tracking-tight md:text-3xl">
-            {t(locale, "home.latest")}
-          </h2>
-          <div className="mt-5 flex flex-col gap-4 sm:mt-6 sm:gap-5 xl:gap-4">
-            {aside.map((a, i) => wrap(a, <ArticleCard a={a} locale={locale} variant="rail" index={i} soloTexto />))}
+          {trasPrincipal && <div className="empty:hidden [&>div:empty]:hidden">{trasPrincipal}</div>}
+          <div className="flex flex-1 flex-col">
+            <header className="relative border-b border-[var(--border)] pb-3.5 after:absolute after:-bottom-px after:left-0 after:h-[3px] after:w-14 after:bg-[var(--accent)]">
+              <p className="lx-kicker flex items-center gap-2.5 text-[var(--accent)]">
+                <span aria-hidden className="cg-latido" />
+                {t(locale, "home.cover")}
+              </p>
+              <h2 className="lx-display mt-2 text-2xl font-semibold tracking-tight md:text-3xl">{t(locale, "home.latest")}</h2>
+            </header>
+            {/* La lista reparte el alto que sobre: los renglones quedan parejos hasta el pie de la foto principal. */}
+            <div className="cg-ultimos flex flex-1 flex-col justify-between">
+              {ultimos.map((a, i) => wrap(a, <ArticleCard a={a} locale={locale} variant="ultimo" index={i} />))}
+            </div>
           </div>
         </aside>
       </section>

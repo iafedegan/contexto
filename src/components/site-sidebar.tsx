@@ -126,7 +126,38 @@ export function ColumnaLafaurie({ locale, columna }: { locale: Locale; columna: 
 }
 
 /** La columna ya consultada (con caché) para ponerla donde haga falta fuera de la barra lateral. */
-export async function ColumnaLafaurieSuelta({ locale }: { locale: Locale }) {
+export async function ColumnaLafaurieSuelta({ locale, tarjeta = false }: { locale: Locale; /** La presentación de la apertura de la portada: tarjeta apaisada con el retrato a la izquierda. */ tarjeta?: boolean }) {
   const columna = await getUltimaColumnaLafaurie().catch(() => null);
-  return columna ? <ColumnaLafaurie locale={locale} columna={columna} /> : null;
+  if (!columna) return null;
+  return tarjeta ? <ColumnaTarjeta locale={locale} columna={columna} /> : <ColumnaLafaurie locale={locale} columna={columna} />;
+}
+
+/** La columna destacada como tarjeta (apertura de la portada): retrato con aro de acento, rótulo, título, firma y una invitación a leerla. */
+function ColumnaTarjeta({ locale, columna }: { locale: Locale; columna: NonNullable<Awaited<ReturnType<typeof getUltimaColumnaLafaurie>>> }) {
+  return (
+    <section className="cg-columna group">
+      <Link href={hrefNota(locale, columna)} className="flex items-start gap-4 p-5 sm:gap-5 sm:p-6">
+        {columna.authorAvatarUrl && (
+          <ImagenSitio
+            src={columna.authorAvatarUrl}
+            alt={columna.authorName ?? ""}
+            sizes="88px"
+            ancho={176}
+            alto={176}
+            className="size-[4.75rem] shrink-0 rounded-full object-cover ring-2 ring-[var(--accent)] ring-offset-[3px] ring-offset-[var(--bg-2)] sm:size-[5.5rem]"
+          />
+        )}
+        <span className="min-w-0 flex-1">
+          <span className="lx-kicker block !text-[0.66rem] text-[var(--accent)]">{t(locale, "sidebar.column")}</span>
+          <span className="lx-display mt-1.5 block text-[1.3rem] font-semibold leading-[1.2] transition-colors group-hover:text-[var(--link)]">{columna.title}</span>
+          {columna.authorName && <span className="lx-ui mt-2 block text-[0.78rem] font-semibold text-[var(--fg)]">{columna.authorName}</span>}
+          {columna.excerpt && <span className="mt-1 line-clamp-2 block text-[0.8rem] leading-snug text-[var(--fg-muted)]">{columna.excerpt}</span>}
+          <span className="lx-ui mt-3 inline-flex items-center gap-2 text-[0.7rem] font-bold uppercase tracking-[0.16em] text-[var(--accent)]">
+            {locale === "en" ? "Read the column" : "Leer la columna"}
+            <span aria-hidden className="transition-transform duration-500 group-hover:translate-x-1">→</span>
+          </span>
+        </span>
+      </Link>
+    </section>
+  );
 }
