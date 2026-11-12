@@ -423,7 +423,8 @@ export function EsmeraldaTemplate({
   // parecido y la foto principal, que se estira hasta igualarlas, no queda ni cuadrada ni con un hueco debajo.
   const base = [second, ...rail, ...river].filter((a): a is ArticleListItem => Boolean(a));
   const hayColumna = conColumna && Boolean(trasPrincipal);
-  const destacadas = hayColumna ? base.slice(0, 2) : [];
+  // Ya no van las dos tarjetas destacadas bajo la principal: ese espacio es para los carruseles.
+  const destacadas: ArticleListItem[] = [];
   // Con columna: cuatro renglones en «Lo último» (01-04), que dejan el alto justo para el hueco de la izquierda; sin ella, la lista se alarga.
   const ultimos = base.slice(destacadas.length, destacadas.length + (hayColumna ? 4 : 6));
   const rio = base.slice(destacadas.length + ultimos.length);
