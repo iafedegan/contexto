@@ -250,7 +250,7 @@ function CineCard({ a, priority, locale }: { a: ArticleListItem; priority?: bool
           alt={a.coverImageAlt ?? a.title}
           seed={a.slug}
           label={a.categoryName ?? a.title}
-          ratio="aspect-[4/5] h-full sm:aspect-[16/10] xl:aspect-[2.15/1] xl:max-h-[calc(100dvh-23rem)] xl:min-h-[20rem]"
+          ratio="aspect-[4/5] h-full sm:aspect-[16/10] xl:aspect-auto xl:min-h-[20rem]"
           priority={priority}
           sizes="(min-width: 1280px) 900px, (min-width: 768px) 60vw, 100vw"
         />

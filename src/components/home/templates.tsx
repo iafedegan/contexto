@@ -441,7 +441,7 @@ export function EsmeraldaTemplate({
         </div>
         <aside className="flex min-w-0 flex-col gap-4 max-xl:order-2">
           {/* La columna destacada (opinión) va primero en la columna derecha, antes de «Lo último», en el celular y en el computador. */}
-          {trasPrincipal && <div className="empty:hidden [&>div:empty]:hidden">{trasPrincipal}</div>}
+          {trasPrincipal && <div className="hidden has-[section]:block">{trasPrincipal}</div>}
           {leidas.length > 0 && (
             <div className="cg-leidas flex flex-1 flex-col overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border-strong)] bg-[var(--bg-2)]">
               <header className="border-b border-[var(--border)] px-4 py-3">

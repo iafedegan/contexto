@@ -63,10 +63,10 @@ export function BotonInicio({ locale, etiqueta }: { locale: Locale; etiqueta: st
     <a
       href={localePath(locale, "/")}
       aria-label={etiqueta}
-      className="mr-2 grid h-10 w-14 place-items-center rounded-lg bg-[#0d2318] shadow-sm ring-2 ring-[#d9a41a]/80 transition-colors hover:bg-[#022327]"
+      className="mr-2 grid size-10 place-items-center text-[#0d2318] transition-transform hover:scale-110"
     >
-      <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden>
-        <path d="M12 3 2 12h3v8h5v-5h4v5h5v-8h3z" fill="#f7eea1" />
+      <svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor" aria-hidden>
+        <path d="M12 3 2 12h3v8h5v-5h4v5h5v-8h3z" />
       </svg>
     </a>
   );
