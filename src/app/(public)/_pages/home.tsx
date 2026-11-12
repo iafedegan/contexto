@@ -148,13 +148,17 @@ async function HomePage({ locale, portadaBorrador }: { locale: Locale; portadaBo
   };
   const nodosCarrusel = await Promise.all(carruseles.map((c, i) => construirCarrusel(c, i)));
   const car = carruseles[0];
-  const carrusel = nodosCarrusel[0];
+  const carruselPropio = nodosCarrusel[0];
+  const esEsmeraldaTema = !["revista", "compacto", "vanguardia", "clasico", "gremial"].includes(body);
   // Los carruseles adicionales, agrupados por el lugar de la portada que cada uno eligió.
-  const extrasEn = (pos: string) => carruseles.map((c, i) => (i > 0 && c.posicion === pos ? nodosCarrusel[i] : null)).filter(Boolean);
+  const extrasEn = (pos: string) => esEsmeraldaTema ? [] : carruseles.map((c, i) => (i > 0 && c.posicion === pos ? nodosCarrusel[i] : null)).filter(Boolean);
   // En el celular la columna del Dr. Lafaurie sube justo debajo del carrusel (en computador sigue en la barra lateral).
   // Sin carrusel, la columna baja justo debajo de la nota principal de la plantilla (las de cuadrícula la reciben después del bloque).
   // Esmeralda sin carrusel: la columna va arriba de la columna derecha («Lo último») también en el computador, y la barra lateral ya no la repite.
   const esEsmeralda = !["revista", "compacto", "vanguardia", "clasico", "gremial"].includes(body);
+  // Esmeralda: todos los carruseles activos van en el hueco que queda bajo las dos destacadas, de a dos y compactos (en vez de a todo el ancho).
+  const hueco = esEsmeralda ? nodosCarrusel.filter(Boolean) : [];
+  const carrusel = esEsmeralda ? null : carruselPropio;
   // ¿Hay columna que mostrar? (lectura cacheada; la misma que hace la tarjeta). Esmeralda reparte distinto la apertura según haya o no.
   const hayColumna = Boolean(await getUltimaColumnaLafaurie().catch(() => null));
   const columnaArriba = !carrusel && !["revista", "compacto", "vanguardia", "clasico", "gremial"].includes(body);
@@ -241,13 +245,13 @@ async function HomePage({ locale, portadaBorrador }: { locale: Locale; portadaBo
           ) : body === "gremial" ? (
             <GremialTemplate {...props} trasPrincipal={trasPrincipal} />
           ) : (
-            <EsmeraldaTemplate {...props} trasPrincipal={trasPrincipal} conColumna={hayColumna} lateral={<SiteSidebar locale={locale} columnaEnMovil={false} sinColumna={columnaArriba} />} />
+            <EsmeraldaTemplate {...props} trasPrincipal={trasPrincipal} conColumna={hayColumna} hueco={hueco.length ? hueco : undefined} lateral={<SiteSidebar locale={locale} columnaEnMovil={false} sinColumna={columnaArriba} />} />
           )}
           {!carrusel && sinSlot && <div className="mt-8">{columnaMovil}</div>}
 
           {car.posicion === "tras-principal" && carruselConColumna && <div className="mt-12">{carruselConColumna}</div>}
           {bloqueInicio("tras-principal", "mt-12")}
-          {extrasEn("tras-principal").map((n, i) => <div key={`tp${i}`} className="mt-12">{n}</div>)}
+          {!esEsmeralda && extrasEn("tras-principal").map((n, i) => <div key={`tp${i}`} className="mt-12">{n}</div>)}
 
           {/* Billboard entre el bloque destacado y el resto (§9.1). */}
           <AdsBanner zone="home_billboard" className="mx-auto mt-14" />

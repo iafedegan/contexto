@@ -60,6 +60,8 @@ type TemplateProps = Slots &
     locale?: Locale;
     /** Bloque que va justo debajo de la nota principal (en el celular, la columna del Dr. Lafaurie). Compacto y Vanguardia no lo usan: es una cuadrícula. */
     trasPrincipal?: React.ReactNode;
+    /** Solo Esmeralda: carruseles que van en el hueco bajo las dos destacadas (de a dos, compactos). */
+    hueco?: React.ReactNode[];
     /** Solo Esmeralda: hay columna destacada arriba de «Lo último» (decide cuántas notas van en la lista y cuántas bajo la principal). */
     conColumna?: boolean;
     /** Barra lateral del sitio (solo Esmeralda): va junto a «Lo más reciente», no junto a la apertura, para que arriba haya dos columnas y no tres. */
@@ -390,6 +392,7 @@ export function EsmeraldaTemplate({
   interactive = true,
   trasPrincipal,
   conColumna = false,
+  hueco,
   lateral,
   locale = DEFAULT_LOCALE,
   builderSelected,
@@ -434,6 +437,11 @@ export function EsmeraldaTemplate({
           {destacadas.length > 0 && (
             <div className="grid min-w-0 grid-cols-1 gap-4 max-xl:order-3 sm:grid-cols-2 sm:gap-5">
               {destacadas.map((a) => wrap(a, <ArticleCard a={a} locale={locale} variant="destacada" />))}
+            </div>
+          )}
+          {hueco && hueco.length > 0 && (
+            <div className={`grid min-w-0 grid-cols-1 gap-4 max-xl:order-4 sm:gap-5 ${hueco.length > 1 ? "sm:grid-cols-2" : ""} xl:[&>*]:max-w-full`}>
+              {hueco.map((n, i) => <div key={i} className="min-w-0">{n}</div>)}
             </div>
           )}
         </div>
