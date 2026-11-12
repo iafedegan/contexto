@@ -443,12 +443,9 @@ export function EsmeraldaTemplate({
             </div>
           )}
           {hueco && hueco.length > 0 && (
-            // En pantallas anchas el hueco NO suma altura: llena justo lo que sobra hasta el pie de «Lo último» (la columna derecha manda), así la
-            // izquierda termina a ras de la última nota. Abajo de xl, un bloque normal.
-            <div className="min-w-0 max-xl:order-4 xl:relative xl:min-h-[15rem] xl:flex-1">
-              <div className={`cg-hueco grid min-w-0 grid-cols-1 content-start gap-4 sm:gap-5 xl:absolute xl:inset-0 xl:overflow-hidden ${hueco.length > 1 ? "sm:grid-cols-2" : ""}`}>
-                {hueco.map((n, i) => <div key={i} className="min-w-0 xl:h-full">{n}</div>)}
-              </div>
+            // Los carruseles del hueco miden todos lo mismo (ver `.cg-hueco` en globals.css), así van parejos aunque vengan de fuentes distintas.
+            <div className={`cg-hueco grid min-w-0 grid-cols-1 content-start items-start gap-4 max-xl:order-4 sm:gap-5 ${hueco.length > 1 ? "sm:grid-cols-2" : ""}`}>
+              {hueco.map((n, i) => <div key={i} className="min-w-0">{n}</div>)}
             </div>
           )}
         </div>

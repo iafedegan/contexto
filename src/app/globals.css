@@ -2708,21 +2708,12 @@ nav.cg-navfed div[role="menu"][class*="overflow-y-auto"] {
   .cg-mastil, .cg-mastil-interior, .cg-escudo { transition: none !important; }
 }
 
-/* Hueco bajo las destacadas (portada Esmeralda): en pantallas anchas el carrusel se estira a la altura que le deja la columna derecha. */
-@media (min-width: 1280px) {
-  .cg-hueco .cg-car { max-width: none; margin: 0; height: 100%; display: flex; flex-direction: column; }
-  .cg-hueco .cg-car-marco { flex: 1; min-height: 0; }
-  .cg-hueco .cg-car-pista, .cg-hueco .cg-car-item, .cg-hueco .cg-car-tarjeta { height: 100%; }
-  .cg-hueco .cg-car-img { height: 100%; aspect-ratio: auto; }
-  .cg-hueco .cg-car-img img { aspect-ratio: auto !important; }
-}
-/* Lo mismo para los carruseles de las filas armadas en el constructor de páginas (components/pagina-interactivos.tsx): cada contenedor que
-   lleva un carrusel mide el 100 % del hueco, y la foto de cada diapositiva llena su alto en vez de guardar su proporción. */
-@media (min-width: 1280px) {
-  .cg-hueco :is(div, section, article):has([aria-roledescription="carrusel"]) { height: 100%; }
-  .cg-hueco [aria-roledescription="carrusel"] { display: flex; flex-direction: column; height: 100%; }
-  .cg-hueco [aria-roledescription="carrusel"] > div:first-child { flex: 1; min-height: 0; }
-  .cg-hueco [aria-roledescription="diapositiva"], .cg-hueco [aria-roledescription="diapositiva"] > a { height: 100%; }
-  .cg-hueco [aria-roledescription="diapositiva"] > a > :first-child { height: 100%; aspect-ratio: auto !important; }
-  .cg-hueco [aria-roledescription="diapositiva"] img { height: 100%; width: 100%; object-fit: cover; }
-}
+/* Hueco bajo la nota principal (portada Esmeralda): todos los carruseles con la MISMA altura de foto, vengan de donde vengan (carrusel de notas o filas
+   del constructor de páginas) y sea cual sea la proporción de sus imágenes; la foto se recorta para llenar la caja. */
+.cg-hueco { --alto-car: 22rem; }
+@media (min-width: 1280px) { .cg-hueco { --alto-car: 24rem; } }
+.cg-hueco .cg-car { max-width: none; margin: 0; }
+.cg-hueco .cg-car-img { height: var(--alto-car); aspect-ratio: auto; }
+.cg-hueco .cg-car-img img { aspect-ratio: auto !important; }
+.cg-hueco [aria-roledescription="diapositiva"] > a > :first-child { height: var(--alto-car); aspect-ratio: auto !important; }
+.cg-hueco [aria-roledescription="diapositiva"] img, .cg-hueco .cg-car-img img { width: 100%; height: 100%; object-fit: cover; }
