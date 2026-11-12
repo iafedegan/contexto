@@ -161,6 +161,13 @@ function MastheadHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extr
     <header data-region="navbar" className="sticky top-[var(--stick-top,0px)] z-40 bg-[var(--nav-bg)]">
       {/* Solo la fila de secciones queda pegada al desplazarse (ver StickyRail). */}
       <StickyRail />
+      {/* Idioma, modo, radio e instalar: en la esquina del encabezado, fuera de la barra de secciones. */}
+      <span className="lx-iconos absolute right-5 top-2 z-10 hidden items-center gap-1.5 text-[var(--fg)] lg:flex">
+          <LocaleSwitch locale={locale} compacto />
+          <ThemeToggle locale={locale} className="!size-8 pointer-coarse:!size-11" />
+          {identity.radioStreamUrl && <RadioPlayer src={identity.radioStreamUrl} locale={locale} />}
+          <InstalarApp locale={locale} variante="mini" />
+        </span>
       {/* Contenedor de tamaño propio: el nombre, el emblema y las líneas se escalan con su ancho y se ajustan juntos. */}
       <div className="mx-auto max-w-7xl px-6 pb-1.5 pt-2 text-center md:pt-2.5 [container-type:inline-size]">
         {/* Logo a la izquierda y, a su lado, el nombre. `items-center` en ESTA fila: las líneas y el logo quedan en el centro vertical del título. */}
@@ -197,13 +204,7 @@ function MastheadHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extr
             <NavMenuItem key={n.href} item={n} locale={locale} className="lx-link lx-ui" />
           ))}
           <MoreMenu locale={locale} extra={extra} />
-          {/* Idioma, modo, radio e instalar: pequeños y discretos, al final de la barra y no en una franja propia. */}
-          <span className="lx-iconos flex items-center gap-1.5 pl-3 text-[#0d2318]">
-            <LocaleSwitch locale={locale} compacto />
-            <ThemeToggle locale={locale} className="!size-8 pointer-coarse:!size-11" />
-            {identity.radioStreamUrl && <RadioPlayer src={identity.radioStreamUrl} locale={locale} />}
-            <InstalarApp locale={locale} variante="mini" />
-          </span>
+          
         </div>
       </nav>
     </header>

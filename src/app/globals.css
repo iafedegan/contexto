@@ -2516,9 +2516,8 @@ nav.cg-navfed [aria-expanded="true"] ~ .lx-link,
 nav.cg-navfed div:has(> [aria-expanded="true"]) > .lx-link { background: rgba(255, 255, 255, 0.4); }
 nav.cg-navfed button[aria-haspopup="menu"] { margin-left: -1.35rem; position: relative; opacity: 1; color: #0d2318; }
 nav.cg-navfed .lx-link:has(+ button[aria-haspopup="menu"]) { padding-right: 1.9rem; }
-nav.cg-navfed .lx-iconos > * > button,
-nav.cg-navfed .lx-iconos > * > a,
-nav.cg-navfed .lx-iconos button { border-radius: 9999px; background: rgba(255, 255, 255, 0.4); }
+.lx-iconos button, .lx-iconos a { border-radius: 9999px; background: rgba(255, 255, 255, 0.12); }
+.lx-iconos button:hover, .lx-iconos a:hover { background: rgba(255, 255, 255, 0.24); }
 /* Submenús: verde oscuro, letra blanca, esquinas redondeadas. */
 nav.cg-navfed [role="menu"] > div {
   --nav-bg: #10291d; --fg: #ffffff; --fg-muted: #c3d3c9; --accent: #9be06a;
