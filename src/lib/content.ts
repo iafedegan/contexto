@@ -105,6 +105,17 @@ export async function getRecentArticles(limit = 12): Promise<ArticleListItem[]> 
     .limit(limit);
 }
 
+/**
+ * Orden de la portada: primero las notas de «Última hora» (la más reciente arriba; al llegar otra pasa a segunda y así), después lo que un editor fijó a
+ * mano, y el resto por fecha. Una nota normal nueva NO desplaza a las de última hora: se queda debajo de ellas.
+ */
+const ordenPortada = [
+  desc(articles.isBreaking),
+  sql`case when ${articles.isBreaking} then 0 when ${articles.homePosition} is null then 1 else 0 end`,
+  sql`case when ${articles.isBreaking} then null else ${articles.homePosition} end`,
+  desc(articles.publishedAt),
+] as const;
+
 /** Consulta de la portada con el orden manual, cacheada entre peticiones (la invalida el panel al publicar). */
 const leerPortada = cachear(
   "portada",
@@ -115,7 +126,7 @@ const leerPortada = cachear(
       .leftJoin(categories, eq(articles.categoryId, categories.id))
       .leftJoin(authors, eq(articles.authorId, authors.id))
       .where(publishedCondition)
-      .orderBy(sql`(${articles.homePosition} is null)`, articles.homePosition, desc(articles.publishedAt))
+      .orderBy(...ordenPortada)
       .limit(limit),
   { tags: [TAG_CONTENIDO], segundos: 60 },
 );
@@ -585,6 +596,21 @@ export const getBreakingArticle = cachear(
   { tags: [TAG_CONTENIDO], segundos: 60 },
 );
 
+/** Direcciones de las notas de «Última hora» que están a la vista (las 8 más recientes): cada una lleva su insignia, no solo la última. */
+export const getBreakingSlugs = cachear(
+  "ultima-hora-slugs",
+  async (): Promise<string[]> => {
+    const rows = await db
+      .select({ slug: articles.slug })
+      .from(articles)
+      .where(and(publishedCondition, eq(articles.isBreaking, true)))
+      .orderBy(desc(articles.publishedAt))
+      .limit(8);
+    return rows.map((r) => r.slug);
+  },
+  { tags: [TAG_CONTENIDO], segundos: 60 },
+);
+
 /** Última nota publicada del Dr. Lafaurie: la columna que la portada fija arriba de la barra lateral. */
 export const getUltimaColumnaLafaurie = cachear(
   "ultima-columna-lafaurie",
@@ -613,7 +639,7 @@ const leerOrdenPortada = cachear(
       .select({ slug: articles.slug, pos: articles.homePosition })
       .from(articles)
       .where(publishedCondition)
-      .orderBy(sql`(${articles.homePosition} is null)`, articles.homePosition, desc(articles.publishedAt))
+      .orderBy(...ordenPortada)
       .limit(PORTADA_NOTAS);
     return filas.map((f) => ({ slug: f.slug, fijada: f.pos !== null }));
   },

@@ -1,4 +1,4 @@
-import { getBreakingArticle, getNavChildren, getTopLevelCategories } from "@/lib/content";
+import { getBreakingSlugs, getNavChildren, getTopLevelCategories } from "@/lib/content";
 import { getSiteIdentity } from "@/lib/site-identity";
 import { getSiteTheme } from "@/lib/site-theme";
 import { getSitePopup } from "@/lib/popup";
@@ -101,7 +101,7 @@ export async function SiteShell({
     getSiteIdentity(),
     getSiteTheme(),
     getSitePopup(),
-    getBreakingArticle().catch(() => null),
+    getBreakingSlugs().catch(() => [] as string[]),
   ]);
   // Ajustes del editor: secciones visibles, enlaces propios y submenús.
   const nav = aplicarMenu(navTodo, site.menuNav);
@@ -118,7 +118,7 @@ export async function SiteShell({
         </div>
       )}
       {/* «Última hora» ya no es una franja roja: la nota marcada lleva una insignia en la esquina de su imagen (ver `estiloUltimaHora`). */}
-      {ultimaHora && /^[a-z0-9-]+$/.test(ultimaHora.slug) && <style dangerouslySetInnerHTML={{ __html: estiloUltimaHora(ultimaHora.slug, t(locale, "breaking.label")) }} />}
+      {ultimaHora.filter((sl) => /^[a-z0-9-]+$/.test(sl)).map((sl) => <style key={sl} dangerouslySetInnerHTML={{ __html: estiloUltimaHora(sl, t(locale, "breaking.label")) }} />)}
       {/* En el celular el cintillo y la cabecera quedan fijos arriba al hacer scroll; en pantallas grandes el envoltorio no existe (contents) y la barra de secciones conserva su propio sticky. */}
       <div className="sticky top-0 z-50 lg:contents">
         {topBar ?? <CintilloMercado locale={locale} />}
