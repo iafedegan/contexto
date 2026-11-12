@@ -907,6 +907,9 @@ a {
     opacity: 0;
     transition: grid-template-rows 0.4s var(--ease-lux), opacity 0.3s ease;
   }
+  /* El detalle oculto (resumen, firma, botón) no cuenta para el ancho de la tarjeta: ella mide lo que miden la etiqueta y el titular. */
+  .lead-detalle > div { width: 0; min-width: 100%; }
+  [data-cg-panel]:has(.lead-detalle) { min-width: min(100%, 24rem); }
   .lx-card:hover .lead-detalle,
   .lx-card:focus-within .lead-detalle,
   .cg-reveal:hover .lead-detalle,
