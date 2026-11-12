@@ -235,14 +235,14 @@ function LeadCard({ a, priority, locale }: { a: ArticleListItem; priority?: bool
 
 /* ------------------------------ Portada Esmeralda: apertura «de cine» */
 /**
- * La nota principal a toda la foto: sin caja de vidrio, el texto va directo sobre la imagen con un velo oscuro que nace del borde
- * (abajo, o arriba si el editor puso el texto arriba). Sección en una pastilla del color de acento, titular a su tamaño completo,
- * resumen y firma siempre a la vista, y una flecha que invita a entrar. El texto es siempre claro: el velo es oscuro en los dos modos.
+ * La nota principal a toda la foto, con una tarjeta de vidrio (blur) encima. En reposo solo se ve la sección y un titular pequeño, así la foto se aprecia;
+ * al pasar el ratón (o el foco) aparecen el resumen, la firma y el botón, y el titular crece. En pantallas táctiles todo está siempre a la vista.
  */
 function CineCard({ a, priority, locale }: { a: ArticleListItem; priority?: boolean; locale: Locale }) {
   const st = cardStyle(a, "cine");
+  const posicion = `${st.textArriba ? "self-start" : "self-end"} ${st.textDerecha ? "justify-self-end items-end text-right" : "justify-self-start"}`;
   return (
-    <article data-bs-root={a.slug} className={`lx-card lead-cine ${priority ? "" : "lx-reveal"} group relative grid h-full grid-cols-[minmax(0,1fr)] overflow-hidden [&>*]:col-start-1 [&>*]:row-start-1`}>
+    <article data-bs-root={a.slug} className={`lx-card lead-cine ${priority ? "" : "lx-reveal"} group relative grid h-full grid-cols-[minmax(0,1fr)] [&>*]:col-start-1 [&>*]:row-start-1`}>
       <div className="lx-shine pointer-events-none absolute inset-0 z-[3]" />
       <Link href={hrefNota(locale, a)} className="block" aria-label={a.title} tabIndex={-1} style={st.imageBox}>
         <CardMedia
@@ -255,24 +255,55 @@ function CineCard({ a, priority, locale }: { a: ArticleListItem; priority?: bool
           sizes="(min-width: 1280px) 900px, (min-width: 768px) 60vw, 100vw"
         />
       </Link>
-      {/* Velo: oscuro a la izquierda (donde va el texto) y limpio a la derecha; en el celular, desde abajo. */}
-      <div aria-hidden className="lead-cine-izq pointer-events-none z-[1]" />
-      {/* El texto va directo sobre la foto, sin caja: sección, titular con filete dorado a la izquierda y el botón de lectura. */}
-      <div className="relative z-[4] flex max-w-[34rem] flex-col items-start gap-4 self-end p-5 text-white sm:max-w-[56%] sm:self-center sm:p-6 md:gap-4 md:p-8">
-        <Kicker a={a} locale={locale} className="whitespace-nowrap rounded-full bg-[var(--accent)] px-4 py-1 !text-[0.68rem] !tracking-[0.14em] text-[var(--accent-fg,#0b1a12)]" />
+      {/* Velo: oscurece solo la franja donde va el texto y deja limpia el resto de la foto. */}
+      <div aria-hidden className={`lead-cine-velo pointer-events-none z-[1] ${st.textArriba ? "lead-cine-velo-arriba" : ""}`} />
+      <div
+        data-cg-panel
+        className={`relative z-[4] m-3 flex w-auto max-w-[44rem] flex-col rounded-[var(--radius-lg)] border border-white/10 bg-[rgba(3,12,8,0.7)] p-4 text-white shadow-[0_12px_36px_rgba(0,0,0,0.35)] backdrop-blur-md backdrop-saturate-150 [--fg-muted:rgba(255,255,255,0.84)] [--fg:#ffffff] max-sm:backdrop-blur-none md:m-5 md:p-6 ${posicion}`}
+      >
+        {/* Si no caben en un renglón (celular), la fecha baja entera: ni la pastilla ni la fecha se parten. */}
+        <span className={`flex flex-wrap items-center gap-x-3 gap-y-2 ${st.textDerecha ? "justify-end" : ""}`}>
+          <Kicker a={a} locale={locale} className="whitespace-nowrap rounded-full bg-[var(--accent)] px-3 !text-[0.66rem] !tracking-[0.18em] text-[var(--accent-fg,#0b1a12)] shadow-[0_6px_18px_-6px_rgba(0,0,0,0.6)]" />
+          {a.publishedAt && (
+            <>
+              <span aria-hidden className="h-px w-7 bg-white/45 max-sm:hidden" />
+              <time dateTime={a.publishedAt.toISOString()} className="lx-ui whitespace-nowrap text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-white/85">
+                {formatDate(a.publishedAt, INTL_LOCALE[locale])}
+              </time>
+            </>
+          )}
+        </span>
         <h2
-          className="lx-display border-l-[3px] border-[var(--accent)] pl-4 text-balance font-bold leading-[1.05] tracking-tight [text-shadow:0_2px_18px_rgba(0,0,0,0.55)]"
-          style={{ ...st.title, fontSize: "clamp(1.5rem, 2.4vw, 2.5rem)", color: st.title.color ?? "#ffffff" }}
+          className="lead-titulo lx-display mt-3.5 text-balance font-semibold tracking-tight [text-shadow:0_2px_18px_rgba(0,0,0,0.55)] md:mt-4"
+          style={{ ...st.title, fontSize: undefined, color: st.title.color ?? "#ffffff", ["--lead-fs" as string]: st.title.fontSize }}
         >
-          <Link href={hrefNota(locale, a)} className="after:absolute after:inset-0 after:z-[2]">
+          <Link href={hrefNota(locale, a)} className="decoration-[var(--accent)] decoration-2 underline-offset-[6px] after:absolute after:inset-0 after:z-[2] group-hover:underline">
             {a.title}
           </Link>
         </h2>
-        {/* El botón es un adorno: toda la tarjeta ya es el enlace del titular. */}
-        <span aria-hidden className="inline-flex items-center gap-2.5 rounded-full border border-[var(--accent)] px-5 py-2.5 text-[0.95rem] font-semibold text-white transition-colors duration-300 group-hover:bg-[var(--accent)] group-hover:text-[var(--accent-fg,#0b1a12)]">
-          {locale === "en" ? "Read full story" : "Leer nota completa"}
-          <span className="transition-transform duration-500 group-hover:translate-x-1">→</span>
-        </span>
+        {/* Con ratón, en reposo solo se ve la sección y el titular; el resumen y la firma aparecen al pasar el puntero (en pantallas táctiles, siempre). */}
+        <div className="lead-detalle">
+          <div className="min-h-0 overflow-hidden">
+          {!st.hideExcerpt && (
+            <p data-cg-resumen className={`mt-3 hidden max-w-2xl text-[0.95rem] leading-relaxed text-white/85 sm:block md:text-base ${st.excerptClamp} ${st.textDerecha ? "ml-auto" : ""}`}>
+              {a.excerpt}
+            </p>
+          )}
+          <span className={`mt-4 flex items-center gap-4 md:mt-5 ${st.textDerecha ? "flex-row-reverse" : ""}`}>
+            {/* El botón es un adorno: toda la tarjeta ya es el enlace del titular. */}
+            <span aria-hidden className="inline-flex items-center gap-2.5 rounded-full border border-[var(--accent)] px-5 py-2.5 text-[0.95rem] font-semibold text-white transition-colors duration-300 group-hover:bg-[var(--accent)] group-hover:text-[var(--accent-fg,#0b1a12)]">
+              {locale === "en" ? "Read full story" : "Leer nota completa"}
+              <span className="transition-transform duration-500 group-hover:translate-x-1">→</span>
+            </span>
+            {a.authorName && (
+              <span className="lx-ui min-w-0 text-[0.8rem] leading-tight text-white/85">
+                <span className="block text-[0.62rem] font-semibold uppercase tracking-[0.18em] text-white/60">{locale === "en" ? "By" : "Por"}</span>
+                <span className="block truncate font-semibold text-white">{a.authorName}</span>
+              </span>
+            )}
+          </span>
+          </div>
+        </div>
       </div>
     </article>
   );
