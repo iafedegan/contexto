@@ -2502,7 +2502,7 @@ nav.cg-navfed {
   background:
     linear-gradient(90deg, transparent 0%, #d9a41a 15%, #f7eea1 50%, #d9a41a 85%, transparent 100%) top / 100% 3px no-repeat,
     linear-gradient(90deg, transparent 0%, #d9a41a 15%, #f7eea1 50%, #d9a41a 85%, transparent 100%) bottom / 100% 2px no-repeat,
-    linear-gradient(180deg, #86d058 0%, #72bf44 100%) !important;
+    linear-gradient(180deg, #86d058 0%, #72bf44 100%) #72bf44 !important;
   border-color: transparent !important;
 }
 nav.cg-navfed .lx-link {
