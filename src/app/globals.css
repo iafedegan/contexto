@@ -2508,9 +2508,11 @@ nav.cg-navfed .lx-link {
   align-items: center;
   padding: 0.5rem 0.7rem;
   border-radius: 9999px;
-  font-size: 0.9rem;
+  font-size: 0.74rem;
   font-weight: 800;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-family: "Segoe UI", "Segoe UI Variable", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif !important;
   color: #0d2318 !important;
   -webkit-text-fill-color: #0d2318 !important;
   transition: background-color 0.2s;
@@ -2519,10 +2521,11 @@ nav.cg-navfed .lx-link::after { display: none; }
 nav.cg-navfed .lx-link:hover,
 nav.cg-navfed [aria-expanded="true"] ~ .lx-link,
 nav.cg-navfed div:has(> [aria-expanded="true"]) > .lx-link { background: rgba(255, 255, 255, 0.4); }
-nav.cg-navfed .lx-navrail { column-gap: 0.1rem !important; padding-left: 1rem; padding-right: 1rem; }
+/* Alto de la barra: 52 px (con el filete dorado). */
+nav.cg-navfed .lx-navrail { column-gap: 0.1rem !important; padding: 0 1rem !important; min-height: 50px; align-items: center; }
 nav.cg-navfed .lx-link + button[aria-haspopup="menu"] { margin-left: -1.25rem; position: relative; opacity: 1; color: #0d2318; }
 nav.cg-navfed .lx-link:has(+ button[aria-haspopup="menu"]) { padding-right: 1.5rem; }
-nav.cg-navfed .lx-navrail > div > button[aria-haspopup="menu"]:not(.lx-link + *) { padding: 0.5rem 0.7rem; border-radius: 9999px; font-size: 0.9rem; font-weight: 800; letter-spacing: 0.08em; color: #0d2318; }
+nav.cg-navfed .lx-navrail > div > button[aria-haspopup="menu"]:not(.lx-link + *) { padding: 0.5rem 0.7rem; border-radius: 9999px; font-size: 0.74rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; font-family: "Segoe UI", "Segoe UI Variable", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif; color: #0d2318; }
 .lx-iconos button, .lx-iconos a { border-radius: 9999px; background: rgba(255, 255, 255, 0.12); }
 .lx-iconos button:hover, .lx-iconos a:hover { background: rgba(255, 255, 255, 0.24); }
 /* Submenús: verde oscuro, letra blanca, esquinas redondeadas. */
@@ -2542,3 +2545,6 @@ nav.cg-navfed .lx-link[aria-current] { color: #0d2318 !important; -webkit-text-f
   32%, 100% { transform: translateX(1150px); }
 }
 @media (prefers-reduced-motion: reduce) { .logo-brillo { animation: none; opacity: 0; } }
+/* Iconos dentro de la barra verde (secciones): círculos claros como en la barra de FEDEGÁN. */
+nav.cg-navfed .lx-iconos button, nav.cg-navfed .lx-iconos a { background: rgba(255, 255, 255, 0.4); }
+nav.cg-navfed .lx-iconos button:hover, nav.cg-navfed .lx-iconos a:hover { background: rgba(255, 255, 255, 0.6); }
