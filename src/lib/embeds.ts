@@ -92,9 +92,64 @@ export function embedHtml(embed: Embed, titulo = "Vídeo", opciones: { ancho?: n
  * pintar la nota y en el editor; lo que no es un servicio admitido queda como enlace.
  */
 export function incrustarEnlaces(html: string): string {
-  return html.replace(/<p[^>]*>\s*(?:<a\s[^>]*href="([^"]+)"[^>]*>[^<]*<\/a>|(https?:\/\/[^\s<]+))\s*(?:<br\s*\/?>\s*)?<\/p>/gi, (todo, href: string | undefined, texto: string | undefined) => {
+  return incrustarCodigoPegado(html).replace(/<p[^>]*>\s*(?:<a\s[^>]*href="([^"]+)"[^>]*>[^<]*<\/a>|(https?:\/\/[^\s<]+))\s*(?:<br\s*\/?>\s*)?<\/p>/gi, (todo, href: string | undefined, texto: string | undefined) => {
     const url = (href ?? texto ?? "").replace(/&amp;/g, "&");
     const e = parseEmbed(url);
     return e ? embedHtml(e, NOMBRE_EMBED[e.tipo], { pie: false }) : todo;
   });
+}
+
+/* ------------------------------------------------------------------ Código de incrustación pegado */
+
+// Marcas del código que dan X, Instagram, TikTok y Facebook para incrustar («Copiar código»).
+const MARCAS_CODIGO = /twitter-tweet|instagram-media|tiktok-embed|fb-post|fb-video|<iframe|&lt;iframe/i;
+const URL_EN_TEXTO = /https?:\/\/[^\s"'<>\\]+/gi;
+
+// Quita las entidades HTML más comunes de un enlace que venía dentro de código pegado.
+const deEntidades = (u: string) => u.replace(/&amp;/g, "&").replace(/&quot;.*$/, "").replace(/&#0?39;.*$/, "").replace(/&lt;.*$/, "").replace(/&gt;.*$/, "");
+
+/**
+ * Si el texto es el CÓDIGO de incrustación de una red (el «<blockquote class="twitter-tweet">… <script …>» que se copia de X, Instagram, TikTok o
+ * Facebook) o de un video (<iframe>), devuelve la publicación a incrustar. Nunca se pega el código tal cual: solo se toma su enlace.
+ */
+export function embedDeCodigo(texto: string): Embed | null {
+  if (!MARCAS_CODIGO.test(texto)) return null;
+  for (const m of texto.matchAll(URL_EN_TEXTO)) {
+    const e = parseEmbed(deEntidades(m[0]));
+    if (e) return e;
+  }
+  return null;
+}
+
+/**
+ * Notas donde ese código se pegó como TEXTO (se ve «<blockquote class="twitter-tweet">…» en la página): se reemplaza todo el bloque, desde su
+ * apertura hasta el «</blockquote>» (y el «<script>» que lo sigue), por la publicación incrustada.
+ */
+export function incrustarCodigoPegado(html: string): string {
+  const apertura = /(?:&lt;|<)blockquote[^]{0,200}?(?:twitter-tweet|instagram-media|tiktok-embed)/i;
+  let salida = html;
+  for (let vuelta = 0; vuelta < 6; vuelta++) {
+    const m = apertura.exec(salida);
+    if (!m) break;
+    const ini = m.index;
+    const cierre = /(?:&lt;|<)\/blockquote(?:&gt;|>)/i.exec(salida.slice(ini));
+    if (!cierre) break;
+    let fin = ini + cierre.index + cierre[0].length;
+    // El <script> que acompaña al código (si viene justo después).
+    const script = /^[^]{0,80}?(?:&lt;|<)\/script(?:&gt;|>)/i.exec(salida.slice(fin));
+    if (script && /script/i.test(script[0])) fin += script[0].length;
+    const bloque = salida.slice(ini, fin);
+    const e = embedDeCodigo(bloque.replace(/<[^>]+>/g, " ")) ?? embedDeCodigo(bloque);
+    // Si el bloque no trae un enlace reconocible se deja como estaba (y se sigue con lo demás).
+    if (!e) break;
+    // Se amplía al párrafo que lo contiene si solo hay ese código en él.
+    let a = ini;
+    let b = fin;
+    const antes = /<p[^>]*>\s*$/i.exec(salida.slice(0, ini));
+    if (antes) a = ini - antes[0].length;
+    const despues = /^\s*<\/p>/i.exec(salida.slice(fin));
+    if (despues) b = fin + despues[0].length;
+    salida = salida.slice(0, a) + embedHtml(e, NOMBRE_EMBED[e.tipo], { pie: false }) + salida.slice(b);
+  }
+  return salida;
 }

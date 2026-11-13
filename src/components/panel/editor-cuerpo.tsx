@@ -4,7 +4,7 @@ import { useLayoutEffect, useRef, useState } from "react";
 import { BarChart3, Bold, Clapperboard, Highlighter, Italic, Link2, List, ListOrdered, Minus, MessageSquareQuote, Quote, Redo2, RemoveFormatting, Replace, Search, Strikethrough, Subscript, Superscript, Table, Underline, Undo2, Unlink, ZoomIn, ZoomOut } from "lucide-react";
 import { decodeSpec, renderChartSvg, svgDataUri } from "@/lib/chart-svg";
 import { escapeHtml } from "@/lib/escape";
-import { embedHtml, incrustarEnlaces, NOMBRE_EMBED, parseEmbed } from "@/lib/embeds";
+import { embedDeCodigo, embedHtml, incrustarEnlaces, NOMBRE_EMBED, parseEmbed } from "@/lib/embeds";
 
 /**
  * Editor del cuerpo tipo procesador de texto: se escribe sobre el texto ya formateado (negrita, intertítulos, listas,
@@ -534,6 +534,14 @@ export function EditorCuerpo({
           e.preventDefault();
           const html = e.clipboardData.getData("text/html");
           const texto = e.clipboardData.getData("text/plain");
+          // Código de incrustación (X, Instagram, TikTok, Facebook, <iframe>) o el enlace suelto de un video o publicación: se pega ya incrustado, no como texto.
+          const emb = embedDeCodigo(texto) ?? embedDeCodigo(html) ?? (/^\s*https?:\/\/\S+\s*$/.test(texto) ? parseEmbed(texto) : null);
+          if (emb) {
+            const fig = embedHtml(emb, NOMBRE_EMBED[emb.tipo], { pie: "Pie · Fuente" }).replace('<figure class="', '<figure contenteditable="false" class="');
+            document.execCommand("insertHTML", false, `${fig}<p><br></p>`);
+            emitir();
+            return;
+          }
           const limpio = html
             ? limpiarPegado(html)
             : texto.split(/\n\s*\n/).map((t) => `<p>${escapeHtml(t.trim()).replace(/\n/g, "<br>")}</p>`).join("");
