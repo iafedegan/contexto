@@ -2573,6 +2573,9 @@ nav.cg-navfed div[role="menu"][class*="overflow-y-auto"] {
   .lead-cine-velo { opacity: 0.3; transition: opacity 0.5s var(--ease-lux); }
   .lead-cine:hover .lead-cine-velo, .lead-cine:focus-within .lead-cine-velo { opacity: 1; }
 }
+/* La apertura va sin marco: ni borde ni filete dorado. */
+.lx-card.lead-cine { border: 0; box-shadow: none; }
+.lead-cine::after { display: none; }
 /* Filete de acento que crece bajo la foto al pasar el puntero. */
 .lead-cine::after {
   content: "";
@@ -2614,7 +2617,7 @@ nav.cg-navfed div[role="menu"][class*="overflow-y-auto"] {
   position: relative;
   isolation: isolate;
   overflow: hidden;
-  border: 1px solid var(--border-strong);
+  border: 0;
   border-radius: var(--radius-lg);
   background:
     radial-gradient(120% 140% at 0% 0%, color-mix(in srgb, var(--accent) 16%, transparent) 0%, transparent 58%),
@@ -2634,7 +2637,7 @@ nav.cg-navfed div[role="menu"][class*="overflow-y-auto"] {
   pointer-events: none;
 }
 @media (hover: hover) {
-  .cg-columna:hover { border-color: var(--accent); box-shadow: var(--shadow-hover); }
+  .cg-columna:hover { box-shadow: var(--shadow-hover); }
 }
 
 /* ====== Efecto al hacer scroll en las franjas por sección de la portada (components/home/secciones-por-bandas.tsx) ======
