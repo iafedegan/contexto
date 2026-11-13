@@ -1515,6 +1515,8 @@ a {
 .prose .lx-embed.lx-embed-der { margin-left: auto; margin-right: 0; }
 /* Publicaciones de redes: alto fijo (atributo height), no 16:9. */
 .prose .lx-embed.lx-embed-social iframe { aspect-ratio: auto; background: transparent; }
+/* Una publicación de red no se corta: tiene un ancho mínimo (por debajo su contenido se desborda) y uno máximo (el de las propias redes). */
+.prose .lx-embed.lx-embed-social { min-width: min(100%, 330px); max-width: min(100%, 550px); }
 .prose .lx-embed iframe {
   display: block;
   width: 100%;

@@ -4,6 +4,7 @@ import { useLayoutEffect, useRef, useState } from "react";
 import { BarChart3, Bold, Clapperboard, Highlighter, Italic, Link2, List, ListOrdered, Minus, MessageSquareQuote, Quote, Redo2, RemoveFormatting, Replace, Search, Strikethrough, Subscript, Superscript, Table, Underline, Undo2, Unlink, ZoomIn, ZoomOut } from "lucide-react";
 import { decodeSpec, renderChartSvg, svgDataUri } from "@/lib/chart-svg";
 import { escapeHtml } from "@/lib/escape";
+import { EmbedAltura } from "@/components/embed-altura";
 import { FacebookIcon, InstagramIcon, LinkedinIcon, TiktokIcon, XIcon, YoutubeIcon } from "@/components/social-icons";
 import { embedDeCodigo, embedHtml, incrustarEnlaces, NOMBRE_EMBED, parseEmbed, type Embed } from "@/lib/embeds";
 
@@ -45,6 +46,8 @@ function desdeEditor(el: HTMLElement): string {
   copia.querySelectorAll("figure.lx-embed").forEach((f) => {
     f.removeAttribute("contenteditable");
     f.classList.remove("cg-embed-sel");
+    // El alto automático de X e Instagram es solo de pantalla: no se guarda.
+    f.querySelectorAll("iframe").forEach((i) => i.removeAttribute("style"));
   });
   // Al escribir, el navegador deja un <br> suelto en el campo vacío.
   const html = copia.innerHTML.replace(/^(<br\s*\/?>|\s)+$/i, "");
@@ -298,7 +301,10 @@ export function EditorCuerpo({
     f.classList.add("cg-embed-sel");
     const m = (f.getAttribute("style") ?? "").match(/width:\s*([\d.]+)%/);
     embedEl.current = f;
-    const h = f.classList.contains("lx-embed-social") ? Number(f.querySelector("iframe")?.getAttribute("height")) || 600 : null;
+    // X e Instagram miden solos su alto (no se corta); en las demás redes el alto se elige a mano.
+    const origen = f.querySelector("iframe")?.getAttribute("src") ?? "";
+    const auto = /^https:\/\/(platform\.twitter\.com|www\.instagram\.com)\//.test(origen);
+    const h = f.classList.contains("lx-embed-social") && !auto ? Number(f.querySelector("iframe")?.getAttribute("height")) || 600 : null;
     setEmbedSel({ ancho: m ? Math.round(Number(m[1])) : 100, alinear: f.classList.contains("lx-embed-izq") ? "izq" : f.classList.contains("lx-embed-der") ? "der" : "centro", alto: h });
     // Que no queden abiertos los demás campos de la cinta (enlace, tabla, imagen, video nuevo).
     setEnlace(null); setTabla(null); setInfografia(null); setVideo(null);
@@ -382,6 +388,7 @@ export function EditorCuerpo({
 
   return (
     <div style={papel ? ({ "--surface": "#ffffff", "--bg-2": "#f3f4f3", "--surface-2": "#eceeed", "--fg": "#1b1b1b", "--fg-muted": "#5b665f", "--border": "rgba(0,0,0,0.16)", "--border-strong": "rgba(0,0,0,0.3)" } as React.CSSProperties) : undefined} className={papel ? "flex flex-col bg-white text-[#1b1b1b]" : "flex min-h-0 flex-1 flex-col overflow-hidden rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] focus-within:border-[var(--accent)]"}>
+      <EmbedAltura />
       {/* Cinta de herramientas por pestañas, como en Word */}
       <div className={`shrink-0 border-b border-[var(--border)] ${papel ? "sticky top-0 z-10 bg-[#f3f4f3]" : "bg-[var(--surface-2)]/40"}`}>
         <div role="tablist" aria-label="Cinta de herramientas" className="flex items-end gap-1 px-2 pt-1.5">
@@ -568,7 +575,7 @@ export function EditorCuerpo({
           [&_table]:my-4 [&_table]:w-full [&_table]:border-collapse [&_td]:min-w-12 [&_td]:border [&_td]:border-[var(--border)] [&_td]:px-2 [&_td]:py-1.5 [&_th]:border [&_th]:border-[var(--border)] [&_th]:bg-[var(--surface-2)] [&_th]:px-2 [&_th]:py-1.5 [&_th]:text-left [&_th]:font-semibold
           [&_figure]:my-4 [&_figure_img]:mx-auto [&_figure_img]:max-h-72 [&_figcaption]:mt-1 [&_figcaption]:text-center [&_figcaption]:text-xs [&_figcaption]:text-[var(--fg-muted)]
           [&_details]:my-3 [&_details]:rounded-md [&_details]:border [&_details]:border-[var(--border)] [&_details]:px-3 [&_details]:py-2 [&_summary]:cursor-pointer [&_summary]:text-sm [&_summary]:font-semibold
-          [&_iframe]:aspect-video [&_iframe]:w-full [&_iframe]:pointer-events-none [&_figure.lx-embed]:mx-auto [&_figure.lx-embed]:cursor-pointer [&_figure.lx-embed-social_iframe]:aspect-auto [&_figure.cg-embed-sel]:outline [&_figure.cg-embed-sel]:outline-2 [&_figure.cg-embed-sel]:outline-offset-4 [&_figure.cg-embed-sel]:outline-[var(--accent)]`}
+          [&_iframe]:aspect-video [&_iframe]:w-full [&_iframe]:pointer-events-none [&_figure.lx-embed]:mx-auto [&_figure.lx-embed]:cursor-pointer [&_figure.lx-embed-social_iframe]:aspect-auto [&_figure.lx-embed-social]:min-w-[min(100%,330px)] [&_figure.lx-embed-social]:max-w-[min(100%,550px)] [&_figure.cg-embed-sel]:outline [&_figure.cg-embed-sel]:outline-2 [&_figure.cg-embed-sel]:outline-offset-4 [&_figure.cg-embed-sel]:outline-[var(--accent)]`}
       />
     </div>
   );

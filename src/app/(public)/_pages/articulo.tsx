@@ -1,6 +1,7 @@
 import { INTL_LOCALE, categoryLabel, localePath, t, type Locale } from "@/lib/i18n";
 import { sanitizeArticleHtml } from "@/lib/sanitize";
 import { incrustarEnlaces } from "@/lib/embeds";
+import { EmbedAltura } from "@/components/embed-altura";
 import { ArticleBody } from "@/components/article-body";
 import { notFound } from "next/navigation";
 import Link from "next/link";
@@ -231,6 +232,7 @@ export function ArticleDocument({
 
         {/* El cuerpo llega como HTML ya sanitizado en el panel editorial. */}
         <div data-el="n-body">
+          <EmbedAltura />
           <ArticleBody
             className={ARTICLE_BODY_CLASS[theme] ?? "prose prose-drop mt-12 !max-w-none"}
             html={sanitizeArticleHtml(incrustarEnlaces(a.body))}
