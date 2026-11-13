@@ -531,6 +531,7 @@ const CATEGORY_EN: Record<string, string> = {
   "politica-gremial": "Industry policy",
   "ciencia-y-tecnologia": "Science & technology",
   opinion: "Opinion",
+  clima: "Climate",
 };
 
 // Nombre de una categoría en el idioma pedido: en inglés usa la traducción si existe y si no, el nombre original.

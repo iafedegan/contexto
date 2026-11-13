@@ -267,6 +267,13 @@
       "when": 1794500000000,
       "tag": "0037_cita_en_comentarios",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1794600000000,
+      "tag": "0038_seccion_clima",
+      "breakpoints": true
     }
   ]
 }

@@ -2820,3 +2820,14 @@ nav.cg-navfed .cg-escudo { position: absolute; left: 1.5rem; top: 50%; margin-to
   .cg-cabecera-fija,
   .cg-cabecera-fija header[data-region="navbar"] { position: static; }
 }
+
+/* Barra verde de secciones (escritorio): todo centrado en una sola fila, con la casa en un círculo. Si no cabe, se ajusta el espacio, no se parte en dos filas. */
+@media (min-width: 1024px) {
+  nav.cg-navfed .lx-navrail { flex-wrap: nowrap !important; justify-content: center !important; column-gap: 0.15rem !important; }
+  nav.cg-navfed .lx-navrail > a:first-child {
+    display: grid; place-items: center; width: 2.4rem; height: 2.4rem; margin: 0 0.5rem 0 0; border-radius: 9999px;
+    background: #0d2318; color: #fff !important; box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.35);
+  }
+  nav.cg-navfed .lx-navrail > a:first-child svg { width: 1.2rem; height: 1.2rem; }
+  nav.cg-navfed .lx-link { padding: 0.5rem clamp(0.3rem, 0.55vw, 0.7rem); letter-spacing: 0.03em; font-size: clamp(0.66rem, 0.9vw, 0.74rem); }
+}

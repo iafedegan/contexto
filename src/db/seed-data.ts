@@ -39,37 +39,39 @@ const PARENT_CATS = [
     description: "Medioambiente, innovación y vida rural.",
     sortOrder: 6,
   },
-  { slug: "opinion", name: "Opinión", description: "Columnas, editoriales y columnistas.", sortOrder: 7 },
-  { slug: "agenda", name: "Agenda", description: "Congresos, ferias y eventos del sector.", sortOrder: 8 },
+  // Sección transversal: sus notas siguen en su sección de origen y además salen aquí (`articles.secciones`). Ver la migración 0038.
+  { slug: "clima", name: "Clima", description: "Lluvias, sequías, fenómenos de El Niño y La Niña, pronósticos y cambio climático en el campo.", sortOrder: 7 },
+  { slug: "opinion", name: "Opinión", description: "Columnas, editoriales y columnistas.", sortOrder: 8 },
+  { slug: "agenda", name: "Agenda", description: "Congresos, ferias y eventos del sector.", sortOrder: 9 },
   {
     slug: "especiales",
     name: "Especiales",
     description: "Crónicas, reportajes e informes en profundidad.",
-    sortOrder: 9,
+    sortOrder: 10,
   },
   // Secciones que el anexo funcional exige como mínimo (§2.1) y que la
   // taxonomía actual del sitio no contempla. Se añaden al final: la barra
-  // principal muestra las ocho primeras (N-04) y el resto vive en «Más».
+  // principal muestra las primeras (NAV_VISIBLE, N-04) y el resto vive en «Más».
   {
     slug: "entrevistas",
     name: "Entrevistas",
     description: "Conversaciones con líderes, expertos, productores y autoridades.",
-    sortOrder: 10,
+    sortOrder: 11,
   },
   {
     slug: "analisis",
     name: "Análisis",
     description: "Contexto sectorial, interpretación de cifras y coyuntura.",
-    sortOrder: 11,
+    sortOrder: 12,
   },
   {
     slug: "servicios",
     name: "Servicios",
     description: "Recursos, herramientas e información útil para el productor.",
-    sortOrder: 12,
+    sortOrder: 13,
   },
-  { slug: "tv", name: "TV", description: "Programas, entrevistas en vídeo y material audiovisual.", sortOrder: 13 },
-  { slug: "radio", name: "Radio", description: "Emisora, transmisiones y pódcast del sector.", sortOrder: 14 },
+  { slug: "tv", name: "TV", description: "Programas, entrevistas en vídeo y material audiovisual.", sortOrder: 14 },
+  { slug: "radio", name: "Radio", description: "Emisora, transmisiones y pódcast del sector.", sortOrder: 15 },
 ];
 
 // Dirección de una categoría principal.

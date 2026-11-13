@@ -167,7 +167,7 @@ export async function navOverflow(locale: Locale = DEFAULT_LOCALE): Promise<NavI
 // Secciones principales del sitio para la navegación, traducidas al idioma.
 export async function navItems(locale: Locale = DEFAULT_LOCALE): Promise<NavItem[]> {
   try {
-    // Solo las de primer nivel, y como mucho ocho (N-04): más opciones
+    // Solo las de primer nivel, y como mucho NAV_VISIBLE (N-04): más opciones
     // visibles sobrecargan la navegación. El resto está en el menú «Más».
     const [categories, hijas] = await Promise.all([getTopLevelCategories(), getNavChildren().catch(() => ({}) as Awaited<ReturnType<typeof getNavChildren>>)]);
     return [
