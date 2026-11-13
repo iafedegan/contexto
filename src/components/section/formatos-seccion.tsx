@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { EnlaceNota as Link } from "@/components/ui/enlace-nota";
 import { Headphones, Play, Sparkles } from "lucide-react";
 import type { ArticleListItem } from "@/lib/content";
 import { CardMedia } from "@/components/cover-art";

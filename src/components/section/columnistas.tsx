@@ -1,5 +1,5 @@
 import Image from "next/image";
-import Link from "next/link";
+import { EnlaceNota as Link } from "@/components/ui/enlace-nota";
 import { ArrowRight } from "lucide-react";
 import type { ArticleListItem, Columnista } from "@/lib/content";
 import { INTL_LOCALE, localePath, type Locale } from "@/lib/i18n";

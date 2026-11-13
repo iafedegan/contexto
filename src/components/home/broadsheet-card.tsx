@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { EnlaceNota as Link } from "@/components/ui/enlace-nota";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import type { ArticleListItem } from "@/lib/content";

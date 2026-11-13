@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { EnlaceNota as Link } from "@/components/ui/enlace-nota";
 import { FacebookIcon, InstagramIcon, LinkedinIcon, YoutubeIcon } from "@/components/social-icons";
 import { AdsBanner } from "@/components/ads-banner";
 import { NewsletterForm } from "@/components/newsletter-form";

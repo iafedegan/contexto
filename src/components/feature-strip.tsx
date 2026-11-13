@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { EnlaceNota as Link } from "@/components/ui/enlace-nota";
 import Image from "next/image";
 import type { ArticleListItem } from "@/lib/content";
 import { formatDate } from "@/lib/utils";

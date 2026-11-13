@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef } from "react";
-import Link from "next/link";
+import { EnlaceNota as Link } from "@/components/ui/enlace-nota";
 import Image from "next/image";
 import { motion, useMotionTemplate, useSpring } from "framer-motion";
 import type { ArticleListItem } from "@/lib/content";

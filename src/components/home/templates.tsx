@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { EnlaceNota as Link } from "@/components/ui/enlace-nota";
 import dynamic from "next/dynamic";
 import { BarChart3, BookOpen, CloudSun, ShieldCheck, Wallet } from "lucide-react";
 import { HomeCard } from "@/components/home/home-card";

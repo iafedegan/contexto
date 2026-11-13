@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { EnlaceNota as Link } from "@/components/ui/enlace-nota";
 import { CoverArt } from "@/components/cover-art";
 import { ImagenSitio } from "@/components/ui/imagen-sitio";
 import type { ArticleListItem, BandaDeSeccion } from "@/lib/content";

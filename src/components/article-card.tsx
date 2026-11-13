@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { EnlaceNota as Link } from "@/components/ui/enlace-nota";
 import type { ArticleListItem } from "@/lib/content";
 import { CardMedia } from "@/components/cover-art";
 import { LiveBadge } from "@/components/live-badge";
