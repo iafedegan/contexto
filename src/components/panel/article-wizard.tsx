@@ -319,7 +319,6 @@ export function ArticleWizard({
   const [region, setRegion] = useState(initial?.region ?? "");
   // Otras secciones donde también aparece la nota (direcciones).
   const [otras, setOtras] = useState<string[]>(initial?.otras ?? []);
-  const [buscaOtras, setBuscaOtras] = useState("");
   // A qué editor se envía la nota al terminar (vacío = a nadie) y el mensaje que le llega con ella.
   const [envio, setEnvio] = useState(enviadoA);
   const [enviarA, setEnviarA] = useState("");
@@ -463,21 +462,6 @@ export function ArticleWizard({
       })
       .map((c) => c.id);
   }, [categories, title, excerpt, tags]);
-  // Secciones agrupadas para elegir las otras donde también sale la nota: cada sección con sus subsecciones, filtradas por la búsqueda.
-  const gruposOtras = useMemo(() => {
-    const norm = (t: string) => t.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
-    const q = norm(buscaOtras.trim());
-    const ids = new Set(categories.map((c) => c.id));
-    const raices = categories.filter((c) => !c.parentId || !ids.has(c.parentId));
-    return raices
-      .map((padre) => {
-        const hijas = categories.filter((c) => c.parentId === padre.id);
-        if (!q) return { padre, hijas };
-        const coincidePadre = norm(padre.name).includes(q);
-        return { padre, hijas: coincidePadre ? hijas : hijas.filter((h) => norm(h.name).includes(q)), ok: coincidePadre || hijas.some((h) => norm(h.name).includes(q)) };
-      })
-      .filter((g) => !("ok" in g) || g.ok);
-  }, [categories, buscaOtras]);
   const authorName = authors.find((a) => a.id === authorId)?.name;
   // «Regiones» (Colombia › Regiones): sus subsecciones son las regiones y los departamentos, que no son secciones del sitio sino un dato de la nota.
   const regionesId = useMemo(() => {
@@ -1484,58 +1468,20 @@ export function ArticleWizard({
         )}
 
         {current.key === "seccion" && (
-          <Step ancho="xl" title="¿Dónde se publica?" hint="Tres pasos: 1. la sección principal, 2. otras secciones donde también sale (opcional) y 3. si va destacada en la portada (opcional).">
+          <Step ancho="xl" title="¿Dónde se publica?" hint="Dos pasos: 1. elige una o varias secciones (la primera es la principal) y 2. si va destacada en la portada del sitio (opcional).">
             <SectionTree
               options={categories}
               value={categoryId}
               onChange={(id) => { setCategoryId(id); setRegion(""); setDepto(""); }}
+              adicionales={otras.map((sl) => categories.find((c) => c.slug === sl)?.id).filter((x): x is string => !!x)}
+              onAdicionales={(ids) => setOtras(ids.map((id) => categories.find((c) => c.id === id)?.slug).filter((x): x is string => !!x))}
               sugeridas={seccionesSugeridas}
               extra={regionesId ? { categoriaId: regionesId, items: itemsRegiones, value: valorRegion, onPick: elegirRegion } : undefined}
               despues={
                 <>
-                  <section className="flex min-w-0 flex-col gap-3 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow)]">
-                <header className="flex min-w-0 items-start gap-3">
-                  <span aria-hidden className="grid size-8 shrink-0 place-items-center rounded-full bg-[var(--accent)] text-sm font-bold text-[var(--accent-fg,#fff)]">2</span>
-                  <div className="min-w-0">
-                    <h3 className="text-base font-semibold leading-tight">¿Sale también en otras secciones?</h3>
-                    <p className="mt-0.5 text-xs text-[var(--fg-muted)]">Opcional. Marca las que quieras: la nota saldrá en cada una, además de en la sección principal. {otras.length ? `Elegidas: ${otras.length}.` : "Ninguna elegida."}</p>
-                  </div>
-                </header>
-                {otras.length > 0 && (
-                  <ul className="flex flex-wrap gap-1.5" aria-label="Otras secciones elegidas">
-                    {otras.map((sl) => {
-                      const c = categories.find((x) => x.slug === sl);
-                      const padre = c?.parentId ? categories.find((x) => x.id === c.parentId)?.name : undefined;
-                      return (
-                        <li key={sl} className="inline-flex items-center gap-1 rounded-full bg-[var(--accent)] py-1 pl-3 pr-1.5 text-xs font-medium text-[var(--accent-fg,#fff)]">
-                          {padre ? `${padre} › ` : ""}{c?.name ?? sl}
-                          <button type="button" onClick={() => setOtras((a) => a.filter((x) => x !== sl))} aria-label={`Quitar ${c?.name ?? sl}`} className="grid size-5 place-items-center rounded-full transition hover:bg-black/20"><X size={12} aria-hidden /></button>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
-                <input value={buscaOtras} onChange={(e) => setBuscaOtras(e.target.value)} placeholder="Buscar una sección…" aria-label="Buscar otra sección" className={`${input} text-sm`} />
-                <div className="max-h-64 overflow-y-auto rounded-[var(--radius)] border border-[var(--border)]">
-                  {gruposOtras.length === 0 && <p className="px-3 py-3 text-sm text-[var(--fg-muted)]">No hay secciones con ese nombre.</p>}
-                  {gruposOtras.map(({ padre, hijas }) => (
-                    <div key={padre.id} className="border-b border-[var(--border)] last:border-b-0">
-                      {[padre, ...hijas].map((c, i) => {
-                        if (!c.slug || c.id === categoryId) return null;
-                        const on = otras.includes(c.slug);
-                        return (
-                          <label key={c.id} className={`flex cursor-pointer items-center gap-2.5 py-2 pr-3 text-sm transition hover:bg-[var(--surface-2)] ${i === 0 ? "bg-[var(--surface-2)]/50 pl-3 font-semibold" : "pl-9"}`}>
-                            <input type="checkbox" checked={on} onChange={() => setOtras((a) => (on ? a.filter((x) => x !== c.slug) : [...a, c.slug!].slice(0, 12)))} className="size-4 accent-[var(--accent)]" />
-                            {c.name}
-                          </label>
-                        );
-                      })}
-                    </div>
-                  ))}
-                </div>
-              </section>
+                  
                   {/* 3 · Lugar en la portada del sitio (solo con permiso «portada»). */}
-              <TarjetaDecision n={3} titulo="¿Va destacada en la portada?" ayuda={canPortada ? (portadaPos === "0" ? "Será la nota grande de arriba." : portadaPos === "1" ? "Irá junto a la principal." : portadaPos === "keep" ? "Ya tiene un lugar fijado; se conserva." : "Normal: entra a la portada por fecha, como cualquier nota.") : "Tu cuenta no ubica notas en la portada: un editor lo hace al publicar."}>
+              <TarjetaDecision n={2} titulo="¿Va destacada en la portada?" ayuda={canPortada ? (portadaPos === "0" ? "Será la nota grande de arriba." : portadaPos === "1" ? "Irá junto a la principal." : portadaPos === "keep" ? "Ya tiene un lugar fijado; se conserva." : "Normal: entra a la portada por fecha, como cualquier nota.") : "Tu cuenta no ubica notas en la portada: un editor lo hace al publicar."}>
                 {canPortada && (
                   <div id="pt-sitio" role="radiogroup" aria-label="Lugar en la portada del sitio" className="grid w-full grid-cols-3 gap-1 rounded-full border border-[var(--border)] bg-[var(--surface-2)]/60 p-1">
                     {([

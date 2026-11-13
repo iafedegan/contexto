@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useMemo, useState } from "react";
-import { Check, ChevronRight, FolderOpen, Search } from "lucide-react";
+import { Check, ChevronRight, FolderOpen, Search, X } from "lucide-react";
 
 // Opción de un selector: id y nombre.
 type Opcion = { id: string; name: string };
@@ -46,6 +46,8 @@ export function SectionTree({
   extra,
   children,
   despues,
+  adicionales = [],
+  onAdicionales,
 }: {
   options: Nodo[];
   /** Sección elegida (id de una sección del sitio). */
@@ -58,6 +60,9 @@ export function SectionTree({
   children?: React.ReactNode;
   /** Contenido propio del asistente que va después de la tarjeta de la sección (otras secciones, portada). */
   despues?: React.ReactNode;
+  /** Otras secciones elegidas además de la principal (ids). Con `onAdicionales` el selector admite VARIAS: la primera que se elige es la principal. */
+  adicionales?: string[];
+  onAdicionales?: (ids: string[]) => void;
 }) {
   const [q, setQ] = useState("");
   const idUnico = useId();
@@ -106,32 +111,47 @@ export function SectionTree({
     const alt = caminoPara(primera?.id);
     return alt.length ? alt : raices.find((r) => abrible(r.id)) ? [raices.find((r) => abrible(r.id))!.id] : [];
   });
-  const seleccionados = new Set(cadena(elegido)); // el elegido y todos sus ancestros
+  const multi = !!onAdicionales;
+  const seleccionados = new Set([...cadena(elegido), ...adicionales.flatMap((a) => cadena(a))]); // lo elegido y todos sus ancestros
 
   const t = norm(q.trim());
   const coincidencias = t ? todos.filter((o) => norm(o.name).includes(t)).sort((a, b) => Number(sugeridas.includes(b.id)) - Number(sugeridas.includes(a.id))).slice(0, 60) : [];
   const sugs = sugeridas.map((x) => porId.get(x)).filter((x): x is NonNullable<typeof x> => !!x).slice(0, 4);
 
   const elegir = (n: { id: string; virtual?: boolean }) => {
-    if (n.virtual) extra?.onPick(n.id);
-    else onChange(elegido === n.id ? "" : n.id);
+    if (n.virtual) return extra?.onPick(n.id);
+    if (!multi) return onChange(elegido === n.id ? "" : n.id);
+    if (elegido === n.id) {
+      // Quitar la principal: la primera de las otras pasa a serlo.
+      if (adicionales.length) { onChange(adicionales[0]); onAdicionales!(adicionales.slice(1)); } else onChange("");
+    } else if (adicionales.includes(n.id)) onAdicionales!(adicionales.filter((x) => x !== n.id));
+    else if (!value) onChange(n.id);
+    else onAdicionales!([...adicionales, n.id].slice(0, 11));
+  };
+  // Pasar una de las otras a ser la principal (la principal actual queda entre las otras).
+  const hacerPrincipal = (id: string) => {
+    if (!onAdicionales) return;
+    onAdicionales([...(value ? [value] : []), ...adicionales.filter((x) => x !== id)]);
+    onChange(id);
   };
 
   /** Una fila elegible (sección completa o subsección sin contenido). */
   const filaElegible = (n: { id: string; name: string; virtual?: boolean }, texto: string, tenue = false) => {
     const activa = elegido === n.id;
+    const tambien = multi && adicionales.includes(n.id);
     return (
       <button
         type="button"
-        aria-pressed={activa}
+        aria-pressed={activa || tambien}
         onClick={() => elegir(n)}
         className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm transition focus-visible:outline-2 focus-visible:outline-[var(--accent)] ${
-          activa ? "bg-[var(--accent)] font-semibold text-[var(--accent-fg)] shadow-sm" : `hover:bg-[var(--surface-2)] ${tenue ? "text-[var(--fg-muted)]" : ""}`
+          activa ? "bg-[var(--accent)] font-semibold text-[var(--accent-fg)] shadow-sm" : tambien ? "bg-[var(--accent)]/15 font-semibold" : `hover:bg-[var(--surface-2)] ${tenue ? "text-[var(--fg-muted)]" : ""}`
         }`}
       >
-        <Marca on={activa} fuerte />
+        <Marca on={activa || tambien} fuerte />
         <span className="min-w-0 flex-1 truncate">{texto}</span>
-        {sugeridas.includes(n.id) && !activa && <Sugerida />}
+        {multi && activa && <span className="shrink-0 rounded-full bg-white/25 px-2 py-0.5 text-[0.65rem] font-bold uppercase tracking-wide">Principal</span>}
+        {sugeridas.includes(n.id) && !activa && !tambien && <Sugerida />}
       </button>
     );
   };
@@ -208,6 +228,23 @@ export function SectionTree({
                 </button>
               );
             })}
+          </div>
+        )}
+
+        {multi && (
+          <div className="flex flex-col gap-1.5 rounded-[var(--radius)] bg-[var(--surface-2)]/60 px-3 py-2.5">
+            <p className="text-xs text-[var(--fg-muted)]">Puedes elegir <strong>varias</strong> secciones: la primera es la principal y la nota saldrá también en las demás. Toca una sección para añadirla o quitarla.</p>
+            {adicionales.length > 0 && (
+              <ul className="flex flex-wrap items-center gap-1.5" aria-label="Otras secciones elegidas">
+                <li className="text-xs font-semibold">También sale en:</li>
+                {adicionales.map((id) => (
+                  <li key={id} className="inline-flex items-center overflow-hidden rounded-full border border-[var(--accent)]/50 bg-[var(--surface)] text-xs font-medium">
+                    <button type="button" onClick={() => hacerPrincipal(id)} title="Hacerla la sección principal" className="py-1 pl-3 pr-2 transition hover:bg-[var(--accent)]/10">{ruta(id)}</button>
+                    <button type="button" onClick={() => onAdicionales!(adicionales.filter((x) => x !== id))} aria-label={`Quitar ${ruta(id)}`} className="grid size-6 place-items-center transition hover:bg-[var(--accent)]/10"><X size={12} aria-hidden /></button>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         )}
 
