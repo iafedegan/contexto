@@ -115,7 +115,7 @@ export function FormatoDeSeccion({ formato, items, locale }: { formato: FormatoS
           <CardMedia src={lead.coverImageUrl} alt={lead.coverImageAlt ?? lead.title} seed={lead.slug} label={lead.categoryName} ratio="aspect-[4/5] sm:aspect-[21/9]" priority sizes="100vw" />
         </Link>
         {/* Tarjeta de vidrio: en reposo solo la etiqueta y un titular pequeño (se aprecia la foto); al pasar el puntero crece el titular y salen el resumen y la firma. */}
-        <div className="cg-vidrio absolute bottom-0 left-0 m-3 max-w-[46rem] rounded-[var(--radius-lg)] border border-white/10 bg-[rgba(3,12,8,0.7)] p-4 text-white shadow-[0_12px_36px_rgba(0,0,0,0.35)] backdrop-blur-md backdrop-saturate-150 max-sm:backdrop-blur-none sm:m-6 sm:p-6">
+        <div className="cg-vidrio absolute bottom-0 left-0 m-3 max-w-[46rem] rounded-[var(--radius-lg)] border border-white/10 bg-[rgba(3,12,8,0.5)] p-4 text-white shadow-[0_12px_36px_rgba(0,0,0,0.35)] backdrop-blur-[3px] backdrop-saturate-150 max-sm:backdrop-blur-none sm:m-6 sm:p-6">
           <p className="lx-kicker inline-flex items-center gap-1.5 rounded-full bg-black/55 px-3 py-1 text-white"><Sparkles size={13} aria-hidden className="text-[var(--accent)]" /> Especial</p>
           <h2 className="lead-titulo lx-display mt-2 font-semibold leading-[1.08]" style={{ ["--lead-fs" as string]: "clamp(1.75rem, 3.4vw, 3rem)" }}>
             <Link href={hrefNota(locale, lead)} className="hover:text-[var(--accent)]">{lead.title}</Link>

@@ -109,7 +109,7 @@ export function BentoTile({
 
         {/* El borde superior reserva el sitio de la etiqueta: las filas crecen con el contenido (minmax) y el texto no la pisa. */}
         {/* En las fichas grandes (con resumen) el texto va en una tarjeta de vidrio: titular pequeño en reposo; al pasar el puntero crece y sale el resumen. */}
-        <div className={cn("relative z-[1] p-3 pt-11 sm:p-4 sm:pt-14", size === "xl" && "sm:p-6 sm:pt-16", showDek && "cg-vidrio group/v m-2 rounded-2xl border border-white/10 bg-[rgba(3,12,8,0.62)] pt-3 backdrop-blur-md max-sm:backdrop-blur-none sm:m-3 sm:pt-4")}>
+        <div className={cn("relative z-[1] p-3 pt-11 sm:p-4 sm:pt-14", size === "xl" && "sm:p-6 sm:pt-16", showDek && "cg-vidrio group/v m-2 rounded-2xl border border-white/10 bg-[rgba(3,12,8,0.45)] pt-3 backdrop-blur-[3px] max-sm:backdrop-blur-none sm:m-3 sm:pt-4")}>
           <h3
             className={cn(
               showDek && "lead-titulo",

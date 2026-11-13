@@ -677,7 +677,7 @@ export function GremialTemplate({
             <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent" />
             <div aria-hidden className="hidden w-full sm:block sm:aspect-[16/9]" />
             {/* Tarjeta de vidrio: titular pequeño en reposo; al pasar el puntero crece y salen el resumen y el botón. */}
-            <div className="cg-vidrio relative m-3 max-w-[46rem] self-end justify-self-start rounded-[var(--radius-lg)] border border-white/10 bg-[rgba(3,12,8,0.7)] p-4 shadow-[0_12px_36px_rgba(0,0,0,0.35)] backdrop-blur-md backdrop-saturate-150 max-sm:backdrop-blur-none sm:m-5 sm:p-6">
+            <div className="cg-vidrio relative m-3 max-w-[46rem] self-end justify-self-start rounded-[var(--radius-lg)] border border-white/10 bg-[rgba(3,12,8,0.5)] p-4 shadow-[0_12px_36px_rgba(0,0,0,0.35)] backdrop-blur-[3px] backdrop-saturate-150 max-sm:backdrop-blur-none sm:m-5 sm:p-6">
               <GremialTag a={lead} locale={locale} />
               <h1 className="lead-titulo lx-display mt-3 font-bold leading-tight text-white" style={{ ...homeStyleTitleCss(lead.homeStyle, 36, 1.25), fontSize: undefined, ["--lead-fs" as string]: homeStyleTitleCss(lead.homeStyle, 36, 1.25).fontSize }}>{lead.title}</h1>
               <div className="lead-detalle">

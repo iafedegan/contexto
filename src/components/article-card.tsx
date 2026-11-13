@@ -214,7 +214,7 @@ function LeadCard({ a, priority, locale }: { a: ArticleListItem; priority?: bool
         </div>
         {detalle}
       </div>
-      <div data-cg-panel className={`relative z-[4] m-3 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--bg)]/80 p-4 shadow-[0_10px_30px_rgba(0,0,0,0.14)] backdrop-blur-md backdrop-saturate-150 max-sm:backdrop-blur-none max-sm:backdrop-saturate-100 [&_.lead-detalle_:is(p,span,time)]:!text-[color-mix(in_srgb,var(--fg)_90%,transparent)] md:m-5 md:max-w-[40rem] md:p-6 ${posicionPanel}`}>
+      <div data-cg-panel className={`relative z-[4] m-3 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--bg)]/70 p-4 shadow-[0_10px_30px_rgba(0,0,0,0.14)] backdrop-blur-[3px] backdrop-saturate-150 max-sm:backdrop-blur-none max-sm:backdrop-saturate-100 [&_.lead-detalle_:is(p,span,time)]:!text-[color-mix(in_srgb,var(--fg)_90%,transparent)] md:m-5 md:max-w-[40rem] md:p-6 ${posicionPanel}`}>
         <Kicker a={a} locale={locale} className="text-[var(--accent)]" />
         <h2
           className="lead-titulo lx-display mt-2.5 text-2xl font-semibold leading-[1.12] tracking-tight sm:text-3xl md:mt-3 md:text-[2.75rem]"
@@ -259,7 +259,7 @@ function CineCard({ a, priority, locale }: { a: ArticleListItem; priority?: bool
       <div aria-hidden className={`lead-cine-velo pointer-events-none z-[1] ${st.textArriba ? "lead-cine-velo-arriba" : ""}`} />
       <div
         data-cg-panel
-        className={`relative z-[4] m-3 flex w-fit max-w-[40rem] flex-col rounded-[var(--radius-lg)] border border-white/10 bg-[rgba(3,12,8,0.7)] p-4 text-white shadow-[0_12px_36px_rgba(0,0,0,0.35)] backdrop-blur-md backdrop-saturate-150 [--fg-muted:rgba(255,255,255,0.84)] [--fg:#ffffff] max-sm:backdrop-blur-none md:m-5 md:p-6 ${posicion}`}
+        className={`relative z-[4] m-3 flex w-fit max-w-[40rem] flex-col rounded-[var(--radius-lg)] border border-white/10 bg-[rgba(3,12,8,0.5)] p-4 text-white shadow-[0_12px_36px_rgba(0,0,0,0.35)] backdrop-blur-[3px] backdrop-saturate-150 [--fg-muted:rgba(255,255,255,0.84)] [--fg:#ffffff] max-sm:backdrop-blur-none md:m-5 md:p-6 ${posicion}`}
       >
         {/* Si no caben en un renglón (celular), la fecha baja entera: ni la pastilla ni la fecha se parten. */}
         <span className={`flex flex-wrap items-center gap-x-3 gap-y-2 ${st.textDerecha ? "justify-end" : ""}`}>
