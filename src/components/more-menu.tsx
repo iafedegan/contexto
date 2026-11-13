@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ChevronDown, LayoutDashboard } from "lucide-react";
+import { ChevronDown, UserRound } from "lucide-react";
 import { MENU_SECUNDARIO } from "@/content/menu-secundario";
 import { localePath, t, type Locale } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
@@ -87,7 +87,7 @@ export function MoreMenu({
               title={t(locale, "footer.panel")}
               className="grid size-10 shrink-0 place-items-center rounded-full border border-[var(--border-strong)] text-[var(--fg)] transition hover:bg-[var(--surface-2)] hover:text-[var(--accent)]"
             >
-              <LayoutDashboard size={17} aria-hidden />
+              <UserRound size={17} aria-hidden />
             </Link>
           </div>
           {extra.length > 0 && (
