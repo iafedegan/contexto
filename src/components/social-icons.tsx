@@ -14,6 +14,15 @@ export function FacebookIcon({ size = 17, className }: Props) {
   );
 }
 
+// Ícono de TikTok.
+export function TiktokIcon({ size = 17, className }: Props) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden className={className}>
+      <path d="M16.6 5.8a4.3 4.3 0 0 1-1-2.8h-3v11.6a2.4 2.4 0 1 1-2.4-2.4c.25 0 .5.04.7.1V9.2a5.5 5.5 0 1 0 4.7 5.4V9.3a7.3 7.3 0 0 0 4.3 1.4V7.7a4.3 4.3 0 0 1-3.3-1.9z" />
+    </svg>
+  );
+}
+
 // Ícono de Instagram.
 export function InstagramIcon({ size = 17, className }: Props) {
   return (

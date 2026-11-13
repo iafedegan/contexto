@@ -4,7 +4,8 @@ import { useLayoutEffect, useRef, useState } from "react";
 import { BarChart3, Bold, Clapperboard, Highlighter, Italic, Link2, List, ListOrdered, Minus, MessageSquareQuote, Quote, Redo2, RemoveFormatting, Replace, Search, Strikethrough, Subscript, Superscript, Table, Underline, Undo2, Unlink, ZoomIn, ZoomOut } from "lucide-react";
 import { decodeSpec, renderChartSvg, svgDataUri } from "@/lib/chart-svg";
 import { escapeHtml } from "@/lib/escape";
-import { embedDeCodigo, embedHtml, incrustarEnlaces, NOMBRE_EMBED, parseEmbed } from "@/lib/embeds";
+import { FacebookIcon, InstagramIcon, LinkedinIcon, TiktokIcon, XIcon, YoutubeIcon } from "@/components/social-icons";
+import { embedDeCodigo, embedHtml, incrustarEnlaces, NOMBRE_EMBED, parseEmbed, type Embed } from "@/lib/embeds";
 
 /**
  * Editor del cuerpo tipo procesador de texto: se escribe sobre el texto ya formateado (negrita, intertítulos, listas,
@@ -133,7 +134,7 @@ export function EditorCuerpo({
   const [infografia, setInfografia] = useState<{ url: string; pie: string } | null>(null);
   const [tabla, setTabla] = useState<{ filas: number; cols: number } | null>(null);
   // Video o publicación de una red social: dirección y ancho (% del texto) que se piden en línea; y la ya insertada que está seleccionada para cambiarle el tamaño.
-  const [video, setVideo] = useState<{ url: string; ancho: number; error: string } | null>(null);
+  const [video, setVideo] = useState<{ url: string; ancho: number; error: string; red?: Embed["tipo"] } | null>(null);
   const [embedSel, setEmbedSel] = useState<{ ancho: number; alinear: "izq" | "centro" | "der"; alto: number | null } | null>(null);
   const embedEl = useRef<HTMLElement | null>(null);
   const [buscar, setBuscar] = useState<{ q: string; r: string; msg: string }>({ q: "", r: "", msg: "" });
@@ -238,16 +239,17 @@ export function EditorCuerpo({
     const pie = escapeHtml(datos.pie.trim() || "Imagen");
     orden("insertHTML", `<figure class="infografia"><img src="${escapeHtml(datos.url.trim())}" alt="${pie}" loading="lazy"><figcaption>${pie}</figcaption></figure><p><br></p>`);
   };
-  const abrirVideo = () => {
+  const abrirVideo = (red?: Embed["tipo"]) => {
     guardarRango();
-    setVideo({ url: "https://", ancho: 100, error: "" });
+    setVideo({ url: "https://", ancho: 100, error: "", red });
   };
   // Inserta el video o la publicación (YouTube, Vimeo, X, Instagram, Facebook, TikTok, LinkedIn) donde estaba el cursor, ya dibujado y con el ancho elegido.
   const aplicarVideo = () => {
     const datos = video;
     if (!datos) return;
-    const e = parseEmbed(datos.url);
-    if (!e) return setVideo({ ...datos, error: "No se reconoce el enlace. Pega uno de YouTube, Vimeo, X, Instagram, Facebook, TikTok o LinkedIn." });
+    const e = embedDeCodigo(datos.url) ?? parseEmbed(datos.url);
+    if (!e) return setVideo({ ...datos, error: datos.red ? `No se reconoce el enlace de ${NOMBRE_EMBED[datos.red]}. Pega la dirección de la publicación o el código para incrustar.` : "No se reconoce el enlace. Pega uno de YouTube, Vimeo, X, Instagram, Facebook, TikTok o LinkedIn." });
+    if (datos.red && e.tipo !== datos.red) return setVideo({ ...datos, error: `Ese enlace no es de ${NOMBRE_EMBED[datos.red]} (es de ${NOMBRE_EMBED[e.tipo]}).` });
     setVideo(null);
     restaurarRango();
     const html = embedHtml(e, NOMBRE_EMBED[e.tipo], { ancho: datos.ancho, pie: "Pie · Fuente" }).replace('<figure class="', '<figure contenteditable="false" class="');
@@ -426,7 +428,15 @@ export function EditorCuerpo({
               <Boton titulo="Quitar enlace" onClick={() => orden("unlink")}><Unlink size={15} /></Boton>
               <Sep />
               <Boton titulo="Imagen o infografía (a todo el ancho, con su pie)" onClick={abrirInfografia}><BarChart3 size={15} /></Boton>
-              <Boton titulo="Video o publicación de una red social (YouTube, Vimeo, X, Instagram, Facebook, TikTok, LinkedIn)" onClick={abrirVideo}><Clapperboard size={15} /></Boton>
+              <Boton titulo="Video o publicación de cualquier red (YouTube, Vimeo, X, Instagram, Facebook, TikTok, LinkedIn)" onClick={() => abrirVideo()}><Clapperboard size={15} /></Boton>
+              <Sep />
+              <Boton titulo="Video de YouTube" activo={video?.red === "youtube"} onClick={() => abrirVideo("youtube")}><YoutubeIcon size={16} /></Boton>
+              <Boton titulo="Publicación de X" activo={video?.red === "x"} onClick={() => abrirVideo("x")}><XIcon size={15} /></Boton>
+              <Boton titulo="Publicación de Instagram" activo={video?.red === "instagram"} onClick={() => abrirVideo("instagram")}><InstagramIcon size={16} /></Boton>
+              <Boton titulo="Publicación de Facebook" activo={video?.red === "facebook"} onClick={() => abrirVideo("facebook")}><FacebookIcon size={16} /></Boton>
+              <Boton titulo="Video de TikTok" activo={video?.red === "tiktok"} onClick={() => abrirVideo("tiktok")}><TiktokIcon size={16} /></Boton>
+              <Boton titulo="Publicación de LinkedIn" activo={video?.red === "linkedin"} onClick={() => abrirVideo("linkedin")}><LinkedinIcon size={16} /></Boton>
+              <Sep />
               <Boton titulo="Tabla" onClick={() => { guardarRango(); setTabla({ filas: 3, cols: 3 }); }}><Table size={15} /></Boton>
               <Boton titulo="Línea separadora" onClick={() => orden("insertHorizontalRule")}><Minus size={16} /></Boton>
               {activos.tabla && (
@@ -453,7 +463,7 @@ export function EditorCuerpo({
               )}
               {video !== null && (
                 <span className="ml-1 flex flex-wrap items-center gap-1 text-xs">
-                  <input autoFocus value={video.url} onChange={(e) => setVideo({ ...video, url: e.target.value, error: "" })} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); aplicarVideo(); } if (e.key === "Escape") setVideo(null); }} aria-label="Dirección del video o de la publicación" placeholder="https://… (YouTube, Instagram, X, TikTok…)" className={`${campoCinta} w-64`} />
+                  <input autoFocus value={video.url} onChange={(e) => setVideo({ ...video, url: e.target.value, error: "" })} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); aplicarVideo(); } if (e.key === "Escape") setVideo(null); }} aria-label="Dirección del video o de la publicación" placeholder={video.red ? `Enlace o código de ${NOMBRE_EMBED[video.red]}` : "https://… (YouTube, Instagram, X, TikTok…)"} className={`${campoCinta} w-64`} />
                   <label className="flex items-center gap-1">Ancho
                     <select value={video.ancho} onChange={(e) => setVideo({ ...video, ancho: Number(e.target.value) })} className={campoCinta}>
                       {[[40, "Pequeño"], [60, "Mediano"], [80, "Grande"], [100, "Completo"]].map(([v, n]) => <option key={v} value={v}>{n} · {v}%</option>)}
