@@ -21,16 +21,17 @@ BEGIN
 END $$;
 --> statement-breakpoint
 
--- 2. Las notas. Entra a Clima la que habla de clima en su título, su resumen o sus etiquetas (no basta una mención de paso en el cuerpo).
+-- 2. Las notas. Entra a Clima la nota que habla de clima en su TÍTULO o en sus ETIQUETAS (una mención de paso en el resumen no basta).
 -- El texto se compara en minúsculas y sin tildes, por palabras completas; «El Niño» y «La Niña» se buscan con sus mayúsculas para no
 -- confundirlos con un niño o una niña. Una sola sentencia: no pisa lo que un editor esté guardando en la misma nota.
 UPDATE "articles" SET "secciones" = "secciones" || '["clima"]'::jsonb
 WHERE NOT "secciones" ? 'clima'
   AND "category_id" IS DISTINCT FROM (SELECT "id" FROM "categories" WHERE "slug" = 'clima')
   AND (
-    translate(lower(coalesce("title", '') || ' ' || coalesce("excerpt", '') || ' ' || coalesce("tags"::text, '')), 'áéíóúüñ', 'aeiouun')
-      ~ '\m(climas?|climatic[oa]s?|climatolog[a-z]+|calentamiento global|efecto invernadero|lluvias?|lluvios[oa]s?|aguaceros?|precipitaciones|sequias?|fenomeno (de |del |de el |de la |el |la )?nin[oa]|ideam|heladas?|inundacion(es)?|inundad[oa]s?|invierno|invernal(es)?|verano|veranillo|temporada seca|epoca seca|granizadas?|granizo|vendaval(es)?|huracan(es)?|tormentas? tropical(es)?|ola de calor|ola de frio|frentes? frios?|(altas|bajas) temperaturas|estres (calorico|termico)|meteorolog[a-z]+|pronostico del tiempo)\M'
-    OR (coalesce("title", '') || ' ' || coalesce("excerpt", '')) ~ '\m(El Niño|La Niña)\M'
+    translate(lower(coalesce("title", '')), 'áéíóúüñ', 'aeiouun')
+      ~ '\m(climas?|climatic[oa]s?|climatolog[a-z]+|calentamiento global|efecto invernadero|lluvias?|lluvios[oa]s?|aguaceros?|precipitaciones|sequias?|fenomeno (de |del |de el |de la |el |la )?nin[oa]|ideam|heladas?|inundacion(es)?|inundad[oa]s?|invierno|invernal(es)?|verano|veranillo|temporada seca|epoca seca|granizadas?|granizo|vendaval(es)?|huracan(es)?|tormentas? tropical(es)?|ola de calor|ola de frio|frentes? frios?|meteorolog[a-z]+)\M'
+    OR "title" ~ '\m(El Niño|La Niña)\M'
+    OR translate(lower(coalesce("tags"::text, '')), 'áéíóúüñ', 'aeiouun') ~ '\m(clima|cambio climatico|sequia|lluvias?|el nino|la nina|ideam)\M'
   );
 --> statement-breakpoint
 
