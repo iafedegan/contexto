@@ -148,7 +148,7 @@ export function SectionTree({
           activa ? "bg-[var(--accent)] font-semibold text-[var(--accent-fg)] shadow-sm" : tambien ? "bg-[var(--accent)]/15 font-semibold" : `hover:bg-[var(--surface-2)] ${tenue ? "text-[var(--fg-muted)]" : ""}`
         }`}
       >
-        <Marca on={activa || tambien} fuerte />
+        <Marca on={activa || tambien} fuerte={activa} />
         <span className="min-w-0 flex-1 truncate">{texto}</span>
         {multi && activa && <span className="shrink-0 rounded-full bg-white/25 px-2 py-0.5 text-[0.65rem] font-bold uppercase tracking-wide">Principal</span>}
         {sugeridas.includes(n.id) && !activa && !tambien && <Sugerida />}
@@ -156,27 +156,57 @@ export function SectionTree({
     );
   };
 
-  /** Una fila con contenido: al pulsarla se abre su columna (no se elige; para elegirla entera está «Toda la sección …»). */
+  /** Una fila con contenido: al pulsarla se abre su columna. Con selección múltiple, su círculo de la izquierda elige o quita la sección ENTERA sin abrirla. */
   const filaCarpeta = (n: { id: string; name: string }, nivel: number) => {
     const abierta = camino[nivel] === n.id;
     const conSeleccion = seleccionados.has(n.id);
-    return (
-      <button
-        type="button"
-        aria-expanded={abierta}
-        onClick={() => setCamino((c) => [...c.slice(0, nivel), n.id])}
-        className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm transition focus-visible:outline-2 focus-visible:outline-[var(--accent)] ${
-          abierta ? "bg-[var(--accent)]/10 font-semibold" : "hover:bg-[var(--surface-2)]"
-        }`}
-      >
-        <Marca on={conSeleccion} />
+    const directa = elegido === n.id || adicionales.includes(n.id);
+    const contenido = (
+      <>
         <span className="min-w-0 flex-1 truncate">{n.name}</span>
         {sugeridas.includes(n.id) && !conSeleccion && <Sugerida />}
         <span className="flex shrink-0 items-center gap-0.5 text-xs text-[var(--fg-muted)]">
           {hijos.get(n.id)?.length}
           <ChevronRight size={14} aria-hidden />
         </span>
-      </button>
+      </>
+    );
+    const abrir = () => setCamino((c) => [...c.slice(0, nivel), n.id]);
+    if (!multi) {
+      return (
+        <button
+          type="button"
+          aria-expanded={abierta}
+          onClick={abrir}
+          className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm transition focus-visible:outline-2 focus-visible:outline-[var(--accent)] ${
+            abierta ? "bg-[var(--accent)]/10 font-semibold" : "hover:bg-[var(--surface-2)]"
+          }`}
+        >
+          <Marca on={conSeleccion} />
+          {contenido}
+        </button>
+      );
+    }
+    return (
+      <div className={`flex w-full items-center rounded-lg transition ${abierta ? "bg-[var(--accent)]/10 font-semibold" : "hover:bg-[var(--surface-2)]"}`}>
+        <button
+          type="button"
+          aria-pressed={directa}
+          aria-label={directa ? `Quitar la sección ${n.name}` : `Elegir toda la sección ${n.name}`}
+          title={directa ? "Quitar esta sección" : "Elegir toda esta sección"}
+          onClick={() => elegir(n)}
+          className="grid shrink-0 place-items-center rounded-l-lg py-2 pl-3 pr-1.5 focus-visible:outline-2 focus-visible:outline-[var(--accent)]"
+        >
+          {!directa && conSeleccion ? (
+            <span aria-hidden title="Hay algo elegido dentro" className="grid size-[1.1rem] shrink-0 place-items-center rounded-full border border-[var(--accent)]"><span className="size-1.5 rounded-full bg-[var(--accent)]" /></span>
+          ) : (
+            <Marca on={directa} fuerte={false} />
+          )}
+        </button>
+        <button type="button" aria-expanded={abierta} onClick={abrir} className="flex min-w-0 flex-1 items-center gap-2.5 rounded-r-lg py-2 pl-1 pr-3 text-left text-sm focus-visible:outline-2 focus-visible:outline-[var(--accent)]">
+          {contenido}
+        </button>
+      </div>
     );
   };
 
