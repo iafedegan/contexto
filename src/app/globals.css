@@ -2801,3 +2801,22 @@ nav.cg-navfed .cg-escudo { position: absolute; left: 1.5rem; top: 50%; margin-to
 @media (max-width: 1023.98px) {
   :is([data-theme="home"], [data-theme="esmeralda"]) footer[data-region="footer"] { --bg-2: #071c13; background: #071c13; }
 }
+
+/* Cabecera fija del celular y la tableta (cintillo + cabecera). */
+@media (max-width: 1023.98px) {
+  /* Con el teléfono en horizontal la página deja libres los lados de la muesca (safe-area), pero las franjas a sangre sí llegan al borde: la
+     cabecera fija también, para que no quede más angosta que el contenido que pasa por debajo. */
+  .cg-cabecera-fija {
+    margin-left: calc(-1 * env(safe-area-inset-left, 0px));
+    margin-right: calc(-1 * env(safe-area-inset-right, 0px));
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
+    background: var(--nav-bg, #071c13);
+  }
+}
+/* Teléfono en horizontal (pantalla baja): la cabecera NO se queda fija. Con cintillo, logo y barra de secciones tapaba media pantalla al leer;
+   aquí se va con el scroll y se vuelve arriba con el botón de subir. */
+@media (max-width: 1023.98px) and (max-height: 560px) {
+  .cg-cabecera-fija,
+  .cg-cabecera-fija header[data-region="navbar"] { position: static; }
+}
