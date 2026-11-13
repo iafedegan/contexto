@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, LayoutDashboard } from "lucide-react";
 import { MENU_SECUNDARIO } from "@/content/menu-secundario";
 import { localePath, t, type Locale } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
@@ -76,7 +76,20 @@ export function MoreMenu({
           className="absolute right-0 top-full z-[60] mt-1 max-h-[70dvh] w-[min(16rem,calc(100vw-2rem))] overflow-y-auto overflow-x-hidden rounded-[var(--radius)] border border-[var(--border-strong)] bg-[var(--nav-bg)] py-2 text-left text-[var(--fg)] opacity-100 shadow-[0_24px_60px_-20px_rgba(0,0,0,0.6)]"
         >
           {acciones && <div className="lx-iconos flex flex-wrap items-center gap-1.5 border-b border-[var(--border)] px-4 pb-2.5 pt-1.5 text-[var(--fg)]">{acciones}</div>}
-          {app && <div className="border-b border-[var(--border)] px-4 py-2.5">{app}</div>}
+          {/* Fila de acceso: instalar la app y, al lado, el ícono del panel editorial (antes era un renglón de texto al final del menú). */}
+          <div className="flex items-center gap-2 border-b border-[var(--border)] px-4 py-2.5">
+            {app}
+            <Link
+              href="/panel"
+              role="menuitem"
+              onClick={() => setOpen(false)}
+              aria-label={t(locale, "footer.panel")}
+              title={t(locale, "footer.panel")}
+              className="grid size-10 shrink-0 place-items-center rounded-full border border-[var(--border-strong)] text-[var(--fg)] transition hover:bg-[var(--surface-2)] hover:text-[var(--accent)]"
+            >
+              <LayoutDashboard size={17} aria-hidden />
+            </Link>
+          </div>
           {extra.length > 0 && (
             <>
               {extra.map((e) => (
@@ -112,15 +125,6 @@ export function MoreMenu({
             </Link>
           ))}
 
-          <span aria-hidden className="my-1.5 block h-px bg-[var(--border)]" />
-          <Link
-            role="menuitem"
-            href="/panel"
-            onClick={() => setOpen(false)}
-            className="lx-ui block px-4 py-2.5 text-[0.8rem] font-semibold normal-case tracking-normal text-[var(--accent)] transition hover:bg-[var(--surface-2)] pointer-coarse:py-3"
-          >
-            {t(locale, "footer.panel")}
-          </Link>
         </div>
       )}
     </div>
