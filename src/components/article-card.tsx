@@ -250,7 +250,7 @@ function CineCard({ a, priority, locale }: { a: ArticleListItem; priority?: bool
           alt={a.coverImageAlt ?? a.title}
           seed={a.slug}
           label={a.categoryName ?? a.title}
-          ratio="aspect-[4/5] h-full sm:aspect-[16/10] xl:aspect-auto xl:min-h-[16rem]"
+          ratio="aspect-[16/10] h-full xl:aspect-auto xl:min-h-[16rem]"
           priority={priority}
           sizes="(min-width: 1280px) 900px, (min-width: 768px) 60vw, 100vw"
         />
@@ -285,7 +285,7 @@ function CineCard({ a, priority, locale }: { a: ArticleListItem; priority?: bool
         <div className="lead-detalle">
           <div className="min-h-0 overflow-hidden">
           {!st.hideExcerpt && (
-            <p data-cg-resumen className={`mt-3 hidden max-w-2xl text-[0.95rem] leading-relaxed text-white/85 sm:block md:text-base ${st.excerptClamp} ${st.textDerecha ? "ml-auto" : ""}`}>
+            <p data-cg-resumen className={`mt-3 max-w-2xl text-[0.95rem] leading-relaxed text-white/85 max-sm:line-clamp-3 md:text-base ${st.excerptClamp} ${st.textDerecha ? "ml-auto" : ""}`}>
               {a.excerpt}
             </p>
           )}

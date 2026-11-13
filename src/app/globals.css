@@ -2502,6 +2502,23 @@ body:has(.cg-cintillo-arriba) .cg-cinta-cabecera { display: none; }
     background: linear-gradient(to bottom, rgb(0 0 0 / 0.9), rgb(0 0 0 / 0.6) 60%, transparent);
     padding: 1.1rem 1.1rem 5rem;
   }
+  /* Apertura «de cine» en el celular: lectura de arriba abajo. La foto va entera y limpia arriba y el texto DEBAJO, en un bloque sólido
+     (antes el titular iba encima y tapaba media imagen). */
+  .lx-card.lead-cine > * { grid-row: auto; }
+  .lx-card.lead-cine > a:first-of-type { grid-row: 1; }
+  .lx-card.lead-cine > [data-cg-panel]:not([aria-hidden]),
+  .lx-card.lead-cine > [data-cg-panel].self-start:not([aria-hidden]) {
+    grid-row: 2;
+    width: auto;
+    max-width: none;
+    align-self: stretch;
+    justify-self: stretch;
+    background: #0b1f17;
+    padding: 1rem 1.1rem 1.15rem;
+  }
+  .lx-card.lead-cine > .lead-cine-velo,
+  .lx-card.lead-cine > .lx-shine { display: none; }
+  .lead-cine .lead-titulo { font-size: min(var(--lead-fs), 1.45rem); text-shadow: none; }
 }
 
 /* ====== Barra de secciones al estilo FEDEGÁN (portada): verde con degradado, letras anchas en negrita, «píldora» al pasar el puntero,

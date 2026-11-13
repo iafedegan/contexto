@@ -222,11 +222,12 @@ export function MobileNav({
       {bar}
       {/* En el celular el menú y la lupa viven en la barra de abajo y esta queda con solo el nombre: el modo claro/oscuro va aquí, a la vista. */}
 
-      {/* Masthead (Esmeralda): la barra verde FEDEGÁN de la web, con la casa y las secciones que se deslizan de lado. */}
+      {/* Masthead (Esmeralda): la barra verde FEDEGÁN de la web, con la casa y las secciones que se deslizan de lado. Solo en tableta: en el celular las
+          secciones ya están en el botón «Secciones» de la barra de abajo y esta franja le quitaba alto a la primera pantalla. */}
       {look === "masthead" && (
         <nav
           aria-label={t(locale, "nav.sections")}
-          className="cg-navmovil flex items-center gap-1 overflow-x-auto px-2 py-1.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          className="cg-navmovil hidden items-center gap-1 overflow-x-auto md:flex px-2 py-1.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
           <Link href={localePath(locale, "/")} aria-label={name} className="grid size-9 shrink-0 place-items-center text-[#0d2318]">
             <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden>

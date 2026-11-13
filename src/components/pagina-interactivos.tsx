@@ -74,7 +74,7 @@ export function Carrusel({ children, porVista = 1, auto = false, segundos = 6, p
           {puntos && (
             <div className="mt-3 flex justify-center gap-1.5">
               {Array.from({ length: paginas }, (_, i) => (
-                <button key={i} type="button" onClick={() => ir(i)} aria-label={`Ir a ${i + 1}`} aria-current={i === actual} className={`h-2 rounded-full transition-all ${i === actual ? "w-6 bg-[var(--accent)]" : "w-2 bg-[var(--border-strong)]"}`} />
+                <button key={i} type="button" onClick={() => ir(i)} aria-label={`Ir a ${i + 1}`} aria-current={i === actual} className={`relative h-2 rounded-full transition-all before:absolute before:-inset-x-1 before:-inset-y-3 before:content-[''] ${i === actual ? "w-6 bg-[var(--accent)]" : "w-2 bg-[var(--border-strong)]"}`} />
               ))}
             </div>
           )}
