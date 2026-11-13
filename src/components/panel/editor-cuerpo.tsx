@@ -134,7 +134,7 @@ export function EditorCuerpo({
   const [tabla, setTabla] = useState<{ filas: number; cols: number } | null>(null);
   // Video o publicación de una red social: dirección y ancho (% del texto) que se piden en línea; y la ya insertada que está seleccionada para cambiarle el tamaño.
   const [video, setVideo] = useState<{ url: string; ancho: number; error: string } | null>(null);
-  const [embedSel, setEmbedSel] = useState<{ ancho: number } | null>(null);
+  const [embedSel, setEmbedSel] = useState<{ ancho: number; alinear: "izq" | "centro" | "der"; alto: number | null } | null>(null);
   const embedEl = useRef<HTMLElement | null>(null);
   const [buscar, setBuscar] = useState<{ q: string; r: string; msg: string }>({ q: "", r: "", msg: "" });
   const [zoom, setZoom] = useState(100);
@@ -260,7 +260,26 @@ export function EditorCuerpo({
     const ancho = Math.round(Math.min(100, Math.max(20, n)));
     if (ancho >= 100) el.removeAttribute("style");
     else el.style.width = `${ancho}%`;
-    setEmbedSel({ ancho });
+    setEmbedSel((e) => (e ? { ...e, ancho } : e));
+    emitir();
+  };
+  // Alineación del video o la publicación: a la izquierda, centrada o a la derecha del texto.
+  const alinearVideo = (a: "izq" | "centro" | "der") => {
+    const el = embedEl.current;
+    if (!el) return;
+    el.classList.remove("lx-embed-izq", "lx-embed-der");
+    if (a !== "centro") el.classList.add(`lx-embed-${a}`);
+    setEmbedSel((e) => (e ? { ...e, alinear: a } : e));
+    emitir();
+  };
+  // Alto (px) de una publicación de red social (los videos mantienen su proporción 16:9).
+  const altoVideo = (n: number) => {
+    const el = embedEl.current;
+    const f = el?.querySelector("iframe");
+    if (!f) return;
+    const alto = Math.round(Math.min(900, Math.max(250, n)));
+    f.setAttribute("height", String(alto));
+    setEmbedSel((e) => (e ? { ...e, alto } : e));
     emitir();
   };
   const quitarVideo = () => {
@@ -277,7 +296,10 @@ export function EditorCuerpo({
     f.classList.add("cg-embed-sel");
     const m = (f.getAttribute("style") ?? "").match(/width:\s*([\d.]+)%/);
     embedEl.current = f;
-    setEmbedSel({ ancho: m ? Math.round(Number(m[1])) : 100 });
+    const h = f.classList.contains("lx-embed-social") ? Number(f.querySelector("iframe")?.getAttribute("height")) || 600 : null;
+    setEmbedSel({ ancho: m ? Math.round(Number(m[1])) : 100, alinear: f.classList.contains("lx-embed-izq") ? "izq" : f.classList.contains("lx-embed-der") ? "der" : "centro", alto: h });
+    // Que no queden abiertos los demás campos de la cinta (enlace, tabla, imagen, video nuevo).
+    setEnlace(null); setTabla(null); setInfografia(null); setVideo(null);
     setPestana("insertar");
   };
   const abrirEnlace = () => {
@@ -438,6 +460,7 @@ export function EditorCuerpo({
                     </select>
                   </label>
                   <button type="button" onClick={aplicarVideo} className="lx-link font-semibold">Insertar</button>
+                  <span className="basis-full text-[var(--fg-muted)]">Luego haz clic sobre lo insertado para cambiar su ancho, alto (redes) y alineación.</span>
                   <button type="button" onClick={() => setVideo(null)} className="text-[var(--fg-muted)] hover:text-[var(--fg)]">Cancelar</button>
                   {video.error && <span role="alert" className="text-[var(--danger,#b4442e)]">{video.error}</span>}
                 </span>
@@ -445,11 +468,22 @@ export function EditorCuerpo({
               {embedSel !== null && (
                 <span className="ml-1 flex flex-wrap items-center gap-2 text-xs">
                   <Sep />
-                  <span className="font-semibold text-[var(--fg-muted)]">Video seleccionado:</span>
+                  <span className="font-semibold text-[var(--fg-muted)]">Seleccionado (video o publicación):</span>
                   <label className="flex items-center gap-1.5">Ancho
                     <input type="range" min={20} max={100} step={5} value={embedSel.ancho} onChange={(e) => anchoVideo(Number(e.target.value))} aria-label="Ancho del video en porcentaje del texto" className="w-28 accent-[var(--accent)]" />
                     <span className="w-9 tabular-nums">{embedSel.ancho}%</span>
                   </label>
+                  {embedSel.alto !== null && (
+                    <label className="flex items-center gap-1.5">Alto
+                      <input type="range" min={250} max={900} step={10} value={embedSel.alto} onChange={(e) => altoVideo(Number(e.target.value))} aria-label="Alto de la publicación en píxeles" className="w-28 accent-[var(--accent)]" />
+                      <span className="w-12 tabular-nums">{embedSel.alto}px</span>
+                    </label>
+                  )}
+                  <span role="group" aria-label="Alineación" className="inline-flex overflow-hidden rounded-md border border-[var(--border)]">
+                    {([["izq", "Izquierda"], ["centro", "Centro"], ["der", "Derecha"]] as const).map(([v, n]) => (
+                      <button key={v} type="button" aria-pressed={embedSel.alinear === v} onClick={() => alinearVideo(v)} className={`px-2 py-1 font-medium transition ${embedSel.alinear === v ? "bg-[var(--accent)] text-[var(--accent-fg,#fff)]" : "text-[var(--fg-muted)] hover:text-[var(--fg)]"}`}>{n}</button>
+                    ))}
+                  </span>
                   <button type="button" onClick={quitarVideo} className="rounded-md border border-[var(--border)] px-2 py-1 font-medium text-[var(--fg-muted)] transition hover:border-[var(--danger,#b4442e)] hover:text-[var(--danger,#b4442e)]">Quitar</button>
                 </span>
               )}

@@ -45,7 +45,7 @@ const OPTIONS: sanitizeHtml.IOptions = {
   },
   // Solo se admite el ancho de la figura (porcentaje o px): el tamaño que elige quien incrusta el video.
   allowedStyles: { figure: { width: [/^\d{1,3}(\.\d+)?%$/, /^\d{2,4}px$/] } },
-  allowedClasses: { figure: ["lx-embed", "lx-embed-social", "lx-chart", "infografia"], blockquote: ["cita-destacada"], span: ["*"], div: ["*"] },
+  allowedClasses: { figure: ["lx-embed", "lx-embed-social", "lx-embed-izq", "lx-embed-der", "lx-chart", "infografia"], blockquote: ["cita-destacada"], span: ["*"], div: ["*"] },
   allowedSchemes: ["https", "http", "mailto", "tel"],
   allowedSchemesByTag: { img: ["https", "http", "data"], video: ["https", "http"], audio: ["https", "http"], source: ["https", "http"] },
   allowProtocolRelative: false,
