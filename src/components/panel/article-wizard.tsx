@@ -463,6 +463,21 @@ export function ArticleWizard({
       })
       .map((c) => c.id);
   }, [categories, title, excerpt, tags]);
+  // Secciones agrupadas para elegir las otras donde también sale la nota: cada sección con sus subsecciones, filtradas por la búsqueda.
+  const gruposOtras = useMemo(() => {
+    const norm = (t: string) => t.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
+    const q = norm(buscaOtras.trim());
+    const ids = new Set(categories.map((c) => c.id));
+    const raices = categories.filter((c) => !c.parentId || !ids.has(c.parentId));
+    return raices
+      .map((padre) => {
+        const hijas = categories.filter((c) => c.parentId === padre.id);
+        if (!q) return { padre, hijas };
+        const coincidePadre = norm(padre.name).includes(q);
+        return { padre, hijas: coincidePadre ? hijas : hijas.filter((h) => norm(h.name).includes(q)), ok: coincidePadre || hijas.some((h) => norm(h.name).includes(q)) };
+      })
+      .filter((g) => !("ok" in g) || g.ok);
+  }, [categories, buscaOtras]);
   const authorName = authors.find((a) => a.id === authorId)?.name;
   // «Regiones» (Colombia › Regiones): sus subsecciones son las regiones y los departamentos, que no son secciones del sitio sino un dato de la nota.
   const regionesId = useMemo(() => {
@@ -1469,36 +1484,22 @@ export function ArticleWizard({
         )}
 
         {current.key === "seccion" && (
-          <Step ancho="xl" title="¿Dónde se publica?" hint="Dos decisiones, ambas opcionales: 1. si va destacada en la portada del sitio y 2. la sección y subsección donde se publica.">
+          <Step ancho="xl" title="¿Dónde se publica?" hint="Tres pasos: 1. la sección principal, 2. otras secciones donde también sale (opcional) y 3. si va destacada en la portada (opcional).">
             <SectionTree
               options={categories}
               value={categoryId}
               onChange={(id) => { setCategoryId(id); setRegion(""); setDepto(""); }}
               sugeridas={seccionesSugeridas}
               extra={regionesId ? { categoriaId: regionesId, items: itemsRegiones, value: valorRegion, onPick: elegirRegion } : undefined}
-            >
-              {/* 3 · Lugar en la portada del sitio (solo con permiso «portada»). */}
-              <TarjetaDecision n={1} titulo="¿Va destacada en la portada?" ayuda={canPortada ? (portadaPos === "0" ? "Será la nota grande de arriba." : portadaPos === "1" ? "Irá junto a la principal." : portadaPos === "keep" ? "Ya tiene un lugar fijado; se conserva." : "Normal: entra a la portada por fecha, como cualquier nota.") : "Tu cuenta no ubica notas en la portada: un editor lo hace al publicar."}>
-                {canPortada && (
-                  <div id="pt-sitio" role="radiogroup" aria-label="Lugar en la portada del sitio" className="grid w-full grid-cols-3 gap-1 rounded-full border border-[var(--border)] bg-[var(--surface-2)]/60 p-1">
-                    {([
-                      ["none", "Normal", "Sin destacar", "Entra por fecha, como cualquier nota."],
-                      ["0", "Principal", "Principal", "La nota grande de arriba."],
-                      ["1", "Segunda", "Segunda", "Junto a la principal."],
-                    ] as const).map(([v, , t, d]) => (
-                      <button key={v} type="button" role="radio" aria-checked={portadaPos === v} title={d} onClick={() => setPortadaPos(v)}
-                        className={`rounded-full px-2 py-1.5 text-center text-sm font-medium transition ${portadaPos === v ? "bg-[var(--accent)] text-[var(--accent-fg,#fff)] shadow-sm" : "text-[var(--fg-muted)] hover:text-[var(--fg)]"}`}>
-                        {t}
-                      </button>
-                    ))}
+              despues={
+                <>
+                  <section className="flex min-w-0 flex-col gap-3 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow)]">
+                <header className="flex min-w-0 items-start gap-3">
+                  <span aria-hidden className="grid size-8 shrink-0 place-items-center rounded-full bg-[var(--accent)] text-sm font-bold text-[var(--accent-fg,#fff)]">2</span>
+                  <div className="min-w-0">
+                    <h3 className="text-base font-semibold leading-tight">¿Sale también en otras secciones?</h3>
+                    <p className="mt-0.5 text-xs text-[var(--fg-muted)]">Opcional. Marca las que quieras: la nota saldrá en cada una, además de en la sección principal. {otras.length ? `Elegidas: ${otras.length}.` : "Ninguna elegida."}</p>
                   </div>
-                )}
-              </TarjetaDecision>
-              {/* Otras secciones: la nota sale también en ellas (además de la principal que se eligió arriba). */}
-              <section className="flex min-w-0 flex-col gap-3 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow)]">
-                <header>
-                  <h3 className="text-base font-semibold leading-tight">¿Aparece también en otras secciones?</h3>
-                  <p className="mt-0.5 text-xs text-[var(--fg-muted)]">Opcional. Elige las que quieras: la nota saldrá en cada una, además de en la sección principal.</p>
                 </header>
                 {otras.length > 0 && (
                   <ul className="flex flex-wrap gap-1.5" aria-label="Otras secciones elegidas">
@@ -1514,30 +1515,45 @@ export function ArticleWizard({
                     })}
                   </ul>
                 )}
-                <input value={buscaOtras} onChange={(e) => setBuscaOtras(e.target.value)} placeholder="Buscar sección o subsección…" aria-label="Buscar otra sección" className={`${input} text-sm`} />
-                <ul className="max-h-56 overflow-y-auto rounded-[var(--radius)] border border-[var(--border)]">
-                  {categories
-                    .filter((c) => c.slug && c.id !== categoryId)
-                    .map((c) => ({ c, padre: c.parentId ? categories.find((x) => x.id === c.parentId)?.name : undefined }))
-                    .filter(({ c, padre }) => {
-                      const q = buscaOtras.trim().normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
-                      return !q || `${padre ?? ""} ${c.name}`.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase().includes(q);
-                    })
-                    .slice(0, 80)
-                    .map(({ c, padre }) => {
-                      const on = otras.includes(c.slug!);
-                      return (
-                        <li key={c.id}>
-                          <label className="flex cursor-pointer items-center gap-2.5 px-3 py-2 text-sm transition hover:bg-[var(--surface-2)]">
+                <input value={buscaOtras} onChange={(e) => setBuscaOtras(e.target.value)} placeholder="Buscar una sección…" aria-label="Buscar otra sección" className={`${input} text-sm`} />
+                <div className="max-h-64 overflow-y-auto rounded-[var(--radius)] border border-[var(--border)]">
+                  {gruposOtras.length === 0 && <p className="px-3 py-3 text-sm text-[var(--fg-muted)]">No hay secciones con ese nombre.</p>}
+                  {gruposOtras.map(({ padre, hijas }) => (
+                    <div key={padre.id} className="border-b border-[var(--border)] last:border-b-0">
+                      {[padre, ...hijas].map((c, i) => {
+                        if (!c.slug || c.id === categoryId) return null;
+                        const on = otras.includes(c.slug);
+                        return (
+                          <label key={c.id} className={`flex cursor-pointer items-center gap-2.5 py-2 pr-3 text-sm transition hover:bg-[var(--surface-2)] ${i === 0 ? "bg-[var(--surface-2)]/50 pl-3 font-semibold" : "pl-9"}`}>
                             <input type="checkbox" checked={on} onChange={() => setOtras((a) => (on ? a.filter((x) => x !== c.slug) : [...a, c.slug!].slice(0, 12)))} className="size-4 accent-[var(--accent)]" />
-                            <span className={padre ? "" : "font-semibold"}>{padre ? <span className="text-[var(--fg-muted)]">{padre} › </span> : null}{c.name}</span>
+                            {c.name}
                           </label>
-                        </li>
-                      );
-                    })}
-                </ul>
+                        );
+                      })}
+                    </div>
+                  ))}
+                </div>
               </section>
-            </SectionTree>
+                  {/* 3 · Lugar en la portada del sitio (solo con permiso «portada»). */}
+              <TarjetaDecision n={3} titulo="¿Va destacada en la portada?" ayuda={canPortada ? (portadaPos === "0" ? "Será la nota grande de arriba." : portadaPos === "1" ? "Irá junto a la principal." : portadaPos === "keep" ? "Ya tiene un lugar fijado; se conserva." : "Normal: entra a la portada por fecha, como cualquier nota.") : "Tu cuenta no ubica notas en la portada: un editor lo hace al publicar."}>
+                {canPortada && (
+                  <div id="pt-sitio" role="radiogroup" aria-label="Lugar en la portada del sitio" className="grid w-full grid-cols-3 gap-1 rounded-full border border-[var(--border)] bg-[var(--surface-2)]/60 p-1">
+                    {([
+                      ["none", "Normal", "Sin destacar", "Entra por fecha, como cualquier nota."],
+                      ["0", "Principal", "Principal", "La nota grande de arriba."],
+                      ["1", "Segunda", "Segunda", "Junto a la principal."],
+                    ] as const).map(([v, , t, d]) => (
+                      <button key={v} type="button" role="radio" aria-checked={portadaPos === v} title={d} onClick={() => setPortadaPos(v)}
+                        className={`rounded-full px-2 py-1.5 text-center text-sm font-medium transition ${portadaPos === v ? "bg-[var(--accent)] text-[var(--accent-fg,#fff)] shadow-sm" : "text-[var(--fg-muted)] hover:text-[var(--fg)]"}`}>
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </TarjetaDecision>
+                </>
+              }
+            />
           </Step>
         )}
 

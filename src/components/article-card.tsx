@@ -259,7 +259,7 @@ function CineCard({ a, priority, locale }: { a: ArticleListItem; priority?: bool
       <div aria-hidden className={`lead-cine-velo pointer-events-none z-[1] ${st.textArriba ? "lead-cine-velo-arriba" : ""}`} />
       <div
         data-cg-panel
-        className={`relative z-[4] m-3 flex w-auto max-w-[44rem] flex-col rounded-[var(--radius-lg)] border border-white/10 bg-[rgba(3,12,8,0.7)] p-4 text-white shadow-[0_12px_36px_rgba(0,0,0,0.35)] backdrop-blur-md backdrop-saturate-150 [--fg-muted:rgba(255,255,255,0.84)] [--fg:#ffffff] max-sm:backdrop-blur-none md:m-5 md:p-6 ${posicion}`}
+        className={`relative z-[4] m-3 flex w-fit max-w-[40rem] flex-col rounded-[var(--radius-lg)] border border-white/10 bg-[rgba(3,12,8,0.7)] p-4 text-white shadow-[0_12px_36px_rgba(0,0,0,0.35)] backdrop-blur-md backdrop-saturate-150 [--fg-muted:rgba(255,255,255,0.84)] [--fg:#ffffff] max-sm:backdrop-blur-none md:m-5 md:p-6 ${posicion}`}
       >
         {/* Si no caben en un renglón (celular), la fecha baja entera: ni la pastilla ni la fecha se parten. */}
         <span className={`flex flex-wrap items-center gap-x-3 gap-y-2 ${st.textDerecha ? "justify-end" : ""}`}>
@@ -274,7 +274,7 @@ function CineCard({ a, priority, locale }: { a: ArticleListItem; priority?: bool
           )}
         </span>
         <h2
-          className="lead-titulo lx-display mt-3.5 text-balance font-semibold tracking-tight [text-shadow:0_2px_18px_rgba(0,0,0,0.55)] md:mt-4"
+          className="lead-titulo lx-display mt-3.5 font-semibold tracking-tight [text-shadow:0_2px_18px_rgba(0,0,0,0.55)] md:mt-4"
           style={{ ...st.title, fontSize: undefined, color: st.title.color ?? "#ffffff", ["--lead-fs" as string]: st.title.fontSize }}
         >
           <Link href={hrefNota(locale, a)} className="decoration-[var(--accent)] decoration-2 underline-offset-[6px] after:absolute after:inset-0 after:z-[2] group-hover:underline">

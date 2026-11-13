@@ -45,6 +45,7 @@ export function SectionTree({
   sugeridas = [],
   extra,
   children,
+  despues,
 }: {
   options: Nodo[];
   /** Sección elegida (id de una sección del sitio). */
@@ -55,6 +56,8 @@ export function SectionTree({
   extra?: { categoriaId: string; items: ItemExtra[]; value: string; onPick: (id: string) => void };
   /** Contenido propio del asistente que va antes de la tarjeta de la sección (p. ej. si la nota va destacada en la portada). */
   children?: React.ReactNode;
+  /** Contenido propio del asistente que va después de la tarjeta de la sección (otras secciones, portada). */
+  despues?: React.ReactNode;
 }) {
   const [q, setQ] = useState("");
   const idUnico = useId();
@@ -173,7 +176,7 @@ export function SectionTree({
             <FolderOpen size={17} aria-hidden />
           </span>
           <div className="min-w-0 flex-1">
-            <p id={`${idUnico}-l`} className="lx-kicker text-[var(--fg-muted)]">2 · Sección elegida</p>
+            <p id={`${idUnico}-l`} className="lx-kicker text-[var(--fg-muted)]">1 · Sección principal</p>
             <p className={`truncate text-sm ${actual ? "font-semibold" : "text-[var(--fg-muted)]"}`} aria-live="polite" title={actual ? ruta(actual.id) : undefined}>
               {actual ? ruta(actual.id) : "Sin sección · puedes dejarlo para después"}
             </p>
@@ -259,6 +262,7 @@ export function SectionTree({
           )}
         </div>
       </section>
+      {despues && <div className="flex min-w-0 flex-col gap-4">{despues}</div>}
     </div>
   );
 }
