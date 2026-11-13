@@ -109,7 +109,7 @@ export function BentoTile({
 
         {/* El borde superior reserva el sitio de la etiqueta: las filas crecen con el contenido (minmax) y el texto no la pisa. */}
         {/* En las fichas grandes (con resumen) el texto va en una tarjeta de vidrio: titular pequeño en reposo; al pasar el puntero crece y sale el resumen. */}
-        <div className={cn("relative z-[1] p-3 pt-11 sm:p-4 sm:pt-14", size === "xl" && "sm:p-6 sm:pt-16", showDek && "m-2 rounded-2xl border border-white/10 bg-[rgba(3,12,8,0.62)] pt-3 backdrop-blur-md max-sm:backdrop-blur-none sm:m-3 sm:pt-4")}>
+        <div className={cn("relative z-[1] p-3 pt-11 sm:p-4 sm:pt-14", size === "xl" && "sm:p-6 sm:pt-16", showDek && "cg-vidrio group/v m-2 rounded-2xl border border-white/10 bg-[rgba(3,12,8,0.62)] pt-3 backdrop-blur-md max-sm:backdrop-blur-none sm:m-3 sm:pt-4")}>
           <h3
             className={cn(
               showDek && "lead-titulo",
@@ -126,7 +126,7 @@ export function BentoTile({
               className={cn(
                 "mt-2 max-w-md text-[0.8rem] text-white/70 transition-all duration-300",
                 size === "xl" ? "line-clamp-2 sm:text-[0.95rem]" : "line-clamp-2",
-                "max-h-0 -translate-y-1 opacity-0 group-hover:max-h-20 group-hover:translate-y-0 group-hover:opacity-100",
+                "max-h-0 -translate-y-1 opacity-0 group-hover/v:max-h-20 group-hover/v:translate-y-0 group-hover/v:opacity-100",
               )}
             >
               {a.excerpt}

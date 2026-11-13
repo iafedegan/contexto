@@ -910,10 +910,8 @@ a {
   /* El detalle oculto (resumen, firma, botón) no cuenta para el ancho de la tarjeta: ella mide lo que miden la etiqueta y el titular. */
   .lead-detalle > div { width: 0; min-width: 100%; }
   [data-cg-panel]:has(.lead-detalle) { min-width: min(100%, 24rem); }
-  .lx-card:hover .lead-detalle,
-  .lx-card:focus-within .lead-detalle,
-  .cg-reveal:hover .lead-detalle,
-  .cg-reveal:focus-within .lead-detalle {
+  /* Se revela al pasar el puntero sobre la tarjeta de texto (o enfocar su enlace), no sobre toda la foto. */
+  :is([data-cg-panel], .cg-vidrio):is(:hover, :focus-within) .lead-detalle {
     grid-template-rows: 1fr;
     opacity: 1;
   }
@@ -929,10 +927,7 @@ a {
     font-size: max(1.05rem, calc(var(--lead-fs) * 0.4));
     transition: font-size 0.4s var(--ease-lux);
   }
-  .lx-card:hover .lead-titulo,
-  .lx-card:focus-within .lead-titulo,
-  .cg-reveal:hover .lead-titulo,
-  .cg-reveal:focus-within .lead-titulo {
+  :is([data-cg-panel], .cg-vidrio):is(:hover, :focus-within) .lead-titulo {
     font-size: var(--lead-fs);
   }
 }
