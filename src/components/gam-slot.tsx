@@ -140,7 +140,7 @@ export function GamSlot({ unidad, className, grupo }: { unidad: UnidadGam; class
       {/* Rótulo arriba y el anuncio debajo. Los banners horizontales van pegados a la derecha, con el rótulo también a la derecha y casi sin aire. */}
       {altoReal && <span className={cn("block text-[0.6875rem] font-medium uppercase tracking-wide text-[var(--fg-muted)]", horizontal ? "mb-1 text-right" : "mb-1")}>Publicidad</span>}
       {/* 1 px mientras espera: el observador necesita un elemento en la página para saber cuándo pedir el anuncio. */}
-      <div ref={caja} id={id} className={cn("flex items-start", horizontal ? "justify-end" : "mx-auto justify-center")} style={{ minHeight: altoReal ?? 1 }} />
+      <div ref={caja} id={id} className={cn("flex items-start [&_iframe]:rounded-lg", horizontal ? "justify-end" : "mx-auto justify-center")} style={{ minHeight: altoReal ?? 1 }} />
     </div>
   );
 }
