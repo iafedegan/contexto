@@ -47,8 +47,6 @@ export const TAMANOS_GAM: Record<UnidadGam, number[][]> = {
   caja: [[336, 280]],
 };
 
-/** Alto reservado (px) para que el anuncio no mueva la página al llegar. */
-export const ALTO_GAM: Record<UnidadGam, number> = { b1: 250, b2: 250, b3: 250, b5: 90, b6: 90, caja: 280 };
 
 /** Nombre de la unidad: la caja de 336×280 es `b4` en la portada y `b7` en las secciones. */
 export const nombreUnidadGam = (prefijo: string, u: UnidadGam) => `${prefijo}_${u === "caja" ? (prefijo === "home" ? "b4" : "b7") : u}`;

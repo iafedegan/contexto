@@ -258,7 +258,7 @@ async function HomePage({ locale, portadaBorrador }: { locale: Locale; portadaBo
           ) : body === "gremial" ? (
             <GremialTemplate {...props} trasPrincipal={trasPrincipal} />
           ) : (
-            <EsmeraldaTemplate {...props} trasPrincipal={trasPrincipal} conColumna={hayColumna} hueco={hueco.length ? hueco : undefined} masLeidas={masLeidas} lateral={<SiteSidebar locale={locale} columnaEnMovil={false} sinColumna={columnaArriba} />} />
+            <EsmeraldaTemplate {...props} trasPrincipal={trasPrincipal} conColumna={hayColumna} hueco={hueco.length ? hueco : undefined} masLeidas={masLeidas} bajoReciente={<AdsBanner zone="home_bottom" className="mx-auto mt-10" />} lateral={<SiteSidebar locale={locale} columnaEnMovil={false} sinColumna={columnaArriba} />} />
           )}
           {!carrusel && sinSlot && <div className="mt-8">{columnaMovil}</div>}
 
@@ -274,8 +274,8 @@ async function HomePage({ locale, portadaBorrador }: { locale: Locale; portadaBo
       </div>
       </CardSlugsProvider>
 
-      {/* La pauta horizontal (Ad Manager `home_b6`) va entre la segunda y la tercera franja de secciones, no al pie. */}
-      <SeccionesPorBandas bandas={bandas} locale={locale} primeraEnTema={esEsmeralda} entre={<AdsBanner zone="home_bottom" className="mx-auto my-10 px-4" />} />
+      {/* La pauta horizontal (Ad Manager `home_b6`): en Esmeralda llena el hueco bajo «Lo más reciente», junto a la barra lateral; en las demás plantillas, entre la segunda y la tercera franja de secciones. */}
+      <SeccionesPorBandas bandas={bandas} locale={locale} primeraEnTema={esEsmeralda} entre={esEsmeralda ? undefined : <AdsBanner zone="home_bottom" className="mx-auto my-10 px-4" />} />
 
       {car.posicion === "abajo" && carruselConColumna && <div className="mt-12">{carruselConColumna}</div>}
       {bloqueInicio("abajo", "mt-12")}

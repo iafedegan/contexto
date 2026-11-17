@@ -39,12 +39,13 @@ export function cabeceraCsp(
   const extra = (nombre: string) => fuentesExtra(env[nombre]);
   const dir = (nombre: string, base: string[], variable: string) => [nombre, ...base, ...extra(variable)].join(" ");
 
+  // tpc.googlesyndication.com y ep*.adtrafficquality.google: scripts que Google Ad Manager carga para pintar y validar los anuncios.
   const value = [
     "default-src 'self'",
     // unpkg.com: Leaflet del mapa de suscriptores, cargado por CDN sin instalarlo (ver subscriber-map.tsx).
     dir(
       "script-src",
-      ["'self'", "'unsafe-inline'", ...(docs ? ["'unsafe-eval'"] : []), "https://www.googletagmanager.com", "https://www.google-analytics.com", "https://challenges.cloudflare.com", "https://cdn.jsdelivr.net", "https://unpkg.com", "https://securepubads.g.doubleclick.net", "https://pagead2.googlesyndication.com", "https://www.googletagservices.com", "https://adservice.google.com"],
+      ["'self'", "'unsafe-inline'", ...(docs ? ["'unsafe-eval'"] : []), "https://www.googletagmanager.com", "https://www.google-analytics.com", "https://challenges.cloudflare.com", "https://cdn.jsdelivr.net", "https://unpkg.com", "https://securepubads.g.doubleclick.net", "https://pagead2.googlesyndication.com", "https://tpc.googlesyndication.com", "https://www.googletagservices.com", "https://adservice.google.com", "https://ep1.adtrafficquality.google", "https://ep2.adtrafficquality.google"],
       "CSP_SCRIPT_SRC_EXTRA",
     ),
     dir("style-src", ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdn.jsdelivr.net", "https://unpkg.com"], "CSP_STYLE_SRC_EXTRA"),
@@ -55,13 +56,13 @@ export function cabeceraCsp(
     // /api-docs (Scalar) llama a su propio worker cargado desde jsdelivr.
     dir(
       "connect-src",
-      ["'self'", "https://www.google-analytics.com", "https://*.google-analytics.com", "https://*.analytics.google.com", "https://www.googletagmanager.com", "https://challenges.cloudflare.com", "https://cdn.jsdelivr.net", "https://*.supabase.co", "https://*.doubleclick.net", "https://*.googlesyndication.com", "https://*.google.com"],
+      ["'self'", "https://www.google-analytics.com", "https://*.google-analytics.com", "https://*.analytics.google.com", "https://www.googletagmanager.com", "https://challenges.cloudflare.com", "https://cdn.jsdelivr.net", "https://*.supabase.co", "https://*.doubleclick.net", "https://*.googlesyndication.com", "https://*.google.com", "https://*.adtrafficquality.google"],
       "CSP_CONNECT_SRC_EXTRA",
     ),
     // 'self': el editor de portada enmarca /vista-portada del propio sitio.
     dir(
       "frame-src",
-      ["'self'", "https://www.youtube-nocookie.com", "https://player.vimeo.com", "https://w.soundcloud.com", "https://static.contextoganadero.com", "https://platform.twitter.com", "https://www.instagram.com", "https://www.facebook.com", "https://www.tiktok.com", "https://www.linkedin.com", "https://challenges.cloudflare.com", "https://www.googletagmanager.com", "https://*.doubleclick.net", "https://*.googlesyndication.com", "https://*.google.com"],
+      ["'self'", "https://www.youtube-nocookie.com", "https://player.vimeo.com", "https://w.soundcloud.com", "https://static.contextoganadero.com", "https://platform.twitter.com", "https://www.instagram.com", "https://www.facebook.com", "https://www.tiktok.com", "https://www.linkedin.com", "https://challenges.cloudflare.com", "https://www.googletagmanager.com", "https://*.doubleclick.net", "https://*.googlesyndication.com", "https://*.google.com", "https://*.adtrafficquality.google"],
       "CSP_FRAME_SRC_EXTRA",
     ),
     "worker-src 'self' blob:",

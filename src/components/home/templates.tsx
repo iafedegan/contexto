@@ -67,6 +67,8 @@ type TemplateProps = Slots &
     conColumna?: boolean;
     /** Barra lateral del sitio (solo Esmeralda): va junto a «Lo más reciente», no junto a la apertura, para que arriba haya dos columnas y no tres. */
     lateral?: React.ReactNode;
+    /** Bajo «Lo más reciente», en la columna de las notas (solo Esmeralda): la pauta horizontal llena el hueco junto a la barra lateral. */
+    bajoReciente?: React.ReactNode;
     /** Solo Esmeralda: las notas más leídas (las tres primeras van en la columna derecha de la apertura). */
     masLeidas?: ArticleListItem[];
     /**
@@ -396,6 +398,7 @@ export function EsmeraldaTemplate({
   trasPrincipal,
   hueco,
   lateral,
+  bajoReciente,
   masLeidas,
   locale = DEFAULT_LOCALE,
   builderSelected,
@@ -496,6 +499,7 @@ export function EsmeraldaTemplate({
               );
             })}
           </div>
+          {bajoReciente}
         </section>
       )}
       {lateral && (

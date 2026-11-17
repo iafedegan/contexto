@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
-import { ALTO_GAM, GAM_RED, TAMANOS_GAM, nombreUnidadGam, prefijoGam, type UnidadGam } from "@/lib/gam";
+import { GAM_RED, TAMANOS_GAM, nombreUnidadGam, prefijoGam, type UnidadGam } from "@/lib/gam";
 
 // Tipos mínimos de Google Publisher Tag (se carga por script).
 type Slot = unknown;
@@ -46,9 +46,8 @@ export function GamSlot({ unidad, className }: { unidad: UnidadGam; className?: 
   const prefijo = prefijoGam(pathname);
   const id = `gam-${useId().replace(/[^a-zA-Z0-9]/g, "")}`;
   const caja = useRef<HTMLDivElement>(null);
-  // Sin campaña para este espacio: se oculta entero (también el rótulo «Publicidad»).
-  const [vacio, setVacio] = useState(false);
-  // Alto del anuncio que llegó: la reserva (el tamaño más común) se cambia por el real, para no dejar un hueco cuando llega uno más bajo.
+  // Alto del anuncio que Google pintó. Mientras no llegue (o si no hay campaña) el espacio no ocupa nada ni muestra el rótulo:
+  // nunca queda una franja vacía con «Publicidad».
   const [altoReal, setAltoReal] = useState<number | null>(null);
 
   useEffect(() => {
@@ -62,8 +61,7 @@ export function GamSlot({ unidad, className }: { unidad: UnidadGam; className?: 
         slot = g.defineSlot(`/${GAM_RED}/${nombreUnidadGam(prefijo, unidad)}`, TAMANOS_GAM[unidad], id)?.addService(g.pubads()) ?? null;
         g.pubads().addEventListener?.("slotRenderEnded", (e) => {
           if (e.slot !== slot) return;
-          setVacio(e.isEmpty);
-          if (Array.isArray(e.size) && typeof e.size[1] === "number") setAltoReal(e.size[1]);
+          setAltoReal(!e.isEmpty && Array.isArray(e.size) && typeof e.size[1] === "number" && e.size[1] > 1 ? e.size[1] : null);
         });
         if (!window.__gptServicios) {
           g.pubads().enableSingleRequest?.();
@@ -96,9 +94,11 @@ export function GamSlot({ unidad, className }: { unidad: UnidadGam; className?: 
 
   if (!prefijo) return null;
   return (
-    <div className={className} hidden={vacio}>
-      <span className="mb-1 block text-[0.6875rem] font-medium uppercase tracking-wide text-[var(--fg-muted)]">Publicidad</span>
-      <div ref={caja} id={id} className="mx-auto flex items-start justify-center" style={{ minHeight: altoReal ?? ALTO_GAM[unidad] }} />
+    // Sin anuncio pintado, el contenedor no suma márgenes ni alto (las clases de margen solo se aplican con anuncio).
+    <div className={altoReal ? className : "w-full"}>
+      {altoReal && <span className="mb-1 block text-[0.6875rem] font-medium uppercase tracking-wide text-[var(--fg-muted)]">Publicidad</span>}
+      {/* 1 px mientras espera: el observador necesita un elemento en la página para saber cuándo pedir el anuncio. */}
+      <div ref={caja} id={id} className="mx-auto flex items-start justify-center" style={{ minHeight: altoReal ?? 1 }} />
     </div>
   );
 }
