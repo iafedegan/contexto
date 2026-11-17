@@ -2831,3 +2831,16 @@ nav.cg-navfed .cg-escudo { position: absolute; left: 1.5rem; top: 50%; margin-to
   nav.cg-navfed .lx-navrail > a:first-child svg { width: 1.2rem; height: 1.2rem; }
   nav.cg-navfed .lx-link { padding: 0.5rem clamp(0.3rem, 0.55vw, 0.7rem); letter-spacing: 0.03em; font-size: clamp(0.66rem, 0.9vw, 0.74rem); }
 }
+
+/* Foto que es una miniatura (ver components/foto-pequena.tsx): entera y sin estirar, sobre su propio fondo desenfocado. */
+[data-foto-pequena-caja]::before {
+  content: "";
+  position: absolute;
+  inset: -10%;
+  background: var(--cg-fondo) center / cover no-repeat;
+  filter: blur(26px) brightness(0.65);
+}
+img[data-foto-pequena] {
+  object-fit: contain !important;
+  object-position: center;
+}

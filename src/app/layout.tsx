@@ -9,6 +9,7 @@ import { getSearchConsoleToken } from "@/lib/analytics-server";
 import { EnVivoAvisoDiferido, PwaAvisosDiferido } from "@/components/diferidos";
 import { PwaRegister } from "@/components/pwa-register";
 import { ProgramadasTick } from "@/components/programadas-tick";
+import { FotoPequena } from "@/components/foto-pequena";
 import "./globals.css";
 
 /**
@@ -113,6 +114,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <PwaAvisosDiferido />
         <EnVivoAvisoDiferido />
         <ProgramadasTick />
+        <FotoPequena />
         {children}
       </body>
     </html>
