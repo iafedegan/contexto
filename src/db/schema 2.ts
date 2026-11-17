@@ -1,0 +1,1149 @@
+/**
+ * Modelo de datos único — CONtexto Ganadero Media
+ * -----------------------------------------------------------------------------
+ * Principio de arquitectura #3: un solo motor Postgres para contenido, usuarios,
+ * avisos, series de datos y vectores de embeddings. Sin buscador externo.
+ *
+ * Dimensión de embeddings: 1536 (text-embedding-3-small). Si se cambia de modelo
+ * hay que recrear las columnas `embedding` y sus índices HNSW.
+ */
+import { relations, sql } from "drizzle-orm";
+import type { HomeTitleFont } from "@/lib/home-fonts";
+import type { RegionStyles } from "@/lib/home-regions";
+import type { TemplateParts } from "@/lib/template-parts";
+import type { TickerConfig } from "@/lib/cintillo";
+import type { ContenidoPagina } from "@/lib/paginas-bloques";
+import type { CarruselConfig } from "@/lib/carrusel";
+import type { TextosCabecera } from "@/lib/textos-cabecera";
+import type { MenuNavbar } from "@/lib/menu-navbar";
+import type { ConfigConsejo, FichaPauta, TemaConsejo } from "@/lib/consejo/plan";
+import {
+  type AnyPgColumn,
+  bigserial,
+  boolean,
+  check,
+  customType,
+  date,
+  doublePrecision,
+  index,
+  integer,
+  jsonb,
+  numeric,
+  pgEnum,
+  pgTable,
+  primaryKey,
+  smallint,
+  text,
+  timestamp,
+  unique,
+  uniqueIndex,
+  uuid,
+  vector,
+} from "drizzle-orm/pg-core";
+
+export const EMBEDDING_DIMENSIONS = 1536;
+
+// Tipo `tsvector` de Postgres (texto indexado para la búsqueda de texto completo).
+const tsvector = customType<{ data: string }>({ dataType: () => "tsvector" });
+
+/**
+ * Estilo manual de una tarjeta en /panel/portada. Todo opcional: lo que no se
+ * fija usa el look por defecto de la sección donde caiga la nota.
+ */
+/** Pantallas que se editan por separado en /panel/portada. */
+export type Pantalla = "pc" | "tablet" | "movil";
+
+export type HomeStyle = {
+  /** Ajustes propios de cada pantalla (ver src/lib/pantallas.ts): si una los tiene, mandan sobre los demás campos en esa pantalla. */
+  pantallas?: Partial<Record<Pantalla, HomeStyle>>;
+  /** Tamaño del bloque: cuánto texto/imagen se muestra. */
+  size?: "sm" | "md" | "lg";
+  /** Columnas ocupadas en la cuadrícula "Lo más reciente" (1 o 2). */
+  span?: 1 | 2;
+  /** Familia del titular: ver `HOME_FONTS` en src/lib/home-fonts.ts. */
+  font?: HomeTitleFont;
+  bold?: boolean;
+  italic?: boolean;
+  /** Escala del titular en % sobre el tamaño de su sección (80-150). */
+  titleScale?: number;
+  /** Escala de la imagen en % (40-100): la encoge dentro de la tarjeta. */
+  imageScale?: number;
+  /** Ancho exacto de la imagen en px (40-2000); manda sobre `imageScale`. Sin alto, conserva la proporción. */
+  imageWidth?: number;
+  /** Alto exacto de la imagen en px (40-1600). Sin ancho, la imagen ocupa el de la tarjeta y se recorta a esta altura. */
+  imageHeight?: number;
+  /** Color del titular (#rrggbb). Sin valor = el del tema de la plantilla. */
+  color?: string;
+  /** Dónde va el texto sobre la foto en la nota principal de Esmeralda: arriba en una esquina. Sin valor = abajo, a lo ancho. */
+  textPos?: "arriba-izq" | "arriba-der";
+
+  // --- Bloque libre: tamaño, fondo y texto de cada tarjeta ---
+  /** Columnas que ocupa en una cuadrícula (1-6). */
+  colSpan?: number;
+  /** Alto mínimo del bloque en px (60-1200). */
+  height?: number;
+  /** Columna y fila de la cuadrícula donde empieza el bloque (1-6 / 1-12). */
+  colStart?: number;
+  rowStart?: number;
+  /** Ancho como % del espacio disponible (20-100): sirve en listas de una columna. */
+  widthPct?: number;
+  /** Dónde queda el bloque cuando es más estrecho que su espacio. */
+  blockAlign?: "left" | "center" | "right";
+  /** Fondo del bloque (#rrggbb) o degradado (manda el degradado). */
+  bg?: string;
+  bgGradient?: Gradient;
+  /** Color del texto del bloque. */
+  fg?: string;
+  /** Esquinas redondeadas en px (0-60). */
+  radius?: number;
+  /** Relleno interior en px (0-80). */
+  pad?: number;
+  /** Fuente del texto corrido del bloque. */
+  textFont?: HomeTitleFont;
+  /** Tamaño EXACTO del titular en px (10-160). */
+  titlePx?: number;
+  /** Degradado en el texto del titular. */
+  titleGradient?: Gradient;
+};
+
+// --- Enums -----------------------------------------------------------------
+
+export const userRole = pgEnum("user_role", ["redactor", "disenador", "editor", "administrador"]);
+
+export const editorialStatus = pgEnum("editorial_status", [
+  "borrador",
+  "en_revision",
+  "programado",
+  "publicado",
+  "archivado",
+]);
+
+export const draftStatus = pgEnum("draft_status", ["pendiente", "aprobado", "rechazado"]);
+
+export const agentSource = pgEnum("agent_source", [
+  "boletin_precios",
+  "comunicado",
+  "convocatoria",
+  "agenda_ferias",
+  "otro",
+]);
+
+export const assistantMode = pgEnum("assistant_mode", ["generativo", "semantico_degradado"]);
+
+// --- Usuarios y autenticación (panel editorial) --------------------------
+
+export const users = pgTable(
+  "users",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    email: text("email").notNull().unique(),
+    name: text("name").notNull(),
+    passwordHash: text("password_hash"), // credenciales locales
+    role: userRole("role").notNull().default("redactor"),
+    // Segundo factor (TOTP)
+    totpSecret: text("totp_secret"),
+    totpEnabled: boolean("totp_enabled").notNull().default(false),
+    active: boolean("active").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  // `email` es único con distinción de mayúsculas: sin esta regla «Ana@x.co» y «ana@x.co» serían dos cuentas.
+  (t) => [check("users_email_minusculas", sql`${t.email} = lower(${t.email})`)],
+);
+
+/**
+ * Cambios de permisos por persona: la diferencia entre lo que da el rol y lo que un administrador fijó para UNA cuenta
+ * (`avisos`, `portada`, `publicar`… o `exigir_2fa`). Antes vivían en un JSON de `site_settings`, sin clave foránea: una cuenta
+ * eliminada dejaba su entrada huérfana. Aquí se borran en cascada con la cuenta.
+ */
+export const userPermissionOverrides = pgTable(
+  "user_permission_overrides",
+  {
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    permiso: text("permiso").notNull(),
+    valor: boolean("valor").notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.permiso] })],
+);
+
+/** Plazo de gracia del segundo factor por cuenta: hasta esa fecha puede entrar sin 2FA; después la exigencia vuelve sola. */
+export const user2faGrace = pgTable("user_2fa_grace", {
+  userId: uuid("user_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  until: timestamp("until", { withTimezone: true }).notNull(),
+});
+
+/**
+ * Bitácora de accesos al panel (antes, un arreglo JSON de `site_settings`). Una fila por inicio de sesión. Guarda una copia del
+ * nombre, el correo y el rol de ese momento: la bitácora debe sobrevivir a la cuenta (`user_id` pasa a null al eliminarla). La IP
+ * es un dato personal (Ley 1581), por eso se depura por antigüedad (`RETENCION_ACCESOS_DIAS` en `src/lib/login-log.ts`).
+ */
+export const loginEvents = pgTable(
+  "login_events",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    at: timestamp("at", { withTimezone: true }).notNull().defaultNow(),
+    userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
+    name: text("name").notNull(),
+    email: text("email").notNull(),
+    role: text("role").notNull(),
+    metodo: text("metodo").notNull(),
+    ip: text("ip").notNull().default(""),
+    dispositivo: text("dispositivo").notNull().default(""),
+  },
+  (t) => [
+    index("login_events_at_idx").on(t.at.desc()),
+    index("login_events_user_idx").on(t.userId),
+    check("login_events_metodo", sql`${t.metodo} in ('contraseña', 'passkey')`),
+  ],
+);
+
+/**
+ * Passkeys (WebAuthn) — alternativa sin escribir nada al TOTP: el navegador
+ * pide huella/Face ID/PIN del dispositivo en vez de un código de 6 dígitos.
+ * Una cuenta puede tener varias (celular, laptop…). `credentialId` y
+ * `publicKey` se guardan en base64url, tal como los codifica
+ * `@simplewebauthn/server`; `counter` es la defensa contra reproducir una
+ * misma respuesta capturada (debe subir en cada uso, nunca bajar).
+ */
+export const passkeys = pgTable(
+  "passkeys",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    credentialId: text("credential_id").notNull().unique(),
+    publicKey: text("public_key").notNull(),
+    counter: integer("counter").notNull().default(0),
+    deviceType: text("device_type").notNull(), // "singleDevice" | "multiDevice"
+    backedUp: boolean("backed_up").notNull().default(false),
+    transports: text("transports"), // JSON de AuthenticatorTransportFuture[], opcional
+    label: text("label"), // "iPhone de Ana", lo pone la persona al crearla
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+  },
+  (t) => [index("passkeys_user_id_idx").on(t.userId)],
+);
+
+/**
+ * Sesiones locales de quien entra desde la SuperApp de FEDEGÁN (MiniApp «Contexto Ganadero»). La persona llega con un cupón de un solo uso que el
+ * servidor canjea; aquí queda la sesión que Contexto mantiene por su cuenta. Se guarda solo lo necesario: la pareja audience + subject, el nivel y los
+ * permisos que comunicó FEDEGÁN, la referencia de la sesión de origen (CIFRADA, para consultar su vigencia) y los vencimientos. Correo y documento
+ * van aparte, cifrados, en `superapp_personas`. La cookie lleva un token aleatorio; aquí solo está su huella.
+ */
+export const superappSesiones = pgTable(
+  "superapp_sesiones",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tokenHash: text("token_hash").notNull().unique(),
+    audience: text("audience").notNull(),
+    subject: text("subject").notNull(),
+    /** Referencia de la sesión de origen (`srs_…`), cifrada con la clave de secretos. */
+    sessionReference: text("session_reference").notNull(),
+    assuranceLevel: integer("assurance_level").notNull().default(0),
+    capabilities: jsonb("capabilities").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+    issuedAt: timestamp("issued_at", { withTimezone: true }).notNull(),
+    /** Vencimiento comunicado por FEDEGÁN: la sesión local nunca dura más. */
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    /** Última vez que FEDEGÁN confirmó que la sesión sigue vigente. */
+    validatedAt: timestamp("validated_at", { withTimezone: true }),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    correlationId: text("correlation_id"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("superapp_sesiones_vence_idx").on(t.expiresAt)],
+);
+
+/**
+ * Personas que entraron desde la SuperApp de FEDEGÁN, una fila por `audience` + `subject`, para el análisis del panel (pestaña «SuperApp»).
+ * Correo y documento llegan en cada entrada y se guardan CIFRADOS (clave de secretos); del documento queda a la vista solo el final, para
+ * reconocerlo sin mostrarlo entero. `subscriberId` se llena si el correo coincide con un suscriptor del boletín. Cada entrada queda además en
+ * `superapp_sesiones` (una fila por entrada).
+ */
+export const superappPersonas = pgTable(
+  "superapp_personas",
+  {
+    audience: text("audience").notNull(),
+    subject: text("subject").notNull(),
+    emailCifrado: text("email_cifrado"),
+    documentoTipo: text("documento_tipo"),
+    documentoCifrado: text("documento_cifrado"),
+    /** Últimos 4 caracteres del documento (para mostrar «CC ••••0001»). */
+    documentoFinal: text("documento_final"),
+    assuranceLevel: integer("assurance_level").notNull().default(0),
+    subscriberId: uuid("subscriber_id").references(() => newsletterSubscribers.id, { onDelete: "set null" }),
+    primeraEntrada: timestamp("primera_entrada", { withTimezone: true }).notNull().defaultNow(),
+    ultimaEntrada: timestamp("ultima_entrada", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.audience, t.subject] }), index("superapp_personas_ultima_idx").on(t.ultimaEntrada)],
+);
+
+/** Navegadores (código de la medición `cg_med`) con los que leyó una persona de la SuperApp: une sus lecturas con ella. */
+export const superappVisitantes = pgTable(
+  "superapp_visitantes",
+  {
+    audience: text("audience").notNull(),
+    subject: text("subject").notNull(),
+    visitorId: uuid("visitor_id").notNull(),
+    linkedAt: timestamp("linked_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.audience, t.subject, t.visitorId] }), index("superapp_visitantes_visitor_idx").on(t.visitorId)],
+);
+
+// Tablas mínimas requeridas por @auth/drizzle-adapter (sesiones JWT no las usan,
+// pero se dejan para permitir SSO futuro sin migración).
+export const sessions = pgTable(
+  "sessions",
+  {
+    sessionToken: text("session_token").primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    expires: timestamp("expires", { withTimezone: true }).notNull(),
+  },
+  // Cerrar las sesiones de una persona (o borrarla) busca por usuario.
+  (t) => [index("sessions_user_idx").on(t.userId)],
+);
+
+export const verificationTokens = pgTable(
+  "verification_tokens",
+  {
+    identifier: text("identifier").notNull(),
+    token: text("token").notNull(),
+    expires: timestamp("expires", { withTimezone: true }).notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.identifier, t.token] })],
+);
+
+// --- Taxonomía y autores -------------------------------------------------
+
+export const authors = pgTable("authors", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  slug: text("slug").notNull().unique(),
+  name: text("name").notNull(),
+  bio: text("bio"),
+  avatarUrl: text("avatar_url"),
+  // Vínculo opcional a una cuenta del panel (un autor puede no tener login).
+  userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [index("authors_user_idx").on(t.userId)]);
+
+export const categories = pgTable(
+  "categories",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    slug: text("slug").notNull().unique(),
+    name: text("name").notNull(),
+    description: text("description"),
+    parentId: uuid("parent_id"),
+    // Rutas de la taxonomía legada que redirigen (301) a esta categoría.
+    legacyPaths: jsonb("legacy_paths").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+    sortOrder: integer("sort_order").notNull().default(0),
+  },
+  (t) => [index("categories_parent_idx").on(t.parentId)],
+);
+
+// --- Artículos propios --------------------------------------------------
+
+export const articles = pgTable(
+  "articles",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    slug: text("slug").notNull().unique(),
+    title: text("title").notNull(),
+    // Resumen editorial: fuente de la meta description (nunca keyword stuffing).
+    excerpt: text("excerpt").notNull(),
+    body: text("body").notNull(), // markdown / HTML sanitizado
+    coverImageUrl: text("cover_image_url"),
+    coverImageAlt: text("cover_image_alt"),
+    // Pie de foto de la portada (con el crédito de la imagen), que se muestra bajo ella.
+    coverImageCaption: text("cover_image_caption"),
+    // Dirección original de la nota en el sitio anterior (`/seccion/titulo`). Las notas migradas se sirven EN ESA dirección, sin redirección,
+    // para no cambiar ni una URL que Google ya tiene indexada. Las notas nuevas la dejan vacía y viven en `/articulo/<slug>`.
+    legacyPath: text("legacy_path"),
+    categoryId: uuid("category_id").references(() => categories.id, { onDelete: "set null" }),
+    authorId: uuid("author_id").references(() => authors.id, { onDelete: "set null" }),
+    status: editorialStatus("status").notNull().default("borrador"),
+    // Secciones del sitio donde aparece la nota además de su categoría principal (slugs de categoría): una nota de
+    // «Regiones» puede salir también en «Gremialidad». Las páginas de categoría la incluyen por aquí.
+    secciones: jsonb("secciones").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+    // Regiones y departamentos que menciona el texto (`region-caribe`, `depto-cordoba`): los calcula un disparador de la base a partir de
+    // título, resumen y etiquetas (migración 0023) para filtrar «Regiones» con un índice en vez de leer el texto de 51 mil notas.
+    zonas: jsonb("zonas").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+    // Metadatos SEO opcionales; si están vacíos se derivan de title/excerpt.
+    metaTitle: text("meta_title"),
+    metaDescription: text("meta_description"),
+    tags: jsonb("tags").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+    publishedAt: timestamp("published_at", { withTimezone: true }),
+    scheduledFor: timestamp("scheduled_for", { withTimezone: true }),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+    // Si el artículo nació de un borrador de agente, se conserva la trazabilidad.
+    originDraftId: uuid("origin_draft_id"),
+    // Texto completo ya indexado en español (título + resumen + cuerpo), calculado por la base al guardar. La búsqueda lo lee en vez de
+    // recalcularlo fila por fila: con decenas de miles de notas, hacerlo al buscar tardaba decenas de segundos. Nunca se escribe a mano.
+    searchVec: tsvector("search_vec").generatedAlwaysAs(sql`to_tsvector('spanish', title || ' ' || excerpt || ' ' || body)`),
+    // Embedding del título + excerpt + body (recorte) para búsqueda híbrida.
+    embedding: vector("embedding", { dimensions: EMBEDDING_DIMENSIONS }),
+    // Posición manual en la portada (0 = principal, 1 = secundaria, 2..5 =
+    // "en breve", 6+ = río). null = no está fijado; se ordena por fecha.
+    // La gestiona el editor desde /panel/portada (drag & drop).
+    homePosition: integer("home_position"),
+    // Estilo manual de la tarjeta (tamaño, tipografía, negrilla/cursiva,
+    // escala de imagen…). null = todo por defecto. Ver tipo `HomeStyle`.
+    homeStyle: jsonb("home_style").$type<HomeStyle>(),
+    // Última hora (H-05): barra destacada en portada mientras esté activa.
+    isBreaking: boolean("is_breaking").notNull().default(false),
+    // Etiqueta "En Vivo" (AI-03 / FM-06): cubrimientos y transmisiones.
+    isLive: boolean("is_live").notNull().default(false),
+    // Contador de lecturas para "Más leídas" (H-04). Lo incrementa un beacon
+    // del cliente, no el render: con ISR el render no equivale a una visita.
+    views: integer("views").notNull().default(0),
+  },
+  (t) => [
+    index("articles_status_published_idx").on(t.status, t.publishedAt),
+    index("articles_category_idx").on(t.categoryId),
+    // Listado de una categoría (archivo de decenas de miles de notas): filtra por categoría y ordena por fecha sin ordenar en memoria.
+    index("articles_category_published_idx").on(t.categoryId, t.publishedAt),
+    index("articles_secciones_idx").using("gin", t.secciones),
+    index("articles_zonas_idx").using("gin", t.zonas),
+    // Listado del panel (51 mil notas): «última edición» y «fecha de publicación» recorren el índice en vez de ordenar toda la tabla (3 s → ms).
+    // Notas de un autor (página de la firma, filtro del panel) y las que creó una cuenta («mis notas»): sin índice recorrían las 51 mil filas.
+    index("articles_author_idx").on(t.authorId, t.publishedAt.desc()),
+    index("articles_created_by_idx").on(t.createdBy),
+    // Orden de la portada (las ancladas primero, luego las más recientes): el editor y la portada leen solo las primeras filas sin ordenar las 51 mil.
+    index("articles_portada_idx")
+      .on(sql`(home_position is null)`, t.homePosition, t.publishedAt.desc())
+      .where(sql`status = 'publicado'`),
+    index("articles_updated_idx").on(t.updatedAt.desc()),
+    index("articles_published_desc_idx").on(t.publishedAt.desc().nullsLast()),
+    uniqueIndex("articles_legacy_path_idx").on(t.legacyPath).where(sql`legacy_path is not null`),
+    index("articles_search_vec_idx").using("gin", t.searchVec),
+    index("articles_scheduled_idx").on(t.scheduledFor),
+    index("articles_home_position_idx").on(t.homePosition),
+    // Sin índice en `views`: cada lectura suma 1 y, con índice, Postgres reescribía los 21 índices de la tabla (incluido el de vectores).
+    index("articles_breaking_idx").on(t.isBreaking),
+    // Reglas que antes solo cumplía la aplicación: la base las exige aunque alguien escriba por otro camino (script, SQL a mano).
+    check("articles_views_no_negativas", sql`${t.views} >= 0`),
+    check("articles_slug_formato", sql`${t.slug} ~ '^[a-z0-9]+(-[a-z0-9]+)*$'`),
+    check("articles_titulo_no_vacio", sql`btrim(${t.title}) <> ''`),
+    check("articles_publicada_con_fecha", sql`${t.status} <> 'publicado' or ${t.publishedAt} is not null`),
+    check("articles_posicion_portada", sql`${t.homePosition} is null or ${t.homePosition} >= 0`),
+    // Índice vectorial HNSW (coseno). Se crea en migración manual porque
+    // drizzle-kit aún no emite `USING hnsw` de forma estable.
+  ],
+);
+
+/**
+ * Comentarios de la revisión de una nota: el redactor, el editor que la revisa o el diseñador dejan notas sobre la nota y la otra parte las ve
+ * como una notificación en el listado de artículos. Pertenecen a la nota (se van con ella).
+ */
+export const articleComments = pgTable(
+  "article_comments",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    articleId: uuid("article_id")
+      .notNull()
+      .references(() => articles.id, { onDelete: "cascade" }),
+    authorId: uuid("author_id").references(() => users.id, { onDelete: "set null" }),
+    body: text("body").notNull(),
+    /** Fragmento de la nota que se seleccionó al comentar (opcional): se muestra como cita y sirve para volver a ubicarlo en el texto. */
+    quote: text("quote"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("article_comments_article_idx").on(t.articleId, t.createdAt),
+    check("article_comments_body_largo", sql`char_length(${t.body}) between 1 and 2000`),
+    check("article_comments_quote_largo", sql`${t.quote} is null or char_length(${t.quote}) <= 600`),
+  ],
+);
+
+/** Hasta cuándo leyó cada persona los comentarios de una nota: lo posterior, escrito por otra persona, cuenta como nuevo. */
+export const articleCommentReads = pgTable(
+  "article_comment_reads",
+  {
+    articleId: uuid("article_id")
+      .notNull()
+      .references(() => articles.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    lastReadAt: timestamp("last_read_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.articleId, t.userId] }), index("article_comment_reads_user_idx").on(t.userId)],
+);
+
+// Lecturas agregadas por artículo y día (analítica del panel). La alimenta el
+// mismo beacon que `articles.views`; solo guarda un entero por día, nunca
+// datos del visitante.
+export const articleViewsDaily = pgTable(
+  "article_views_daily",
+  {
+    articleId: uuid("article_id")
+      .notNull()
+      .references(() => articles.id, { onDelete: "cascade" }),
+    day: date("day").notNull(),
+    views: integer("views").notNull().default(0),
+  },
+  (t) => [
+    primaryKey({ columns: [t.articleId, t.day] }),
+    index("article_views_daily_day_idx").on(t.day),
+    check("article_views_daily_no_negativas", sql`${t.views} >= 0`),
+  ],
+);
+
+// Lecturas por visitante (centro de análisis del panel). Una fila por nota leída por alguien que ACEPTÓ la medición: el
+// visitante es un código aleatorio de una cookie propia (sin nombre, correo ni IP) y nada más que el comportamiento de
+// lectura. La ciudad y la región salen de la cabecera de geolocalización de Vercel (aproximadas). Se purga por antigüedad
+// (`RETENCION_LECTORES`, 400 días por defecto) y se borra con la nota.
+export const readerSessions = pgTable(
+  "reader_sessions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    visitorId: uuid("visitor_id").notNull(),
+    articleId: uuid("article_id")
+      .notNull()
+      .references(() => articles.id, { onDelete: "cascade" }),
+    /** mobile | tablet | desktop | otro */
+    device: text("device").notNull().default("otro"),
+    browser: text("browser"),
+    os: text("os"),
+    country: text("country"),
+    /** Código de la región (departamento) según la geolocalización de Vercel, p. ej. «ANT». */
+    region: text("region"),
+    city: text("city"),
+    /** Etiqueta del origen (Google, Facebook, Directo, boletín…), la misma que usa «¿Desde dónde los leen?». */
+    source: text("source"),
+    campaign: text("campaign"),
+    /** Si el navegador ya había leído antes en este sitio. */
+    returning: boolean("returning").notNull().default(false),
+    /** Hasta dónde bajó la persona por la nota, de 0 a 100. */
+    maxScroll: smallint("max_scroll").notNull().default(0),
+    /** Segundos con la pestaña a la vista (tope de una hora). */
+    seconds: integer("seconds").notNull().default(0),
+  },
+  (t) => [
+    index("reader_sessions_created_idx").on(t.createdAt),
+    index("reader_sessions_article_idx").on(t.articleId, t.createdAt),
+    index("reader_sessions_visitor_idx").on(t.visitorId),
+  ],
+);
+
+// Navegadores (códigos de visitante de la medición) que una persona suscrita AUTORIZÓ relacionar con su suscripción. Solo existe
+// para quien marcó la casilla de autorización; se borra al darse de baja o al eliminar la suscripción. `verified` es verdadero
+// cuando el vínculo se probó con un enlace del correo (la persona controla esa dirección) y falso si salió del formulario.
+export const subscriberVisitors = pgTable(
+  "subscriber_visitors",
+  {
+    subscriberId: uuid("subscriber_id")
+      .notNull()
+      .references(() => newsletterSubscribers.id, { onDelete: "cascade" }),
+    visitorId: uuid("visitor_id").notNull(),
+    linkedAt: timestamp("linked_at", { withTimezone: true }).notNull().defaultNow(),
+    verified: boolean("verified").notNull().default(false),
+  },
+  (t) => [primaryKey({ columns: [t.subscriberId, t.visitorId] }), index("subscriber_visitors_visitor_idx").on(t.visitorId)],
+);
+
+// Límite de intentos (login, formularios públicos). Una fila por clave
+// ("login:ip:1.2.3.4", "contacto:ip:…"); se comparte entre instancias
+// serverless, a diferencia de un contador en memoria.
+export const rateLimits = pgTable("rate_limits", {
+  key: text("key").primaryKey(),
+  count: integer("count").notNull().default(0),
+  resetAt: timestamp("reset_at", { withTimezone: true }).notNull(),
+});
+
+// --- Espejo de solo lectura del archivo histórico ---------------------
+// NUNCA se escribe de vuelta al sistema origen. Solo lo actualiza el job de
+// sincronización (src/lib/archive-client.ts + inngest).
+
+export const archiveIndex = pgTable(
+  "archive_index",
+  {
+    // ID del artículo en el sistema legado.
+    externalId: text("external_id").primaryKey(),
+    canonicalUrl: text("canonical_url").notNull(),
+    title: text("title").notNull(),
+    summary: text("summary").notNull(),
+    legacyCategory: text("legacy_category"),
+    publishedAt: timestamp("published_at", { withTimezone: true }),
+    // Hash del contenido origen para detectar cambios sin re-embeber todo.
+    sourceHash: text("source_hash").notNull(),
+    syncedAt: timestamp("synced_at", { withTimezone: true }).notNull().defaultNow(),
+    embedding: vector("embedding", { dimensions: EMBEDDING_DIMENSIONS }),
+  },
+  (t) => [index("archive_published_idx").on(t.publishedAt)],
+);
+
+// --- Avisos publicitarios --------------------------------------------
+
+export const adsZones = pgTable("ads_zones", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  key: text("key").notNull().unique(), // p.ej. "home_top", "article_sidebar"
+  name: text("name").notNull(),
+  // Creatividad activa (HTML/imagen + enlace). null = zona vacía.
+  html: text("html"),
+  imageUrl: text("image_url"),
+  clickUrl: text("click_url"),
+  active: boolean("active").notNull().default(false),
+  startsAt: timestamp("starts_at", { withTimezone: true }),
+  endsAt: timestamp("ends_at", { withTimezone: true }),
+});
+
+// --- Newsletter -----------------------------------------------------
+
+export const newsletterSubscribers = pgTable("newsletter_subscribers", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  email: text("email").notNull().unique(),
+  firstName: text("first_name"),
+  lastName: text("last_name"),
+  birthDate: date("birth_date"),
+  mobile: text("mobile"),
+  // Trazabilidad interna del alta (no se muestra al suscriptor): de dónde y
+  // desde qué ciudad se registró, según la cabecera de geo-IP de Vercel.
+  // Lat/lon vienen de la MISMA cabecera (x-vercel-ip-*): no se llama a ningún
+  // servicio de geocodificación externo, así que solo hay dato para las altas
+  // hechas después de este cambio.
+  signupIp: text("signup_ip"),
+  signupCity: text("signup_city"),
+  /** Código postal aproximado que resuelve Vercel a partir de la IP (puede faltar). */
+  signupPostal: text("signup_postal"),
+  /** Barrio por geocodificación inversa; solo con ubicación exacta compartida. */
+  neighborhood: text("neighborhood"),
+  /** "gps" si la persona compartió su ubicación; "ip" si es la aproximada por IP. */
+  signupGeoSource: text("signup_geo_source"),
+  /** Precisión de la ubicación compartida, en metros (GPS: pocos; Wi-Fi/antenas: cientos). */
+  signupGeoAccuracy: numeric("signup_geo_accuracy"),
+  signupCountry: text("signup_country"),
+  /** Ciudad o municipio que la persona escribió al suscribirse (la de `signup_city` sale de la IP y puede no ser la suya). */
+  city: text("city"),
+  /** Temas que la persona eligió al suscribirse (identificadores de `TEMAS_INTERES`); sirve para enviar una edición solo a quien le interesa. */
+  interests: jsonb("interests").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+  /** Etiquetas que pone el equipo desde el panel («Aliados», «Prensa»…); sirven para enviar una edición solo a un grupo. Ver `lib/newsletter/etiquetas.ts`. */
+  tags: jsonb("tags").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+  signupLat: numeric("signup_lat"),
+  signupLon: numeric("signup_lon"),
+  confirmed: boolean("confirmed").notNull().default(false),
+  /** Cuándo la persona autorizó expresamente que se relacione lo que lee con su suscripción (casilla del formulario). null = no autorizó. */
+  readingAuthorizedAt: timestamp("reading_authorized_at", { withTimezone: true }),
+  confirmToken: text("confirm_token"),
+  unsubscribedAt: timestamp("unsubscribed_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// --- Series de datos (boletines de precios, indicadores) -------------
+// Vive en el mismo motor: alimenta artículos automáticos y widgets.
+
+export const dataSeries = pgTable("data_series", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  key: text("key").notNull().unique(), // "precio_novillo_gordo_medellin"
+  name: text("name").notNull(),
+  unit: text("unit").notNull(), // "COP/kg"
+  source: text("source").notNull(),
+});
+
+export const dataPoints = pgTable(
+  "data_points",
+  {
+    seriesId: uuid("series_id")
+      .notNull()
+      .references(() => dataSeries.id, { onDelete: "cascade" }),
+    observedOn: date("observed_on").notNull(),
+    value: numeric("value").notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.seriesId, t.observedOn] })],
+);
+
+// --- Borradores generados por agentes de IA -------------------------
+// Principio #6: ningún borrador pasa a "publicado" sin acción explícita de un
+// editor con rol habilitado.
+
+export const agentDrafts = pgTable(
+  "agent_drafts",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    source: agentSource("source").notNull(),
+    // Referencia legible a la fuente concreta (URL del comunicado, id del boletín…).
+    sourceRef: text("source_ref").notNull(),
+    sourcePayload: jsonb("source_payload"), // datos estructurados de entrada
+    modelVersion: text("model_version").notNull(),
+    title: text("title").notNull(),
+    excerpt: text("excerpt").notNull(),
+    body: text("body").notNull(),
+    suggestedCategoryId: uuid("suggested_category_id").references(() => categories.id, {
+      onDelete: "set null",
+    }),
+    // Resultado del agente verificador: cada cifra contrastada contra la fuente.
+    factChecks: jsonb("fact_checks")
+      .$type<
+        Array<{
+          claim: string;
+          value: string;
+          verified: boolean;
+          sourceQuote: string | null;
+          note: string | null;
+        }>
+      >()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    hasUnverifiedClaims: boolean("has_unverified_claims").notNull().default(false),
+    status: draftStatus("status").notNull().default("pendiente"),
+    approvedBy: uuid("approved_by").references(() => users.id, { onDelete: "set null" }),
+    approvedAt: timestamp("approved_at", { withTimezone: true }),
+    rejectionReason: text("rejection_reason"),
+    // Artículo resultante tras la aprobación (atribuido al editor, no al sistema).
+    publishedArticleId: uuid("published_article_id").references(() => articles.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("agent_drafts_status_idx").on(t.status, t.createdAt)],
+);
+
+// --- Log de consultas al asistente ---------------------------------
+// Alimenta el tablero de demanda informativa para la redacción.
+
+export const assistantQueries = pgTable(
+  "assistant_queries",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    sessionId: text("session_id").notNull(),
+    question: text("question").notNull(),
+    mode: assistantMode("mode").notNull(),
+    // Fuentes recuperadas y citadas (obligatorio si mode = generativo).
+    citedSources: jsonb("cited_sources")
+      .$type<Array<{ title: string; url: string; kind: "articulo" | "archivo" | "observatorio" }>>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    answered: boolean("answered").notNull().default(false), // false = declinó por falta de fuentes
+    inputTokens: integer("input_tokens").notNull().default(0),
+    outputTokens: integer("output_tokens").notNull().default(0),
+    costUsd: numeric("cost_usd").notNull().default("0"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("assistant_queries_created_idx").on(t.createdAt),
+    index("assistant_queries_session_idx").on(t.sessionId),
+  ],
+);
+
+// --- Redirecciones 301 explícitas ---------------------------------
+// Complementa el mapeo de `categories.legacyPaths`. Para casos uno-a-uno.
+
+export const redirects = pgTable(
+  "redirects",
+  {
+    fromPath: text("from_path").primaryKey(),
+    toPath: text("to_path").notNull(),
+    statusCode: integer("status_code").notNull().default(301),
+    hits: integer("hits").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  // `from_path` ya es la clave primaria: el índice único `redirects_from_idx` duplicaba su índice (migración 0033 lo quita).
+  (t) => [
+    check("redirects_codigo", sql`${t.statusCode} in (301, 302, 307, 308)`),
+    check("redirects_sin_bucle", sql`${t.fromPath} <> ${t.toPath}`),
+    check("redirects_origen_absoluto", sql`${t.fromPath} like '/%'`),
+  ],
+);
+
+// --- Boletín: ediciones ------------------------------------------------
+// Cada edición del boletín (borrador o enviada). Los suscriptores viven en
+// `newsletter_subscribers`; el envío es reanudable: `cursor` guarda el último
+// suscriptor procesado, así una lista grande se envía por tandas sin repetir.
+export const newsletterEditions = pgTable(
+  "newsletter_editions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    subject: text("subject").notNull(),
+    // Texto que muestran los clientes de correo junto al asunto.
+    preheader: text("preheader").notNull().default(""),
+    // Saludo o nota del editor, antes de las noticias.
+    intro: text("intro").notNull().default(""),
+    // Notas incluidas, en orden; la primera es la destacada.
+    articleSlugs: jsonb("article_slugs").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+    // Armado con secciones: encabezados («Última hora», «Colombia»…) y notas en orden. `[]` = lista plana de `article_slugs`. Ver `src/lib/newsletter/items.ts`.
+    items: jsonb("items").$type<unknown[]>().notNull().default(sql`'[]'::jsonb`),
+    // Cuándo debe salir (hora absoluta); con estado «programada». `null` = sin programar.
+    scheduledFor: timestamp("scheduled_for", { withTimezone: true }),
+    // borrador | programada | enviando | enviada
+    status: text("status").notNull().default("borrador"),
+    // Número de la edición, asignado al empezar el envío.
+    issue: integer("issue"),
+    cursor: text("cursor"),
+    // A quién va: `{}` = todos los suscriptores confirmados; si no, los filtros (ciudades, países, temas, antigüedad). Ver `src/lib/newsletter/audiencia-tipos.ts`.
+    audience: jsonb("audience").$type<Record<string, unknown>>().notNull().default(sql`'{}'::jsonb`),
+    total: integer("total").notNull().default(0),
+    delivered: integer("delivered").notNull().default(0),
+    failed: integer("failed").notNull().default(0),
+    startedAt: timestamp("started_at", { withTimezone: true }),
+    sentAt: timestamp("sent_at", { withTimezone: true }),
+    createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("newsletter_editions_status_idx").on(t.status, t.createdAt),
+    check("newsletter_editions_estado", sql`${t.status} in ('borrador', 'programada', 'enviando', 'enviada')`),
+    check("newsletter_editions_cuentas", sql`${t.total} >= 0 and ${t.delivered} >= 0 and ${t.failed} >= 0`),
+  ],
+);
+
+// --- API pública para terceros ------------------------------------------
+// Claves de acceso a `/api/v1/*` (artículos, categorías, alta al boletín).
+// Se guarda solo el hash (SHA-256): la clave en texto plano se muestra una
+// única vez, al crearla, igual que un token de GitHub o Stripe — así un
+// volcado de la base nunca la regala.
+export const apiClients = pgTable(
+  "api_clients",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    name: text("name").notNull(),
+    keyHash: text("key_hash").notNull().unique(),
+    // Primeros caracteres de la clave, para reconocerla en la lista sin poder
+    // reconstruirla (`cg_live_a1b2c3d4…`).
+    keyPrefix: text("key_prefix").notNull(),
+    active: boolean("active").notNull().default(true),
+    requestsPerHour: integer("requests_per_hour").notNull().default(600),
+    lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+    createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("api_clients_active_idx").on(t.active), check("api_clients_limite_positivo", sql`${t.requestsPerHour} > 0`)],
+);
+
+export type ApiClient = typeof apiClients.$inferSelect;
+
+// --- Ajustes de sitio (clave/valor) --------------------------------
+// Mecanismo genérico para configuración editable desde el panel que no es
+// contenido (p. ej. el diseño de las secciones de portada). Una fila por
+// clave; `value` es JSON libre e interpretado por quien lo lee.
+
+export const siteSettings = pgTable("site_settings", {
+  key: text("key").primaryKey(),
+  value: jsonb("value").notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/**
+ * Consejo de redacción: el plan de la semana. Cada plan lleva su configuración (días, horas, cuotas por sección y aprobación), los temas
+ * que el consejo quiere cubrir y una casilla por cada pieza (`editorial_slots`) con su día, hora y sección. Ver src/lib/consejo.
+ */
+export const editorialPlans = pgTable("editorial_plans", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  title: text("title").notNull(),
+  /** Lunes de la semana que cubre (fecha de Colombia). */
+  weekStart: date("week_start").notNull(),
+  /** borrador | activo | cerrado. Solo un plan activo redacta y programa. */
+  status: text("status").notNull().default("borrador"),
+  config: jsonb("config").$type<ConfigConsejo>().notNull(),
+  temas: jsonb("temas").$type<TemaConsejo[]>().notNull().default(sql`'[]'::jsonb`),
+  createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+  /** Quién activó el plan: con sus permisos se redacta y, si una casilla es automática, se programa. */
+  activatedBy: uuid("activated_by").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** Una pieza del plan: qué, cuándo, en qué sección y cómo sale (con aprobación o automática). */
+export const editorialSlots = pgTable(
+  "editorial_slots",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    planId: uuid("plan_id")
+      .notNull()
+      .references(() => editorialPlans.id, { onDelete: "cascade" }),
+    /** Hora exacta de publicación. */
+    publishAt: timestamp("publish_at", { withTimezone: true }).notNull(),
+    sectionSlug: text("section_slug").notNull(),
+    topic: text("topic").notNull().default(""),
+    angle: text("angle").notNull().default(""),
+    /** Encargo para la IA: qué contar, qué datos y fuentes confirmar. */
+    brief: text("brief").notNull().default(""),
+    /** Ficha de pauta: las preguntas que el consejo responde antes de encargar la nota (foco, por qué ahora, fuentes, riesgos…). */
+    ficha: jsonb("ficha").$type<FichaPauta>().notNull().default(sql`'{}'::jsonb`),
+    priority: smallint("priority").notNull().default(2),
+    /** manual (un editor aprueba antes) | auto (se programa sola). */
+    approval: text("approval").notNull().default("manual"),
+    /** planificada | redactando | revision | programada | publicada | fallida | omitida. */
+    status: text("status").notNull().default("planificada"),
+    articleId: uuid("article_id").references(() => articles.id, { onDelete: "set null" }),
+    error: text("error"),
+    /** Cuándo vio el responsable que la pieza le llegó (null = tarea nueva: sale el aviso y la insignia «nueva»). */
+    responsableVistoAt: timestamp("responsable_visto_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("editorial_slots_plan_idx").on(t.planId, t.publishAt),
+    index("editorial_slots_pendientes_idx").on(t.status, t.publishAt),
+    check("editorial_slots_aprobacion", sql`${t.approval} in ('manual', 'auto')`),
+    check("editorial_slots_estado", sql`${t.status} in ('planificada', 'redactando', 'revision', 'programada', 'publicada', 'fallida', 'omitida')`),
+    check("editorial_slots_prioridad", sql`${t.priority} >= 0`),
+  ],
+);
+
+/**
+ * Fondo de la portada, elegido por un editor en /panel/portada. Se aplica a
+ * TODA la plantilla (cabecera, contenido y pie), sobrescribiendo los tokens
+ * de color del tema con variables CSS en línea.
+ */
+export type HomeBackground = {
+  /** "theme" = el del tema de la plantilla; "solid" = un color; "gradient" = degradado. */
+  mode: "theme" | "solid" | "gradient";
+  /** Color sólido, o primer punto del degradado. */
+  from?: string;
+  /** Segundo punto del degradado. */
+  to?: string;
+  /** Ángulo del degradado en grados (0 = de abajo a arriba). */
+  angle?: number;
+};
+
+/** Valor de site_settings con key = "home_layout": plantilla visual de la
+ * portada + ajustes finos de sus secciones. */
+/** Degradado lineal entre dos colores (#rrggbb) con ángulo en grados. */
+export type Gradient = { from: string; to: string; angle: number };
+
+/** Cada elemento suelto del encabezado de una sección que se puede estilar por separado. */
+export type SectionElId = "breadcrumb" | "kicker" | "title" | "description" | "chips" | "filters" | "n-title" | "n-excerpt" | "n-byline" | "n-photo" | "n-body" | "h-nombre" | "h-logo" | "h-lema" | "h-fecha" | "h-menu" | "h-cintillo";
+
+export type SectionElStyle = {
+  font?: HomeTitleFont;
+  /** Tamaño exacto en px (8-220). */
+  size?: number;
+  /** Grosor 300-900. */
+  weight?: number;
+  color?: string;
+  /** Degradado en el texto (solo etiqueta, título y descripción). */
+  gradient?: Gradient;
+  upper?: boolean;
+  /** Espaciado entre letras en px (-2 a 20). */
+  tracking?: number;
+  /** Lo mismo, solo cuando el sitio se ve en modo claro / oscuro (pisa a lo de arriba). */
+  claro?: Omit<SectionElStyle, "claro" | "oscuro">;
+  oscuro?: Omit<SectionElStyle, "claro" | "oscuro">;
+};
+
+/** Una zona del cuerpo (contenedor de varios bloques) convertida en cuadrícula. */
+export type ZoneStyle = {
+  /** Columnas iguales (1-6). */
+  cols?: number;
+  /** Proporciones personalizadas, p. ej. "2fr 1fr" (manda sobre `cols`). */
+  tpl?: string;
+  /** Espacio entre bloques en px (0-80). */
+  gap?: number;
+  /** Los bloques de los grupos internos pasan a ser celdas de esta cuadrícula. */
+  flat?: boolean;
+  /** Ajustada a propósito para el celular: no se apila a una columna (ver src/lib/pantallas.ts). */
+  libreEnMovil?: boolean;
+};
+
+/** Dónde van los filtros (rangos de fecha y subsección) en la página de una sección. */
+export type SectionFiltersPos = "cabecera" | "izquierda" | "centro" | "derecha" | "barra" | "oculto";
+
+/** Lo visual del diseño propio de una pantalla: si falta una parte, esa pantalla usa la general (ver src/lib/pantallas.ts). */
+export type VisualPantalla = {
+  regions?: RegionStyles;
+  zones?: Record<string, ZoneStyle>;
+  sectionEls?: Partial<Record<SectionElId, SectionElStyle>>;
+  menuEstilo?: NonNullable<MenuNavbar["estilo"]>;
+};
+
+export type HomeLayoutConfig = {
+  /** Lo visual por pantalla: computador, tableta y celular se editan por separado. */
+  pantallas?: Partial<Record<Pantalla, VisualPantalla>>;
+  /** Posición de los filtros en las páginas de sección. */
+  sectionFilters?: SectionFiltersPos;
+  /** Estilo por elemento del encabezado de sección (migas, etiqueta, título…). */
+  sectionEls?: Partial<Record<SectionElId, SectionElStyle>>;
+  /** Cómo se acomodan los bloques de cada zona del cuerpo (ver src/lib/zones.ts). */
+  zones?: Record<string, ZoneStyle>;
+  /** Plantilla: decide componentes, efectos y tipografía (no solo columnas). */
+  templateId?: "esmeralda" | "clasico" | "revista" | "compacto" | "vanguardia" | "gremial";
+  /** "En breve" en la plantilla Clásico: lista vertical o fila horizontal. */
+  breveDirection?: "vertical" | "horizontal";
+  /** Columnas cuando "En breve" es horizontal (2-4). */
+  breveColumns?: number;
+  /** Columnas de la cuadrícula "Lo más reciente" en escritorio (2-4). */
+  riverColumns?: number;
+  /** Ancho de la columna de la nota principal frente a «Lo último» en «Esmeralda Real» (pantallas anchas). */
+  anchoPrincipal?: "normal" | "ancha" | "muyAncha";
+  /** Fondo de la plantilla (color sólido o degradado). */
+  background?: HomeBackground;
+  /** Estilo por componente: navbar, hero, cuerpo, tarjetas y pie. */
+  regions?: RegionStyles;
+  /** Plantilla compuesta: navbar, cuerpo y footer elegidos por separado. */
+  parts?: TemplateParts;
+  /** Cintillo de titulares: qué lleva y a qué velocidad (ver src/lib/cintillo.ts). */
+  ticker?: TickerConfig;
+  /** Carrusel de notas de la portada, en todas las plantillas (ver src/lib/carrusel.ts). */
+  carrusel?: CarruselConfig;
+  /** Carruseles adicionales (cada uno con su lugar en la portada). */
+  carruseles?: CarruselConfig[];
+  /** Título, subtítulo y fecha de la cabecera (ver src/lib/textos-cabecera.ts). */
+  textos?: TextosCabecera;
+  /** Secciones visibles, enlaces propios y submenús de la barra (ver src/lib/menu-navbar.ts). */
+  menuNav?: MenuNavbar;
+};
+
+// --- Relaciones ---------------------------------------------------
+
+export const articlesRelations = relations(articles, ({ one }) => ({
+  category: one(categories, { fields: [articles.categoryId], references: [categories.id] }),
+  author: one(authors, { fields: [articles.authorId], references: [authors.id] }),
+}));
+
+export const agentDraftsRelations = relations(agentDrafts, ({ one }) => ({
+  approver: one(users, { fields: [agentDrafts.approvedBy], references: [users.id] }),
+  suggestedCategory: one(categories, {
+    fields: [agentDrafts.suggestedCategoryId],
+    references: [categories.id],
+  }),
+}));
+
+// --- Tipos compartidos ------------------------------------------
+
+export type Article = typeof articles.$inferSelect;
+export type NewArticle = typeof articles.$inferInsert;
+export type ArchiveEntry = typeof archiveIndex.$inferSelect;
+export type AgentDraft = typeof agentDrafts.$inferSelect;
+export type User = typeof users.$inferSelect;
+export type UserRole = (typeof userRole.enumValues)[number];
+export type EditorialStatus = (typeof editorialStatus.enumValues)[number];
+
+/**
+ * Mensajes de los formularios públicos (contacto y pauta comercial).
+ * Se guardan en la base y se leen desde el panel: nada se envía a servicios de
+ * terceros, y así el equipo conserva la trazabilidad de cada solicitud.
+ */
+export const contactKind = pgEnum("contact_kind", ["contacto", "comercial"]);
+
+export const contactMessages = pgTable(
+  "contact_messages",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    kind: contactKind("kind").notNull().default("contacto"),
+    name: text("name").notNull(),
+    email: text("email").notNull(),
+    organization: text("organization"),
+    subject: text("subject"),
+    message: text("message").notNull(),
+    /** Marca de atención del panel: evita responder dos veces lo mismo. */
+    handled: boolean("handled").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("contact_messages_created_idx").on(t.createdAt)],
+);
+
+/**
+ * Suscripciones a notificaciones push (FM-01). Una fila por navegador; el
+ * endpoint es único y es lo que el servidor usa para enviar el aviso.
+ */
+export const pushSubscriptions = pgTable("push_subscriptions", {
+  endpoint: text("endpoint").primaryKey(),
+  p256dh: text("p256dh").notNull(),
+  auth: text("auth").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/**
+ * Las cifras del Observatorio en formato largo: una fila por tema, indicador, serie y periodo (p. ej. inventario · bovinos · Antioquia · 2025).
+ * Es una copia que se reescribe cada vez que se refrescan las lecturas del sistema de estadísticas de FEDEGÁN (`observatorio_snapshot` e
+ * `indicadores_snapshot` siguen siendo lo que dibuja las gráficas). Existe para poder consultarlas con SQL: el asistente la lee con una consulta
+ * generada por IA y validada (solo SELECT, solo esta tabla y `articles`).
+ */
+export const observatorioDatos = pgTable(
+  "observatorio_datos",
+  {
+    id: bigserial("id", { mode: "number" }).primaryKey(),
+    tema: text("tema").notNull(), // precios | inventario | hato | produccion | consumo | internacional | costos
+    indicador: text("indicador").notNull(), // clave del indicador (p. ej. «bovinos», «sacrificio»)
+    titulo: text("titulo").notNull(),
+    unidad: text("unidad").notNull().default(""),
+    fuente: text("fuente").notNull().default(""),
+    serie: text("serie").notNull(), // departamento, región, país o categoría
+    periodo: text("periodo").notNull(), // tal como lo da el origen: «2025», «sep/2026»
+    fecha: date("fecha"), // primer día del periodo, si se pudo interpretar
+    valor: doublePrecision("valor").notNull(),
+    actualizadoEn: timestamp("actualizado_en", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    unique("observatorio_datos_unico").on(t.tema, t.indicador, t.serie, t.periodo),
+    index("observatorio_datos_consulta_idx").on(t.tema, t.indicador, t.fecha),
+  ],
+);
+
+/* ---------------------------------------------------------------- BIBLIOTECA DE IMÁGENES
+   Carpetas y archivos que la diseñadora deja listos para las notas. Los archivos viven en el bucket «media» (como todo lo demás);
+   aquí solo se guarda dónde están y quién los puede ver. Un archivo de la biblioteca NUNCA se borra por falta de uso (ver media-limpieza). */
+
+/** Una carpeta de la biblioteca; `parentId` null = está en la raíz. */
+export const mediaFolders = pgTable(
+  "media_folders",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    parentId: uuid("parent_id").references((): AnyPgColumn => mediaFolders.id, { onDelete: "restrict" }),
+    name: text("name").notNull(),
+    createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("media_folders_parent_idx").on(t.parentId)],
+);
+
+/** Un archivo de la biblioteca: su carpeta, su nombre y la dirección pública en el bucket. */
+export const mediaAssets = pgTable(
+  "media_assets",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    folderId: uuid("folder_id").references(() => mediaFolders.id, { onDelete: "restrict" }),
+    name: text("name").notNull(),
+    url: text("url").notNull().unique(),
+    kind: text("kind").notNull().default("imagen"),
+    bytes: integer("bytes"),
+    uploadedBy: uuid("uploaded_by").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("media_assets_folder_idx").on(t.folderId, t.createdAt), index("media_assets_uploaded_by_idx").on(t.uploadedBy)],
+);
+
+/** Qué personas ven una carpeta (y todo lo que hay dentro). Administradores y quien gestiona la biblioteca ven todo sin estar aquí. */
+export const mediaFolderAccess = pgTable(
+  "media_folder_access",
+  {
+    folderId: uuid("folder_id").notNull().references(() => mediaFolders.id, { onDelete: "cascade" }),
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.folderId, t.userId] }), index("media_folder_access_user_idx").on(t.userId)],
+);
+
+/**
+ * Páginas armadas en el panel con el constructor (filas, columnas y elementos arrastrados). Se publican en `/{slug}`.
+ * `seccionId` las cuelga de una sección del árbol (para encontrarlas allí); es opcional.
+ */
+export const paginas = pgTable(
+  "paginas",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    slug: text("slug").notNull().unique(),
+    titulo: text("titulo").notNull(),
+    descripcion: text("descripcion"),
+    seccionId: uuid("seccion_id").references(() => categories.id, { onDelete: "set null" }),
+    contenido: jsonb("contenido").$type<ContenidoPagina>().notNull().default(sql`'{"filas":[]}'::jsonb`),
+    publicada: boolean("publicada").notNull().default(false),
+    updatedBy: uuid("updated_by").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("paginas_seccion_idx").on(t.seccionId)],
+);

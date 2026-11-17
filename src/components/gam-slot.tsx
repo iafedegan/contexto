@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
+import { cn } from "@/lib/utils";
 import { GAM_RED, TAMANOS_GAM, nombreUnidadGam, prefijoGam, type UnidadGam } from "@/lib/gam";
 
 // Tipos mínimos de Google Publisher Tag (se carga por script).
@@ -71,6 +72,7 @@ export function GamSlot({ unidad, className, grupo }: { unidad: UnidadGam; class
   const prefijo = prefijoGam(pathname);
   const id = `gam-${useId().replace(/[^a-zA-Z0-9]/g, "")}`;
   const caja = useRef<HTMLDivElement>(null);
+  const horizontal = unidad === "b5" || unidad === "b6";
   // Alto del anuncio que Google pintó. Mientras no llegue (o si no hay campaña) el espacio no ocupa nada ni muestra el rótulo:
   // nunca queda una franja vacía con «Publicidad».
   const [altoReal, setAltoReal] = useState<number | null>(null);
@@ -132,8 +134,9 @@ export function GamSlot({ unidad, className, grupo }: { unidad: UnidadGam; class
   if (!prefijo) return null;
   return (
     // Sin anuncio pintado, el contenedor no suma márgenes ni alto (las clases de margen solo se aplican con anuncio).
-    <div className={altoReal ? className : "w-full"} hidden={sobra(grupo, id)}>
-      {altoReal && <span className="mb-1 block text-[0.6875rem] font-medium uppercase tracking-wide text-[var(--fg-muted)]">Publicidad</span>}
+    <div className={altoReal ? cn(className, horizontal && "py-4 sm:py-6") : "w-full"} hidden={sobra(grupo, id)}>
+      {/* Rótulo arriba a la izquierda y el anuncio centrado debajo; los banners horizontales llevan el mismo aire arriba y abajo. */}
+      {altoReal && <span className={cn("block text-[0.6875rem] font-medium uppercase tracking-wide text-[var(--fg-muted)]", horizontal ? "mb-3" : "mb-1")}>Publicidad</span>}
       {/* 1 px mientras espera: el observador necesita un elemento en la página para saber cuándo pedir el anuncio. */}
       <div ref={caja} id={id} className="mx-auto flex items-start justify-center" style={{ minHeight: altoReal ?? 1 }} />
     </div>
