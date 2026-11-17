@@ -14,15 +14,20 @@ type Parts = {
   actions: React.ReactNode;
   cover: React.ReactNode;
   kicker?: string;
+  /** Pauta horizontal de la nota. En la plantilla Esmeralda va en el hueco a la derecha de la firma y los botones; en las demás, arriba a la derecha. */
+  pauta?: React.ReactNode;
 };
 
 // Cabecera de una nota: sección, titular, resumen, autor, fecha y portada, según las piezas de la plantilla.
 export function ArticleHero(p: Parts) {
+  // Fuera de Esmeralda no hay un hueco junto a la firma: la pauta va arriba del todo, a la derecha.
+  const pautaArriba = p.pauta ? <div className="mb-3 flex justify-end">{p.pauta}</div> : null;
   switch (p.theme) {
     case "clasico":
       // Diario: todo centrado entre filetes, titular grande con remate serif.
       return (
         <header className="text-center">
+          {pautaArriba}
           <div className="flex justify-center">{p.breadcrumb}</div>
           {p.live && <div className="mt-4 flex justify-center">{p.live}</div>}
           <div className="mx-auto mt-6 max-w-5xl border-y-4 border-double border-[var(--fg)] py-8">
@@ -43,6 +48,7 @@ export function ArticleHero(p: Parts) {
       // arriba (recortado por el overflow y pisando la miga).
       return (
         <header>
+          {pautaArriba}
           {p.breadcrumb}
           <div className="mt-6 grid overflow-hidden rounded-[var(--radius-lg)] bg-[#0b0d10] [&>*]:col-start-1 [&>*]:row-start-1">
             <div className="[&_figure]:!mt-0 [&_figure]:h-full [&_figure]:rounded-none [&_figure]:border-0 [&_figure]:aspect-[4/3] sm:[&_figure]:aspect-[16/9] md:[&_figure]:aspect-[21/9]">{p.cover}</div>
@@ -66,6 +72,7 @@ export function ArticleHero(p: Parts) {
       // Compacto: ficha técnica. Titular a la izquierda, datos en columna.
       return (
         <header>
+          {pautaArriba}
           {p.breadcrumb}
           <div className="mt-4 grid grid-cols-1 gap-6 border-b-2 border-[var(--fg)] pb-6 lg:grid-cols-[1fr_20rem]">
             <div>
@@ -88,6 +95,7 @@ export function ArticleHero(p: Parts) {
       // Vanguardia: tarjeta redondeada con orbes y titular en degradado.
       return (
         <header>
+          {pautaArriba}
           <div className="relative overflow-hidden rounded-[2rem] border border-[var(--border)] bg-[var(--bg-2)] p-6 md:p-12">
             <div aria-hidden className="pointer-events-none absolute -right-20 -top-24 size-96 rounded-full bg-[var(--accent-2)] opacity-25 blur-3xl" />
             <div aria-hidden className="pointer-events-none absolute -bottom-28 left-10 size-80 rounded-full bg-[var(--accent)] opacity-20 blur-3xl" />
@@ -118,8 +126,14 @@ export function ArticleHero(p: Parts) {
           </h1>
           <p data-el="n-excerpt" className="mt-5 text-xl leading-relaxed text-[var(--fg-muted)] md:text-[1.35rem]">{p.excerpt}</p>
           <hr className="lx-rule my-8" />
-          {p.byline}
-          <div className="mt-8">{p.actions}</div>
+          {/* Firma y botones a la izquierda; la pauta, pequeña, en el hueco de la derecha (si no cabe al lado, baja y queda a la derecha). */}
+          <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-4">
+            <div>
+              {p.byline}
+              <div className="mt-8">{p.actions}</div>
+            </div>
+            {p.pauta && <div className="ml-auto max-w-full">{p.pauta}</div>}
+          </div>
           {p.cover}
         </header>
       );

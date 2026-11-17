@@ -131,11 +131,10 @@ export function ArticleDocument({
         />
         )}
 
-        {/* Pauta horizontal de la nota: arriba del todo y a la derecha (sin hueco si no hay campaña). */}
-        {!preview && <AdsBanner zone="article_top" className="ml-auto mb-3" />}
-
         <ArticleHero
           theme={theme}
+          // Pauta horizontal de la nota: a la derecha de la firma y los botones (sin hueco si no hay campaña).
+          pauta={!preview ? <AdsBanner zone="article_top" className="ml-auto" /> : undefined}
           kicker={a.categorySlug ? categoryLabel(locale, a.categorySlug, a.categoryName ?? "") : undefined}
           title={a.title}
           excerpt={a.excerpt}
