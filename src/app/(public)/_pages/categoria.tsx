@@ -398,7 +398,12 @@ async function CategoryPage({ params, searchParams, locale, portadaBorrador }: P
         </p>
       ) : (
         <>
-          <AdsBanner zone="section_top" className="ml-auto mb-4" />
+          {/* Inicio de sección: franja de borde a borde con la pauta centrada. Sin campaña no deja ni borde ni fondo ni hueco (el espacio sigue en la página para que Ad Manager lo pueda pedir). */}
+          <div className="lx-fullbleed mb-6 border-y border-[var(--border)] bg-[var(--bg-2)] py-2 [&:not(:has(iframe,img))]:mb-0 [&:not(:has(iframe,img))]:border-0 [&:not(:has(iframe,img))]:bg-transparent [&:not(:has(iframe,img))]:py-0 [&_[id^=gam-]]:!justify-center [&_span]:text-center">
+            <div className="shell">
+              <AdsBanner zone="section_top" className="mx-auto" />
+            </div>
+          </div>
           {/* TV, Radio y Especiales (y sus subsecciones) tienen formato propio; el resto, la cuadrícula de la plantilla. */}
           {(() => {
             const formato = formatoDeSeccion(slug, category.parentSlug);
