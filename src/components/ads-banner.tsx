@@ -16,7 +16,7 @@ export async function AdsBanner({ zone, className }: { zone: AdPosition; classNa
   if (ads.length === 0) {
     // Sin anuncio propio cargado en el panel, la posición usa el espacio de Google Ad Manager del sitio anterior (si está activado).
     const unidad = GAM_POR_POSICION[zone];
-    return process.env.NEXT_PUBLIC_GAM_ENABLED === "1" && unidad ? <GamSlot unidad={unidad} className={cn("mx-auto w-full", className)} /> : null;
+    return process.env.NEXT_PUBLIC_GAM_ENABLED === "1" && unidad ? <GamSlot unidad={unidad} grupo={zone.startsWith("sidebar_") ? "lateral" : undefined} className={cn("mx-auto w-full", className)} /> : null;
   }
 
   return (

@@ -37,11 +37,36 @@ function cargarGpt() {
   document.head.appendChild(s);
 }
 
+// Espacios de un mismo grupo (la barra lateral): se coordinan para que, si llega un anuncio grande, no se apilen más de dos.
+const GRANDE = 500;
+type Registro = { alto: number; el: HTMLElement };
+const grupos = new Map<string, Map<string, Registro>>();
+const oyentes = new Set<() => void>();
+function registrar(grupo: string, id: string, alto: number, el: HTMLElement) {
+  if (!grupos.has(grupo)) grupos.set(grupo, new Map());
+  grupos.get(grupo)!.set(id, { alto, el });
+  oyentes.forEach((f) => f());
+}
+function quitar(grupo: string, id: string) {
+  grupos.get(grupo)?.delete(id);
+  oyentes.forEach((f) => f());
+}
+/** Con un anuncio grande en el grupo se queda ese y UN pequeño (el primero en la página); los demás pequeños se ocultan. */
+function sobra(grupo: string | undefined, id: string): boolean {
+  const m = grupo ? grupos.get(grupo) : undefined;
+  const yo = m?.get(id);
+  if (!m || !yo || yo.alto <= 0 || yo.alto >= GRANDE) return false;
+  const conAnuncio = [...m.entries()].filter(([, v]) => v.alto > 0);
+  if (!conAnuncio.some(([, v]) => v.alto >= GRANDE)) return false;
+  const chicos = conAnuncio.filter(([, v]) => v.alto < GRANDE).sort((a, b) => (a[1].el.compareDocumentPosition(b[1].el) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1));
+  return chicos[0][0] !== id;
+}
+
 /**
  * Un espacio de Google Ad Manager. Reserva su alto desde el inicio (sin saltos) y solo carga Google cuando el espacio está por entrar en
  * pantalla, así los anuncios nunca compiten con el contenido ni con el LCP. La sección (y por tanto la unidad) sale de la dirección.
  */
-export function GamSlot({ unidad, className }: { unidad: UnidadGam; className?: string }) {
+export function GamSlot({ unidad, className, grupo }: { unidad: UnidadGam; className?: string; grupo?: string }) {
   const pathname = usePathname() ?? "/";
   const prefijo = prefijoGam(pathname);
   const id = `gam-${useId().replace(/[^a-zA-Z0-9]/g, "")}`;
@@ -49,6 +74,15 @@ export function GamSlot({ unidad, className }: { unidad: UnidadGam; className?: 
   // Alto del anuncio que Google pintó. Mientras no llegue (o si no hay campaña) el espacio no ocupa nada ni muestra el rótulo:
   // nunca queda una franja vacía con «Publicidad».
   const [altoReal, setAltoReal] = useState<number | null>(null);
+  // Se vuelve a dibujar cuando otro espacio del grupo cambia (llegó un anuncio grande).
+  const [, avisar] = useState(0);
+  useEffect(() => {
+    const f = () => avisar((n) => n + 1);
+    oyentes.add(f);
+    return () => {
+      oyentes.delete(f);
+    };
+  }, []);
 
   useEffect(() => {
     const el = caja.current;
@@ -61,7 +95,9 @@ export function GamSlot({ unidad, className }: { unidad: UnidadGam; className?: 
         slot = g.defineSlot(`/${GAM_RED}/${nombreUnidadGam(prefijo, unidad)}`, TAMANOS_GAM[unidad], id)?.addService(g.pubads()) ?? null;
         g.pubads().addEventListener?.("slotRenderEnded", (e) => {
           if (e.slot !== slot) return;
-          setAltoReal(!e.isEmpty && Array.isArray(e.size) && typeof e.size[1] === "number" && e.size[1] > 1 ? e.size[1] : null);
+          const alto = !e.isEmpty && Array.isArray(e.size) && typeof e.size[1] === "number" && e.size[1] > 1 ? e.size[1] : null;
+          setAltoReal(alto);
+          if (grupo) registrar(grupo, id, alto ?? 0, el);
         });
         if (!window.__gptServicios) {
           g.pubads().enableSingleRequest?.();
@@ -85,17 +121,18 @@ export function GamSlot({ unidad, className }: { unidad: UnidadGam; className?: 
     io.observe(el);
     return () => {
       io.disconnect();
+      if (grupo) quitar(grupo, id);
       window.googletag?.cmd.push(() => {
         const g = window.googletag as Gpt;
         if (slot) g.destroySlots([slot]);
       });
     };
-  }, [id, prefijo, unidad]);
+  }, [id, prefijo, unidad, grupo]);
 
   if (!prefijo) return null;
   return (
     // Sin anuncio pintado, el contenedor no suma márgenes ni alto (las clases de margen solo se aplican con anuncio).
-    <div className={altoReal ? className : "w-full"}>
+    <div className={altoReal ? className : "w-full"} hidden={sobra(grupo, id)}>
       {altoReal && <span className="mb-1 block text-[0.6875rem] font-medium uppercase tracking-wide text-[var(--fg-muted)]">Publicidad</span>}
       {/* 1 px mientras espera: el observador necesita un elemento en la página para saber cuándo pedir el anuncio. */}
       <div ref={caja} id={id} className="mx-auto flex items-start justify-center" style={{ minHeight: altoReal ?? 1 }} />
