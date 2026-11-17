@@ -60,9 +60,6 @@ export async function SiteSidebar({ locale, columnaEnMovil = true, sinColumna = 
         </section>
       )}
 
-      {/* 300 × 250, above the fold. */}
-      <AdsBanner zone="sidebar_top" />
-
       <div className="flex flex-col gap-3">
         <NewsletterForm locale={locale} />
         {/* Avisos de última hora (FM-01). El permiso se pide al pulsar, nunca
@@ -92,6 +89,9 @@ export async function SiteSidebar({ locale, columnaEnMovil = true, sinColumna = 
           ))}
         </ul>
       </section>
+
+      {/* 300 × 250, above the fold. */}
+      <AdsBanner zone="sidebar_top" />
 
       <AdsBanner zone="sidebar_bottom" />
 
