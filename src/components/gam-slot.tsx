@@ -161,7 +161,7 @@ export function GamSlot({ unidad, className, grupo, completo = false }: { unidad
         <div
           ref={caja}
           id={id}
-          className={cn("flex items-start [&_iframe]:rounded-lg", horizontal && !completo ? "justify-end" : "mx-auto justify-center")}
+          className={cn("flex items-start [&_iframe]:rounded-lg", completo ? undefined : horizontal ? "justify-end" : "mx-auto justify-center")}
           style={completo && anchoReal ? { minHeight: altoReal ?? 1, width: anchoReal, transform: `scale(${escala})`, transformOrigin: "top left" } : { minHeight: altoReal ?? 1 }}
         />
       </div>
