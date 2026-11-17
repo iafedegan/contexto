@@ -9,6 +9,12 @@ test("el prefijo de las unidades sale de la dirección", () => {
   assert.equal(prefijoGam("/ganaderia/una-nota"), "ganaderia");
   assert.equal(prefijoGam("/categoria/radio"), null);
   assert.equal(prefijoGam("/observatorio"), null);
+  // Subsecciones y slugs antiguos usan las unidades de su sección, como en el sitio anterior.
+  assert.equal(prefijoGam("/regiones/una-nota"), "colombia");
+  assert.equal(prefijoGam("/columna/una-columna"), "opinion");
+  assert.equal(prefijoGam("/categoria/sistemas-pecuarios"), "sistemas_pecuarios");
+  assert.equal(prefijoGam("/otrossistemP/una-nota"), "sistemas_pecuarios");
+  assert.equal(prefijoGam("/constructor"), null);
 });
 
 test("la caja de 336×280 es b4 en la portada y b7 en las secciones", () => {

@@ -6,16 +6,33 @@
  */
 export const GAM_RED = process.env.NEXT_PUBLIC_GAM_NETWORK ?? "22847726224";
 
-/** Secciones que tienen sus propias unidades en Ad Manager (más `home` para la portada). */
-const SECCIONES_GAM = new Set(["agenda", "colombia", "economia", "especiales", "ganaderia", "mundo", "opinion", "tendencias"]);
+/**
+ * Prefijo de Ad Manager de cada sección y subsección (las unidades son por sección principal: una nota de «Regiones» usa las de
+ * «Colombia», como en el sitio anterior). Incluye los slugs del árbol actual y los antiguos que aún salen en las direcciones de las notas.
+ */
+const SECCION_GAM: Record<string, string> = {
+  agenda: "agenda", congresos: "agenda", ferias: "agenda", tauromaquia: "agenda", "otros-eventos": "agenda", otroseventos: "agenda",
+  colombia: "colombia", gremialidad: "colombia", politica: "colombia", regiones: "colombia", seguridad: "colombia",
+  economia: "economia", agroindustria: "economia", internacional: "economia", nacional: "economia", "precio-del-ganado": "economia", agricultura: "economia",
+  especiales: "especiales", cronica: "especiales", galeria: "especiales", "gobierno-petro": "especiales", informes: "especiales", reportaje: "especiales", entrevistas: "especiales",
+  ganaderia: "ganaderia", nutricion: "ganaderia", produccion: "ganaderia", razas: "ganaderia", "salud-animal": "ganaderia", saludanimal: "ganaderia",
+  "sistemas-silvopastoriles": "ganaderia", sostenible: "ganaderia", "ganaderia-sostenible": "ganaderia",
+  mundo: "mundo", argentina: "mundo", "centro-america": "mundo", eeuu: "mundo", espana: "mundo", europa: "mundo", mexico: "mundo",
+  "norte-america": "mundo", "otros-mundo": "mundo", otrosmundo: "mundo", peru: "mundo", "sur-america": "mundo",
+  opinion: "opinion", blogs: "opinion", columnas: "opinion", columnistas: "opinion", editorial: "opinion", columna: "opinion",
+  "sistemas-pecuarios": "sistemas_pecuarios", avicola: "sistemas_pecuarios", equino: "sistemas_pecuarios", porcicola: "sistemas_pecuarios",
+  "ovino-caprino": "sistemas_pecuarios", ovinocaprino: "sistemas_pecuarios", "otros-sistemas-pecuarios": "sistemas_pecuarios", otrossistemP: "sistemas_pecuarios",
+  tendencias: "tendencias", deportes: "tendencias", gastronomia: "tendencias", innovacion: "tendencias", mascotas: "tendencias",
+  medioambiente: "tendencias", "redes-sociales": "tendencias", redessociales: "tendencias",
+};
 
-/** Prefijo de las unidades para una dirección: `home`, el slug de la sección o `null` si esa página no tiene unidades. */
+/** Prefijo de las unidades para una dirección: `home`, el de la sección o `null` si esa página no tiene unidades. */
 export function prefijoGam(pathname: string): string | null {
   const partes = pathname.split("/").filter(Boolean);
   if (partes[0] === "en") partes.shift();
   if (partes.length === 0) return "home";
   const seccion = partes[0] === "categoria" ? partes[1] : partes[0];
-  return seccion && SECCIONES_GAM.has(seccion) ? seccion : null;
+  return (seccion && Object.hasOwn(SECCION_GAM, seccion) && SECCION_GAM[seccion]) || null;
 }
 
 export type UnidadGam = "b1" | "b2" | "b3" | "b5" | "b6" | "caja";
