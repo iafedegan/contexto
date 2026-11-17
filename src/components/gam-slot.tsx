@@ -52,15 +52,17 @@ function quitar(grupo: string, id: string) {
   grupos.get(grupo)?.delete(id);
   oyentes.forEach((f) => f());
 }
-/** Con un anuncio grande en el grupo se queda ese y UN pequeño (el primero en la página); los demás pequeños se ocultan. */
+/** Con un anuncio grande en el grupo se queda UN grande y UN pequeño (los primeros en la página); los demás se ocultan. */
 function sobra(grupo: string | undefined, id: string): boolean {
   const m = grupo ? grupos.get(grupo) : undefined;
   const yo = m?.get(id);
-  if (!m || !yo || yo.alto <= 0 || yo.alto >= GRANDE) return false;
+  if (!m || !yo || yo.alto <= 0) return false;
   const conAnuncio = [...m.entries()].filter(([, v]) => v.alto > 0);
   if (!conAnuncio.some(([, v]) => v.alto >= GRANDE)) return false;
-  const chicos = conAnuncio.filter(([, v]) => v.alto < GRANDE).sort((a, b) => (a[1].el.compareDocumentPosition(b[1].el) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1));
-  return chicos[0][0] !== id;
+  const delMismoTamano = conAnuncio
+    .filter(([, v]) => (v.alto >= GRANDE) === (yo.alto >= GRANDE))
+    .sort((a, b) => (a[1].el.compareDocumentPosition(b[1].el) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1));
+  return delMismoTamano[0][0] !== id;
 }
 
 /**
