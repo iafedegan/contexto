@@ -12,7 +12,7 @@ type Gpt = {
   pubads: () => {
     enableSingleRequest?: () => void;
     collapseEmptyDivs?: () => void;
-    addEventListener?: (tipo: "slotRenderEnded", f: (e: { slot: Slot; isEmpty: boolean }) => void) => void;
+    addEventListener?: (tipo: "slotRenderEnded", f: (e: { slot: Slot; isEmpty: boolean; size: number[] | string | null }) => void) => void;
   };
   enableServices: () => void;
   display: (id: string) => void;
@@ -48,6 +48,8 @@ export function GamSlot({ unidad, className }: { unidad: UnidadGam; className?: 
   const caja = useRef<HTMLDivElement>(null);
   // Sin campaña para este espacio: se oculta entero (también el rótulo «Publicidad»).
   const [vacio, setVacio] = useState(false);
+  // Alto del anuncio que llegó: la reserva (el tamaño más común) se cambia por el real, para no dejar un hueco cuando llega uno más bajo.
+  const [altoReal, setAltoReal] = useState<number | null>(null);
 
   useEffect(() => {
     const el = caja.current;
@@ -59,7 +61,9 @@ export function GamSlot({ unidad, className }: { unidad: UnidadGam; className?: 
         const g = window.googletag as Gpt;
         slot = g.defineSlot(`/${GAM_RED}/${nombreUnidadGam(prefijo, unidad)}`, TAMANOS_GAM[unidad], id)?.addService(g.pubads()) ?? null;
         g.pubads().addEventListener?.("slotRenderEnded", (e) => {
-          if (e.slot === slot) setVacio(e.isEmpty);
+          if (e.slot !== slot) return;
+          setVacio(e.isEmpty);
+          if (Array.isArray(e.size) && typeof e.size[1] === "number") setAltoReal(e.size[1]);
         });
         if (!window.__gptServicios) {
           g.pubads().enableSingleRequest?.();
@@ -94,7 +98,7 @@ export function GamSlot({ unidad, className }: { unidad: UnidadGam; className?: 
   return (
     <div className={className} hidden={vacio}>
       <span className="mb-1 block text-[0.6875rem] font-medium uppercase tracking-wide text-[var(--fg-muted)]">Publicidad</span>
-      <div ref={caja} id={id} className="mx-auto flex items-center justify-center" style={{ minHeight: ALTO_GAM[unidad] }} />
+      <div ref={caja} id={id} className="mx-auto flex items-start justify-center" style={{ minHeight: altoReal ?? ALTO_GAM[unidad] }} />
     </div>
   );
 }
