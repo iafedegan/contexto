@@ -292,6 +292,8 @@ export function ToroFlotante() {
       style={{ ...(pos ? { left: pos.x, top: pos.y, right: "auto", bottom: "auto" } : {}), "--sale-izq": `${recorrido.izq}px`, "--sale-der": `${recorrido.der}px` } as React.CSSProperties}
       onAnimationEnd={(e) => e.target === e.currentTarget && salida && terminoSalida()}
       data-salida={salida ?? undefined}
+      role="complementary"
+      aria-label={en ? "Assistant" : "Asistente"}
       className="toro-wrap pointer-events-none max-md:hidden fixed bottom-[max(1rem,env(safe-area-inset-bottom))] right-[max(0.75rem,env(safe-area-inset-right))] z-30 print:hidden"
     >
       <div className={`group relative ${salida ? "pointer-events-none" : "pointer-events-auto"}`}>

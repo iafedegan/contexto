@@ -780,9 +780,9 @@ export function videoIncrustado(url: string): string | null {
     const u = new URL(url);
     if (/(^|\.)youtube\.com$/.test(u.hostname)) {
       const v = u.pathname.startsWith("/shorts/") || u.pathname.startsWith("/live/") ? u.pathname.split("/")[2] : (u.searchParams.get("v") ?? u.pathname.split("/").pop());
-      return v ? `https://www.youtube-nocookie.com/embed/${encodeURIComponent(v)}` : null;
+      return v ? `https://www.youtube-nocookie.com/embed/${encodeURIComponent(v)}?cc_load_policy=1&cc_lang_pref=es` : null;
     }
-    if (u.hostname === "youtu.be") return `https://www.youtube-nocookie.com/embed/${encodeURIComponent(u.pathname.slice(1))}`;
+    if (u.hostname === "youtu.be") return `https://www.youtube-nocookie.com/embed/${encodeURIComponent(u.pathname.slice(1))}?cc_load_policy=1&cc_lang_pref=es`;
     if (/(^|\.)vimeo\.com$/.test(u.hostname)) return `https://player.vimeo.com/video/${encodeURIComponent(u.pathname.split("/").filter(Boolean).pop() ?? "")}`;
   } catch {}
   return null;

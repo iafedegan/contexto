@@ -76,7 +76,7 @@ export function EnVivoPlayer({ videoId, titulo, url, children }: { videoId: stri
       <div className="aspect-video w-full overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border)] bg-black">
         <iframe
           ref={iframe}
-          src={`https://www.youtube-nocookie.com/embed/${videoId}?rel=0&modestbranding=1&iv_load_policy=3&playsinline=1&autoplay=1&enablejsapi=1`}
+          src={`https://www.youtube-nocookie.com/embed/${videoId}?rel=0&modestbranding=1&iv_load_policy=3&playsinline=1&autoplay=1&enablejsapi=1&cc_load_policy=1&cc_lang_pref=es`}
           title={titulo}
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
           referrerPolicy="strict-origin-when-cross-origin"

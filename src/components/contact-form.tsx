@@ -88,11 +88,13 @@ export function ContactForm({ kind, locale }: { kind: "contacto" | "comercial"; 
         </label>
       </div>
 
-      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <Campo etiqueta={c.nombre}>
+      {/* WCAG 3.3.2: se dice cuáles campos son obligatorios antes de llenarlos. */}
+      <p className="mt-6 text-xs text-[var(--fg-muted)]">{locale === "en" ? "Fields marked * are required." : "Los campos con * son obligatorios."}</p>
+      <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <Campo etiqueta={c.nombre} obligatorio>
           <input name="name" required maxLength={120} autoComplete="name" className={INPUT} />
         </Campo>
-        <Campo etiqueta={c.correo}>
+        <Campo etiqueta={c.correo} obligatorio>
           <input name="email" type="email" required maxLength={160} autoComplete="email" className={INPUT} />
         </Campo>
         <Campo etiqueta={c.organizacion}>
@@ -102,7 +104,7 @@ export function ContactForm({ kind, locale }: { kind: "contacto" | "comercial"; 
           <input name="subject" maxLength={160} className={INPUT} />
         </Campo>
         <div className="sm:col-span-2">
-          <Campo etiqueta={c.mensaje}>
+          <Campo etiqueta={c.mensaje} obligatorio>
             <textarea name="message" required rows={5} maxLength={4000} className={`${INPUT} resize-y`} />
           </Campo>
         </div>
@@ -121,9 +123,10 @@ export function ContactForm({ kind, locale }: { kind: "contacto" | "comercial"; 
 
         {state && (
           <p
-            role="status"
-            className={`flex items-center gap-2 text-sm ${
-              state.ok ? "text-[var(--accent-2)]" : "text-[var(--danger)]"
+            // Un error se anuncia de inmediato (alert); una confirmación, sin interrumpir (status).
+            role={state.ok ? "status" : "alert"}
+            className={`flex items-center gap-2 text-sm font-semibold ${
+              state.ok ? "text-[var(--fg)]" : "text-[var(--danger)]"
             }`}
           >
             {state.ok ? <Check size={15} /> : <TriangleAlert size={15} />}
@@ -137,13 +140,16 @@ export function ContactForm({ kind, locale }: { kind: "contacto" | "comercial"; 
 
 // Clases de los campos de texto.
 const INPUT =
-  "w-full rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] px-3.5 py-2.5 text-[0.95rem] outline-none transition focus:border-[var(--accent)]";
+  "w-full rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] px-3.5 py-2.5 text-[0.95rem] transition focus:border-[var(--accent)]";
 
 // Campo con su etiqueta.
-function Campo({ etiqueta, children }: { etiqueta: string; children: React.ReactNode }) {
+function Campo({ etiqueta, obligatorio, children }: { etiqueta: string; obligatorio?: boolean; children: React.ReactNode }) {
   return (
     <label className="flex flex-col gap-1.5">
-      <span className="lx-kicker text-[var(--fg-muted)]">{etiqueta}</span>
+      <span className="lx-kicker text-[var(--fg-muted)]">
+        {etiqueta}
+        {obligatorio && <span aria-hidden> *</span>}
+      </span>
       {children}
     </label>
   );

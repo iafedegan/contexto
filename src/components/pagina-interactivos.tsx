@@ -7,6 +7,7 @@
 import { Children, useCallback, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { ImagenSitio } from "@/components/ui/imagen-sitio";
+import { BotonPausa } from "@/components/ui/boton-pausa";
 
 /** Carrusel con desplazamiento nativo (se arrastra con el dedo), flechas, puntos y paso automático que se detiene al pasar el ratón. */
 export function Carrusel({ children, porVista = 1, auto = false, segundos = 6, puntos = true, etiqueta = "Carrusel" }: {
@@ -16,6 +17,8 @@ export function Carrusel({ children, porVista = 1, auto = false, segundos = 6, p
   const slides = Children.toArray(children);
   const [actual, setActual] = useState(0);
   const [pausa, setPausa] = useState(false);
+  // Detenido a propósito con el botón (WCAG 2.2.2).
+  const [detenido, setDetenido] = useState(false);
 
   const ir = useCallback((i: number) => {
     const el = ref.current;
@@ -40,7 +43,7 @@ export function Carrusel({ children, porVista = 1, auto = false, segundos = 6, p
   }, []);
 
   useEffect(() => {
-    if (!auto || pausa || slides.length < 2) return;
+    if (!auto || pausa || detenido || slides.length < 2) return;
     if (typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const t = window.setInterval(() => {
       const el = ref.current;
@@ -50,7 +53,7 @@ export function Carrusel({ children, porVista = 1, auto = false, segundos = 6, p
       else ir(actual + 1);
     }, Math.max(2, segundos) * 1000);
     return () => window.clearInterval(t);
-  }, [auto, pausa, segundos, actual, ir, slides.length]);
+  }, [auto, pausa, detenido, segundos, actual, ir, slides.length]);
 
   const ancho = { 1: "basis-full", 2: "basis-full @md:basis-[calc((100%-1rem)/2)]", 3: "basis-full @md:basis-[calc((100%-1rem)/2)] @3xl:basis-[calc((100%-2rem)/3)]", 4: "basis-[85%] @md:basis-[calc((100%-1rem)/2)] @3xl:basis-[calc((100%-3rem)/4)]" }[porVista];
   const paginas = porVista === 1 ? slides.length : Math.max(1, slides.length - porVista + 1);
@@ -65,6 +68,7 @@ export function Carrusel({ children, porVista = 1, auto = false, segundos = 6, p
       </div>
       {slides.length > porVista && (
         <>
+          {auto && <BotonPausa detenido={detenido} onCambio={setDetenido} className="absolute right-2 top-2 z-10" />}
           <button type="button" onClick={() => ir(actual - 1)} aria-label="Anterior" className="absolute left-2 top-1/2 grid size-10 -translate-y-1/2 place-items-center rounded-full bg-black/45 text-white backdrop-blur transition hover:bg-black/70">
             <ChevronLeft size={20} />
           </button>
@@ -72,9 +76,11 @@ export function Carrusel({ children, porVista = 1, auto = false, segundos = 6, p
             <ChevronRight size={20} />
           </button>
           {puntos && (
-            <div className="mt-3 flex justify-center gap-1.5">
+            <div className="mt-2 flex justify-center">
               {Array.from({ length: paginas }, (_, i) => (
-                <button key={i} type="button" onClick={() => ir(i)} aria-label={`Ir a ${i + 1}`} aria-current={i === actual} className={`relative h-2 rounded-full transition-all before:absolute before:-inset-x-1 before:-inset-y-3 before:content-[''] ${i === actual ? "w-6 bg-[var(--accent)]" : "w-2 bg-[var(--border-strong)]"}`} />
+                <button key={i} type="button" onClick={() => ir(i)} aria-label={`Ir a ${i + 1}`} aria-current={i === actual} className="grid h-6 min-w-6 place-items-center">
+                  <span aria-hidden className={`h-2 rounded-full transition-all ${i === actual ? "w-6 bg-[var(--accent)]" : "w-2 bg-[var(--border-strong)]"}`} />
+                </button>
               ))}
             </div>
           )}

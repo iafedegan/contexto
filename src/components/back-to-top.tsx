@@ -27,7 +27,7 @@ export function BackToTop({ locale }: { locale: Locale }) {
       type="button"
       aria-label={t(locale, "ui.backToTop")}
       onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-      className="fixed bottom-[calc(var(--cg-barra,0px)+1rem)] right-4 z-[60] inline-flex h-12 w-12 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--surface)] text-[var(--fg)] shadow-md transition-colors hover:bg-[var(--accent)] hover:text-[var(--accent-fg)] focus-visible:outline-2 focus-visible:outline-offset-2"
+      className="fixed bottom-[calc(var(--cg-barra,0px)+1rem)] right-4 z-[60] inline-flex h-12 w-12 items-center justify-center rounded-full border border-[#0d2318]/25 bg-white text-[#0d2318] shadow-md transition-colors hover:bg-[#0d2318] hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2"
     >
       <ArrowUp aria-hidden className="h-5 w-5" />
     </button>

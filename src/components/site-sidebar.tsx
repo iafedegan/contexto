@@ -47,7 +47,7 @@ export async function SiteSidebar({ locale, columnaEnMovil = true, sinColumna = 
                   href={hrefNota(locale, a)}
                   className="group flex items-baseline gap-3 py-3"
                 >
-                  <span className="lx-display w-7 shrink-0 text-lg leading-none text-[var(--accent-2)]">
+                  <span className="lx-display w-7 shrink-0 text-lg leading-none text-[color-mix(in_srgb,var(--accent-2)_60%,var(--fg))]">
                     {String(i + 1).padStart(2, "0")}
                   </span>
                   <span className="lx-display flex-1 text-[0.95rem] leading-snug transition-colors group-hover:text-[var(--accent)]">

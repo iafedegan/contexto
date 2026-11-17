@@ -192,7 +192,7 @@ function fuentesHtml(refs: { title: string; outlet: string; url: string; videoId
   const videos = refs.filter((r) => r.videoId && /^[\w-]{6,20}$/.test(r.videoId));
   const incrustados = videos.length
     ? `<h2>Videos relacionados</h2>${videos
-        .map((v) => `<p><iframe src="https://www.youtube-nocookie.com/embed/${v.videoId}" title="${esc(v.title)}" loading="lazy" allowfullscreen></iframe></p>`)
+        .map((v) => `<p><iframe src="https://www.youtube-nocookie.com/embed/${v.videoId}?cc_load_policy=1&amp;cc_lang_pref=es" title="${esc(v.title)}" loading="lazy" allowfullscreen></iframe></p>`)
         .join("")}`
     : "";
   // Las fuentes van en un desplegable que SIEMPRE llega cerrado (sin el atributo `open`; el saneado no lo permite).

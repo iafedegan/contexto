@@ -5,6 +5,7 @@ import Image from "next/image";
 import { EnlaceNota as Link } from "@/components/ui/enlace-nota";
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { BotonPausa } from "@/components/ui/boton-pausa";
 import type { ArticleListItem } from "@/lib/content";
 import { formatDate } from "@/lib/utils";
 import { estiloFijo, factorTamano, homeStyleImageScale, homeStyleTitleCss } from "@/lib/home-style";
@@ -33,18 +34,20 @@ export function HeroCarousel({
 }) {
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
+  // Detenido a propósito con el botón (WCAG 2.2.2): manda sobre el puntero.
+  const [detenido, setDetenido] = useState(false);
   const count = items.length;
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
   // Deslizar con el dedo (en el teléfono no hay flechas al alcance ni cursor).
   const touchStart = useRef<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
-    if (!interactive || count <= 1 || paused) return;
+    if (!interactive || count <= 1 || paused || detenido) return;
     timer.current = setInterval(() => setIndex((i) => (i + 1) % count), AUTOPLAY_MS);
     return () => {
       if (timer.current) clearInterval(timer.current);
     };
-  }, [count, paused, interactive, index]);
+  }, [count, paused, detenido, interactive, index]);
 
   if (count === 0) return null;
   // Va a la diapositiva indicada, dando la vuelta en los extremos.
@@ -54,7 +57,7 @@ export function HeroCarousel({
   const Wrapper: React.ElementType = interactive ? Link : "div";
 
   return (
-    <div onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}>
+    <div onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)} onFocus={() => setPaused(true)} onBlur={() => setPaused(false)}>
       {/* Ruptura a sangre completa (ver `.lx-fullbleed`): la anula el contenedor
           `.lx-bleed-off` cuando la portada se pinta junto a la barra lateral. */}
       <div className="lx-fullbleed">
@@ -145,6 +148,7 @@ export function HeroCarousel({
 
           {count > 1 && (
             <>
+              {interactive && <BotonPausa detenido={detenido} onCambio={setDetenido} className="absolute right-3 top-3 z-10 sm:right-6 sm:top-6" />}
               <button
                 type="button"
                 aria-label="Anterior"

@@ -2,6 +2,7 @@ import { duracionDelCintillo, piezasDelCintillo, sanitizeTicker } from "@/lib/ci
 import { getHomeLayoutConfig } from "@/lib/content";
 import { formatMarketValue, getMarketTicker } from "@/lib/market-data";
 import { t, type Locale } from "@/lib/i18n";
+import { BotonPausaCss } from "@/components/ui/boton-pausa";
 
 /**
  * Cintillo de cotizaciones (economía) en lo más alto de la página: fondo verde oscuro, nombre en negrita, valor y la variación con flecha
@@ -18,8 +19,10 @@ export async function CintilloMercado({ locale }: { locale: Locale }) {
   }).filter((p) => p.tipo === "mercado");
   if (piezas.length === 0) return null;
   return (
-  <div data-region="cintillo" data-el="h-cintillo" className="cg-cintillo-arriba bg-[#003e41] pt-[env(safe-area-inset-top)] text-white [--fg:#ffffff]">
-    <div className="overflow-hidden py-2">
+  <div role="region" aria-label={locale === "en" ? "Market prices" : "Cotizaciones del mercado"} data-pausable data-region="cintillo" data-el="h-cintillo" className="cg-cintillo-arriba bg-[#003e41] pt-[env(safe-area-inset-top)] text-white [--fg:#ffffff]">
+    <div className="relative overflow-hidden py-2">
+      {/* WCAG 2.2.2: lo que se mueve solo se puede detener. */}
+      <BotonPausaCss className="absolute right-1 top-1/2 z-10 !size-6 -translate-y-1/2 bg-[#003e41] ring-1 ring-white/30" />
       {(() => {
         // Una vuelta lo bastante larga para llenar pantallas anchas: si hay pocos datos, se repiten seguidos.
         const largo = piezas.reduce((n, p) => n + (p.etiqueta ? p.etiqueta.length + (p.valor?.length ?? 0) + 8 : p.texto.length), 0) || 1;

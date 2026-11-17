@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { BotonPausa } from "@/components/ui/boton-pausa";
 import type { CarruselConfig } from "@/lib/carrusel";
 
 // Una nota lista para pintar en el carrusel.
@@ -36,6 +37,8 @@ export function CarruselPortada({ config: c, notas }: { config: Required<Carruse
   const animando = useRef(false);
   const [idx, setIdx] = useState(0);
   const [pausa, setPausa] = useState(false);
+  // Detenido a propósito con el botón (WCAG 2.2.2).
+  const [detenido, setDetenido] = useState(false);
   const [oculta, setOculta] = useState(false);
   const [ancho, setAncho] = useState<"escritorio" | "tableta" | "celular">("escritorio");
   const fundido = c.transicion === "fundido";
@@ -91,11 +94,11 @@ export function CarruselPortada({ config: c, notas }: { config: Required<Carruse
   // Paso automático.
   useEffect(() => {
     if (!c.autoplay || reducido || notas.length <= visibles) return;
-    if ((c.pausarAlPasar && pausa) || oculta) return;
+    if ((c.pausarAlPasar && pausa) || oculta || detenido) return;
     if (!c.bucle && idx >= maxIdx) return;
     const t = setTimeout(siguiente, c.intervalo * 1000);
     return () => clearTimeout(t);
-  }, [c.autoplay, c.intervalo, c.pausarAlPasar, c.bucle, pausa, oculta, idx, maxIdx, notas.length, visibles, siguiente, reducido]);
+  }, [c.autoplay, c.intervalo, c.pausarAlPasar, c.bucle, pausa, oculta, detenido, idx, maxIdx, notas.length, visibles, siguiente, reducido]);
   // Se detiene cuando la pestaña no se ve.
   useEffect(() => {
     const f = () => setOculta(document.hidden);
@@ -168,6 +171,7 @@ export function CarruselPortada({ config: c, notas }: { config: Required<Carruse
             </li>
           ))}
         </ul>
+        {hayVarias && c.autoplay && !reducido && <BotonPausa detenido={detenido} onCambio={setDetenido} className="absolute right-2 top-2 z-10" />}
         {hayVarias && c.flechas !== "nunca" && (
           <>
             <button type="button" className="cg-car-flecha cg-car-prev" onClick={anterior} aria-label="Anterior" disabled={!c.bucle && idx <= 0}>

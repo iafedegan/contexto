@@ -1111,6 +1111,10 @@ a {
   animation: lx-scroll var(--lx-marquee-s, 38s) linear infinite;
 }
 
+[data-pausable][data-pausado] * {
+  animation-play-state: paused !important;
+}
+
 @keyframes lx-scroll {
   to { transform: translateX(-50%); }
 }

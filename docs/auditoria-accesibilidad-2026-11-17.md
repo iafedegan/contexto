@@ -35,6 +35,17 @@
 
 Falta volver a correr axe sobre el despliegue nuevo para confirmar que quedaron en cero.
 
+## Segunda ronda (misma fecha)
+
+La segunda corrida de axe confirmó corregidos el botón de subsecciones, las etiquetas sobre dorado y los chips. Quedaban: los números de «Más leído» (4,25:1 en claro), los puntos del carrusel (8 px) y el contenido fuera de los landmarks. Se corrigió, además de lo que axe no mide:
+
+- **WCAG 2.2.2 (pausar lo que se mueve):** botón «Detener el movimiento» en el cintillo de cotizaciones, el carrusel de la apertura, el carrusel de la portada y el carrusel de bloques (`components/ui/boton-pausa.tsx`). El de la apertura también se pausa al recibir el foco.
+- **Landmarks:** el cintillo es una región con nombre («Cotizaciones del mercado») y el toro flotante un complemento («Asistente»).
+- **Contraste:** números de «Más leído» y «Relacionadas» con un color que contrasta en claro y oscuro. Botón «Consultar el archivo» del pie y botón «Volver arriba» con colores fijos (verde oscuro y blanco).
+- **Objetivos táctiles:** los puntos del carrusel de bloques miden 24 px.
+- **Formularios (3.3.1, 3.3.2):** el formulario de contacto marca los campos obligatorios y lo dice antes de llenarlo; los errores se anuncian con `role="alert"`; el foco del campo deja de quitarse el contorno.
+- **Subtítulos (1.2.2):** todos los videos de YouTube se incrustan con los subtítulos en español activos por defecto (`cc_load_policy=1`). **Solo aparecen si el video los tiene en YouTube:** subirlos es tarea de quien publica.
+
 ## Prueba de teclado (automatizada, en producción)
 
 Se recorrieron 120 tabulaciones en portada, sección, nota y contacto: el primer foco es «Saltar al contenido», ningún elemento enfocado queda oculto y todos muestran indicador de foco. No es una prueba humana: no valida el orden lógico ni que el menú, el carrusel y el asistente se manejen bien solo con teclado.
