@@ -71,6 +71,7 @@ export function sanitizeSectionEls(input: unknown): Partial<Record<SectionElId, 
       size: id === "n-photo" ? clamp(r.size, EL_RANGES.photo.min, EL_RANGES.photo.max) : id === "h-logo" ? clamp(r.size, EL_RANGES.logo.min, EL_RANGES.logo.max) : clamp(r.size, EL_RANGES.size.min, EL_RANGES.size.max),
       weight,
       color: hex(r.color),
+      fondo: id === "h-menu" ? hex(r.fondo) : undefined,
       gradient: gradient ? sanitizeGradient(r.gradient) : undefined,
       upper: r.upper === true ? true : r.upper === false ? false : undefined,
       tracking: clamp(r.tracking, EL_RANGES.tracking.min, EL_RANGES.tracking.max),
@@ -116,6 +117,8 @@ export function sectionElsCss(input: unknown, scope = "[data-site-root]"): strin
       if (l.length) rules.push(`${sel}:not(svg){${l.join(";")}}`);
       return;
     }
+    // Barra del menú: su fondo sale de `--nav-bg` (puesta en línea en site-header.tsx), por eso se pisa también la variable.
+    if (id === "h-menu" && s.fondo) rules.push(`${sel}{background:${s.fondo}!important;--nav-bg:${s.fondo}!important}`);
     const d: string[] = [];
     const family = homeFontFamily(s.font);
     if (family) d.push(`font-family:${family}!important`);

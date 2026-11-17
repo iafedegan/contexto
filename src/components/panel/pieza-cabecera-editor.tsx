@@ -79,6 +79,15 @@ export function PiezaCabeceraEditor({
       </div>
       {modo !== "ambos" && <p className="-mt-1 text-[11px] leading-snug text-[var(--fg-muted)]">Solo para quien ve el sitio en modo {modo}; lo demás sale de «Los dos modos». El lienzo se muestra en modo {modo} mientras editas.</p>}
 
+      {/* Fondo: solo la barra del menú tiene un fondo propio que cambiar. */}
+      {el === "h-menu" && (
+        <div className={seccion}>
+          <p className={titulo}>Color de fondo</p>
+          <ColorRow label="Fondo de la barra" value={actual.fondo} onChange={(fondo) => patch({ fondo })} />
+          {!actual.fondo && <p className="text-[11px] leading-snug text-[var(--fg-muted)]">Sin color propio, la barra queda en el verde de FEDEGÁN.</p>}
+        </div>
+      )}
+
       {/* 1. Color */}
       <div className={seccion}>
         <p className={titulo}>Color</p>

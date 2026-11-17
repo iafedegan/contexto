@@ -923,6 +923,8 @@ export type SectionElStyle = {
   /** Grosor 300-900. */
   weight?: number;
   color?: string;
+  /** Color de fondo de la pieza (hoy solo la barra del menú). */
+  fondo?: string;
   /** Degradado en el texto (solo etiqueta, título y descripción). */
   gradient?: Gradient;
   upper?: boolean;
