@@ -131,6 +131,9 @@ export function ArticleDocument({
         />
         )}
 
+        {/* Pauta horizontal de la nota: arriba del todo y a la derecha (sin hueco si no hay campaña). */}
+        {!preview && <AdsBanner zone="article_top" className="ml-auto mb-3" />}
+
         <ArticleHero
           theme={theme}
           kicker={a.categorySlug ? categoryLabel(locale, a.categorySlug, a.categoryName ?? "") : undefined}
@@ -227,8 +230,6 @@ export function ArticleDocument({
         {a.coverImageCaption && a.coverImageUrl && (
           <p className="lx-ui mx-auto mt-3 text-sm leading-snug text-[var(--fg-muted)]">{a.coverImageCaption}</p>
         )}
-
-        {!preview && <AdsBanner zone="article_top" className="mx-auto mt-10" />}
 
         {/* El cuerpo llega como HTML ya sanitizado en el panel editorial. */}
         <div data-el="n-body">

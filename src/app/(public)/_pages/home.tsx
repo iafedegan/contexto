@@ -278,7 +278,7 @@ async function HomePage({ locale, portadaBorrador }: { locale: Locale; portadaBo
       </CardSlugsProvider>
 
       {/* La pauta horizontal (Ad Manager `home_b6`): va en una franja de borde a borde justo debajo de «Lo más reciente», antes de las franjas de secciones (el hueco bajo «Lo más reciente» lo llenan dos notas, ver `NotasDelHueco`). */}
-      <SeccionesPorBandas bandas={bandas} locale={locale} primeraEnTema={esEsmeralda} entre={<div className="lx-fullbleed border-y border-[var(--border)] bg-[var(--bg-2)] py-3"><div className="shell"><AdsBanner zone="home_bottom" className="mx-auto" /></div></div>} />
+      <SeccionesPorBandas bandas={bandas} locale={locale} primeraEnTema={esEsmeralda} entre={<div className="lx-fullbleed border-y border-[var(--border)] bg-[var(--bg-2)] py-1.5"><div className="shell"><AdsBanner zone="home_bottom" className="ml-auto" /></div></div>} />
 
       {car.posicion === "abajo" && carruselConColumna && <div className="mt-12">{carruselConColumna}</div>}
       {bloqueInicio("abajo", "mt-12")}

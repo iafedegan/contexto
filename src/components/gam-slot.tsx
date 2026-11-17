@@ -136,11 +136,11 @@ export function GamSlot({ unidad, className, grupo }: { unidad: UnidadGam; class
   if (!prefijo) return null;
   return (
     // Sin anuncio pintado, el contenedor no suma márgenes ni alto (las clases de margen solo se aplican con anuncio).
-    <div className={altoReal ? cn(className, horizontal && "py-4 sm:py-6") : "w-full"} hidden={sobra(grupo, id)}>
-      {/* Rótulo arriba a la izquierda y el anuncio centrado debajo; los banners horizontales llevan el mismo aire arriba y abajo. */}
-      {altoReal && <span className={cn("block text-[0.6875rem] font-medium uppercase tracking-wide text-[var(--fg-muted)]", horizontal ? "mb-3" : "mb-1")}>Publicidad</span>}
+    <div className={altoReal ? cn(className, horizontal && "py-1") : "w-full"} hidden={sobra(grupo, id)}>
+      {/* Rótulo arriba y el anuncio debajo. Los banners horizontales van pegados a la derecha, con el rótulo también a la derecha y casi sin aire. */}
+      {altoReal && <span className={cn("block text-[0.6875rem] font-medium uppercase tracking-wide text-[var(--fg-muted)]", horizontal ? "mb-1 text-right" : "mb-1")}>Publicidad</span>}
       {/* 1 px mientras espera: el observador necesita un elemento en la página para saber cuándo pedir el anuncio. */}
-      <div ref={caja} id={id} className="mx-auto flex items-start justify-center" style={{ minHeight: altoReal ?? 1 }} />
+      <div ref={caja} id={id} className={cn("flex items-start", horizontal ? "justify-end" : "mx-auto justify-center")} style={{ minHeight: altoReal ?? 1 }} />
     </div>
   );
 }

@@ -398,7 +398,7 @@ async function CategoryPage({ params, searchParams, locale, portadaBorrador }: P
         </p>
       ) : (
         <>
-          <AdsBanner zone="section_top" className="mx-auto mb-10" />
+          <AdsBanner zone="section_top" className="ml-auto mb-4" />
           {/* TV, Radio y Especiales (y sus subsecciones) tienen formato propio; el resto, la cuadrícula de la plantilla. */}
           {(() => {
             const formato = formatoDeSeccion(slug, category.parentSlug);
@@ -468,7 +468,7 @@ async function CategoryPage({ params, searchParams, locale, portadaBorrador }: P
         </nav>
       )}
 
-      <AdsBanner zone="section_bottom" className="mx-auto mt-14" />
+      <AdsBanner zone="section_bottom" className="ml-auto mt-8" />
 
     </SiteShell>
   );
