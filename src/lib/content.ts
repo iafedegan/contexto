@@ -106,15 +106,11 @@ export async function getRecentArticles(limit = 12): Promise<ArticleListItem[]> 
 }
 
 /**
- * Orden de la portada: primero las notas de «Última hora» (la más reciente arriba; al llegar otra pasa a segunda y así), después lo que un editor fijó a
- * mano, y el resto por fecha. Una nota normal nueva NO desplaza a las de última hora: se queda debajo de ellas.
+ * Orden de la portada: primero las notas de «Última hora» (la más reciente arriba; al llegar otra pasa a segunda y así) y después TODO lo demás por
+ * orden de llegada: fecha, hora, minuto y segundo de publicación, la más nueva primero. Lo único que se queda arriba es la última hora: una nota
+ * normal nueva no la desplaza. Las posiciones que un editor fijó a mano antes (`homePosition`) ya no mandan en este orden.
  */
-const ordenPortada = [
-  desc(articles.isBreaking),
-  sql`case when ${articles.isBreaking} then 0 when ${articles.homePosition} is null then 1 else 0 end`,
-  sql`case when ${articles.isBreaking} then null else ${articles.homePosition} end`,
-  desc(articles.publishedAt),
-] as const;
+const ordenPortada = [desc(articles.isBreaking), desc(articles.publishedAt)] as const;
 
 /** Consulta de la portada con el orden manual, cacheada entre peticiones (la invalida el panel al publicar). */
 const leerPortada = cachear(
@@ -132,9 +128,7 @@ const leerPortada = cachear(
 );
 
 /**
- * Como getRecentArticles, pero respeta el orden manual fijado por un editor en
- * /panel/portada (`articles.homePosition`): los artículos anclados van primero,
- * en el orden elegido, y el resto llena los huecos por fecha. Solo lo usa la
+ * Como getRecentArticles, pero con la última hora primero: la última hora va arriba (la más reciente primero) y el resto por fecha y hora de llegada. Solo lo usa la
  * portada; RSS, llms.txt y el cintillo siguen el orden cronológico real.
  */
 export async function getHomepageArticles(limit = 13): Promise<ArticleListItem[]> {
@@ -631,17 +625,18 @@ export const getUltimaColumnaLafaurie = cachear(
 /** Cuántas notas muestra la portada: 1 principal, 1 secundaria, 4 «en breve» y el resto en el río (los cortes de `splitHomeSlots`). */
 export const PORTADA_NOTAS = 13;
 
-// El orden de la portada (primero lo fijado a mano, luego por fecha), solo con lo necesario para saber dónde queda cada nota.
+// El orden de la portada (primero la última hora, luego por fecha y hora), solo con lo necesario para saber dónde queda cada nota.
 const leerOrdenPortada = cachear(
   "portada-orden",
   async (): Promise<{ slug: string; fijada: boolean }[]> => {
     const filas = await db
-      .select({ slug: articles.slug, pos: articles.homePosition })
+      .select({ slug: articles.slug, ultimaHora: articles.isBreaking })
       .from(articles)
       .where(publishedCondition)
       .orderBy(...ordenPortada)
       .limit(PORTADA_NOTAS);
-    return filas.map((f) => ({ slug: f.slug, fijada: f.pos !== null }));
+    // Lo único que queda fijo arriba es la última hora.
+    return filas.map((f) => ({ slug: f.slug, fijada: f.ultimaHora }));
   },
   { tags: [TAG_CONTENIDO], segundos: 60 },
 );
