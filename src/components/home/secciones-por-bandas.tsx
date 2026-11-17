@@ -115,11 +115,11 @@ export function SeccionesPorBandas({
   bandas: BandaDeSeccion[];
   locale: Locale;
   primeraEnTema?: boolean;
-  /** Lo que va entre la segunda y la tercera franja (la pauta horizontal de la portada); si hay menos de tres, va al final. */
+  /** Lo que va antes de la primera franja (la pauta horizontal de la portada), justo debajo de «Lo más reciente». */
   entre?: React.ReactNode;
 }) {
   if (!bandas.length) return entre ?? null;
-  const tras = Math.min(2, bandas.length);
+  const tras = 0;
   return (
     <div data-region="bandas-secciones" className={primeraEnTema ? "mt-0" : "mt-16"}>
       {bandas.slice(0, tras).map((b, i) => <Banda key={b.slug} banda={b} indice={i} locale={locale} primeraEnTema={primeraEnTema} />)}
