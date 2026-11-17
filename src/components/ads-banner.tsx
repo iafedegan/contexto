@@ -10,17 +10,17 @@ import { GAM_POR_POSICION } from "@/lib/gam";
  * varios activos se apilan por orden. No renderiza nada si la posición no
  * tiene ninguno activo y vigente.
  */
-export async function AdsBanner({ zone, className }: { zone: AdPosition; className?: string }) {
+export async function AdsBanner({ zone, className, completo = false }: { zone: AdPosition; className?: string; completo?: boolean }) {
   const spec = AD_ZONE_SPECS[zone];
   const ads = await getAdsForPosition(zone).catch(() => []);
   if (ads.length === 0) {
     // Sin anuncio propio cargado en el panel, la posición usa el espacio de Google Ad Manager del sitio anterior (si está activado).
     const unidad = GAM_POR_POSICION[zone];
-    return process.env.NEXT_PUBLIC_GAM_ENABLED === "1" && unidad ? <GamSlot unidad={unidad} grupo={zone.startsWith("sidebar_") ? "lateral" : undefined} className={cn("mx-auto w-full", className)} /> : null;
+    return process.env.NEXT_PUBLIC_GAM_ENABLED === "1" && unidad ? <GamSlot unidad={unidad} grupo={zone.startsWith("sidebar_") ? "lateral" : undefined} className={cn("mx-auto w-full", className)} completo={completo} /> : null;
   }
 
   return (
-    <div className={cn("flex flex-col gap-4", className)} style={{ maxWidth: spec.width }}>
+    <div className={cn("flex flex-col gap-4", className)} style={{ maxWidth: completo ? undefined : spec.width }}>
       {ads.map((content) => (
         <div key={content.key} className="flex flex-col items-center gap-1">
           <span className="self-start text-[0.6875rem] font-medium uppercase tracking-wide text-[var(--fg-muted)]">

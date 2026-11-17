@@ -69,7 +69,10 @@ function sobra(grupo: string | undefined, id: string): boolean {
  * Un espacio de Google Ad Manager. Reserva su alto desde el inicio (sin saltos) y solo carga Google cuando el espacio está por entrar en
  * pantalla, así los anuncios nunca compiten con el contenido ni con el LCP. La sección (y por tanto la unidad) sale de la dirección.
  */
-export function GamSlot({ unidad, className, grupo }: { unidad: UnidadGam; className?: string; grupo?: string }) {
+// Con `completo`, el anuncio se escala (sin deformarlo) hasta ocupar todo el ancho disponible; esto es lo más que se amplía.
+const ESCALA_MAX = 2.2;
+
+export function GamSlot({ unidad, className, grupo, completo = false }: { unidad: UnidadGam; className?: string; grupo?: string; completo?: boolean }) {
   const pathname = usePathname() ?? "/";
   const prefijo = prefijoGam(pathname);
   const id = `gam-${useId().replace(/[^a-zA-Z0-9]/g, "")}`;
@@ -78,6 +81,19 @@ export function GamSlot({ unidad, className, grupo }: { unidad: UnidadGam; class
   // Alto del anuncio que Google pintó. Mientras no llegue (o si no hay campaña) el espacio no ocupa nada ni muestra el rótulo:
   // nunca queda una franja vacía con «Publicidad».
   const [altoReal, setAltoReal] = useState<number | null>(null);
+  // Tamaño (ancho) del anuncio pintado y escala para ocupar todo el ancho disponible (solo con `completo`).
+  const [anchoReal, setAnchoReal] = useState<number | null>(null);
+  const [escala, setEscala] = useState(1);
+  const fuera = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = fuera.current;
+    if (!completo || !anchoReal || !el) return;
+    const calcular = () => setEscala(Math.min(ESCALA_MAX, Math.max(0.3, el.clientWidth / anchoReal)));
+    calcular();
+    const ro = new ResizeObserver(calcular);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [completo, anchoReal]);
   // Se vuelve a dibujar cuando otro espacio del grupo cambia (llegó un anuncio grande).
   const [, avisar] = useState(0);
   useEffect(() => {
@@ -101,6 +117,7 @@ export function GamSlot({ unidad, className, grupo }: { unidad: UnidadGam; class
           if (e.slot !== slot) return;
           const alto = !e.isEmpty && Array.isArray(e.size) && typeof e.size[1] === "number" && e.size[1] > 1 ? e.size[1] : null;
           setAltoReal(alto);
+          setAnchoReal(alto && typeof e.size?.[0] === "number" ? e.size[0] : null);
           if (grupo) registrar(grupo, id, alto ?? 0, el);
         });
         if (!window.__gptServicios) {
@@ -140,7 +157,14 @@ export function GamSlot({ unidad, className, grupo }: { unidad: UnidadGam; class
       {/* Rótulo arriba y el anuncio debajo. Los banners horizontales van pegados a la derecha, con el rótulo también a la derecha y casi sin aire. */}
       {altoReal && <span className={cn("block text-[0.6875rem] font-medium uppercase tracking-wide text-[var(--fg-muted)]", horizontal ? "mb-1 text-right" : "mb-1")}>Publicidad</span>}
       {/* 1 px mientras espera: el observador necesita un elemento en la página para saber cuándo pedir el anuncio. */}
-      <div ref={caja} id={id} className={cn("flex items-start [&_iframe]:rounded-lg", horizontal ? "justify-end" : "mx-auto justify-center")} style={{ minHeight: altoReal ?? 1 }} />
+      <div ref={fuera} className={completo ? "w-full overflow-hidden" : undefined} style={completo && altoReal ? { height: altoReal * escala } : undefined}>
+        <div
+          ref={caja}
+          id={id}
+          className={cn("flex items-start [&_iframe]:rounded-lg", horizontal && !completo ? "justify-end" : "mx-auto justify-center")}
+          style={completo && anchoReal ? { minHeight: altoReal ?? 1, width: anchoReal, transform: `scale(${escala})`, transformOrigin: "top left" } : { minHeight: altoReal ?? 1 }}
+        />
+      </div>
     </div>
   );
 }
