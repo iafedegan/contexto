@@ -9,6 +9,7 @@ import {
 } from "@/components/home/templates";
 import { FeatureStrip } from "@/components/feature-strip";
 import { AdsBanner } from "@/components/ads-banner";
+import { ArticleCard } from "@/components/article-card";
 import { CardSlugsProvider } from "@/components/home/card-styles";
 import { blockStylesCss } from "@/lib/home-style";
 import { ColumnaLafaurieSuelta, SiteSidebar } from "@/components/site-sidebar";
@@ -174,6 +175,9 @@ async function HomePage({ locale, portadaBorrador }: { locale: Locale; portadaBo
   // ¿Hay columna que mostrar? (lectura cacheada; la misma que hace la tarjeta). Esmeralda reparte distinto la apertura según haya o no.
   const hayColumna = Boolean(await getUltimaColumnaLafaurie().catch(() => null));
   const masLeidas = esEsmeralda ? await getMostReadArticles(3).catch(() => []) : [];
+  // Para llenar el hueco que deja la barra lateral (más alta que «Lo más reciente»): una nota grande y una pequeña que aún no salen en la portada.
+  const usadas = new Set(articles.map((a) => a.slug));
+  const extrasRecientes = esEsmeralda ? (await getRecentArticles(30).catch(() => [])).filter((a) => !usadas.has(a.slug)).slice(0, 2) : [];
   const columnaArriba = !carrusel && !["revista", "compacto", "vanguardia", "clasico", "gremial"].includes(body);
   const columnaMovil = (
     <div className={columnaArriba ? undefined : "lg:hidden"}>
@@ -258,7 +262,7 @@ async function HomePage({ locale, portadaBorrador }: { locale: Locale; portadaBo
           ) : body === "gremial" ? (
             <GremialTemplate {...props} trasPrincipal={trasPrincipal} />
           ) : (
-            <EsmeraldaTemplate {...props} trasPrincipal={trasPrincipal} conColumna={hayColumna} hueco={hueco.length ? hueco : undefined} masLeidas={masLeidas} bajoReciente={<AdsBanner zone="home_bottom" className="mx-auto mt-10" />} lateral={<SiteSidebar locale={locale} columnaEnMovil={false} sinColumna={columnaArriba} />} />
+            <EsmeraldaTemplate {...props} trasPrincipal={trasPrincipal} conColumna={hayColumna} hueco={hueco.length ? hueco : undefined} masLeidas={masLeidas} bajoReciente={extrasRecientes.length > 0 ? <NotasDelHueco notas={extrasRecientes} locale={locale} /> : undefined} lateral={<SiteSidebar locale={locale} columnaEnMovil={false} sinColumna={columnaArriba} />} />
           )}
           {!carrusel && sinSlot && <div className="mt-8">{columnaMovil}</div>}
 
@@ -274,8 +278,8 @@ async function HomePage({ locale, portadaBorrador }: { locale: Locale; portadaBo
       </div>
       </CardSlugsProvider>
 
-      {/* La pauta horizontal (Ad Manager `home_b6`): en Esmeralda llena el hueco bajo «Lo más reciente», junto a la barra lateral; en las demás plantillas, entre la segunda y la tercera franja de secciones. */}
-      <SeccionesPorBandas bandas={bandas} locale={locale} primeraEnTema={esEsmeralda} entre={esEsmeralda ? undefined : <AdsBanner zone="home_bottom" className="mx-auto my-10 px-4" />} />
+      {/* La pauta horizontal (Ad Manager `home_b6`): va entre la segunda y la tercera franja de secciones (el hueco bajo «Lo más reciente» lo llenan dos notas, ver `NotasDelHueco`). */}
+      <SeccionesPorBandas bandas={bandas} locale={locale} primeraEnTema={esEsmeralda} entre={<AdsBanner zone="home_bottom" className="mx-auto my-10 px-4" />} />
 
       {car.posicion === "abajo" && carruselConColumna && <div className="mt-12">{carruselConColumna}</div>}
       {bloqueInicio("abajo", "mt-12")}
@@ -285,6 +289,19 @@ async function HomePage({ locale, portadaBorrador }: { locale: Locale; portadaBo
   );
 }
 
+
+/** Una nota grande y una pequeña bajo «Lo más reciente»: llenan el hueco junto a la barra lateral, que es más alta que la cuadrícula. */
+function NotasDelHueco({ notas, locale }: { notas: Awaited<ReturnType<typeof getRecentArticles>>; locale: Locale }) {
+  const [grande, pequena] = notas;
+  return (
+    <div className="mt-10 grid grid-cols-1 gap-x-7 gap-y-10 sm:grid-cols-3">
+      <div className={pequena ? "min-h-[26rem] sm:col-span-2 [&>article]:h-full" : "min-h-[26rem] sm:col-span-3 [&>article]:h-full"}>
+        <ArticleCard a={grande} variant="mosaico" locale={locale} />
+      </div>
+      {pequena && <ArticleCard a={pequena} variant="gold" locale={locale} />}
+    </div>
+  );
+}
 
 /** El inicio con una portada en borrador en su lugar (vista previa del constructor). */
 export function VistaPortadaInicio({ contenido }: { contenido: ContenidoPagina }) {
