@@ -1051,7 +1051,7 @@ a {
   font-size: 0.72rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--fg-muted);
+  color: color-mix(in srgb, var(--fg) 85%, var(--surface-2));
 }
 
 /* Enlace con filete que crece desde la izquierda. */

@@ -263,7 +263,7 @@ function CineCard({ a, priority, locale }: { a: ArticleListItem; priority?: bool
       >
         {/* Si no caben en un renglón (celular), la fecha baja entera: ni la pastilla ni la fecha se parten. */}
         <span className={`flex flex-wrap items-center gap-x-3 gap-y-2 ${st.textDerecha ? "justify-end" : ""}`}>
-          <Kicker a={a} locale={locale} className="whitespace-nowrap rounded-full bg-[var(--accent)] px-3 !text-[0.66rem] !tracking-[0.18em] text-[var(--accent-fg,#0b1a12)] shadow-[0_6px_18px_-6px_rgba(0,0,0,0.6)]" />
+          <Kicker a={a} locale={locale} className="whitespace-nowrap rounded-full bg-[var(--accent)] px-3 !text-[0.66rem] !tracking-[0.18em] !text-[var(--accent-fg,#0b1a12)] shadow-[0_6px_18px_-6px_rgba(0,0,0,0.6)]" />
           {a.publishedAt && (
             <>
               <span aria-hidden className="h-px w-7 bg-white/45 max-sm:hidden" />
@@ -380,7 +380,7 @@ function MosaicoCard({ a, locale }: { a: ArticleListItem; locale: Locale }) {
       <div aria-hidden className="pointer-events-none z-[1] bg-gradient-to-t from-[rgba(2,22,20,0.94)] via-[rgba(2,22,20,0.42)] to-transparent" />
       <div className="relative z-[4] flex items-end justify-between gap-3 self-end p-4 text-white sm:p-5">
         <div className="flex min-w-0 flex-col items-start gap-2">
-          <Kicker a={a} locale={locale} className="whitespace-nowrap rounded-full bg-[var(--accent)] px-3 !text-[0.64rem] !tracking-[0.16em] text-[var(--accent-fg,#0b1a12)]" />
+          <Kicker a={a} locale={locale} className="whitespace-nowrap rounded-full bg-[var(--accent)] px-3 !text-[0.64rem] !tracking-[0.16em] !text-[var(--accent-fg,#0b1a12)]" />
           <h3 className="lx-display line-clamp-3 text-balance font-semibold leading-tight [text-shadow:0_2px_14px_rgba(0,0,0,0.5)]" style={{ ...st.title, color: st.title.color ?? "#ffffff" }}>
             <Link href={hrefNota(locale, a)} className="after:absolute after:inset-0 after:z-[2]">
               {a.title}

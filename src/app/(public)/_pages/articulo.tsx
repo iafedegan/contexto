@@ -280,7 +280,7 @@ export function ArticleDocument({
                     className="group flex items-baseline gap-4 py-4"
                     {...(r.kind === "archivo" ? { rel: "bookmark" } : {})}
                   >
-                    <span className="lx-display text-lg text-[var(--accent-2)]">
+                    <span className="lx-display text-lg text-[var(--accent)]">
                       {String(i + 1).padStart(2, "0")}
                     </span>
                     <span className="lx-display flex-1 text-lg leading-snug transition-colors group-hover:text-[var(--accent)]">

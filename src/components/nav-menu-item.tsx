@@ -99,7 +99,7 @@ export function NavMenuItem({ item, locale, className }: { item: ItemMenu; local
         aria-expanded={abierto}
         aria-haspopup="menu"
         onClick={alternar}
-        className="ml-0.5 inline-flex size-5 items-center justify-center text-inherit opacity-70 transition hover:text-[var(--accent)] hover:opacity-100 pointer-coarse:size-8"
+        className="ml-0.5 inline-flex size-6 items-center justify-center text-inherit opacity-70 transition hover:text-[var(--accent)] hover:opacity-100 pointer-coarse:size-8"
       >
         <ChevronDown size={12} aria-hidden className={cn("transition-transform", abierto && "rotate-180")} />
       </button>

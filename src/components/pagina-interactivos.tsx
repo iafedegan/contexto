@@ -55,8 +55,8 @@ export function Carrusel({ children, porVista = 1, auto = false, segundos = 6, p
   const ancho = { 1: "basis-full", 2: "basis-full @md:basis-[calc((100%-1rem)/2)]", 3: "basis-full @md:basis-[calc((100%-1rem)/2)] @3xl:basis-[calc((100%-2rem)/3)]", 4: "basis-[85%] @md:basis-[calc((100%-1rem)/2)] @3xl:basis-[calc((100%-3rem)/4)]" }[porVista];
   const paginas = porVista === 1 ? slides.length : Math.max(1, slides.length - porVista + 1);
   return (
-    <div className="@container relative" role="region" aria-roledescription="carrusel" aria-label={etiqueta} onMouseEnter={() => setPausa(true)} onMouseLeave={() => setPausa(false)} onFocus={() => setPausa(true)} onBlur={() => setPausa(false)}>
-      <div ref={ref} className="flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+    <div className="@container relative" role="group" aria-roledescription="carrusel" aria-label={etiqueta} onMouseEnter={() => setPausa(true)} onMouseLeave={() => setPausa(false)} onFocus={() => setPausa(true)} onBlur={() => setPausa(false)}>
+      <div ref={ref} tabIndex={0} aria-label={etiqueta} className="flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {slides.map((s, i) => (
           <div key={i} className={`min-w-0 shrink-0 snap-start ${ancho}`} aria-roledescription="diapositiva" aria-label={`${i + 1} de ${slides.length}`}>
             {s}
