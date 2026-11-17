@@ -214,9 +214,8 @@ async function HomePage({ locale, portadaBorrador }: { locale: Locale; portadaBo
         {identity.name} — {identity.tagline || t(locale, "nav.tagline")}
       </h1>
 
-      {/* Zona comercial de portada. No ocupa sitio si no hay creatividad
-          activa y vigente (ver src/lib/ads.ts). */}
-      <AdsBanner zone="home_top" className="mx-auto mb-4" />
+      {/* Sin pauta arriba del todo: entre el menú y la nota principal no va publicidad (decisión editorial). La zona `home_top` sigue en el
+          panel pero la portada ya no la pinta. */}
 
       {/* La portada propia del inicio, armada en Páginas con el constructor: va arriba de las notas. En la vista previa manda el borrador. */}
       {filasInicio("arriba").length > 0 && (
