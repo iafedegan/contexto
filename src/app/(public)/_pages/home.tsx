@@ -274,13 +274,12 @@ async function HomePage({ locale, portadaBorrador }: { locale: Locale; portadaBo
       </div>
       </CardSlugsProvider>
 
-      <SeccionesPorBandas bandas={bandas} locale={locale} primeraEnTema={esEsmeralda} />
+      {/* La pauta horizontal (Ad Manager `home_b6`) va entre la segunda y la tercera franja de secciones, no al pie. */}
+      <SeccionesPorBandas bandas={bandas} locale={locale} primeraEnTema={esEsmeralda} entre={<AdsBanner zone="home_bottom" className="mx-auto my-10 px-4" />} />
 
       {car.posicion === "abajo" && carruselConColumna && <div className="mt-12">{carruselConColumna}</div>}
       {bloqueInicio("abajo", "mt-12")}
       {extrasEn("abajo").map((n, i) => <div key={`ab${i}`} className="mt-12">{n}</div>)}
-
-      <AdsBanner zone="home_bottom" className="mx-auto mt-14" />
 
     </SiteShell>
   );

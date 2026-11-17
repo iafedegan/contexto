@@ -2,6 +2,9 @@ import { escapeHtml as esc } from "@/lib/escape";
 import { siteUrl } from "@/lib/utils";
 import { JADE, JADE_PROFUNDO, MARFIL, ORO, ORO_CLARO, ORO_TEXTO, RUTA_EMBLEMA_ORO, dobleFilete, marcaConEmblema, ornamento } from "@/lib/newsletter/deluxe";
 
+/** Foto de fondo del encabezado: vaca y ternero en el llano (CIAT / Neil Palmer, CC BY-SA 2.0), ya con el velo verde oscuro encima. */
+export const RUTA_FONDO_LLANO = "/correo/llano-fondo.jpg";
+
 const SERIF = "Georgia, 'Times New Roman', Times, serif";
 const SANS = "-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
 
@@ -10,12 +13,15 @@ const SANS = "-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
  * el emblema de la marca como inicial. Es una pieza de marca fija: no depende del diseño elegido para el boletín. Sin `server-only`: se
  * prueba y se previsualiza sin base de datos.
  */
-export function renderConfirmationHtml(p: { nombre: string; tagline?: string; email: string; url: string }): string {
+export function renderConfirmationHtml(p: { nombre: string; tagline?: string; email: string; url: string; fondo?: string }): string {
+  // Fondo del encabezado: con `background` (atributo) y `background-image` para los clientes que solo entienden uno; Outlook de escritorio
+  // lo ignora y se queda con el verde sólido (`bgcolor`), que también es lo que se ve si el lector bloquea las imágenes.
+  const fondo = p.fondo ?? siteUrl(RUTA_FONDO_LLANO);
   return `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <style>@media only screen and (max-width:560px){.px{padding-left:22px !important;padding-right:22px !important}.brand{font-size:23px !important}.brand img{width:auto !important;height:26px !important}}</style></head>
 <body style="margin:0;background:${JADE_PROFUNDO}"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${JADE_PROFUNDO}"><tr><td align="center" style="padding:28px 12px">
 <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="width:560px;max-width:100%;background:${MARFIL};border:1px solid ${ORO}">
-<tr><td class="px" style="background:${JADE};padding:16px 28px">
+<tr><td class="px" background="${esc(fondo)}" bgcolor="${JADE}" style="background:${JADE} url('${esc(fondo)}') center center / cover no-repeat;padding:16px 28px">
   ${dobleFilete(ORO)}
   <div style="text-align:center;padding:30px 0 28px 0">
     <span class="brand" style="font:400 34px/1.2 ${SERIF};color:${ORO_CLARO};white-space:nowrap">${marcaConEmblema(p.nombre, siteUrl(RUTA_EMBLEMA_ORO), 34)}</span>
@@ -37,6 +43,6 @@ export function renderConfirmationHtml(p: { nombre: string; tagline?: string; em
   <p style="margin:0;font:400 12px/1.7 ${SANS};color:#7d746a">Si el botón no funciona, copia este enlace en tu navegador:<br><a href="${esc(p.url)}" style="color:${ORO_TEXTO};word-break:break-all">${esc(p.url)}</a></p>
 </td></tr>
 </table>
-<p style="margin:18px 0 0 0;font:400 11px/1.6 ${SANS};color:#9aa8a1">${esc(p.nombre)}</p>
+<p style="margin:18px 0 0 0;font:400 11px/1.6 ${SANS};color:#9aa8a1">${esc(p.nombre)}<br><span style="font-size:10px;color:#6f8179">Foto del encabezado: Neil Palmer / CIAT · CC BY-SA 2.0</span></p>
 </td></tr></table></body></html>`;
 }

@@ -106,11 +106,25 @@ function Banda({ banda, indice, locale, primeraEnTema }: { banda: BandaDeSeccion
 }
 
 /** Las franjas por sección del inicio (nada si no hay ninguna con notas suficientes). */
-export function SeccionesPorBandas({ bandas, locale, primeraEnTema = false }: { bandas: BandaDeSeccion[]; locale: Locale; primeraEnTema?: boolean }) {
-  if (!bandas.length) return null;
+export function SeccionesPorBandas({
+  bandas,
+  locale,
+  primeraEnTema = false,
+  entre,
+}: {
+  bandas: BandaDeSeccion[];
+  locale: Locale;
+  primeraEnTema?: boolean;
+  /** Lo que va entre la segunda y la tercera franja (la pauta horizontal de la portada); si hay menos de tres, va al final. */
+  entre?: React.ReactNode;
+}) {
+  if (!bandas.length) return entre ?? null;
+  const tras = Math.min(2, bandas.length);
   return (
     <div data-region="bandas-secciones" className={primeraEnTema ? "mt-0" : "mt-16"}>
-      {bandas.map((b, i) => <Banda key={b.slug} banda={b} indice={i} locale={locale} primeraEnTema={primeraEnTema} />)}
+      {bandas.slice(0, tras).map((b, i) => <Banda key={b.slug} banda={b} indice={i} locale={locale} primeraEnTema={primeraEnTema} />)}
+      {entre}
+      {bandas.slice(tras).map((b, i) => <Banda key={b.slug} banda={b} indice={i + tras} locale={locale} primeraEnTema={primeraEnTema} />)}
     </div>
   );
 }
