@@ -155,7 +155,7 @@ function GrandFooter({ nav, theme, locale, LEGAL, TOOLS, ARCHIVE_NOTE, SITE_NAME
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-[var(--fg-muted)]">
 {t(locale, "footer.blurb")}
             </p>
-            <Link href={localePath(locale, "/asistente")} className="lx-btn mt-6">
+            <Link href={localePath(locale, "/asistente")} className="lx-btn mt-6 !border-white/30 !bg-[#0d2318] !bg-none !text-white">
               {t(locale, "footer.consultArchive")}
             </Link>
           </div>
@@ -196,7 +196,7 @@ function GremialFooter({ nav, theme, locale, LEGAL, TOOLS, ARCHIVE_NOTE, SITE_NA
           <div className="col-span-2 md:col-span-1">
             <span className="lx-display text-3xl font-semibold">{SITE_NAME}</span>
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-[var(--fg-muted)]">{t(locale, "footer.blurb")}</p>
-            <Link href={localePath(locale, "/asistente")} className="lx-btn mt-6">
+            <Link href={localePath(locale, "/asistente")} className="lx-btn mt-6 !border-white/30 !bg-[#0d2318] !bg-none !text-white">
               {t(locale, "footer.consultArchive")}
             </Link>
           </div>
