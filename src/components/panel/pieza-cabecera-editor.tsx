@@ -45,10 +45,23 @@ export function PiezaCabeceraEditor({
     for (const k of Object.keys(o)) if (o[k] === undefined) delete o[k];
     return Object.keys(o).length ? o : undefined;
   };
+  // Lo que se toca en «Los dos modos» vale para los dos: se quita de los ajustes propios de cada modo, que si no le ganarían (los de un modo
+  // mandan sobre los comunes) y el cambio parecería no hacer nada.
+  const sinClaves = (m: SectionElStyle | undefined, claves: string[]) => {
+    if (!m) return undefined;
+    const o: Record<string, unknown> = { ...m };
+    for (const k of claves) delete o[k];
+    return limpio(o) as SectionElStyle | undefined;
+  };
   function patch(p: Partial<SectionElStyle>) {
-    const next: Record<string, unknown> = modo === "ambos" ? { ...base, ...p, claro, oscuro } : { ...base, claro, oscuro, [modo]: limpio({ ...actual, ...p }) };
+    const next: Record<string, unknown> =
+      modo === "ambos"
+        ? { ...base, ...p, claro: sinClaves(claro, Object.keys(p)), oscuro: sinClaves(oscuro, Object.keys(p)) }
+        : { ...base, claro, oscuro, [modo]: limpio({ ...actual, ...p }) };
     onChange(limpio(next) as SectionElStyle | undefined);
   }
+  // Un modo con su propio color manda sobre «Los dos modos»: se avisa, para no buscar por qué «no cambia».
+  const modosConColor = modo === "ambos" ? ([claro?.color || claro?.gradient ? "claro" : null, oscuro?.color || oscuro?.gradient ? "oscuro" : null].filter(Boolean) as string[]) : [];
 
   const seccion = "flex flex-col gap-2 border-t border-[var(--border)] pt-3";
   const titulo = "text-[0.8rem] font-extrabold text-[#0b0b0b]";
@@ -93,6 +106,11 @@ export function PiezaCabeceraEditor({
         <p className={titulo}>Color</p>
         {!actual.gradient && <ColorRow label={esLogo ? "Color del logo" : "Color del texto"} value={actual.color} onChange={(color) => patch({ color })} />}
         {meta.gradient && <GradientEditor label="Usar degradado" value={actual.gradient} onChange={(gradient) => patch({ gradient })} />}
+        {modosConColor.length > 0 && (
+          <p className="text-[11px] leading-snug text-[var(--fg-muted)]">
+            El modo {modosConColor.join(" y el modo ")} tiene su propio color y manda sobre este. Al elegir un color aquí, se cambia también en {modosConColor.length > 1 ? "esos modos" : "ese modo"}.
+          </p>
+        )}
         {!actual.color && !actual.gradient && (
           <p className="text-[11px] leading-snug text-[var(--fg-muted)]">
             {esLogo ? "Sin color propio, el logo toma el de «Títulos» (Toda la cabecera › Colores)." : "Sin color propio, toma el de la cabecera (Toda la cabecera › Colores)."}

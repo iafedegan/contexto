@@ -113,7 +113,7 @@ export async function SiteShell({
       {site.css && <style dangerouslySetInnerHTML={{ __html: site.css }} />}
       {/* El progreso de lectura acompaña al artículo en cualquier plantilla. */}
       {variant === "articulo" && (
-        <div className="sticky top-0 z-50 h-0">
+        <div aria-hidden className="sticky top-0 z-50 h-0">
           <ReadingProgress />
         </div>
       )}

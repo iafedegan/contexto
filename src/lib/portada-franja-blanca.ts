@@ -14,6 +14,8 @@ export const VARIABLES_BLANCO = {
   "--bg": "#ffffff",
   "--bg-2": "#f4f8f8",
   "--accent": "#8a6200",
+  // Texto sobre el acento (botones): blanco, 5,6:1 sobre #8a6200; el oscuro del tema daba 3:1.
+  "--accent-fg": "#ffffff",
   "--link": "#0b6b67",
   backgroundColor: "#ffffff",
   color: "#022327",

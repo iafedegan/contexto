@@ -46,6 +46,13 @@ La segunda corrida de axe confirmó corregidos el botón de subsecciones, las et
 - **Formularios (3.3.1, 3.3.2):** el formulario de contacto marca los campos obligatorios y lo dice antes de llenarlo; los errores se anuncian con `role="alert"`; el foco del campo deja de quitarse el contorno.
 - **Subtítulos (1.2.2):** todos los videos de YouTube se incrustan con los subtítulos en español activos por defecto (`cc_load_policy=1`). **Solo aparecen si el video los tiene en YouTube:** subirlos es tarea de quien publica.
 
+## Tercera corrida (tras desplegar la segunda ronda)
+
+43 de 44 corridas completas (`/buscar` en escritorio oscuro volvió a agotar el tiempo). Quedaban 2 hallazgos, ya corregidos (pendientes de desplegar y medir):
+
+- Botón del boletín en la franja blanca: texto oscuro sobre `#8a6200` (3:1). La franja blanca ahora define `--accent-fg` blanco (5,6:1).
+- Barra de progreso de lectura fuera de los landmarks: es decorativa y queda oculta para el lector de pantalla.
+
 ## Prueba de teclado (automatizada, en producción)
 
 Se recorrieron 120 tabulaciones en portada, sección, nota y contacto: el primer foco es «Saltar al contenido», ningún elemento enfocado queda oculto y todos muestran indicador de foco. No es una prueba humana: no valida el orden lógico ni que el menú, el carrusel y el asistente se manejen bien solo con teclado.
