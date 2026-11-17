@@ -1074,6 +1074,169 @@ export const DOCUMENTOS: DocumentoInstitucional[] = [
       ],
     },
   },
+  // ------------------------------------------------ Declaración de accesibilidad
+  // Honesta a propósito: dice el estado real de la verificación (ver docs/auditoria-accesibilidad-2026-11-17.md). Cuando termine la
+  // verificación manual (lector de pantalla, panel, NTC 5854 criterio por criterio), se cambia el apartado «Estado» por la conformidad.
+  {
+    slug: "accesibilidad",
+    titulo: { es: "Declaración de accesibilidad", en: "Accessibility statement" },
+    bajada: {
+      es: "Nuestro compromiso para que todas las personas, incluidas las personas con discapacidad, puedan usar el portal.",
+      en: "Our commitment so that everyone, including people with disabilities, can use this site.",
+    },
+    descripcion: {
+      es: "Declaración de accesibilidad de CONtexto Ganadero Media: estándares de referencia, estado de la verificación y cómo reportar una barrera.",
+      en: "Accessibility statement for CONtexto Ganadero Media: reference standards, verification status and how to report a barrier.",
+    },
+    secciones: {
+      es: [
+        {
+          id: "compromiso",
+          titulo: "1. Compromiso",
+          bloques: [
+            {
+              tipo: "parrafo",
+              texto:
+                "CONtexto Ganadero Media trabaja para que el portal pueda usarse por todas las personas, incluidas las personas con discapacidad. Tomamos como referencia las Pautas de Accesibilidad para el Contenido Web (WCAG) 2.1, nivel AA, y la Norma Técnica Colombiana NTC 5854.",
+            },
+          ],
+        },
+        {
+          id: "estado",
+          titulo: "2. Estado de la verificación",
+          bloques: [
+            {
+              tipo: "parrafo",
+              texto:
+                "El portal pasa las pruebas automáticas de accesibilidad que aplicamos a sus páginas principales, en computador y celular y en modo claro y oscuro (última revisión: 17 de noviembre de 2026). La verificación manual está en curso: pruebas con lectores de pantalla, revisión del panel editorial y revisión de la NTC 5854 criterio por criterio. Mientras no termine, el portal se declara parcialmente conforme.",
+            },
+          ],
+        },
+        {
+          id: "funciones",
+          titulo: "3. Qué incluye el portal",
+          bloques: [
+            {
+              tipo: "lista",
+              items: [
+                "Enlace «Saltar al contenido» al comienzo de cada página y navegación completa con teclado, con el foco siempre visible.",
+                "Textos alternativos en las imágenes y nombres claros en botones y enlaces.",
+                "Contraste de color revisado en modo claro y oscuro.",
+                "Botón para detener el cintillo de cotizaciones y los carruseles que se mueven solos; el movimiento se reduce si el dispositivo lo pide.",
+                "Videos con subtítulos en español activados por defecto cuando el video los tiene.",
+                "Modo de lectura y opción para escuchar las notas.",
+              ],
+            },
+          ],
+        },
+        {
+          id: "limitaciones",
+          titulo: "4. Limitaciones conocidas",
+          bloques: [
+            {
+              tipo: "lista",
+              items: [
+                "Algunos videos y audios del archivo no tienen subtítulos ni transcripción.",
+                "Parte del contenido migrado del sitio anterior puede tener imágenes sin descripción.",
+                "Los contenidos de terceros incrustados (videos, redes sociales, publicidad) dependen de la accesibilidad de cada plataforma.",
+              ],
+            },
+          ],
+        },
+        {
+          id: "reportar",
+          titulo: "5. Reporte una barrera",
+          bloques: [
+            {
+              tipo: "parrafo",
+              texto:
+                "Si encuentra una parte del portal que no puede usar, o necesita un contenido en otro formato, escríbanos indicando la página y el problema. Respondemos y corregimos lo antes posible.",
+            },
+            {
+              tipo: "datos",
+              items: [
+                { etiqueta: "Correo", valor: "contexto@fedegan.org.co", href: "mailto:contexto@fedegan.org.co" },
+                { etiqueta: "Teléfono", valor: "(+57 601) 578 2020", href: "tel:+576015782020" },
+              ],
+            },
+          ],
+        },
+      ],
+      en: [
+        {
+          id: "compromiso",
+          titulo: "1. Commitment",
+          bloques: [
+            {
+              tipo: "parrafo",
+              texto:
+                "CONtexto Ganadero Media works so that everyone, including people with disabilities, can use this site. Our references are the Web Content Accessibility Guidelines (WCAG) 2.1, level AA, and the Colombian technical standard NTC 5854.",
+            },
+          ],
+        },
+        {
+          id: "estado",
+          titulo: "2. Verification status",
+          bloques: [
+            {
+              tipo: "parrafo",
+              texto:
+                "The site passes the automated accessibility tests we run on its main pages, on desktop and mobile and in light and dark mode (last review: 17 November 2026). Manual verification is under way: screen-reader testing, review of the editorial panel and a criterion-by-criterion review of NTC 5854. Until it is finished, the site declares itself partially conformant.",
+            },
+          ],
+        },
+        {
+          id: "funciones",
+          titulo: "3. What the site includes",
+          bloques: [
+            {
+              tipo: "lista",
+              items: [
+                "A “Skip to content” link at the start of every page and full keyboard navigation with visible focus.",
+                "Alternative text on images and clear names on buttons and links.",
+                "Colour contrast checked in light and dark mode.",
+                "A button to stop the market ticker and the auto-moving carousels; motion is reduced if the device asks for it.",
+                "Videos with Spanish captions turned on by default when the video has them.",
+                "Reading mode and an option to listen to stories.",
+              ],
+            },
+          ],
+        },
+        {
+          id: "limitaciones",
+          titulo: "4. Known limitations",
+          bloques: [
+            {
+              tipo: "lista",
+              items: [
+                "Some archive videos and audio lack captions or transcripts.",
+                "Some content migrated from the previous site may have images without descriptions.",
+                "Embedded third-party content (videos, social media, ads) depends on each platform's accessibility.",
+              ],
+            },
+          ],
+        },
+        {
+          id: "reportar",
+          titulo: "5. Report a barrier",
+          bloques: [
+            {
+              tipo: "parrafo",
+              texto:
+                "If you find part of the site you cannot use, or need content in another format, write to us with the page and the problem. We will reply and fix it as soon as possible.",
+            },
+            {
+              tipo: "datos",
+              items: [
+                { etiqueta: "Email", valor: "contexto@fedegan.org.co", href: "mailto:contexto@fedegan.org.co" },
+                { etiqueta: "Phone", valor: "(+57 601) 578 2020", href: "tel:+576015782020" },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+  },
 ];
 
 // Direcciones de todos los documentos.
