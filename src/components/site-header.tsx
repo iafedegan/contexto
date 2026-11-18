@@ -166,7 +166,7 @@ function MastheadHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extr
 
       <MastilPortada locale={locale}>
       {/* Contenedor de tamaño propio: el nombre, el emblema y las líneas se escalan con su ancho y se ajustan juntos. */}
-      <div className="relative mx-auto max-w-7xl px-6 pb-3 pt-3 text-center md:pb-4 md:pt-3 [container-type:inline-size]">
+      <div className="relative mx-auto max-w-7xl px-6 pb-3 pt-2 text-center md:pb-3 md:pt-2 [container-type:inline-size]">
         {/* Como en FEDEGÁN: las redes en círculos abajo a la izquierda y el modo claro/oscuro abajo a la derecha, a la altura de la fecha. */}
         <div className="absolute bottom-3 left-6 z-10 hidden items-center gap-3 md:flex">
           {[

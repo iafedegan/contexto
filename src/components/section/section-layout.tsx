@@ -108,19 +108,19 @@ export function SectionHeader({ theme, kicker, title, description, chips, breadc
       // Esmeralda: título y descripción a la izquierda y las etiquetas (n publicaciones, filtros) a la derecha, en UN bloque bajo
       // el menú. Antes eran cinco filas centradas (rombos, título, descripción, etiquetas y filete) y la lista empezaba a media pantalla.
       return (
-        <header data-region="encabezado" className="relative mb-6 pt-1 sm:mb-8">
+        <header data-region="encabezado" className="relative mb-6 pt-1 lg:mb-3">
           <div className="flex justify-center">{breadcrumb}</div>
-          <div className="flex flex-col gap-4 border-b border-[var(--border)] pb-4 lg:flex-row lg:items-end lg:justify-between lg:gap-8">
+          <div className="flex flex-col gap-4 border-b border-[var(--border)] pb-4 lg:flex-row lg:items-end lg:justify-between lg:gap-8 lg:pb-2">
             <div className="min-w-0">
               <p data-el="kicker" className="lx-kicker flex items-center gap-2 text-[var(--accent)]">
                 <span aria-hidden>◆</span>
                 {kicker}
               </p>
-              <h1 data-el="title" className="lx-display mt-1 bg-gradient-to-b from-[var(--fg)] to-[var(--accent)] bg-clip-text break-words text-[clamp(2rem,10vw,2.4rem)] font-semibold leading-[1.05] tracking-tight text-transparent md:text-5xl">
+              <h1 data-el="title" className="lx-display mt-1 bg-gradient-to-b from-[var(--fg)] to-[var(--accent)] bg-clip-text break-words text-[clamp(2rem,10vw,2.4rem)] font-semibold leading-[1.05] tracking-tight text-transparent md:text-4xl lg:text-[2.6rem]">
                 {title}
               </h1>
               {description && (
-                <p data-el="description" className="mt-2 max-w-2xl text-base leading-snug text-[var(--fg-muted)]">{description}</p>
+                <p data-el="description" className="mt-1 max-w-2xl text-base leading-snug text-[var(--fg-muted)] lg:mt-0.5 lg:text-[0.95rem]">{description}</p>
               )}
             </div>
             <div className="flex flex-wrap items-center gap-2 lg:shrink-0 lg:justify-end">
