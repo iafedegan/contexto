@@ -254,7 +254,8 @@ export function SectionGrid({ theme, items, locale, pautaColumna }: { theme: str
         <div className="flex flex-col gap-14">
           <section className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
             {/* Efecto al hacer scroll (globals.css, «cg-scroll-*»): las notas suben a su sitio a medida que entran en pantalla. */}
-            <div className="cg-scroll-foto min-w-0">
+            {/* En escritorio la foto llena todo el alto de la fila (a ras de la última nota de la columna): la tarjeta toma el alto de la celda en vez del de su proporción. */}
+            <div className="cg-scroll-foto min-w-0 lg:[&>article]:h-full">
               <ArticleCard a={lead} locale={locale} variant="lead" priority />
             </div>
             {rail.length > 0 && (
