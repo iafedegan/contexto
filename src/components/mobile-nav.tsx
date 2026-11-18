@@ -256,6 +256,12 @@ export function MobileNav({
               <span className="grid size-10 place-items-center rounded-full border border-[var(--border-strong)] text-[var(--accent)]"><Moon size={18} /></span>
               {es ? "Tono claro / oscuro" : "Light / dark"}
             </button>
+            {radioStreamUrl && (
+              <div className="flex min-h-12 items-center gap-3 rounded-xl px-2 text-base font-semibold">
+                <RadioPlayer src={radioStreamUrl} locale={locale} />
+                <span>{es ? "Escuchar la emisora" : "Listen live"}</span>
+              </div>
+            )}
             <Link href="/panel/login" className="flex min-h-12 items-center gap-3 rounded-xl px-2 text-base font-semibold text-[var(--accent)]">
               <span className="grid size-10 place-items-center rounded-full border border-[var(--border-strong)]"><UserCircle size={18} /></span>
               {es ? "Iniciar sesión" : "Sign in"}
