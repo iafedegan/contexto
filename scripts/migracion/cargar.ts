@@ -323,6 +323,9 @@ async function main() {
     resumen.notas += filas.length;
     if (SIMULACRO) { resumen.redireccionesGuardadas += reds.length; return; }
     // Notas: se insertan o se actualizan (nunca las creadas desde el panel). Lo que edita la redacción (portada, vistas, embeddings) no se toca.
+    // Una nota ya migrada CONSERVA su dirección y su sección: el sitio anterior publica algunas notas en dos secciones (p. ej. /cronica/x y
+    // /galeria/x) y, como se actualiza por `slug`, cargar la otra dirección movía la nota de sección y cambiaba la URL que Google ya conoce
+    // (la otra sigue funcionando: la ruta antigua busca la nota por su título y redirige con 308).
     if (filas.length) {
       const guardadas = await conReintentos(() => db
         .insert(articles)
@@ -331,8 +334,8 @@ async function main() {
           target: articles.slug,
           set: {
             title: sql`excluded.title`, excerpt: sql`excluded.excerpt`, body: sql`excluded.body`,
-            coverImageUrl: sql`excluded.cover_image_url`, coverImageAlt: sql`excluded.cover_image_alt`, coverImageCaption: sql`excluded.cover_image_caption`, legacyPath: sql`excluded.legacy_path`,
-            categoryId: sql`excluded.category_id`, authorId: sql`excluded.author_id`, status: sql`excluded.status`,
+            coverImageUrl: sql`excluded.cover_image_url`, coverImageAlt: sql`excluded.cover_image_alt`, coverImageCaption: sql`excluded.cover_image_caption`, legacyPath: sql`coalesce(${articles.legacyPath}, excluded.legacy_path)`,
+            categoryId: sql`coalesce(${articles.categoryId}, excluded.category_id)`, authorId: sql`excluded.author_id`, status: sql`excluded.status`,
             metaTitle: sql`excluded.meta_title`, metaDescription: sql`excluded.meta_description`, tags: sql`excluded.tags`, secciones: sql`excluded.secciones`,
             publishedAt: sql`excluded.published_at`, updatedAt: sql`excluded.updated_at`, createdAt: sql`excluded.created_at`,
           },
