@@ -2,8 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { ChevronDown, ChevronLeft, ChevronRight, EllipsisVertical, House, Menu, Moon, Search, UserCircle, X } from "lucide-react";
+import { ChevronDown, ChevronRight, EllipsisVertical, Menu, Moon, Search, UserCircle, X } from "lucide-react";
 import { LogoMark } from "@/components/logo-mark";
 import { LogoContexto } from "@/components/logo-contexto";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -68,10 +67,6 @@ export function MobileNav({
   const label = LABELS[locale === "en" ? "en" : "es"];
   const all = [...nav, ...extra];
   const es = locale !== "en";
-  // En la portada no hace falta volver a ella; en cualquier otra página, la casa de la cabecera lleva a la portada.
-  const ruta = (usePathname() ?? "/").replace(/\/+$/, "") || "/";
-  const inicio = localePath(locale, "/").replace(/\/+$/, "") || "/";
-  const enPortada = ruta === inicio || ruta === "/";
   const toggleTheme = () => {
     const d = document.documentElement.dataset.dark;
     const dark = d === "1" || (d !== "0" && ["home", "esmeralda", "revista", "vanguardia"].includes(document.querySelector("[data-site-root]")?.getAttribute("data-theme") ?? ""));
@@ -254,17 +249,6 @@ export function MobileNav({
           <span key={`${c}-${i}`} className="cg-cinta-tramo h-full flex-1" style={{ "--c": c } as React.CSSProperties} />
         ))}
       </div>
-      {/* Fuera de la portada, en el celular: una franja delgada bajo la cabecera para volver a la portada (como el «atrás» de una app). */}
-      {!enPortada && (
-        <Link
-          href={localePath(locale, "/")}
-          className="flex h-10 items-center gap-1 border-b border-[var(--border)] px-3 text-[0.8rem] font-semibold text-[var(--accent)] active:bg-[var(--surface-2)] md:hidden"
-        >
-          <ChevronLeft size={18} aria-hidden className="-ml-1" />
-          <House size={15} aria-hidden />
-          {es ? "Volver a la portada" : "Back to the front page"}
-        </Link>
-      )}
       <div className="flex flex-col items-center">
         {more && (
           <div className="my-2 w-[min(18rem,90%)] rounded-2xl border border-[var(--border-strong)] bg-[var(--surface-2)] p-2">
