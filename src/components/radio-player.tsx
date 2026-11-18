@@ -59,6 +59,24 @@ export function RadioPlayer({
 
   const sonando = estado === "sonando";
 
+  // Si el enlace es una página (por ejemplo la de la emisora en colombia.com) y no un flujo de audio, el botón la abre en una pestaña nueva.
+  const esFlujo = /\.(aac|mp3|ogg|opus|m3u8)(\?|$)/i.test(src);
+  if (!esFlujo) {
+    return (
+      <a
+        href={src}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label={`${t(locale, "radio.listen")} (${locale === "en" ? "opens in a new tab" : "se abre en una pestaña nueva"})`}
+        title={t(locale, "radio.listen")}
+        className={`lx-ui inline-flex min-h-11 items-center gap-1.5 rounded-full border border-[var(--border-strong)] px-3 text-[0.72rem] uppercase tracking-[0.14em] transition hover:border-[var(--accent)] hover:text-[var(--accent)] ${className}`}
+      >
+        <Play size={13} />
+        <span className="hidden sm:inline">Radio</span>
+      </a>
+    );
+  }
+
   return (
     <button
       type="button"
