@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import { EnlaceNota as Link } from "@/components/ui/enlace-nota";
 import { CoverArt } from "@/components/cover-art";
 import { ImagenSitio } from "@/components/ui/imagen-sitio";
@@ -111,12 +112,15 @@ export function SeccionesPorBandas({
   locale,
   primeraEnTema = false,
   entre,
+  entreMovil,
 }: {
   bandas: BandaDeSeccion[];
   locale: Locale;
   primeraEnTema?: boolean;
   /** Lo que va antes de la primera franja (la pauta horizontal de la portada), justo debajo de «Lo más reciente». */
   entre?: React.ReactNode;
+  /** Celular y tableta: pauta que se repite entre una franja y la siguiente (en el computador la lateral ya la lleva). */
+  entreMovil?: React.ReactNode;
 }) {
   if (!bandas.length) return entre ?? null;
   const tras = 0;
@@ -124,7 +128,13 @@ export function SeccionesPorBandas({
     <div data-region="bandas-secciones" className={primeraEnTema ? "mt-0" : "mt-16"}>
       {bandas.slice(0, tras).map((b, i) => <Banda key={b.slug} banda={b} indice={i} locale={locale} primeraEnTema={primeraEnTema} />)}
       {entre}
-      {bandas.slice(tras).map((b, i) => <Banda key={b.slug} banda={b} indice={i + tras} locale={locale} primeraEnTema={primeraEnTema} />)}
+      {bandas.slice(tras).map((b, i) => (
+        <Fragment key={b.slug}>
+          {/* Una pauta cada dos franjas (después de la 2.ª, 4.ª…), solo en celular y tableta, y nunca después de la última. */}
+          {entreMovil && i > 0 && i % 2 === 0 && <div className="lg:hidden">{entreMovil}</div>}
+          <Banda banda={b} indice={i + tras} locale={locale} primeraEnTema={primeraEnTema} />
+        </Fragment>
+      ))}
     </div>
   );
 }

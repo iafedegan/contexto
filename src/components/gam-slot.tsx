@@ -97,7 +97,8 @@ export function GamSlot({ unidad, className, grupo, completo = false }: { unidad
   const [anchoReal, setAnchoReal] = useState<number | null>(null);
   const [escala, setEscala] = useState(1);
   const fuera = useRef<HTMLDivElement>(null);
-  const ajusta = completo || horizontal;
+  const centrada = completo || unidad === "caja"; // el cuadro (336×280) va centrado
+  const ajusta = completo || horizontal || unidad === "caja";
   useEffect(() => {
     const el = fuera.current;
     if (!ajusta || !anchoReal || !altoReal || !el) return;
@@ -171,9 +172,9 @@ export function GamSlot({ unidad, className, grupo, completo = false }: { unidad
     // Sin anuncio pintado, el contenedor no suma márgenes ni alto (las clases de margen solo se aplican con anuncio).
     <div className={altoReal ? cn(className, horizontal && "py-1") : "w-full"} hidden={sobra(grupo, id)}>
       {/* Rótulo arriba y el anuncio debajo. Los banners horizontales van pegados a la derecha, con el rótulo también a la derecha y casi sin aire. */}
-      {altoReal && <span className={cn("block text-[0.6875rem] font-medium uppercase tracking-wide text-[var(--fg-muted)]", horizontal ? (completo ? "mb-1 text-center" : "mb-1 text-right") : "mb-1")}>Publicidad</span>}
+      {altoReal && <span className={cn("block text-[0.6875rem] font-medium uppercase tracking-wide text-[var(--fg-muted)]", centrada ? "mb-1 text-center" : horizontal ? "mb-1 text-right" : "mb-1")}>Publicidad</span>}
       {/* 1 px mientras espera: el observador necesita un elemento en la página para saber cuándo pedir el anuncio. */}
-      <div ref={fuera} className={ajusta ? cn("flex w-full overflow-hidden", completo ? "justify-center" : "justify-end") : undefined} style={ajusta && altoReal ? { height: altoReal * escala } : undefined}>
+      <div ref={fuera} className={ajusta ? cn("flex w-full overflow-hidden", centrada ? "justify-center" : "justify-end") : undefined} style={ajusta && altoReal ? { height: altoReal * escala } : undefined}>
         {/* Una envoltura del tamaño ya escalado coloca el anuncio (centrado o a la derecha): la escala no cambia el espacio que ocupa. */}
         <div className={ajusta && anchoReal ? "flex-none overflow-hidden" : "w-full"} style={ajusta && anchoReal && altoReal ? { width: anchoReal * escala, height: altoReal * escala } : undefined}>
           <div

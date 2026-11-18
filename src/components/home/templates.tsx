@@ -69,6 +69,8 @@ type TemplateProps = Slots &
     lateral?: React.ReactNode;
     /** Bajo «Lo más reciente», en la columna de las notas (solo Esmeralda): la pauta horizontal llena el hueco junto a la barra lateral. */
     bajoReciente?: React.ReactNode;
+    /** Solo Esmeralda, celular y tableta: pauta entre la apertura y «Lo más reciente» (sin ella, el primer anuncio quedaba a miles de píxeles del inicio). */
+    pautaMovil?: React.ReactNode;
     /** Solo Esmeralda: las notas más leídas (las tres primeras van en la columna derecha de la apertura). */
     masLeidas?: ArticleListItem[];
     /**
@@ -399,6 +401,7 @@ export function EsmeraldaTemplate({
   hueco,
   lateral,
   bajoReciente,
+  pautaMovil,
   masLeidas,
   locale = DEFAULT_LOCALE,
   builderSelected,
@@ -474,6 +477,7 @@ export function EsmeraldaTemplate({
       )}
       </div>
 
+      {pautaMovil && <div className="lg:hidden">{pautaMovil}</div>}
 
       {/* La rejilla de abajo usa las MISMAS columnas que la apertura: la barra lateral cae justo bajo «Lo último», con su mismo filete. */}
       {/* «Lo más reciente» + «Para leer»: franja de fondo BLANCO a todo el ancho; las franjas por sección que siguen alternan (verde, blanco…). */}

@@ -179,6 +179,9 @@ async function HomePage({ locale, portadaBorrador }: { locale: Locale; portadaBo
   const usadas = new Set(articles.map((a) => a.slug));
   const extrasRecientes = esEsmeralda ? (await getRecentArticles(30).catch(() => [])).filter((a) => !usadas.has(a.slug)).slice(0, 2) : [];
   const columnaArriba = !carrusel && !["revista", "compacto", "vanguardia", "clasico", "gremial"].includes(body);
+  // Pauta de celular y tableta: un cuadro de 336×280 (el formato que sí cabe en una pantalla angosta) entre la apertura y «Lo más reciente» y
+  // cada dos franjas de secciones. En el computador esos espacios los cubren la lateral y la franja horizontal.
+  const pautaMovil = <AdsBanner zone="home_billboard" className="mx-auto my-2" />;
   const columnaMovil = (
     <div className={columnaArriba ? undefined : "lg:hidden"}>
       <ColumnaLafaurieSuelta locale={locale} tarjeta={esEsmeralda} />
@@ -261,7 +264,7 @@ async function HomePage({ locale, portadaBorrador }: { locale: Locale; portadaBo
           ) : body === "gremial" ? (
             <GremialTemplate {...props} trasPrincipal={trasPrincipal} />
           ) : (
-            <EsmeraldaTemplate {...props} trasPrincipal={trasPrincipal} conColumna={hayColumna} hueco={hueco.length ? hueco : undefined} masLeidas={masLeidas} bajoReciente={extrasRecientes.length > 0 ? <NotasDelHueco notas={extrasRecientes} locale={locale} /> : undefined} lateral={<SiteSidebar locale={locale} columnaEnMovil={false} sinColumna={columnaArriba} />} />
+            <EsmeraldaTemplate {...props} pautaMovil={pautaMovil} trasPrincipal={trasPrincipal} conColumna={hayColumna} hueco={hueco.length ? hueco : undefined} masLeidas={masLeidas} bajoReciente={extrasRecientes.length > 0 ? <NotasDelHueco notas={extrasRecientes} locale={locale} /> : undefined} lateral={<SiteSidebar locale={locale} columnaEnMovil={false} sinColumna={columnaArriba} />} />
           )}
           {!carrusel && sinSlot && <div className="mt-8">{columnaMovil}</div>}
 
@@ -278,7 +281,7 @@ async function HomePage({ locale, portadaBorrador }: { locale: Locale; portadaBo
       </CardSlugsProvider>
 
       {/* La pauta horizontal (Ad Manager `home_b6`): va en una franja de borde a borde justo debajo de «Lo más reciente», antes de las franjas de secciones (el hueco bajo «Lo más reciente» lo llenan dos notas, ver `NotasDelHueco`). */}
-      <SeccionesPorBandas bandas={bandas} locale={locale} primeraEnTema={esEsmeralda} entre={<div className="lx-fullbleed border-y border-[var(--border)] bg-[var(--bg-2)] py-1.5 [&:not(:has(iframe,img))]:border-0 [&:not(:has(iframe,img))]:bg-transparent [&:not(:has(iframe,img))]:py-0"><div className="shell"><AdsBanner zone="home_bottom" completo /></div></div>} />
+      <SeccionesPorBandas bandas={bandas} locale={locale} primeraEnTema={esEsmeralda} entreMovil={pautaMovil} entre={<div className="lx-fullbleed border-y border-[var(--border)] bg-[var(--bg-2)] py-1.5 [&:not(:has(iframe,img))]:border-0 [&:not(:has(iframe,img))]:bg-transparent [&:not(:has(iframe,img))]:py-0"><div className="shell"><AdsBanner zone="home_bottom" completo /></div></div>} />
 
       {car.posicion === "abajo" && carruselConColumna && <div className="mt-12">{carruselConColumna}</div>}
       {bloqueInicio("abajo", "mt-12")}
