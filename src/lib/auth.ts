@@ -204,7 +204,7 @@ export const auth = cache(() => authSinCache());
 // La cuenta por id, una vez por petición.
 export const cuentaPorId = cache(async (id: string) => {
   const [row] = await db
-    .select({ id: users.id, name: users.name, email: users.email, role: users.role, active: users.active, totpEnabled: users.totpEnabled })
+    .select({ id: users.id, name: users.name, email: users.email, role: users.role, active: users.active, totpEnabled: users.totpEnabled, mustChangePassword: users.mustChangePassword })
     .from(users)
     .where(eq(users.id, id))
     .limit(1);

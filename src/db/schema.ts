@@ -143,6 +143,8 @@ export const users = pgTable(
     // Segundo factor (TOTP)
     totpSecret: text("totp_secret"),
     totpEnabled: boolean("totp_enabled").notNull().default(false),
+    // Contraseña temporal: la persona entra con ella pero el panel solo le deja cambiarla (se apaga al cambiarla).
+    mustChangePassword: boolean("must_change_password").notNull().default(false),
     active: boolean("active").notNull().default(true),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),

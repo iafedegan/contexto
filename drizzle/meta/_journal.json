@@ -281,6 +281,13 @@
       "when": 1794700000000,
       "tag": "0039_agricultura_seccion_principal",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1795035027453,
+      "tag": "0040_clave_temporal",
+      "breakpoints": true
     }
   ]
 }

@@ -74,10 +74,10 @@ export default async function PanelLayout({ children }: { children: React.ReactN
     "--canvas-2": mezcla(marca.desde, 17, "#ffffff"),
     "--canvas-3": mezcla(marca.desde, 26, "#ffffff"),
   } as React.CSSProperties;
-  let yo: { totpEnabled: boolean } | undefined = yoPorId;
+  let yo: { totpEnabled: boolean; mustChangePassword: boolean } | undefined = yoPorId;
   if (!yo && session.user.email) {
     [yo] = await db
-      .select({ totpEnabled: users.totpEnabled })
+      .select({ totpEnabled: users.totpEnabled, mustChangePassword: users.mustChangePassword })
       .from(users)
       .where(eq(users.email, session.user.email.toLowerCase().trim()));
   }
@@ -91,7 +91,10 @@ export default async function PanelLayout({ children }: { children: React.ReactN
   // de Configuración no se renderiza el contenido (solo la ida a Seguridad) y
   // dentro se oculta el menú para que no pueda salir de ahí.
   const permisos = efectivos(session.user.role, ajustesYo);
-  const bloqueado = debeActivar2fa && !pathname.startsWith(RUTA_SEGURIDAD);
+  // Contraseña temporal: hasta que la cambie, solo puede abrir Configuración (donde está el cambio de contraseña).
+  const debeCambiarClave = yo?.mustChangePassword === true;
+  const restringido = debeActivar2fa || debeCambiarClave;
+  const bloqueado = restringido && !pathname.startsWith(RUTA_SEGURIDAD);
 
   // La cuenta (nombre, «Ver sitio», «Salir») va en la barra en escritorio y dentro del menú en el teléfono.
   const cuenta = (
@@ -135,7 +138,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
           </div>
         </div>
         {/* «Uso de IA» va justo debajo del grupo Configuración (último del menú); el pie (Ver sitio / Salir) se queda al fondo. */}
-        {!debeActivar2fa && (
+        {!restringido && (
           <div className="flex shrink-0 flex-col gap-3">
             <PanelSidebarNav role={session.user.role} permisos={permisos} pendientes={misTareas.total} notas={misNotas} imagenes={misImagenes} comentarios={misComentarios} />
             {permisos.includes("uso_ia") && <UsoIaBarra variante="lateral" />}
@@ -172,7 +175,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
             </span>
           </Link>
 
-          {!debeActivar2fa && (
+          {!restringido && (
             <PanelNav role={session.user.role} permisos={permisos} pendientes={misTareas.total} notas={misNotas} imagenes={misImagenes} comentarios={misComentarios}>
               {permisos.includes("uso_ia") && <UsoIaBarra variante="movil" />}
               {cuenta}
@@ -180,7 +183,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
           )}
 
           {/* Sin 2FA no hay menú: la cuenta (con «Salir») se queda siempre a la vista. */}
-          <div className={`ml-auto items-center gap-3 text-xs ${debeActivar2fa ? "flex flex-wrap justify-end" : "hidden"}`}>{cuenta}</div>
+          <div className={`ml-auto items-center gap-3 text-xs ${restringido ? "flex flex-wrap justify-end" : "hidden"}`}>{cuenta}</div>
         </div>
       </header>
 
@@ -189,6 +192,15 @@ export default async function PanelLayout({ children }: { children: React.ReactN
           mismo fondo, en vez de mezclar pantallas claras y oscuras. */}
       <main data-theme="panel-amber" style={estiloContenido} className="lx-pearl-canvas flex-1 text-[var(--fg)]">
         <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:px-10">
+          {debeCambiarClave && (
+            <p className="mb-6 flex items-start gap-2 rounded-[var(--radius)] border border-[var(--accent)]/40 bg-[var(--surface-2)] p-4 text-sm leading-relaxed">
+              <ShieldAlert size={16} className="mt-0.5 shrink-0 text-[var(--accent)]" />
+              <span>
+                Entraste con una contraseña temporal. <strong>Cámbiala ahora</strong> en «Mi perfil» (más abajo en esta pantalla): escribe la contraseña actual y una nueva de al menos
+                10 caracteres. Mientras no la cambies no podrás usar el resto del panel.
+              </span>
+            </p>
+          )}
           {debeActivar2fa && (
             <p className="mb-6 flex items-start gap-2 rounded-[var(--radius)] border border-[var(--accent)]/40 bg-[var(--surface-2)] p-4 text-sm leading-relaxed">
               <ShieldAlert size={16} className="mt-0.5 shrink-0 text-[var(--accent)]" />
@@ -207,7 +219,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
             </p>
           )}
           {bloqueado ? <IrASeguridad href={`${RUTA_SEGURIDAD}#seguridad`} /> : children}
-          {!debeActivar2fa && !bloqueado && <AvisoTareas pendientes={misTareas.total} nuevas={misTareas.nuevas} />}
+          {!restringido && !bloqueado && <AvisoTareas pendientes={misTareas.total} nuevas={misTareas.nuevas} />}
         </div>
       </main>
 

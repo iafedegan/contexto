@@ -268,7 +268,9 @@ export async function actualizarMiPerfil(_prev: MiPerfilState, formData: FormDat
     if (!yo.passwordHash || !(await bcrypt.compare(passwordActual, yo.passwordHash))) {
       return { ok: false, message: "La contraseña actual no es correcta." };
     }
+    if (passwordNueva === passwordActual) return { ok: false, message: "La contraseña nueva debe ser distinta de la actual." };
     cambios.passwordHash = await bcrypt.hash(passwordNueva, 10);
+    cambios.mustChangePassword = false;
   }
 
   await db.update(users).set(cambios).where(eq(users.id, session.user.id));
