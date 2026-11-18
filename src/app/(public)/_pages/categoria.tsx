@@ -398,8 +398,8 @@ async function CategoryPage({ params, searchParams, locale, portadaBorrador }: P
         </p>
       ) : (
         <>
-          {/* Inicio de sección: la pauta ocupa todo el largo de la página (se escala al ancho del contenido). */}
-          <AdsBanner zone="section_top" className="mb-6" completo />
+          {/* Inicio de sección: la pauta sube pegada a la cabecera (-mt-10 anula casi todo su margen de abajo; solo se aplica con anuncio pintado). */}
+          <AdsBanner zone="section_top" className="-mt-10 mb-4" completo />
           {/* TV, Radio y Especiales (y sus subsecciones) tienen formato propio; el resto, la cuadrícula de la plantilla. */}
           {(() => {
             const formato = formatoDeSeccion(slug, category.parentSlug);
