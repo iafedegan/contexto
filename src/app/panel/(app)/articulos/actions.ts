@@ -10,7 +10,7 @@ import { articles, categories } from "@/db/schema";
 import { canPublish, requirePermiso } from "@/lib/auth";
 import { slugify } from "@/lib/utils";
 import { autorDeUsuario, crearFirma, firmaDeNota, type FirmaCreada } from "@/lib/user-authors";
-import { archivarCore, distintivosCore, enviarARevisionCore, fijarPortadaCore, guardarBorradorCore, programarCore, publicarCore, reindexarNota, revalidarNota, type BorradorInput } from "@/lib/article-ops";
+import { archivarCore, asegurarRutaDeColumna, distintivosCore, enviarARevisionCore, fijarPortadaCore, guardarBorradorCore, programarCore, publicarCore, reindexarNota, revalidarNota, type BorradorInput } from "@/lib/article-ops";
 import { tienePermiso } from "@/lib/permisos-server";
 import { avisarSiUltimaHora } from "@/lib/push";
 import { invalidarCache } from "@/lib/data-cache";
@@ -132,6 +132,8 @@ export async function saveArticle(formData: FormData) {
   }
 
   await reindexarNota(articleId);
+  // Una columna se sirve en /columna/<título>, también si ya estaba publicada y solo se guarda.
+  await asegurarRutaDeColumna(articleId);
   // Lugar en la portada del sitio (solo con permiso «portada»; «keep» o ausente = no tocar).
   const portadaPos = String(formData.get("portadaPos") ?? "keep");
   if ((portadaPos === "0" || portadaPos === "1" || portadaPos === "none") && (await tienePermiso(user.id, user.role, "portada"))) {

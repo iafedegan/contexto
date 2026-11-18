@@ -21,6 +21,7 @@ import {
   transcribirEntrevistaCore,
   crearSubidaAudioCore,
   transcribirEntrevistaSubidaCore,
+  leerDocumentoCore,
   leerEnlacesCore,
   buscarRelacionadasCore,
 } from "@/lib/ai-core";
@@ -119,6 +120,12 @@ export async function crearSubidaAudio(...args: Parameters<typeof crearSubidaAud
 export async function transcribirEntrevistaSubida(...args: Parameters<typeof transcribirEntrevistaSubidaCore> extends [string, ...infer R] ? R : never) {
   const user = await requirePermiso("articulos");
   return transcribirEntrevistaSubidaCore(user.id, ...args);
+}
+
+// Lee un documento (PDF, Word o texto) para usarlo como material. Exige el permiso «articulos»; el PDF descuenta cuota de IA.
+export async function leerDocumento(...args: Parameters<typeof leerDocumentoCore> extends [string, ...infer R] ? R : never) {
+  const user = await requirePermiso("articulos");
+  return leerDocumentoCore(user.id, ...args);
 }
 
 // Lee enlaces para usarlos como material. Exige el permiso «articulos» y delega en la función núcleo, que descuenta la cuota de IA.

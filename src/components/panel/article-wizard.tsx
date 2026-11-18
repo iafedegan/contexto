@@ -59,6 +59,7 @@ import {
   transcribirEntrevista,
   crearSubidaAudio,
   transcribirEntrevistaSubida,
+  leerDocumento,
   leerEnlaces,
   type TopicIdea,
   type NewsItem,
@@ -74,7 +75,7 @@ import { textoDeSegmentos, type Material, type Participante, type Segmento } fro
 import { participantesListos, SegmentosEditor } from "@/components/panel/entrevista-editor";
 import { SiteArticlePreview, type SitePreviewChrome } from "@/components/panel/site-article-preview";
 import { briefParaPrompt, type BriefSeccion } from "@/lib/consejo/plan";
-import { FuenteCards, PantallaEnlaces, PantallaEntrevista, PantallaIdeas, PantallaNoticias, type Fuente } from "@/components/panel/wizard-fuentes";
+import { FuenteCards, MAX_DOCUMENTOS, PantallaDocumentos, PantallaEnlaces, PantallaEntrevista, PantallaIdeas, PantallaNoticias, type Fuente } from "@/components/panel/wizard-fuentes";
 import { WizardStepper } from "@/components/panel/wizard-stepper";
 import { BotonVoz } from "@/components/panel/boton-voz";
 import { SelectorBiblioteca } from "@/components/panel/selector-biblioteca";
@@ -292,6 +293,8 @@ export function ArticleWizard({
   const [urlsTxt, setUrlsTxt] = useState("");
   const [urlsError, setUrlsError] = useState("");
   const [urlsBusy, startUrls] = useTransition();
+  const [docsBusy, startDocs] = useTransition();
+  const [docsError, setDocsError] = useState("");
   const [sceneTxt, setSceneTxt] = useState("");
   // Fotos de referencia (máximo 3) con las que la IA compone la portada.
   const [fotosRef, setFotosRef] = useState<string[]>([]);
@@ -779,6 +782,27 @@ export function ArticleWizard({
     });
   }
 
+  // Lee los documentos elegidos (de a uno, para no pasar el límite de tamaño de la petición) y los agrega como material; máximo 3 por nota.
+  function cargarDocumentos(archivos: File[]) {
+    setDocsError("");
+    const libres = MAX_DOCUMENTOS - material.filter((m) => m.kind === "documento").length;
+    const elegidos = archivos.slice(0, Math.max(0, libres));
+    const fallos: string[] = archivos.length > elegidos.length ? [`Solo caben ${MAX_DOCUMENTOS} documentos por nota: se dejaron ${archivos.length - elegidos.length} sin subir.`] : [];
+    startDocs(async () => {
+      for (const f of elegidos) {
+        const fd = new FormData();
+        fd.set("documento", f);
+        const res = await leerDocumento(fd);
+        if (res.ok) {
+          setMaterial((m) => (m.some((x) => x.title === res.material.title && x.text === res.material.text) ? m : [...m, res.material]));
+          setOptions(null);
+        } else fallos.push(res.error);
+      }
+      if (fallos.length) setDocsError(fallos.join(" "));
+      else setFuente(null);
+    });
+  }
+
   // Pide a la IA la imagen de portada.
   function makeCover() {
     setImgError("");
@@ -1137,6 +1161,7 @@ export function ArticleWizard({
               : subpantalla === "noticias" ? "Buscar noticias"
               : subpantalla === "entrevista" ? "Voz o video"
               : subpantalla === "enlaces" ? "Enlaces"
+              : subpantalla === "documentos" ? "Documentos"
               : subpantalla === "revision" ? "Revisa lo que se dijo"
               : "Tema, título y contexto"
             }
@@ -1158,6 +1183,7 @@ export function ArticleWizard({
                     {subpantalla === "noticias" && "Investiga una persona, empresa o tema. Elige cuáles referenciar o cuál usar como tema."}
                     {subpantalla === "entrevista" && "Dinos quiénes hablan y sube la grabación: la IA la divide por intervenciones."}
                     {subpantalla === "enlaces" && "La IA lee cada página y redacta con palabras propias."}
+                    {subpantalla === "documentos" && "La IA lee hasta 3 documentos y redacta con palabras propias."}
                     {subpantalla === "revision" && matRev && `${matRev.title} · ${matRev.segmentos?.length ? "asigna quién dijo cada fragmento y corrige el texto" : "corrige el texto antes de redactar"}`}
                   </span>
                   <button type="button" onClick={volverAlTema} className="lx-link inline-flex shrink-0 items-center gap-1 text-xs font-semibold">
@@ -1232,6 +1258,9 @@ export function ArticleWizard({
             {subpantalla === "enlaces" && (
               <PantallaEnlaces texto={urlsTxt} onTexto={setUrlsTxt} onCargar={cargarEnlaces} cargando={urlsBusy} error={urlsError} />
             )}
+            {subpantalla === "documentos" && (
+              <PantallaDocumentos cargados={material.filter((m) => m.kind === "documento").map((m) => m.title)} ocupado={docsBusy} error={docsError} onArchivos={cargarDocumentos} />
+            )}
             {subpantalla === "revision" && matRev && idxRev !== null && (
               matRev.segmentos?.length ? (
                 <SegmentosEditor
@@ -1286,7 +1315,7 @@ export function ArticleWizard({
                       render={(m, i) => (
                         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] px-3 py-2">
                           <span className="rounded-full bg-[var(--accent)]/12 px-2 py-0.5 text-[0.6875rem] font-semibold uppercase tracking-wide text-[var(--accent)]">
-                            {m.kind === "entrevista" ? "Entrevista" : "Enlace"}
+                            {m.kind === "entrevista" ? "Entrevista" : m.kind === "documento" ? "Documento" : "Enlace"}
                           </span>
                           <span className="min-w-0 flex-1 truncate text-sm font-semibold" title={m.title}>{m.title}</span>
                           <span className="text-xs text-[var(--fg-muted)]">{m.segmentos?.length ? `${m.segmentos.length} intervenciones · ` : ""}{m.text.length.toLocaleString("es-CO")} car.</span>
@@ -1306,6 +1335,7 @@ export function ArticleWizard({
                     ideas: ideaElegida ? "Tema elegido" : ideas ? `${ideas.ideas.length} temas` : undefined,
                     noticias: refs.length ? `${refs.length} referencia${refs.length > 1 ? "s" : ""}` : news ? `${news.length} resultados` : undefined,
                     entrevista: material.some((m) => m.kind === "entrevista") ? "Cargada" : undefined,
+                    documentos: material.some((m) => m.kind === "documento") ? `${material.filter((m) => m.kind === "documento").length} de ${MAX_DOCUMENTOS}` : undefined,
                     enlaces: material.some((m) => m.kind === "enlace") ? `${material.filter((m) => m.kind === "enlace").length} cargados` : undefined,
                   }}
                 />

@@ -9,7 +9,7 @@ export const SIN_IDENTIFICAR = "Sin identificar";
 
 /** Material que el periodista carga para redactar: una entrevista transcrita o el texto de uno o más enlaces. */
 export type Material = {
-  kind: "entrevista" | "enlace";
+  kind: "entrevista" | "enlace" | "documento";
   title: string;
   text: string;
   url?: string;
@@ -76,7 +76,9 @@ export function materialParaPrompt(material: Material[] | undefined, maxTotal = 
             `no inventes ni recortes palabras dentro de una cita.` +
             (m.esEntrevista ? ` Es una entrevista: respeta quién pregunta y quién responde, y no mezcles las respuestas de una persona con las de otra.` : "") +
             `\n${t}`
-        : `[ENLACE ${i + 1}: ${m.title}${m.url ? ` — ${m.url}` : ""}]\nTexto de la fuente (no lo copies: redacta con palabras propias y atribúyelo):\n${t}`,
+        : m.kind === "documento"
+          ? `[DOCUMENTO ${i + 1}: ${m.title}]\nTexto del documento (no lo copies: redacta con palabras propias, atribúyelo a su autor o entidad y verifica las cifras contra el texto):\n${t}`
+          : `[ENLACE ${i + 1}: ${m.title}${m.url ? ` — ${m.url}` : ""}]\nTexto de la fuente (no lo copies: redacta con palabras propias y atribúyelo):\n${t}`,
     );
   });
   return partes.join("\n\n");

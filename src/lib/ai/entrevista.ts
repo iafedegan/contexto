@@ -11,6 +11,7 @@ import { getModelo } from "@/lib/ai-provider";
 import { descargarSeguro } from "@/lib/safe-fetch";
 import { FORMATOS_MEDIA, esMimeVideo, mimeMedia } from "@/lib/media-mime";
 import { SIN_IDENTIFICAR, parseTiempo, textoDeSegmentos, type Material, type Participante, type Segmento } from "@/lib/material-types";
+import { textoDeDocx } from "@/lib/ai/documento-texto";
 import { registrarUsoIA, verificarCuotaIA } from "@/lib/ai-cuota";
 
 export type MaterialResult = { ok: true; material: Material } | { ok: false; error: string };
@@ -330,5 +331,53 @@ export async function transcribirAudioBytesCore(userId: string, bytes: Uint8Arra
     console.error("transcribirAudioBytes:", err);
     const d = err && typeof err === "object" && "message" in err ? String((err as Error).message) : "";
     return { ok: false, error: d ? `No se pudo transcribir: ${d.slice(0, 220)}` : "El modelo no respondió." };
+  }
+}
+
+const MAX_DOCUMENTO = 4 * 1024 * 1024; // el límite de Vercel para el cuerpo de una petición es ~4,5 MB
+const EXT_TEXTO = /\.(txt|md|csv)$/i;
+
+/**
+ * Lee UN documento subido (PDF, Word .docx o texto) y lo devuelve como material para redactar. El PDF lo lee el modelo; el resto se lee sin IA.
+ * El asistente llama una vez por archivo (máximo 3 por nota).
+ */
+export async function leerDocumentoCore(userId: string, formData: FormData): Promise<MaterialResult> {
+  const f = formData.get("documento");
+  if (!(f instanceof File) || f.size === 0) return { ok: false, error: "No llegó ningún documento." };
+  if (f.size > MAX_DOCUMENTO) return { ok: false, error: `«${f.name}» pesa ${(f.size / 1048576).toFixed(1)} MB; el máximo son 4 MB por documento.` };
+  const titulo = `Documento: ${f.name.replace(/\.[a-z0-9]+$/i, "").slice(0, 80)}`;
+  const bytes = new Uint8Array(await f.arrayBuffer());
+  try {
+    let texto = "";
+    if (/\.docx$/i.test(f.name)) {
+      texto = textoDeDocx(bytes) ?? "";
+      if (!texto) return { ok: false, error: `No se pudo leer «${f.name}». Guárdalo de nuevo como .docx o súbelo en PDF.` };
+    } else if (/\.doc$/i.test(f.name)) {
+      return { ok: false, error: "El formato .doc antiguo no se puede leer: guárdalo como .docx o PDF." };
+    } else if (EXT_TEXTO.test(f.name) || f.type.startsWith("text/")) {
+      texto = new TextDecoder("utf-8").decode(bytes).trim();
+    } else if (/\.pdf$/i.test(f.name) || f.type === "application/pdf") {
+      if (String.fromCharCode(...bytes.subarray(0, 5)) !== "%PDF-") return { ok: false, error: `«${f.name}» no es un PDF válido.` };
+      const model = await getModelo("editor");
+      if (!model) return { ok: false, error: "Falta la clave del modelo (la conecta un administrador en Configuración → Inteligencia artificial)." };
+      const cuota = await verificarCuotaIA(userId);
+      if (!cuota.ok) return { ok: false, error: cuota.message };
+      const r = await generateText({
+        model,
+        system:
+          "Eres un asistente de redacción de un medio periodístico colombiano. Extraes el texto de un documento con fidelidad: sin resumir, sin corregir y sin inventar. Conserva títulos, cifras, tablas (como filas de texto), nombres y fechas. Si una parte es ilegible, escribe [ilegible].",
+        messages: [{ role: "user", content: [{ type: "text", text: "Devuelve el texto completo de este documento." }, { type: "file", data: bytes, mediaType: "application/pdf" }] }],
+      });
+      await registrarUsoIA(userId, r.usage);
+      texto = r.text.trim();
+    } else {
+      return { ok: false, error: `«${f.name}» no es un formato admitido. Usa PDF, Word (.docx) o texto (.txt).` };
+    }
+    if (texto.length < 40) return { ok: false, error: `«${f.name}» no tiene texto que leer (¿es una imagen escaneada o está vacío?).` };
+    return { ok: true, material: { kind: "documento", title: titulo, text: texto.slice(0, 120_000) } };
+  } catch (err) {
+    console.error("leerDocumento:", err);
+    const d = err && typeof err === "object" && "message" in err ? String((err as Error).message) : "";
+    return { ok: false, error: d ? `No se pudo leer el documento: ${d.slice(0, 220)}` : "El modelo no respondió." };
   }
 }

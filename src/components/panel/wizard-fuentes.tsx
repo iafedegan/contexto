@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowRight, Check, Link2, Lightbulb, Loader2, Mic, Search, Sparkles, TrendingUp } from "lucide-react";
+import { ArrowRight, Check, FileText, Link2, Lightbulb, Loader2, Mic, Search, Sparkles, TrendingUp } from "lucide-react";
 import type { NewsItem, TopicIdea } from "@/app/panel/(app)/articulos/ai-actions";
 import { Carrusel, filasListas, useAltoVentana } from "@/components/panel/carrusel";
 import { AreaVoz, InputVoz } from "@/components/panel/campo-voz";
@@ -18,7 +18,7 @@ import type { Participante } from "@/lib/material-types";
 const CAMPO = "w-full rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] px-4 !py-2 text-sm outline-none transition focus:border-[var(--accent)] placeholder:text-[var(--fg-muted)]/50";
 
 // Nombre de cada fuente que el editor puede elegir para empezar.
-export type Fuente = "ideas" | "noticias" | "entrevista" | "enlaces";
+export type Fuente = "ideas" | "noticias" | "entrevista" | "enlaces" | "documentos";
 
 /** Las cuatro fuentes con su ícono, nombre y una línea que explica qué hace. */
 const FUENTES = [
@@ -26,6 +26,7 @@ const FUENTES = [
   { id: "noticias", Icono: Search, titulo: "Buscar noticias", ayuda: "Investiga una persona o tema en medios, YouTube y fuentes oficiales." },
   { id: "entrevista", Icono: Mic, titulo: "Voz o video", ayuda: "Sube una grabación: la IA la transcribe por intervenciones." },
   { id: "enlaces", Icono: Link2, titulo: "Enlaces", ayuda: "Pega hasta 5 páginas y redacta con palabras propias." },
+  { id: "documentos", Icono: FileText, titulo: "Documentos", ayuda: "Sube hasta 3 (PDF, Word o texto): la IA los lee y redacta la nota." },
 ] as const;
 
 /** Las cuatro fuentes como tarjetas; al pulsar una se abre su pantalla. `notas` muestra lo ya cargado de cada una. */
@@ -339,6 +340,46 @@ export function PantallaEnlaces({
         </button>
         {error && <p role="alert" className="min-w-0 flex-1 text-sm text-[var(--danger,#b4442e)]">{error}</p>}
       </div>
+    </div>
+  );
+}
+
+/** Máximo de documentos por nota. */
+export const MAX_DOCUMENTOS = 3;
+
+/** Pantalla «Documentos»: elegir o arrastrar hasta 3 archivos (PDF, Word o texto); la IA los lee y quedan como material. */
+export function PantallaDocumentos({
+  cargados, ocupado, error, onArchivos,
+}: {
+  cargados: string[];
+  ocupado: boolean;
+  error: string;
+  onArchivos: (archivos: File[]) => void;
+}) {
+  const libres = MAX_DOCUMENTOS - cargados.length;
+  return (
+    <div className="flex flex-col gap-3">
+      <p className="text-sm text-[var(--fg-muted)]">Sube hasta {MAX_DOCUMENTOS} documentos (PDF, Word .docx o texto, de hasta 4 MB cada uno). La IA los lee y redacta con palabras propias, atribuyendo.</p>
+      {cargados.length > 0 && (
+        <ul className="flex flex-col gap-1 text-sm">
+          {cargados.map((t) => (
+            <li key={t} className="flex items-center gap-2"><Check size={15} className="text-[var(--accent)]" aria-hidden /> <span className="min-w-0 truncate">{t}</span></li>
+          ))}
+        </ul>
+      )}
+      <label className={`flex flex-col items-center justify-center gap-2 rounded-[var(--radius)] border border-dashed border-[var(--border-strong,var(--border))] px-4 py-8 text-center text-sm ${libres > 0 && !ocupado ? "cursor-pointer hover:bg-[var(--surface-2)]" : "opacity-60"}`}>
+        {ocupado ? <Loader2 size={22} className="animate-spin" aria-hidden /> : <FileText size={22} aria-hidden />}
+        <span className="font-medium">{ocupado ? "Leyendo documentos…" : libres > 0 ? `Elegir documentos (puedes subir ${libres} más)` : "Ya subiste los 3 documentos"}</span>
+        <input
+          type="file"
+          multiple
+          disabled={libres <= 0 || ocupado}
+          accept=".pdf,.docx,.txt,.md,.csv,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
+          className="sr-only"
+          onChange={(e) => { const lista = [...(e.target.files ?? [])]; e.target.value = ""; if (lista.length) onArchivos(lista); }}
+        />
+      </label>
+      {error && <p role="alert" className="text-sm text-[var(--danger,#b4442e)]">{error}</p>}
     </div>
   );
 }
