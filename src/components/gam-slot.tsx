@@ -69,8 +69,10 @@ function sobra(grupo: string | undefined, id: string): boolean {
  * Un espacio de Google Ad Manager. Reserva su alto desde el inicio (sin saltos) y solo carga Google cuando el espacio está por entrar en
  * pantalla, así los anuncios nunca compiten con el contenido ni con el LCP. La sección (y por tanto la unidad) sale de la dirección.
  */
-// Con `completo`, el anuncio se escala (sin deformarlo) hasta ocupar todo el ancho disponible; esto es lo más que se amplía.
+// Con `completo`, el anuncio se amplía (sin deformarlo ni recortarlo) hasta ocupar el ancho disponible, pero sin pasar de este alto en px
+// (un 728×90 llenando 1.400 px medía ~175 de alto): si no llega al ancho completo, queda centrado.
 const ESCALA_MAX = 2.2;
+const ALTO_MAX_COMPLETO = 120;
 
 export function GamSlot({ unidad, className, grupo, completo = false }: { unidad: UnidadGam; className?: string; grupo?: string; completo?: boolean }) {
   const pathname = usePathname() ?? "/";
@@ -87,13 +89,13 @@ export function GamSlot({ unidad, className, grupo, completo = false }: { unidad
   const fuera = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const el = fuera.current;
-    if (!completo || !anchoReal || !el) return;
-    const calcular = () => setEscala(Math.min(ESCALA_MAX, Math.max(0.3, el.clientWidth / anchoReal)));
+    if (!completo || !anchoReal || !altoReal || !el) return;
+    const calcular = () => setEscala(Math.min(ESCALA_MAX, ALTO_MAX_COMPLETO / altoReal, Math.max(0.3, el.clientWidth / anchoReal)));
     calcular();
     const ro = new ResizeObserver(calcular);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [completo, anchoReal]);
+  }, [completo, anchoReal, altoReal]);
   // Se vuelve a dibujar cuando otro espacio del grupo cambia (llegó un anuncio grande).
   const [, avisar] = useState(0);
   useEffect(() => {
@@ -155,15 +157,18 @@ export function GamSlot({ unidad, className, grupo, completo = false }: { unidad
     // Sin anuncio pintado, el contenedor no suma márgenes ni alto (las clases de margen solo se aplican con anuncio).
     <div className={altoReal ? cn(className, horizontal && "py-1") : "w-full"} hidden={sobra(grupo, id)}>
       {/* Rótulo arriba y el anuncio debajo. Los banners horizontales van pegados a la derecha, con el rótulo también a la derecha y casi sin aire. */}
-      {altoReal && <span className={cn("block text-[0.6875rem] font-medium uppercase tracking-wide text-[var(--fg-muted)]", horizontal ? "mb-1 text-right" : "mb-1")}>Publicidad</span>}
+      {altoReal && <span className={cn("block text-[0.6875rem] font-medium uppercase tracking-wide text-[var(--fg-muted)]", horizontal ? (completo ? "mb-1 text-center" : "mb-1 text-right") : "mb-1")}>Publicidad</span>}
       {/* 1 px mientras espera: el observador necesita un elemento en la página para saber cuándo pedir el anuncio. */}
-      <div ref={fuera} className={completo ? "w-full overflow-hidden" : undefined} style={completo && altoReal ? { height: altoReal * escala } : undefined}>
-        <div
-          ref={caja}
-          id={id}
-          className={cn("flex items-start [&_iframe]:rounded-lg", completo ? undefined : horizontal ? "justify-end" : "mx-auto justify-center")}
-          style={completo && anchoReal ? { minHeight: altoReal ?? 1, width: anchoReal, transform: `scale(${escala})`, transformOrigin: "top left" } : { minHeight: altoReal ?? 1 }}
-        />
+      <div ref={fuera} className={completo ? "flex w-full justify-center overflow-hidden" : undefined} style={completo && altoReal ? { height: altoReal * escala } : undefined}>
+        {/* Con `completo`, una envoltura del tamaño ya ampliado centra el anuncio escalado (la escala no cambia el espacio que ocupa). */}
+        <div className={completo && anchoReal ? "flex-none overflow-hidden" : "w-full"} style={completo && anchoReal && altoReal ? { width: anchoReal * escala, height: altoReal * escala } : undefined}>
+          <div
+            ref={caja}
+            id={id}
+            className={cn("flex items-start [&_iframe]:rounded-lg", completo ? undefined : horizontal ? "justify-end" : "mx-auto justify-center")}
+            style={completo && anchoReal ? { minHeight: altoReal ?? 1, width: anchoReal, transform: `scale(${escala})`, transformOrigin: "top left" } : { minHeight: altoReal ?? 1 }}
+          />
+        </div>
       </div>
     </div>
   );
