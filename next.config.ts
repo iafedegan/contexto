@@ -37,17 +37,17 @@ const nextConfig: NextConfig = {
 
   // Imágenes remotas del CDN de medios. Ajustar al dominio real de assets.
   images: {
-    formats: ["image/avif", "image/webp"],
+    // Solo WebP: con AVIF cada foto se generaba en dos formatos y los rastreadores del archivo (~51.500 notas) duplicaban el costo.
+    formats: ["image/webp"],
     // Portadas grandes (artículo a todo el ancho, carrusel): calidad 90 en vez del 75 por defecto, que se notaba blando/pixelado.
     qualities: [75, 90],
     // Sin esto, Next usa su default de 60 s: con un carrusel rotando cada
     // pocos segundos (Revista) o cualquier página donde la misma foto se
     // vea más de un minuto, el navegador la vuelve a pedir y decodificar de
     // la nada — Lighthouse lo capturaba como trabajo del hilo principal muy
-    // variable entre corridas. Un día es suficiente para eliminar eso sin
-    // arriesgar servir una portada vieja mucho tiempo si un editor la
-    // reemplaza en la misma URL.
-    minimumCacheTTL: 86400,
+    // variable entre corridas.
+    // 31 días: un robot que vuelve a pasar por una nota vieja no paga otra transformación (cada subida lleva un nombre único, media-storage.ts, así que nunca se sirve una foto vieja en la misma URL).
+    minimumCacheTTL: 2678400,
     remotePatterns: [
       { protocol: "https", hostname: "**.contextoganadero.com" },
       { protocol: "https", hostname: "**.supabase.co" },
