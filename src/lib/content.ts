@@ -74,10 +74,13 @@ export type ArticleListItem = {
   homeStyle: HomeStyle | null;
   /** Etiqueta "En Vivo" activada por la redacción (AI-03 / FM-06). */
   isLive: boolean;
+  /** Lugar fijado a mano por un editor (0 = principal, 1 = segunda); null si entra por fecha. */
+  homePosition?: number | null;
 };
 
 // Columnas que se leen de la base para armar un listado de notas.
 const listSelection = {
+  homePosition: articles.homePosition,
   slug: articles.slug,
   legacyPath: articles.legacyPath,
   title: articles.title,
@@ -108,10 +111,15 @@ export async function getRecentArticles(limit = 12): Promise<ArticleListItem[]> 
 
 /**
  * Orden de la portada: primero las notas de «Última hora» (la más reciente arriba; al llegar otra pasa a segunda y así) y después TODO lo demás por
- * orden de llegada: fecha, hora, minuto y segundo de publicación, la más nueva primero. Lo único que se queda arriba es la última hora: una nota
- * normal nueva no la desplaza. Las posiciones que un editor fijó a mano antes (`homePosition`) ya no mandan en este orden.
+ * orden de llegada: fecha, hora, minuto y segundo de publicación, la más nueva primero. Salvo lo que un editor fijó a mano como «Principal» o «Segunda»
+ * (`homePosition` 0 y 1), que va primero, y la última hora, una nota normal nueva no desplaza a las de arriba.
  */
-const ordenPortada = [desc(articles.isBreaking), desc(articles.publishedAt)] as const;
+const ordenPortada = [
+  // Lo que un editor fijó como «Principal» (0) o «Segunda» (1) en el editor de notas va primero; lo demás, por última hora y fecha.
+  sql`case when ${articles.homePosition} in (0, 1) then ${articles.homePosition} end asc nulls last`,
+  desc(articles.isBreaking),
+  desc(articles.publishedAt),
+] as const;
 
 /** Consulta de la portada con el orden manual, cacheada entre peticiones (la invalida el panel al publicar). */
 const leerPortada = cachear(
@@ -160,7 +168,7 @@ const SECCIONES_DE_OPINION = new Set(["opinion", "columnas", "columnistas", "edi
 
 /** Deja las dos primeras plazas (principal y segunda) a notas que no son de opinión; las de opinión bajan al resto de la portada, sin cambiar su orden. */
 export function sinOpinionArriba<T extends { categorySlug: string | null }>(notas: T[]): T[] {
-  const esOpinion = (n: T) => !!n.categorySlug && SECCIONES_DE_OPINION.has(n.categorySlug);
+  const esOpinion = (n: T & { homePosition?: number | null }) => n.homePosition == null && !!n.categorySlug && SECCIONES_DE_OPINION.has(n.categorySlug);
   const arriba = notas.filter((n) => !esOpinion(n)).slice(0, 2);
   if (arriba.length < 2) return notas;
   return [...arriba, ...notas.filter((n) => !arriba.includes(n))];
