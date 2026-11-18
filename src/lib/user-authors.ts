@@ -1,7 +1,7 @@
 import "server-only";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
-import { authors, users } from "@/db/schema";
+import { articles, authors, users } from "@/db/schema";
 import { slugify } from "@/lib/utils";
 
 /**
@@ -42,4 +42,45 @@ export async function autorDeUsuario(userId: string): Promise<string | null> {
   } catch {
     return null;
   }
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const sinTildes = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
+/**
+ * Con qué ficha de autor se firma una nota al guardarla. La firma es de quien escribe, salvo que quien guarda sea ADMINISTRADOR: él puede
+ * firmar por otra persona (la ficha que pida, si existe). Cualquier otro rol conserva la firma que la nota ya tiene (o la suya si es nueva):
+ * lo que llegue del formulario no vale, porque se puede falsear.
+ */
+export async function firmaDeNota(user: { id: string; role: string }, pedida: unknown, notaId?: string | null): Promise<string | null> {
+  const propia = await autorDeUsuario(user.id);
+  let actual: string | null = null;
+  if (notaId) {
+    const [r] = await db.select({ a: articles.authorId }).from(articles).where(eq(articles.id, notaId)).limit(1);
+    actual = r?.a ?? null;
+  }
+  if (user.role !== "administrador") return notaId ? (actual ?? propia) : propia;
+  const id = typeof pedida === "string" ? pedida.trim() : "";
+  if (UUID.test(id)) {
+    const [a] = await db.select({ id: authors.id }).from(authors).where(eq(authors.id, id)).limit(1);
+    if (a) return a.id;
+  }
+  return actual ?? propia;
+}
+
+export type FirmaCreada = { ok: true; id: string; name: string; creada: boolean } | { ok: false; message: string };
+
+/** Crea la ficha de autor de una persona que firma sin cuenta en el panel. Si ya hay una con ese nombre (sin tildes ni mayúsculas), devuelve esa. */
+export async function crearFirma(nombreCrudo: string): Promise<FirmaCreada> {
+  const name = nombreCrudo.replace(/\s+/g, " ").trim();
+  if (name.length < 2 || name.length > 80) return { ok: false, message: "Escribe el nombre de la persona (de 2 a 80 letras)." };
+  const todos = await db.select({ id: authors.id, name: authors.name, slug: authors.slug }).from(authors);
+  const igual = todos.find((a) => sinTildes(a.name) === sinTildes(name));
+  if (igual) return { ok: true, id: igual.id, name: igual.name, creada: false };
+  const slugs = new Set(todos.map((a) => a.slug));
+  const base = slugify(name) || "autor";
+  let slug = base;
+  for (let n = 2; slugs.has(slug); n++) slug = `${base}-${n}`;
+  const [nueva] = await db.insert(authors).values({ slug, name }).returning({ id: authors.id });
+  return { ok: true, id: nueva.id, name, creada: true };
 }

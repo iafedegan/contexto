@@ -38,11 +38,12 @@ import {
   MessageSquare,
   Minimize2,
   PenLine,
+  Plus,
   Sparkles,
   Trash2,
   X,
 } from "lucide-react";
-import { autosaveDraft, cancelarEnvio, saveArticle } from "@/app/panel/(app)/articulos/actions";
+import { autosaveDraft, cancelarEnvio, crearAutor, saveArticle } from "@/app/panel/(app)/articulos/actions";
 import { subirMedia } from "./subir-media";
 import { PedirImagen } from "./pedir-imagen";
 import { etiquetaRol } from "@/lib/notas-asignadas-reglas";
@@ -327,7 +328,32 @@ export function ArticleWizard({
   const [errorEnvio, setErrorEnvio] = useState("");
   const editorElegido = editores.find((e) => e.id === enviarA);
   const [depto, setDepto] = useState(initial?.depto ?? "");
-  const [authorId] = useState(initial?.authorId ?? miAutorId ?? "");
+  const [authorId, setAuthorId] = useState(initial?.authorId ?? miAutorId ?? "");
+  // Firmar por otra persona (solo administradores): las firmas existentes más las que se creen aquí.
+  const [autoresNuevos, setAutoresNuevos] = useState<Option[]>([]);
+  const autoresTodos = useMemo(
+    () => [...authors, ...autoresNuevos.filter((n) => !authors.some((a) => a.id === n.id))].sort((a, b) => a.name.localeCompare(b.name, "es")),
+    [authors, autoresNuevos],
+  );
+  const [nuevoAutor, setNuevoAutor] = useState("");
+  const [errorAutor, setErrorAutor] = useState("");
+  const [avisoAutor, setAvisoAutor] = useState("");
+  const [creandoAutor, crearAutorT] = useTransition();
+  const crearYFirmar = () => {
+    setErrorAutor("");
+    setAvisoAutor("");
+    crearAutorT(async () => {
+      const r = await crearAutor(nuevoAutor);
+      if (!r.ok) {
+        setErrorAutor(r.message);
+        return;
+      }
+      setAutoresNuevos((prev) => (prev.some((a) => a.id === r.id) ? prev : [...prev, { id: r.id, name: r.name }]));
+      setAuthorId(r.id);
+      setNuevoAutor("");
+      setAvisoAutor(r.creada ? `Firma «${r.name}» creada y elegida.` : `«${r.name}» ya existía: quedó elegida.`);
+    });
+  };
   // El cuerpo se guarda como HTML (el editor lo muestra ya formateado). Las gráficas viajan como marcador `[[GRAFICA …]]`.
   const [body, setBody] = useState(initial?.body ?? "");
   // Indicaciones del editor para la IA sobre cómo escribir (tono, estructura, qué citar…).
@@ -363,9 +389,9 @@ export function ArticleWizard({
         focus: tags[0] || title,
         coverImageUrl: cover,
         coverImageAlt: coverAlt,
-        authorName: authors.find((a) => a.id === authorId)?.name ?? "",
+        authorName: autoresTodos.find((a) => a.id === authorId)?.name ?? "",
       }),
-    [title, excerpt, bodyHtml, metaTitle, metaDescription, tags, cover, coverAlt, authorId, authors],
+    [title, excerpt, bodyHtml, metaTitle, metaDescription, tags, cover, coverAlt, authorId, autoresTodos],
   );
   // Una nota solo se publica o se programa con su imagen de portada y el SEO en el mínimo exigido (el servidor lo vuelve a comprobar).
   const faltaPortada = !cover;
@@ -462,7 +488,7 @@ export function ArticleWizard({
       })
       .map((c) => c.id);
   }, [categories, title, excerpt, tags]);
-  const authorName = authors.find((a) => a.id === authorId)?.name;
+  const authorName = autoresTodos.find((a) => a.id === authorId)?.name;
   // «Regiones» (Colombia › Regiones): sus subsecciones son las regiones y los departamentos, que no son secciones del sitio sino un dato de la nota.
   const regionesId = useMemo(() => {
     const norm = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
@@ -1890,6 +1916,55 @@ export function ArticleWizard({
                 <Eye size={14} /> Así se verá en el sitio
               </p>
             </div>
+            {esAdmin && (
+              <div className="flex flex-wrap items-end gap-3 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface-2)] p-3 text-sm">
+                <label className="flex min-w-[14rem] flex-1 flex-col gap-1">
+                  <span className="text-xs font-semibold">Firmar la nota como</span>
+                  <select
+                    value={authorId}
+                    onChange={(e) => setAuthorId(e.target.value)}
+                    className="w-full rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] px-3 py-2"
+                  >
+                    {!authorId && <option value="">— Elige una firma —</option>}
+                    {autoresTodos.map((a) => (
+                      <option key={a.id} value={a.id}>{a.name}{a.id === miAutorId ? " (yo)" : ""}</option>
+                    ))}
+                  </select>
+                </label>
+                <div className="flex min-w-[14rem] flex-1 flex-col gap-1">
+                  <label htmlFor="nuevo-autor" className="text-xs font-semibold">¿No está en la lista? Créala</label>
+                  <div className="flex gap-2">
+                    <input
+                      id="nuevo-autor"
+                      value={nuevoAutor}
+                      onChange={(e) => setNuevoAutor(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          if (nuevoAutor.trim().length >= 2 && !creandoAutor) crearYFirmar();
+                        }
+                      }}
+                      placeholder="Nombre y apellido"
+                      maxLength={80}
+                      className="min-w-0 flex-1 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] px-3 py-2"
+                    />
+                    <button
+                      type="button"
+                      onClick={crearYFirmar}
+                      disabled={creandoAutor || nuevoAutor.trim().length < 2}
+                      className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-[var(--border-strong)] bg-[var(--surface)] px-4 py-2 text-xs font-semibold hover:bg-[var(--surface-2)] disabled:opacity-50"
+                    >
+                      {creandoAutor ? <Loader2 size={14} className="animate-spin" aria-hidden /> : <Plus size={14} aria-hidden />} Crear y firmar
+                    </button>
+                  </div>
+                </div>
+                {errorAutor && <p role="alert" className="basis-full text-xs text-[var(--danger,#b4442e)]">{errorAutor}</p>}
+                {avisoAutor && <p role="status" className="basis-full text-xs text-[#157a4a]">{avisoAutor}</p>}
+                <p className="basis-full text-xs text-[var(--fg-muted)]">
+                  La vista previa de abajo muestra la firma elegida. Se guarda con la nota; si ya está publicada, usa «Guardar y actualizar».
+                </p>
+              </div>
+            )}
             {canPublish && (breaking || live) && (
               <p className="-mt-1 text-xs text-[var(--fg-muted)]">
                 {breaking && "Última hora: barra roja en la portada y aviso por notificación a quienes tienen la app, una sola vez al publicar. "}

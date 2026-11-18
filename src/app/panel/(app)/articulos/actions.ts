@@ -9,7 +9,7 @@ import { db } from "@/db";
 import { articles, categories } from "@/db/schema";
 import { canPublish, requirePermiso } from "@/lib/auth";
 import { slugify } from "@/lib/utils";
-import { autorDeUsuario } from "@/lib/user-authors";
+import { autorDeUsuario, crearFirma, firmaDeNota, type FirmaCreada } from "@/lib/user-authors";
 import { archivarCore, distintivosCore, enviarARevisionCore, fijarPortadaCore, guardarBorradorCore, programarCore, publicarCore, reindexarNota, revalidarNota, type BorradorInput } from "@/lib/article-ops";
 import { tienePermiso } from "@/lib/permisos-server";
 import { avisarSiUltimaHora } from "@/lib/push";
@@ -46,8 +46,8 @@ export async function saveArticle(formData: FormData) {
   const excerpt = String(formData.get("excerpt") ?? "").trim();
   const body = sanitizeArticleHtml(String(formData.get("body") ?? ""));
   const categoryId = (formData.get("categoryId") as string) || null;
-  // La firma es siempre quien escribe: si la nota no tiene autor, es la persona con sesión iniciada.
-  const authorId = ((formData.get("authorId") as string) || null) ?? (await autorDeUsuario(user.id));
+  // La firma es de quien escribe; solo un administrador puede firmar por otra persona (ver `firmaDeNota`).
+  const authorId = await firmaDeNota(user, formData.get("authorId"), id || null);
   const isBreaking = String(formData.get("isBreaking") ?? "0") === "1";
   const isLive = String(formData.get("isLive") ?? "0") === "1";
   const coverImageUrl = String(formData.get("coverImageUrl") ?? "").trim() || null;
@@ -265,6 +265,7 @@ export async function autosaveDraft(input: BorradorInput & { piezaId?: string })
   const user = await requirePermiso("articulos");
   if (input.id) await exigirNotaPropia(user, input.id);
   const { piezaId, ...borrador } = input;
+  borrador.authorId = await firmaDeNota(user, borrador.authorId, borrador.id);
   // Una pieza del consejo que ya tiene nota (se reabrió el enlace): se sigue guardando en esa nota, no se crea otra.
   if (piezaId && !borrador.id) {
     const pieza = await piezaParaEscribir(user, piezaId).catch(() => null);
@@ -277,4 +278,11 @@ export async function autosaveDraft(input: BorradorInput & { piezaId?: string })
   // Si la nota se escribe para una pieza del consejo, queda enlazada a ella.
   if (r.ok && piezaId) await vincularPieza(user, piezaId, r.id).catch(() => {});
   return r;
+}
+
+/** Un administrador crea la firma de una persona que no tiene ficha de autor (con o sin cuenta en el panel). Si ya existe una con ese nombre, la devuelve. */
+export async function crearAutor(nombre: string): Promise<FirmaCreada> {
+  const user = await requirePermiso("articulos");
+  if (user.role !== "administrador") return { ok: false, message: "Solo un administrador puede crear firmas." };
+  return crearFirma(String(nombre ?? ""));
 }
