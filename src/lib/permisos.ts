@@ -50,14 +50,14 @@ export const PERMISO_IDS: readonly string[] = PERMISOS.map((p) => p.id);
 export type Ajustes = Partial<Record<PermisoId | typeof DOS_PASOS, boolean>>;
 
 /**
- * No es un permiso sino una exigencia: por defecto TODA cuenta debe tener 2FA.
- * El administrador puede eximir a una persona (casilla apagada). Un
- * administrador nunca queda exento.
+ * No es un permiso sino una exigencia: por defecto toda cuenta, salvo la del administrador, debe tener 2FA. El administrador puede eximir a
+ * una persona (casilla apagada). La cuenta de administrador NO está obligada: usa el segundo factor cuando lo active en Configuración →
+ * Seguridad (desde entonces el ingreso le pide el código), y solo se le exige si una casilla `exigir_2fa` lo enciende expresamente.
  */
 export const DOS_PASOS = "exigir_2fa";
-// Indica si la persona debe usar segundo factor: los administradores siempre; el resto, salvo que se les exima.
+// Indica si la persona debe usar segundo factor: el resto, salvo que se les exima; el administrador, solo si se le exige expresamente.
 export function exige2fa(role: UserRole, ajustes: Ajustes | undefined): boolean {
-  if (role === "administrador") return true;
+  if (role === "administrador") return ajustes?.[DOS_PASOS] ?? false;
   return ajustes?.[DOS_PASOS] ?? true;
 }
 
