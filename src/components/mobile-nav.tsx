@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ChevronDown, ChevronRight, EllipsisVertical, Menu, Moon, Search, UserCircle, X } from "lucide-react";
+import { usePathname } from "next/navigation";
+import { ChevronDown, ChevronRight, EllipsisVertical, House, Menu, Moon, Search, UserCircle, X } from "lucide-react";
 import { LogoMark } from "@/components/logo-mark";
 import { LogoContexto } from "@/components/logo-contexto";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -67,6 +68,10 @@ export function MobileNav({
   const label = LABELS[locale === "en" ? "en" : "es"];
   const all = [...nav, ...extra];
   const es = locale !== "en";
+  // En la portada no hace falta volver a ella; en cualquier otra página, la casa de la cabecera lleva a la portada.
+  const ruta = (usePathname() ?? "/").replace(/\/+$/, "") || "/";
+  const inicio = localePath(locale, "/").replace(/\/+$/, "") || "/";
+  const enPortada = ruta === inicio || ruta === "/";
   const toggleTheme = () => {
     const d = document.documentElement.dataset.dark;
     const dark = d === "1" || (d !== "0" && ["home", "esmeralda", "revista", "vanguardia"].includes(document.querySelector("[data-site-root]")?.getAttribute("data-theme") ?? ""));
@@ -125,8 +130,18 @@ export function MobileNav({
   // el botón de opciones. Sin filetes a los lados: en un teléfono solo restaban espacio al nombre.
   const escaparate = (
     <div className="grid min-w-0 grid-cols-[2.5rem_minmax(0,1fr)_2.5rem] items-center gap-1 px-3 py-2.5">
-      {/* Hueco del mismo ancho que el botón de opciones: así el nombre queda centrado de verdad en la pantalla. */}
-      <span aria-hidden />
+      {/* A la izquierda, del mismo ancho que el botón de opciones (así el nombre queda centrado de verdad): la casa que vuelve a la portada. */}
+      {enPortada ? (
+        <span aria-hidden />
+      ) : (
+        <Link
+          href={localePath(locale, "/")}
+          aria-label={es ? "Volver a la portada" : "Back to the front page"}
+          className="grid size-10 shrink-0 place-items-center justify-self-start rounded-full border border-[var(--border-strong)] bg-[var(--surface-2)] text-[var(--accent)] shadow-sm transition active:scale-90"
+        >
+          <House size={20} aria-hidden />
+        </Link>
+      )}
       <Link href={localePath(locale, "/")} className="flex min-w-0 justify-center text-center">
         <span className="flex min-w-0 flex-col items-center">
           {/* El logo oficial en SVG (con «— 14 AÑOS —»), a un alto que cabe en un teléfono de 360 px. */}
