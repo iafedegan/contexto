@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronDown, ChevronRight, EllipsisVertical, House, Menu, Moon, Search, UserCircle, X } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, EllipsisVertical, House, Menu, Moon, Search, UserCircle, X } from "lucide-react";
 import { LogoMark } from "@/components/logo-mark";
 import { LogoContexto } from "@/components/logo-contexto";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -130,18 +130,8 @@ export function MobileNav({
   // el botón de opciones. Sin filetes a los lados: en un teléfono solo restaban espacio al nombre.
   const escaparate = (
     <div className="grid min-w-0 grid-cols-[2.5rem_minmax(0,1fr)_2.5rem] items-center gap-1 px-3 py-2.5">
-      {/* A la izquierda, del mismo ancho que el botón de opciones (así el nombre queda centrado de verdad): la casa que vuelve a la portada. */}
-      {enPortada ? (
-        <span aria-hidden />
-      ) : (
-        <Link
-          href={localePath(locale, "/")}
-          aria-label={es ? "Volver a la portada" : "Back to the front page"}
-          className="grid size-10 shrink-0 place-items-center justify-self-start rounded-full border border-[var(--border-strong)] bg-[var(--surface-2)] text-[var(--accent)] shadow-sm transition active:scale-90"
-        >
-          <House size={20} aria-hidden />
-        </Link>
-      )}
+      {/* Hueco del mismo ancho que el botón de opciones: así el nombre queda centrado de verdad en la pantalla. */}
+      <span aria-hidden />
       <Link href={localePath(locale, "/")} className="flex min-w-0 justify-center text-center">
         <span className="flex min-w-0 flex-col items-center">
           {/* El logo oficial en SVG (con «— 14 AÑOS —»), a un alto que cabe en un teléfono de 360 px. */}
@@ -264,6 +254,17 @@ export function MobileNav({
           <span key={`${c}-${i}`} className="cg-cinta-tramo h-full flex-1" style={{ "--c": c } as React.CSSProperties} />
         ))}
       </div>
+      {/* Fuera de la portada, en el celular: una franja delgada bajo la cabecera para volver a la portada (como el «atrás» de una app). */}
+      {!enPortada && (
+        <Link
+          href={localePath(locale, "/")}
+          className="flex h-10 items-center gap-1 border-b border-[var(--border)] px-3 text-[0.8rem] font-semibold text-[var(--accent)] active:bg-[var(--surface-2)] md:hidden"
+        >
+          <ChevronLeft size={18} aria-hidden className="-ml-1" />
+          <House size={15} aria-hidden />
+          {es ? "Volver a la portada" : "Back to the front page"}
+        </Link>
+      )}
       <div className="flex flex-col items-center">
         {more && (
           <div className="my-2 w-[min(18rem,90%)] rounded-2xl border border-[var(--border-strong)] bg-[var(--surface-2)] p-2">
