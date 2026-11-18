@@ -153,7 +153,7 @@ export function SectionHeader({ theme, kicker, title, description, chips, breadc
 }
 
 /** Lista de notas de la sección con la composición de la plantilla. */
-export function SectionGrid({ theme, items, locale }: { theme: string; items: ArticleListItem[]; locale: Locale }) {
+export function SectionGrid({ theme, items, locale, pautaColumna }: { theme: string; items: ArticleListItem[]; locale: Locale; pautaColumna?: React.ReactNode }) {
   const [lead, ...rest] = items;
   if (!lead) return null;
 
@@ -259,6 +259,8 @@ export function SectionGrid({ theme, items, locale }: { theme: string; items: Ar
             </div>
             {rail.length > 0 && (
               <div className="flex flex-col gap-5">
+                {/* Pauta de la sección: encima de la nota 01. Sin anuncio pintado se anula el hueco que dejaría la separación de la columna. */}
+                {pautaColumna && <div className="[&:not(:has(iframe,img))]:-mb-[21px]">{pautaColumna}</div>}
                 {rail.map((a, i) => (
                   <div key={a.slug} className="cg-scroll-sube">
                     <ArticleCard a={a} locale={locale} variant="rail" index={i} />

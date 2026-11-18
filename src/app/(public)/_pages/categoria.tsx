@@ -398,13 +398,22 @@ async function CategoryPage({ params, searchParams, locale, portadaBorrador }: P
         </p>
       ) : (
         <>
-          {/* Inicio de sección: la pauta sube pegada a la cabecera (-mt-10 anula casi todo su margen de abajo; solo se aplica con anuncio pintado). */}
-          <AdsBanner zone="section_top" className="-mt-10 mb-4" completo />
           {/* TV, Radio y Especiales (y sus subsecciones) tienen formato propio; el resto, la cuadrícula de la plantilla. */}
           {(() => {
+            // Pauta de inicio de sección. Va pegada a la cabecera (-mt-10 anula casi todo su margen de abajo; solo con anuncio pintado), salvo en
+            // la plantilla con columna «Lo último» (Esmeralda), donde va dentro de esa columna, justo encima de la nota 01.
+            const encima = <AdsBanner zone="section_top" className="-mt-10 mb-4" completo />;
             const formato = formatoDeSeccion(slug, category.parentSlug);
-            if (formato) return <FormatoDeSeccion formato={formato} items={items} locale={locale} />;
-            return conAutor ? <ColumnistasGrid items={items} locale={locale} /> : <SectionGrid theme={site.parts.body} items={items} locale={locale} />;
+            if (formato) return <>{encima}<FormatoDeSeccion formato={formato} items={items} locale={locale} /></>;
+            if (conAutor) return <>{encima}<ColumnistasGrid items={items} locale={locale} /></>;
+            const cuerpo: string = site.parts.body; // SectionGrid también entiende "esmeralda" y "home", que no están en el tipo de las partes
+            const enColumna = cuerpo === "esmeralda" || cuerpo === "home";
+            return (
+              <>
+                {!enColumna && encima}
+                <SectionGrid theme={site.parts.body} items={items} locale={locale} pautaColumna={enColumna ? <AdsBanner zone="section_top" completo /> : undefined} />
+              </>
+            );
           })()}
         </>
       )}
