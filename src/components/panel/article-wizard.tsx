@@ -43,7 +43,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { autosaveDraft, cancelarEnvio, crearAutor, saveArticle } from "@/app/panel/(app)/articulos/actions";
+import { autosaveDraft, cancelarEnvio, crearAutor, devolverNota, saveArticle, soltarNota } from "@/app/panel/(app)/articulos/actions";
 import { subirMedia } from "./subir-media";
 import { PedirImagen } from "./pedir-imagen";
 import { etiquetaRol } from "@/lib/notas-asignadas-reglas";
@@ -161,6 +161,7 @@ export function ArticleWizard({
   puedeEnviarEditor = false,
   envioLibre = false,
   enviadoA = null,
+  miUsuarioId = null,
 }: {
   categories: (Option & { parentId?: string | null; slug?: string })[];
   authors: Option[];
@@ -202,7 +203,9 @@ export function ArticleWizard({
   /** Editor o administrador: el destinatario es un especialista, de cualquier rol. */
   envioLibre?: boolean;
   /** A quién se envió ya esta nota (lo leído del servidor), con su mensaje y la fecha. */
-  enviadoA?: { editorId: string; porId?: string; nombre: string; mensaje: string; fecha: string } | null;
+  enviadoA?: { editorId: string; porId?: string; nombre: string; porNombre?: string; mensaje: string; fecha: string } | null;
+  /** Mi cuenta: sirve para saber si la nota me la enviaron a mí (entonces puedo devolverla o quitarla de mis pendientes). */
+  miUsuarioId?: string | null;
 }) {
   const heading = pieza ? "Tarea del consejo · artículo con IA" : mode === "ia" ? "Nuevo artículo con IA" : "Nuevo artículo";
   const STEPS: readonly { key: StepKey; label: string }[] = mode === "ia" ? STEPS_IA : STEPS_MANUAL;
@@ -322,6 +325,11 @@ export function ArticleWizard({
   const [otras, setOtras] = useState<string[]>(initial?.otras ?? []);
   // A qué editor se envía la nota al terminar (vacío = a nadie) y el mensaje que le llega con ella.
   const [envio, setEnvio] = useState(enviadoA);
+  // Si la nota me la enviaron a mí: devolverla a quien me la envió, o quitarla de mis pendientes.
+  const soyDestinatario = Boolean(envio && miUsuarioId && envio.editorId === miUsuarioId);
+  const [mensajeDevolver, setMensajeDevolver] = useState("");
+  const [devolviendo, devolverT] = useTransition();
+  const [avisoEnvio, setAvisoEnvio] = useState("");
   const [enviarA, setEnviarA] = useState("");
   const [mensajeEditor, setMensajeEditor] = useState("");
   const [cancelando, cancelarT] = useTransition();
@@ -1859,8 +1867,64 @@ export function ArticleWizard({
                 <PedirImagen articleId={savedId} titulo={title} resumen={excerpt} portadaActual={cover} alUsar={(u, a) => { setCover(u); if (a) setCoverAlt(a); setImgError(""); }} />
               </TarjetaEnvio>
               {puedeEnviarEditor ? (
-                <TarjetaEnvio Icono={Send} titulo={envioLibre ? "Enviar la nota a alguien" : "Enviar la nota a un editor"} ayuda="Queda «En revisión» y le llega en «Artículos».">
-                  {envio ? (
+                <TarjetaEnvio
+                  Icono={Send}
+                  titulo={soyDestinatario ? "Devolver la nota" : envioLibre ? "Enviar la nota a alguien" : "Enviar la nota a un editor"}
+                  ayuda={soyDestinatario ? "Cuando termines tu revisión, devuélvesela a quien te la envió o quítala de tus pendientes." : "Queda «En revisión» y le llega en «Artículos»."}
+                >
+                  {avisoEnvio && !envio ? (
+                    <p role="status" className="rounded-[var(--radius)] bg-[var(--surface-2)] px-3 py-2 text-xs text-[#157a4a]">{avisoEnvio}</p>
+                  ) : soyDestinatario && envio ? (
+                    // La nota me la enviaron: puedo devolverla (con un mensaje) o dejarla de mis pendientes.
+                    <div className="flex flex-col gap-2.5 text-xs">
+                      <p className="rounded-[var(--radius)] bg-[var(--surface-2)] px-3 py-2">
+                        Te la envió <strong>{envio.porNombre ?? "otra persona"}</strong> · {new Intl.DateTimeFormat("es-CO", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "America/Bogota" }).format(new Date(envio.fecha))}.
+                      </p>
+                      {envio.mensaje && <p className="whitespace-pre-line text-[var(--fg-muted)]">{envio.mensaje}</p>}
+                      <textarea
+                        value={mensajeDevolver}
+                        onChange={(e) => setMensajeDevolver(e.target.value)}
+                        maxLength={600}
+                        rows={3}
+                        placeholder={`Mensaje para ${envio.porNombre ?? "quien te la envió"} (opcional): qué corregiste, qué falta…`}
+                        className="w-full resize-none rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm outline-none transition placeholder:text-[var(--fg-muted)]/60 focus:border-[var(--accent)]"
+                      />
+                      {errorEnvio && <p role="alert" className="text-[var(--danger,#b4442e)]">{errorEnvio}</p>}
+                      <button
+                        type="button"
+                        disabled={devolviendo}
+                        onClick={() => {
+                          setErrorEnvio("");
+                          devolverT(async () => {
+                            const r = await devolverNota(savedId, mensajeDevolver);
+                            if (!r.ok) return setErrorEnvio(r.message);
+                            setAvisoEnvio(`Nota devuelta a ${r.aNombre ?? "quien te la envió"}: quedó como borrador suyo y ya no está en tus pendientes.`);
+                            setEnvio(null);
+                            setMensajeDevolver("");
+                          });
+                        }}
+                        className="lx-btn self-start disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        <Send size={15} /> {devolviendo ? "Devolviendo…" : `Devolver a ${envio.porNombre ?? "quien me la envió"}`}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={devolviendo}
+                        onClick={() => {
+                          setErrorEnvio("");
+                          devolverT(async () => {
+                            const r = await soltarNota(savedId);
+                            if (!r.ok) return setErrorEnvio(r.message);
+                            setAvisoEnvio("Listo: la quitaste de tus pendientes. Sigue «En revisión», a la vista de los editores.");
+                            setEnvio(null);
+                          });
+                        }}
+                        className="lx-link self-start font-medium"
+                      >
+                        Quitar de mis pendientes (sin devolverla)
+                      </button>
+                    </div>
+                  ) : envio ? (
                     // Ya enviada: se ve como el pedido de imagen, con la opción de cancelar el envío.
                     <div className="flex flex-col gap-2 text-xs">
                       <p className="rounded-[var(--radius)] bg-[var(--surface-2)] px-3 py-2">

@@ -6,6 +6,7 @@ import {
   accesosDeCarpeta,
   asignarCarpeta,
   crearCarpeta,
+  crearCarpetaColumnistas,
   eliminarActivos,
   eliminarCarpeta,
   explorarBiblioteca,
@@ -251,6 +252,20 @@ export function BibliotecaExplorador({ modo, onElegir }: { modo: Modo; onElegir?
           </label>
           {gestion && (
             <>
+              <button
+                type="button"
+                className={boton}
+                title="Crea la carpeta «Columnistas» con la foto de cada autor de la sección Columnas"
+                onClick={async () => {
+                  setError("");
+                  const r = await crearCarpetaColumnistas();
+                  if (!r.ok) return setError(r.error);
+                  setAviso(r.agregados ? `Carpeta «Columnistas»: se agregaron ${r.agregados} fotos.` : "La carpeta «Columnistas» ya tenía todas las fotos.");
+                  await recargar();
+                }}
+              >
+                <Users size={16} aria-hidden /> Fotos de columnistas
+              </button>
               <button type="button" className={boton} onClick={nuevaCarpeta}><FolderPlus size={16} aria-hidden /> Crear carpeta</button>
               <button type="button" className="lx-btn" onClick={() => entrada.current?.click()} disabled={!!subida}>
                 {subida ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <Upload size={16} aria-hidden />} Subir archivos

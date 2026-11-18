@@ -15,7 +15,7 @@ import { tienePermiso } from "@/lib/permisos-server";
 import { avisarSiUltimaHora } from "@/lib/push";
 import { invalidarCache } from "@/lib/data-cache";
 import { esNotaPropia, exigirNotaPropia } from "@/lib/propiedad-notas";
-import { asignacionDe, destinoActivo, quitarAsignacion, registrarAsignacion } from "@/lib/notas-asignadas";
+import { asignacionDe, destinoActivo, devolverAsignacion, quitarAsignacion, registrarAsignacion, soltarAsignacion, type ResultadoAsignacion } from "@/lib/notas-asignadas";
 import { puedeEnviarNota } from "@/lib/notas-asignadas-reglas";
 import { piezaParaEscribir, vincularPieza } from "@/app/panel/(app)/pendientes/consultas";
 
@@ -285,4 +285,28 @@ export async function crearAutor(nombre: string): Promise<FirmaCreada> {
   const user = await requirePermiso("articulos");
   if (user.role !== "administrador") return { ok: false, message: "Solo un administrador puede crear firmas." };
   return crearFirma(String(nombre ?? ""));
+}
+
+function refrescarAsignaciones(id: string) {
+  revalidatePath("/panel/asignaciones");
+  revalidatePath("/panel/articulos");
+  revalidatePath(`/panel/articulos/${id}`);
+}
+
+/** Quien recibió una nota la devuelve a quien se la envió (con un mensaje): queda como borrador de esa persona y sale de los pendientes de quien la devuelve. */
+export async function devolverNota(articleId: string, mensaje: string): Promise<ResultadoAsignacion> {
+  const user = await requirePermiso("articulos");
+  const id = String(articleId ?? "");
+  const r = await devolverAsignacion(id, user.id, user.role, String(mensaje ?? ""));
+  if (r.ok) refrescarAsignaciones(id);
+  return r;
+}
+
+/** Quien recibió una nota la quita de sus pendientes (sin devolverla a nadie). */
+export async function soltarNota(articleId: string): Promise<ResultadoAsignacion> {
+  const user = await requirePermiso("articulos");
+  const id = String(articleId ?? "");
+  const r = await soltarAsignacion(id, user.id, user.role);
+  if (r.ok) refrescarAsignaciones(id);
+  return r;
 }

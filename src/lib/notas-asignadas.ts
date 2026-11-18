@@ -88,13 +88,14 @@ export async function destinatariosDe(articleIds: string[]): Promise<Map<string,
 }
 
 /** A quién se envió una nota (la entrega más reciente), con su nombre; `null` si no se ha enviado a nadie. */
-export async function asignacionDe(articleId: string): Promise<{ editorId: string; porId: string; nombre: string; mensaje: string; fecha: string } | null> {
+export async function asignacionDe(articleId: string): Promise<{ editorId: string; porId: string; nombre: string; porNombre: string; mensaje: string; fecha: string } | null> {
   const [row] = await db.select({ value: siteSettings.value }).from(siteSettings).where(eq(siteSettings.key, ASIGNADAS_KEY)).limit(1);
   const lista = (Array.isArray(row?.value) ? (row.value as Asignacion[]) : []).filter((a) => a.articleId === articleId);
   const ultima = [...lista].sort((x, y) => y.fecha.localeCompare(x.fecha))[0];
   if (!ultima) return null;
-  const [persona] = await db.select({ nombre: users.name }).from(users).where(eq(users.id, ultima.editorId)).limit(1);
-  return { editorId: ultima.editorId, porId: ultima.porId, nombre: persona?.nombre ?? "otra persona", mensaje: ultima.mensaje ?? "", fecha: ultima.fecha };
+  const personas = await db.select({ id: users.id, nombre: users.name }).from(users).where(inArray(users.id, [ultima.editorId, ultima.porId]));
+  const nombre = (id: string, vacio: string) => personas.find((p) => p.id === id)?.nombre ?? vacio;
+  return { editorId: ultima.editorId, porId: ultima.porId, nombre: nombre(ultima.editorId, "otra persona"), porNombre: nombre(ultima.porId, "quien la envió"), mensaje: ultima.mensaje ?? "", fecha: ultima.fecha };
 }
 
 /** Quita la asignación de una nota (cancelar el envío). Una sola sentencia, como el resto de escrituras de la lista. */
@@ -124,4 +125,32 @@ export async function marcarAsignacionAbierta(articleId: string, userId: string)
         then e || jsonb_build_object('abiertaAt', ${new Date().toISOString()}::text) else e end)
       from jsonb_array_elements(value) e), updated_at = now()
     where key = ${ASIGNADAS_KEY} and exists (select 1 from jsonb_array_elements(value) e where e->>'articleId' = ${articleId} and e->>'editorId' = ${userId} and e->>'abiertaAt' is null)`);
+}
+
+export type ResultadoAsignacion = { ok: true; aNombre?: string; aId?: string } | { ok: false; message: string };
+
+/**
+ * Quien RECIBIÓ la nota (o un administrador) la devuelve a quien se la envió, con un mensaje. La nota pasa a «Borrador» y le llega a esa persona
+ * como una asignación nueva (así la ve en «Artículos» y en sus pendientes); la del que la devuelve se quita. No cambia nada de una nota ya publicada.
+ */
+export async function devolverAsignacion(articleId: string, userId: string, role: string, mensaje: string): Promise<ResultadoAsignacion> {
+  const envio = await asignacionDe(articleId);
+  if (!envio) return { ok: false, message: "Esta nota no está enviada a nadie." };
+  if (envio.editorId !== userId && role !== "administrador") return { ok: false, message: "Solo quien recibió la nota puede devolverla." };
+  if (!envio.porId || envio.porId === envio.editorId) return { ok: false, message: "No hay a quién devolverla: quien la envió es la misma persona. Usa «Quitar de mis pendientes»." };
+  const [destino] = await db.select({ id: users.id, nombre: users.name }).from(users).where(and(eq(users.id, envio.porId), eq(users.active, true))).limit(1);
+  if (!destino) return { ok: false, message: "Quien te la envió ya no está activo: usa «Quitar de mis pendientes» o envíala a otra persona." };
+  await registrarAsignacion({ articleId, editorId: destino.id, porId: userId, mensaje: mensaje.trim().slice(0, 600), fecha: new Date().toISOString() });
+  // Vuelve a ser un borrador de quien la escribió (una nota publicada o programada no se toca).
+  await db.update(articles).set({ status: "borrador", updatedAt: sql`now()` }).where(and(eq(articles.id, articleId), eq(articles.status, "en_revision")));
+  return { ok: true, aNombre: destino.nombre, aId: destino.id };
+}
+
+/** Quien recibió la nota (o un administrador) la quita de sus pendientes sin devolverla: sigue «En revisión», a la vista de los editores. */
+export async function soltarAsignacion(articleId: string, userId: string, role: string): Promise<ResultadoAsignacion> {
+  const envio = await asignacionDe(articleId);
+  if (!envio) return { ok: false, message: "Esta nota no está enviada a nadie." };
+  if (envio.editorId !== userId && role !== "administrador") return { ok: false, message: "Solo quien recibió la nota puede quitarla de sus pendientes." };
+  await quitarAsignacion(articleId);
+  return { ok: true };
 }

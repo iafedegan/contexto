@@ -7,7 +7,7 @@
  */
 import { and, asc, desc, eq, ilike, inArray, isNull, sql } from "drizzle-orm";
 import { db, rowsOf } from "@/db";
-import { mediaAssets, mediaFolderAccess, mediaFolders, users } from "@/db/schema";
+import { articles, authors, categories, mediaAssets, mediaFolderAccess, mediaFolders, users } from "@/db/schema";
 import { requireRole } from "@/lib/auth";
 import { tienePermiso } from "@/lib/permisos-server";
 import { carpetasVisibles, estaDentroDe, nombreValido } from "@/lib/biblioteca-acceso";
@@ -240,4 +240,34 @@ export async function fichaActivo(input: { id: string }): Promise<{ ok: true; fi
       usos: usos.map((u) => ({ titulo: u.titulo, slug: u.slug, estado: u.estado, periodista: u.periodista, seccion: u.seccion, fecha: u.fecha, comoPortada: !!u.portada })),
     },
   };
+}
+
+/**
+ * Arma (o completa) la carpeta «Columnistas» con la foto de cada autor que firma notas en la sección Columnas, para elegirla como imagen de portada.
+ * No copia archivos: registra la dirección de la foto del autor. Se puede repetir: solo agrega las que falten.
+ */
+export async function crearCarpetaColumnistas(): Promise<Resultado & { agregados?: number; carpeta?: string }> {
+  const yo = await gestor();
+  const nombre = "Columnistas";
+  const carpetas = await todasLasCarpetas();
+  let carpeta = carpetas.find((c) => c.parentId === null && c.name.toLowerCase() === nombre.toLowerCase())?.id;
+  const fichas = await db
+    .selectDistinct({ id: authors.id, name: authors.name, avatar: authors.avatarUrl })
+    .from(articles)
+    .innerJoin(categories, eq(categories.id, articles.categoryId))
+    .innerJoin(authors, eq(authors.id, articles.authorId))
+    .where(and(eq(categories.slug, "columnas"), sql`${authors.avatarUrl} is not null and ${authors.avatarUrl} <> ''`))
+    .orderBy(asc(authors.name));
+  if (!fichas.length) return { ok: false, error: "No hay columnistas con foto para agregar." };
+  if (!carpeta) {
+    const [f] = await db.insert(mediaFolders).values({ parentId: null, name: nombre, createdBy: yo.id }).returning({ id: mediaFolders.id });
+    carpeta = f.id;
+  }
+  const filas = fichas.flatMap((a) => {
+    const url = a.avatar ?? "";
+    if (!/^https?:\/\//.test(url) || url.length > 400) return [];
+    return [{ folderId: carpeta, name: nombreValido(a.name) ?? "Columnista", url, kind: "imagen", bytes: null, uploadedBy: yo.id }];
+  });
+  const nuevos = filas.length ? await db.insert(mediaAssets).values(filas).onConflictDoNothing({ target: mediaAssets.url }).returning({ id: mediaAssets.id }) : [];
+  return { ok: true, agregados: nuevos.length, carpeta };
 }

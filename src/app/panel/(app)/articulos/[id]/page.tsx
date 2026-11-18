@@ -186,6 +186,7 @@ export default async function ArticleEditorPage({
           puedeEnviarEditor={puedeEnviarNota(session!.user.role)}
           envioLibre={envioLibre(session!.user.role)}
           enviadoA={enviadoA}
+          miUsuarioId={session!.user.id}
           comentariosNuevos={(await contarSinLeer(session!.user.id, [id]).catch(() => new Map<string, number>())).get(id) ?? 0}
           status={row.status}
           canPublish={canPublish(session!.user.role)}
