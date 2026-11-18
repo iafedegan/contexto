@@ -151,7 +151,18 @@ export async function getHomepageArticles(limit = 13): Promise<ArticleListItem[]
     const seen = new Set(draft.items.map((d) => d.slug));
     return [...ordered, ...rows.filter((r) => !seen.has(r.slug))].slice(0, limit);
   }
-  return leerPortada(limit);
+  return sinOpinionArriba(await leerPortada(limit));
+}
+
+// Las columnas y notas de opinión no abren la portada: tienen su propio recuadro («Columna destacada») y su sección.
+const SECCIONES_DE_OPINION = new Set(["opinion", "columnas", "columnistas", "editorial", "blogs", "columna"]);
+
+/** Deja las dos primeras plazas (principal y segunda) a notas que no son de opinión; las de opinión bajan al resto de la portada, sin cambiar su orden. */
+export function sinOpinionArriba<T extends { categorySlug: string | null }>(notas: T[]): T[] {
+  const esOpinion = (n: T) => !!n.categorySlug && SECCIONES_DE_OPINION.has(n.categorySlug);
+  const arriba = notas.filter((n) => !esOpinion(n)).slice(0, 2);
+  if (arriba.length < 2) return notas;
+  return [...arriba, ...notas.filter((n) => !arriba.includes(n))];
 }
 // Filtros de una página de categoría: paginación, subcategoría y rango de fechas.
 export type CategoryFilters = {
