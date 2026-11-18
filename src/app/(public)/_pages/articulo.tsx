@@ -108,8 +108,8 @@ export function ArticleDocument({
   /** La nota es la «Última hora» de la barra roja: lleva la insignia roja sobre el titular. */
   ultimaHora?: boolean;
 }) {
-  // Columna de opinión: la sección «columnas» (o «columna», como en el sitio anterior) o una dirección original /columna/…
-  const esColumna = a.categorySlug === "columnas" || a.categorySlug === "columna" || !!a.legacyPath?.startsWith("/columna") || a.slug.startsWith("columna-");
+  // Columna de opinión (foto redonda del autor en lugar de la foto grande): las secciones Opinión, Columnas o Columnistas, o la sección «columna» (o «columna», como en el sitio anterior) o una dirección original /columna/…
+  const esColumna = ["columnas", "columna", "opinion", "columnistas"].includes(a.categorySlug ?? "") || !!a.legacyPath?.startsWith("/columna") || a.slug.startsWith("columna-");
   const seo = { ...a, authorName: a.authorName, categoryName: a.categoryName };
   const readingMinutes = Math.max(1, Math.round(a.body.replace(/<[^>]+>/g, " ").split(/\s+/).length / 220));
 
