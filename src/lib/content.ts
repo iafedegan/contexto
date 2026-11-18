@@ -115,8 +115,9 @@ export async function getRecentArticles(limit = 12): Promise<ArticleListItem[]> 
  * (`homePosition` 0 y 1), que va primero, y la última hora, una nota normal nueva no desplaza a las de arriba.
  */
 const ordenPortada = [
-  // Lo que un editor fijó como «Principal» (0) o «Segunda» (1) en el editor de notas va primero; lo demás, por última hora y fecha.
-  sql`case when ${articles.homePosition} in (0, 1) then ${articles.homePosition} end asc nulls last`,
+  // Lo que un editor fijó como «Principal» (0) o «Segunda» (1) en el editor de notas va primero, pero solo mientras la nota es reciente (3 días): una nota vieja
+  // no se queda arriba para siempre. Lo demás, por última hora y fecha.
+  sql`case when ${articles.homePosition} in (0, 1) and ${articles.publishedAt} > now() - interval '3 days' then ${articles.homePosition} end asc nulls last`,
   desc(articles.isBreaking),
   desc(articles.publishedAt),
 ] as const;
