@@ -1,6 +1,7 @@
 import "server-only";
 import { cache } from "react";
 import { departamentoPorSlug, regionPorSlug } from "@/lib/regiones-colombia";
+import { SECCIONES_COLUMNA } from "@/lib/ruta-nota";
 import { and, desc, eq, gt, gte, ilike, inArray, isNull, lte, notInArray, or, sql, type SQL } from "drizzle-orm";
 import { db, rowsOf } from "@/db";
 import {
@@ -724,6 +725,17 @@ export const getMostReadArticles = cachear("mas-leidas-v2", leerMasLeidas, { tag
 
 /** Dirección (slug) de la nota publicada cuya dirección original del sitio anterior es `ruta` (`/seccion/titulo`); null si no hay. */
 export async function getSlugPorRutaOriginal(ruta: string): Promise<string | null> {
+  // Las columnas nuevas viven en `/columna/<slug>` sin guardar esa dirección: se resuelven por el título si la nota es de una sección de opinión.
+  const col = /^\/columna\/([^/]+)$/.exec(ruta);
+  if (col) {
+    const [nueva] = await db
+      .select({ slug: articles.slug })
+      .from(articles)
+      .innerJoin(categories, eq(articles.categoryId, categories.id))
+      .where(and(eq(articles.slug, col[1]), inArray(categories.slug, [...SECCIONES_COLUMNA]), publishedCondition))
+      .limit(1);
+    if (nueva) return nueva.slug;
+  }
   const [row] = await db
     .select({ slug: articles.slug })
     .from(articles)

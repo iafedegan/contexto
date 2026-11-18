@@ -3,7 +3,7 @@ import { sanitizeArticleHtml } from "@/lib/sanitize";
 import { incrustarEnlaces } from "@/lib/embeds";
 import { EmbedAltura } from "@/components/embed-altura";
 import { ArticleBody } from "@/components/article-body";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import type { Metadata } from "next";
@@ -23,7 +23,7 @@ import { relatedContent } from "@/lib/search";
 import { articleMetadata, breadcrumbJsonLd, newsArticleJsonLd } from "@/lib/seo";
 import { formatDate } from "@/lib/utils";
 import { PREFIJO_IMAGEN_IA } from "@/lib/ai-image";
-import { rutaDeNota } from "@/lib/ruta-nota";
+import { esDeOpinion, rutaDeNota } from "@/lib/ruta-nota";
 
 /** Artículo — plantilla «Marfil & Burdeos». */
 export const revalidate = 86400;
@@ -64,12 +64,14 @@ async function generateMetadataImpl({ params, desdeOriginal }: Params): Promise<
 }
 
 // Página de una nota publicada: cuerpo saneado, autor, relacionados y datos estructurados; 404 si no existe.
-async function ArticlePage({ params, locale }: Params & { locale: Locale }) {
+async function ArticlePage({ params, locale, desdeOriginal }: Params & { locale: Locale }) {
   const { slug } = await params;
   // Sin `.catch`: si la base falla, la página FALLA (Next conserva la versión guardada y no cachea nada) en vez de responder 404 a una nota que existe.
   // `null` solo significa que la nota de verdad no existe.
   const a = await getPublishedArticleBySlug(slug);
   if (!a) notFound();
+  // Una columna se sirve en /columna/<título>: por /articulo/<título> redirige (permanente) para que haya una sola dirección.
+  if (!desdeOriginal && locale === "es" && !a.legacyPath && esDeOpinion(a.categorySlug)) permanentRedirect(`/columna/${a.slug}`);
 
   const [related, site, enBarra] = await Promise.all([
     relatedContent(a.title, a.id, 4, a.categorySlug).catch(() => []),
@@ -109,7 +111,7 @@ export function ArticleDocument({
   ultimaHora?: boolean;
 }) {
   // Columna de opinión (foto redonda del autor en lugar de la foto grande): las secciones Opinión, Columnas o Columnistas, o la sección «columna» (o «columna», como en el sitio anterior) o una dirección original /columna/…
-  const esColumna = ["columnas", "columna", "opinion", "columnistas"].includes(a.categorySlug ?? "") || !!a.legacyPath?.startsWith("/columna") || a.slug.startsWith("columna-");
+  const esColumna = esDeOpinion(a.categorySlug) || !!a.legacyPath?.startsWith("/columna") || a.slug.startsWith("columna-");
   const seo = { ...a, authorName: a.authorName, categoryName: a.categoryName };
   const readingMinutes = Math.max(1, Math.round(a.body.replace(/<[^>]+>/g, " ").split(/\s+/).length / 220));
 
