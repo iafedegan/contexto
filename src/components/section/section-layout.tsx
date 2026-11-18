@@ -248,8 +248,10 @@ export function SectionGrid({ theme, items, locale, pautaColumna }: { theme: str
     case "esmeralda":
     case "home": {
       // Esmeralda: apertura + columna «Lo último» numerada, y rejilla dorada.
-      const rail = rest.slice(0, 4);
-      const grid = rest.slice(4);
+      // Tres notas junto a la foto grande (no cuatro): con cuatro la fila se alargaba, la foto crecía hasta pasar el alto de la pantalla y su titular
+      // quedaba fuera de la vista; con tres el conjunto cabe en un computador normal y se mantiene equilibrado al cambiar de tamaño.
+      const rail = rest.slice(0, 3);
+      const grid = rest.slice(3);
       return (
         <div className="flex flex-col gap-14">
           <section className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
