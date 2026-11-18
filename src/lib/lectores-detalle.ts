@@ -56,8 +56,30 @@ const IDENTIDAD = sql`select distinct on (sv.visitor_id) sv.visitor_id, trim(coa
   from subscriber_visitors sv join newsletter_subscribers n on n.id = sv.subscriber_id
   where n.reading_authorized_at is not null and n.unsubscribed_at is null order by sv.visitor_id, sv.verified desc`;
 
-/** Un renglón por lector (navegador) con lo que leyó: cuántas notas, cuánto tiempo, a qué hora, desde dónde y con qué. */
-export async function lectoresDetalle(f: Filtros, conNombres: boolean): Promise<{ filas: Lector[]; total: number }> {
+/** Columnas por las que se puede ordenar la tabla de lectores → expresión SQL fija (lista blanca: del usuario solo llega el nombre). */
+export const ORDEN_LECTORES = {
+  lector: "a.visitor_id::text",
+  ciudad: "a.ciudad",
+  dispositivo: "a.dispositivo",
+  notas: "a.notas",
+  dias: "a.dias",
+  tiempo: "a.segundos",
+  leyo: "a.scroll",
+  hora: 'a."horaHabitual"',
+  seccion: "a.seccion",
+  origen: "a.fuente",
+  ultima: "a.ultima",
+} as const;
+export type ColumnaLectores = keyof typeof ORDEN_LECTORES;
+export type OrdenLectores = { col: ColumnaLectores; dir: "asc" | "desc" };
+export const esColumnaLectores = (v: unknown): v is ColumnaLectores => typeof v === "string" && Object.prototype.hasOwnProperty.call(ORDEN_LECTORES, v);
+
+/** Un renglón por lector (navegador) con lo que leyó: cuántas notas, cuánto tiempo, a qué hora, desde dónde y con qué. Sin `orden`: más notas primero. */
+export async function lectoresDetalle(f: Filtros, conNombres: boolean, orden?: OrdenLectores): Promise<{ filas: Lector[]; total: number }> {
+  // Los vacíos van siempre al final; el desempate es el mismo de siempre (más notas, más reciente), para que el orden sea estable.
+  const orderBy = orden
+    ? sql.raw(`${ORDEN_LECTORES[orden.col]} ${orden.dir === "asc" ? "asc" : "desc"} nulls last, a.notas desc, a.ultima desc`)
+    : sql.raw("a.notas desc, a.ultima desc");
   const r = filas<Lector & { total: number }>(
     await db.execute(sql`with ident as (${IDENTIDAD}),
       lect as (select s.visitor_id, s.created_at, s.seconds, s.max_scroll, s.city, s.device, s.browser, s.source, c.name categoria ${DESDE} where ${donde(f)}),
@@ -70,7 +92,7 @@ export async function lectoresDetalle(f: Filtros, conNombres: boolean): Promise<
         ${conNombres ? sql`nullif(i.nombre, '')` : sql`null`} nombre, ${conNombres ? sql`i.correo` : sql`null`} correo,
         a.notas, a.dias, a.segundos, a.scroll, a.completas, a.primera, a.ultima, a."horaHabitual", a.ciudad, a.dispositivo, a.navegador, a.seccion, a.fuente,
         (count(*) over ())::int total
-      from agg a left join ident i on i.visitor_id = a.visitor_id order by a.notas desc, a.ultima desc limit 150`),
+      from agg a left join ident i on i.visitor_id = a.visitor_id order by ${orderBy} limit 150`),
   );
   return { filas: r, total: r[0]?.total ?? 0 };
 }

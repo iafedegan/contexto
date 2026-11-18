@@ -4,7 +4,7 @@ import { tienePermiso } from "@/lib/permisos-server";
 import { adopcion, identificados, lecturasDe } from "@/lib/lectores-identificados";
 import { esUuid } from "@/lib/lectores-entrada";
 import { AdopcionLectura, FichaPersona, TablaPersonas } from "@/components/panel/bi-personas";
-import { lectoresDetalle, registroLecturas } from "@/lib/lectores-detalle";
+import { esColumnaLectores, lectoresDetalle, registroLecturas, type OrdenLectores } from "@/lib/lectores-detalle";
 import { EncabezadoLector, TablaLectores, TablaRegistro } from "@/components/panel/bi-lectores";
 import { TabsResumen } from "@/components/panel/tabs-resumen";
 import { Card } from "@/components/ui";
@@ -94,6 +94,8 @@ export default async function AnaliticaPage({ searchParams }: { searchParams: Pr
   const verPersonas = await tienePermiso(user.id, user.role, "newsletter");
   const sel = typeof q.suscriptor === "string" && esUuid(q.suscriptor) ? q.suscriptor.toLowerCase() : undefined;
   const f = leerFiltros(q);
+  // Orden de la tabla de lectores (columna y sentido), de la dirección; lo que no sea una columna conocida se ignora.
+  const ordenLectores: OrdenLectores | undefined = esColumnaLectores(q.orden) ? { col: q.orden, dir: q.dir === "asc" ? "asc" : "desc" } : undefined;
   const vista = q.vista === "suscriptores" ? "suscriptores" : q.vista === "lectores" ? "lectores" : q.vista === "superapp" ? "superapp" : "audiencia";
   const lector = typeof q.lector === "string" && esUuid(q.lector) ? q.lector.toLowerCase() : undefined;
   const hoy = hoyColombia();
@@ -109,7 +111,7 @@ export default async function AnaliticaPage({ searchParams }: { searchParams: Pr
         </div>
       </header>
 
-      {vista === "audiencia" ? <Audiencia f={f} hoy={hoy} /> : vista === "lectores" ? <Lectores f={f} hoy={hoy} verPersonas={verPersonas} lector={lector} /> : vista === "superapp" ? <SuperApp f={f} hoy={hoy} verPersonas={verPersonas} /> : <Suscriptores f={f} hoy={hoy} verPersonas={verPersonas} sel={sel} />}
+      {vista === "audiencia" ? <Audiencia f={f} hoy={hoy} /> : vista === "lectores" ? <Lectores f={f} hoy={hoy} verPersonas={verPersonas} lector={lector} orden={ordenLectores} /> : vista === "superapp" ? <SuperApp f={f} hoy={hoy} verPersonas={verPersonas} /> : <Suscriptores f={f} hoy={hoy} verPersonas={verPersonas} sel={sel} />}
     </div>
   );
 }
@@ -210,8 +212,8 @@ async function Audiencia({ f, hoy }: { f: ReturnType<typeof leerFiltros>; hoy: s
   );
 }
 
-async function Lectores({ f, hoy, verPersonas, lector }: { f: ReturnType<typeof leerFiltros>; hoy: string; verPersonas: boolean; lector?: string }) {
-  const [p, det, registro] = await Promise.all([panorama(f), lector ? null : lectoresDetalle(f, verPersonas), registroLecturas(f, verPersonas, lector)]);
+async function Lectores({ f, hoy, verPersonas, lector, orden }: { f: ReturnType<typeof leerFiltros>; hoy: string; verPersonas: boolean; lector?: string; orden?: OrdenLectores }) {
+  const [p, det, registro] = await Promise.all([panorama(f), lector ? null : lectoresDetalle(f, verPersonas, orden), registroLecturas(f, verPersonas, lector)]);
   const base = aParametros(f).toString();
   const con = (extra: string) => `?${[base, extra].filter(Boolean).join("&")}`;
   const uno = lector ? registro[0] : undefined;
@@ -225,7 +227,7 @@ async function Lectores({ f, hoy, verPersonas, lector }: { f: ReturnType<typeof 
         </>
       ) : (
         <>
-          <Panel kicker="Quién lee" titulo="Lectores"><TablaLectores lectores={det?.filas ?? []} total={det?.total ?? 0} enlace={(id) => con(`vista=lectores&lector=${id}`)} /></Panel>
+          <Panel kicker="Quién lee" titulo="Lectores"><TablaLectores lectores={det?.filas ?? []} total={det?.total ?? 0} enlace={(id) => con(`vista=lectores&lector=${id}`)} orden={orden} ordenar={(col, dir) => con(`vista=lectores&orden=${col}&dir=${dir}`)} /></Panel>
           <Panel kicker="Qué se leyó" titulo="Últimas lecturas, una por una"><TablaRegistro registros={registro} /></Panel>
         </>
       )}

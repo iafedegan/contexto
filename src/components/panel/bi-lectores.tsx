@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { BadgeCheck, Smartphone, Monitor, Tablet, X } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, BadgeCheck, Smartphone, Monitor, Tablet, X } from "lucide-react";
 import { Card } from "@/components/ui";
 import { duracion, horaEtiqueta } from "@/lib/lectores-formato";
-import type { Lector, Registro } from "@/lib/lectores-detalle";
+import type { ColumnaLectores, Lector, OrdenLectores, Registro } from "@/lib/lectores-detalle";
 import { nfCO } from "@/lib/format";
 
 /**
@@ -39,7 +39,22 @@ function Quien({ codigo, nombre, correo }: { codigo: string; nombre?: string | n
   );
 }
 
-export function TablaLectores({ lectores, total, enlace }: { lectores: Lector[]; total: number; enlace: (id: string) => string }) {
+// Encabezados de la tabla de lectores y la columna por la que ordena cada uno. Los números abren de mayor a menor; el texto, de A a Z.
+const COLUMNAS: { t: string; col: ColumnaLectores; numerica: boolean; derecha?: boolean }[] = [
+  { t: "Lector", col: "lector", numerica: false },
+  { t: "Ciudad", col: "ciudad", numerica: false },
+  { t: "Dispositivo", col: "dispositivo", numerica: false },
+  { t: "Notas", col: "notas", numerica: true, derecha: true },
+  { t: "Días", col: "dias", numerica: true, derecha: true },
+  { t: "Tiempo", col: "tiempo", numerica: true, derecha: true },
+  { t: "Leyó", col: "leyo", numerica: true },
+  { t: "Hora habitual", col: "hora", numerica: true },
+  { t: "Sección", col: "seccion", numerica: false },
+  { t: "Origen", col: "origen", numerica: false },
+  { t: "Última vez", col: "ultima", numerica: true },
+];
+
+export function TablaLectores({ lectores, total, enlace, orden, ordenar }: { lectores: Lector[]; total: number; enlace: (id: string) => string; orden?: OrdenLectores; /** Dirección de la página con ese orden. */ ordenar?: (col: ColumnaLectores, dir: "asc" | "desc") => string }) {
   if (!lectores.length) return <p className="text-sm text-[var(--fg-muted)]">Ninguna lectura con estos filtros.</p>;
   return (
     <>
@@ -49,9 +64,29 @@ export function TablaLectores({ lectores, total, enlace }: { lectores: Lector[];
           <caption className="sr-only">Lectores con lo que leyeron en el periodo</caption>
           <thead>
             <tr className="border-b border-[var(--border-strong)] text-left text-xs text-[var(--fg-muted)]">
-              {["Lector", "Ciudad", "Dispositivo", "Notas", "Días", "Tiempo", "Leyó", "Hora habitual", "Sección", "Origen", "Última vez"].map((t, i) => (
-                <th key={t} scope="col" className={`px-2 py-2 font-semibold ${i >= 3 && i <= 5 ? "text-right" : ""}`}>{t}</th>
-              ))}
+              {COLUMNAS.map(({ t, col, numerica, derecha }) => {
+                const activa = orden?.col === col;
+                // Un clic ordena; otro invierte (mayor→menor ⇄ menor→mayor).
+                const siguiente: "asc" | "desc" = activa ? (orden!.dir === "asc" ? "desc" : "asc") : numerica ? "desc" : "asc";
+                const Icono = !activa ? ArrowUpDown : orden!.dir === "asc" ? ArrowUp : ArrowDown;
+                return (
+                  <th key={t} scope="col" aria-sort={activa ? (orden!.dir === "asc" ? "ascending" : "descending") : "none"} className={`px-2 py-2 font-semibold ${derecha ? "text-right" : ""}`}>
+                    {ordenar ? (
+                      <Link
+                        href={ordenar(col, siguiente)}
+                        scroll={false}
+                        title={`Ordenar por ${t.toLowerCase()}: ${siguiente === "desc" ? "de mayor a menor" : "de menor a mayor"}`}
+                        className={`inline-flex items-center gap-1 whitespace-nowrap rounded px-1 py-0.5 hover:bg-[var(--surface-2)] hover:text-[var(--fg)] ${derecha ? "flex-row-reverse" : ""} ${activa ? "text-[var(--fg)]" : ""}`}
+                      >
+                        {t}
+                        <Icono size={12} aria-hidden className={activa ? "text-[var(--accent)]" : "opacity-50"} />
+                      </Link>
+                    ) : (
+                      t
+                    )}
+                  </th>
+                );
+              })}
             </tr>
           </thead>
           <tbody>

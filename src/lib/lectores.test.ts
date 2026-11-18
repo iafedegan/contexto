@@ -258,6 +258,18 @@ test("el detalle de lectura: un renglón por lector, con ciudad y filtros, y el 
   assert.equal(pc.length, 1);
   assert.equal(pc[0].nombre, null);
   assert.equal((await det.registroLecturas(todo, true, V1)).length, 2, "el historial de un solo lector");
+
+  // Orden de las columnas: de mayor a menor y de menor a mayor, y los textos de la A a la Z.
+  const ids = async (col: import("@/lib/lectores-detalle").ColumnaLectores, dir: "asc" | "desc") => (await det.lectoresDetalle(todo, false, { col, dir })).filas.map((l) => l.ciudad);
+  assert.deepEqual(await ids("notas", "desc"), ["Bogotá", "Medellín"], "más notas primero");
+  assert.deepEqual(await ids("notas", "asc"), ["Medellín", "Bogotá"], "menos notas primero");
+  assert.deepEqual(await ids("tiempo", "desc"), ["Bogotá", "Medellín"], "230 s contra 60 s");
+  assert.deepEqual(await ids("tiempo", "asc"), ["Medellín", "Bogotá"]);
+  assert.deepEqual(await ids("ciudad", "asc"), ["Bogotá", "Medellín"], "texto de la A a la Z");
+  assert.deepEqual(await ids("ciudad", "desc"), ["Medellín", "Bogotá"]);
+  assert.deepEqual(await ids("ultima", "desc"), ["Medellín", "Bogotá"], "el más reciente primero");
+  assert.equal(det.esColumnaLectores("notas"), true);
+  assert.equal(det.esColumnaLectores("a.notas; drop table users"), false, "solo columnas conocidas");
 });
 
 test("el editor puede unir un navegador con un suscriptor: autoriza, vincula y atribuye las lecturas anteriores", async () => {
