@@ -126,13 +126,13 @@ export function ArticleHero(p: Parts) {
           </h1>
           <p data-el="n-excerpt" className="mt-5 text-xl leading-relaxed text-[var(--fg-muted)] md:text-[1.35rem]">{p.excerpt}</p>
           <hr className="lx-rule my-8" />
-          {/* Firma y botones a la izquierda; la pauta, pequeña, en el hueco de la derecha (si no cabe al lado, baja y queda a la derecha). */}
-          <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-4">
+          {/* Firma y botones a la izquierda; la pauta, en el hueco de la derecha, pegada al borde (si no hay 22 rem libres al lado, baja a su propia línea y se ajusta al ancho). */}
+          <div className="flex flex-wrap items-start justify-between gap-x-6">
             <div>
               {p.byline}
               <div className="mt-8">{p.actions}</div>
             </div>
-            {p.pauta && <div className="ml-auto max-w-full">{p.pauta}</div>}
+            {p.pauta && <div className="min-w-0 flex-1 basis-[22rem] max-lg:[&:has(iframe,img)]:mt-4">{p.pauta}</div>}
           </div>
           {p.cover}
         </header>

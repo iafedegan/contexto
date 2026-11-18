@@ -73,6 +73,15 @@ function sobra(grupo: string | undefined, id: string): boolean {
 // (un 728×90 llenando 1.400 px medía ~175 de alto; con 60 queda en ~485 px de ancho): si no llega al ancho completo, queda centrado.
 const ESCALA_MAX = 2.2;
 const ALTO_MAX_COMPLETO = 60;
+// Lo más que se reduce un banner para que quepa en pantalla angosta.
+const ESCALA_MIN = 0.3;
+
+// Tamaños que se piden a Ad Manager. En un celular (< 640 px) los banners horizontales piden primero los de 320 de ancho, que caben sin
+// reducirse; los de siempre siguen pedidos (se reducen para caber) para no perder campañas que solo tengan 728×90.
+function tamanosPara(unidad: UnidadGam, horizontal: boolean): number[][] {
+  const base = TAMANOS_GAM[unidad];
+  return horizontal && typeof window !== "undefined" && window.innerWidth < 640 ? [[320, 50], [320, 100], ...base] : base;
+}
 
 export function GamSlot({ unidad, className, grupo, completo = false }: { unidad: UnidadGam; className?: string; grupo?: string; completo?: boolean }) {
   const pathname = usePathname() ?? "/";
@@ -83,19 +92,24 @@ export function GamSlot({ unidad, className, grupo, completo = false }: { unidad
   // Alto del anuncio que Google pintó. Mientras no llegue (o si no hay campaña) el espacio no ocupa nada ni muestra el rótulo:
   // nunca queda una franja vacía con «Publicidad».
   const [altoReal, setAltoReal] = useState<number | null>(null);
-  // Tamaño (ancho) del anuncio pintado y escala para ocupar todo el ancho disponible (solo con `completo`).
+  // Tamaño (ancho) del anuncio pintado y escala. Los banners horizontales SIEMPRE se ajustan al ancho disponible (un 728 px no cabe en un
+  // celular y se salía de la pantalla): se reducen lo justo para caber, sin deformarlos. Con `completo` además se amplían (con tope de alto).
   const [anchoReal, setAnchoReal] = useState<number | null>(null);
   const [escala, setEscala] = useState(1);
   const fuera = useRef<HTMLDivElement>(null);
+  const ajusta = completo || horizontal;
   useEffect(() => {
     const el = fuera.current;
-    if (!completo || !anchoReal || !altoReal || !el) return;
-    const calcular = () => setEscala(Math.min(ESCALA_MAX, ALTO_MAX_COMPLETO / altoReal, Math.max(0.3, el.clientWidth / anchoReal)));
+    if (!ajusta || !anchoReal || !altoReal || !el) return;
+    const calcular = () => {
+      const cabe = Math.max(ESCALA_MIN, el.clientWidth / anchoReal);
+      setEscala(completo ? Math.min(ESCALA_MAX, ALTO_MAX_COMPLETO / altoReal, cabe) : Math.min(1, cabe));
+    };
     calcular();
     const ro = new ResizeObserver(calcular);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [completo, anchoReal, altoReal]);
+  }, [ajusta, completo, anchoReal, altoReal]);
   // Se vuelve a dibujar cuando otro espacio del grupo cambia (llegó un anuncio grande).
   const [, avisar] = useState(0);
   useEffect(() => {
@@ -114,7 +128,7 @@ export function GamSlot({ unidad, className, grupo, completo = false }: { unidad
       cargarGpt();
       window.googletag!.cmd.push(() => {
         const g = window.googletag as Gpt;
-        slot = g.defineSlot(`/${GAM_RED}/${nombreUnidadGam(prefijo, unidad)}`, TAMANOS_GAM[unidad], id)?.addService(g.pubads()) ?? null;
+        slot = g.defineSlot(`/${GAM_RED}/${nombreUnidadGam(prefijo, unidad)}`, tamanosPara(unidad, horizontal), id)?.addService(g.pubads()) ?? null;
         g.pubads().addEventListener?.("slotRenderEnded", (e) => {
           if (e.slot !== slot) return;
           const alto = !e.isEmpty && Array.isArray(e.size) && typeof e.size[1] === "number" && e.size[1] > 1 ? e.size[1] : null;
@@ -159,14 +173,14 @@ export function GamSlot({ unidad, className, grupo, completo = false }: { unidad
       {/* Rótulo arriba y el anuncio debajo. Los banners horizontales van pegados a la derecha, con el rótulo también a la derecha y casi sin aire. */}
       {altoReal && <span className={cn("block text-[0.6875rem] font-medium uppercase tracking-wide text-[var(--fg-muted)]", horizontal ? (completo ? "mb-1 text-center" : "mb-1 text-right") : "mb-1")}>Publicidad</span>}
       {/* 1 px mientras espera: el observador necesita un elemento en la página para saber cuándo pedir el anuncio. */}
-      <div ref={fuera} className={completo ? "flex w-full justify-center overflow-hidden" : undefined} style={completo && altoReal ? { height: altoReal * escala } : undefined}>
-        {/* Con `completo`, una envoltura del tamaño ya ampliado centra el anuncio escalado (la escala no cambia el espacio que ocupa). */}
-        <div className={completo && anchoReal ? "flex-none overflow-hidden" : "w-full"} style={completo && anchoReal && altoReal ? { width: anchoReal * escala, height: altoReal * escala } : undefined}>
+      <div ref={fuera} className={ajusta ? cn("flex w-full overflow-hidden", completo ? "justify-center" : "justify-end") : undefined} style={ajusta && altoReal ? { height: altoReal * escala } : undefined}>
+        {/* Una envoltura del tamaño ya escalado coloca el anuncio (centrado o a la derecha): la escala no cambia el espacio que ocupa. */}
+        <div className={ajusta && anchoReal ? "flex-none overflow-hidden" : "w-full"} style={ajusta && anchoReal && altoReal ? { width: anchoReal * escala, height: altoReal * escala } : undefined}>
           <div
             ref={caja}
             id={id}
-            className={cn("flex items-start [&_iframe]:rounded-lg", completo ? undefined : horizontal ? "justify-end" : "mx-auto justify-center")}
-            style={completo && anchoReal ? { minHeight: altoReal ?? 1, width: anchoReal, transform: `scale(${escala})`, transformOrigin: "top left" } : { minHeight: altoReal ?? 1 }}
+            className={cn("flex items-start [&_iframe]:rounded-lg", ajusta ? undefined : "mx-auto justify-center")}
+            style={ajusta && anchoReal ? { minHeight: altoReal ?? 1, width: anchoReal, transform: `scale(${escala})`, transformOrigin: "top left" } : { minHeight: altoReal ?? 1 }}
           />
         </div>
       </div>
