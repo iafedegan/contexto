@@ -198,6 +198,20 @@ export async function exigirRequisitosDePublicacion(articleId: string) {
   if (!r.ok) throw new Error(`No se puede publicar todavía: ${r.motivos.join(" y ")}.`);
 }
 
+/**
+ * Las columnas se sirven en `/columna/<slug>`, igual que las del sitio anterior (no en `/articulo/<slug>`). Se hace dejando esa dirección como la de la
+ * nota (`legacy_path`), que es la que usa todo el sitio para enlazarla. Solo si la nota es de la sección Columnas, aún no tiene dirección propia
+ * y nadie más la usa.
+ */
+export async function asegurarRutaDeColumna(articleId: string) {
+  await db.execute(sql`
+    update articles a set legacy_path = '/columna/' || a.slug
+    from categories c
+    where a.id = ${articleId} and c.id = a.category_id and c.slug in ('columnas', 'columna')
+      and a.legacy_path is null
+      and not exists (select 1 from articles o where o.legacy_path = '/columna/' || a.slug)`);
+}
+
 // Publica una nota ya autorizada: cambia el estado, recalcula su embedding, revalida el sitio y avisa si es de última hora.
 export async function publicarCore(articleId: string) {
   // Una nota que ya está publicada se actualiza sin volver a exigirle los requisitos; las demás los cumplen o no salen.
@@ -207,6 +221,7 @@ export async function publicarCore(articleId: string) {
     .update(articles)
     .set({ status: "publicado", publishedAt: sql`coalesce(${articles.publishedAt}, now())`, scheduledFor: null, updatedAt: sql`now()` })
     .where(eq(articles.id, articleId));
+  await asegurarRutaDeColumna(articleId);
   await reindexarNota(articleId);
   await revalidarNota(articleId);
   emitir("nota.publicada", { ids: [articleId] });
