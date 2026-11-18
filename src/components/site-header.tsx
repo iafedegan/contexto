@@ -180,7 +180,9 @@ function MastheadHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extr
             </a>
           ))}
         </div>
-        <div className="absolute bottom-3 right-6 z-10 hidden items-center md:flex">
+        <div className="absolute bottom-3 right-6 z-10 hidden items-center gap-3 md:flex">
+          {/* La emisora, a la vista junto al modo claro/oscuro (en el celular va en el menú «Más»). */}
+          {identity.radioStreamUrl && <RadioPlayer src={identity.radioStreamUrl} locale={locale} className="!min-h-11 !border-[#d9a41a]/55 !text-[#d9a41a]" />}
           <ThemeToggle locale={locale} className="!size-11 rounded-full border border-[#d9a41a]/55 !text-[#d9a41a]" />
         </div>
         {/* Logo a la izquierda y, a su lado, el nombre. `items-center` en ESTA fila: las líneas y el logo quedan en el centro vertical del título. */}
