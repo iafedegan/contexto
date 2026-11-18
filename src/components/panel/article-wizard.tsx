@@ -2332,7 +2332,7 @@ function SeoPanel({ score, items, groups, capped, focus }: { score: number; item
   const mostrar = vista === "falta" && pending.length > 0 ? "falta" : "cumplido";
 
   return (
-    <aside className="lx-card hidden min-h-0 w-72 shrink-0 flex-col p-0 lg:flex xl:w-80" style={{ transform: "none" }} aria-label="Puntuación SEO">
+    <aside className="lx-card hidden min-h-0 w-72 shrink-0 flex-col overscroll-contain p-0 lg:flex xl:w-80" style={{ transform: "none", overflowX: "hidden", overflowY: "auto" }} aria-label="Puntuación SEO">
       <div className="shrink-0 border-b border-[var(--border)] p-4">
         <p className="lx-kicker text-[var(--fg-muted)]">SEO en vivo</p>
         <div className="mt-1 flex items-baseline gap-2">
@@ -2374,7 +2374,7 @@ function SeoPanel({ score, items, groups, capped, focus }: { score: number; item
           {focus ? `Palabra clave: «${focus}»` : "Añade palabras clave para medir la principal."}
         </p>
       </div>
-      <div className="flex min-h-0 flex-1 flex-col gap-2.5 p-4">
+      <div className="flex min-h-[15rem] flex-1 flex-col gap-2.5 p-4">
         <div role="group" aria-label="Criterios" className="grid shrink-0 grid-cols-2 gap-1 rounded-full border border-[var(--border)] bg-[var(--surface)] p-1">
           {([["falta", `Falta (${pending.length})`], ["cumplido", `Cumplido (${passed.length})`]] as const).map(([v, texto]) => (
             <button key={v} type="button" aria-pressed={mostrar === v} onClick={() => setVista(v)}
