@@ -26,7 +26,7 @@ import { PREFIJO_IMAGEN_IA } from "@/lib/ai-image";
 import { rutaDeNota } from "@/lib/ruta-nota";
 
 /** Artículo — plantilla «Marfil & Burdeos». */
-export const revalidate = 3600;
+export const revalidate = 86400;
 
 // Parámetros de la ruta: la dirección de la nota.
 type Params = {

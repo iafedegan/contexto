@@ -10,7 +10,7 @@ import { PaginaConstruida, metadataDePagina, paginaDeLaRuta } from "../../_pages
  * se busca una página armada en el constructor con esa dirección (`/seccion/pagina`) y, si tampoco, se resuelve como antes: redirecciones,
  * categoría o 404. Las rutas con nombre propio (`/categoria/x`, `/autor/x`…) ganan a esta.
  */
-export const revalidate = 3600;
+export const revalidate = 86400;
 // Las páginas no se generan en la compilación: se crean en la primera visita y se guardan.
 export async function generateStaticParams() {
   return [];
