@@ -129,7 +129,8 @@ async function HomePage({ locale, portadaBorrador }: { locale: Locale; portadaBo
       slug: `propia-${d.id}`,
       href: d.enlace || null,
       externa: d.nuevaPestana && /^https?:/.test(d.enlace),
-      sinOptimizar: true,
+      // Solo sin optimizar si la imagen viene de un dominio que el optimizador no admite (ver `images.remotePatterns` en next.config.ts).
+      sinOptimizar: !/^(\/|https:\/\/([a-z0-9-]+\.)*(supabase\.co|contextoganadero\.com|storyblok\.com)\/)/i.test(d.imagen ?? ""),
       title: d.titulo,
       excerpt: d.texto,
       image: d.imagen,

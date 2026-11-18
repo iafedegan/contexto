@@ -47,17 +47,23 @@ export async function generateStaticParams() {
 }
 
 // Metadatos de la sección.
-async function generateMetadataImpl({ params }: Params): Promise<Metadata> {
+async function generateMetadataImpl({ params, searchParams }: PageProps): Promise<Metadata> {
   const { slug } = await params;
   const category = await getCategoryMeta(slug).catch(() => null);
   if (!category) return { title: "Sección no encontrada", robots: { index: false } };
+  // Cada página de la lista se declara a sí misma como canónica (antes la 2, 3… apuntaban a la 1 y Google dejaba de recorrerlas, con lo
+  // que las notas viejas se descubrían peor). Con filtros (subsección, fechas, autor…) la canónica sigue siendo la sección sin filtros.
+  const q = (await searchParams) ?? {};
+  const filtrada = Boolean(q.subcategoria || q.desde || q.hasta || q.autor || q.anio || q.mes || q.region || q.depto || q.orden);
+  const pagina = Math.max(1, Math.floor(Number(q.pagina) || 1));
+  const canonica = siteUrl(`/categoria/${slug}${!filtrada && pagina > 1 ? `?pagina=${pagina}` : ""}`);
   return {
-    title: category.name,
+    title: pagina > 1 && !filtrada ? `${category.name} — página ${pagina}` : category.name,
     description:
       category.description ??
       `Noticias y análisis de ${category.name.toLowerCase()} en el sector ganadero colombiano.`,
     alternates: {
-      canonical: siteUrl(`/categoria/${slug}`),
+      canonical: canonica,
       // Los lectores RSS descubren solos el feed de la sección.
       types: { "application/rss+xml": siteUrl(`/categoria/${slug}/feed.xml`) },
     },

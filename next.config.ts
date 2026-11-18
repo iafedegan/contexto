@@ -51,6 +51,8 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       { protocol: "https", hostname: "**.contextoganadero.com" },
       { protocol: "https", hostname: "**.supabase.co" },
+      // Imágenes que el sitio anterior servía desde su CDN (diapositivas del carrusel, notas viejas): así pasan por el optimizador.
+      { protocol: "https", hostname: "a.storyblok.com" },
       // Solo para las imágenes de ejemplo del seed local.
       { protocol: "https", hostname: "picsum.photos" },
       { protocol: "https", hostname: "fastly.picsum.photos" },

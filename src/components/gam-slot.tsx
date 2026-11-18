@@ -30,6 +30,8 @@ declare global {
 // Carga gpt.js una sola vez (async, sin bloquear nada).
 function cargarGpt() {
   window.googletag = window.googletag ?? { cmd: [] };
+  // Otro script (p. ej. Google Tag Manager) puede haber creado `googletag` sin su cola: sin esto, `cmd.push` fallaba y no salía la pauta.
+  window.googletag.cmd = window.googletag.cmd ?? [];
   if (window.__gptCargado) return;
   window.__gptCargado = true;
   const s = document.createElement("script");
@@ -160,7 +162,7 @@ export function GamSlot({ unidad, className, grupo, completo = false }: { unidad
     return () => {
       io.disconnect();
       if (grupo) quitar(grupo, id);
-      window.googletag?.cmd.push(() => {
+      window.googletag?.cmd?.push(() => {
         const g = window.googletag as Gpt;
         if (slot) g.destroySlots([slot]);
       });
