@@ -32,7 +32,7 @@ export function SectionHeader({ theme, kicker, title, description, chips, breadc
       // Diario: cabecera centrada entre filetes dobles, como una sección impresa.
       return (
         <header data-region="encabezado" className="relative mb-12 pt-2 text-center">
-          <div className="flex justify-center">{breadcrumb}</div>
+          <div className="flex justify-center"><div className="sr-only">{breadcrumb}</div></div>
           <div className="mt-2 border-y-4 border-double border-[var(--fg)] py-6 lg:grid lg:grid-cols-[1fr_auto_1fr] lg:items-end lg:gap-6">
             <span className="hidden lg:block" />
             <div>
@@ -51,7 +51,7 @@ export function SectionHeader({ theme, kicker, title, description, chips, breadc
       // Revista: título enorme en cursiva, alineado a la izquierda, con aire.
       return (
         <header data-region="encabezado" className="relative mb-14 pt-3">
-          {breadcrumb}
+          <div className="sr-only">{breadcrumb}</div>
           <div className="mt-6 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div className="min-w-0">
               <p data-el="kicker" className="lx-kicker text-[var(--accent)]">{kicker}</p>
@@ -69,7 +69,7 @@ export function SectionHeader({ theme, kicker, title, description, chips, breadc
       // Compacto: barra densa tipo panel de datos.
       return (
         <header data-region="encabezado" className="mb-6 pt-4">
-          {breadcrumb}
+          <div className="sr-only">{breadcrumb}</div>
           <div className="mt-3 flex flex-wrap items-end justify-between gap-3 border-b-2 border-[var(--fg)] pb-3">
             <div>
               <p data-el="kicker" className="font-mono text-[11px] uppercase tracking-[0.12em] text-[var(--accent)]">{kicker}</p>
@@ -88,7 +88,7 @@ export function SectionHeader({ theme, kicker, title, description, chips, breadc
           <div aria-hidden className="pointer-events-none absolute -right-20 -top-24 size-80 rounded-full bg-[var(--accent-2)] opacity-25 blur-3xl" />
           <div aria-hidden className="pointer-events-none absolute -bottom-24 left-10 size-72 rounded-full bg-[var(--accent)] opacity-20 blur-3xl" />
           <div className="relative">
-            {breadcrumb}
+            <div className="sr-only">{breadcrumb}</div>
             <div className="mt-6 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
               <div className="min-w-0">
                 <p data-el="kicker" className="lx-kicker text-[var(--accent)]">{kicker}</p>
@@ -109,13 +109,13 @@ export function SectionHeader({ theme, kicker, title, description, chips, breadc
       // el menú. Antes eran cinco filas centradas (rombos, título, descripción, etiquetas y filete) y la lista empezaba a media pantalla.
       return (
         <header data-region="encabezado" className="relative mb-6 pt-1 lg:mb-3">
-          <div className="flex justify-center">{breadcrumb}</div>
           <div className="flex flex-col gap-4 border-b border-[var(--border)] pb-4 lg:flex-row lg:items-end lg:justify-between lg:gap-8 lg:pb-2">
             <div className="min-w-0">
-              <p data-el="kicker" className="lx-kicker flex items-center gap-2 text-[var(--accent)]">
-                <span aria-hidden>◆</span>
-                {kicker}
-              </p>
+              {/* «Inicio / Sección»: la miga visible, con el enlace a la portada (antes solo decía «Sección»). */}
+              <div data-el="kicker" className="flex items-center gap-2">
+                <span aria-hidden className="lx-kicker text-[var(--accent)]">◆</span>
+                {breadcrumb ?? <span className="lx-kicker text-[var(--accent)]">{kicker}</span>}
+              </div>
               <h1 data-el="title" className="lx-display mt-1 bg-gradient-to-b from-[var(--fg)] to-[var(--accent)] bg-clip-text break-words text-[clamp(2rem,10vw,2.4rem)] font-semibold leading-[1.05] tracking-tight text-transparent md:text-4xl lg:text-[2.6rem]">
                 {title}
               </h1>
@@ -134,7 +134,7 @@ export function SectionHeader({ theme, kicker, title, description, chips, breadc
       // Resto: lámina con filete.
       return (
         <header data-region="encabezado" className="relative mb-8 pt-2">
-          {breadcrumb}
+          <div className="sr-only">{breadcrumb}</div>
           <div className="mt-4 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div className="min-w-0">
               <p data-el="kicker" className="lx-kicker text-[var(--accent)]">{kicker}</p>
