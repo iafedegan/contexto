@@ -70,9 +70,9 @@ function sobra(grupo: string | undefined, id: string): boolean {
  * pantalla, así los anuncios nunca compiten con el contenido ni con el LCP. La sección (y por tanto la unidad) sale de la dirección.
  */
 // Con `completo`, el anuncio se amplía (sin deformarlo ni recortarlo) hasta ocupar el ancho disponible, pero sin pasar de este alto en px
-// (un 728×90 llenando 1.400 px medía ~175 de alto): si no llega al ancho completo, queda centrado.
+// (un 728×90 llenando 1.400 px medía ~175 de alto; con 60 queda en ~485 px de ancho): si no llega al ancho completo, queda centrado.
 const ESCALA_MAX = 2.2;
-const ALTO_MAX_COMPLETO = 120;
+const ALTO_MAX_COMPLETO = 60;
 
 export function GamSlot({ unidad, className, grupo, completo = false }: { unidad: UnidadGam; className?: string; grupo?: string; completo?: boolean }) {
   const pathname = usePathname() ?? "/";
