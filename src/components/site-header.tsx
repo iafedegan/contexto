@@ -14,7 +14,7 @@ import { RadioPlayer } from "@/components/radio-player";
 import { InstalarApp } from "@/components/instalar-app";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { StickyRail } from "@/components/sticky-rail";
-import { BotonInicio, EscudoSecciones, MastilPortada } from "@/components/en-portada";
+import { EscudoSecciones, MastilPortada } from "@/components/en-portada";
 import { cn } from "@/lib/utils";
 import { FacebookIcon, InstagramIcon, LinkedinIcon, YoutubeIcon } from "@/components/social-icons";
 
@@ -215,7 +215,6 @@ function MastheadHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extr
         style={{ "--nav-bg": "#72bf44", "--fg": "#0d2318", "--fg-muted": "#1f3a28", "--border": "rgba(13,35,24,0.22)" } as React.CSSProperties}
       >
         <div className="lx-navrail mx-auto max-w-[125rem] items-center justify-start gap-x-5 gap-y-2 px-6 py-2.5 text-[0.72rem] font-bold uppercase tracking-[0.16em] sm:justify-center xl:gap-x-6">
-          <BotonInicio locale={locale} etiqueta={identity.name} />
           <EscudoSecciones locale={locale}>
             {/* Escudo a la izquierda (en las secciones el logo grande se esconde y el cintillo de cifras queda arriba). */}
             <Link href={localePath(locale, "/")} aria-label={identity.name} className="flex size-9 items-center justify-center rounded-full bg-[#022327] p-1.5 ring-2 ring-[#d9a41a]/80">

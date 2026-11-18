@@ -47,8 +47,17 @@ function marcadoresAGraficas(html: string): string {
 }
 
 // Cuerpo de una nota: HTML ya saneado, con tablas desplazables, fuentes plegables y gráficas interactivas.
+/**
+ * Una columna suele abrir con la firma en su propio párrafo («Por José de Silvestri, gerente técnico de …»): ese párrafo no lleva la capitular,
+ * se la deja al siguiente. Se reconoce por empezar con «Por » y ser corto.
+ */
+export function marcarFirma(html: string): string {
+  const m = /^\s*<p>(Por\s[^<]{3,160})<\/p>(?=\s*<p)/.exec(html);
+  return m ? html.replace("<p>", '<p class="firma-nota">') : html;
+}
+
 export function ArticleBody({ html: crudo, className }: { html: string; className?: string }) {
-  const html = envolverTablas(fuentesDesplegables(marcadoresAGraficas(crudo)));
+  const html = marcarFirma(envolverTablas(fuentesDesplegables(marcadoresAGraficas(crudo))));
   const parts: React.ReactNode[] = [];
   let last = 0;
   let k = 0;
