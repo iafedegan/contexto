@@ -609,6 +609,19 @@ export const getBreakingSlugs = cachear(
 export const getUltimaColumnaLafaurie = cachear(
   "ultima-columna-lafaurie",
   async (): Promise<ArticleListItem | null> => {
+    // Si un editor eligió una columna destacada (paso «Sección» del editor de notas) y sigue publicada, esa va primero.
+    const [elegida] = await db.select({ value: siteSettings.value }).from(siteSettings).where(eq(siteSettings.key, "columna_destacada")).limit(1);
+    const idElegida = (elegida?.value as { articleId?: unknown } | undefined)?.articleId;
+    if (typeof idElegida === "string" && idElegida) {
+      const [fija] = await db
+        .select(listSelection)
+        .from(articles)
+        .leftJoin(authors, eq(articles.authorId, authors.id))
+        .leftJoin(categories, eq(articles.categoryId, categories.id))
+        .where(and(publishedCondition, eq(articles.id, idElegida)))
+        .limit(1);
+      if (fija) return fija;
+    }
     const [row] = await db
       .select(listSelection)
       .from(articles)

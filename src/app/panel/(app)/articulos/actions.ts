@@ -17,6 +17,7 @@ import { invalidarCache } from "@/lib/data-cache";
 import { esNotaPropia, exigirNotaPropia } from "@/lib/propiedad-notas";
 import { asignacionDe, destinoActivo, devolverAsignacion, quitarAsignacion, registrarAsignacion, soltarAsignacion, type ResultadoAsignacion } from "@/lib/notas-asignadas";
 import { puedeEnviarNota } from "@/lib/notas-asignadas-reglas";
+import { fijarColumnaDestacada } from "@/lib/columna-destacada";
 import { piezaParaEscribir, vincularPieza } from "@/app/panel/(app)/pendientes/consultas";
 
 // Variante para las acciones que responden con un mensaje en vez de lanzar.
@@ -138,6 +139,9 @@ export async function saveArticle(formData: FormData) {
     const quiere = portadaPos === "none" ? null : Number(portadaPos);
     if ((act?.pos ?? null) !== quiere) await fijarPortadaCore(articleId, quiere);
   }
+  // Columna destacada de la portada (solo con permiso «portada»; ausente = no tocar).
+  const colDest = String(formData.get("columnaDestacada") ?? "keep");
+  if ((colDest === "si" || colDest === "no") && (await tienePermiso(user.id, user.role, "portada"))) await fijarColumnaDestacada(articleId, colDest === "si");
   // Los distintivos (última hora, directo) salen en la cabecera y en las
   // tarjetas de todo el portal, así que se refresca el layout completo.
   invalidarCache();

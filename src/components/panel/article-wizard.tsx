@@ -150,6 +150,7 @@ export function ArticleWizard({
   status,
   canPublish = false,
   canPortada = false,
+  esColumnaDestacada = false,
   estilo = "sin",
   estiloInfo = null,
   escritores = [],
@@ -182,6 +183,8 @@ export function ArticleWizard({
   canPublish?: boolean;
   /** Puede ubicar notas en la portada del sitio (permiso «portada»). */
   canPortada?: boolean;
+  /** Esta nota es hoy la «Columna destacada» de la portada. */
+  esColumnaDestacada?: boolean;
   /** Estilo de escritura de la persona: «activo» (la IA lo usa), «apagado» (lo tiene pero lo desactivó) o «sin» (aún no lo carga). */
   estilo?: EstadoEstilo;
   /** Datos del diagnóstico de estilo (fecha, notas, palabras) para el aviso del paso 1. */
@@ -373,6 +376,7 @@ export function ArticleWizard({
     const p = initial?.homePosition;
     return p == null ? "none" : p === 0 ? "0" : p === 1 ? "1" : "keep";
   });
+  const [columnaDest, setColumnaDest] = useState(esColumnaDestacada);
   const [cover, setCover] = useState(initial?.coverImageUrl ?? "");
   const [coverAlt, setCoverAlt] = useState(initial?.coverImageAlt ?? "");
   const [metaTitle, setMetaTitle] = useState(initial?.metaTitle ?? "");
@@ -993,6 +997,7 @@ export function ArticleWizard({
       <input type="hidden" name="isBreaking" value={breaking ? "1" : "0"} />
       <input type="hidden" name="isLive" value={live ? "1" : "0"} />
       <input type="hidden" name="portadaPos" value={canPortada ? portadaPos : "keep"} />
+      <input type="hidden" name="columnaDestacada" value={canPortada ? (columnaDest ? "si" : "no") : "keep"} />
       <input type="hidden" name="enviarA" value={puedeEnviarEditor ? enviarA : ""} />
       <input type="hidden" name="mensajeEditor" value={puedeEnviarEditor && enviarA ? mensajeEditor : ""} />
 
@@ -1531,6 +1536,18 @@ export function ArticleWizard({
                   </div>
                 )}
               </TarjetaDecision>
+              {canPortada && (
+                <TarjetaDecision n={3} titulo="¿Es la columna destacada?" ayuda={columnaDest ? "Saldrá en «Columna destacada» (arriba de «Lo más leído»), en lugar de la que está hoy. Al guardar o publicar." : "Opcional: ponla en el recuadro «Columna destacada» de la portada, en lugar de la actual."}>
+                  <div role="radiogroup" aria-label="Columna destacada" className="grid w-full grid-cols-2 gap-1 rounded-full border border-[var(--border)] bg-[var(--surface-2)]/60 p-1">
+                    {([[false, "No"], [true, "Sí, destacarla"]] as const).map(([v, t]) => (
+                      <button key={t} type="button" role="radio" aria-checked={columnaDest === v} onClick={() => setColumnaDest(v)}
+                        className={`rounded-full px-2 py-1.5 text-center text-sm font-medium transition ${columnaDest === v ? "bg-[var(--accent)] text-[var(--accent-fg,#fff)] shadow-sm" : "text-[var(--fg-muted)] hover:text-[var(--fg)]"}`}>
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                </TarjetaDecision>
+              )}
                 </>
               }
             />

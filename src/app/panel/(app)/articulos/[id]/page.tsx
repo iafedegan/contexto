@@ -20,6 +20,7 @@ import { siteChrome } from "@/components/panel/site-chrome";
 import { ViewsBarChart } from "@/components/panel/views-chart";
 import { articleSeries, bestDay, pctChange } from "@/lib/article-stats";
 import { formatDate } from "@/lib/utils";
+import { columnaDestacadaId } from "@/lib/columna-destacada";
 import {
   publishArticle,
   scheduleArticle,
@@ -85,6 +86,7 @@ export default async function ArticleEditorPage({
 }) {
   await requirePermiso("articulos");
   const { id } = await params;
+  const esColumnaDestacada = (await columnaDestacadaId().catch(() => null)) === id;
   const { modo, paso, desde, guardado, pieza: piezaId } = await searchParams;
   const session = await auth();
   const isNew = id === "nuevo";
@@ -122,6 +124,7 @@ export default async function ArticleEditorPage({
           envioLibre={envioLibre(session!.user.role)}
           canPublish={canPublish(session!.user.role)}
           canPortada={await tienePermiso(session!.user.id, session!.user.role, "portada")}
+          esColumnaDestacada={esColumnaDestacada}
           estilo={estilo}
           escritores={escritores}
           estiloInfo={est.diagnostico ? { generadoEn: est.diagnostico.generadoEn, muestras: est.diagnostico.muestras, palabras: est.diagnostico.palabras } : null}
@@ -191,6 +194,7 @@ export default async function ArticleEditorPage({
           status={row.status}
           canPublish={canPublish(session!.user.role)}
           canPortada={await tienePermiso(session!.user.id, session!.user.role, "portada")}
+          esColumnaDestacada={esColumnaDestacada}
           estilo={estilo}
           escritores={escritores}
           estiloInfo={est.diagnostico ? { generadoEn: est.diagnostico.generadoEn, muestras: est.diagnostico.muestras, palabras: est.diagnostico.palabras } : null}
