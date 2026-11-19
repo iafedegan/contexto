@@ -28,3 +28,10 @@ describe("figuraImagen", () => {
     assert.equal(urlImagenValida("javascript:alert(1)"), false);
   });
 });
+
+describe("foto con el texto alrededor", () => {
+  it("el sitio conserva el ajuste y el ancho", () => {
+    const limpio = sanitizeArticleHtml('<figure class="img-izq cg-img-sel" style="width:40%"><img src="https://x.co/a.webp" alt="a"><figcaption>Archivo FEDEGÁN</figcaption></figure>');
+    assert.match(limpio, /<figure class="img-izq" style="width:40%">/);
+  });
+});

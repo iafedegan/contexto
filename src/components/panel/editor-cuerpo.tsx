@@ -32,7 +32,10 @@ export function expandirGraficas(html: string): string {
 
 /** Cuerpo guardado → HTML que se pinta en el editor (las gráficas, como bloques que no se editan por dentro). */
 function paraEditor(html: string): string {
-  return incrustarEnlaces(expandirGraficas(html)).replace(/<figure class="(lx-chart|lx-embed)/g, '<figure contenteditable="false" class="$1');
+  return incrustarEnlaces(expandirGraficas(html))
+    .replace(/<figure class="(lx-chart|lx-embed)/g, '<figure contenteditable="false" class="$1')
+    // Las fotos del cuerpo son un bloque que se selecciona con un clic (como en Word); el pie se edita desde la cinta.
+    .replace(/<figure(?=[\s>])(?![^>]*contenteditable)((?:(?!>)[^])*?)>(?=\s*<img)/g, '<figure contenteditable="false"$1>');
 }
 
 /** HTML del editor → cuerpo guardado: las gráficas vuelven a su marcador y se quitan los restos del editor. */
@@ -50,6 +53,12 @@ function desdeEditor(el: HTMLElement): string {
     f.classList.remove("cg-embed-sel");
     // El alto automático de X e Instagram es solo de pantalla: no se guarda.
     f.querySelectorAll("iframe").forEach((i) => i.removeAttribute("style"));
+  });
+  // Fotos del cuerpo: se quitan las marcas del editor (no editable y seleccionada).
+  copia.querySelectorAll("figure:not(.lx-embed):not(.lx-chart)").forEach((f) => {
+    f.removeAttribute("contenteditable");
+    f.classList.remove("cg-img-sel");
+    if (!f.getAttribute("class")) f.removeAttribute("class");
   });
   // Al escribir, el navegador deja un <br> suelto en el campo vacío.
   const html = copia.innerHTML.replace(/^(<br\s*\/?>|\s)+$/i, "");
@@ -109,8 +118,28 @@ function Boton({ titulo, activo, onClick, children }: { titulo: string; activo?:
   );
 }
 
+/** Cómo se acomoda una foto con el texto, como en Word: en línea (sola, centrada) o con el texto alrededor a un lado. */
+type AjusteImagen = "linea" | "izq" | "der";
+const AJUSTES: { id: AjusteImagen; nombre: string; ayuda: string }[] = [
+  { id: "linea", nombre: "En línea", ayuda: "Sola en su renglón, centrada (el texto arriba y abajo)" },
+  { id: "izq", nombre: "A la izquierda", ayuda: "La foto a la izquierda y el texto la rodea por la derecha" },
+  { id: "der", nombre: "A la derecha", ayuda: "La foto a la derecha y el texto la rodea por la izquierda" },
+];
+
+/** Dibujo de cada ajuste (foto y renglones), como los íconos de Word. */
+function IconoAjuste({ a }: { a: AjusteImagen }) {
+  const lineas = (x: number, w: number, ys: number[]) => ys.map((y) => <rect key={y} x={x} y={y} width={w} height="1.4" rx=".7" fill="currentColor" opacity=".55" />);
+  return (
+    <svg width="18" height="14" viewBox="0 0 18 14" aria-hidden>
+      {a === "linea" && <>{lineas(1, 16, [1])}<rect x="5" y="3.5" width="8" height="6" rx="1" fill="currentColor" />{lineas(1, 16, [11.6])}</>}
+      {a === "izq" && <><rect x="1" y="1" width="7" height="7" rx="1" fill="currentColor" />{lineas(9.5, 7.5, [1.5, 4.5, 7.5])}{lineas(1, 16, [11])}</>}
+      {a === "der" && <><rect x="10" y="1" width="7" height="7" rx="1" fill="currentColor" />{lineas(1, 7.5, [1.5, 4.5, 7.5])}{lineas(1, 16, [11])}</>}
+    </svg>
+  );
+}
+
 /** Pestañas de la cinta, como en Word. */
-type Pestana = "inicio" | "insertar" | "revisar";
+type Pestana = "inicio" | "insertar" | "revisar" | "imagen";
 const ESTILOS: { valor: string; nombre: string }[] = [
   { valor: "p", nombre: "Párrafo" },
   { valor: "h2", nombre: "Título 2" },
@@ -157,6 +186,9 @@ export function EditorCuerpo({
   const [video, setVideo] = useState<{ url: string; ancho: number; error: string; red?: Embed["tipo"] } | null>(null);
   const [embedSel, setEmbedSel] = useState<{ ancho: number; alinear: "izq" | "centro" | "der"; alto: number | null } | null>(null);
   const embedEl = useRef<HTMLElement | null>(null);
+  // Foto del cuerpo seleccionada: su ajuste con el texto (como en Word), su ancho y su pie.
+  const [imgSel, setImgSel] = useState<{ ajuste: AjusteImagen; ancho: number; pie: string } | null>(null);
+  const imgEl = useRef<HTMLElement | null>(null);
   const [buscar, setBuscar] = useState<{ q: string; r: string; msg: string }>({ q: "", r: "", msg: "" });
   const [zoom, setZoom] = useState(100);
   const [caracteres, setCaracteres] = useState(0);
@@ -271,7 +303,7 @@ export function EditorCuerpo({
   const insertarImagen = (d: Parameters<typeof figuraImagen>[0]) => {
     setImagen(null);
     restaurarRango();
-    orden("insertHTML", `${figuraImagen(d)}<p><br></p>`);
+    orden("insertHTML", `${figuraImagen(d).replace("<figure>", '<figure contenteditable="false">')}<p><br></p>`);
   };
   const abrirVideo = (red?: Embed["tipo"]) => {
     guardarRango();
@@ -324,8 +356,72 @@ export function EditorCuerpo({
     setEmbedSel(null);
     emitir();
   };
+  // Ajusta la foto seleccionada con el texto: en línea, o flotando a un lado con el texto alrededor (al flotar se limita a la mitad del ancho).
+  const ajustarImagen = (a: AjusteImagen) => {
+    const el = imgEl.current;
+    if (!el) return;
+    el.classList.remove("img-izq", "img-der");
+    if (a !== "linea") el.classList.add(`img-${a}`);
+    let ancho = imgSel?.ancho ?? 100;
+    if (a !== "linea" && ancho > 60) ancho = 45;
+    if (a === "linea" && ancho < 100 && ancho <= 50) ancho = 100;
+    if (ancho >= 100) el.style.removeProperty("width"); else el.style.width = `${ancho}%`;
+    if (!el.getAttribute("style")) el.removeAttribute("style");
+    setImgSel((x) => (x ? { ...x, ajuste: a, ancho } : x));
+    emitir();
+  };
+  const anchoImagen = (n: number) => {
+    const el = imgEl.current;
+    if (!el) return;
+    const tope = imgSel?.ajuste === "linea" ? 100 : 70;
+    const ancho = Math.round(Math.min(tope, Math.max(20, n)));
+    if (ancho >= 100) el.style.removeProperty("width"); else el.style.width = `${ancho}%`;
+    if (!el.getAttribute("style")) el.removeAttribute("style");
+    setImgSel((x) => (x ? { ...x, ancho } : x));
+    emitir();
+  };
+  const pieImagen = (t: string) => {
+    const el = imgEl.current;
+    if (!el) return;
+    let cap = el.querySelector("figcaption");
+    if (!cap) { cap = document.createElement("figcaption"); el.appendChild(cap); }
+    cap.textContent = t;
+    setImgSel((x) => (x ? { ...x, pie: t } : x));
+    emitir();
+  };
+  const quitarImagen = () => {
+    imgEl.current?.remove();
+    imgEl.current = null;
+    setImgSel(null);
+    emitir();
+  };
+  // Mueve la foto un bloque arriba o abajo (para acomodarla junto al párrafo que ilustra).
+  const moverImagen = (dir: -1 | 1) => {
+    const el = imgEl.current;
+    if (!el) return;
+    if (dir < 0 && el.previousElementSibling) el.previousElementSibling.before(el);
+    if (dir > 0 && el.nextElementSibling) el.nextElementSibling.after(el);
+    el.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    emitir();
+  };
   // Al hacer clic en un video del cuerpo se selecciona (sus controles salen en «Insertar»).
   const alHacerClic = (e: React.MouseEvent<HTMLDivElement>) => {
+    caja.current?.querySelectorAll("figure.cg-img-sel").forEach((x) => x.classList.remove("cg-img-sel"));
+    // Una foto del cuerpo: se selecciona y sus herramientas salen en la cinta.
+    const foto = (e.target as Element).closest?.("figure:not(.lx-embed):not(.lx-chart)") as HTMLElement | null;
+    if (foto && foto.querySelector("img") && caja.current?.contains(foto)) {
+      caja.current?.querySelectorAll("figure.cg-embed-sel").forEach((x) => x.classList.remove("cg-embed-sel"));
+      embedEl.current = null; setEmbedSel(null);
+      foto.classList.add("cg-img-sel");
+      imgEl.current = foto;
+      const m = (foto.getAttribute("style") ?? "").match(/width:\s*([\d.]+)%/);
+      setImgSel({ ajuste: foto.classList.contains("img-izq") ? "izq" : foto.classList.contains("img-der") ? "der" : "linea", ancho: m ? Math.round(Number(m[1])) : 100, pie: foto.querySelector("figcaption")?.textContent ?? "" });
+      setEnlace(null); setTabla(null); setInfografia(null); setVideo(null);
+      setPestana("imagen");
+      return;
+    }
+    imgEl.current = null; setImgSel(null);
+    if (pestana === "imagen") setPestana("insertar");
     const f = (e.target as Element).closest?.("figure.lx-embed") as HTMLElement | null;
     caja.current?.querySelectorAll("figure.cg-embed-sel").forEach((x) => x.classList.remove("cg-embed-sel"));
     if (!f) { embedEl.current = null; return setEmbedSel(null); }
@@ -427,6 +523,8 @@ export function EditorCuerpo({
           <button type="button" role="tab" aria-selected={pestana === "inicio"} onClick={() => setPestana("inicio")} className={tabClase("inicio")}>Inicio</button>
           <button type="button" role="tab" aria-selected={pestana === "insertar"} onClick={() => setPestana("insertar")} className={tabClase("insertar")}>Insertar</button>
           <button type="button" role="tab" aria-selected={pestana === "revisar"} onClick={() => setPestana("revisar")} className={tabClase("revisar")}>Revisar</button>
+          {/* Como en Word: al seleccionar una foto aparece su pestaña de herramientas. */}
+          {imgSel && <button type="button" role="tab" aria-selected={pestana === "imagen"} onClick={() => setPestana("imagen")} className={`${tabClase("imagen")} ${pestana === "imagen" ? "" : "!text-[var(--accent)]"}`}>Formato de imagen</button>}
           <span className="ml-auto pb-1 pr-1 text-xs tabular-nums text-[var(--fg-muted)]">{resumen ? <>{resumen} · </> : null}{caracteres.toLocaleString("es-CO")} caracteres</span>
         </div>
         <div role="toolbar" aria-label="Formato del texto" className="flex min-h-[2.75rem] flex-wrap items-center gap-0.5 border-t border-[var(--border)] bg-white px-2 py-1.5">
@@ -548,6 +646,32 @@ export function EditorCuerpo({
               )}
             </>
           )}
+          {pestana === "imagen" && imgSel && (
+            <span className="flex flex-wrap items-center gap-2 text-xs">
+              <span className="font-semibold text-[var(--fg-muted)]">Ajustar texto:</span>
+              <span role="group" aria-label="Ajuste de la foto con el texto" className="inline-flex overflow-hidden rounded-md border border-[var(--border)]">
+                {AJUSTES.map((a) => (
+                  <button key={a.id} type="button" title={a.ayuda} aria-pressed={imgSel.ajuste === a.id} onMouseDown={(e) => e.preventDefault()} onClick={() => ajustarImagen(a.id)}
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 font-medium transition ${imgSel.ajuste === a.id ? "bg-[var(--accent)] text-[var(--accent-fg,#fff)]" : "text-[var(--fg-muted)] hover:text-[var(--fg)]"}`}>
+                    <IconoAjuste a={a.id} /> {a.nombre}
+                  </button>
+                ))}
+              </span>
+              <Sep />
+              <label className="flex items-center gap-1.5">Tamaño
+                <input type="range" min={20} max={imgSel.ajuste === "linea" ? 100 : 70} step={5} value={imgSel.ancho} onChange={(e) => anchoImagen(Number(e.target.value))} aria-label="Ancho de la foto en porcentaje del texto" className="w-28 accent-[var(--accent)]" />
+                <span className="w-9 tabular-nums">{imgSel.ancho}%</span>
+              </label>
+              <Sep />
+              <button type="button" title="Subir la foto un párrafo" onClick={() => moverImagen(-1)} className="rounded-md border border-[var(--border)] px-2 py-1 font-medium text-[var(--fg-muted)] hover:text-[var(--fg)]">↑ Subir</button>
+              <button type="button" title="Bajar la foto un párrafo" onClick={() => moverImagen(1)} className="rounded-md border border-[var(--border)] px-2 py-1 font-medium text-[var(--fg-muted)] hover:text-[var(--fg)]">↓ Bajar</button>
+              <Sep />
+              <label className="flex items-center gap-1.5">Pie y crédito
+                <input value={imgSel.pie} onChange={(e) => pieImagen(e.target.value.slice(0, 400))} aria-label="Pie de foto y crédito" className={`${campoCinta} w-72`} />
+              </label>
+              <button type="button" onClick={quitarImagen} className="rounded-md border border-[var(--border)] px-2 py-1 font-medium text-[var(--fg-muted)] transition hover:border-[var(--danger,#b4442e)] hover:text-[var(--danger,#b4442e)]">Quitar foto</button>
+            </span>
+          )}
           {pestana === "revisar" && (
             <>
               <Search size={15} aria-hidden className="text-[var(--fg-muted)]" />
@@ -609,7 +733,9 @@ export function EditorCuerpo({
           [&_table]:my-4 [&_table]:w-full [&_table]:border-collapse [&_td]:min-w-12 [&_td]:border [&_td]:border-[var(--border)] [&_td]:px-2 [&_td]:py-1.5 [&_th]:border [&_th]:border-[var(--border)] [&_th]:bg-[var(--surface-2)] [&_th]:px-2 [&_th]:py-1.5 [&_th]:text-left [&_th]:font-semibold
           [&_figure]:my-4 [&_figure_img]:mx-auto [&_figure_img]:max-h-72 [&_figcaption]:mt-1 [&_figcaption]:text-center [&_figcaption]:text-xs [&_figcaption]:text-[var(--fg-muted)]
           [&_details]:my-3 [&_details]:rounded-md [&_details]:border [&_details]:border-[var(--border)] [&_details]:px-3 [&_details]:py-2 [&_summary]:cursor-pointer [&_summary]:text-sm [&_summary]:font-semibold
-          [&_iframe]:aspect-video [&_iframe]:w-full [&_iframe]:pointer-events-none [&_figure.lx-embed]:mx-auto [&_figure.lx-embed]:cursor-pointer [&_figure.lx-embed-social_iframe]:aspect-auto [&_figure.lx-embed-social]:min-w-[min(100%,330px)] [&_figure.lx-embed-social]:max-w-[min(100%,550px)] [&_figure.cg-embed-sel]:outline [&_figure.cg-embed-sel]:outline-2 [&_figure.cg-embed-sel]:outline-offset-4 [&_figure.cg-embed-sel]:outline-[var(--accent)]`}
+          [&_iframe]:aspect-video [&_iframe]:w-full [&_iframe]:pointer-events-none [&_figure.lx-embed]:mx-auto [&_figure.lx-embed]:cursor-pointer [&_figure.lx-embed-social_iframe]:aspect-auto [&_figure.lx-embed-social]:min-w-[min(100%,330px)] [&_figure.lx-embed-social]:max-w-[min(100%,550px)] [&_figure.cg-embed-sel]:outline [&_figure.cg-embed-sel]:outline-2 [&_figure.cg-embed-sel]:outline-offset-4 [&_figure.cg-embed-sel]:outline-[var(--accent)]
+          [&_figure.cg-img-sel]:outline [&_figure.cg-img-sel]:outline-2 [&_figure.cg-img-sel]:outline-offset-4 [&_figure.cg-img-sel]:outline-[var(--accent)] [&_figure:has(>img)]:cursor-pointer [&_figure:has(>img)]:mx-auto
+          [&_figure.img-izq]:float-left [&_figure.img-izq]:mr-5 [&_figure.img-izq]:mt-1 [&_figure.img-izq]:mb-2 [&_figure.img-izq]:w-[45%] [&_figure.img-der]:float-right [&_figure.img-der]:ml-5 [&_figure.img-der]:mt-1 [&_figure.img-der]:mb-2 [&_figure.img-der]:w-[45%] [&_figure.img-izq_img]:max-h-none [&_figure.img-der_img]:max-h-none [&_h2]:clear-both [&_h3]:clear-both`}
       />
     </div>
   );
