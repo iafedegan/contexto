@@ -196,8 +196,9 @@ export default async function PanelLayout({ children }: { children: React.ReactN
             <p className="mb-6 flex items-start gap-2 rounded-[var(--radius)] border border-[var(--accent)]/40 bg-[var(--surface-2)] p-4 text-sm leading-relaxed">
               <ShieldAlert size={16} className="mt-0.5 shrink-0 text-[var(--accent)]" />
               <span>
-                Entraste con una contraseña temporal. <strong>Cámbiala ahora</strong> en «Mi perfil» (más abajo en esta pantalla): escribe la contraseña actual y una nueva de al menos
-                10 caracteres. Mientras no la cambies no podrás usar el resto del panel.
+                Entraste con una contraseña temporal. <strong>Cámbiala ahora</strong>: ve a la pestaña <strong>«Mis datos»</strong> (la primera de esta pantalla), baja a «Contraseña», escribe la contraseña
+                actual y una nueva de al menos 10 caracteres. Mientras no la cambies no podrás usar el resto del panel.{" "}
+                <a href={`${RUTA_SEGURIDAD}#usuarios`} className="lx-link font-semibold">Ir a cambiar mi contraseña →</a>
               </span>
             </p>
           )}
