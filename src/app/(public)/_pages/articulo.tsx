@@ -203,18 +203,34 @@ export function ArticleDocument({
         <figure data-el="n-photo" className={esColumna ? "lx-media relative mx-auto mt-10 aspect-square w-48 overflow-hidden rounded-full sm:w-56" : "lx-media lx-card mt-10 aspect-[16/9] w-full"}>
           {/* «Última hora»: la insignia va en la esquina de la imagen, no en una franja. */}
           {ultimaHora && <BreakingBadge locale={locale} className="absolute left-3 top-3 z-[5] shadow-lg" />}
-          {a.coverImageUrl ? (
+          {a.coverImageUrl && esColumna ? (
             <Image
               src={a.coverImageUrl}
               alt={a.coverImageAlt ?? a.title}
               fill
               priority
               fetchPriority="high"
-              sizes={esColumna ? "224px" : "(min-width: 1280px) 1200px, 100vw"}
+              sizes="224px"
               quality={75}
-              // Encuadre algo hacia arriba: en una foto vertical (el retrato de un columnista) queda la cara, no el pecho.
+              // Encuadre algo hacia arriba: en el retrato de un columnista queda la cara, no el pecho.
               className="object-cover object-[50%_28%]"
             />
+          ) : a.coverImageUrl ? (
+            <>
+              {/* Autoajuste: la foto se ve ENTERA, sin recortes, sea cual sea su tamaño (un banner muy ancho con texto ya no pierde los bordes).
+                  El espacio que sobre lo llena la misma foto desenfocada; mismo `src`, `sizes` y calidad, así que el navegador la descarga una sola vez. */}
+              <Image src={a.coverImageUrl} alt="" aria-hidden fill sizes="(min-width: 1280px) 1200px, 100vw" quality={75} className="scale-110 object-cover blur-2xl brightness-[0.65]" />
+              <Image
+                src={a.coverImageUrl}
+                alt={a.coverImageAlt ?? a.title}
+                fill
+                priority
+                fetchPriority="high"
+                sizes="(min-width: 1280px) 1200px, 100vw"
+                quality={75}
+                className="object-contain"
+              />
+            </>
           ) : (
             <CoverArt seed={a.slug} label={a.categoryName ?? a.title} className="text-[7rem]" />
           )}
