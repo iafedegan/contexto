@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { and, eq, sql } from "drizzle-orm";
 import bcrypt from "bcryptjs";
+import { generarClaveTemporal } from "@/lib/clave-temporal";
+import { enviarClaveTemporal } from "@/lib/correo-clave-temporal";
 import { db } from "@/db";
 import { siteSettings, userPermissionOverrides, users, type UserRole } from "@/db/schema";
 import { CUOTAS_KEY, type Cuotas } from "@/lib/ai-cuota";
@@ -79,6 +81,24 @@ export async function toggleUserActive(userId: string, active: boolean) {
 
   await db.update(users).set({ active, updatedAt: new Date() }).where(eq(users.id, userId));
   revalidatePath("/panel/configuracion");
+}
+
+/**
+ * Restablece la contraseña de OTRA persona (solo administradores): le pone una temporal al azar, la obliga a cambiarla al entrar y se la
+ * envía por correo desde el remitente del sitio. Si el correo no sale, la temporal se le muestra al administrador para entregarla a mano.
+ */
+export async function restablecerClave(userId: string): Promise<{ ok: boolean; message: string; clave?: string }> {
+  const me = await requireRole("administrador");
+  if (me.id === userId) return { ok: false, message: "Tu propia contraseña se cambia en «Mis datos»." };
+  const [persona] = await db.select({ id: users.id, name: users.name, email: users.email }).from(users).where(eq(users.id, String(userId))).limit(1);
+  if (!persona) return { ok: false, message: "Esa cuenta ya no existe." };
+  const clave = generarClaveTemporal();
+  await db.update(users).set({ passwordHash: await bcrypt.hash(clave, 10), mustChangePassword: true, updatedAt: new Date() }).where(eq(users.id, persona.id));
+  revalidatePath("/panel/configuracion");
+  const envio = await enviarClaveTemporal({ nombre: persona.name, email: persona.email, clave });
+  return envio.ok
+    ? { ok: true, message: `Listo: se envió la contraseña temporal a ${persona.email}. Al entrar tendrá que cambiarla.` }
+    : { ok: true, clave, message: `La contraseña quedó restablecida, pero el correo no salió (${envio.error}). Entrégale esta temporal de forma segura:` };
 }
 
 /**

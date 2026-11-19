@@ -2,10 +2,11 @@
 
 import { CuotaBarra } from "@/components/panel/cuota-ia-form";
 import { Fragment, useState, useTransition } from "react";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Copy, KeyRound, Loader2 } from "lucide-react";
 import type { UserRole } from "@/db/schema";
 import {
   deleteUser,
+  restablecerClave,
   resetUserPermissions,
   resetUserTotp,
   setAiQuota,
@@ -63,6 +64,10 @@ export function UserRow({
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [abierto, setAbierto] = useState(false);
+  // Restablecer la contraseña: el resultado (y la temporal, si el correo no salió) se muestra en la propia fila.
+  const [reinicio, setReinicio] = useState<{ ok: boolean; message: string; clave?: string } | null>(null);
+  const [reiniciando, reiniciarT] = useTransition();
+  const [copiada, setCopiada] = useState(false);
   const [marcas, setMarcas] = useState<Record<string, boolean>>(
     Object.fromEntries(permisos.map((p) => [p.id, p.activo])),
   );
@@ -140,6 +145,36 @@ export function UserRow({
           <span className="inline-block rounded-full bg-[#d97706]/12 px-2.5 py-1 text-xs font-medium leading-snug text-[#92400e]">Primer ingreso: falta cambiar la contraseña</span>
         ) : (
           <span className="text-xs text-[var(--fg-muted)]">Propia</span>
+        )}
+        {canManage && (
+          <div className="mt-2 flex flex-col items-start gap-1.5">
+            <button
+              type="button"
+              disabled={reiniciando}
+              onClick={async () => {
+                if (!(await confirmar(`¿Restablecer la contraseña de ${user.name}? Se le pondrá una temporal, se le enviará a ${user.email} y tendrá que cambiarla al entrar. La que tiene ahora deja de servir.`))) return;
+                setReinicio(null);
+                setCopiada(false);
+                reiniciarT(async () => setReinicio(await restablecerClave(user.id)));
+              }}
+              className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border-strong)] px-3 py-1 text-xs font-medium transition hover:border-[var(--accent)] hover:text-[var(--accent)] disabled:opacity-60"
+            >
+              {reiniciando ? <Loader2 size={12} className="animate-spin" aria-hidden /> : <KeyRound size={12} aria-hidden />} Restablecer contraseña
+            </button>
+            {reinicio && (
+              <div role="status" className={`max-w-xs text-xs leading-snug ${reinicio.ok && !reinicio.clave ? "text-[#157a4a]" : reinicio.ok ? "text-[#92400e]" : "text-red-700"}`}>
+                <p>{reinicio.message}</p>
+                {reinicio.clave && (
+                  <p className="mt-1 flex items-center gap-2">
+                    <code className="rounded bg-[var(--surface-2)] px-2 py-1 font-mono text-sm text-[var(--fg)]">{reinicio.clave}</code>
+                    <button type="button" onClick={() => { void navigator.clipboard?.writeText(reinicio.clave!).then(() => setCopiada(true)); }} className="inline-flex items-center gap-1 font-medium text-[var(--accent)] hover:underline">
+                      <Copy size={12} aria-hidden /> {copiada ? "Copiada" : "Copiar"}
+                    </button>
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
         )}
       </td>
 
