@@ -5,7 +5,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { signIn } from "next-auth/react";
-import { startAuthentication } from "@simplewebauthn/browser";
+import { browserSupportsWebAuthn, startAuthentication } from "@simplewebauthn/browser";
+import { mensajeErrorPasskey } from "@/components/panel/passkey-errores";
 import { ArrowLeft, Fingerprint, Loader2, MailCheck, ShieldCheck } from "lucide-react";
 import { Turnstile } from "@/components/turnstile";
 import { confirmarLoginPasskey, iniciarLogin, iniciarLoginPasskey, pedirClaveOlvidada, reenviarCodigo, type OlvidoState } from "./actions";
@@ -119,13 +120,7 @@ function LoginForm() {
       router.push(next);
       router.refresh();
     } catch (e) {
-      setError(
-        e instanceof Error && e.name === "NotAllowedError"
-          ? "Cancelaste el ingreso con passkey."
-          : typeof window !== "undefined" && !window.PublicKeyCredential
-            ? "Este navegador o dispositivo no soporta passkeys."
-            : "No se pudo completar el ingreso con passkey. Inténtalo de nuevo o entra con tu contraseña.",
-      );
+      setError(mensajeErrorPasskey(e, "ingreso", browserSupportsWebAuthn()));
     } finally {
       setPendingPasskey(false);
     }

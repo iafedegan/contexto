@@ -153,6 +153,8 @@ function CampoClave({ nombre, etiqueta: titulo, ayuda, autoComplete, requerido, 
   const ver = verFuera ?? verPropio;
   const setVer = (f: (v: boolean) => boolean) => (alVer ? alVer(f(ver)) : setVerPropio(f));
   const [mayus, setMayus] = useState(false);
+  // El aviso de Bloq Mayús solo sale en el campo en el que se está escribiendo (antes quedaba debajo de los dos, también con el campo vacío).
+  const [enfocado, setEnfocado] = useState(false);
   const id = `campo-${nombre}`;
   return (
     <div className="flex flex-col gap-1.5">
@@ -164,7 +166,10 @@ function CampoClave({ nombre, etiqueta: titulo, ayuda, autoComplete, requerido, 
           type={ver ? "text" : "password"}
           value={valor}
           onChange={(e) => alCambiar(e.target.value)}
+          onKeyDown={(e) => setMayus(e.getModifierState("CapsLock"))}
           onKeyUp={(e) => setMayus(e.getModifierState("CapsLock"))}
+          onFocus={() => setEnfocado(true)}
+          onBlur={() => setEnfocado(false)}
           autoComplete={autoComplete}
           autoCapitalize="none"
           autoCorrect="off"
@@ -187,7 +192,7 @@ function CampoClave({ nombre, etiqueta: titulo, ayuda, autoComplete, requerido, 
         </button>
       </div>
       {ayuda && <p className="text-xs text-[var(--fg-muted)]">{ayuda}</p>}
-      {mayus && <p className="text-xs font-medium text-[#92400e]">Bloq Mayús está activado.</p>}
+      {mayus && enfocado && <p role="status" className="text-xs font-medium text-[#92400e]">Bloq Mayús está activado.</p>}
     </div>
   );
 }

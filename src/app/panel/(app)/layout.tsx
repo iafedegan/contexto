@@ -10,16 +10,14 @@ import { auth, cuentaPorId, signOut } from "@/lib/auth";
 import { PanelNav, PanelSidebarNav } from "@/components/panel/panel-nav";
 import { UsoIaBarra } from "@/components/panel/uso-ia-barra";
 import { AvisoTareas } from "@/components/panel/aviso-tareas";
-import { contarMisPendientes } from "./pendientes/consultas";
+import { AvisosMenu } from "@/components/panel/avisos-menu";
+import { contarAvisos } from "./avisos";
 import { HeaderHeightVar } from "@/components/panel/header-height";
 import { IrASeguridad } from "@/components/panel/ir-a-seguridad";
 import { efectivos, enPlazoDosPasos, exige2fa } from "@/lib/permisos";
 import { getAjustes, getPlazos2fa } from "@/lib/permisos-server";
 import { getSiteTheme } from "@/lib/site-theme";
 import { colorPanel } from "@/lib/panel-tema";
-import { contarNotasPendientes } from "@/lib/notas-asignadas";
-import { contarImagenesPendientes } from "@/lib/imagenes-pedidas";
-import { totalSinLeer } from "@/lib/comentarios-notas";
 
 /** Panel editorial — plantilla «Grafito & Jade». */
 export const dynamic = "force-dynamic";
@@ -45,7 +43,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
   // Por id y, si el id de la sesión no aparece, por correo (como requireRole):
   // sin esto una sesión con id desfasado se saltaba la exigencia de 2FA.
   // La cuenta y los ajustes de permisos se piden a la vez (y la cuenta ya viene resuelta de la sesión: no es otro viaje).
-  const [yoPorId, ajustes, cabeceras, sitio, plazos, misTareas, misNotas, misImagenes, misComentarios] = await Promise.all([cuentaPorId(session.user.id), getAjustes(), headers(), getSiteTheme(), getPlazos2fa(), contarMisPendientes(session.user.id), contarNotasPendientes(session.user.id), contarImagenesPendientes(session.user.id, session.user.role), totalSinLeer({ id: session.user.id, role: session.user.role })]);
+  const [yoPorId, ajustes, cabeceras, sitio, plazos, avisos] = await Promise.all([cuentaPorId(session.user.id), getAjustes(), headers(), getSiteTheme(), getPlazos2fa(), contarAvisos({ id: session.user.id, role: session.user.role })]);
   // La barra lleva el color principal de la plantilla que usa el sitio (se cambia en Portada y plantillas).
   const marca = colorPanel(sitio.theme);
   const estiloMarca = { "--accent": marca.acento, "--accent-2": marca.acento, "--border-strong": marca.acento, "--link": marca.acento, "--accent-fg": "#101611",
@@ -123,6 +121,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
 
   const inicial = (session.user.name ?? "?").trim().charAt(0).toUpperCase();
   return (
+    <AvisosMenu inicial={avisos}>
     <div data-theme="panel" className="lx-shell">
       {/* Barra lateral (escritorio): con el color de la plantilla activa, la navegación agrupada y la cuenta al pie. */}
       <aside data-theme="panel-header" style={{ ...estiloMarca, backgroundImage: `linear-gradient(180deg, ${marca.desde}, ${marca.hasta})` }} className="lx-sb peer/sb group/sb fixed inset-y-0 left-0 z-50 hidden w-16 flex-col gap-6 overflow-y-auto overflow-x-hidden px-3 py-6 text-[var(--fg)] shadow-[8px_0_30px_-18px_rgba(0,0,0,0.6)] transition-[width] duration-200 ease-out hover:w-64 focus-within:w-64 lg:flex">
@@ -140,7 +139,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
         {/* «Uso de IA» va justo debajo del grupo Configuración (último del menú); el pie (Ver sitio / Salir) se queda al fondo. */}
         {!restringido && (
           <div className="flex shrink-0 flex-col gap-3">
-            <PanelSidebarNav role={session.user.role} permisos={permisos} pendientes={misTareas.total} notas={misNotas} imagenes={misImagenes} comentarios={misComentarios} />
+            <PanelSidebarNav role={session.user.role} permisos={permisos} />
             {permisos.includes("uso_ia") && <UsoIaBarra variante="lateral" />}
           </div>
         )}
@@ -176,7 +175,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
           </Link>
 
           {!restringido && (
-            <PanelNav role={session.user.role} permisos={permisos} pendientes={misTareas.total} notas={misNotas} imagenes={misImagenes} comentarios={misComentarios}>
+            <PanelNav role={session.user.role} permisos={permisos}>
               {permisos.includes("uso_ia") && <UsoIaBarra variante="movil" />}
               {cuenta}
             </PanelNav>
@@ -220,7 +219,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
             </p>
           )}
           {bloqueado ? <IrASeguridad href={`${RUTA_SEGURIDAD}#seguridad`} mensaje={debeCambiarClave ? "Llevándote a Configuración para que cambies tu contraseña temporal…" : undefined} /> : children}
-          {!restringido && !bloqueado && <AvisoTareas pendientes={misTareas.total} nuevas={misTareas.nuevas} />}
+          {!restringido && !bloqueado && <AvisoTareas />}
         </div>
       </main>
 
@@ -232,5 +231,6 @@ export default async function PanelLayout({ children }: { children: React.ReactN
       </footer>
       </div>
     </div>
+    </AvisosMenu>
   );
 }

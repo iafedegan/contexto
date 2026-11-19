@@ -6,6 +6,7 @@ import { grupoDe, useGruposMenu } from "@/components/panel/grupos-menu";
 import { Brush, CalendarRange, ChevronDown, Images, ClipboardList, PenLine, Inbox, KeyRound, LayoutDashboard, LayoutTemplate, Mail, Newspaper, Settings, Users, Circle } from "lucide-react";
 import type { PermisoId } from "@/lib/permisos";
 import { PanelMobileMenu } from "@/components/panel/panel-mobile-menu";
+import { useAvisos } from "@/components/panel/avisos-menu";
 
 // Elemento del menú del panel: dirección, etiqueta, ícono y permiso necesario.
 type Item = {
@@ -136,7 +137,8 @@ const ICONOS: Record<string, typeof Circle> = {
 };
 
 /** Barra lateral de escritorio (≥ lg): navegación vertical agrupada, con la sección activa resaltada. */
-export function PanelSidebarNav({ role, permisos, pendientes = 0, notas = 0, imagenes = 0, comentarios = 0 }: { role: string; permisos: string[]; pendientes?: number; notas?: number; imagenes?: number; comentarios?: number }) {
+export function PanelSidebarNav({ role, permisos }: { role: string; permisos: string[] }) {
+  const { pendientes, notas, imagenes, comentarios } = useAvisos();
   const groups = gruposVisibles(role, permisos, pendientes, notas, imagenes, comentarios);
   const pathname = usePathname();
   const { abierto, alternar } = useGruposMenu(grupoDe(groups, pathname));
@@ -190,7 +192,8 @@ export function PanelSidebarNav({ role, permisos, pendientes = 0, notas = 0, ima
 }
 
 // Menú lateral del panel, filtrado por rol y permisos.
-export function PanelNav({ role, permisos, pendientes = 0, notas = 0, imagenes = 0, comentarios = 0, children }: { role: string; permisos: string[]; pendientes?: number; notas?: number; imagenes?: number; comentarios?: number; children?: React.ReactNode }) {
+export function PanelNav({ role, permisos, children }: { role: string; permisos: string[]; children?: React.ReactNode }) {
+  const { pendientes, notas, imagenes, comentarios } = useAvisos();
   const groups = gruposVisibles(role, permisos, pendientes, notas, imagenes, comentarios);
 
   return (

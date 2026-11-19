@@ -1,13 +1,14 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { startRegistration } from "@simplewebauthn/browser";
+import { browserSupportsWebAuthn, startRegistration } from "@simplewebauthn/browser";
 import { Fingerprint, Loader2, Trash2, TriangleAlert } from "lucide-react";
 import {
   confirmarRegistroPasskey,
   eliminarPasskey,
   iniciarRegistroPasskey,
 } from "@/app/panel/(app)/configuracion/passkey-actions";
+import { mensajeErrorPasskey, nombreEquipo } from "@/components/panel/passkey-errores";
 
 // Passkey registrada en la cuenta.
 type Passkey = {
@@ -18,6 +19,9 @@ type Passkey = {
   lastUsedAt: Date | null;
 };
 
+// Fecha corta en la hora de Colombia («18 nov 2026»).
+const fecha = (d: Date) => new Intl.DateTimeFormat("es-CO", { day: "numeric", month: "short", year: "numeric", timeZone: "America/Bogota" }).format(new Date(d));
+
 /** Alta y gestión de passkeys (huella/Face ID/PIN en vez de escribir un
  * código cada vez) — complemento del TOTP, no un reemplazo obligatorio. */
 export function PasskeyForm({ passkeys }: { passkeys: Passkey[] }) {
@@ -27,6 +31,10 @@ export function PasskeyForm({ passkeys }: { passkeys: Passkey[] }) {
   // Registra una passkey nueva en este dispositivo.
   function agregar() {
     setError(null);
+    if (!browserSupportsWebAuthn()) {
+      setError(mensajeErrorPasskey(null, "registro", false));
+      return;
+    }
     start(async () => {
       try {
         const inicio = await iniciarRegistroPasskey();
@@ -35,25 +43,11 @@ export function PasskeyForm({ passkeys }: { passkeys: Passkey[] }) {
           return;
         }
         const respuesta = await startRegistration(inicio.options);
-        const nombre =
-          typeof navigator !== "undefined" && /iphone|ipad/i.test(navigator.userAgent)
-            ? "iPhone/iPad"
-            : /android/i.test(navigator.userAgent)
-              ? "Android"
-              : /mac/i.test(navigator.userAgent)
-                ? "Mac"
-                : "Este dispositivo";
-        const resultado = await confirmarRegistroPasskey(respuesta, nombre);
+        const resultado = await confirmarRegistroPasskey(respuesta, nombreEquipo(navigator.userAgent));
         if (!resultado?.ok) setError(resultado?.message ?? "No se pudo agregar la passkey.");
       } catch (e) {
-        // El usuario canceló el diálogo del navegador, o el dispositivo no
-        // soporta WebAuthn: no es un error del servidor, no hay nada que
-        // registrar en consola.
-        setError(
-          e instanceof Error && e.name === "NotAllowedError"
-            ? "Cancelaste el registro."
-            : "Este navegador o dispositivo no soporta passkeys.",
-        );
+        // Lo rechazó el navegador (cancelado, el equipo ya tiene una passkey de la cuenta, sin Windows Hello…): no es un error del servidor.
+        setError(mensajeErrorPasskey(e, "registro", true));
       }
     });
   }
@@ -76,11 +70,10 @@ export function PasskeyForm({ passkeys }: { passkeys: Passkey[] }) {
               className="flex items-center justify-between gap-2 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] px-3 py-2 text-xs"
             >
               <span>
-                <span className="font-medium">{p.label || "Dispositivo sin nombre"}</span>
+                <span className="font-medium">{p.label === "Este dispositivo" ? "Computador" : p.label || "Dispositivo sin nombre"}</span>
                 <span className="ml-2 text-[var(--fg-muted)]">
-                  {p.lastUsedAt
-                    ? `usada ${new Date(p.lastUsedAt).toLocaleDateString("es-CO")}`
-                    : "sin usar todavía"}
+                  creada el {fecha(p.createdAt)} ·{" "}
+                  {p.lastUsedAt ? `usada por última vez el ${fecha(p.lastUsedAt)}` : "sin usar todavía"}
                 </span>
               </span>
               <button
@@ -94,6 +87,11 @@ export function PasskeyForm({ passkeys }: { passkeys: Passkey[] }) {
             </li>
           ))}
         </ul>
+      )}
+      {passkeys.length > 0 && (
+        <p className="mt-2 text-xs text-[var(--fg-muted)]">
+          Si el equipo en el que estás ya aparece en la lista, no necesitas otra: al entrar al panel pulsa <strong>«Entrar con passkey»</strong>.
+        </p>
       )}
 
       <button

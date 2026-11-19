@@ -5,12 +5,14 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { BellRing, X } from "lucide-react";
 import { marcarPendientesVistos } from "@/app/panel/(app)/pendientes/actions";
+import { useAvisos } from "@/components/panel/avisos-menu";
 
 /**
  * Aviso de tareas nuevas del consejo de redacción. Las «nuevas» las cuenta el servidor (piezas asignadas que la persona aún no abrió), así que el aviso
  * sale en cualquier navegador y no se pierde al cambiar de equipo. Se apaga al abrir «Mis pendientes» o al cerrarlo. El título de la pestaña lleva el número.
  */
-export function AvisoTareas({ pendientes, nuevas }: { pendientes: number; nuevas: number }) {
+export function AvisoTareas() {
+  const { pendientes, nuevas } = useAvisos();
   const pathname = usePathname();
   const router = useRouter();
   const [, run] = useTransition();

@@ -299,7 +299,7 @@ export async function actualizarMiPerfil(_prev: MiPerfilState, formData: FormDat
 
   await db.update(users).set(cambios).where(eq(users.id, session.user.id));
   revalidatePath("/panel/configuracion");
-  return { ok: true, message: "Datos actualizados." };
+  return { ok: true, message: passwordNueva ? "Contraseña cambiada. La próxima vez entra con la nueva." : "Datos actualizados." };
 }
 
 /** Lee los ajustes de IA guardados (o vacíos). */
