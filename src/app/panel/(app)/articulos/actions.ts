@@ -27,15 +27,15 @@ import { piezaParaEscribir, vincularPieza } from "@/app/panel/(app)/pendientes/c
 const esNotaPropiaSegura = esNotaPropia;
 
 /**
- * Quién puede publicar ESTA nota: un editor o superior con el permiso «publicar» (cualquier nota) o, para una nota que ya está «En revisión»,
- * cualquier persona del equipo que pueda editarla, siempre que cumpla los requisitos (imagen de portada y SEO mínimo, que `publicarCore` vuelve
- * a exigir). Así quien terminó su nota y la envió a revisión no queda esperando a un editor cuando la nota ya está lista.
+ * Quién puede publicar ESTA nota: un editor o superior con el permiso «publicar» (cualquier nota) o cualquier persona del equipo que pueda editarla
+ * (en borrador o en revisión), siempre que cumpla los requisitos: imagen de portada con su crédito y SEO mínimo, que `publicarCore` vuelve a exigir.
+ * Así quien terminó su nota no queda esperando a un editor cuando la nota ya está lista.
  */
 async function quienPublica(articleId: string) {
   const user = await requirePermiso("articulos");
   if (canPublish(user.role) && (await tienePermiso(user.id, user.role, "publicar"))) return user;
   const [n] = await db.select({ status: articles.status }).from(articles).where(eq(articles.id, String(articleId ?? ""))).limit(1);
-  if (n?.status !== "en_revision") throw new Error("Para publicar, la nota debe estar «En revisión» (o ser de un editor).");
+  if (n?.status !== "borrador" && n?.status !== "en_revision") throw new Error("Esta nota ya está publicada, programada o archivada: solo un editor puede cambiarla.");
   const r = await requisitosDePublicacion(String(articleId));
   if (!r.ok) throw new Error(`No se puede publicar todavía: ${r.motivos.join(" y ")}.`);
   return user;

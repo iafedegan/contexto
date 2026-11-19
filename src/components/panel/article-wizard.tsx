@@ -2267,13 +2267,13 @@ export function ArticleWizard({
                 <Send size={15} /> Enviar a {editorElegido.nombre}
               </button>
             )}
-            {!canPublish && status === "en_revision" && (
-              // Una nota ya «En revisión» que cumple los requisitos (portada, crédito y SEO) la puede publicar quien la trabaja, sin esperar a un editor.
+            {!canPublish && status !== "publicado" && status !== "programado" && status !== "archivado" && (
+              // Cualquiera puede publicar su nota si cumple los requisitos (portada, crédito y SEO), sin esperar a un editor.
               <button type="submit" name="intent" value="publicar" disabled={!puedeSalir} title={!puedeSalir ? "Falta la imagen de portada, su crédito o el SEO mínimo" : undefined} className="lx-btn disabled:cursor-not-allowed disabled:opacity-50 disabled:saturate-50">
                 <Send size={15} /> Publicar
               </button>
             )}
-            {!canPublish && status === "en_revision" && !puedeSalir && (
+            {!canPublish && status !== "publicado" && status !== "programado" && status !== "archivado" && !puedeSalir && (
               <p role="status" className="w-full rounded-[var(--radius)] border border-[#d97706]/40 bg-[#d97706]/8 px-3 py-2 text-xs text-[#92400e] sm:text-right">
                 Para publicar falta: {[faltaPortada && "la imagen de portada", faltaCredito && "el crédito de la foto", faltaSeo && `SEO de ${SEO_MINIMO_PUBLICAR} o más (ahora ${audit.score})`].filter(Boolean).join(" y ")}.
               </p>

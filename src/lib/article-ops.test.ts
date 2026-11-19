@@ -142,11 +142,11 @@ test("cada acción del panel que cambia el estado de una nota exige poder public
   }
 });
 
-test("quienPublica: un editor con permiso publica cualquier nota; el resto, solo si está «En revisión» y cumple los requisitos", async () => {
+test("quienPublica: un editor con permiso publica cualquier nota; el resto, si está en borrador o revisión y cumple los requisitos", async () => {
   const { readFileSync } = await import("node:fs");
   const codigo = readFileSync("src/app/panel/(app)/articulos/actions.ts", "utf8");
   const cuerpo = codigo.match(/async function quienPublica\([^)]*\)[^{]*\{([\s\S]*?)\n\}/)?.[1] ?? "";
   assert.match(cuerpo, /canPublish\(user\.role\) && \(await tienePermiso\(user\.id, user\.role, "publicar"\)\)/);
-  assert.match(cuerpo, /status !== "en_revision"/);
+  assert.match(cuerpo, /status !== "borrador" && n\?\.status !== "en_revision"/);
   assert.match(cuerpo, /requisitosDePublicacion/);
 });
