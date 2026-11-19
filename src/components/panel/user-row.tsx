@@ -42,6 +42,8 @@ export function UserRow({
     role: UserRole;
     active: boolean;
     totpEnabled: boolean;
+    /** Entró con una contraseña temporal y aún no la cambia. */
+    mustChangePassword?: boolean;
   };
   canManage: boolean;
   isSelf: boolean;
@@ -134,9 +136,11 @@ export function UserRow({
       </td>
 
       <td className="border-b border-[var(--border)] px-4 py-3">
-        <span className={`text-xs ${user.totpEnabled ? "text-[var(--accent-2)]" : "text-[var(--fg-muted)]"}`}>
-          {user.totpEnabled ? "Activo" : "—"}
-        </span>
+        {user.mustChangePassword ? (
+          <span className="inline-block rounded-full bg-[#d97706]/12 px-2.5 py-1 text-xs font-medium leading-snug text-[#92400e]">Primer ingreso: falta cambiar la contraseña</span>
+        ) : (
+          <span className="text-xs text-[var(--fg-muted)]">Propia</span>
+        )}
       </td>
 
       <td className="border-b border-[var(--border)] px-4 py-3">

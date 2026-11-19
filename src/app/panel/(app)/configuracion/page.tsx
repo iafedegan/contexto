@@ -60,6 +60,7 @@ export default async function ConfiguracionPage() {
         role: users.role,
         active: users.active,
         totpEnabled: users.totpEnabled,
+        mustChangePassword: users.mustChangePassword,
       })
       .from(users)
       // Quien no es administrador solo recibe su propia cuenta: la lista de
@@ -219,7 +220,7 @@ export default async function ConfiguracionPage() {
                       <table className="w-full min-w-[34rem] border-separate border-spacing-0 text-sm">
                         <thead>
                           <tr>
-                            {["Persona", "Rol", "2FA", "Estado"].map((h) => (
+                            {["Persona", "Rol", "Contraseña", "Estado"].map((h) => (
                               <th
                                 key={h}
                                 className="lx-kicker border-b border-[var(--border)] bg-[var(--surface-2)] px-4 py-3 text-left text-[var(--fg-muted)]"
