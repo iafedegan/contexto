@@ -26,7 +26,7 @@ import { PREFIJO_IMAGEN_IA } from "@/lib/ai-image";
 import { esDeOpinion, rutaDeNota } from "@/lib/ruta-nota";
 
 /** Artículo — plantilla «Marfil & Burdeos». */
-export const revalidate = 86400;
+export const revalidate = 2592000; // 30 días: las notas viejas no cambian; al publicar o editar se renuevan al instante (revalidarNotas).
 
 // Parámetros de la ruta: la dirección de la nota.
 type Params = {

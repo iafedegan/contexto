@@ -39,6 +39,9 @@ const nextConfig: NextConfig = {
   images: {
     // Solo WebP: con AVIF cada foto se generaba en dos formatos y los rastreadores del archivo (~51.500 notas) duplicaban el costo.
     formats: ["image/webp"],
+    // Menos anchos (antes 8 + 7): cada foto se generaba en hasta 15 tamaños y cada uno se cobraba; con estos cubre celular, tableta y escritorio.
+    deviceSizes: [640, 828, 1200, 1920],
+    imageSizes: [96, 256, 384],
     // Portadas grandes (artículo a todo el ancho, carrusel): calidad 90 en vez del 75 por defecto, que se notaba blando/pixelado.
     qualities: [75, 90],
     // Sin esto, Next usa su default de 60 s: con un carrusel rotando cada

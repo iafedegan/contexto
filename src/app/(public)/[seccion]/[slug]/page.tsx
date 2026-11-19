@@ -10,7 +10,7 @@ import { PaginaConstruida, metadataDePagina, paginaDeLaRuta } from "../../_pages
  * se busca una página armada en el constructor con esa dirección (`/seccion/pagina`) y, si tampoco, se resuelve como antes: redirecciones,
  * categoría o 404. Las rutas con nombre propio (`/categoria/x`, `/autor/x`…) ganan a esta.
  */
-export const revalidate = 86400;
+export const revalidate = 2592000; // 30 días: las notas viejas no cambian; al publicar o editar se renuevan al instante (revalidarNotas).
 // Las páginas no se generan en la compilación: se crean en la primera visita y se guardan.
 export async function generateStaticParams() {
   return [];
