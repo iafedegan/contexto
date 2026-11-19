@@ -1916,8 +1916,8 @@ export function ArticleWizard({
               {puedeEnviarEditor ? (
                 <TarjetaEnvio
                   Icono={Send}
-                  titulo={soyDestinatario ? "Devolver la nota" : envioLibre ? "Enviar la nota a alguien" : "Enviar la nota a un editor"}
-                  ayuda={soyDestinatario ? "Cuando termines tu revisión, devuélvesela a quien te la envió o quítala de tus pendientes." : "Queda «En revisión» y le llega en «Artículos»."}
+                  titulo={soyDestinatario ? (envioLibre ? "Enviar o devolver la nota" : "Devolver la nota") : envioLibre ? "Enviar la nota a alguien" : "Enviar la nota a un editor"}
+                  ayuda={soyDestinatario ? (envioLibre ? "Cuando termines tu revisión, envíasela a quien quieras, devuélvesela a quien te la envió o quítala de tus pendientes." : "Cuando termines tu revisión, devuélvesela a quien te la envió o quítala de tus pendientes.") : "Queda «En revisión» y le llega en «Artículos»."}
                 >
                   {avisoEnvio && !envio ? (
                     <p role="status" className="rounded-[var(--radius)] bg-[var(--surface-2)] px-3 py-2 text-xs text-[#157a4a]">{avisoEnvio}</p>
@@ -1954,6 +1954,21 @@ export function ArticleWizard({
                       >
                         <Send size={15} /> {devolviendo ? "Devolviendo…" : `Devolver a ${envio.porNombre ?? "quien me la envió"}`}
                       </button>
+                      {envioLibre && editores.length > 0 && (
+                        // Un editor (o un administrador) que recibió la nota también puede pasársela a otra persona, no solo devolverla.
+                        <div className="mt-1 flex flex-col gap-2 border-t border-[var(--border)] pt-3">
+                          <p className="font-semibold">O envíala a otra persona</p>
+                          <select id="reenviar-a" value={enviarA} onChange={(e) => setEnviarA(e.target.value)} aria-label="Enviar la nota a" className="w-full rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm outline-none transition focus:border-[var(--accent)]">
+                            <option value="">Elige a quién</option>
+                            {editores.map((e) => <option key={e.id} value={e.id}>{e.nombre}{e.rol ? ` · ${etiquetaRol(e.rol)}` : ""}</option>)}
+                          </select>
+                          <textarea value={mensajeEditor} onChange={(e) => setMensajeEditor(e.target.value)} maxLength={600} rows={3} disabled={!enviarA} placeholder={enviarA ? "Mensaje para quien la recibe (opcional)" : "Elige a quién enviarla para dejarle un mensaje"} aria-label="Mensaje para quien la recibe"
+                            className="w-full resize-none rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm outline-none transition placeholder:text-[var(--fg-muted)]/60 focus:border-[var(--accent)] disabled:opacity-60" />
+                          <button type="submit" name="intent" value="editor" disabled={!editorElegido || devolviendo} className="lx-btn self-start disabled:cursor-not-allowed disabled:opacity-60 disabled:saturate-50">
+                            <Send size={15} /> {editorElegido ? `Enviar a ${editorElegido.nombre}` : "Enviar la nota"}
+                          </button>
+                        </div>
+                      )}
                       <button
                         type="button"
                         disabled={devolviendo}
