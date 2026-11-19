@@ -9,6 +9,9 @@ import { db } from "@/db";
 import { passkeys, users } from "@/db/schema";
 import { DominioNoPermitido, guardarChallenge, leerYBorrarChallenge, rpInfo, firmarTokenPasskey } from "@/lib/passkey";
 import { clientIp, hit } from "@/lib/rate-limit";
+import { verifyHuman } from "@/lib/turnstile";
+import { emitirClaveOlvidada, VIGENCIA_CLAVE_OLVIDADA_MIN } from "@/lib/clave-olvidada";
+import { enviarClaveTemporal } from "@/lib/correo-clave-temporal";
 
 /** Intentos de passkey por IP y ventana: más holgados que los de contraseña porque cada uno exige un gesto del dispositivo. */
 const INTENTOS_POR_IP = 20;
@@ -119,4 +122,33 @@ export async function confirmarLoginPasskey(
     .where(eq(passkeys.id, cred.id));
 
   return { ok: true, token: firmarTokenPasskey(cred.userId), message: "" };
+}
+
+// Resultado de pedir la contraseña temporal: siempre el mismo mensaje si se aceptó (no revela si el correo existe).
+export type OlvidoState = { ok: boolean; message: string };
+
+/**
+ * «Olvidé mi contraseña»: envía una temporal al correo registrado. Límites por IP y por correo y verificación humana, igual que el
+ * login. La respuesta es la misma exista o no la cuenta, para no permitir adivinar qué correos tienen acceso al panel.
+ */
+export async function pedirClaveOlvidada(input: { email: string; captcha?: string }): Promise<OlvidoState> {
+  const email = String(input?.email ?? "").toLowerCase().trim().slice(0, 200);
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { ok: false, message: "Escribe el correo con el que entras al panel." };
+  const ip = clientIp(await headers());
+  const [porIp, porCorreo] = await Promise.all([hit(`olvido:ip:${ip}`, 5, 60 * 60), hit(`olvido:email:${email}`, 3, 60 * 60)]);
+  if (!porIp.allowed || !porCorreo.allowed) return { ok: false, message: "Ya pediste varias contraseñas temporales. Revisa tu correo (también el spam) o espera una hora." };
+  if (!(await verifyHuman(String(input?.captcha ?? ""), ip))) return { ok: false, message: "No se pudo verificar que eres una persona. Vuelve a intentarlo." };
+  try {
+    const lista = await emitirClaveOlvidada(email);
+    if (lista) {
+      const envio = await enviarClaveTemporal({ ...lista, motivo: "olvido" });
+      if (!envio.ok) console.warn(`[clave-olvidada] el correo no salió: ${envio.error}`);
+    }
+  } catch (e) {
+    console.error("[clave-olvidada] fallo al emitir", e);
+  }
+  return {
+    ok: true,
+    message: `Si ese correo tiene una cuenta activa, en unos minutos te llega una contraseña temporal (revisa también el spam). Sirve una vez y vence en ${VIGENCIA_CLAVE_OLVIDADA_MIN} minutos; tu contraseña de siempre sigue funcionando.`,
+  };
 }

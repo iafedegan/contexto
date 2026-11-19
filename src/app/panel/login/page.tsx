@@ -6,9 +6,9 @@ import Link from "next/link";
 import Image from "next/image";
 import { signIn } from "next-auth/react";
 import { startAuthentication } from "@simplewebauthn/browser";
-import { Fingerprint, Loader2 } from "lucide-react";
+import { ArrowLeft, Fingerprint, Loader2, MailCheck } from "lucide-react";
 import { Turnstile } from "@/components/turnstile";
-import { confirmarLoginPasskey, iniciarLoginPasskey } from "./actions";
+import { confirmarLoginPasskey, iniciarLoginPasskey, pedirClaveOlvidada, type OlvidoState } from "./actions";
 import { LogoMark } from "@/components/logo-mark";
 
 /** Acceso al panel — plantilla «Platino». */
@@ -30,6 +30,26 @@ function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [pendingPasskey, setPendingPasskey] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
+  // «Olvidé mi contraseña»: la misma tarjeta cambia a pedir la temporal por correo.
+  const [olvido, setOlvido] = useState(false);
+  const [correoOlvido, setCorreoOlvido] = useState("");
+  const [olvidoEstado, setOlvidoEstado] = useState<OlvidoState | null>(null);
+  const [pidiendo, setPidiendo] = useState(false);
+
+  async function pedirTemporal(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setPidiendo(true);
+    setOlvidoEstado(null);
+    const fd = new FormData(e.currentTarget);
+    try {
+      setOlvidoEstado(await pedirClaveOlvidada({ email: correoOlvido.trim(), captcha: String(fd.get("cf-turnstile-response") ?? "") }));
+    } catch {
+      setOlvidoEstado({ ok: false, message: "No se pudo enviar ahora. Vuelve a intentarlo en un momento." });
+    } finally {
+      setPidiendo(false);
+      (window as unknown as { turnstile?: { reset: () => void } }).turnstile?.reset();
+    }
+  }
   const isDemo = process.env.NODE_ENV !== "production";
 
   // Inicia sesión con una passkey: pide el desafío, deja que el navegador lo firme y entrega el token al formulario.
@@ -106,6 +126,36 @@ function LoginForm() {
         <h1 className="lx-display mt-6 text-2xl font-semibold tracking-tight">Panel editorial</h1>
         <p className="lx-kicker mt-2 text-[var(--fg-muted)]">CONtexto Ganadero Media</p>
 
+        {olvido ? (
+          <div className="mt-8 flex flex-col gap-4">
+            <div>
+              <h2 className="text-lg font-semibold">Recuperar la contraseña</h2>
+              <p className="mt-1 text-sm leading-relaxed text-[var(--fg-muted)]">Escribe el correo con el que entras. Te enviamos una contraseña temporal: sirve una vez y vence en 1 hora. Al entrar con ella, el panel te pide crear una nueva.</p>
+            </div>
+            {olvidoEstado?.ok ? (
+              <p role="status" className="flex items-start gap-2 rounded-[var(--radius)] border border-[var(--accent-2)]/40 bg-[var(--accent-2)]/10 p-3 text-sm leading-relaxed">
+                <MailCheck size={18} aria-hidden className="mt-0.5 shrink-0 text-[var(--accent-2)]" />
+                <span>{olvidoEstado.message}</span>
+              </p>
+            ) : (
+              <form onSubmit={pedirTemporal} className="flex flex-col gap-4">
+                <label className="lx-kicker flex flex-col gap-2 text-[var(--fg-muted)]">
+                  Correo
+                  <input type="email" required autoComplete="username" value={correoOlvido} onChange={(e) => setCorreoOlvido(e.target.value)} autoFocus className="lx-input" />
+                </label>
+                {olvidoEstado && !olvidoEstado.ok && <p role="alert" className="text-sm text-[var(--danger)]">{olvidoEstado.message}</p>}
+                <Turnstile />
+                <button type="submit" disabled={pidiendo} className="lx-btn w-full">
+                  {pidiendo ? "Enviando…" : "Enviarme una contraseña temporal"}
+                </button>
+              </form>
+            )}
+            <button type="button" onClick={() => { setOlvido(false); setOlvidoEstado(null); }} className="inline-flex items-center justify-center gap-1.5 text-sm font-medium text-[var(--accent-2)] transition hover:text-[var(--accent)]">
+              <ArrowLeft size={15} aria-hidden /> Volver a entrar
+            </button>
+          </div>
+        ) : (
+        <>
         <form ref={formRef} onSubmit={onSubmit} className="mt-8 flex flex-col gap-4">
           <label className="lx-kicker flex flex-col gap-2 text-[var(--fg-muted)]">
             Correo
@@ -130,6 +180,13 @@ function LoginForm() {
               className="lx-input"
             />
           </label>
+          <button
+            type="button"
+            onClick={() => { setOlvido(true); setError(null); setCorreoOlvido(String((formRef.current?.elements.namedItem("email") as HTMLInputElement | null)?.value ?? "")); }}
+            className="-mt-1 self-end text-sm font-medium text-[var(--accent-2)] underline-offset-4 transition hover:text-[var(--accent)] hover:underline"
+          >
+            ¿Olvidaste tu contraseña?
+          </button>
           {aviso && !error && <p className="text-sm text-[var(--fg-muted)]" role="status">{aviso}</p>}
           {error && <p className="text-sm text-[var(--danger)]">{error}</p>}
           <Turnstile />
@@ -153,6 +210,8 @@ function LoginForm() {
           {pendingPasskey ? <Loader2 size={15} className="animate-spin" /> : <Fingerprint size={15} />}
           Entrar con passkey
         </button>
+        </>
+        )}
 
         {isDemo && (
           <button

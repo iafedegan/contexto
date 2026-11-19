@@ -11,6 +11,7 @@ import { clearHits, clientIp, hit } from "@/lib/rate-limit";
 import { verifyHuman } from "@/lib/turnstile";
 import { dispositivoDe, enmascararCorreo, registrarAcceso } from "@/lib/login-log";
 import { consumirTokenPasskey } from "@/lib/passkey";
+import { usarClaveOlvidada } from "@/lib/clave-olvidada";
 import { tienePermiso } from "@/lib/permisos-server";
 import { RANGO, type PermisoId } from "@/lib/permisos";
 
@@ -134,7 +135,8 @@ export const { handlers, signIn, signOut, auth: authSinCache } = NextAuth({
         if (!u.active) return rechazar("la cuenta está desactivada");
         if (!u.passwordHash) return rechazar("la cuenta no tiene contraseña definida");
 
-        const ok = await bcrypt.compare(password, u.passwordHash);
+        // La de siempre o, si la pidió con «Olvidé mi contraseña», la temporal vigente (sirve una vez y le obliga a cambiarla).
+        const ok = (await bcrypt.compare(password, u.passwordHash)) || (await usarClaveOlvidada(u.id, password));
         if (!ok) return rechazar("contraseña incorrecta");
 
         // El segundo factor (TOTP) ya no se pide a nadie al entrar: basta el correo y la contraseña.
