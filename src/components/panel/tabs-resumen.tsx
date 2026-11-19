@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BarChart3, ListTree, Smartphone, Users } from "lucide-react";
+import { BarChart3, FileText, ListTree, Smartphone, Users } from "lucide-react";
 
 /**
  * Las tres pestañas de la opción «Resumen» del panel: el estado editorial (`/panel`) y el centro de análisis, que se parte en
@@ -36,6 +36,11 @@ export function TabsResumen({ activa, analitica, parametros = "" }: { activa: Pe
             </Link>
           </li>
         ))}
+        <li className="min-w-0 flex-1 sm:flex-none">
+          <Link href={`/panel/analitica/informe${p ? `?${p}` : ""}`} className="inline-flex min-h-10 w-full items-center justify-center gap-2 whitespace-nowrap rounded-full px-2.5 text-[0.8125rem] font-semibold text-[var(--accent)] transition hover:bg-[var(--surface-2)] sm:w-auto sm:px-4 sm:text-sm">
+            <FileText size={15} aria-hidden className="hidden min-[430px]:block" /> Informe
+          </Link>
+        </li>
       </ul>
     </nav>
   );

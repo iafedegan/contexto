@@ -1,4 +1,6 @@
 import "server-only";
+import { registrarActividad } from "@/lib/actividad-notas";
+import { palabrasCambiadas } from "@/lib/actividad-reglas";
 import { revalidatePath } from "next/cache";
 import { and, eq, gte, inArray, isNotNull, ne, sql } from "drizzle-orm";
 import { db } from "@/db";
@@ -56,10 +58,12 @@ export async function guardarBorradorCore(userId: string, input: BorradorInput):
   };
   try {
     if (input.id) {
-      const [row] = await db.select({ status: articles.status }).from(articles).where(eq(articles.id, input.id)).limit(1);
+      const [row] = await db.select({ status: articles.status, title: articles.title, excerpt: articles.excerpt, body: articles.body }).from(articles).where(eq(articles.id, input.id)).limit(1);
       if (!row) return { ok: false, error: "La nota ya no existe." };
       if (row.status !== "borrador" && row.status !== "en_revision") return { ok: false, skipped: true };
       await db.update(articles).set(values).where(eq(articles.id, input.id));
+      const cambio = palabrasCambiadas(`${row.title} ${row.excerpt} ${row.body}`, `${values.title} ${values.excerpt} ${values.body}`);
+      if (cambio > 0) await registrarActividad(input.id, userId, "edito", cambio);
       revalidatePath("/panel/articulos");
       return { ok: true, id: input.id, savedAt: new Date().toISOString() };
     }
@@ -67,6 +71,7 @@ export async function guardarBorradorCore(userId: string, input: BorradorInput):
     const [dup] = await db.select({ id: articles.id }).from(articles).where(eq(articles.slug, slug)).limit(1);
     if (dup) slug = `${slug}-${Date.now().toString(36)}`;
     const [row] = await db.insert(articles).values({ ...values, slug, status: "borrador", createdBy: userId }).returning({ id: articles.id });
+    await registrarActividad(row.id, userId, "creo");
     revalidatePath("/panel/articulos");
     return { ok: true, id: row.id, savedAt: new Date().toISOString() };
   } catch (err) {

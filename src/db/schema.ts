@@ -1104,6 +1104,30 @@ export const mediaFolders = pgTable(
   (t) => [index("media_folders_parent_idx").on(t.parentId)],
 );
 
+/**
+ * Lo que hizo cada persona en cada nota, para el informe del equipo: la recibió, la abrió para revisarla, la editó (con cuántas palabras cambió),
+ * la publicó, la programó, la envió o la devolvió. Una fila por nota, persona, acción y día (el autoguardado suma palabras en la misma fila).
+ */
+export const articleActivity = pgTable(
+  "article_activity",
+  {
+    articleId: uuid("article_id").notNull().references(() => articles.id, { onDelete: "cascade" }),
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    tipo: text("tipo").notNull(),
+    dia: date("dia").notNull(),
+    veces: integer("veces").notNull().default(1),
+    palabras: integer("palabras").notNull().default(0),
+    primera: timestamp("primera", { withTimezone: true }).notNull().defaultNow(),
+    ultima: timestamp("ultima", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.articleId, t.userId, t.tipo, t.dia] }),
+    index("article_activity_user_idx").on(t.userId, t.dia),
+    check("article_activity_tipo", sql`${t.tipo} in ('creo', 'recibio', 'reviso', 'edito', 'publico', 'programo', 'envio', 'devolvio')`),
+    check("article_activity_no_negativas", sql`${t.veces} >= 0 and ${t.palabras} >= 0`),
+  ],
+);
+
 /** Un archivo de la biblioteca: su carpeta, su nombre y la dirección pública en el bucket. */
 export const mediaAssets = pgTable(
   "media_assets",

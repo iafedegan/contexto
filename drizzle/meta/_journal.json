@@ -295,6 +295,13 @@
       "when": 1795103915858,
       "tag": "0041_credito_imagen",
       "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1795126072606,
+      "tag": "0042_actividad_notas",
+      "breakpoints": true
     }
   ]
 }

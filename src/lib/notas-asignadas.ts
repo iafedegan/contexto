@@ -1,4 +1,5 @@
 import "server-only";
+import { registrarActividad } from "@/lib/actividad-notas";
 import { and, eq, inArray, ne, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { articles, siteSettings, users } from "@/db/schema";
@@ -141,6 +142,9 @@ export async function contarNotasPendientes(userId: string): Promise<number> {
 
 /** Marca como abierta la nota enviada a la persona (la primera vez que la abre). Si no le fue enviada, no hace nada. */
 export async function marcarAsignacionAbierta(articleId: string, userId: string): Promise<void> {
+  // Abrir una nota que le enviaron cuenta como revisarla (una vez por día en el informe).
+  const lista = await notasAsignadasA(userId);
+  if (lista.includes(articleId)) await registrarActividad(articleId, userId, "reviso");
   await db.execute(sql`update site_settings set value = (
       select jsonb_agg(case when e->>'articleId' = ${articleId} and e->>'editorId' = ${userId} and e->>'abiertaAt' is null
         then e || jsonb_build_object('abiertaAt', ${new Date().toISOString()}::text) else e end)
@@ -166,6 +170,8 @@ export async function devolverAsignacion(articleId: string, userId: string, role
   await registrarAsignacion({ articleId, editorId: destino.id, porId: userId, mensaje: mensaje.trim().slice(0, 600), fecha: new Date().toISOString() }, { sumar: true });
   // Vuelve a ser un borrador de quien la escribió (una nota publicada o programada no se toca).
   await db.update(articles).set({ status: "borrador", updatedAt: sql`now()` }).where(and(eq(articles.id, articleId), eq(articles.status, "en_revision")));
+  await registrarActividad(articleId, userId, "devolvio");
+  await registrarActividad(articleId, destino.id, "recibio");
   return { ok: true, aNombre: destino.nombre, aId: destino.id };
 }
 

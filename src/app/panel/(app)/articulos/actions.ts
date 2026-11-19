@@ -16,6 +16,8 @@ import { tienePermiso } from "@/lib/permisos-server";
 import { avisarSiUltimaHora } from "@/lib/push";
 import { invalidarCache } from "@/lib/data-cache";
 import { esNotaPropia, exigirNotaPropia } from "@/lib/propiedad-notas";
+import { registrarActividad } from "@/lib/actividad-notas";
+import { palabrasCambiadas } from "@/lib/actividad-reglas";
 import { asignacionDe, destinoActivo, devolverAsignacion, quitarAsignacion, registrarAsignacion, soltarAsignacion, type ResultadoAsignacion } from "@/lib/notas-asignadas";
 import { puedeEnviarNota } from "@/lib/notas-asignadas-reglas";
 import { fijarColumnaDestacada } from "@/lib/columna-destacada";
@@ -123,13 +125,15 @@ export async function saveArticle(formData: FormData) {
     await exigirNotaPropia(user, id);
     // Una nota publicada o programada ya está (o va a estar) a la vista de los lectores: solo quien
     // puede publicar la modifica. Un redactor trabaja sobre borradores y revisión.
-    const [actual] = await db.select({ status: articles.status }).from(articles).where(eq(articles.id, id)).limit(1);
+    const [actual] = await db.select({ status: articles.status, title: articles.title, excerpt: articles.excerpt, body: articles.body }).from(articles).where(eq(articles.id, id)).limit(1);
     if (!actual) throw new Error("La nota ya no existe.");
     if (actual.status === "publicado" || actual.status === "programado") {
       const puedePublicar = canPublish(user.role) && (await tienePermiso(user.id, user.role, "publicar"));
       if (!puedePublicar) throw new Error("Esta nota ya está publicada o programada: solo un editor puede modificarla.");
     }
     await db.update(articles).set(values).where(eq(articles.id, id));
+    const cambio = palabrasCambiadas(`${actual.title} ${actual.excerpt} ${actual.body}`, `${title} ${excerpt} ${body}`);
+    if (cambio > 0) await registrarActividad(id, user.id, "edito", cambio);
   } else {
     const [row] = await db
       .insert(articles)
@@ -164,6 +168,7 @@ export async function saveArticle(formData: FormData) {
   // El asistente paso a paso puede, además de guardar, publicar o enviar a
   // revisión en el mismo clic (el permiso se comprueba dentro de cada acción).
   const intent = String(formData.get("intent") ?? "");
+  if (!id) await registrarActividad(articleId, user.id, "creo");
   if (intent === "publicar") await publishArticle(articleId);
   else if (intent === "revision") await submitForReview(articleId);
   else if (intent === "editor" && editorDestino) {
@@ -172,6 +177,8 @@ export async function saveArticle(formData: FormData) {
     // «Agregar»: la nota le llega también a esta persona y sigue con quienes ya la tenían (incluida quien la envía, si se la habían enviado).
     const sumar = formData.get("sumarDestino") === "1";
     await registrarAsignacion({ articleId, editorId: editorDestino.id, porId: user.id, mensaje: String(formData.get("mensajeEditor") ?? "").trim().slice(0, 600), fecha: new Date().toISOString() }, { sumar });
+    await registrarActividad(articleId, user.id, "envio");
+    await registrarActividad(articleId, editorDestino.id, "recibio");
     revalidatePath("/panel/asignaciones");
   }
   else if (intent === "programar") {
@@ -220,6 +227,7 @@ export async function publishArticle(articleId: string) {
   const user = await requirePublicador();
   await exigirNotaPropia(user, articleId);
   await publicarCore(articleId);
+  await registrarActividad(articleId, user.id, "publico");
   revalidatePath(`/panel/articulos/${articleId}`);
 }
 
@@ -228,6 +236,7 @@ export async function scheduleArticle(articleId: string, isoDateTime: string) {
   const user = await requirePublicador();
   await exigirNotaPropia(user, articleId);
   await programarCore(articleId, isoDateTime);
+  await registrarActividad(articleId, user.id, "programo");
   revalidatePath(`/panel/articulos/${articleId}`);
 }
 

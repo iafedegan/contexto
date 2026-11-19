@@ -2861,3 +2861,10 @@ img[data-foto-pequena] {
   object-fit: contain !important;
   object-position: center;
 }
+
+/* Informe del panel al imprimir o guardar en PDF: sin menú, barra ni pie, y en blanco. */
+@media print {
+  .lx-sb, [data-panel-header], .lx-shell footer { display: none !important; }
+  .lx-shell > div { padding-left: 0 !important; }
+  .lx-pearl-canvas { background: #fff !important; }
+}
