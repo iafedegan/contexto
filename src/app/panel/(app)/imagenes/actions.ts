@@ -47,6 +47,16 @@ export async function cancelarPedido(input: { articleId: string }): Promise<Resp
   return hecho ? { ok: true, message: "Pedido cancelado." } : { ok: false, message: "Ese pedido ya no estaba pendiente." };
 }
 
+/** Quita una tarea pendiente de «Solicitud de imágenes». Quien la quita tiene que explicar por qué; el motivo le llega a quien pidió la imagen. */
+export async function quitarTarea(input: { articleId: string; motivo: string }): Promise<Respuesta> {
+  const yo = await requirePermiso("imagenes");
+  const motivo = String(input.motivo ?? "").replace(/\s+/g, " ").trim().slice(0, 500);
+  if (motivo.length < 10) return { ok: false, message: "Explica por qué quitas la tarea (al menos 10 caracteres)." };
+  const hecho = await cerrarPedido(String(input.articleId), { estado: "cancelada", motivo, quitadaPorId: yo.id, quitadaEn: new Date().toISOString() });
+  revalidatePath("/panel/imagenes");
+  return hecho ? { ok: true, message: "Tarea quitada." } : { ok: false, message: "Esa tarea ya no estaba pendiente." };
+}
+
 /** Las carpetas de la biblioteca donde puede quedar guardada la imagen entregada (solo quien gestiona la biblioteca elige carpeta). */
 export async function carpetasDeEntrega(): Promise<{ gestiona: boolean; carpetas: { id: string; parentId: string | null; name: string }[] }> {
   const yo = await requirePermiso("articulos");

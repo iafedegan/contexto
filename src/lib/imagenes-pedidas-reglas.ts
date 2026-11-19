@@ -20,6 +20,10 @@ export type PedidoImagen = {
   /** Texto alternativo y pie de foto (con el crédito) que escribió al entregarla: pasan a la nota junto con la imagen. */
   alt?: string;
   pie?: string;
+  /** Por qué se quitó la tarea (obligatorio al quitarla) y quién y cuándo. */
+  motivo?: string;
+  quitadaPorId?: string;
+  quitadaEn?: string;
 };
 
 /** Quien puede entregar la imagen pedida: los diseñadores, y los editores y administradores que los reemplazan. */

@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
-import { CalendarDays, Filter, Search, X } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useMemo, useState, useTransition } from "react";
+import { CalendarDays, Filter, Search, Trash2, X } from "lucide-react";
 import { Card } from "@/components/ui";
 import { EntregaImagen } from "@/components/panel/entrega-imagen";
+import { quitarTarea } from "@/app/panel/(app)/imagenes/actions";
 
 /** Una solicitud de imagen lista para mostrar (ya con los nombres y datos de la nota resueltos por el servidor). */
 export type FilaSolicitud = {
@@ -190,6 +192,7 @@ export function SolicitudesImagenes({ filas, miId, esDisenador }: { filas: FilaS
                   <p className="text-xs text-[var(--fg-muted)]">Pedida por {p.por || "—"}{p.para ? ` · para ${p.para}` : ""} · {cuando(p.fecha)}{p.seccion ? ` · ${p.seccion}` : ""}</p>
                   <p className="mt-2 whitespace-pre-line text-sm">{p.indicaciones}</p>
                   <EntregaImagen articleId={p.articleId} tituloNota={p.titulo} resumen={p.resumen} />
+                  <QuitarTarea articleId={p.articleId} titulo={p.titulo} />
                 </li>
               ))}
             </ul>
@@ -226,3 +229,45 @@ export function SolicitudesImagenes({ filas, miId, esDisenador }: { filas: FilaS
 }
 
 export { ESTADO_NOTA };
+
+/** «Quitar esta tarea»: pide el motivo antes de quitarla. El motivo se guarda y se le muestra a quien pidió la imagen. */
+function QuitarTarea({ articleId, titulo }: { articleId: string; titulo: string }) {
+  const router = useRouter();
+  const [abierto, setAbierto] = useState(false);
+  const [motivo, setMotivo] = useState("");
+  const [error, setError] = useState("");
+  const [pendiente, empezar] = useTransition();
+  const largo = motivo.trim().length;
+
+  if (!abierto) {
+    return (
+      <button type="button" onClick={() => setAbierto(true)} className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--danger,#b4442e)] hover:underline">
+        <Trash2 size={13} aria-hidden /> Quitar esta tarea
+      </button>
+    );
+  }
+  return (
+    <form
+      className="mt-3 flex flex-col gap-2 rounded-[var(--radius)] border border-[var(--danger,#b4442e)]/40 bg-[var(--danger,#b4442e)]/5 p-3"
+      onSubmit={(e) => {
+        e.preventDefault();
+        setError("");
+        empezar(async () => {
+          const r = await quitarTarea({ articleId, motivo });
+          if (!r.ok) return setError(r.message);
+          router.refresh();
+        });
+      }}
+    >
+      <label className="text-sm font-semibold" htmlFor={`motivo-${articleId}`}>¿Por qué quitas esta tarea?</label>
+      <p className="text-xs text-[var(--fg-muted)]">«{titulo}». Quien pidió la imagen verá tu explicación.</p>
+      <textarea id={`motivo-${articleId}`} value={motivo} onChange={(e) => setMotivo(e.target.value)} rows={3} maxLength={500} required autoFocus placeholder="Ej.: La nota ya tiene foto del archivo; el pedido está duplicado; falta información para hacerla…" className="w-full rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]" />
+      <div className="flex items-center justify-between text-xs text-[var(--fg-muted)]"><span>{largo < 10 ? `Mínimo 10 caracteres (${largo})` : " "}</span><span>{largo}/500</span></div>
+      {error && <p role="alert" className="text-sm text-[var(--danger,#b4442e)]">{error}</p>}
+      <div className="flex gap-2">
+        <button type="submit" disabled={pendiente || largo < 10} className="lx-btn !bg-[var(--danger,#b4442e)] disabled:cursor-not-allowed disabled:opacity-50">{pendiente ? "Quitando…" : "Quitar tarea"}</button>
+        <button type="button" onClick={() => { setAbierto(false); setMotivo(""); setError(""); }} className="lx-btn lx-btn-ghost">No quitarla</button>
+      </div>
+    </form>
+  );
+}

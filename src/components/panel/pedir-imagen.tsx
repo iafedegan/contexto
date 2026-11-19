@@ -93,6 +93,11 @@ export function PedirImagen({ articleId, titulo, resumen, portadaActual, alUsar 
         </div>
       ) : (
         <>
+          {pedido?.estado === "cancelada" && pedido.motivo && (
+            <p role="status" className="rounded-[var(--radius)] border border-[#d97706]/40 bg-[#d97706]/8 px-3 py-2 text-xs text-[#92400e]">
+              El diseñador quitó tu pedido anterior. <strong>Motivo:</strong> {pedido.motivo}
+            </p>
+          )}
           {otra && <p className="rounded-[var(--radius)] border border-[#d97706]/40 bg-[#d97706]/8 px-3 py-2 text-xs text-[#92400e]">Ya hay una imagen entregada. Si pides otra, reemplazará a la actual cuando el diseñador la entregue. <button type="button" onClick={() => setOtra(false)} className="lx-link font-semibold">Mantener la actual</button></p>}
           <select value={disenadorId} onChange={(e) => setDisenadorId(e.target.value)} className={campo} aria-label="Diseñador">
             <option value="">Cualquier diseñador</option>
