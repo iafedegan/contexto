@@ -6,6 +6,7 @@ import { useEffect } from "react";
  * Fotos que el sitio anterior guardó como miniatura (p. ej. el retrato de una columna, 298×380 px) y que las tarjetas anchas
  * estiran con `object-cover` hasta verse pixeladas. Cuando una foto de esas se muestra mucho más grande que sus píxeles reales
  * se le pone `data-foto-pequena` (CSS: se ve entera, sin estirarla) y su caja recibe un fondo con la misma foto desenfocada.
+ * También se muestran enteras las fotos que `object-cover` cortaría en más de una cuarta parte (carteles y banners con texto).
  * Las fotos normales y los avatares chicos nunca cumplen la condición, así que no cambian.
  *
  * El ancho real se mide cargando la misma URL en un `Image` suelto (sale de la caché, no hay descarga nueva): `naturalWidth`
@@ -17,6 +18,8 @@ const ANCHO_MAX_FOTO = 400;
 const ANCHO_MIN_CAJA = 300;
 /** Estirada: sus píxeles reales cubren menos de esta fracción de los píxeles de pantalla que ocupa. */
 const COBERTURA_MAX = 0.75;
+/** Con `object-cover`, si se vería menos de esta fracción de la foto (se corta más de una cuarta parte), se muestra entera. */
+const FRACCION_VISIBLE_MIN = 0.72;
 
 const anchos = new Map<string, Promise<number>>();
 
@@ -41,9 +44,17 @@ async function revisar(img: HTMLImageElement) {
   const ancho = img.clientWidth;
   if (ancho < ANCHO_MIN_CAJA) return;
   if (!img.hasAttribute("data-foto-pequena") && getComputedStyle(img).objectFit !== "cover") return;
-  const real = await anchoReal(src);
-  if (img.currentSrc !== src) return; // cambió de foto mientras se medía
-  const pequena = real > 0 && real <= ANCHO_MAX_FOTO && real < img.clientWidth * (window.devicePixelRatio || 1) * COBERTURA_MAX;
+  // Foto cuya proporción no se parece a la de su caja: con `object-cover` se le cortaría más de una cuarta parte (un cartel con texto, un
+  // banner ancho…). Se muestra entera, sobre su propio fondo desenfocado, para que nada quede cortado.
+  const alto = img.clientHeight;
+  const escala = alto > 0 ? Math.max(ancho / img.naturalWidth, alto / img.naturalHeight) : 0;
+  const muyRecortada = escala > 0 && (ancho * alto) / (img.naturalWidth * img.naturalHeight * escala * escala) < FRACCION_VISIBLE_MIN;
+  let pequena = muyRecortada;
+  if (!pequena) {
+    const real = await anchoReal(src);
+    if (img.currentSrc !== src) return; // cambió de foto mientras se medía
+    pequena = real > 0 && real <= ANCHO_MAX_FOTO && real < img.clientWidth * (window.devicePixelRatio || 1) * COBERTURA_MAX;
+  }
   if (pequena) {
     img.setAttribute("data-foto-pequena", "");
     caja.setAttribute("data-foto-pequena-caja", "");
