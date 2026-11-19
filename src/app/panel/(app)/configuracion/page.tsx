@@ -201,7 +201,7 @@ export default async function ConfiguracionPage() {
         title={isAdmin ? "Personas" : "Mis datos"}
         hint={isAdmin ? `${people.length} cuentas · cuentas, roles y cuota de IA` : "Tu nombre, correo y contraseña"}
       >
-        {!isAdmin && yoMismo && <MiPerfilForm name={yoMismo.name} email={yoMismo.email} />}
+        {!isAdmin && yoMismo && <MiPerfilForm name={yoMismo.name} email={yoMismo.email} debeCambiar={yoMismo.mustChangePassword} />}
 
         {isAdmin && (
           <SubTabs
@@ -211,7 +211,7 @@ export default async function ConfiguracionPage() {
                 label: "Cuentas",
                 contenido: (
                   <>
-                    {yoMismo && <MiPerfilForm name={yoMismo.name} email={yoMismo.email} />}
+                    {yoMismo && <MiPerfilForm name={yoMismo.name} email={yoMismo.email} debeCambiar={yoMismo.mustChangePassword} />}
                     <div className="mb-6">
                       <AddUserForm rolesPropios={rolesPropios.map((r) => ({ id: r.id, nombre: r.nombre }))} />
                     </div>
