@@ -14,7 +14,7 @@ import { carpetasVisibles, estaDentroDe, nombreValido } from "@/lib/biblioteca-a
 import { urlPublicaMedia } from "@/lib/media-storage";
 
 export type CarpetaInfo = { id: string; parentId: string | null; name: string };
-export type ActivoInfo = { id: string; name: string; url: string; kind: string; bytes: number | null; folderId: string | null; carpeta: string | null; createdAt: string };
+export type ActivoInfo = { id: string; name: string; url: string; kind: string; bytes: number | null; credit: string | null; description: string | null; folderId: string | null; carpeta: string | null; createdAt: string };
 export type Explorado =
   | { ok: true; gestiona: boolean; carpetas: CarpetaInfo[]; activos: ActivoInfo[]; hayMas: boolean }
   | { ok: false; error: string };
@@ -65,7 +65,7 @@ export async function explorarBiblioteca(input: { carpeta: string | null; q?: st
   // Una carpeta con miles de imágenes (las de las notas) se lee por páginas de 200.
   const desde = q ? 0 : Math.max(0, Math.min(Math.floor(Number(input.pagina) || 0), 1000)) * limite;
   const filas = await db
-    .select({ id: mediaAssets.id, name: mediaAssets.name, url: mediaAssets.url, kind: mediaAssets.kind, bytes: mediaAssets.bytes, folderId: mediaAssets.folderId, createdAt: mediaAssets.createdAt })
+    .select({ id: mediaAssets.id, name: mediaAssets.name, url: mediaAssets.url, kind: mediaAssets.kind, bytes: mediaAssets.bytes, credit: mediaAssets.credit, description: mediaAssets.description, folderId: mediaAssets.folderId, createdAt: mediaAssets.createdAt })
     .from(mediaAssets)
     .where(donde)
     .orderBy(desc(mediaAssets.createdAt), asc(mediaAssets.id))
@@ -172,6 +172,18 @@ export async function renombrarActivo(input: { id: string; name: string }): Prom
   return { ok: true };
 }
 
+/** Los datos de una imagen: su nombre, quién la tomó y una descripción. Crédito y descripción pueden quedar vacíos. */
+export async function actualizarActivo(input: { id: string; name: string; credit?: string; description?: string }): Promise<Resultado> {
+  await gestor();
+  const name = nombreValido(input.name);
+  if (!name) return { ok: false, error: "Escribe un nombre (hasta 120 letras)." };
+  const texto = (v: unknown, max: number) => (typeof v === "string" ? v.replace(/\u0000/g, "").replace(/[ \t]+/g, " ").trim().slice(0, max) || null : null);
+  const credit = texto(input.credit, 200);
+  const description = texto(input.description, 500);
+  await db.update(mediaAssets).set({ name, credit, description }).where(eq(mediaAssets.id, input.id));
+  return { ok: true };
+}
+
 /** Quita archivos de la biblioteca. El archivo del almacenamiento se conserva mientras una nota lo use; si nadie lo usa, la limpieza lo retira a los 7 días. */
 export async function eliminarActivos(input: { ids: string[] }): Promise<Resultado> {
   await gestor();
@@ -206,13 +218,13 @@ export async function asignarCarpeta(input: { carpeta: string; userIds: string[]
 
 /** Ficha completa de una imagen: metadata del archivo, quién la subió y en qué notas se usó (con su periodista). */
 export type FichaActivo = {
-  name: string; url: string; kind: string; bytes: number | null; mime: string | null; creada: string; subidaPor: string | null;
+  name: string; credit: string | null; description: string | null; url: string; kind: string; bytes: number | null; mime: string | null; creada: string; subidaPor: string | null;
   usos: { titulo: string; slug: string; estado: string; periodista: string | null; seccion: string | null; fecha: string | null; comoPortada: boolean }[];
 };
 export async function fichaActivo(input: { id: string }): Promise<{ ok: true; ficha: FichaActivo } | { ok: false; error: string }> {
   await gestor();
   const [a] = await db
-    .select({ name: mediaAssets.name, url: mediaAssets.url, kind: mediaAssets.kind, bytes: mediaAssets.bytes, createdAt: mediaAssets.createdAt, por: users.name })
+    .select({ name: mediaAssets.name, credit: mediaAssets.credit, description: mediaAssets.description, url: mediaAssets.url, kind: mediaAssets.kind, bytes: mediaAssets.bytes, createdAt: mediaAssets.createdAt, por: users.name })
     .from(mediaAssets).leftJoin(users, eq(users.id, mediaAssets.uploadedBy)).where(eq(mediaAssets.id, input.id)).limit(1);
   if (!a) return { ok: false, error: "Esa imagen ya no existe." };
   const objeto = a.url.split("/object/public/media/")[1] ?? "";
@@ -236,7 +248,7 @@ export async function fichaActivo(input: { id: string }): Promise<{ ok: true; fi
   return {
     ok: true,
     ficha: {
-      name: a.name, url: a.url, kind: a.kind, bytes, mime, creada: new Date(a.createdAt).toISOString(), subidaPor: a.por ?? null,
+      name: a.name, credit: a.credit, description: a.description, url: a.url, kind: a.kind, bytes, mime, creada: new Date(a.createdAt).toISOString(), subidaPor: a.por ?? null,
       usos: usos.map((u) => ({ titulo: u.titulo, slug: u.slug, estado: u.estado, periodista: u.periodista, seccion: u.seccion, fecha: u.fecha, comoPortada: !!u.portada })),
     },
   };

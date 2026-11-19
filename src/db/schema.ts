@@ -1114,10 +1114,18 @@ export const mediaAssets = pgTable(
     url: text("url").notNull().unique(),
     kind: text("kind").notNull().default("imagen"),
     bytes: integer("bytes"),
+    // Quién tomó la foto («Foto: …») y una descripción libre; ambos opcionales.
+    credit: text("credit"),
+    description: text("description"),
     uploadedBy: uuid("uploaded_by").references(() => users.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index("media_assets_folder_idx").on(t.folderId, t.createdAt), index("media_assets_uploaded_by_idx").on(t.uploadedBy)],
+  (t) => [
+    index("media_assets_folder_idx").on(t.folderId, t.createdAt),
+    index("media_assets_uploaded_by_idx").on(t.uploadedBy),
+    check("media_assets_credit_largo", sql`char_length(${t.credit}) <= 200`),
+    check("media_assets_description_largo", sql`char_length(${t.description}) <= 500`),
+  ],
 );
 
 /** Qué personas ven una carpeta (y todo lo que hay dentro). Administradores y quien gestiona la biblioteca ven todo sin estar aquí. */

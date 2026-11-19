@@ -13,7 +13,7 @@ import {
   moverActivos,
   moverCarpeta,
   registrarActivos,
-  renombrarActivo,
+  actualizarActivo,
   fichaActivo,
   type FichaActivo,
   renombrarCarpeta,
@@ -55,6 +55,13 @@ export function BibliotecaExplorador({ modo, onElegir }: { modo: Modo; onElegir?
   const [arrastrando, setArrastrando] = useState(false);
   const [acceso, setAcceso] = useState<{ personas: Persona[]; marcadas: Set<string>; guardando: boolean } | null>(null);
   const [ficha, setFicha] = useState<FichaActivo | null>(null);
+  // Formulario propio de la app (en vez del cuadro del navegador): nombre de una carpeta o datos de una imagen.
+  const [formulario, setFormulario] = useState<
+    | { tipo: "carpeta-nueva" }
+    | { tipo: "carpeta-nombre"; id: string; name: string }
+    | { tipo: "imagen"; activo: ActivoInfo }
+    | null
+  >(null);
   const [moviendo, setMoviendo] = useState<{ tipo: "archivos" | "carpeta"; destino: string } | null>(null);
   const entrada = useRef<HTMLInputElement>(null);
 
@@ -121,13 +128,8 @@ export function BibliotecaExplorador({ modo, onElegir }: { modo: Modo; onElegir?
     return true;
   }
 
-  async function nuevaCarpeta() {
-    const nombre = window.prompt(actual ? `Nombre de la carpeta nueva dentro de «${nombreRuta(actual)}»` : "Nombre de la carpeta nueva");
-    if (!nombre) return;
-    const r = await crearCarpeta({ parentId: actual, name: nombre });
-    if (!r.ok) return setAviso(r.error);
-    if (actual) setAbiertas((s) => new Set(s).add(actual));
-    await recargar();
+  function nuevaCarpeta() {
+    setFormulario({ tipo: "carpeta-nueva" });
   }
 
   async function subir(files: File[]) {
@@ -288,7 +290,7 @@ export function BibliotecaExplorador({ modo, onElegir }: { modo: Modo; onElegir?
             {gestion && carpetaActual && (
               <span className="ml-auto flex flex-wrap items-center gap-2">
                 <button type="button" className={boton} onClick={abrirAcceso}><Users size={15} aria-hidden /> Quién la ve</button>
-                <button type="button" className={boton} onClick={async () => { const n = window.prompt("Nuevo nombre de la carpeta", carpetaActual.name); if (n) await accion(() => renombrarCarpeta({ id: carpetaActual.id, name: n })); }}><Pencil size={15} aria-hidden /> Renombrar</button>
+                <button type="button" className={boton} onClick={() => setFormulario({ tipo: "carpeta-nombre", id: carpetaActual.id, name: carpetaActual.name })}><Pencil size={15} aria-hidden /> Renombrar</button>
                 <button type="button" className={boton} onClick={() => setMoviendo({ tipo: "carpeta", destino: carpetaActual.parentId ?? "" })}><MoveRight size={15} aria-hidden /> Mover</button>
                 <button type="button" className={boton} onClick={async () => { if (await confirmar(`¿Eliminar la carpeta «${carpetaActual.name}»? Solo se puede si está vacía.`)) { const ok = await accion(() => eliminarCarpeta({ id: carpetaActual.id }), "Carpeta eliminada."); if (ok) abrirCarpeta(carpetaActual.parentId); } }}><Trash2 size={15} aria-hidden /> Eliminar</button>
               </span>
@@ -346,7 +348,7 @@ export function BibliotecaExplorador({ modo, onElegir }: { modo: Modo; onElegir?
                       <>
                         <input type="checkbox" checked={marcado} onChange={() => setSeleccion((s) => { const n = new Set(s); if (n.has(a.id)) n.delete(a.id); else n.add(a.id); return n; })} aria-label={`Marcar ${a.name}`} className="absolute left-3.5 top-3.5 size-5 accent-[var(--accent)]" />
                         <button type="button" aria-label={`Ficha de ${a.name}`} onClick={async () => { const r = await fichaActivo({ id: a.id }); if (r.ok) setFicha(r.ficha); else setError(r.error); }} className="absolute right-12 top-3.5 grid size-8 place-items-center rounded-full bg-black/55 text-xs font-bold text-white opacity-0 transition focus:opacity-100 group-hover/a:opacity-100 [@media(pointer:coarse)]:opacity-100">i</button>
-                        <button type="button" aria-label={`Renombrar ${a.name}`} onClick={async () => { const n = window.prompt("Nuevo nombre", a.name); if (n) await accion(() => renombrarActivo({ id: a.id, name: n })); }} className="absolute right-3.5 top-3.5 grid size-8 place-items-center rounded-full bg-black/55 text-white opacity-0 transition focus:opacity-100 group-hover/a:opacity-100 [@media(pointer:coarse)]:opacity-100"><Pencil size={14} aria-hidden /></button>
+                        <button type="button" aria-label={`Editar datos de ${a.name}`} title="Nombre, crédito y descripción" onClick={() => setFormulario({ tipo: "imagen", activo: a })} className="absolute right-3.5 top-3.5 grid size-8 place-items-center rounded-full bg-black/55 text-white opacity-0 transition focus:opacity-100 group-hover/a:opacity-100 [@media(pointer:coarse)]:opacity-100"><Pencil size={14} aria-hidden /></button>
                       </>
                     )}
                   </>
@@ -367,10 +369,36 @@ export function BibliotecaExplorador({ modo, onElegir }: { modo: Modo; onElegir?
         )}
       </section>
 
+      {formulario && (
+        <FormularioDatos
+          key={formulario.tipo === "imagen" ? formulario.activo.id : formulario.tipo === "carpeta-nombre" ? formulario.id : "nueva"}
+          formulario={formulario}
+          dentro={actual ? nombreRuta(actual) : null}
+          onCerrar={() => setFormulario(null)}
+          onGuardar={async (v) => {
+            if (formulario.tipo === "carpeta-nueva") {
+              const r = await crearCarpeta({ parentId: actual, name: v.name });
+              if (!r.ok) return r.error;
+              if (actual) setAbiertas((s) => new Set(s).add(actual));
+              await recargar();
+              return null;
+            }
+            const r = formulario.tipo === "carpeta-nombre"
+              ? await renombrarCarpeta({ id: formulario.id, name: v.name })
+              : await actualizarActivo({ id: formulario.activo.id, name: v.name, credit: v.credit, description: v.description });
+            if (!r.ok) return r.error;
+            await recargar();
+            return null;
+          }}
+        />
+      )}
+
       {/* Quién ve esta carpeta */}
       {ficha && (
         <Ventana titulo={ficha.name} onCerrar={() => setFicha(null)}>
           <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+            {ficha.credit && (<><dt className="text-[var(--fg-muted)]">Crédito</dt><dd>{ficha.credit}</dd></>)}
+            {ficha.description && (<><dt className="text-[var(--fg-muted)]">Descripción</dt><dd>{ficha.description}</dd></>)}
             <dt className="text-[var(--fg-muted)]">Tipo</dt><dd>{ficha.mime ?? ficha.kind}</dd>
             <dt className="text-[var(--fg-muted)]">Peso</dt><dd>{ficha.bytes ? peso(ficha.bytes) : "—"}</dd>
             <dt className="text-[var(--fg-muted)]">Fecha</dt><dd>{fecha(ficha.creada)}</dd>
@@ -458,5 +486,69 @@ function Ventana({ titulo, onCerrar, children }: { titulo: string; onCerrar: () 
         {children}
       </div>
     </div>
+  );
+}
+
+/** Formulario pequeño de la biblioteca: el nombre de una carpeta, o el nombre, el crédito y la descripción de una imagen. */
+function FormularioDatos({
+  formulario,
+  dentro,
+  onCerrar,
+  onGuardar,
+}: {
+  formulario: { tipo: "carpeta-nueva" } | { tipo: "carpeta-nombre"; id: string; name: string } | { tipo: "imagen"; activo: ActivoInfo };
+  dentro: string | null;
+  onCerrar: () => void;
+  onGuardar: (v: { name: string; credit: string; description: string }) => Promise<string | null>;
+}) {
+  const imagen = formulario.tipo === "imagen" ? formulario.activo : null;
+  const [name, setName] = useState(imagen?.name ?? (formulario.tipo === "carpeta-nombre" ? formulario.name : ""));
+  const [credit, setCredit] = useState(imagen?.credit ?? "");
+  const [description, setDescription] = useState(imagen?.description ?? "");
+  const [error, setError] = useState("");
+  const [guardando, setGuardando] = useState(false);
+  const titulo = imagen ? "Datos de la imagen" : formulario.tipo === "carpeta-nombre" ? "Renombrar la carpeta" : dentro ? `Carpeta nueva dentro de «${dentro}»` : "Carpeta nueva";
+
+  async function enviar(e: React.FormEvent) {
+    e.preventDefault();
+    if (!name.trim()) return setError("Escribe un nombre.");
+    setGuardando(true);
+    setError("");
+    const fallo = await onGuardar({ name, credit, description });
+    setGuardando(false);
+    if (fallo) return setError(fallo);
+    onCerrar();
+  }
+
+  return (
+    <Ventana titulo={titulo} onCerrar={onCerrar}>
+      <form onSubmit={enviar} className="flex flex-col gap-3 text-sm">
+        {imagen && /^https?:\/\//.test(imagen.url) && imagen.kind === "imagen" && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={imagen.url} alt="" className="max-h-40 w-full rounded-[var(--radius)] border border-[var(--border)] object-contain bg-[var(--surface-2)]" />
+        )}
+        <label className="block">
+          <span className="font-medium">Nombre</span>
+          <input autoFocus value={name} onChange={(e) => setName(e.target.value)} maxLength={120} className="lx-input mt-1 w-full" />
+        </label>
+        {imagen && (
+          <>
+            <label className="block">
+              <span className="font-medium">Crédito <span className="font-normal text-[var(--fg-muted)]">(quién tomó la foto)</span></span>
+              <input value={credit} onChange={(e) => setCredit(e.target.value)} maxLength={200} placeholder="Ej.: Juan Pérez / FEDEGÁN" className="lx-input mt-1 w-full" />
+            </label>
+            <label className="block">
+              <span className="font-medium">Descripción <span className="font-normal text-[var(--fg-muted)]">(opcional)</span></span>
+              <textarea value={description} onChange={(e) => setDescription(e.target.value)} maxLength={500} rows={3} placeholder="Qué se ve, dónde y cuándo" className="lx-input mt-1 w-full" />
+            </label>
+          </>
+        )}
+        {error && <p role="alert" className="text-sm font-medium text-[#b42318]">{error}</p>}
+        <div className="flex justify-end gap-2">
+          <button type="button" className={boton} onClick={onCerrar}>Cancelar</button>
+          <button type="submit" className="lx-btn" disabled={guardando}>{guardando ? "Guardando…" : "Guardar"}</button>
+        </div>
+      </form>
+    </Ventana>
   );
 }

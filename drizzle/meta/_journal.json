@@ -288,6 +288,13 @@
       "when": 1795035027453,
       "tag": "0040_clave_temporal",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1795103915858,
+      "tag": "0041_credito_imagen",
+      "breakpoints": true
     }
   ]
 }
