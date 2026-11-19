@@ -22,7 +22,6 @@ import { MiPerfilForm } from "@/components/panel/mi-perfil-form";
 import { getConfigIA } from "@/lib/ai-provider";
 import { resumenUsoIA } from "@/lib/ai-uso";
 import { IaConfig } from "@/components/panel/ia-config";
-import { MfaForm } from "@/components/panel/mfa-form";
 import { PasskeyForm } from "@/components/panel/passkey-form";
 import { listarPasskeys } from "./passkey-actions";
 import { ConfigTabs } from "@/components/panel/config-tabs";
@@ -322,9 +321,8 @@ export default async function ConfiguracionPage() {
         id="seguridad"
         icon={<ShieldCheck size={14} />}
         title="Seguridad de mi cuenta"
-        hint="Segundo factor de acceso al panel"
+        hint="Passkeys para entrar sin escribir la contraseña"
       >
-        <MfaForm activo={yoMismo?.totpEnabled ?? false} />
         <PasskeyForm passkeys={misPasskeys} />
       </Section>
 

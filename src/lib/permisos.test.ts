@@ -29,12 +29,12 @@ test("los ajustes de una persona suben o bajan permisos, pero no al administrado
 
 test("el segundo factor es obligatorio salvo exención; el administrador no está obligado y lo activa cuando quiera", () => {
   assert.equal(exige2fa("redactor", undefined), false);
-  assert.equal(exige2fa("redactor", { exigir_2fa: true }), true);
+  assert.equal(exige2fa("redactor", { exigir_2fa: true }), false, "ya no se exige a nadie");
   assert.equal(exige2fa("redactor", { exigir_2fa: false }), false);
   assert.equal(exige2fa("administrador", undefined), false);
   assert.equal(exige2fa("administrador", { exigir_2fa: false }), false);
   // Solo se le exige si una casilla lo enciende expresamente.
-  assert.equal(exige2fa("administrador", { exigir_2fa: true }), true);
+  assert.equal(exige2fa("administrador", { exigir_2fa: true }), false);
 });
 
 test("el plazo de gracia del segundo factor vence solo", () => {

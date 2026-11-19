@@ -55,9 +55,9 @@ export type Ajustes = Partial<Record<PermisoId | typeof DOS_PASOS, boolean>>;
  * Seguridad (desde entonces el ingreso le pide el código), y solo se le exige si una casilla `exigir_2fa` lo enciende expresamente.
  */
 export const DOS_PASOS = "exigir_2fa";
-// Indica si la persona debe usar segundo factor: solo si un administrador se lo exigió expresamente a esa cuenta (por defecto nadie lo tiene obligatorio).
-export function exige2fa(_role: UserRole, ajustes: Ajustes | undefined): boolean {
-  return ajustes?.[DOS_PASOS] ?? false;
+// El segundo factor ya no se exige a nadie (ni al entrar ni obligando a activarlo): se conserva la función para no tocar a quien la llama.
+export function exige2fa(_role: UserRole, _ajustes: Ajustes | undefined): boolean {
+  return false;
 }
 
 /** Lo que el rol da sin ajustes. */

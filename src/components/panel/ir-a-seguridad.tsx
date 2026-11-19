@@ -10,14 +10,14 @@ import { useEffect } from "react";
  * ahí durante el paso de login a /panel deja al router de Next sin árbol
  * válido: pide la misma ruta sin parar y la pantalla queda en negro.
  */
-export function IrASeguridad({ href }: { href: string }) {
+export function IrASeguridad({ href, mensaje = "Llevándote a Configuración…" }: { href: string; mensaje?: string }) {
   useEffect(() => {
     window.location.replace(href);
   }, [href]);
 
   return (
     <p className="py-10 text-center text-sm text-[var(--fg-muted)]" role="status">
-      Llevándote a Configuración para activar la verificación en dos pasos…
+      {mensaje}
     </p>
   );
 }

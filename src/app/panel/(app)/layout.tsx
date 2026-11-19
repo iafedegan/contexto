@@ -218,7 +218,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
               </span>
             </p>
           )}
-          {bloqueado ? <IrASeguridad href={`${RUTA_SEGURIDAD}#seguridad`} /> : children}
+          {bloqueado ? <IrASeguridad href={debeCambiarClave ? `${RUTA_SEGURIDAD}#usuarios` : `${RUTA_SEGURIDAD}#seguridad`} mensaje={debeCambiarClave ? "Llevándote a Configuración para que cambies tu contraseña temporal…" : undefined} /> : children}
           {!restringido && !bloqueado && <AvisoTareas pendientes={misTareas.total} nuevas={misTareas.nuevas} />}
         </div>
       </main>
