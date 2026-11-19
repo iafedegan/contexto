@@ -152,7 +152,7 @@ export default async function ArticleEditorPage({
     if (!(await esNotaPropia({ id: session!.user.id, role: session!.user.role }, id))) redirect("/panel/articulos");
     // Si se la enviaron a esta persona, queda como abierta: en «Mis pendientes» pasa de «Pendiente» a «Editando».
     await marcarAsignacionAbierta(id, session!.user.id).catch(() => {});
-    enviadoA = await asignacionDe(id).catch(() => null);
+    enviadoA = await asignacionDe(id, session!.user.id).catch(() => null);
     initial = {
       id: row.id,
       title: row.title,

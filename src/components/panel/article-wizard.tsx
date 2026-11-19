@@ -210,7 +210,7 @@ export function ArticleWizard({
   /** Editor o administrador: el destinatario es un especialista, de cualquier rol. */
   envioLibre?: boolean;
   /** A quién se envió ya esta nota (lo leído del servidor), con su mensaje y la fecha. */
-  enviadoA?: { editorId: string; porId?: string; nombre: string; porNombre?: string; mensaje: string; fecha: string } | null;
+  enviadoA?: { editorId: string; porId?: string; nombre: string; porNombre?: string; mensaje: string; fecha: string; todos?: { id: string; nombre: string }[] } | null;
   /** Mi cuenta: sirve para saber si la nota me la enviaron a mí (entonces puedo devolverla o quitarla de mis pendientes). */
   miUsuarioId?: string | null;
 }) {
@@ -344,6 +344,9 @@ export function ArticleWizard({
   const [cancelando, cancelarT] = useTransition();
   const [errorEnvio, setErrorEnvio] = useState("");
   const editorElegido = editores.find((e) => e.id === enviarA);
+  // Quienes ya tienen la nota (no se ofrecen otra vez al agregar personas).
+  const yaLaTienen = new Set((envio?.todos ?? (envio ? [{ id: envio.editorId, nombre: envio.nombre }] : [])).map((p) => p.id));
+  const otrosDestinos = editores.filter((e) => !yaLaTienen.has(e.id));
   const [depto, setDepto] = useState(initial?.depto ?? "");
   const [authorId, setAuthorId] = useState(initial?.authorId ?? miAutorId ?? "");
   // Firmar por otra persona (solo administradores): las firmas existentes más las que se creen aquí.
@@ -809,6 +812,26 @@ export function ArticleWizard({
       else setFuente(null);
     });
   }
+
+  // Agregar la nota a otra persona: le llega también a ella y quienes ya la tenían la conservan (sirve a quien la recibió y a quien la envió).
+  const agregarPersona = (
+    <div className="flex flex-col gap-2 rounded-[var(--radius)] border border-[var(--accent)]/40 bg-[var(--surface)] p-3">
+      <p className="text-sm font-semibold">Agregar a otra persona</p>
+      {envio?.todos && envio.todos.length > 0 && (
+        <p className="text-[var(--fg-muted)]">Ya la tiene{envio.todos.length === 1 ? "" : "n"}: <strong className="text-[var(--fg)]">{envio.todos.map((p) => p.nombre).join(", ")}</strong>. Quien agregues la recibe también, sin quitársela a nadie.</p>
+      )}
+      <input type="hidden" name="sumarDestino" value="1" />
+      <select value={enviarA} onChange={(e) => setEnviarA(e.target.value)} aria-label="Agregar la nota a" className="w-full rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm outline-none transition focus:border-[var(--accent)]">
+        <option value="">Elige a quién</option>
+        {otrosDestinos.map((e) => <option key={e.id} value={e.id}>{e.nombre}{e.rol ? ` · ${etiquetaRol(e.rol)}` : ""}</option>)}
+      </select>
+      <textarea value={mensajeEditor} onChange={(e) => setMensajeEditor(e.target.value)} maxLength={600} rows={2} disabled={!enviarA} placeholder={enviarA ? "Mensaje para quien la recibe (opcional)" : "Elige a quién para dejarle un mensaje"} aria-label="Mensaje para quien la recibe"
+        className="w-full resize-none rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm outline-none transition placeholder:text-[var(--fg-muted)]/60 focus:border-[var(--accent)] disabled:opacity-60" />
+      <button type="submit" name="intent" value="editor" disabled={!editorElegido} className="lx-btn self-start disabled:cursor-not-allowed disabled:opacity-60 disabled:saturate-50">
+        <Send size={15} /> {editorElegido ? `Agregar a ${editorElegido.nombre}` : "Agregar persona"}
+      </button>
+    </div>
+  );
 
   // Imagen con IA para el CUERPO de la nota: la misma generación que la portada, centrada en el párrafo donde está el cursor o en la escena que se describió.
   async function imagenParaCuerpo(escena: string, parrafo: string) {
@@ -1958,6 +1981,8 @@ export function ArticleWizard({
                         Te la envió <strong>{envio.porNombre ?? "otra persona"}</strong> · {new Intl.DateTimeFormat("es-CO", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "America/Bogota" }).format(new Date(envio.fecha))}.
                       </p>
                       {envio.mensaje && <p className="whitespace-pre-line text-[var(--fg-muted)]">{envio.mensaje}</p>}
+                      {otrosDestinos.length > 0 && agregarPersona}
+                      <p className="mt-1 font-semibold">O devuélvela</p>
                       <textarea
                         value={mensajeDevolver}
                         onChange={(e) => setMensajeDevolver(e.target.value)}
@@ -1984,21 +2009,6 @@ export function ArticleWizard({
                       >
                         <Send size={15} /> {devolviendo ? "Devolviendo…" : `Devolver a ${envio.porNombre ?? "quien me la envió"}`}
                       </button>
-                      {envioLibre && editores.length > 0 && (
-                        // Un editor (o un administrador) que recibió la nota también puede pasársela a otra persona, no solo devolverla.
-                        <div className="mt-1 flex flex-col gap-2 border-t border-[var(--border)] pt-3">
-                          <p className="font-semibold">O envíala a otra persona</p>
-                          <select id="reenviar-a" value={enviarA} onChange={(e) => setEnviarA(e.target.value)} aria-label="Enviar la nota a" className="w-full rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm outline-none transition focus:border-[var(--accent)]">
-                            <option value="">Elige a quién</option>
-                            {editores.map((e) => <option key={e.id} value={e.id}>{e.nombre}{e.rol ? ` · ${etiquetaRol(e.rol)}` : ""}</option>)}
-                          </select>
-                          <textarea value={mensajeEditor} onChange={(e) => setMensajeEditor(e.target.value)} maxLength={600} rows={3} disabled={!enviarA} placeholder={enviarA ? "Mensaje para quien la recibe (opcional)" : "Elige a quién enviarla para dejarle un mensaje"} aria-label="Mensaje para quien la recibe"
-                            className="w-full resize-none rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm outline-none transition placeholder:text-[var(--fg-muted)]/60 focus:border-[var(--accent)] disabled:opacity-60" />
-                          <button type="submit" name="intent" value="editor" disabled={!editorElegido || devolviendo} className="lx-btn self-start disabled:cursor-not-allowed disabled:opacity-60 disabled:saturate-50">
-                            <Send size={15} /> {editorElegido ? `Enviar a ${editorElegido.nombre}` : "Enviar la nota"}
-                          </button>
-                        </div>
-                      )}
                       <button
                         type="button"
                         disabled={devolviendo}
@@ -2020,9 +2030,10 @@ export function ArticleWizard({
                     // Ya enviada: se ve como el pedido de imagen, con la opción de cancelar el envío.
                     <div className="flex flex-col gap-2 text-xs">
                       <p className="rounded-[var(--radius)] bg-[var(--surface-2)] px-3 py-2">
-                        Enviada a <strong>{envio.nombre}</strong> · {new Intl.DateTimeFormat("es-CO", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "America/Bogota" }).format(new Date(envio.fecha))}. Quedó «En revisión» y le llega en «Artículos».
+                        Enviada a <strong>{envio.todos?.length ? envio.todos.map((p) => p.nombre).join(", ") : envio.nombre}</strong> · {new Intl.DateTimeFormat("es-CO", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "America/Bogota" }).format(new Date(envio.fecha))}. Quedó «En revisión» y le llega en «Artículos».
                       </p>
                       {envio.mensaje && <p className="whitespace-pre-line text-[var(--fg-muted)]">{envio.mensaje}</p>}
+                      {otrosDestinos.length > 0 && agregarPersona}
                       {errorEnvio && <p role="alert" className="text-[var(--danger,#b4442e)]">{errorEnvio}</p>}
                       <button
                         type="button"

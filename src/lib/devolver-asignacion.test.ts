@@ -42,3 +42,18 @@ test("quitar de mis pendientes: solo quien la recibió", async () => {
   assert.equal((await asig.soltarAsignacion(e.nota, e.editor, "editor")).ok, true);
   assert.equal(await asig.asignacionDe(e.nota), null);
 });
+
+test("agregar personas: la nota queda con todas y cada una la suelta o la devuelve sin quitársela a las demás", async () => {
+  const e = await escenario();
+  const t = `${Date.now()}${Math.floor(Math.random() * 1e6)}`;
+  const [otra] = await bd.db.insert(esquema.users).values({ name: "Otra Editora", email: `o-${t}@ej.com`, role: "editor" }).returning({ id: esquema.users.id });
+  await asig.registrarAsignacion({ articleId: e.nota, editorId: otra.id, porId: e.editor, mensaje: "Mírala tú también", fecha: new Date(Date.now() + 1000).toISOString() }, { sumar: true });
+  const vista = await asig.asignacionDe(e.nota, e.editor);
+  assert.equal(vista?.editorId, e.editor, "cada quien ve SU entrega");
+  assert.deepEqual(new Set(vista?.todos.map((p) => p.id)), new Set([e.editor, otra.id]));
+  assert.ok((await asig.notasAsignadasA(otra.id)).includes(e.nota));
+  assert.ok((await asig.notasAsignadasA(e.editor)).includes(e.nota));
+  assert.equal((await asig.soltarAsignacion(e.nota, otra.id, "editor")).ok, true);
+  assert.ok(!(await asig.notasAsignadasA(otra.id)).includes(e.nota));
+  assert.ok((await asig.notasAsignadasA(e.editor)).includes(e.nota), "el editor la conserva");
+});

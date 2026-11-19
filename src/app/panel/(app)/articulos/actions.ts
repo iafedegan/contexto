@@ -169,7 +169,9 @@ export async function saveArticle(formData: FormData) {
   else if (intent === "editor" && editorDestino) {
     // Queda «En revisión» y le aparece al editor en «Artículos» y en «Notas para editores» (la nota cuenta como suya para revisarla).
     await enviarARevisionCore(articleId);
-    await registrarAsignacion({ articleId, editorId: editorDestino.id, porId: user.id, mensaje: String(formData.get("mensajeEditor") ?? "").trim().slice(0, 600), fecha: new Date().toISOString() });
+    // «Agregar»: la nota le llega también a esta persona y sigue con quienes ya la tenían (incluida quien la envía, si se la habían enviado).
+    const sumar = formData.get("sumarDestino") === "1";
+    await registrarAsignacion({ articleId, editorId: editorDestino.id, porId: user.id, mensaje: String(formData.get("mensajeEditor") ?? "").trim().slice(0, 600), fecha: new Date().toISOString() }, { sumar });
     revalidatePath("/panel/asignaciones");
   }
   else if (intent === "programar") {
