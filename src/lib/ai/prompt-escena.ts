@@ -98,3 +98,31 @@ export function construirPrompt(input: { titulo: string; resumen?: string; escen
     .filter(Boolean)
     .join(" ");
 }
+
+/**
+ * Prompt para MEZCLAR las fotos que sube la redacción (hasta 3) en una sola imagen nueva. A diferencia de `construirPrompt` (que inventa una escena
+ * desde cero y prohíbe agregar sujetos o personas), aquí las fotos son la materia prima: se conservan sus sujetos reales —personas, animales, lugares,
+ * objetos— y se funden en una composición única y creíble. `plan` es la propuesta de composición (opcional) y `instruccion` lo que pidió la persona.
+ */
+export function construirPromptMezcla(input: { titulo: string; resumen?: string; cantidad: number; instruccion?: string; plan?: string; estilo?: Partial<EstiloEscena> }): string {
+  const estilo = estiloValido({ ...ESTILO_POR_DEFECTO, ...input.estilo });
+  const tratamiento = TRATAMIENTOS.find((o) => o.id === estilo.tratamiento)!;
+  const n = Math.min(3, Math.max(1, Math.round(input.cantidad)));
+  const resumen = input.resumen ? ` (${input.resumen.slice(0, 220)})` : "";
+  const plural = n === 1 ? "la foto adjunta" : `las ${n} fotos adjuntas`;
+  return [
+    `Crea UNA imagen nueva, fotorrealista y de calidad editorial, a partir de ${plural}, para ilustrar la noticia «${input.titulo}»${resumen}.`,
+    n === 1
+      ? "USO DE LA FOTO: conserva sus sujetos reales (personas, animales, lugares, objetos) tal como son, con sus rasgos, colores y proporciones; puedes reencuadrarla, ampliar el entorno y mejorar la luz."
+      : `MEZCLA: toma sujetos y elementos reales de CADA una de las ${n} fotos (personas, animales, lugares, objetos) y fúndelos en una sola escena coherente. Conserva sus rasgos, colores y proporciones: no los inventes ni los deformes. Todas las fotos deben notarse en el resultado, ninguna se ignora ni se copia tal cual.`,
+    "COHERENCIA: misma luz, dirección de las sombras, perspectiva, escala, nitidez y gradación de color en todos los elementos, de modo que parezca una sola fotografía tomada en un mismo momento; bordes limpios, sin recortes visibles ni costuras.",
+    "NO HAGAS: collage, mosaico, pantalla dividida, marcos, ni fotos pegadas una al lado de otra.",
+    input.instruccion ? `INSTRUCCIÓN DE LA REDACCIÓN (manda sobre todo lo demás): ${input.instruccion}.` : "",
+    input.plan ? `PROPUESTA DE COMPOSICIÓN: ${input.plan}` : "",
+    `TRATAMIENTO: ${tratamiento.texto}.`,
+    estilo.notas ? `INDICACIONES DEL EQUIPO: ${estilo.notas}.` : "",
+    "FORMATO: horizontal 16:9, sujeto principal claro y un lado visual limpio que respire. Máxima nitidez, sin pixelado. Sin texto, sin letras, sin logotipos ni marcas de agua.",
+  ]
+    .filter(Boolean)
+    .join(" ");
+}

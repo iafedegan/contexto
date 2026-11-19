@@ -8,7 +8,7 @@ import { registrarCostoIA, registrarUsoIA, verificarCuotaIA } from "@/lib/ai-cuo
 import { aWebp } from "@/lib/imagen-webp";
 import { tipoPorFirma } from "@/lib/media-firma";
 import { urlPublicaMedia } from "@/lib/media-storage";
-import { construirPrompt, type EstiloEscena } from "@/lib/ai/prompt-escena";
+import { construirPrompt, construirPromptMezcla, type EstiloEscena } from "@/lib/ai/prompt-escena";
 
 // Resultado de generar la portada: dirección de la imagen, texto alternativo y escena usada, o un error.
 export type CoverImageResult =
@@ -59,8 +59,34 @@ export async function generarPortadasCore(userId: string, input: EntradaPortada)
     const cuota = await verificarCuotaIA(userId);
     if (!cuota.ok) return { ok: false, error: cuota.message };
 
+    const refs = input.referencias?.slice(0, 3) ?? [];
     let scene = (input.scene ?? "").trim();
-    if (!scene && text) {
+    // Con fotos subidas la escena NO se inventa desde el texto de la nota (eso hacía que la imagen ignorara las fotos): el modelo las mira y propone
+    // cómo combinarlas, y esa propuesta (más lo que escribió la persona) guía la imagen.
+    let plan = "";
+    if (refs.length && text) {
+      try {
+        const r = await generateText({
+          model: text,
+          system:
+            "Eres editor fotográfico de un medio periodístico colombiano. Recibes entre 1 y 3 fotos reales y el tema de una nota. Describe en 2-4 frases cómo combinarlas en UNA sola imagen horizontal creíble: qué sujetos o elementos concretos tomar de cada foto (di qué se ve en cada una), dónde ubicarlos y cómo unificar luz y escala. No inventes sujetos que no estén en las fotos. Si la persona dio una instrucción, síguela primero. Responde solo con la propuesta, sin explicaciones.",
+          messages: [
+            {
+              role: "user",
+              content: [
+                { type: "text", text: `TÍTULO: ${title}\n${input.excerpt ? `RESUMEN: ${input.excerpt.slice(0, 400)}\n` : ""}${scene ? `INSTRUCCIÓN DE LA PERSONA: ${scene}\n` : ""}Fotos adjuntas en orden (foto 1 a foto ${refs.length}).` },
+                ...refs.map((bytes) => ({ type: "image" as const, image: bytes })),
+              ],
+            },
+          ],
+        });
+        await registrarUsoIA(userId, r.usage);
+        plan = r.text.trim().slice(0, 900);
+      } catch (e) {
+        console.warn("generarPortadas: no se pudo planear la mezcla de fotos:", e);
+      }
+    }
+    if (!scene && !refs.length && text) {
       const r = await generateText({
         model: text,
         system:
@@ -70,14 +96,13 @@ export async function generarPortadasCore(userId: string, input: EntradaPortada)
       await registrarUsoIA(userId, r.usage);
       scene = r.text.trim().replace(/^["«]|["»]$/g, "");
     }
-    if (!scene) scene = `Escena fotográfica que ilustra fielmente el tema: ${title}`;
+    if (!scene && !refs.length) scene = `Escena fotográfica que ilustra fielmente el tema: ${title}`;
 
-    const textoPrompt = construirPrompt({ titulo: title, resumen: input.excerpt, escena: scene, estilo: input.estilo });
-    const refs = input.referencias?.slice(0, 3) ?? [];
-    // Con fotos de referencia el modelo las recibe junto al texto: debe usarlas como material (sujetos, lugar, objetos) y no copiar una sola.
-    const prompt = refs.length
-      ? { text: `${textoPrompt}\n\nFOTOS ADJUNTAS (${refs.length}): úsalas como material visual real de la nota. Combina lo que se ve en ellas (sujetos, lugar, objetos, ambiente) en UNA sola imagen nueva y coherente que cumpla la escena pedida; no hagas un collage ni copies una sola foto tal cual. Sin texto en la imagen.`, images: refs }
-      : textoPrompt;
+    // Con fotos de referencia el modelo las recibe junto al texto: son la materia prima y se mezclan en una sola imagen (ver `construirPromptMezcla`).
+    const textoPrompt = refs.length
+      ? construirPromptMezcla({ titulo: title, resumen: input.excerpt, cantidad: refs.length, instruccion: scene || undefined, plan: plan || undefined, estilo: input.estilo })
+      : construirPrompt({ titulo: title, resumen: input.excerpt, escena: scene, estilo: input.estilo });
+    const prompt = refs.length ? { text: textoPrompt, images: refs } : textoPrompt;
 
     // Una imagen: primero el modelo preferido (si se pidió uno) en 2K; si falla, el elegido en Configuración y, como último recurso, el de 1K.
     let costoUnitario = COSTO_IMAGEN_USD;
@@ -122,7 +147,8 @@ export async function generarPortadasCore(userId: string, input: EntradaPortada)
       if (!up.ok) return { ok: false, error: up.error };
       imagenes.push({ url: up.url });
     }
-    return { ok: true, imagenes, alt: altDeEscena(scene), credito: creditoImagenIA(conPro), scene, prompt: textoPrompt };
+    const escenaFinal = scene || plan || `Composición a partir de las fotos de la nota: ${title}`;
+    return { ok: true, imagenes, alt: altDeEscena(escenaFinal), credito: creditoImagenIA(conPro), scene: escenaFinal, prompt: textoPrompt };
   } catch (err) {
     console.error("generarPortadas:", err);
     const detalle = err && typeof err === "object" && "message" in err ? String((err as Error).message) : "";

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { construirPrompt, ESTILO_POR_DEFECTO, estiloValido } from "./prompt-escena";
+import { construirPrompt, construirPromptMezcla, ESTILO_POR_DEFECTO, estiloValido } from "./prompt-escena";
 
 const base = { titulo: "Arranca el ciclo de vacunación", resumen: "Más de 606.000 predios en todo el país", escena: "Un vacunador revisa el ganado en un corral al amanecer" };
 
@@ -34,4 +34,16 @@ test("un estilo que llega del navegador se sanea: lo desconocido vuelve al valor
   assert.equal(e.luz, ESTILO_POR_DEFECTO.luz);
   assert.equal(e.notas, "ok");
   assert.deepEqual(estiloValido(undefined), ESTILO_POR_DEFECTO);
+});
+
+test("el prompt de mezcla usa las fotos como materia prima: las funde, no hace collage y no prohíbe sus personas", () => {
+  const p = construirPromptMezcla({ titulo: "Arranca el ciclo de vacunación", cantidad: 3, instruccion: "El vacunador en primer plano y el hato al fondo", plan: "Foto 1: vacunador; foto 2: corral." });
+  assert.match(p, /las 3 fotos adjuntas/);
+  assert.match(p, /CADA una de las 3 fotos/);
+  assert.match(p, /collage/i);
+  assert.match(p, /INSTRUCCIÓN DE LA REDACCIÓN/);
+  assert.match(p, /PROPUESTA DE COMPOSICIÓN/);
+  assert.doesNotMatch(p, /Sin personas reales identificables/, "las fotos pueden traer personas reales");
+  assert.doesNotMatch(p, /no agregues/i);
+  assert.match(construirPromptMezcla({ titulo: "Una nota", cantidad: 1 }), /la foto adjunta/);
 });
