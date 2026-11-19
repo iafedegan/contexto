@@ -3,6 +3,7 @@ import { LEGACY_SYSTEM_REDIRECTS, resolveLegacyTaxonomy } from "@/lib/redirects"
 import { isBlockedBot } from "@/lib/bots";
 import { anfitrionIndexable } from "@/lib/indexacion";
 import { siteUrl } from "@/lib/utils";
+import { INACTIVIDAD_SEG, revisarSesion } from "@/lib/sesion-inactividad";
 
 /**
  * Proxy de borde (en Next.js 16 el antiguo «middleware» se llama `proxy.ts`).
@@ -65,6 +66,8 @@ export async function proxy(req: NextRequest) {
   // Todas las respuestas llevan las cabeceras de seguridad y, fuera del dominio oficial, la de «no indexar».
   const host = req.headers.get("host");
   const conCabeceras = (res: NextResponse, ruta?: string) => applyHeaders(res, ruta, host);
+  // Estado de la sesión del panel (inactividad), si la petición es del panel y trae sesión.
+  let revision: Awaited<ReturnType<typeof revisarSesion>> | undefined;
 
   // --- 0. Anti-scraping -------------------------------------------------
   // Los feeds RSS quedan fuera: los lectores RSS usan clientes genéricos.
@@ -131,6 +134,18 @@ export async function proxy(req: NextRequest) {
       url.searchParams.set("next", pathname);
       return conCabeceras(NextResponse.redirect(url), pathname);
     }
+    // 4 horas sin usar el panel cierran la sesión; mientras se usa, se renueva (ver src/lib/sesion-inactividad.ts).
+    if (hasSession) {
+      revision = await revisarSesion(req);
+      if (revision.estado === "vencida" && pathname !== "/panel/login" && req.method === "GET") {
+        const url = new URL("/panel/login", req.url);
+        url.searchParams.set("motivo", "inactividad");
+        url.searchParams.set("next", pathname);
+        const salida = NextResponse.redirect(url);
+        salida.cookies.delete(revision.cookie);
+        return conCabeceras(salida, pathname);
+      }
+    }
   }
 
   // La ruta debe viajar en la PETICIÓN (no solo en la respuesta): es lo que
@@ -139,6 +154,16 @@ export async function proxy(req: NextRequest) {
   const requestHeaders = new Headers(req.headers);
   requestHeaders.set("x-pathname", pathname);
   const res = conCabeceras(NextResponse.next({ request: { headers: requestHeaders } }), pathname);
+  if (revision?.estado === "vencida") res.cookies.delete(revision.cookie);
+  if (revision?.estado === "vigente" && revision.renovada) {
+    res.cookies.set(revision.renovada.nombre, revision.renovada.valor, {
+      httpOnly: true,
+      sameSite: "lax",
+      path: "/",
+      secure: revision.renovada.nombre.startsWith("__Secure-"),
+      maxAge: INACTIVIDAD_SEG,
+    });
+  }
   // La portada no cambia según quien la mira (en producción no lee cookies): la red de Vercel la guarda un minuto y sirve la copia
   // mientras la renueva (hasta diez minutos), así la primera respuesta no espera al servidor ni a la base de datos. El navegador sigue
   // sin guardarla (`Cache-Control` intacto): solo cambia lo que hace la red. Con búsqueda en la dirección (?…) no se guarda.

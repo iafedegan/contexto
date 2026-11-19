@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { and, eq, sql } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { generarClaveTemporal } from "@/lib/clave-temporal";
+import { fuerzaClave, NIVEL_MINIMO } from "@/lib/fuerza-clave";
 import { enviarClaveTemporal } from "@/lib/correo-clave-temporal";
 import { db } from "@/db";
 import { siteSettings, userPermissionOverrides, users, type UserRole } from "@/db/schema";
@@ -284,6 +285,9 @@ export async function actualizarMiPerfil(_prev: MiPerfilState, formData: FormDat
   if (passwordNueva) {
     if (passwordNueva.length < 10) {
       return { ok: false, message: "La contraseña nueva debe tener al menos 10 caracteres." };
+    }
+    if (fuerzaClave(passwordNueva, [name, email, yo.name, yo.email]).nivel < NIVEL_MINIMO) {
+      return { ok: false, message: "La contraseña nueva es muy fácil de adivinar. Hazla más larga, evita palabras conocidas o usa «Generar una segura»." };
     }
     if (!yo.passwordHash || !(await bcrypt.compare(passwordActual, yo.passwordHash))) {
       return { ok: false, message: "La contraseña actual no es correcta." };

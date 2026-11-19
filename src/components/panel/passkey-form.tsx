@@ -64,8 +64,8 @@ export function PasskeyForm({ passkeys }: { passkeys: Passkey[] }) {
         <Fingerprint size={15} className="text-[var(--accent-2)]" /> Passkeys
       </p>
       <p className="mt-1.5 text-xs leading-relaxed text-[var(--fg-muted)]">
-        Entra con la huella, Face ID o PIN del dispositivo en vez de escribir el código del segundo
-        factor. Puedes tener varias (celular, laptop…).
+        Entra con la huella, Face ID o PIN del dispositivo, sin escribir la contraseña ni esperar el código del
+        correo. Puedes tener varias (celular, laptop…).
       </p>
 
       {passkeys.length > 0 && (

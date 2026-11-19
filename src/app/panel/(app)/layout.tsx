@@ -196,9 +196,9 @@ export default async function PanelLayout({ children }: { children: React.ReactN
             <p className="mb-6 flex items-start gap-2 rounded-[var(--radius)] border border-[var(--accent)]/40 bg-[var(--surface-2)] p-4 text-sm leading-relaxed">
               <ShieldAlert size={16} className="mt-0.5 shrink-0 text-[var(--accent)]" />
               <span>
-                Entraste con una contraseña temporal. <strong>Cámbiala ahora</strong>: en la pestaña <strong>«Mis datos»</strong>, recuadro «Cambiar contraseña»: escribe la contraseña
+                Entraste con una contraseña temporal. <strong>Cámbiala ahora</strong>: en la pestaña <strong>«Seguridad de mi cuenta»</strong>, bloque «Contraseña»: escribe la contraseña
                 actual y una nueva de al menos 10 caracteres. Mientras no la cambies no podrás usar el resto del panel.{" "}
-                <a href={`${RUTA_SEGURIDAD}#usuarios`} className="lx-link font-semibold">Ir a cambiar mi contraseña →</a>
+                <a href={`${RUTA_SEGURIDAD}#seguridad`} className="lx-link font-semibold">Ir a cambiar mi contraseña →</a>
               </span>
             </p>
           )}
@@ -219,7 +219,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
               </span>
             </p>
           )}
-          {bloqueado ? <IrASeguridad href={debeCambiarClave ? `${RUTA_SEGURIDAD}#usuarios` : `${RUTA_SEGURIDAD}#seguridad`} mensaje={debeCambiarClave ? "Llevándote a Configuración para que cambies tu contraseña temporal…" : undefined} /> : children}
+          {bloqueado ? <IrASeguridad href={`${RUTA_SEGURIDAD}#seguridad`} mensaje={debeCambiarClave ? "Llevándote a Configuración para que cambies tu contraseña temporal…" : undefined} /> : children}
           {!restringido && !bloqueado && <AvisoTareas pendientes={misTareas.total} nuevas={misTareas.nuevas} />}
         </div>
       </main>

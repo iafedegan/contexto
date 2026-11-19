@@ -10,8 +10,10 @@ import { passkeys, users } from "@/db/schema";
 import { DominioNoPermitido, guardarChallenge, leerYBorrarChallenge, rpInfo, firmarTokenPasskey } from "@/lib/passkey";
 import { clientIp, hit } from "@/lib/rate-limit";
 import { verifyHuman } from "@/lib/turnstile";
-import { emitirClaveOlvidada, VIGENCIA_CLAVE_OLVIDADA_MIN } from "@/lib/clave-olvidada";
-import { enviarClaveTemporal } from "@/lib/correo-clave-temporal";
+import bcrypt from "bcryptjs";
+import { claveOlvidadaValida, emitirClaveOlvidada, VIGENCIA_CLAVE_OLVIDADA_MIN } from "@/lib/clave-olvidada";
+import { enviarClaveTemporal, enviarCodigoAcceso } from "@/lib/correo-clave-temporal";
+import { codigoActivo, crearCodigoAcceso, hayCodigoVigente, VIGENCIA_CODIGO_MIN } from "@/lib/codigo-acceso";
 
 /** Intentos de passkey por IP y ventana: más holgados que los de contraseña porque cada uno exige un gesto del dispositivo. */
 const INTENTOS_POR_IP = 20;
@@ -151,4 +153,70 @@ export async function pedirClaveOlvidada(input: { email: string; captcha?: strin
     ok: true,
     message: `Si ese correo tiene una cuenta activa, en unos minutos te llega una contraseña temporal (revisa también el spam). Sirve una vez y vence en ${VIGENCIA_CLAVE_OLVIDADA_MIN} minutos; tu contraseña de siempre sigue funcionando.`,
   };
+}
+
+// Resultado del primer paso del login: pasar al código (con el correo enmascarado), entrar directo (código apagado) o un mensaje.
+export type InicioLoginState =
+  | { ok: true; paso: "codigo"; correo: string; minutos: number }
+  | { ok: true; paso: "directo" }
+  | { ok: false; message: string };
+
+const CREDENCIALES_MAL = "Correo o contraseña incorrectos. Tras 5 intentos fallidos la cuenta se bloquea 15 minutos.";
+
+// «ed•••@gmail.com»: se ve a qué correo llegó sin mostrarlo entero en pantalla.
+const enmascarar = (email: string) => {
+  const [u, d] = email.split("@");
+  return `${u.slice(0, 2)}•••@${d ?? ""}`;
+};
+
+/** La cuenta si el correo y la contraseña (la de siempre o una temporal de «Olvidé mi contraseña») son correctos. */
+async function cuentaConClave(email: string, password: string) {
+  const [u] = await db.select({ id: users.id, name: users.name, email: users.email, active: users.active, passwordHash: users.passwordHash }).from(users).where(eq(users.email, email)).limit(1);
+  if (!u?.active || !u.passwordHash) return null;
+  const ok = (await bcrypt.compare(password, u.passwordHash)) || (await claveOlvidadaValida(u.id, password));
+  return ok ? u : null;
+}
+
+/** Genera el código, lo envía y devuelve el paso siguiente. */
+async function mandarCodigo(u: { id: string; name: string; email: string }): Promise<InicioLoginState> {
+  if (!(await hit(`codigo-acceso:envio:${u.id}`, 5, 15 * 60)).allowed) return { ok: false, message: "Ya te enviamos varios códigos. Revisa tu correo (también el spam) o espera 15 minutos." };
+  const codigo = await crearCodigoAcceso(u.id);
+  const envio = await enviarCodigoAcceso({ nombre: u.name, email: u.email, codigo, minutos: VIGENCIA_CODIGO_MIN });
+  if (!envio.ok) {
+    if (process.env.NODE_ENV === "development") console.info(`[codigo-acceso] (desarrollo, sin correo) código de ${u.email}: ${codigo}`);
+    else {
+      console.error(`[codigo-acceso] el correo no salió: ${envio.error}`);
+      return { ok: false, message: "No pudimos enviarte el código al correo. Inténtalo en un momento, entra con passkey o avisa a un administrador." };
+    }
+  }
+  return { ok: true, paso: "codigo", correo: enmascarar(u.email), minutos: VIGENCIA_CODIGO_MIN };
+}
+
+/**
+ * Primer paso del login con contraseña: comprueba correo, contraseña y verificación humana (con los mismos límites que antes) y, si
+ * están bien, envía el código de 4 dígitos al correo de la cuenta. La sesión solo se abre en el segundo paso, con el código
+ * (`authorize` en src/lib/auth.ts). Con el código apagado (`LOGIN_SIN_CODIGO=1`) se entra directo, como antes.
+ */
+export async function iniciarLogin(input: { email: string; password: string; captcha?: string }): Promise<InicioLoginState> {
+  if (!codigoActivo()) return { ok: true, paso: "directo" };
+  const email = String(input?.email ?? "").toLowerCase().trim().slice(0, 200);
+  const password = String(input?.password ?? "");
+  if (!email || !password) return { ok: false, message: "Escribe tu correo y tu contraseña." };
+  const ip = clientIp(await headers());
+  const [porIp, porCuenta] = await Promise.all([hit(`login:ip:${ip}`, 20, 15 * 60), hit(`login:email:${email}`, 5, 15 * 60)]);
+  if (!porIp.allowed || !porCuenta.allowed) return { ok: false, message: "Demasiados intentos. Espera 15 minutos y vuelve a probar." };
+  if (!(await verifyHuman(String(input?.captcha ?? ""), ip))) return { ok: false, message: "No se pudo verificar que eres una persona. Vuelve a intentarlo." };
+  const u = await cuentaConClave(email, password);
+  if (!u) return { ok: false, message: CREDENCIALES_MAL };
+  return mandarCodigo(u);
+}
+
+/** «Reenviar el código»: solo mientras siga vivo el anterior (es decir, quien lo pide acaba de pasar la contraseña); si no, a empezar. */
+export async function reenviarCodigo(input: { email: string; password: string }): Promise<InicioLoginState> {
+  const email = String(input?.email ?? "").toLowerCase().trim().slice(0, 200);
+  const ip = clientIp(await headers());
+  if (!(await hit(`login:ip:${ip}`, 20, 15 * 60)).allowed) return { ok: false, message: "Demasiados intentos. Espera 15 minutos y vuelve a probar." };
+  const u = await cuentaConClave(email, String(input?.password ?? ""));
+  if (!u || !(await hayCodigoVigente(u.id))) return { ok: false, message: "El código venció. Vuelve a escribir tu contraseña." };
+  return mandarCodigo(u);
 }

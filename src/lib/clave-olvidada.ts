@@ -54,6 +54,16 @@ export async function usarClaveOlvidada(userId: string, password: string): Promi
   return false;
 }
 
+/** ¿La contraseña escrita es una temporal vigente de la cuenta? No la consume (primer paso del login, antes del código por correo). */
+export async function claveOlvidadaValida(userId: string, password: string): Promise<boolean> {
+  const vivas = await db
+    .select({ token: verificationTokens.token })
+    .from(verificationTokens)
+    .where(and(eq(verificationTokens.identifier, id(userId)), gt(verificationTokens.expires, sql`now()`)));
+  for (const v of vivas) if (await bcrypt.compare(password, v.token)) return true;
+  return false;
+}
+
 /** Borra las temporales vencidas (las usadas ya se borran al usarlas). */
 export async function purgarClavesOlvidadas(): Promise<void> {
   await db.delete(verificationTokens).where(and(sql`${verificationTokens.identifier} like 'clave-temporal:%'`, sql`${verificationTokens.expires} < now()`));

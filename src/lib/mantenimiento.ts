@@ -1,6 +1,7 @@
 import "server-only";
 import { purgarLimitesVencidos } from "@/lib/rate-limit";
 import { purgarClavesOlvidadas } from "@/lib/clave-olvidada";
+import { purgarCodigosAcceso } from "@/lib/codigo-acceso";
 import { aplicarRetencion, type ResultadoRetencion } from "@/lib/newsletter/retencion";
 import { limpiarMediaHuerfana, type ResultadoLimpieza } from "@/lib/media-limpieza";
 import { purgarLecturas } from "@/lib/lectores-registro";
@@ -39,6 +40,7 @@ export async function purgarVencidos(): Promise<ResultadoMantenimiento> {
   const lecturasTarea: Promise<number | "off"> = cfg === "off" ? Promise.resolve("off" as const) : purgarLecturas(Number.isFinite(diasLecturas) && diasLecturas >= 30 ? Math.floor(diasLecturas) : 400);
   // Contraseñas temporales de «Olvidé mi contraseña» ya vencidas (las usadas se borran al usarlas).
   await purgarClavesOlvidadas().catch(() => {});
+  await purgarCodigosAcceso().catch(() => {});
   const [limitesBorrados, boletin, medios, lecturas, vinculos, sesionesSuperApp] = await Promise.all([
     purgarLimitesVencidos(),
     aislar("la retención de datos del boletín", aplicarRetencion()),

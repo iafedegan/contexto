@@ -12,6 +12,8 @@ import { verifyHuman } from "@/lib/turnstile";
 import { dispositivoDe, enmascararCorreo, registrarAcceso } from "@/lib/login-log";
 import { consumirTokenPasskey } from "@/lib/passkey";
 import { usarClaveOlvidada } from "@/lib/clave-olvidada";
+import { codigoActivo, hayCodigoVigente, usarCodigoAcceso } from "@/lib/codigo-acceso";
+import { INACTIVIDAD_SEG } from "@/lib/sesion-inactividad";
 import { tienePermiso } from "@/lib/permisos-server";
 import { RANGO, type PermisoId } from "@/lib/permisos";
 
@@ -69,14 +71,16 @@ export const { handlers, signIn, signOut, auth: authSinCache } = NextAuth({
       options: { sameSite: "lax", path: "/", secure: useSecureCookies },
     },
   },
-  session: { strategy: "jwt", maxAge: 60 * 60 * 8 },
+  // 4 horas desde el último uso: el proxy renueva el vencimiento mientras se usa el panel (ver src/lib/sesion-inactividad.ts).
+  session: { strategy: "jwt", maxAge: INACTIVIDAD_SEG },
   pages: { signIn: "/panel/login" },
   providers: [
     Credentials({
       credentials: {
         email: {},
         password: {},
-        totp: {}, // código de 6 dígitos del segundo factor
+        totp: {}, // (sin uso) código de 6 dígitos del antiguo segundo factor
+        codigo: {}, // código de 4 dígitos que llega al correo (segundo paso)
         captcha: {}, // token de Cloudflare Turnstile (verificación humana)
         passkeyToken: {}, // puente firmado desde confirmarLoginPasskey (ver src/lib/passkey.ts)
       },
@@ -119,14 +123,17 @@ export const { handlers, signIn, signOut, auth: authSinCache } = NextAuth({
         // cada 15 minutos. Se cuentan ANTES de comprobar la clave, así que
         // tampoco sirven para adivinar qué correos existen.
         const ip = request?.headers ? clientIp(request.headers) : "0.0.0.0";
+        // Con el código por correo, la contraseña y la verificación humana ya se comprobaron en el primer paso (`iniciarLogin`, con sus
+        // propios límites); aquí se cuenta aparte para que el segundo paso no gaste los intentos del primero.
+        const conCodigo = codigoActivo();
         const [porIp, porCuenta] = await Promise.all([
           hit(`login:ip:${ip}`, 20, 15 * 60),
-          hit(`login:email:${email}`, 5, 15 * 60),
+          hit(conCodigo ? `login:codigo:${email}` : `login:email:${email}`, conCodigo ? 10 : 5, 15 * 60),
         ]);
         if (!porIp.allowed || !porCuenta.allowed) {
           return rechazar(`demasiados intentos (ip ${ip}); bloqueado ${Math.max(porIp.retryAfter, porCuenta.retryAfter)} s`);
         }
-        if (!(await verifyHuman(String(creds?.captcha ?? ""), ip))) {
+        if (!conCodigo && !(await verifyHuman(String(creds?.captcha ?? ""), ip))) {
           return rechazar("verificación humana (Turnstile) fallida");
         }
 
@@ -134,6 +141,13 @@ export const { handlers, signIn, signOut, auth: authSinCache } = NextAuth({
         if (!u) return rechazar("no hay ninguna cuenta con ese correo");
         if (!u.active) return rechazar("la cuenta está desactivada");
         if (!u.passwordHash) return rechazar("la cuenta no tiene contraseña definida");
+
+        // Segundo paso: el código de 4 dígitos que llegó al correo. Sin un código vigente ni se mira la contraseña (no hay qué adivinar).
+        if (conCodigo) {
+          if (!(await hayCodigoVigente(u.id))) return rechazar("no hay código de acceso vigente");
+          const r = await usarCodigoAcceso(u.id, String(creds?.codigo ?? ""));
+          if (r !== "ok") return rechazar(r === "agotado" ? "código de acceso agotado (5 intentos)" : "código de acceso incorrecto o vencido");
+        }
 
         // La de siempre o, si la pidió con «Olvidé mi contraseña», la temporal vigente (sirve una vez y le obliga a cambiarla).
         const ok = (await bcrypt.compare(password, u.passwordHash)) || (await usarClaveOlvidada(u.id, password));

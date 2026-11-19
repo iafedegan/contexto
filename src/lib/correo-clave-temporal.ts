@@ -54,3 +54,40 @@ export async function enviarClaveTemporal(input: { nombre: string; email: string
   });
   return r.failed === 0 ? { ok: true } : { ok: false, error: r.error || "el proveedor rechazó el envío" };
 }
+
+/** Envía el código de acceso de 4 dígitos (segundo paso del login) desde el correo del sitio. */
+export async function enviarCodigoAcceso(input: { nombre: string; email: string; codigo: string; minutos: number }): Promise<{ ok: true } | { ok: false; error: string }> {
+  const proveedor = await getProviderStatus();
+  if (!proveedor.configured) return { ok: false, error: "no hay un proveedor de correo configurado (Boletín › Ajustes)" };
+  const [ajustes, identidad] = await Promise.all([getNewsletterSettings(), getSiteIdentity()]);
+  if (!ajustes.fromEmail) return { ok: false, error: "falta el correo remitente (Boletín › Ajustes)" };
+  const sitio = identidad.name;
+  const text = [
+    `Hola, ${input.nombre}:`,
+    "",
+    `Tu código para entrar al panel de ${sitio} es:`,
+    "",
+    `    ${input.codigo}`,
+    "",
+    `Vence en ${input.minutos} minutos y sirve una sola vez.`,
+    "",
+    "Si no intentaste entrar, cambia tu contraseña: alguien la conoce.",
+  ].join("\n");
+  const html = `<!doctype html><html lang="es"><body style="margin:0;background:#f3f5f2;font-family:Arial,Helvetica,sans-serif;color:#10231a">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="padding:32px 16px"><tr><td align="center">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border-radius:12px;padding:32px">
+<tr><td>
+<p style="margin:0 0 4px;font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#4b6355">${esc(sitio)}</p>
+<h1 style="margin:0 0 20px;font-size:22px">Tu código de acceso</h1>
+<p style="margin:0 0 16px;font-size:15px;line-height:1.5">Hola, ${esc(input.nombre)}. Escribe este código en la pantalla de acceso del panel:</p>
+<p style="margin:0 0 20px;padding:18px;border-radius:8px;background:#eef3ef;font-family:'Courier New',monospace;font-size:36px;font-weight:bold;letter-spacing:12px;text-align:center">${esc(input.codigo)}</p>
+<p style="margin:0 0 16px;font-size:15px;line-height:1.5">Vence en ${input.minutos} minutos y sirve una sola vez.</p>
+<p style="margin:0;font-size:13px;line-height:1.5;color:#4b6355">Si no intentaste entrar, cambia tu contraseña: alguien la conoce.</p>
+</td></tr></table></td></tr></table></body></html>`;
+  const r = await sendMany([{ to: input.email, subject: `${input.codigo} es tu código de acceso · ${sitio}`, html, text }], {
+    fromName: ajustes.fromName || sitio,
+    fromEmail: ajustes.fromEmail,
+    replyTo: ajustes.replyTo || undefined,
+  });
+  return r.failed === 0 ? { ok: true } : { ok: false, error: r.error || "el proveedor rechazó el envío" };
+}

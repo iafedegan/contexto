@@ -1,14 +1,14 @@
 "use client";
 
-import { Suspense, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { signIn } from "next-auth/react";
 import { startAuthentication } from "@simplewebauthn/browser";
-import { ArrowLeft, Fingerprint, Loader2, MailCheck } from "lucide-react";
+import { ArrowLeft, Fingerprint, Loader2, MailCheck, ShieldCheck } from "lucide-react";
 import { Turnstile } from "@/components/turnstile";
-import { confirmarLoginPasskey, iniciarLoginPasskey, pedirClaveOlvidada, type OlvidoState } from "./actions";
+import { confirmarLoginPasskey, iniciarLogin, iniciarLoginPasskey, pedirClaveOlvidada, reenviarCodigo, type OlvidoState } from "./actions";
 import { LogoMark } from "@/components/logo-mark";
 
 /** Acceso al panel — plantilla «Platino». */
@@ -22,6 +22,8 @@ function LoginForm() {
   const aviso =
     motivo === "sesion"
       ? "Tu sesión venció o no se pudo leer. Vuelve a entrar."
+      : motivo === "inactividad"
+        ? "Tu sesión se cerró tras 4 horas sin usar el panel. Vuelve a entrar."
       : motivo === "cuenta"
         ? "Tu sesión no corresponde a una cuenta activa del panel. Si crees que es un error, avisa a un administrador."
         : null;
@@ -30,6 +32,47 @@ function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [pendingPasskey, setPendingPasskey] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
+  // Segundo paso: el código de 4 dígitos que llega al correo. Correo y contraseña quedan en memoria (no en el navegador) para completarlo.
+  const [codigoPaso, setCodigoPaso] = useState<{ email: string; password: string; correo: string; minutos: number } | null>(null);
+  const [codigo, setCodigo] = useState("");
+  const [reenvioEn, setReenvioEn] = useState(0);
+  const [aviso2, setAviso2] = useState<string | null>(null);
+  useEffect(() => {
+    if (reenvioEn <= 0) return;
+    const t = setTimeout(() => setReenvioEn((n) => n - 1), 1000);
+    return () => clearTimeout(t);
+  }, [reenvioEn]);
+
+  async function entrarConCodigo(valor: string) {
+    if (!codigoPaso || valor.length !== 4) return;
+    setPending(true);
+    setError(null);
+    const res = await signIn("credentials", { email: codigoPaso.email, password: codigoPaso.password, codigo: valor, redirect: false });
+    setPending(false);
+    if (res?.error) {
+      setError("Código incorrecto o vencido. Revisa el último correo que te llegó; tras 5 intentos hay que pedir otro.");
+      setCodigo("");
+      return;
+    }
+    router.push(next);
+    router.refresh();
+  }
+
+  async function reenviar() {
+    if (!codigoPaso) return;
+    setError(null);
+    setAviso2(null);
+    const r = await reenviarCodigo({ email: codigoPaso.email, password: codigoPaso.password });
+    if (!r.ok) {
+      setError(r.message);
+      if (r.message.startsWith("El código venció")) setCodigoPaso(null);
+      return;
+    }
+    setAviso2("Te enviamos un código nuevo. El anterior ya no sirve.");
+    setReenvioEn(60);
+    setCodigo("");
+  }
+
   // «Olvidé mi contraseña»: la misma tarjeta cambia a pedir la temporal por correo.
   const [olvido, setOlvido] = useState(false);
   const [correoOlvido, setCorreoOlvido] = useState("");
@@ -96,13 +139,25 @@ function LoginForm() {
     const fd = new FormData(e.currentTarget);
     // Se recortan los espacios: pegar credenciales suele arrastrar un espacio
     // final y el fallo resultante es indistinguible de una clave equivocada.
-    const res = await signIn("credentials", {
-      email: String(fd.get("email") ?? "").trim(),
-      password: String(fd.get("password") ?? "").trim(),
-      totp: String(fd.get("totp") ?? "").trim(),
-      captcha: String(fd.get("cf-turnstile-response") ?? ""),
-      redirect: false,
-    });
+    const email = String(fd.get("email") ?? "").trim();
+    const password = String(fd.get("password") ?? "").trim();
+    const captcha = String(fd.get("cf-turnstile-response") ?? "");
+    // Primer paso: correo y contraseña. Si están bien, llega un código de 4 dígitos al correo.
+    const inicio = await iniciarLogin({ email, password, captcha }).catch(() => ({ ok: false as const, message: "No se pudo conectar. Vuelve a intentarlo." }));
+    if (!inicio.ok) {
+      setPending(false);
+      setError(inicio.message);
+      (window as unknown as { turnstile?: { reset: () => void } }).turnstile?.reset();
+      return;
+    }
+    if (inicio.paso === "codigo") {
+      setPending(false);
+      setCodigoPaso({ email, password, correo: inicio.correo, minutos: inicio.minutos });
+      setCodigo("");
+      setReenvioEn(60);
+      return;
+    }
+    const res = await signIn("credentials", { email, password, captcha, redirect: false });
     setPending(false);
     if (res?.error) {
       setError(
@@ -126,7 +181,51 @@ function LoginForm() {
         <h1 className="lx-display mt-6 text-2xl font-semibold tracking-tight">Panel editorial</h1>
         <p className="lx-kicker mt-2 text-[var(--fg-muted)]">CONtexto Ganadero Media</p>
 
-        {olvido ? (
+        {codigoPaso ? (
+          <div className="mt-8 flex flex-col gap-4">
+            <div>
+              <h2 className="flex items-center gap-2 text-lg font-semibold"><ShieldCheck size={18} aria-hidden className="text-[var(--accent-2)]" /> Revisa tu correo</h2>
+              <p className="mt-1 text-sm leading-relaxed text-[var(--fg-muted)]">
+                Enviamos un código de 4 dígitos a <strong className="text-[var(--fg)]">{codigoPaso.correo}</strong>. Vence en {codigoPaso.minutos} minutos.
+              </p>
+            </div>
+            <form onSubmit={(e) => { e.preventDefault(); void entrarConCodigo(codigo); }} className="flex flex-col gap-4">
+              <label className="lx-kicker flex flex-col gap-2 text-[var(--fg-muted)]">
+                Código
+                <input
+                  value={codigo}
+                  onChange={(e) => {
+                    const v = e.target.value.replace(/\D/g, "").slice(0, 4);
+                    setCodigo(v);
+                    if (v.length === 4) void entrarConCodigo(v);
+                  }}
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  pattern="[0-9]{4}"
+                  maxLength={4}
+                  required
+                  autoFocus
+                  aria-describedby="codigo-ayuda"
+                  className="lx-input text-center font-mono text-3xl tracking-[0.6em]"
+                />
+              </label>
+              <p id="codigo-ayuda" className="-mt-2 text-xs text-[var(--fg-muted)]">Si no lo ves, revisa el spam. Se entra solo al escribir el cuarto dígito.</p>
+              {aviso2 && !error && <p role="status" className="text-sm text-[var(--accent-2)]">{aviso2}</p>}
+              {error && <p role="alert" className="text-sm text-[var(--danger)]">{error}</p>}
+              <button type="submit" disabled={pending || codigo.length !== 4} className="lx-btn w-full">
+                {pending ? "Entrando…" : "Entrar"}
+              </button>
+            </form>
+            <div className="flex items-center justify-between gap-3 text-sm">
+              <button type="button" onClick={() => { setCodigoPaso(null); setError(null); setAviso2(null); }} className="inline-flex items-center gap-1.5 font-medium text-[var(--accent-2)] transition hover:text-[var(--accent)]">
+                <ArrowLeft size={15} aria-hidden /> Volver
+              </button>
+              <button type="button" onClick={() => void reenviar()} disabled={reenvioEn > 0} className="font-medium text-[var(--accent-2)] transition hover:text-[var(--accent)] disabled:text-[var(--fg-muted)]">
+                {reenvioEn > 0 ? `Reenviar código (${reenvioEn} s)` : "Reenviar código"}
+              </button>
+            </div>
+          </div>
+        ) : olvido ? (
           <div className="mt-8 flex flex-col gap-4">
             <div>
               <h2 className="text-lg font-semibold">Recuperar la contraseña</h2>

@@ -107,7 +107,8 @@ export default async function ConfiguracionPage() {
         tabs={[
           // La identidad del sitio es solo de administradores: a las demás personas ni se les muestra.
           ...(isAdmin ? [{ id: "sitio", label: "Identidad del sitio", icon: <Globe size={13} /> }] : []),
-          { id: "usuarios", label: isAdmin ? "Personas" : "Mis datos", icon: <Users size={13} /> },
+          // «Personas» es solo de administradores; los datos propios y la contraseña de cada quien están en «Seguridad de mi cuenta».
+          ...(isAdmin ? [{ id: "usuarios", label: "Personas", icon: <Users size={13} /> }] : []),
           { id: "estilo", label: isAdmin ? "Estilos de escritura" : "Mi estilo de escritura", icon: <PenLine size={13} /> },
           { id: "seguridad", label: "Seguridad de mi cuenta", icon: <ShieldCheck size={13} /> },
           ...(isAdmin
@@ -194,14 +195,14 @@ export default async function ConfiguracionPage() {
         {isAdmin ? <EstilosEscritores escritores={await listarEscritores()} miId={session!.user.id} miEstilo={miEstilo} /> : <EstiloEscritura inicial={miEstilo} />}
       </Section>
 
-      {/* ---------------------------------------------------------- Personas */}
+      {/* ---------------------------------------------------------- Personas (solo administradores) */}
+      {isAdmin && (
       <Section
         id="usuarios"
         icon={<Users size={14} />}
         title={isAdmin ? "Personas" : "Mis datos"}
         hint={isAdmin ? `${people.length} cuentas · cuentas, roles y cuota de IA` : "Tu nombre, correo y contraseña"}
       >
-        {!isAdmin && yoMismo && <MiPerfilForm name={yoMismo.name} email={yoMismo.email} debeCambiar={yoMismo.mustChangePassword} />}
 
         {isAdmin && (
           <SubTabs
@@ -211,7 +212,6 @@ export default async function ConfiguracionPage() {
                 label: "Cuentas",
                 contenido: (
                   <>
-                    {yoMismo && <MiPerfilForm name={yoMismo.name} email={yoMismo.email} debeCambiar={yoMismo.mustChangePassword} />}
                     <div className="mb-6">
                       <AddUserForm rolesPropios={rolesPropios.map((r) => ({ id: r.id, nombre: r.nombre }))} />
                     </div>
@@ -315,6 +315,7 @@ export default async function ConfiguracionPage() {
           />
         )}
       </Section>
+      )}
 
 
       {/* --------------------------------------------- Seguridad de mi cuenta */}
@@ -322,8 +323,10 @@ export default async function ConfiguracionPage() {
         id="seguridad"
         icon={<ShieldCheck size={14} />}
         title="Seguridad de mi cuenta"
-        hint="Passkeys para entrar sin escribir la contraseña"
+        hint="Tus datos, tu contraseña y tus passkeys"
       >
+        {yoMismo && <MiPerfilForm name={yoMismo.name} email={yoMismo.email} debeCambiar={yoMismo.mustChangePassword} />}
+        <hr className="mb-6 border-[var(--border)]" />
         <PasskeyForm passkeys={misPasskeys} />
       </Section>
 
