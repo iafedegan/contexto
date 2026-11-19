@@ -11,7 +11,7 @@ import { articles, categories } from "@/db/schema";
 import { canPublish, requirePermiso } from "@/lib/auth";
 import { slugify } from "@/lib/utils";
 import { autorDeUsuario, crearFirma, firmaDeNota, type FirmaCreada } from "@/lib/user-authors";
-import { archivarCore, asegurarRutaDeColumna, distintivosCore, enviarARevisionCore, fijarPortadaCore, guardarBorradorCore, programarCore, publicarCore, reindexarNota, revalidarNota, type BorradorInput } from "@/lib/article-ops";
+import { archivarCore, asegurarRutaDeColumna, distintivosCore, enviarARevisionCore, fijarPortadaCore, guardarBorradorCore, programarCore, publicarCore, reindexarNota, requisitosDePublicacion, revalidarNota, type BorradorInput } from "@/lib/article-ops";
 import { tienePermiso } from "@/lib/permisos-server";
 import { avisarSiUltimaHora } from "@/lib/push";
 import { invalidarCache } from "@/lib/data-cache";
@@ -25,6 +25,21 @@ import { piezaParaEscribir, vincularPieza } from "@/app/panel/(app)/pendientes/c
 
 // Variante para las acciones que responden con un mensaje en vez de lanzar.
 const esNotaPropiaSegura = esNotaPropia;
+
+/**
+ * Quién puede publicar ESTA nota: un editor o superior con el permiso «publicar» (cualquier nota) o, para una nota que ya está «En revisión»,
+ * cualquier persona del equipo que pueda editarla, siempre que cumpla los requisitos (imagen de portada y SEO mínimo, que `publicarCore` vuelve
+ * a exigir). Así quien terminó su nota y la envió a revisión no queda esperando a un editor cuando la nota ya está lista.
+ */
+async function quienPublica(articleId: string) {
+  const user = await requirePermiso("articulos");
+  if (canPublish(user.role) && (await tienePermiso(user.id, user.role, "publicar"))) return user;
+  const [n] = await db.select({ status: articles.status }).from(articles).where(eq(articles.id, String(articleId ?? ""))).limit(1);
+  if (n?.status !== "en_revision") throw new Error("Para publicar, la nota debe estar «En revisión» (o ser de un editor).");
+  const r = await requisitosDePublicacion(String(articleId));
+  if (!r.ok) throw new Error(`No se puede publicar todavía: ${r.motivos.join(" y ")}.`);
+  return user;
+}
 
 /**
  * Quién puede publicar: rol de editor o superior Y permiso «publicar». Es el mismo criterio para
@@ -224,7 +239,7 @@ export async function submitForReview(articleId: string) {
 
 // Publica una nota (exige permiso y rol de editor). Todo lo demás —estado, embedding, revalidación y el aviso push de «Última hora» por el evento nota.publicada— lo hace `publicarCore`, la misma máquina de estados que usa Telegram.
 export async function publishArticle(articleId: string) {
-  const user = await requirePublicador();
+  const user = await quienPublica(articleId);
   await exigirNotaPropia(user, articleId);
   await publicarCore(articleId);
   await registrarActividad(articleId, user.id, "publico");

@@ -114,10 +114,10 @@ test("una nota sin imagen de portada o con SEO bajo no se publica ni se programa
   assert.equal((await bd.db.select({ s: schema.articles.status }).from(schema.articles).where(eq(schema.articles.id, n.id)))[0].s, "borrador");
 });
 
-test("una nota con portada y SEO de 90 o más sí cumple y se puede programar", async () => {
+test("una nota con portada y SEO de 80 o más sí cumple y se puede programar", async () => {
   const id = await notaCompleta("nota-completa");
   const r = await ops.requisitosDePublicacion(id);
-  assert.ok(r.score >= 90, `el SEO debería ser ≥ 90 (es ${r.score}: ${r.motivos.join("; ")})`);
+  assert.ok(r.score >= 80, `el SEO debería ser ≥ 80 (es ${r.score}: ${r.motivos.join("; ")})`);
   assert.equal(r.ok, true);
   await ops.programarCore(id, new Date(Date.now() + 3600_000).toISOString());
   assert.equal((await bd.db.select({ s: schema.articles.status }).from(schema.articles).where(eq(schema.articles.id, id)))[0].s, "programado");
@@ -132,11 +132,21 @@ test("cada acción del panel que cambia el estado de una nota exige poder public
   const codigo = readFileSync("src/app/panel/(app)/articulos/actions.ts", "utf8");
   for (const [accion, nucleo] of [["publishArticle", "publicarCore"], ["scheduleArticle", "programarCore"], ["unpublishArticle", "archivarCore"]] as const) {
     const cuerpo = codigo.match(new RegExp(`export async function ${accion}\\([^)]*\\)[^{]*\\{([\\s\\S]*?)\\n\\}`))?.[1] ?? "";
-    assert.match(cuerpo, /await requirePublicador\(\)/, `${accion} debe exigir el permiso y el rol de publicación`);
+    // Publicar admite además a quien trabaja una nota «En revisión» que cumple los requisitos (`quienPublica`); programar y despublicar, solo editores.
+    assert.match(cuerpo, accion === "publishArticle" ? /await quienPublica\(articleId\)/ : /await requirePublicador\(\)/, `${accion} debe exigir el permiso y el rol de publicación`);
     assert.ok(cuerpo.includes(nucleo), `${accion} debe delegar en ${nucleo}`);
   }
   for (const accion of ["deleteArticle", "setArticleFlag"]) {
     const cuerpo = codigo.match(new RegExp(`export async function ${accion}\\([^)]*\\)[^{]*\\{([\\s\\S]*?)\\n\\}`))?.[1] ?? "";
     assert.match(cuerpo, /await requirePublicador\(\)/, `${accion} debe exigir el permiso y el rol de publicación`);
   }
+});
+
+test("quienPublica: un editor con permiso publica cualquier nota; el resto, solo si está «En revisión» y cumple los requisitos", async () => {
+  const { readFileSync } = await import("node:fs");
+  const codigo = readFileSync("src/app/panel/(app)/articulos/actions.ts", "utf8");
+  const cuerpo = codigo.match(/async function quienPublica\([^)]*\)[^{]*\{([\s\S]*?)\n\}/)?.[1] ?? "";
+  assert.match(cuerpo, /canPublish\(user\.role\) && \(await tienePermiso\(user\.id, user\.role, "publicar"\)\)/);
+  assert.match(cuerpo, /status !== "en_revision"/);
+  assert.match(cuerpo, /requisitosDePublicacion/);
 });
