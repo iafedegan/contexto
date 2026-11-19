@@ -1814,6 +1814,24 @@ export function ArticleWizard({
                   </div>
                 )}
               </div>
+              {cover && <div className="mt-4 flex flex-col gap-3 text-sm">
+                    <label className="flex flex-col gap-1">
+                      <span className="lx-kicker text-[var(--fg-muted)]">Texto alternativo</span>
+                      <textarea value={coverAlt} onChange={(e) => setCoverAlt(e.target.value)} rows={2} placeholder="Qué se ve en la foto" className={`${input} resize-none text-sm`} />
+                    </label>
+                    <div className={`flex flex-col gap-2 rounded-[var(--radius)] border p-3 ${faltaCredito ? "border-[#d97706]/60 bg-[#d97706]/6" : "border-[var(--border)] bg-[var(--surface)]"}`}>
+                      <label htmlFor="credito-foto" className="lx-kicker text-[var(--fg-muted)]">Crédito de la foto <span className="text-[#b42318]">*</span></label>
+                      <div className="flex flex-wrap gap-1.5" role="group" aria-label="Origen de la foto">
+                        {ORIGENES_CREDITO.map((o) => (
+                          <button key={o.id} type="button" onClick={() => setCoverCaption(o.texto)} className="rounded-full border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-xs font-medium transition hover:border-[var(--accent)]">{o.etiqueta}</button>
+                        ))}
+                      </div>
+                      <input id="credito-foto" value={coverCaption} onChange={(e) => setCoverCaption(e.target.value.slice(0, 300))} placeholder={FORMATO_CREDITO} aria-invalid={faltaCredito} aria-describedby="credito-foto-ayuda" className={`${input} text-sm`} />
+                      <p id="credito-foto-ayuda" className={`text-xs ${faltaCredito ? "font-medium text-[#92400e]" : "text-[var(--fg-muted)]"}`}>
+                        {creditoFotoValido(coverCaption) ? "Se muestra bajo la foto en la nota." : `Toda foto lleva crédito. Si la subes tú, escríbelo así: «${FORMATO_CREDITO}». Las de IA y las del archivo ya lo traen.`}
+                      </p>
+                    </div>
+              </div>}
               </div>
               <div className="flex min-w-0 flex-col gap-3 text-sm">
                 <div>
@@ -1862,26 +1880,6 @@ export function ArticleWizard({
                     {genImg ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} aria-hidden />} Crear imagen con mis fotos
                   </button>
                 </div>
-                {cover && (
-                  <>
-                    <label className="flex flex-col gap-1">
-                      <span className="lx-kicker text-[var(--fg-muted)]">Texto alternativo</span>
-                      <textarea value={coverAlt} onChange={(e) => setCoverAlt(e.target.value)} rows={2} placeholder="Qué se ve en la foto" className={`${input} resize-none text-sm`} />
-                    </label>
-                    <div className={`flex flex-col gap-2 rounded-[var(--radius)] border p-3 ${faltaCredito ? "border-[#d97706]/60 bg-[#d97706]/6" : "border-[var(--border)] bg-[var(--surface)]"}`}>
-                      <label htmlFor="credito-foto" className="lx-kicker text-[var(--fg-muted)]">Crédito de la foto <span className="text-[#b42318]">*</span></label>
-                      <div className="flex flex-wrap gap-1.5" role="group" aria-label="Origen de la foto">
-                        {ORIGENES_CREDITO.map((o) => (
-                          <button key={o.id} type="button" onClick={() => setCoverCaption(o.texto)} className="rounded-full border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-xs font-medium transition hover:border-[var(--accent)]">{o.etiqueta}</button>
-                        ))}
-                      </div>
-                      <input id="credito-foto" value={coverCaption} onChange={(e) => setCoverCaption(e.target.value.slice(0, 300))} placeholder={FORMATO_CREDITO} aria-invalid={faltaCredito} aria-describedby="credito-foto-ayuda" className={`${input} text-sm`} />
-                      <p id="credito-foto-ayuda" className={`text-xs ${faltaCredito ? "font-medium text-[#92400e]" : "text-[var(--fg-muted)]"}`}>
-                        {creditoFotoValido(coverCaption) ? "Se muestra bajo la foto en la nota." : `Toda foto lleva crédito. Si la subes tú, escríbelo así: «${FORMATO_CREDITO}». Las de IA y las del archivo ya lo traen.`}
-                      </p>
-                    </div>
-                  </>
-                )}
                 <details className="min-w-0">
                   <summary className="lx-link cursor-pointer text-xs font-medium">Pegar la URL de una imagen</summary>
                   <input value={cover} onChange={(e) => setCover(e.target.value)} placeholder="https://…" className={`${input} mt-2 text-sm`} />
