@@ -9,7 +9,7 @@ import { EncabezadoLector, TablaLectores, TablaRegistro } from "@/components/pan
 import { TabsResumen } from "@/components/panel/tabs-resumen";
 import { Card } from "@/components/ui";
 import { BiFiltros } from "@/components/panel/bi-filtros";
-import { EmbudoLectura, GraficaTiempo, ListaBarras, MapaCalorHoras, MapaLectura, SerieDiaria } from "@/components/panel/bi-graficas";
+import { EmbudoLectura, GraficaTiempo, ListaBarras, MapaCalorHoras, MapaLectura, MapaMundo, SerieDiaria } from "@/components/panel/bi-graficas";
 import { BI_COLORES } from "@/lib/graficas";
 import { TablaNotas } from "@/components/panel/bi-notas";
 import { SubscriberMap } from "@/components/panel/subscriber-map";
@@ -184,6 +184,8 @@ async function Audiencia({ f, hoy }: { f: ReturnType<typeof leerFiltros>; hoy: s
             <Panel kicker="Cuándo leen" titulo="Día de la semana y hora"><MapaCalorHoras calor={p.calor} /></Panel>
             <Panel kicker="Cuánto leen" titulo="¿Leen todo?"><EmbudoLectura embudo={p.embudo} /></Panel>
           </div>
+
+          <Panel kicker="Desde dónde" titulo="El mundo"><MapaMundo paises={p.paises} total={i.lecturas} /></Panel>
 
           <div className="grid gap-5 lg:grid-cols-2 sm:gap-6">
             <Panel kicker="Desde dónde" titulo="Departamentos"><MapaLectura regiones={p.regiones} total={i.lecturas} /></Panel>

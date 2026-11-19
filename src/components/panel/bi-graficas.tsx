@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useAplicarFiltro } from "@/components/panel/bi-filtros";
 import { DEPARTAMENTOS, MAPA_ALTO, MAPA_ANCHO } from "@/lib/colombia-mapa";
+import { MUNDO_ALTO, MUNDO_ANCHO, PAISES } from "@/lib/mundo-mapa";
 import { BI_COLORES, compacto, marcasEje, tramos, trazoSuave } from "@/lib/graficas";
 import { DIAS_CORTOS, DIAS_LARGOS, duracion, franja, horaEtiqueta, indiceDia, parte } from "@/lib/lectores-formato";
 import { departamentoDeRegion, nombreDeDepartamento } from "@/lib/lectores-geo";
@@ -287,6 +288,116 @@ export function MapaLectura({ regiones, total }: { regiones: Desglose[]; total: 
         </ol>
         {sinUbicar > 0 && <p className="mt-2 text-[0.7rem] text-[var(--fg-muted)]">{nfCO.format(sinUbicar)} lecturas sin departamento (fuera de Colombia o sin geolocalización).</p>}
       </div>
+    </div>
+  );
+}
+
+// Nombre del país en español a partir del código ISO (el del mapa si lo trae; si no, el del navegador).
+const nombresPais = typeof Intl !== "undefined" && "DisplayNames" in Intl ? new Intl.DisplayNames(["es"], { type: "region" }) : null;
+const NOMBRE_MAPA = new Map(PAISES.map((p) => [p.iso, p.nombre]));
+function nombrePais(iso: string): string {
+  if (NOMBRE_MAPA.has(iso)) return NOMBRE_MAPA.get(iso)!;
+  try {
+    return nombresPais?.of(iso) ?? iso;
+  } catch {
+    return iso;
+  }
+}
+// Bandera a partir del código de dos letras (símbolos regionales de Unicode).
+const bandera = (iso: string) => (/^[A-Z]{2}$/.test(iso) ? String.fromCodePoint(...[...iso].map((c) => 0x1f1e6 + c.charCodeAt(0) - 65)) : "🌐");
+
+/**
+ * «Desde dónde · El mundo»: mapa de calor por país y la lista de países. La escala es logarítmica: Colombia trae casi todas las
+ * lecturas y, con una escala lineal, el resto del mundo quedaría del mismo gris aunque haya lectores en él.
+ */
+export function MapaMundo({ paises, total }: { paises: Desglose[]; total: number }) {
+  const [foco, setFoco] = useState<string | null>(null);
+  const [verTodos, setVerTodos] = useState(false);
+  const lista = paises.filter((p) => /^[A-Z]{2}$/.test(p.clave)).sort((a, b) => b.lecturas - a.lecturas);
+  const sinPais = paises.filter((p) => !/^[A-Z]{2}$/.test(p.clave)).reduce((s, p) => s + p.lecturas, 0);
+  const porPais = new Map(lista.map((p) => [p.clave, p]));
+  const max = Math.max(1, ...lista.map((l) => l.lecturas));
+  const color = (v?: number) => (v ? colorCalor(Math.log1p(v), Math.log1p(max)) : "var(--surface-2)");
+  const activo = foco ? porPais.get(foco) : lista[0];
+  const fuera = lista.filter((p) => p.clave !== "CO");
+  const lecturasFuera = fuera.reduce((s, p) => s + p.lecturas, 0);
+  const visibles = verTodos ? lista : lista.slice(0, 10);
+  if (!lista.length) return <p className="text-sm text-[var(--fg-muted)]">Todavía no hay lecturas con país conocido.</p>;
+  return (
+    <div className="flex flex-col gap-5">
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Cifra titulo="Países" valor={nfCO.format(lista.length)} nota="desde donde leyeron" />
+        <Cifra titulo="Fuera de Colombia" valor={`${parte(lecturasFuera, total).toLocaleString("es-CO", { maximumFractionDigits: 1 })} %`} nota={`${nfCO.format(lecturasFuera)} lecturas en ${nfCO.format(fuera.length)} ${fuera.length === 1 ? "país" : "países"}`} />
+        <Cifra titulo="Después de Colombia" valor={fuera[0] ? `${bandera(fuera[0].clave)} ${nombrePais(fuera[0].clave)}` : "—"} nota={fuera[0] ? `${nfCO.format(fuera[0].lecturas)} lecturas · ${nfCO.format(fuera[0].visitantes)} lectores` : "Aún sin lecturas del exterior"} />
+      </div>
+      <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_20rem]">
+        <div className="min-w-0">
+          <svg viewBox={`0 0 ${MUNDO_ANCHO} ${MUNDO_ALTO}`} className="block h-auto w-full" role="img" aria-label="Mapa del mundo con las lecturas por país" onPointerLeave={() => setFoco(null)}>
+            {PAISES.map((p) => {
+              const v = porPais.get(p.iso);
+              const es = activo?.clave === p.iso;
+              return (
+                <path
+                  key={p.iso}
+                  d={p.d}
+                  fill={color(v?.lecturas)}
+                  stroke={es ? "var(--fg)" : "var(--bg)"}
+                  strokeWidth={es ? 0.9 : 0.35}
+                  strokeLinejoin="round"
+                  className={v ? "cursor-pointer transition-[fill] duration-500" : undefined}
+                  onPointerEnter={() => v && setFoco(p.iso)}
+                  onClick={() => v && setFoco(p.iso)}
+                >
+                  <title>{v ? `${p.nombre}: ${nfCO.format(v.lecturas)} lecturas` : p.nombre}</title>
+                </path>
+              );
+            })}
+          </svg>
+          <div className="mt-2 flex items-center gap-2 text-[0.7rem] text-[var(--fg-muted)]">
+            <span>Menos</span>
+            <span aria-hidden className="h-1.5 w-28 rounded-full" style={{ background: `linear-gradient(90deg, ${color(1)}, ${color(max)})` }} />
+            <span>Más</span>
+          </div>
+        </div>
+        <div className="min-w-0">
+        {activo && (
+          <p className="mb-3 rounded-[var(--radius)] border border-[var(--border-strong)] bg-[var(--surface)] p-3 text-sm" aria-live="polite">
+            <strong className="lx-display block text-lg">{bandera(activo.clave)} {nombrePais(activo.clave)}</strong>
+            <span className="tabular-nums">{nfCO.format(activo.lecturas)} lecturas · {nfCO.format(activo.visitantes)} lectores · {parte(activo.lecturas, total).toLocaleString("es-CO", { maximumFractionDigits: 1 })} %</span>
+          </p>
+        )}
+        <ol className={`flex flex-col gap-1 ${verTodos ? "max-h-[26rem] overflow-y-auto pr-1" : ""}`}>
+          {visibles.map((l, i) => (
+            <li key={l.clave}>
+              <button type="button" onClick={() => setFoco(l.clave)} onPointerEnter={() => setFoco(l.clave)} className={`grid min-h-9 w-full grid-cols-[1.25rem_1.4rem_minmax(0,1fr)_auto] items-center gap-2 rounded-[var(--radius)] px-2 text-left text-sm ${activo?.clave === l.clave ? "bg-[var(--surface-2)]" : ""}`}>
+                <span className="text-xs font-bold tabular-nums text-[var(--fg-muted)]">{i + 1}</span>
+                <span aria-hidden>{bandera(l.clave)}</span>
+                <span className="relative min-w-0"><span className="relative z-10 block truncate py-0.5 font-medium">{nombrePais(l.clave)}</span><span aria-hidden className="absolute inset-y-0.5 left-0 rounded-sm bg-[var(--accent)]/15" style={{ width: `${(Math.log1p(l.lecturas) / Math.log1p(max)) * 100}%` }} /></span>
+                <span className="text-xs font-semibold tabular-nums">{nfCO.format(l.lecturas)}</span>
+              </button>
+            </li>
+          ))}
+          {lista.length > 10 && (
+            <li>
+              <button type="button" onClick={() => setVerTodos((v) => !v)} className="mt-1 px-2 text-xs font-semibold text-[var(--accent)] hover:underline">
+                {verTodos ? "Ver solo los 10 primeros" : `Ver los ${nfCO.format(lista.length)} países`}
+              </button>
+            </li>
+          )}
+          {sinPais > 0 && <li className="mt-2 px-2 text-[0.7rem] text-[var(--fg-muted)]">{nfCO.format(sinPais)} lecturas sin país (sin geolocalización).</li>}
+        </ol>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Cifra({ titulo, valor, nota }: { titulo: string; valor: string; nota: string }) {
+  return (
+    <div className="rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] p-3">
+      <p className="text-xs text-[var(--fg-muted)]">{titulo}</p>
+      <p className="lx-display mt-0.5 truncate text-xl font-semibold tabular-nums">{valor}</p>
+      <p className="truncate text-xs text-[var(--fg-muted)]">{nota}</p>
     </div>
   );
 }

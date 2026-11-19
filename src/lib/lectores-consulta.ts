@@ -51,6 +51,8 @@ export type Panorama = {
   fuentes: Desglose[];
   ciudades: Desglose[];
   regiones: Desglose[];
+  /** Países (código ISO 3166-1 alfa-2 de la geolocalización de Vercel), para el mapa del mundo. */
+  paises: Desglose[];
   categorias: Desglose[];
   notas: NotaTop[];
   opciones: Opciones;
@@ -68,7 +70,7 @@ async function indicadores(f: Filtros, rango = { desde: f.desde, hasta: f.hasta 
   return { lecturas: 0, visitantes: 0, segundosMedios: 0, segundosMediana: 0, scrollMedio: 0, completas: 0, recurrentes: 0, rebotes: 0, ...r };
 }
 
-async function desglose(columna: "device" | "browser" | "os" | "source" | "city" | "region" | "categoria", f: Filtros, limite: number): Promise<Desglose[]> {
+async function desglose(columna: "device" | "browser" | "os" | "source" | "city" | "region" | "country" | "categoria", f: Filtros, limite: number): Promise<Desglose[]> {
   const col = columna === "categoria" ? sql`c.name` : sql.raw(`s.${columna}`);
   return filas<Desglose>(
     await db.execute(sql`select coalesce(${col}, 'Sin dato') clave, count(*)::int lecturas, count(distinct s.visitor_id)::int visitantes,
@@ -82,7 +84,7 @@ export async function panorama(f: Filtros): Promise<Panorama> {
   const [existe] = filas<{ n: number }>(await db.execute(sql`select count(*)::int n from (select 1 from reader_sessions limit 1) t`));
   const [
     actual, previo, [totales], serie, calor, [alcance], tiempo, frecuencia,
-    dispositivos, navegadores, sistemas, fuentes, ciudades, regiones, categorias, notas, optCiudades, optFuentes, optCategorias,
+    dispositivos, navegadores, sistemas, fuentes, ciudades, regiones, paises, categorias, notas, optCiudades, optFuentes, optCategorias,
   ] = await Promise.all([
     indicadores(f),
     indicadores(f, ant),
@@ -104,6 +106,7 @@ export async function panorama(f: Filtros): Promise<Panorama> {
     desglose("source", f, 12),
     desglose("city", f, 12),
     desglose("region", f, 40),
+    desglose("country", f, 250),
     desglose("categoria", f, 12),
     db.execute(sql`select a.slug, a.title titulo, c.name categoria, count(*)::int lecturas, count(distinct s.visitor_id)::int visitantes,
       coalesce(avg(s.max_scroll), 0)::float scroll, coalesce(avg(s.seconds), 0)::float segundos,
@@ -131,7 +134,7 @@ export async function panorama(f: Filtros): Promise<Panorama> {
     serie: completa,
     calor,
     embudo: { alcance: alcance ?? { lecturas: 0, a25: 0, a50: 0, a75: 0, completas: 0 }, tiempo: llena(["0", "1", "2", "3", "4"], tiempo), frecuencia: llena(["1", "2", "3", "4"], frecuencia) },
-    dispositivos, navegadores, sistemas, fuentes, ciudades, regiones, categorias, notas,
+    dispositivos, navegadores, sistemas, fuentes, ciudades, regiones, paises, categorias, notas,
     opciones: { ciudades: optCiudades, fuentes: optFuentes, categorias: optCategorias },
   };
 }
