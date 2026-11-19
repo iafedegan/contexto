@@ -424,6 +424,49 @@ export function ArticleWizard({
   const puedeSalir = !faltaPortada && !faltaCredito && !faltaSeo;
   // Autoguardado: a cada cambio (con una pausa) y al cambiar de paso se guarda el borrador, sin salir del asistente.
   const [savedId, setSavedId] = useState(initial?.id ?? "");
+  // Lo que se cargó en el primer paso (el tema, el audio y los documentos ya leídos, los enlaces, las indicaciones) se guarda en este navegador
+  // mientras la nota exista y no esté publicada: al salir y volver al asistente sigue ahí. Al publicarla se borra.
+  const claveFuente = savedId ? `cg-fuente-nota:${savedId}` : "";
+  const fuenteRestaurada = useRef(false);
+  useEffect(() => {
+    if (fuenteRestaurada.current || !initial?.id) return;
+    const id = initial.id;
+    // Se lee ya montado (en el servidor no hay almacenamiento) y en un aplazo, no dentro del propio efecto.
+    const t = setTimeout(() => {
+    fuenteRestaurada.current = true;
+    try {
+      const raw = localStorage.getItem(`cg-fuente-nota:${id}`);
+      if (!raw) return;
+      const d = JSON.parse(raw) as Record<string, unknown>;
+      const texto = (v: unknown) => (typeof v === "string" ? v : "");
+      if (!topic && texto(d.topic)) setTopic(texto(d.topic));
+      if (!context && texto(d.context)) setContext(texto(d.context));
+      if (!material.length && Array.isArray(d.material)) setMaterial(d.material as Material[]);
+      if (Array.isArray(d.personas) && d.personas.length && personas.every((x) => !x.nombre && !x.cargo)) setPersonas(d.personas as Participante[]);
+      if (d.esEntrevistaGrabada === true) setEsEntrevistaGrabada(true);
+      if (!urlsTxt && texto(d.urlsTxt)) setUrlsTxt(texto(d.urlsTxt));
+      if (!instrucciones && texto(d.instrucciones)) setInstrucciones(texto(d.instrucciones));
+      if (!sceneTxt && texto(d.sceneTxt)) setSceneTxt(texto(d.sceneTxt));
+      if (!fotosRef.length && Array.isArray(d.fotosRef)) setFotosRef((d.fotosRef as unknown[]).filter((u): u is string => typeof u === "string").slice(0, 3));
+    } catch { /* sin almacenamiento o datos viejos: se empieza en blanco */ }
+    }, 0);
+    return () => clearTimeout(t);
+    // Solo al abrir el asistente.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  useEffect(() => {
+    if (!claveFuente) return;
+    if (status === "publicado") {
+      try { localStorage.removeItem(claveFuente); } catch { /* sin almacenamiento */ }
+      return;
+    }
+    const t = setTimeout(() => {
+      try {
+        localStorage.setItem(claveFuente, JSON.stringify({ topic, context, material, personas, esEntrevistaGrabada, urlsTxt, instrucciones, sceneTxt, fotosRef }));
+      } catch { /* sin espacio o sin almacenamiento: no se guarda */ }
+    }, 600);
+    return () => clearTimeout(t);
+  }, [claveFuente, status, topic, context, material, personas, esEntrevistaGrabada, urlsTxt, instrucciones, sceneTxt, fotosRef]);
   const [autoEstado, setAutoEstado] = useState<"idle" | "guardando" | "guardado" | "error" | "omitido">("idle");
   const [autoHora, setAutoHora] = useState("");
   const savedIdRef = useRef(initial?.id ?? "");
