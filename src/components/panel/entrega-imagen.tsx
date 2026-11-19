@@ -8,7 +8,7 @@ import { subirMedia } from "./subir-media";
 import { SelectorCarpeta, type CarpetaNodo } from "./selector-carpeta";
 import { VistaPreviaPortada } from "./vista-previa-portada";
 import { AMBIENTES, CAMARAS, ESTILO_POR_DEFECTO, LUCES, PLANOS, TRATAMIENTOS, type EstiloEscena } from "@/lib/ai/prompt-escena";
-import { ANCHO_PORTADA, aArchivo, renderizarPortada, type Ajuste } from "./ajustar-imagen";
+import { ANCHO_PORTADA, aArchivo, portadaAuto, renderizarPortada, type Ajuste } from "./ajustar-imagen";
 
 const campo = "w-full rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm outline-none transition focus:border-[var(--accent)] placeholder:text-[var(--fg-muted)]/50";
 
@@ -69,7 +69,9 @@ export function EntregaImagen({ articleId, tituloNota = "", resumen = "" }: { ar
     setError("");
     setSubiendo(true);
     try {
-      const r = await subirMedia(file);
+      // Si no viene en 16:9 y WebP, se recorta al centro y se convierte (el original queda para reencuadrar a mano).
+      const listo = await portadaAuto(file);
+      const r = await subirMedia(listo);
       if (!r.ok) return setError(r.error);
       if (r.kind === "video") return setError("La portada debe ser una imagen.");
       setUrl(r.url);
@@ -77,7 +79,7 @@ export function EntregaImagen({ articleId, tituloNota = "", resumen = "" }: { ar
       setConIA(false);
       setArchivo(file);
       setAjustando(false);
-      setBytes(file.size);
+      setBytes(listo.size);
       setMedidas(null);
       if (!nombre) setNombre(nombreLegible(file.name));
     } catch {

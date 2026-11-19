@@ -106,3 +106,26 @@ export function aArchivo(lienzo: HTMLCanvasElement, nombre: string): Promise<Fil
     );
   });
 }
+
+/** ¿Ya es 16:9 (con un punto de tolerancia)? */
+export const es16x9 = (w: number, h: number) => h > 0 && Math.abs(w / h - 16 / 9) < 0.01 * (16 / 9);
+
+/**
+ * Deja una foto lista como portada sin pedir nada: si no viene en 16:9 y WebP (o es enorme), la recorta al centro a 16:9, la lleva a 1200–1600 px
+ * de ancho y la convierte a WebP. Los GIF no se tocan (perderían la animación) ni lo que el navegador no pueda leer: en ese caso se devuelve igual.
+ */
+export async function portadaAuto(archivo: File): Promise<File> {
+  if (!archivo.type.startsWith("image/") || archivo.type === "image/gif") return archivo;
+  try {
+    const bmp = await createImageBitmap(archivo);
+    const { width: w, height: h } = bmp;
+    bmp.close();
+    if (es16x9(w, h) && archivo.type === "image/webp" && w <= 2048) return archivo;
+    const { sw } = recorte169(w, h, 0.5, 0.5);
+    const lienzo = await renderizarPortada(archivo, { fx: 0.5, fy: 0.5, mejorar: false }, Math.min(ANCHO_PORTADA, Math.max(1200, sw)));
+    const nombre = archivo.name.replace(/\.[a-z0-9]+$/i, "") || "portada";
+    return await aArchivo(lienzo, `${nombre}-16x9`);
+  } catch {
+    return archivo;
+  }
+}

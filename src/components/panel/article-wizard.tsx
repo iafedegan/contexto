@@ -45,6 +45,7 @@ import {
 } from "lucide-react";
 import { autosaveDraft, cancelarEnvio, crearAutor, devolverNota, saveArticle, soltarNota } from "@/app/panel/(app)/articulos/actions";
 import { subirMedia } from "./subir-media";
+import { portadaAuto } from "./ajustar-imagen";
 import { PedirImagen } from "./pedir-imagen";
 import { etiquetaRol } from "@/lib/notas-asignadas-reglas";
 import {
@@ -968,7 +969,8 @@ export function ArticleWizard({
     setError("");
     setUploading(true);
     try {
-      const res = await subirMedia(file);
+      // Si no viene en 16:9 y WebP, se recorta al centro y se convierte antes de subirla.
+      const res = await subirMedia(await portadaAuto(file));
       if (!res.ok) return setError(res.error);
       if (res.kind === "video") return setError("La portada debe ser una imagen.");
       setCover(res.url);

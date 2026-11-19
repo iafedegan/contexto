@@ -21,3 +21,12 @@ test("una imagen que ya es 16:9 no se recorta", () => {
   const r = recorte169(1600, 900, 0.5, 0.5);
   assert.deepEqual([r.sx, r.sy, r.sw, r.sh], [0, 0, 1600, 900]);
 });
+
+import { es16x9 } from "./ajustar-imagen";
+test("es16x9: reconoce 16:9 con tolerancia y rechaza lo demás", () => {
+  assert.equal(es16x9(1600, 900), true);
+  assert.equal(es16x9(1920, 1080), true);
+  assert.equal(es16x9(1600, 1000), false);
+  assert.equal(es16x9(900, 1600), false);
+  assert.equal(es16x9(0, 0), false);
+});
