@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { AlertTriangle, Check, CheckCircle2, ImagePlus, Loader2, Sparkles, Trash2, Wand2 } from "lucide-react";
 import { carpetasDeEntrega, entregarImagen, generarImagenesConIA } from "@/app/panel/(app)/imagenes/actions";
 import { subirMedia } from "./subir-media";
+import { creditoFotoValido, FORMATO_CREDITO } from "@/lib/credito-foto";
 import { SelectorCarpeta, type CarpetaNodo } from "./selector-carpeta";
 import { VistaPreviaPortada } from "./vista-previa-portada";
 import { AMBIENTES, CAMARAS, ESTILO_POR_DEFECTO, LUCES, PLANOS, TRATAMIENTOS, type EstiloEscena } from "@/lib/ai/prompt-escena";
@@ -184,6 +185,7 @@ export function EntregaImagen({ articleId, tituloNota = "", resumen = "" }: { ar
   const proporcion = medidas ? medidas.w / medidas.h : 0;
   const cumple = medidas ? medidas.w >= 1200 && Math.abs(proporcion - 16 / 9) < 0.06 : true;
   const altOk = alt.trim().length >= 10;
+  const creditoOk = creditoFotoValido(pie);
 
   function entregar() {
     setError("");
@@ -268,7 +270,7 @@ export function EntregaImagen({ articleId, tituloNota = "", resumen = "" }: { ar
         </label>
         <label className="flex flex-col gap-1">
           <span className="lx-kicker text-[var(--fg-muted)]">Pie de foto y crédito{conIA ? " · de la IA" : ""}</span>
-          <input value={pie} onChange={(e) => setPie(e.target.value.slice(0, 300))} placeholder="Ganado en la Orinoquía. Foto: Nombre Apellido / CONtexto Ganadero" className={campo} />
+          <input value={pie} onChange={(e) => setPie(e.target.value.slice(0, 300))} placeholder="Ganado en la Orinoquía. Foto: Nombre Apellido / CONtexto Ganadero" aria-required="true" className={campo} />
           <span className="text-xs text-[var(--fg-muted)]">Se muestra bajo la imagen en la nota. Incluye quién la hizo.</span>
         </label>
         <label className="flex flex-col gap-1">
@@ -277,10 +279,11 @@ export function EntregaImagen({ articleId, tituloNota = "", resumen = "" }: { ar
         </label>
         {gestiona && <SelectorCarpeta carpetas={carpetas} value={carpetaId} onChange={setCarpetaId} />}
         {error && <p role="alert" className="text-sm text-[var(--danger,#b4442e)]">{error}</p>}
-        <button type="button" onClick={entregar} disabled={!url || !altOk || subiendo || pendiente} className="lx-btn self-start disabled:cursor-not-allowed disabled:opacity-50">
+        <button type="button" onClick={entregar} disabled={!url || !altOk || !creditoOk || subiendo || pendiente} className="lx-btn self-start disabled:cursor-not-allowed disabled:opacity-50">
           {pendiente ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />} Entregar y poner en la nota
         </button>
         {url && !altOk && <p className="-mt-1 text-xs text-[var(--fg-muted)]">Falta el texto alternativo para poder entregar.</p>}
+        {url && altOk && !creditoOk && <p role="status" className="-mt-1 text-xs font-medium text-[#92400e]">Falta el crédito de la foto. Escríbelo así: «{FORMATO_CREDITO}».</p>}
       </div>
     </div>
 

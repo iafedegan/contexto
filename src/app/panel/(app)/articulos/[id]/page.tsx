@@ -212,6 +212,7 @@ export default async function ArticleEditorPage({
             authorId: row.authorId,
             coverImageUrl: row.coverImageUrl,
             coverImageAlt: row.coverImageAlt,
+            coverImageCaption: row.coverImageCaption,
             metaTitle: row.metaTitle,
             metaDescription: row.metaDescription,
             isBreaking: row.isBreaking,

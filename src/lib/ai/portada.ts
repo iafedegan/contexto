@@ -12,7 +12,7 @@ import { construirPrompt, type EstiloEscena } from "@/lib/ai/prompt-escena";
 
 // Resultado de generar la portada: dirección de la imagen, texto alternativo y escena usada, o un error.
 export type CoverImageResult =
-  | { ok: true; url: string; alt: string; scene: string }
+  | { ok: true; url: string; alt: string; /** Crédito: la IA que la generó. */ credito: string; scene: string }
   | { ok: false; error: string };
 
 /**
@@ -176,7 +176,7 @@ export async function generarPortadaDesdeFotosCore(
     cantidad: 1,
     referencias: lectura.referencias,
   });
-  return r.ok ? { ok: true, url: r.imagenes[0].url, alt: r.alt, scene: r.scene } : r;
+  return r.ok ? { ok: true, url: r.imagenes[0].url, alt: r.alt, credito: r.credito, scene: r.scene } : r;
 }
 
 /** Una sola portada (el asistente de redacción, Telegram y el consejo de redacción): lo mismo que `generarPortadasCore` con una opción. */
@@ -185,7 +185,7 @@ export async function generateCoverImageCore(
   input: Omit<EntradaPortada, "cantidad">,
 ): Promise<CoverImageResult> {
   const r = await generarPortadasCore(userId, { ...input, cantidad: 1 });
-  return r.ok ? { ok: true, url: r.imagenes[0].url, alt: r.alt, scene: r.scene } : r;
+  return r.ok ? { ok: true, url: r.imagenes[0].url, alt: r.alt, credito: r.credito, scene: r.scene } : r;
 }
 
 /* --------------------------------------------------------------------------

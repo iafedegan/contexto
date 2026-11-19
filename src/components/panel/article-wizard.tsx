@@ -46,6 +46,7 @@ import {
 import { autosaveDraft, cancelarEnvio, crearAutor, devolverNota, saveArticle, soltarNota } from "@/app/panel/(app)/articulos/actions";
 import { subirMedia } from "./subir-media";
 import { portadaAuto } from "./ajustar-imagen";
+import { creditoFotoValido, FORMATO_CREDITO, ORIGENES_CREDITO } from "@/lib/credito-foto";
 import { PedirImagen } from "./pedir-imagen";
 import { etiquetaRol } from "@/lib/notas-asignadas-reglas";
 import {
@@ -107,6 +108,7 @@ export type WizardInitial = {
   authorId: string | null;
   coverImageUrl: string | null;
   coverImageAlt: string | null;
+  coverImageCaption?: string | null;
   metaTitle: string | null;
   metaDescription: string | null;
   isBreaking?: boolean;
@@ -383,6 +385,8 @@ export function ArticleWizard({
   const [columnaDest, setColumnaDest] = useState(esColumnaDestacada);
   const [cover, setCover] = useState(initial?.coverImageUrl ?? "");
   const [coverAlt, setCoverAlt] = useState(initial?.coverImageAlt ?? "");
+  // Crédito de la foto («Foto: Nombre / Medio»): toda foto nueva lo lleva.
+  const [coverCaption, setCoverCaption] = useState(initial?.coverImageCaption ?? "");
   const [metaTitle, setMetaTitle] = useState(initial?.metaTitle ?? "");
   const [metaDescription, setMetaDescription] = useState(initial?.metaDescription ?? "");
   const [uploading, setUploading] = useState(false);
@@ -411,8 +415,10 @@ export function ArticleWizard({
   );
   // Una nota solo se publica o se programa con su imagen de portada y el SEO en el mínimo exigido (el servidor lo vuelve a comprobar).
   const faltaPortada = !cover;
+  // La foto que ya tenía la nota no se obliga; una foto nueva (subida, de la biblioteca, de la IA o del diseñador) debe traer su crédito.
+  const faltaCredito = Boolean(cover) && cover !== (initial?.coverImageUrl ?? "") && !creditoFotoValido(coverCaption);
   const faltaSeo = audit.score < SEO_MINIMO_PUBLICAR;
-  const puedeSalir = !faltaPortada && !faltaSeo;
+  const puedeSalir = !faltaPortada && !faltaCredito && !faltaSeo;
   // Autoguardado: a cada cambio (con una pausa) y al cambiar de paso se guarda el borrador, sin salir del asistente.
   const [savedId, setSavedId] = useState(initial?.id ?? "");
   const [autoEstado, setAutoEstado] = useState<"idle" | "guardando" | "guardado" | "error" | "omitido">("idle");
@@ -423,7 +429,7 @@ export function ArticleWizard({
   const ultimaFirma = useRef("");
   const snapshot = {
     title, excerpt, body: bodyHtml, tags, categoryId, authorId,
-    coverImageUrl: cover, coverImageAlt: coverAlt, metaTitle, metaDescription,
+    coverImageUrl: cover, coverImageAlt: coverAlt, coverImageCaption: coverCaption, metaTitle, metaDescription,
   };
   const firma = JSON.stringify(snapshot);
   const snapRef = useRef(snapshot);
@@ -818,6 +824,7 @@ export function ArticleWizard({
       if (!res.ok) return setImgError(res.error);
       setCover(res.url);
       setCoverAlt(res.alt);
+      setCoverCaption(res.credito);
     });
   }
 
@@ -858,6 +865,7 @@ export function ArticleWizard({
       if (!res.ok) return setImgError(res.error);
       setCover(res.url);
       setCoverAlt(res.alt);
+      setCoverCaption(res.credito);
     });
   }
 
@@ -974,6 +982,7 @@ export function ArticleWizard({
       if (!res.ok) return setError(res.error);
       if (res.kind === "video") return setError("La portada debe ser una imagen.");
       setCover(res.url);
+      setCoverCaption(""); // foto subida por una persona: debe poner el crédito
     } catch {
       setError("No se pudo subir la imagen.");
     } finally {
@@ -1018,6 +1027,7 @@ export function ArticleWizard({
       <input type="hidden" name="authorId" value={authorId} />
       <input type="hidden" name="coverImageUrl" value={cover} />
       <input type="hidden" name="coverImageAlt" value={coverAlt} />
+      <input type="hidden" name="coverImageCaption" value={coverCaption} />
       <input type="hidden" name="metaTitle" value={metaTitle} />
       <input type="hidden" name="metaDescription" value={metaDescription} />
       <input type="hidden" name="isBreaking" value={breaking ? "1" : "0"} />
@@ -1784,7 +1794,7 @@ export function ArticleWizard({
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={cover} alt="" className="size-full object-cover" />
                     <div className="absolute inset-x-0 bottom-0 flex items-center justify-end bg-gradient-to-t from-black/60 to-transparent p-3 pt-8">
-                      <button type="button" onClick={() => { setCover(""); setCoverAlt(""); }} className="inline-flex items-center gap-1.5 rounded-full bg-black/45 px-3 py-1.5 text-xs font-medium text-white backdrop-blur transition hover:bg-black/65">
+                      <button type="button" onClick={() => { setCover(""); setCoverAlt(""); setCoverCaption(""); }} className="inline-flex items-center gap-1.5 rounded-full bg-black/45 px-3 py-1.5 text-xs font-medium text-white backdrop-blur transition hover:bg-black/65">
                         <Trash2 size={13} /> Quitar imagen
                       </button>
                     </div>
@@ -1853,10 +1863,24 @@ export function ArticleWizard({
                   </button>
                 </div>
                 {cover && (
-                  <label className="flex flex-col gap-1">
-                    <span className="lx-kicker text-[var(--fg-muted)]">Texto alternativo</span>
-                    <input value={coverAlt} onChange={(e) => setCoverAlt(e.target.value)} placeholder="Qué se ve en la foto" className={`${input} text-sm`} />
-                  </label>
+                  <>
+                    <label className="flex flex-col gap-1">
+                      <span className="lx-kicker text-[var(--fg-muted)]">Texto alternativo</span>
+                      <textarea value={coverAlt} onChange={(e) => setCoverAlt(e.target.value)} rows={2} placeholder="Qué se ve en la foto" className={`${input} resize-none text-sm`} />
+                    </label>
+                    <div className={`flex flex-col gap-2 rounded-[var(--radius)] border p-3 ${faltaCredito ? "border-[#d97706]/60 bg-[#d97706]/6" : "border-[var(--border)] bg-[var(--surface)]"}`}>
+                      <label htmlFor="credito-foto" className="lx-kicker text-[var(--fg-muted)]">Crédito de la foto <span className="text-[#b42318]">*</span></label>
+                      <div className="flex flex-wrap gap-1.5" role="group" aria-label="Origen de la foto">
+                        {ORIGENES_CREDITO.map((o) => (
+                          <button key={o.id} type="button" onClick={() => setCoverCaption(o.texto)} className="rounded-full border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-xs font-medium transition hover:border-[var(--accent)]">{o.etiqueta}</button>
+                        ))}
+                      </div>
+                      <input id="credito-foto" value={coverCaption} onChange={(e) => setCoverCaption(e.target.value.slice(0, 300))} placeholder={FORMATO_CREDITO} aria-invalid={faltaCredito} aria-describedby="credito-foto-ayuda" className={`${input} text-sm`} />
+                      <p id="credito-foto-ayuda" className={`text-xs ${faltaCredito ? "font-medium text-[#92400e]" : "text-[var(--fg-muted)]"}`}>
+                        {creditoFotoValido(coverCaption) ? "Se muestra bajo la foto en la nota." : `Toda foto lleva crédito. Si la subes tú, escríbelo así: «${FORMATO_CREDITO}». Las de IA y las del archivo ya lo traen.`}
+                      </p>
+                    </div>
+                  </>
                 )}
                 <details className="min-w-0">
                   <summary className="lx-link cursor-pointer text-xs font-medium">Pegar la URL de una imagen</summary>
@@ -1867,7 +1891,7 @@ export function ArticleWizard({
             {biblioteca && (
               <SelectorBiblioteca
                 onCerrar={() => setBiblioteca(false)}
-                onElegir={(a) => { setCover(a.url); if (!coverAlt.trim()) setCoverAlt(a.name); setImgError(""); setBiblioteca(false); }}
+                onElegir={(a) => { setCover(a.url); setCoverCaption(a.credit ?? ""); if (!coverAlt.trim()) setCoverAlt(a.name); setImgError(""); setBiblioteca(false); }}
               />
             )}
           </Step>
@@ -1913,7 +1937,7 @@ export function ArticleWizard({
           <Step ancho="lg" title="Enviar" hint="Opcional. Pide la imagen a un diseñador y, si quieres, envía la nota a otra persona. Cada tarjeta tiene su botón.">
             <div className="grid items-stretch gap-4 @2xl:grid-cols-2">
               <TarjetaEnvio Icono={Brush} titulo="Solicitar la imagen" ayuda="Un diseñador la prepara y te la devuelve a la nota.">
-                <PedirImagen articleId={savedId} titulo={title} resumen={excerpt} portadaActual={cover} alUsar={(u, a) => { setCover(u); if (a) setCoverAlt(a); setImgError(""); }} />
+                <PedirImagen articleId={savedId} titulo={title} resumen={excerpt} portadaActual={cover} alUsar={(u, a, pie) => { setCover(u); setCoverCaption(pie ?? ""); if (a) setCoverAlt(a); setImgError(""); }} />
               </TarjetaEnvio>
               {puedeEnviarEditor ? (
                 <TarjetaEnvio
@@ -2169,7 +2193,7 @@ export function ArticleWizard({
             )}
             {canPublish && !puedeSalir && status !== "publicado" && (
               <p role="status" className="w-full rounded-[var(--radius)] border border-[#d97706]/40 bg-[#d97706]/8 px-3 py-2 text-xs text-[#92400e] sm:text-right">
-                Para publicar o programar falta: {[faltaPortada && "la imagen de portada", faltaSeo && `SEO de ${SEO_MINIMO_PUBLICAR} o más (ahora ${audit.score})`].filter(Boolean).join(" y ")}.
+                Para publicar o programar falta: {[faltaPortada && "la imagen de portada", faltaCredito && "el crédito de la foto", faltaSeo && `SEO de ${SEO_MINIMO_PUBLICAR} o más (ahora ${audit.score})`].filter(Boolean).join(" y ")}.
               </p>
             )}
             {canPublish && (
@@ -2229,7 +2253,7 @@ export function ArticleWizard({
               </button>
             )}
             {canPublish ? (
-              <button type="submit" name="intent" value="publicar" disabled={status !== "publicado" && !puedeSalir} title={status !== "publicado" && !puedeSalir ? "Falta la imagen de portada o el SEO mínimo" : undefined} className="lx-btn disabled:cursor-not-allowed disabled:opacity-50 disabled:saturate-50">
+              <button type="submit" name="intent" value="publicar" disabled={status !== "publicado" && !puedeSalir} title={status !== "publicado" && !puedeSalir ? "Falta la imagen de portada, su crédito o el SEO mínimo" : undefined} className="lx-btn disabled:cursor-not-allowed disabled:opacity-50 disabled:saturate-50">
                 <Send size={15} /> {status === "publicado" ? "Guardar y actualizar" : "Publicar"}
               </button>
             ) : !editorElegido ? (

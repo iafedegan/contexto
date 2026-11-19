@@ -1,5 +1,6 @@
 "use server";
 
+import { creditoFotoValido, FORMATO_CREDITO } from "@/lib/credito-foto";
 import { departamentoPorSlug, regionPorSlug } from "@/lib/regiones-colombia";
 import { revalidatePath } from "next/cache";
 import { sanitizeArticleHtml } from "@/lib/sanitize";
@@ -53,6 +54,9 @@ export async function saveArticle(formData: FormData) {
   const isLive = String(formData.get("isLive") ?? "0") === "1";
   const coverImageUrl = String(formData.get("coverImageUrl") ?? "").trim() || null;
   const coverImageAlt = String(formData.get("coverImageAlt") ?? "").trim() || null;
+  // Crédito de la foto: ausente = no tocar (otros formularios no lo envían).
+  const credito = formData.get("coverImageCaption");
+  const coverImageCaption = credito === null ? undefined : String(credito).replace(/\s+/g, " ").trim().slice(0, 300) || null;
   const metaTitle = String(formData.get("metaTitle") ?? "").trim() || null;
   const metaDescription = String(formData.get("metaDescription") ?? "").trim() || null;
   const tags = String(formData.get("tags") ?? "")
@@ -98,6 +102,7 @@ export async function saveArticle(formData: FormData) {
     authorId,
     coverImageUrl,
     coverImageAlt,
+    ...(coverImageCaption !== undefined ? { coverImageCaption } : {}),
     isBreaking,
     isLive,
     metaTitle,
@@ -105,6 +110,13 @@ export async function saveArticle(formData: FormData) {
     tags,
     updatedAt: sql`now()`,
   };
+
+  // Toda foto de portada nueva lleva su crédito para publicarla o programarla (las de IA y las del archivo ya lo traen).
+  const intentCredito = String(formData.get("intent") ?? "");
+  if ((intentCredito === "publicar" || intentCredito === "programar") && coverImageUrl && coverImageCaption !== undefined) {
+    const [previa] = id ? await db.select({ url: articles.coverImageUrl }).from(articles).where(eq(articles.id, id)).limit(1) : [];
+    if (previa?.url !== coverImageUrl && !creditoFotoValido(coverImageCaption)) throw new Error(`Falta el crédito de la foto de portada (formato: «${FORMATO_CREDITO}»).`);
+  }
 
   let articleId = id;
   if (id) {

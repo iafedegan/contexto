@@ -13,7 +13,7 @@ type Disenador = { id: string; nombre: string };
  * En el paso «Imagen»: pedirle la portada al diseñador, ver si ya la hizo y usarla. El redactor puede seguir subiendo o generando la imagen
  * él mismo; esto es una alternativa. Sin `name` en los campos: no viajan con el formulario de la nota.
  */
-export function PedirImagen({ articleId, titulo, resumen, portadaActual, alUsar }: { articleId: string; titulo: string; resumen: string; portadaActual: string; alUsar: (url: string, alt?: string) => void }) {
+export function PedirImagen({ articleId, titulo, resumen, portadaActual, alUsar }: { articleId: string; titulo: string; resumen: string; portadaActual: string; alUsar: (url: string, alt?: string, pie?: string) => void }) {
   const [pedido, setPedido] = useState<PedidoImagen | null>(null);
   const [disenadores, setDisenadores] = useState<Disenador[]>([]);
   const [cargado, setCargado] = useState(false);
@@ -76,7 +76,7 @@ export function PedirImagen({ articleId, titulo, resumen, portadaActual, alUsar 
           <p className="font-medium text-[#16a34a]">✓ El diseñador entregó la imagen.</p>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={pedido!.url} alt="" className="aspect-[16/9] w-full max-w-xs rounded-[var(--radius)] border border-[var(--border)] object-cover" />
-          <button type="button" onClick={() => alUsar(pedido!.url!, pedido!.alt)} className="lx-btn self-start !px-3 !py-1.5 text-xs"><Check size={13} /> Usar esta imagen</button>
+          <button type="button" onClick={() => alUsar(pedido!.url!, pedido!.alt, pedido!.pie)} className="lx-btn self-start !px-3 !py-1.5 text-xs"><Check size={13} /> Usar esta imagen</button>
         </div>
       ) : aplicada && !otra ? (
         // El pedido ya se cumplió: nada que enviar. Para pedir otra imagen hay que decidirlo con el botón.

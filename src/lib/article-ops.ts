@@ -27,6 +27,8 @@ export type BorradorInput = {
   authorId?: string | null;
   coverImageUrl?: string | null;
   coverImageAlt?: string | null;
+  /** Crédito de la foto («Foto: Nombre / Medio»). Ausente = no tocar. */
+  coverImageCaption?: string | null;
   metaTitle?: string | null;
   metaDescription?: string | null;
 };
@@ -46,6 +48,7 @@ export async function guardarBorradorCore(userId: string, input: BorradorInput):
     authorId: input.authorId || (await autorDeUsuario(userId)),
     coverImageUrl: input.coverImageUrl?.trim() || null,
     coverImageAlt: input.coverImageAlt?.trim() || null,
+    ...(input.coverImageCaption !== undefined ? { coverImageCaption: input.coverImageCaption?.trim().slice(0, 300) || null } : {}),
     metaTitle: input.metaTitle?.trim() || null,
     metaDescription: input.metaDescription?.trim() || null,
     tags: (input.tags ?? []).map((t) => t.trim()).filter(Boolean),

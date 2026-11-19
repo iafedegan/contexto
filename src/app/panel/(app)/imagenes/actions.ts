@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { asc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { articles, categories, mediaAssets, mediaFolders } from "@/db/schema";
+import { creditoFotoValido, FORMATO_CREDITO } from "@/lib/credito-foto";
 import { tienePermiso } from "@/lib/permisos-server";
 import { nombreValido } from "@/lib/biblioteca-acceso";
 import { urlPublicaMedia } from "@/lib/media-storage";
@@ -78,6 +79,7 @@ export async function entregarImagen(input: { articleId: string; url: string; al
   const alt = String(input.alt ?? "").trim().slice(0, 300);
   if (alt.length < 10) return { ok: false, message: "Describe lo que se ve en la imagen (al menos 10 caracteres): Google la usa para entenderla." };
   const pie = String(input.pie ?? "").trim().slice(0, 300);
+  if (!creditoFotoValido(pie)) return { ok: false, message: `Falta el crédito de la foto. Escríbelo así: «${FORMATO_CREDITO}».` };
   const articleId = String(input.articleId ?? "");
   const [nota] = await db.select({ id: articles.id, estado: articles.status }).from(articles).where(eq(articles.id, articleId)).limit(1);
   if (!nota) return { ok: false, message: "La nota ya no existe." };
