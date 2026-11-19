@@ -810,6 +810,12 @@ export function ArticleWizard({
     });
   }
 
+  // Imagen con IA para el CUERPO de la nota: la misma generación que la portada, centrada en el párrafo donde está el cursor o en la escena que se describió.
+  async function imagenParaCuerpo(escena: string, parrafo: string) {
+    const res = await generateCoverImage({ title, excerpt, body: parrafo || bodyHtml, section: categories.find((c) => c.id === categoryId)?.name, scene: escena || undefined });
+    return res.ok ? { ok: true as const, url: res.url, alt: res.alt, credito: res.credito } : res;
+  }
+
   // Pide a la IA la imagen de portada.
   function makeCover() {
     setImgError("");
@@ -1625,7 +1631,7 @@ export function ArticleWizard({
                       <p className="lx-kicker mt-4 text-[#6b756f]">Cuerpo</p>
                     </div>
                     <div className="px-3 pb-10 sm:px-12">
-                      <EditorCuerpo papel value={body} onChange={setBody} placeholder="Primer párrafo con lo más importante…"
+                      <EditorCuerpo papel value={body} onChange={setBody} imagenIA={imagenParaCuerpo} placeholder="Primer párrafo con lo más importante…"
                         resumen={<>{words} palabras · {Math.max(1, Math.round(words / 200))} min</>} />
                     </div>
                   </article>
@@ -1649,7 +1655,7 @@ export function ArticleWizard({
                   <p className="lx-kicker mt-4 text-[#6b756f]">Cuerpo</p>
                 </div>
                 <div className="px-3 pb-10 sm:px-12">
-                  <EditorCuerpo papel value={body} onChange={setBody} placeholder="Primer párrafo con lo más importante…"
+                  <EditorCuerpo papel value={body} onChange={setBody} imagenIA={imagenParaCuerpo} placeholder="Primer párrafo con lo más importante…"
                     resumen={<>{words} palabras · {Math.max(1, Math.round(words / 200))} min</>} />
                 </div>
               </article>

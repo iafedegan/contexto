@@ -1,12 +1,14 @@
 "use client";
 
 import { useLayoutEffect, useRef, useState } from "react";
-import { BarChart3, Bold, Clapperboard, Highlighter, Italic, Link2, List, ListOrdered, Minus, MessageSquareQuote, Quote, Redo2, RemoveFormatting, Replace, Search, Strikethrough, Subscript, Superscript, Table, Underline, Undo2, Unlink, ZoomIn, ZoomOut } from "lucide-react";
+import { BarChart3, Bold, Clapperboard, Highlighter, Images, Italic, Link2, List, ListOrdered, Minus, MessageSquareQuote, Quote, Redo2, RemoveFormatting, Replace, Search, Sparkles, Strikethrough, Subscript, Superscript, Table, Underline, Undo2, Unlink, ZoomIn, ZoomOut } from "lucide-react";
 import { decodeSpec, renderChartSvg, svgDataUri } from "@/lib/chart-svg";
 import { escapeHtml } from "@/lib/escape";
 import { EmbedAltura } from "@/components/embed-altura";
 import { FacebookIcon, InstagramIcon, LinkedinIcon, TiktokIcon, XIcon, YoutubeIcon } from "@/components/social-icons";
 import { embedDeCodigo, embedHtml, incrustarEnlaces, NOMBRE_EMBED, parseEmbed, type Embed } from "@/lib/embeds";
+import { InsertarImagen, type OrigenImagen, type ResultadoImagenIA } from "@/components/panel/insertar-imagen";
+import { figuraImagen } from "@/components/panel/figura-imagen";
 
 /**
  * Editor del cuerpo tipo procesador de texto: se escribe sobre el texto ya formateado (negrita, intertítulos, listas,
@@ -80,6 +82,16 @@ function limpiarPegado(html: string): string {
   return [...doc.body.childNodes].map(limpiar).join("").replace(/<p>\s*<\/p>/g, "");
 }
 
+/** Botón de la barra con su nombre a la vista (para lo que se usa a diario y no se adivina por el ícono). */
+function BotonTexto({ titulo, onClick, children }: { titulo: string; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button type="button" title={titulo} onMouseDown={(e) => e.preventDefault()} onClick={onClick}
+      className="inline-flex h-8 items-center gap-1.5 rounded-md px-2 text-xs font-semibold text-[var(--fg-muted)] transition hover:bg-[var(--surface-2)] hover:text-[var(--fg)]">
+      {children}
+    </button>
+  );
+}
+
 /** Botón de la barra: no le quita el foco ni la selección al texto. */
 function Boton({ titulo, activo, onClick, children }: { titulo: string; activo?: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
@@ -116,6 +128,7 @@ export function EditorCuerpo({
   placeholder,
   resumen,
   papel = false,
+  imagenIA,
 }: {
   /** Cuerpo en HTML. */
   value: string;
@@ -125,6 +138,8 @@ export function EditorCuerpo({
   resumen?: React.ReactNode;
   /** Aspecto de página de Word: sin marco propio, barra fija arriba y el desplazamiento lo da quien lo contiene. */
   papel?: boolean;
+  /** Genera con IA una imagen para el cuerpo (la escena que se escribió y el párrafo donde está el cursor). Sin ella no se ofrece la opción. */
+  imagenIA?: (escena: string, parrafo: string) => Promise<ResultadoImagenIA>;
 }) {
   const caja = useRef<HTMLDivElement>(null);
   // Último HTML que salió del editor: si `value` es otro, el cambio vino de fuera (p. ej. la IA reescribió) y se repinta.
@@ -136,6 +151,8 @@ export function EditorCuerpo({
   // Infografía: dirección de la imagen y su pie (se piden en línea, como el enlace).
   const [infografia, setInfografia] = useState<{ url: string; pie: string } | null>(null);
   const [tabla, setTabla] = useState<{ filas: number; cols: number } | null>(null);
+  // Ventana para poner una imagen dentro de la nota (biblioteca, IA, subida o dirección) y el párrafo donde estaba el cursor.
+  const [imagen, setImagen] = useState<{ origen: OrigenImagen; parrafo: string } | null>(null);
   // Video o publicación de una red social: dirección y ancho (% del texto) que se piden en línea; y la ya insertada que está seleccionada para cambiarle el tamaño.
   const [video, setVideo] = useState<{ url: string; ancho: number; error: string; red?: Embed["tipo"] } | null>(null);
   const [embedSel, setEmbedSel] = useState<{ ancho: number; alinear: "izq" | "centro" | "der"; alto: number | null } | null>(null);
@@ -241,6 +258,20 @@ export function EditorCuerpo({
     restaurarRango();
     const pie = escapeHtml(datos.pie.trim() || "Imagen");
     orden("insertHTML", `<figure class="infografia"><img src="${escapeHtml(datos.url.trim())}" alt="${pie}" loading="lazy"><figcaption>${pie}</figcaption></figure><p><br></p>`);
+  };
+  // Abre la ventana de imagen recordando dónde estaba el cursor y el texto de ese párrafo (la IA lo ilustra si no se le describe otra escena).
+  const abrirImagen = (origen: OrigenImagen) => {
+    guardarRango();
+    const nodo = rango.current?.startContainer ?? null;
+    const bloque = (nodo instanceof Element ? nodo : nodo?.parentElement)?.closest("p, h2, h3, h4, li, blockquote");
+    const parrafo = bloque && caja.current?.contains(bloque) ? (bloque.textContent ?? "").replace(/\s+/g, " ").trim().slice(0, 1500) : "";
+    setEnlace(null); setInfografia(null); setVideo(null); setTabla(null);
+    setImagen({ origen, parrafo });
+  };
+  const insertarImagen = (d: Parameters<typeof figuraImagen>[0]) => {
+    setImagen(null);
+    restaurarRango();
+    orden("insertHTML", `${figuraImagen(d)}<p><br></p>`);
   };
   const abrirVideo = (red?: Embed["tipo"]) => {
     guardarRango();
@@ -389,6 +420,7 @@ export function EditorCuerpo({
   return (
     <div style={papel ? ({ "--surface": "#ffffff", "--bg-2": "#f3f4f3", "--surface-2": "#eceeed", "--fg": "#1b1b1b", "--fg-muted": "#5b665f", "--border": "rgba(0,0,0,0.16)", "--border-strong": "rgba(0,0,0,0.3)" } as React.CSSProperties) : undefined} className={papel ? "flex flex-col bg-white text-[#1b1b1b]" : "flex min-h-0 flex-1 flex-col overflow-hidden rounded-[var(--radius)] border border-[var(--border)] bg-[var(--bg-2)] focus-within:border-[var(--accent)]"}>
       <EmbedAltura />
+      {imagen && <InsertarImagen inicial={imagen.origen} parrafo={imagen.parrafo} generarIA={imagenIA} onInsertar={insertarImagen} onCerrar={() => setImagen(null)} />}
       {/* Cinta de herramientas por pestañas, como en Word */}
       <div className={`shrink-0 border-b border-[var(--border)] ${papel ? "sticky top-0 z-10 bg-[#f3f4f3]" : "bg-[var(--surface-2)]/40"}`}>
         <div role="tablist" aria-label="Cinta de herramientas" className="flex items-end gap-1 px-2 pt-1.5">
@@ -434,7 +466,9 @@ export function EditorCuerpo({
               <Boton titulo="Enlace" onClick={abrirEnlace}><Link2 size={15} /></Boton>
               <Boton titulo="Quitar enlace" onClick={() => orden("unlink")}><Unlink size={15} /></Boton>
               <Sep />
-              <Boton titulo="Imagen o infografía (a todo el ancho, con su pie)" onClick={abrirInfografia}><BarChart3 size={15} /></Boton>
+              <BotonTexto titulo="Poner una imagen de la biblioteca (o subirla del equipo) donde está el cursor" onClick={() => abrirImagen("biblioteca")}><Images size={15} aria-hidden /> Imagen</BotonTexto>
+              {imagenIA && <BotonTexto titulo="Generar con IA una imagen para el párrafo donde está el cursor" onClick={() => abrirImagen("ia")}><Sparkles size={15} aria-hidden /> Imagen con IA</BotonTexto>}
+              <Boton titulo="Infografía por su dirección (a todo el ancho, con marco y su pie)" onClick={abrirInfografia}><BarChart3 size={15} /></Boton>
               <Boton titulo="Video o publicación de cualquier red (YouTube, Vimeo, X, Instagram, Facebook, TikTok, LinkedIn)" onClick={() => abrirVideo()}><Clapperboard size={15} /></Boton>
               <Sep />
               <Boton titulo="Video de YouTube" activo={video?.red === "youtube"} onClick={() => abrirVideo("youtube")}><YoutubeIcon size={16} /></Boton>
