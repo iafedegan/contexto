@@ -41,14 +41,11 @@ async function revisar(img: HTMLImageElement) {
   const caja = img.parentElement;
   const src = img.currentSrc;
   if (!caja || !src || !img.complete || !img.naturalWidth) return;
-  // Si ya se le dio la proporción de la foto a la caja, se mide con la proporción de origen de la tarjeta (no con la ajustada).
-  const ajustada = caja.hasAttribute("data-foto-ajustada");
-  if (ajustada) caja.style.removeProperty("aspect-ratio");
   const ancho = img.clientWidth;
   if (ancho < ANCHO_MIN_CAJA) return;
-  if (!img.hasAttribute("data-foto-pequena") && !ajustada && getComputedStyle(img).objectFit !== "cover") return;
+  if (!img.hasAttribute("data-foto-pequena") && getComputedStyle(img).objectFit !== "cover") return;
   // Foto cuya proporción no se parece a la de su caja: con `object-cover` se le cortaría más de una cuarta parte (un cartel con texto, un
-  // banner ancho…). Se muestra entera, sobre un fondo liso, para que nada quede cortado.
+  // banner ancho…). Se muestra entera, sobre su propio fondo desenfocado, para que nada quede cortado.
   const alto = img.clientHeight;
   const escala = alto > 0 ? Math.max(ancho / img.naturalWidth, alto / img.naturalHeight) : 0;
   const muyRecortada = escala > 0 && (ancho * alto) / (img.naturalWidth * img.naturalHeight * escala * escala) < FRACCION_VISIBLE_MIN;
@@ -58,12 +55,6 @@ async function revisar(img: HTMLImageElement) {
     if (img.currentSrc !== src) return; // cambió de foto mientras se medía
     pequena = real > 0 && real <= ANCHO_MAX_FOTO && real < img.clientWidth * (window.devicePixelRatio || 1) * COBERTURA_MAX;
   }
-  if (muyRecortada) {
-    // Cartel o banner: la caja toma la proporción de la foto (entre 1:1 y 2:1) y se ve completa, sin franjas.
-    const razon = Math.min(2, Math.max(1, img.naturalWidth / img.naturalHeight));
-    caja.style.aspectRatio = String(razon);
-    caja.setAttribute("data-foto-ajustada", "");
-  } else caja.removeAttribute("data-foto-ajustada");
   if (pequena) {
     img.setAttribute("data-foto-pequena", "");
     caja.setAttribute("data-foto-pequena-caja", "");
