@@ -220,12 +220,12 @@ export async function createUser(_prev: CreateUserState, formData: FormData): Pr
   if (existente) return { ok: false, message: "Ya existe una cuenta con ese correo." };
 
   const passwordHash = await bcrypt.hash(password, 10);
-  const [nueva] = await db.insert(users).values({ name, email, passwordHash, role }).returning({ id: users.id });
+  const [nueva] = await db.insert(users).values({ name, email, passwordHash, role, mustChangePassword: true }).returning({ id: users.id });
   // Rol propio, o rol de siempre con los cambios que se le hayan hecho.
   if (nueva && role !== "administrador") await asignarRol(nueva.id, propio ? `rol:${propio.id}` : role);
 
   revalidatePath("/panel/configuracion");
-  return { ok: true, message: `Cuenta creada para ${name}. Comparte la contraseña de forma segura.` };
+  return { ok: true, message: `Cuenta creada para ${name}. Comparte la contraseña de forma segura: al entrar por primera vez tendrá que cambiarla.` };
 }
 
 // Estado que se devuelve al formulario: si salió bien y el mensaje.

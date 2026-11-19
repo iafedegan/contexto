@@ -86,7 +86,7 @@ function LoginForm() {
     setPending(false);
     if (res?.error) {
       setError(
-        "Credenciales o código de verificación inválidos. Tras 5 intentos fallidos la cuenta se bloquea 15 minutos.",
+        "Correo o contraseña incorrectos. Tras 5 intentos fallidos la cuenta se bloquea 15 minutos.",
       );
       // El token de Turnstile es de un solo uso: se pide uno nuevo.
       (window as unknown as { turnstile?: { reset: () => void } }).turnstile?.reset();
@@ -128,16 +128,6 @@ function LoginForm() {
               required
               autoComplete="current-password"
               className="lx-input"
-            />
-          </label>
-          <label className="lx-kicker flex flex-col gap-2 text-[var(--fg-muted)]">
-            Código 2FA <span className="normal-case tracking-normal">(si está activado)</span>
-            <input
-              name="totp"
-              inputMode="numeric"
-              pattern="[0-9]*"
-              autoComplete="one-time-code"
-              className="lx-input lx-mono"
             />
           </label>
           {aviso && !error && <p className="text-sm text-[var(--fg-muted)]" role="status">{aviso}</p>}
