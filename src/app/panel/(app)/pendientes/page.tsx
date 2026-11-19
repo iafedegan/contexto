@@ -4,6 +4,7 @@ import { CalendarClock, CircleCheck, ClipboardList, PenLine, Send, Sparkles, typ
 import { auth } from "@/lib/auth";
 import { tienePermiso } from "@/lib/permisos-server";
 import { MarcarVistos } from "@/components/panel/marcar-vistos";
+import { QuitarPendiente } from "@/components/panel/quitar-pendiente";
 import { sincronizarCasillas } from "@/lib/ai/consejo-ejecucion";
 import { contarMisPendientes } from "./consultas";
 import { tableroDe, type Columna, type Tarjeta } from "./tablero";
@@ -29,7 +30,7 @@ const ORIGEN: Record<Tarjeta["origen"], { texto: string; Icono: LucideIcon }> = 
 function TarjetaNota({ t }: { t: Tarjeta }) {
   const o = ORIGEN[t.origen];
   return (
-    <li>
+    <li className="rounded-[var(--radius)]">
       <Link href={t.href} className="group block rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] p-3 shadow-[var(--shadow)] transition hover:border-[var(--accent)] focus-visible:outline-2 focus-visible:outline-offset-2">
         <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[0.7rem] text-[var(--fg-muted)]">
           <span className="inline-flex items-center gap-1 font-semibold"><o.Icono size={12} aria-hidden /> {o.texto}</span>
@@ -44,6 +45,8 @@ function TarjetaNota({ t }: { t: Tarjeta }) {
           </p>
         )}
       </Link>
+      {/* Se pueden quitar las piezas del grupo de redacción y las notas que te enviaron (con la razón); las propias y las ya publicadas no. */}
+      {t.origen !== "propia" && t.columna !== "publicado" && <div className="px-1"><QuitarPendiente clave={t.clave} /></div>}
     </li>
   );
 }
