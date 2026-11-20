@@ -332,6 +332,8 @@ export const authors = pgTable("authors", {
   avatarUrl: text("avatar_url"),
   // Vínculo opcional a una cuenta del panel (un autor puede no tener login).
   userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
+  /** Una firma inactiva ya no se ofrece al elegir autor de una nota nueva (las notas que la llevan la conservan). */
+  active: boolean("active").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [index("authors_user_idx").on(t.userId)]);
 

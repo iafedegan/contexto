@@ -1,8 +1,8 @@
 import { autorDeUsuario, ensureUserAuthors } from "@/lib/user-authors";
 import { notFound, redirect } from "next/navigation";
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { articles, authors, categories } from "@/db/schema";
+import { articles, authors, categories, users } from "@/db/schema";
 import { auth, canPublish, requirePermiso } from "@/lib/auth";
 import { tienePermiso } from "@/lib/permisos-server";
 import Link from "next/link";
@@ -100,7 +100,8 @@ export default async function ArticleEditorPage({
   const estilo: "activo" | "apagado" | "sin" = est.diagnostico ? (est.activo ? "activo" : "apagado") : "sin";
   const [cats, auths] = await Promise.all([
     db.select({ id: categories.id, name: categories.name, parentId: categories.parentId, slug: categories.slug }).from(categories).orderBy(asc(categories.sortOrder), asc(categories.name)),
-    db.select({ id: authors.id, name: authors.name }).from(authors).orderBy(asc(authors.name)),
+    // Solo firmas activas (y, si son de una cuenta del panel, con la cuenta activa).
+    db.select({ id: authors.id, name: authors.name }).from(authors).leftJoin(users, eq(authors.userId, users.id)).where(sql`${authors.active} and (${authors.userId} is null or ${users.active})`).orderBy(asc(authors.name)),
   ]);
 
   // Artículo nuevo: primero se elige cómo crearlo.

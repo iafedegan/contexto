@@ -302,6 +302,13 @@
       "when": 1795126072606,
       "tag": "0042_actividad_notas",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1795134601298,
+      "tag": "0043_firmas_activas",
+      "breakpoints": true
     }
   ]
 }

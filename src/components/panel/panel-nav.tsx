@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { grupoDe, useGruposMenu } from "@/components/panel/grupos-menu";
-import { Brush, CalendarRange, ChevronDown, Images, ClipboardList, PenLine, Inbox, KeyRound, LayoutDashboard, LayoutTemplate, Mail, Newspaper, Settings, Users, Circle } from "lucide-react";
+import { Brush, CalendarRange, ChevronDown, Images, ClipboardList, PenLine, Inbox, KeyRound, MessageSquareQuote, LayoutDashboard, LayoutTemplate, Mail, Newspaper, Settings, Users, Circle } from "lucide-react";
 import type { PermisoId } from "@/lib/permisos";
 import { PanelMobileMenu } from "@/components/panel/panel-mobile-menu";
 import { useAvisos } from "@/components/panel/avisos-menu";
@@ -78,6 +78,7 @@ const GROUPS: Group[] = [
         label: "Configuración",
         hint: "Identidad, personas, seguridad, analítica y asistente",
       },
+      { href: "/panel/comentaristas", label: "Comentaristas", hint: "Firmas de las notas: editar, activar, inactivar o borrar", soloAdmin: true },
       {
         href: "/panel/newsletter?tab=suscriptores",
         label: "Suscriptores",
@@ -133,6 +134,7 @@ const ICONOS: Record<string, typeof Circle> = {
   "/panel/configuracion": Settings,
   "/panel/newsletter?tab=suscriptores": Users,
   "/panel/mensajes": Inbox,
+  "/panel/comentaristas": MessageSquareQuote,
   "/panel/api": KeyRound,
 };
 

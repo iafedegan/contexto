@@ -1,0 +1,1 @@
+ALTER TABLE "authors" ADD COLUMN IF NOT EXISTS "active" boolean DEFAULT true NOT NULL;
