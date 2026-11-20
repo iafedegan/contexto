@@ -128,7 +128,16 @@ export function UserRow({
           </span>
         )}
         {desbloqueo && <span role="status" className={`mt-1 block text-xs ${desbloqueo.ok ? "text-[#157a4a]" : "text-red-700"}`}>{desbloqueo.message}</span>}
-        {!user.active && <span className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-[var(--surface-2)] px-2.5 py-1 text-xs font-semibold text-[var(--fg-muted)]"><Lock size={12} aria-hidden /> Cuenta desactivada</span>}
+        {/* Estado SIEMPRE visible: activa (puede entrar), desactivada por un administrador o bloqueada por intentos fallidos (esta última, arriba, con su botón). */}
+        {!bloqueadoHasta && (
+          user.active ? (
+            <span className="mt-1.5 inline-flex items-center gap-1.5 rounded-full bg-[#157a4a]/12 px-2.5 py-1 text-xs font-semibold text-[#157a4a]">
+              <span className="size-1.5 rounded-full bg-[#157a4a]" aria-hidden /> Activa · no está bloqueada
+            </span>
+          ) : (
+            <span className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-red-600/12 px-2.5 py-1 text-xs font-semibold text-red-700"><Lock size={12} aria-hidden /> Desactivada: no puede entrar</span>
+          )
+        )}
         {cuotaIA && <CuotaBarra gasto={cuotaIA.gasto} tope={cuotaIA.efectiva} compacta />}
       </td>
 
