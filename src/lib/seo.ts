@@ -64,7 +64,8 @@ export function articleMetadata(a: ArticleLike): Metadata {
       siteName: SITE_NAME,
       publishedTime: toIso(a.publishedAt),
       modifiedTime: toIso(a.updatedAt),
-      images: a.coverImageUrl ? [{ url: abs(a.coverImageUrl), alt: a.coverImageAlt ?? a.title }] : undefined,
+      // La versión liviana para compartir (1200 × 630, JPEG): WhatsApp no muestra la vista previa con imágenes de más de ~600 KB.
+      images: a.coverImageUrl ? [{ url: imagenParaCompartir(a.coverImageUrl), width: 1200, height: 630, type: "image/jpeg", alt: a.coverImageAlt ?? a.title }] : undefined,
       authors: a.authorName ? [a.authorName] : undefined,
       section: a.categoryName ?? undefined,
       tags: a.tags,
@@ -73,9 +74,14 @@ export function articleMetadata(a: ArticleLike): Metadata {
       card: "summary_large_image",
       title,
       description,
-      images: a.coverImageUrl ? [abs(a.coverImageUrl)] : undefined,
+      images: a.coverImageUrl ? [imagenParaCompartir(a.coverImageUrl)] : undefined,
     },
   };
+}
+
+/** Portada en versión para compartir (ver app/og-imagen): recortada a 1200 × 630 y en JPEG liviano. */
+export function imagenParaCompartir(portada: string): string {
+  return siteUrl(`/og-imagen?u=${encodeURIComponent(abs(portada))}`);
 }
 
 /** JSON-LD NewsArticle — verificable en Rich Results Test. */

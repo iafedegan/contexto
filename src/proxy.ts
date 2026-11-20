@@ -42,7 +42,7 @@ const RATE_WINDOW_MS = 60_000;
 // Máximo de peticiones por IP y minuto (por instancia, aproximado a propósito).
 const RATE_MAX = 120;
 // Recursos que el navegador pide junto a cada página y no son páginas: no cuentan para el ritmo por IP.
-const RECURSOS_PWA = /^\/(manifest\.webmanifest|icon|apple-icon|opengraph-image|twitter-image|offline)(\/|$)/;
+const RECURSOS_PWA = /^\/(manifest\.webmanifest|icon|apple-icon|opengraph-image|twitter-image|og-imagen|offline)(\/|$)/;
 // Contadores de peticiones por IP; se vacían al crecer demasiado.
 const hits = new Map<string, { n: number; reset: number }>();
 
