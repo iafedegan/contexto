@@ -313,7 +313,7 @@ export async function actualizarMiPerfil(_prev: MiPerfilState, formData: FormDat
   // La firma de las notas sigue al nombre de la cuenta: si estaba con un nombre de usuario («pfonseca»), toma el nombre nuevo.
   if (name !== yo.name) {
     const [firma] = await db.select({ id: authors.id, name: authors.name }).from(authors).where(eq(authors.userId, session.user.id)).limit(1);
-    if (firma && (firma.name === yo.name || debeTomarNombreDeCuenta(firma.name, name))) {
+    if (firma && (firma.name === yo.name || debeTomarNombreDeCuenta(firma.name, name, email))) {
       await db.update(authors).set({ name }).where(eq(authors.id, firma.id));
       invalidarCache();
     }

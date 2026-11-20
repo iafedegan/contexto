@@ -1,14 +1,19 @@
 /**
- * ¿La firma de una cuenta debe tomar el nombre de la cuenta? Sí cuando la firma quedó con un nombre de usuario (una sola palabra, como
- * «pfonseca») y la cuenta ya tiene un nombre real con nombre y apellido. Sin base de datos, para poder probarlo.
+ * ¿La firma de una cuenta debe tomar el nombre de la cuenta? Solo cuando la firma ES el usuario de ESA persona: la parte del correo antes de
+ * la @ («pfonseca» de pfonseca@…) o la inicial del nombre más el apellido («pfonseca» de Pedro Fonseca), con o sin mayúsculas o puntos.
+ * Cualquier otra firma de una sola palabra se deja como está: una regla más suelta renombró por error una firma vinculada a otra cuenta.
+ * Sin base de datos, para poder probarlo.
  */
-export function debeTomarNombreDeCuenta(firma: string, nombreCuenta: string): boolean {
+const plano = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
+
+export function debeTomarNombreDeCuenta(firma: string, nombreCuenta: string, correoCuenta = ""): boolean {
   const f = firma.trim();
   const n = nombreCuenta.replace(/\s+/g, " ").trim();
-  if (!n || f === n) return false;
-  // Una sola palabra que NO es ninguna de las palabras del nombre real («Pfonseca», «pfonseca», «p.fonseca»): es el usuario, no un nombre.
-  const sinTildes = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-  const palabras = sinTildes(n).split(" ");
-  const pareceUsuario = !/\s/.test(f) && !palabras.includes(sinTildes(f));
-  return pareceUsuario && n.includes(" ");
+  if (!n || f === n || /\s/.test(f) || !n.includes(" ")) return false;
+  const usuario = plano(f);
+  if (!usuario) return false;
+  const palabras = n.split(" ").map(plano).filter(Boolean);
+  const inicialYApellido = palabras.length >= 2 ? palabras.slice(1).map((ap) => palabras[0][0] + ap) : [];
+  const local = plano(correoCuenta.split("@")[0] ?? "");
+  return usuario === local || inicialYApellido.includes(usuario);
 }

@@ -20,7 +20,7 @@ export async function ensureUserAuthors(opciones: { forzar?: boolean } = {}): Pr
   if (!opciones.forzar && Date.now() - ultimaRevision < REVISION_CADA_MS) return;
   ultimaRevision = Date.now();
   const [activos, existentes] = await Promise.all([
-    db.select({ id: users.id, name: users.name }).from(users).where(eq(users.active, true)),
+    db.select({ id: users.id, name: users.name, email: users.email }).from(users).where(eq(users.active, true)),
     db.select({ id: authors.id, userId: authors.userId, slug: authors.slug, name: authors.name }).from(authors),
   ]);
   // Firmas que quedaron con un nombre de usuario («pfonseca») porque la cuenta se creó así y después se le puso el nombre real: toman el
@@ -29,7 +29,7 @@ export async function ensureUserAuthors(opciones: { forzar?: boolean } = {}): Pr
   let renombradas = 0;
   for (const a of existentes) {
     const u = a.userId ? activos.find((x) => x.id === a.userId) : undefined;
-    if (!u || !debeTomarNombreDeCuenta(a.name, u.name)) continue;
+    if (!u || !debeTomarNombreDeCuenta(a.name, u.name, u.email)) continue;
     await db.update(authors).set({ name: u.name.trim() }).where(eq(authors.id, a.id));
     renombradas++;
   }
