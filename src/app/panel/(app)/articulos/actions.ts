@@ -20,6 +20,7 @@ import { esNotaPropia, exigirNotaPropia } from "@/lib/propiedad-notas";
 import { registrarActividad } from "@/lib/actividad-notas";
 import { palabrasCambiadas } from "@/lib/actividad-reglas";
 import { limpiarEnvio } from "@/lib/notas-asignadas-reglas";
+import { guardarVersion } from "@/lib/versiones-notas";
 import { asignacionDe, destinoActivo, devolverAsignacion, quitarAsignacion, registrarAsignacion, soltarAsignacion, type ResultadoAsignacion } from "@/lib/notas-asignadas";
 import { puedeEnviarNota } from "@/lib/notas-asignadas-reglas";
 import { fijarColumnaDestacada } from "@/lib/columna-destacada";
@@ -200,6 +201,8 @@ export async function saveArticle(formData: FormData) {
       // Queda «En revisión» y le aparece al editor en «Artículos» y en «Notas para editores» (la nota cuenta como suya para revisarla).
       await enviarARevisionCore(articleId);
       // «Agregar»: la nota le llega también a esta persona y sigue con quienes ya la tenían (incluida quien la envía, si se la habían enviado).
+      // Foto de la nota tal como la entrega quien la envía: lo que cambie quien la recibe se marca sobre ella (control de cambios).
+      await guardarVersion(articleId, user.id, "envio");
       const sumar = formData.get("sumarDestino") === "1";
       await registrarAsignacion({ articleId, editorId: editorDestino.id, porId: user.id, mensaje: String(formData.get("mensajeEditor") ?? "").trim().slice(0, 600), fecha: new Date().toISOString(), ...limpiarEnvio(formData.get("proposito"), formData.get("paraCuando")) }, { sumar });
       await registrarActividad(articleId, user.id, "envio");
@@ -259,7 +262,9 @@ export async function submitForReview(articleId: string) {
 export async function publishArticle(articleId: string) {
   const user = await quienPublica(articleId);
   await exigirNotaPropia(user, articleId);
+  await guardarVersion(articleId, user.id, "corte");
   await publicarCore(articleId);
+  await guardarVersion(articleId, user.id, "publico");
   await registrarActividad(articleId, user.id, "publico");
   revalidatePath(`/panel/articulos/${articleId}`);
 }

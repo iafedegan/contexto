@@ -309,6 +309,13 @@
       "when": 1795134601298,
       "tag": "0043_firmas_activas",
       "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1795210398015,
+      "tag": "0044_versiones_notas",
+      "breakpoints": true
     }
   ]
 }

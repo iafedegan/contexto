@@ -1,5 +1,6 @@
 import "server-only";
 import { registrarActividad } from "@/lib/actividad-notas";
+import { guardarVersion } from "@/lib/versiones-notas";
 import { and, eq, inArray, ne, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { articles, siteSettings, users } from "@/db/schema";
@@ -170,6 +171,7 @@ export async function devolverAsignacion(articleId: string, userId: string, role
   await registrarAsignacion({ articleId, editorId: destino.id, porId: userId, mensaje: mensaje.trim().slice(0, 600), fecha: new Date().toISOString() }, { sumar: true });
   // Vuelve a ser un borrador de quien la escribió (una nota publicada o programada no se toca).
   await db.update(articles).set({ status: "borrador", updatedAt: sql`now()` }).where(and(eq(articles.id, articleId), eq(articles.status, "en_revision")));
+  await guardarVersion(articleId, userId, "devolvio");
   await registrarActividad(articleId, userId, "devolvio");
   await registrarActividad(articleId, destino.id, "recibio");
   return { ok: true, aNombre: destino.nombre, aId: destino.id };

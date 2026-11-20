@@ -1110,6 +1110,29 @@ export const mediaFolders = pgTable(
  * Lo que hizo cada persona en cada nota, para el informe del equipo: la recibió, la abrió para revisarla, la editó (con cuántas palabras cambió),
  * la publicó, la programó, la envió o la devolvió. Una fila por nota, persona, acción y día (el autoguardado suma palabras en la misma fila).
  */
+/**
+ * Versiones de una nota para el control de cambios: una foto del título, la bajada y el cuerpo cada vez que la nota pasa de una persona a otra
+ * (al enviarla, devolverla o publicarla) o cuando se aceptan los cambios. Lo que cambió entre una foto y la siguiente lo hizo quien la tenía.
+ */
+export const articleVersions = pgTable(
+  "article_versions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    articleId: uuid("article_id").notNull().references(() => articles.id, { onDelete: "cascade" }),
+    /** Quién tenía la nota hasta este momento (quien la envía, la devuelve, la publica o acepta los cambios). */
+    userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
+    motivo: text("motivo").notNull(),
+    title: text("title").notNull(),
+    excerpt: text("excerpt").notNull().default(""),
+    body: text("body").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("article_versions_nota_idx").on(t.articleId, t.createdAt),
+    check("article_versions_motivo", sql`${t.motivo} in ('envio', 'devolvio', 'publico', 'aceptado', 'corte', 'rechazo')`),
+  ],
+);
+
 export const articleActivity = pgTable(
   "article_activity",
   {

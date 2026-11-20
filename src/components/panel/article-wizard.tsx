@@ -41,8 +41,7 @@ import {
   Plus,
   Sparkles,
   Trash2,
-  X,
-} from "lucide-react";
+  X, GitCompareArrows } from "lucide-react";
 import { autosaveDraft, cancelarEnvio, crearAutor, devolverNota, saveArticle, soltarNota } from "@/app/panel/(app)/articulos/actions";
 import { subirMedia } from "./subir-media";
 import { portadaAuto } from "./ajustar-imagen";
@@ -50,6 +49,7 @@ import { creditoFotoValido, FORMATO_CREDITO, ORIGENES_CREDITO } from "@/lib/cred
 import { PedirImagen } from "./pedir-imagen";
 import { etiquetaRol, PROPOSITOS, textoProposito } from "@/lib/notas-asignadas-reglas";
 import { RecorridoNota } from "@/components/panel/recorrido-nota";
+import { ControlCambios } from "@/components/panel/control-cambios";
 import {
   generateArticleDraft,
   regenerateDraftPart,
@@ -254,6 +254,8 @@ export function ArticleWizard({
   // Comentarios nuevos que la persona aún no ha leído: ponen en rojo el círculo del paso «Documento» hasta que abre los comentarios.
   const [nuevos, setNuevos] = useState(comentariosNuevos);
   const abrirComentarios = () => { setVerComentarios(true); setNuevos(0); };
+  // Control de cambios (quién cambió qué, como en Word).
+  const [verCambios, setVerCambios] = useState(false);
   const comentariosAbiertos = useRef(false);
   useEffect(() => { comentariosAbiertos.current = verComentarios; }, [verComentarios]);
   // «Comentar selección»: si el panel está cerrado, se abre y el evento se repite cuando ya está montado, para que el fragmento llegue a la caja.
@@ -1164,6 +1166,12 @@ export function ArticleWizard({
                 {nuevos > 0 && !verComentarios && <span aria-hidden className="ml-0.5 size-2 rounded-full bg-red-600" />}
               </button>
             )}
+            {savedId && (
+              <button type="button" onClick={() => setVerCambios(true)} className="lx-link inline-flex items-center gap-1 font-medium">
+                <GitCompareArrows size={13} aria-hidden /> Control de cambios
+              </button>
+            )}
+            {verCambios && savedId && <ControlCambios articleId={savedId} alCambiarCuerpo={(html) => setBody(html)} alCerrar={() => setVerCambios(false)} />}
             {initial ? (
               <Link href={`/panel/articulos/${initial.id}`} className="lx-link">
                 Editor completo
