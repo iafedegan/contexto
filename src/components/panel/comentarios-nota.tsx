@@ -40,7 +40,10 @@ export function ComentariosNota({ articleId, esAdmin = false }: { articleId: str
 
   useEffect(() => {
     let vigente = true;
-    comentariosDeNota(articleId)
+    // Un fallo pasajero (la red, una acción que se cruzó con otra) se reintenta una vez antes de avisar.
+    const cargar = () => comentariosDeNota(articleId);
+    cargar()
+      .catch(() => new Promise((ok) => setTimeout(ok, 800)).then(cargar))
       .then((r) => { if (!vigente) return; if (r.ok) setLista(r.comentarios); else { setError(r.message); setLista([]); } })
       .catch(() => { if (vigente) { setError("No se pudieron cargar los comentarios."); setLista([]); } });
     return () => { vigente = false; };

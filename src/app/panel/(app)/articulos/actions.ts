@@ -19,6 +19,7 @@ import { invalidarCache } from "@/lib/data-cache";
 import { esNotaPropia, exigirNotaPropia } from "@/lib/propiedad-notas";
 import { registrarActividad } from "@/lib/actividad-notas";
 import { palabrasCambiadas } from "@/lib/actividad-reglas";
+import { limpiarEnvio } from "@/lib/notas-asignadas-reglas";
 import { asignacionDe, destinoActivo, devolverAsignacion, quitarAsignacion, registrarAsignacion, soltarAsignacion, type ResultadoAsignacion } from "@/lib/notas-asignadas";
 import { puedeEnviarNota } from "@/lib/notas-asignadas-reglas";
 import { fijarColumnaDestacada } from "@/lib/columna-destacada";
@@ -200,7 +201,7 @@ export async function saveArticle(formData: FormData) {
       await enviarARevisionCore(articleId);
       // «Agregar»: la nota le llega también a esta persona y sigue con quienes ya la tenían (incluida quien la envía, si se la habían enviado).
       const sumar = formData.get("sumarDestino") === "1";
-      await registrarAsignacion({ articleId, editorId: editorDestino.id, porId: user.id, mensaje: String(formData.get("mensajeEditor") ?? "").trim().slice(0, 600), fecha: new Date().toISOString() }, { sumar });
+      await registrarAsignacion({ articleId, editorId: editorDestino.id, porId: user.id, mensaje: String(formData.get("mensajeEditor") ?? "").trim().slice(0, 600), fecha: new Date().toISOString(), ...limpiarEnvio(formData.get("proposito"), formData.get("paraCuando")) }, { sumar });
       await registrarActividad(articleId, user.id, "envio");
       await registrarActividad(articleId, editorDestino.id, "recibio");
     // Quien la tenía en sus pendientes y la pasa a otra persona ya terminó su parte: sale de SUS pendientes (la conservan los demás).

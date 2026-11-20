@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { CalendarClock, CircleCheck, ClipboardList, PenLine, Send, Sparkles, type LucideIcon } from "lucide-react";
+import { CalendarClock, CheckCheck, CircleCheck, ClipboardList, PenLine, Send, Sparkles, type LucideIcon } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { tienePermiso } from "@/lib/permisos-server";
 import { MarcarVistos } from "@/components/panel/marcar-vistos";
@@ -17,6 +17,7 @@ const cuando = (d: Date) => new Intl.DateTimeFormat("es-CO", { weekday: "short",
 const COLUMNAS: { id: Columna; titulo: string; vacia: string; Icono: LucideIcon; tono: string }[] = [
   { id: "pendiente", titulo: "Pendiente", vacia: "Nada por empezar.", Icono: ClipboardList, tono: "bg-red-600" },
   { id: "editando", titulo: "Editando", vacia: "No tienes notas a medio camino.", Icono: PenLine, tono: "bg-amber-500" },
+  { id: "resuelta", titulo: "Resueltas", vacia: "Aquí pasan las notas que revisas y le envías a otra persona.", Icono: CheckCheck, tono: "bg-sky-600" },
   { id: "publicado", titulo: "Publicado", vacia: "Nada publicado en los últimos 30 días.", Icono: CircleCheck, tono: "bg-[#157a4a]" },
 ];
 
@@ -46,12 +47,12 @@ function TarjetaNota({ t }: { t: Tarjeta }) {
         )}
       </Link>
       {/* Se pueden quitar las piezas del grupo de redacción y las notas que te enviaron (con la razón); las propias y las ya publicadas no. */}
-      {t.origen !== "propia" && t.columna !== "publicado" && <div className="px-1"><QuitarPendiente clave={t.clave} /></div>}
+      {t.origen !== "propia" && t.columna !== "publicado" && t.columna !== "resuelta" && <div className="px-1"><QuitarPendiente clave={t.clave} /></div>}
     </li>
   );
 }
 
-// «Mis pendientes» como tablero: lo que le toca a quien entra, en tres columnas (pendiente, editando, publicado). Reúne las piezas del grupo de
+// «Mis pendientes» como tablero: lo que le toca a quien entra, en cuatro columnas (pendiente, editando, resueltas, publicado). Reúne las piezas del grupo de
 // redacción, las notas que le enviaron los redactores o los administradores y sus propias notas.
 export default async function MisPendientes() {
   const session = await auth();
@@ -64,7 +65,7 @@ export default async function MisPendientes() {
     tarjetas
       .filter((t) => t.columna === c)
       // Pendiente y editando: lo más urgente (o lo que sale antes) arriba; publicado: lo último arriba.
-      .sort((a, b) => (c === "publicado" ? (b.fecha?.getTime() ?? 0) - (a.fecha?.getTime() ?? 0) : (a.fecha?.getTime() ?? Infinity) - (b.fecha?.getTime() ?? Infinity)));
+      .sort((a, b) => (c === "publicado" || c === "resuelta" ? (b.fecha?.getTime() ?? 0) - (a.fecha?.getTime() ?? 0) : (a.fecha?.getTime() ?? Infinity) - (b.fecha?.getTime() ?? Infinity)));
   const n = (c: Columna) => tarjetas.filter((t) => t.columna === c).length;
 
   return (
@@ -74,12 +75,12 @@ export default async function MisPendientes() {
         <p className="lx-kicker text-[var(--accent)]">Grupo de redacción</p>
         <h1 className="lx-display mt-1 text-3xl font-semibold tracking-tight sm:text-4xl">Mis pendientes</h1>
         <p className="mt-1 text-sm text-[var(--fg-muted)]">
-          {n("pendiente")} {n("pendiente") === 1 ? "pendiente" : "pendientes"} · {n("editando")} editando · {n("publicado")} {n("publicado") === 1 ? "publicada" : "publicadas"} en los últimos 30 días.
+          {n("pendiente")} {n("pendiente") === 1 ? "pendiente" : "pendientes"} · {n("editando")} editando · {n("resuelta")} {n("resuelta") === 1 ? "resuelta" : "resueltas"} · {n("publicado")} {n("publicado") === 1 ? "publicada" : "publicadas"} en los últimos 30 días.
           Aquí llegan las piezas del grupo de redacción y las notas que te envían.
         </p>
       </header>
 
-      <div className="grid items-start gap-4 lg:grid-cols-3">
+      <div className="grid items-start gap-4 md:grid-cols-2 xl:grid-cols-4">
         {COLUMNAS.map(({ id, titulo, vacia, Icono, tono }) => {
           const lista = de(id);
           return (

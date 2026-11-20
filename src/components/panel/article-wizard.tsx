@@ -48,7 +48,8 @@ import { subirMedia } from "./subir-media";
 import { portadaAuto } from "./ajustar-imagen";
 import { creditoFotoValido, FORMATO_CREDITO, ORIGENES_CREDITO } from "@/lib/credito-foto";
 import { PedirImagen } from "./pedir-imagen";
-import { etiquetaRol } from "@/lib/notas-asignadas-reglas";
+import { etiquetaRol, PROPOSITOS, textoProposito } from "@/lib/notas-asignadas-reglas";
+import { RecorridoNota } from "@/components/panel/recorrido-nota";
 import {
   generateArticleDraft,
   regenerateDraftPart,
@@ -210,7 +211,7 @@ export function ArticleWizard({
   /** Editor o administrador: el destinatario es un especialista, de cualquier rol. */
   envioLibre?: boolean;
   /** A quién se envió ya esta nota (lo leído del servidor), con su mensaje y la fecha. */
-  enviadoA?: { editorId: string; porId?: string; nombre: string; porNombre?: string; mensaje: string; fecha: string; todos?: { id: string; nombre: string }[] } | null;
+  enviadoA?: { editorId: string; porId?: string; nombre: string; porNombre?: string; mensaje: string; fecha: string; proposito?: string; para?: string; todos?: { id: string; nombre: string }[] } | null;
   /** Mi cuenta: sirve para saber si la nota me la enviaron a mí (entonces puedo devolverla o quitarla de mis pendientes). */
   miUsuarioId?: string | null;
 }) {
@@ -341,6 +342,9 @@ export function ArticleWizard({
   const [avisoEnvio, setAvisoEnvio] = useState("");
   const [enviarA, setEnviarA] = useState("");
   const [mensajeEditor, setMensajeEditor] = useState("");
+  // Para qué y para cuándo se envía la nota (lo ve quien la recibe, arriba de la nota y en «Mis pendientes»).
+  const [proposito, setProposito] = useState<string>("revisar");
+  const [paraCuando, setParaCuando] = useState("");
   const [cancelando, cancelarT] = useTransition();
   const [errorEnvio, setErrorEnvio] = useState("");
   const editorElegido = editores.find((e) => e.id === enviarA);
@@ -856,6 +860,16 @@ export function ArticleWizard({
     });
   }
 
+  // Para qué y para cuándo: se eligen al enviar o agregar a alguien.
+  const camposEnvio = (
+    <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+      <select value={proposito} onChange={(e) => setProposito(e.target.value)} disabled={!enviarA} aria-label="Para qué se la envías" className="w-full rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm outline-none transition focus:border-[var(--accent)] disabled:opacity-60">
+        {PROPOSITOS.map((p) => <option key={p.id} value={p.id}>Para: {p.texto}</option>)}
+      </select>
+      <input type="date" value={paraCuando} onChange={(e) => setParaCuando(e.target.value)} disabled={!enviarA} aria-label="Para cuándo" title="Para cuándo (opcional)" className="rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm outline-none transition focus:border-[var(--accent)] disabled:opacity-60" />
+    </div>
+  );
+
   // Agregar la nota a otra persona: le llega también a ella y quienes ya la tenían la conservan (sirve a quien la recibió y a quien la envió).
   const agregarPersona = (
     <div className="flex flex-col gap-2 rounded-[var(--radius)] border border-[var(--accent)]/40 bg-[var(--surface)] p-3">
@@ -868,6 +882,7 @@ export function ArticleWizard({
         <option value="">Elige a quién</option>
         {otrosDestinos.map((e) => <option key={e.id} value={e.id}>{e.nombre}{e.rol ? ` · ${etiquetaRol(e.rol)}` : ""}{yaLaTienen.has(e.id) ? " · ya la tiene (se le vuelve a enviar)" : ""}</option>)}
       </select>
+      {camposEnvio}
       <textarea value={mensajeEditor} onChange={(e) => setMensajeEditor(e.target.value)} maxLength={600} rows={2} disabled={!enviarA} placeholder={enviarA ? "Mensaje para quien la recibe (opcional)" : "Elige a quién para dejarle un mensaje"} aria-label="Mensaje para quien la recibe"
         className="w-full resize-none rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm outline-none transition placeholder:text-[var(--fg-muted)]/60 focus:border-[var(--accent)] disabled:opacity-60" />
       <button type="submit" name="intent" value="editor" disabled={!editorElegido} className="lx-btn self-start disabled:cursor-not-allowed disabled:opacity-60 disabled:saturate-50">
@@ -1108,6 +1123,8 @@ export function ArticleWizard({
       <input type="hidden" name="columnaDestacada" value={canPortada ? (columnaDest ? "si" : "no") : "keep"} />
       <input type="hidden" name="enviarA" value={puedeEnviarEditor ? enviarA : ""} />
       <input type="hidden" name="mensajeEditor" value={puedeEnviarEditor && enviarA ? mensajeEditor : ""} />
+      <input type="hidden" name="proposito" value={puedeEnviarEditor && enviarA ? proposito : ""} />
+      <input type="hidden" name="paraCuando" value={puedeEnviarEditor && enviarA ? paraCuando : ""} />
 
       {/* --- Pasos --- */}
       <div className="lx-card shrink-0 px-4 py-3">
@@ -2026,6 +2043,12 @@ export function ArticleWizard({
                       <p className="rounded-[var(--radius)] bg-[var(--surface-2)] px-3 py-2">
                         Te la envió <strong>{envio.porNombre ?? "otra persona"}</strong> · {new Intl.DateTimeFormat("es-CO", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "America/Bogota" }).format(new Date(envio.fecha))}.
                       </p>
+                      {(envio.proposito || envio.para) && (
+                        <p className="flex flex-wrap items-center gap-2">
+                          {envio.proposito && <span className="rounded-full bg-[var(--accent)] px-2.5 py-0.5 font-semibold text-[var(--accent-fg,#fff)]">Te pide: {textoProposito(envio.proposito)}</span>}
+                          {envio.para && <span className="rounded-full bg-amber-500/15 px-2.5 py-0.5 font-semibold text-amber-800">Para el {new Intl.DateTimeFormat("es-CO", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" }).format(new Date(`${envio.para}T12:00:00Z`))}</span>}
+                        </p>
+                      )}
                       {envio.mensaje && <p className="whitespace-pre-line text-[var(--fg-muted)]">{envio.mensaje}</p>}
                       {otrosDestinos.length > 0 && agregarPersona}
                       <p className="mt-1 font-semibold">O devuélvela</p>
@@ -2103,6 +2126,7 @@ export function ArticleWizard({
                         <option value="">No enviar a nadie</option>
                         {editores.map((e) => <option key={e.id} value={e.id}>{e.nombre}{envioLibre && e.rol ? ` · ${etiquetaRol(e.rol)}` : ""}</option>)}
                       </select>
+                      {camposEnvio}
                       <textarea value={mensajeEditor} onChange={(e) => setMensajeEditor(e.target.value)} maxLength={600} rows={3} disabled={!enviarA} placeholder={enviarA ? "Mensaje para quien la recibe (opcional)" : "Elige a quién enviarla para dejarle un mensaje"} aria-label="Mensaje para quien la recibe"
                         className="w-full resize-none rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm outline-none transition placeholder:text-[var(--fg-muted)]/60 focus:border-[var(--accent)] disabled:opacity-60" />
                       <button type="submit" name="intent" value="editor" disabled={!editorElegido} className="lx-btn self-start disabled:cursor-not-allowed disabled:opacity-60 disabled:saturate-50">
@@ -2116,6 +2140,7 @@ export function ArticleWizard({
                 </TarjetaEnvio>
               ) : null}
             </div>
+            {savedId && <div className="mt-4"><RecorridoNota articleId={savedId} /></div>}
             </div>
           </Step>
         )}

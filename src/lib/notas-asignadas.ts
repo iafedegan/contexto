@@ -12,7 +12,7 @@ import { destinoPermitido, destinosPara, puedeEnviarNota, type Destino } from "@
  */
 export const ASIGNADAS_KEY = "notas_asignadas";
 
-export type Asignacion = { articleId: string; editorId: string; porId: string; mensaje: string; fecha: string; /** Cuándo la abrió por primera vez quien la recibe (pasa de «Pendiente» a «Editando»). */ abiertaAt?: string };
+export type Asignacion = { articleId: string; editorId: string; porId: string; mensaje: string; fecha: string; /** Para qué se la envían (revisar, verificar datos…). */ proposito?: string; /** Para cuándo (YYYY-MM-DD, hora de Colombia). */ para?: string; /** Cuándo la abrió por primera vez quien la recibe (pasa de «Pendiente» a «Editando»). */ abiertaAt?: string };
 
 /** Solo administradores y redactores envían notas a un editor desde el asistente. */
 export const puedeEnviarAEditor = (role: string) => role === "administrador" || role === "redactor";
@@ -106,7 +106,7 @@ export async function destinatariosDe(articleIds: string[]): Promise<Map<string,
  * A quién se envió una nota, con su nombre; `null` si no se ha enviado a nadie. Una nota puede estar con varias personas: si `paraId` la tiene,
  * se devuelve SU entrega (quién se la mandó y con qué mensaje); si no, la más reciente. `todos` son los nombres de todas las que la tienen.
  */
-export async function asignacionDe(articleId: string, paraId?: string): Promise<{ editorId: string; porId: string; nombre: string; porNombre: string; mensaje: string; fecha: string; todos: { id: string; nombre: string }[] } | null> {
+export async function asignacionDe(articleId: string, paraId?: string): Promise<{ editorId: string; porId: string; nombre: string; porNombre: string; mensaje: string; fecha: string; proposito?: string; para?: string; todos: { id: string; nombre: string }[] } | null> {
   const [row] = await db.select({ value: siteSettings.value }).from(siteSettings).where(eq(siteSettings.key, ASIGNADAS_KEY)).limit(1);
   const lista = [...(Array.isArray(row?.value) ? (row.value as Asignacion[]) : []).filter((a) => a.articleId === articleId)].sort((x, y) => y.fecha.localeCompare(x.fecha));
   const ultima = (paraId && lista.find((a) => a.editorId === paraId)) || lista[0];
@@ -115,7 +115,7 @@ export async function asignacionDe(articleId: string, paraId?: string): Promise<
   const personas = await db.select({ id: users.id, nombre: users.name }).from(users).where(inArray(users.id, ids));
   const nombre = (id: string, vacio: string) => personas.find((p) => p.id === id)?.nombre ?? vacio;
   const todos = [...new Set(lista.map((a) => a.editorId))].map((id) => ({ id, nombre: nombre(id, "otra persona") }));
-  return { editorId: ultima.editorId, porId: ultima.porId, nombre: nombre(ultima.editorId, "otra persona"), porNombre: nombre(ultima.porId, "quien la envió"), mensaje: ultima.mensaje ?? "", fecha: ultima.fecha, todos };
+  return { editorId: ultima.editorId, porId: ultima.porId, nombre: nombre(ultima.editorId, "otra persona"), porNombre: nombre(ultima.porId, "quien la envió"), mensaje: ultima.mensaje ?? "", fecha: ultima.fecha, proposito: ultima.proposito, para: ultima.para, todos };
 }
 
 /** Quita la asignación de una nota (cancelar el envío). Una sola sentencia, como el resto de escrituras de la lista. */

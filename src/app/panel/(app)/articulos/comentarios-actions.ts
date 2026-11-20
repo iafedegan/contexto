@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requirePermiso } from "@/lib/auth";
 import { puedeVerNota } from "@/lib/propiedad-notas";
+import { recorridoDe, type PasoRecorrido } from "@/lib/recorrido-nota";
 import { actualizarComentario, agregarComentario, comentarioDe, eliminarComentario, listarComentarios, marcarLeidos, MAX_CITA, MAX_COMENTARIO, type Comentario } from "@/lib/comentarios-notas";
 
 type Respuesta = { ok: true; comentarios: Comentario[] } | { ok: false; message: string };
@@ -13,8 +14,9 @@ export async function comentariosDeNota(articleId: string): Promise<Respuesta> {
   const yo = await requirePermiso("articulos");
   const id = String(articleId ?? "");
   if (!(await puedeVerNota(yo, id))) return { ok: false, message: SIN_ACCESO };
-  await marcarLeidos(id, yo.id);
-  revalidatePath("/panel/articulos");
+  // Leer no revalida la página: hacerlo desde la carga de la caja de comentarios refrescaba toda la pantalla y, con dos cajas abiertas
+  // (la del asistente y la de pantalla completa), la segunda carga se cortaba con «No se pudieron cargar los comentarios».
+  await marcarLeidos(id, yo.id).catch(() => {});
   return { ok: true, comentarios: await listarComentarios(id, yo.id) };
 }
 
@@ -58,4 +60,12 @@ export async function borrarComentarioNota(commentId: string): Promise<Respuesta
   await eliminarComentario(c.id);
   revalidatePath("/panel/articulos");
   return { ok: true, comentarios: await listarComentarios(c.articleId, yo.id) };
+}
+
+/** Recorrido de la nota (por quién ha pasado y qué hizo cada persona). Solo para quien ve la nota. */
+export async function recorridoDeNota(articleId: string): Promise<{ ok: true; pasos: PasoRecorrido[] } | { ok: false; message: string }> {
+  const yo = await requirePermiso("articulos");
+  const id = String(articleId ?? "");
+  if (!(await puedeVerNota(yo, id))) return { ok: false, message: SIN_ACCESO };
+  return { ok: true, pasos: await recorridoDe(id) };
 }

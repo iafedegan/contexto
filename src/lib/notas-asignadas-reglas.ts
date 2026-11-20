@@ -28,3 +28,19 @@ export function destinosPara(role: string, userId: string, personas: Destino[]):
 const ETIQUETA: Record<string, string> = { redactor: "redactor", disenador: "diseñador", editor: "editor", administrador: "administrador" };
 /** Rol en palabras, para la lista de destinatarios. */
 export const etiquetaRol = (rol: string) => ETIQUETA[rol] ?? rol;
+
+/** Para qué se envía una nota a otra persona. */
+export const PROPOSITOS = [
+  { id: "revisar", texto: "Revisar estilo" },
+  { id: "verificar", texto: "Verificar datos" },
+  { id: "editar", texto: "Editar" },
+  { id: "aprobar", texto: "Aprobar para publicar" },
+] as const;
+export type Proposito = (typeof PROPOSITOS)[number]["id"];
+export const textoProposito = (id: string | null | undefined) => PROPOSITOS.find((p) => p.id === id)?.texto ?? "";
+/** Valida lo que llega del formulario: un propósito conocido y una fecha AAAA-MM-DD (o nada). */
+export function limpiarEnvio(proposito: unknown, para: unknown): { proposito?: Proposito; para?: string } {
+  const p = PROPOSITOS.find((x) => x.id === String(proposito ?? ""))?.id;
+  const f = /^\d{4}-\d{2}-\d{2}$/.test(String(para ?? "")) ? String(para) : undefined;
+  return { ...(p ? { proposito: p } : {}), ...(f ? { para: f } : {}) };
+}
