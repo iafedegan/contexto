@@ -30,6 +30,8 @@ export function SearchBox({
   const [abierto, setAbierto] = useState(false);
   const caja = useRef<HTMLDivElement>(null);
 
+  // Lo ya consultado en esta visita: escribir y borrar no vuelve a pedir lo mismo.
+  const memoria = useRef(new Map<string, Sugerencia[]>());
   const temporizador = useRef<ReturnType<typeof setTimeout> | null>(null);
   const peticion = useRef<AbortController | null>(null);
 
@@ -50,6 +52,12 @@ export function SearchBox({
       return;
     }
 
+    const guardada = memoria.current.get(q.toLowerCase());
+    if (guardada) {
+      setItems(guardada);
+      setAbierto(guardada.length > 0);
+      return;
+    }
     const ctrl = new AbortController();
     peticion.current = ctrl;
     temporizador.current = setTimeout(async () => {
@@ -58,6 +66,7 @@ export function SearchBox({
           signal: ctrl.signal,
         });
         const data = (await res.json()) as { items: Sugerencia[] };
+        memoria.current.set(q.toLowerCase(), data.items ?? []);
         setItems(data.items ?? []);
         setAbierto((data.items ?? []).length > 0);
       } catch {

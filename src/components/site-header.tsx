@@ -11,6 +11,7 @@ import { MoreMenu } from "@/components/more-menu";
 import { NavMenuItem } from "@/components/nav-menu-item";
 import { MobileNav, type MobileLook } from "@/components/mobile-nav";
 import { RadioPlayer } from "@/components/radio-player";
+import { LupaBuscar } from "@/components/lupa-buscar";
 import { InstalarApp } from "@/components/instalar-app";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { StickyRail } from "@/components/sticky-rail";
@@ -183,6 +184,7 @@ function MastheadHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extr
         <div className="absolute bottom-3 right-6 z-10 hidden items-center gap-3 md:flex">
           {/* La emisora, a la vista junto al modo claro/oscuro (en el celular va en el menú «Más»). */}
           {identity.radioStreamUrl && <RadioPlayer src={identity.radioStreamUrl} locale={locale} className="!min-h-11 !border-[#d9a41a]/55 !text-[#d9a41a]" />}
+          <LupaBuscar locale={locale} />
           <ThemeToggle locale={locale} className="!size-11 rounded-full border border-[#d9a41a]/55 !text-[#d9a41a]" />
         </div>
         {/* Logo a la izquierda y, a su lado, el nombre. `items-center` en ESTA fila: las líneas y el logo quedan en el centro vertical del título. */}
@@ -238,7 +240,8 @@ function MastheadHeader({ nav, extra, locale, identity }: { nav: NavItem[]; extr
               </>
             }
           />
-          
+          {/* En el celular la columna de la derecha del mastil no se ve: la lupa va también al final del menú verde. */}
+          <LupaBuscar locale={locale} variante="barra" className="md:hidden" />
         </div>
       </nav>
     </header>

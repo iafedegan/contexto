@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
-import { and, ilike, sql } from "drizzle-orm";
-import { db } from "@/db";
-import { articles } from "@/db/schema";
+import { sql } from "drizzle-orm";
+import { db, rowsOf } from "@/db";
 import { clientIp, hit } from "@/lib/rate-limit";
 
 /**
@@ -22,20 +21,23 @@ export async function GET(req: Request) {
   }
 
   try {
-    const rows = await db
-      .select({ title: articles.title, slug: articles.slug })
-      .from(articles)
-      .where(
-        and(
-          sql`${articles.status} = 'publicado'`,
-          sql`${articles.publishedAt} <= now()`,
-          // `%` y `_` son comodines de LIKE: sin escaparlos, «%%%» o «___» coincidían con todo y «a_c» con «abc».
-          ilike(articles.title, `%${q.slice(0, 80).replace(/[\\%_]/g, "\\$&")}%`),
-        ),
-      )
-      .orderBy(sql`${articles.publishedAt} desc`)
-      .limit(6);
-    return NextResponse.json({ items: rows });
+    // Con el índice de texto completo (GIN sobre `search_vec`) en vez de recorrer los 51 mil títulos con `ilike '%…%'`: cada palabra tecleada es
+    // un prefijo («vacun» encuentra «vacunación»), sin tildes ni mayúsculas. De los candidatos más recientes, primero van los que llevan lo tecleado en el titular.
+    const palabras = q.slice(0, 80).match(/[\p{L}\p{N}]+/gu)?.slice(0, 5) ?? [];
+    if (!palabras.length) return NextResponse.json({ items: [] });
+    const consulta = palabras.map((w, i) => (i === palabras.length - 1 ? `${w}:*` : w)).join(" & ");
+    const frase = palabras.join(" ");
+    const rows = rowsOf<{ title: string; slug: string }>(
+      await db.execute(sql`
+        select title, slug from (
+          select title, slug, published_at from articles
+          where status = 'publicado' and published_at <= now() and search_vec @@ to_tsquery('spanish', ${consulta})
+          order by published_at desc limit 300
+        ) c
+        order by (translate(lower(title), 'áéíóúü', 'aeiouu') like '%' || translate(lower(${frase}), 'áéíóúü', 'aeiouu') || '%') desc, published_at desc
+        limit 6`),
+    );
+    return NextResponse.json({ items: rows }, { headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300" } });
   } catch {
     return NextResponse.json({ items: [] });
   }
