@@ -344,9 +344,9 @@ export function ArticleWizard({
   const [cancelando, cancelarT] = useTransition();
   const [errorEnvio, setErrorEnvio] = useState("");
   const editorElegido = editores.find((e) => e.id === enviarA);
-  // Quienes ya tienen la nota (no se ofrecen otra vez al agregar personas).
+  // Quienes ya tienen la nota: se siguen ofreciendo (marcados) para poder devolvérsela o volver a avisarles; nadie queda fuera de la lista.
   const yaLaTienen = new Set((envio?.todos ?? (envio ? [{ id: envio.editorId, nombre: envio.nombre }] : [])).map((p) => p.id));
-  const otrosDestinos = editores.filter((e) => !yaLaTienen.has(e.id));
+  const otrosDestinos = editores;
   const [depto, setDepto] = useState(initial?.depto ?? "");
   const [authorId, setAuthorId] = useState(initial?.authorId ?? miAutorId ?? "");
   // Firmar por otra persona (solo administradores): las firmas existentes más las que se creen aquí.
@@ -861,12 +861,12 @@ export function ArticleWizard({
     <div className="flex flex-col gap-2 rounded-[var(--radius)] border border-[var(--accent)]/40 bg-[var(--surface)] p-3">
       <p className="text-sm font-semibold">Agregar a otra persona</p>
       {envio?.todos && envio.todos.length > 0 && (
-        <p className="text-[var(--fg-muted)]">Ya la tiene{envio.todos.length === 1 ? "" : "n"}: <strong className="text-[var(--fg)]">{envio.todos.map((p) => p.nombre).join(", ")}</strong>. Quien agregues la recibe también, sin quitársela a nadie.</p>
+        <p className="text-[var(--fg-muted)]">Ya la tiene{envio.todos.length === 1 ? "" : "n"}: <strong className="text-[var(--fg)]">{envio.todos.map((p) => p.nombre).join(", ")}</strong>. Quien agregues la recibe también, sin quitársela a nadie; también puedes elegir a quien ya la tiene para devolvérsela.</p>
       )}
       <input type="hidden" name="sumarDestino" value="1" />
       <select value={enviarA} onChange={(e) => setEnviarA(e.target.value)} aria-label="Agregar la nota a" className="w-full rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm outline-none transition focus:border-[var(--accent)]">
         <option value="">Elige a quién</option>
-        {otrosDestinos.map((e) => <option key={e.id} value={e.id}>{e.nombre}{e.rol ? ` · ${etiquetaRol(e.rol)}` : ""}</option>)}
+        {otrosDestinos.map((e) => <option key={e.id} value={e.id}>{e.nombre}{e.rol ? ` · ${etiquetaRol(e.rol)}` : ""}{yaLaTienen.has(e.id) ? " · ya la tiene (se le vuelve a enviar)" : ""}</option>)}
       </select>
       <textarea value={mensajeEditor} onChange={(e) => setMensajeEditor(e.target.value)} maxLength={600} rows={2} disabled={!enviarA} placeholder={enviarA ? "Mensaje para quien la recibe (opcional)" : "Elige a quién para dejarle un mensaje"} aria-label="Mensaje para quien la recibe"
         className="w-full resize-none rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm outline-none transition placeholder:text-[var(--fg-muted)]/60 focus:border-[var(--accent)] disabled:opacity-60" />

@@ -16,8 +16,8 @@ test("envían notas los redactores, los editores y los administradores; los dise
   assert.equal(puedeEnviarNota("disenador"), false);
 });
 
-test("un redactor solo ve editores y administradores", () => {
-  assert.deepEqual(destinosPara("redactor", "r1", gente).map((p) => p.id), ["a1", "e1"]);
+test("un redactor también ve a todas las personas activas, menos a sí mismo", () => {
+  assert.deepEqual(destinosPara("redactor", "r1", gente).map((p) => p.id), ["a1", "d1", "e1"]);
 });
 
 test("un editor ve a todas las personas activas menos a sí mismo", () => {
@@ -29,9 +29,9 @@ test("un administrador también ve a todos, sin él", () => {
   assert.deepEqual(destinosPara("administrador", "a1", gente).map((p) => p.id), ["d1", "e1", "r1"]);
 });
 
-test("un redactor no puede enviarle una nota a otro redactor ni a un diseñador", () => {
-  assert.equal(destinoPermitido("redactor", "redactor"), false);
-  assert.equal(destinoPermitido("redactor", "disenador"), false);
-  assert.equal(destinoPermitido("redactor", "editor"), true);
+test("quien puede enviar, envía a cualquier persona registrada; un diseñador no envía", () => {
+  assert.equal(destinoPermitido("redactor", "redactor"), true);
+  assert.equal(destinoPermitido("redactor", "disenador"), true);
   assert.equal(destinoPermitido("editor", "redactor"), true);
+  assert.equal(destinoPermitido("disenador", "editor"), false);
 });
