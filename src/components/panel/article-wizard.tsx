@@ -861,7 +861,7 @@ export function ArticleWizard({
     <div className="flex flex-col gap-2 rounded-[var(--radius)] border border-[var(--accent)]/40 bg-[var(--surface)] p-3">
       <p className="text-sm font-semibold">Agregar a otra persona</p>
       {envio?.todos && envio.todos.length > 0 && (
-        <p className="text-[var(--fg-muted)]">Ya la tiene{envio.todos.length === 1 ? "" : "n"}: <strong className="text-[var(--fg)]">{envio.todos.map((p) => p.nombre).join(", ")}</strong>. Quien agregues la recibe también, sin quitársela a nadie; también puedes elegir a quien ya la tiene para devolvérsela.</p>
+        <p className="text-[var(--fg-muted)]">Ya la tiene{envio.todos.length === 1 ? "" : "n"}: <strong className="text-[var(--fg)]">{envio.todos.map((p) => p.nombre).join(", ")}</strong>. Quien elijas la recibe (también quien ya la tiene, para devolvérsela) y sale de tus pendientes; los demás la conservan.</p>
       )}
       <input type="hidden" name="sumarDestino" value="1" />
       <select value={enviarA} onChange={(e) => setEnviarA(e.target.value)} aria-label="Agregar la nota a" className="w-full rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm outline-none transition focus:border-[var(--accent)]">

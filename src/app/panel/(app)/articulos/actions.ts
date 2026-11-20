@@ -203,6 +203,8 @@ export async function saveArticle(formData: FormData) {
       await registrarAsignacion({ articleId, editorId: editorDestino.id, porId: user.id, mensaje: String(formData.get("mensajeEditor") ?? "").trim().slice(0, 600), fecha: new Date().toISOString() }, { sumar });
       await registrarActividad(articleId, user.id, "envio");
       await registrarActividad(articleId, editorDestino.id, "recibio");
+    // Quien la tenía en sus pendientes y la pasa a otra persona ya terminó su parte: sale de SUS pendientes (la conservan los demás).
+    if (editorDestino.id !== user.id) await quitarAsignacion(articleId, user.id);
       revalidatePath("/panel/asignaciones");
     }
     else if (intent === "programar") {
