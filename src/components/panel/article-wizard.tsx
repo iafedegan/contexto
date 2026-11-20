@@ -2005,7 +2005,10 @@ export function ArticleWizard({
 
         {current.key === "enviar" && (
           <Step ancho="lg" title="Enviar" hint="Opcional. Pide la imagen a un diseñador y, si quieres, envía la nota a otra persona. Cada tarjeta tiene su botón.">
-            <div className="grid items-stretch gap-4 @2xl:grid-cols-2">
+            {/* Desplazamiento propio: con la lista de personas, el mensaje y los botones, la tarjeta de envío no cabe en la pantalla del asistente y
+                lo de abajo («Agregar a…») quedaba cortado sin poder bajar. */}
+            <div className="-mr-2 min-h-0 flex-1 overflow-y-auto overscroll-contain pb-2 pr-2">
+            <div className="grid items-start gap-4 @2xl:grid-cols-2">
               <TarjetaEnvio Icono={Brush} titulo="Solicitar la imagen" ayuda="Un diseñador la prepara y te la devuelve a la nota.">
                 <PedirImagen articleId={savedId} titulo={title} resumen={excerpt} portadaActual={cover} alUsar={(u, a, pie) => { setCover(u); setCoverCaption(pie ?? ""); if (a) setCoverAlt(a); setImgError(""); }} />
               </TarjetaEnvio>
@@ -2112,6 +2115,7 @@ export function ArticleWizard({
                   )}
                 </TarjetaEnvio>
               ) : null}
+            </div>
             </div>
           </Step>
         )}
