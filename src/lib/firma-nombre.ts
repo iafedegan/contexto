@@ -6,6 +6,9 @@ export function debeTomarNombreDeCuenta(firma: string, nombreCuenta: string): bo
   const f = firma.trim();
   const n = nombreCuenta.replace(/\s+/g, " ").trim();
   if (!n || f === n) return false;
-  const pareceUsuario = !/\s/.test(f) && (/[._@0-9]/.test(f) || f === f.toLowerCase());
+  // Una sola palabra que NO es ninguna de las palabras del nombre real («Pfonseca», «pfonseca», «p.fonseca»): es el usuario, no un nombre.
+  const sinTildes = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  const palabras = sinTildes(n).split(" ");
+  const pareceUsuario = !/\s/.test(f) && !palabras.includes(sinTildes(f));
   return pareceUsuario && n.includes(" ");
 }
