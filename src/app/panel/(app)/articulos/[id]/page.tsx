@@ -82,12 +82,18 @@ export default async function ArticleEditorPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ modo?: string; paso?: string; desde?: string; guardado?: string; pieza?: string }>;
+  searchParams: Promise<{ modo?: string; paso?: string; desde?: string; guardado?: string; pieza?: string; aviso?: string }>;
 }) {
   await requirePermiso("articulos");
   const { id } = await params;
   const esColumnaDestacada = (await columnaDestacadaId().catch(() => null)) === id;
-  const { modo, paso, desde, guardado, pieza: piezaId } = await searchParams;
+  const { modo, paso, desde, guardado, pieza: piezaId, aviso } = await searchParams;
+  // Motivo por el que no se pudo publicar, programar o enviar (la nota sí quedó guardada).
+  const avisoBox = aviso ? (
+    <div role="alert" className="rounded-[var(--radius)] border border-red-600/40 bg-red-600/10 px-4 py-3 text-sm font-medium text-red-800">
+      La nota quedó guardada, pero no se pudo completar: {aviso.slice(0, 300)}
+    </div>
+  ) : null;
   const session = await auth();
   const isNew = id === "nuevo";
 
@@ -111,6 +117,8 @@ export default async function ArticleEditorPage({
       const p = modo === "ia" && piezaId ? await piezaParaEscribir({ id: session!.user.id, role: session!.user.role }, piezaId) : null;
       // Ojo: aquí NO se redirige si la pieza ya tiene nota. Al elegir el título el autoguardado la enlaza y la pantalla se refresca; redirigir sacaba a la persona del asistente y le borraba lo escrito. Si se reabre el enlace, el autoguardado reutiliza la nota existente.
       return (
+        <>
+        {avisoBox}
         <ArticleWizard
           categories={cats}
           authors={auths}
@@ -130,6 +138,7 @@ export default async function ArticleEditorPage({
           escritores={escritores}
           estiloInfo={est.diagnostico ? { generadoEn: est.diagnostico.generadoEn, muestras: est.diagnostico.muestras, palabras: est.diagnostico.palabras } : null}
         />
+        </>
       );
     }
     return <ModeChooser />;
@@ -231,6 +240,7 @@ export default async function ArticleEditorPage({
 
   return (
     <div className="flex flex-col gap-6">
+      {avisoBox}
       <div className="flex flex-col gap-2">
         {!isNew && (desde === "ia" || desde === "manual") ? (
           <Link

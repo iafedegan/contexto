@@ -189,31 +189,41 @@ export async function saveArticle(formData: FormData) {
   // revisión en el mismo clic (el permiso se comprueba dentro de cada acción).
   const intent = String(formData.get("intent") ?? "");
   if (!id) await registrarActividad(articleId, user.id, "creo");
-  if (intent === "publicar") await publishArticle(articleId);
-  else if (intent === "revision") await submitForReview(articleId);
-  else if (intent === "editor" && editorDestino) {
-    // Queda «En revisión» y le aparece al editor en «Artículos» y en «Notas para editores» (la nota cuenta como suya para revisarla).
-    await enviarARevisionCore(articleId);
-    // «Agregar»: la nota le llega también a esta persona y sigue con quienes ya la tenían (incluida quien la envía, si se la habían enviado).
-    const sumar = formData.get("sumarDestino") === "1";
-    await registrarAsignacion({ articleId, editorId: editorDestino.id, porId: user.id, mensaje: String(formData.get("mensajeEditor") ?? "").trim().slice(0, 600), fecha: new Date().toISOString() }, { sumar });
-    await registrarActividad(articleId, user.id, "envio");
-    await registrarActividad(articleId, editorDestino.id, "recibio");
-    revalidatePath("/panel/asignaciones");
+  // Publicar, programar o enviar puede fallar por una regla (SEO, imagen, permiso…). La nota ya quedó guardada: en vez de tumbar la pantalla
+  // («No se pudo abrir esta pantalla»), se vuelve al editor con el motivo a la vista.
+  let aviso = "";
+  try {
+    if (intent === "publicar") await publishArticle(articleId);
+    else if (intent === "revision") await submitForReview(articleId);
+    else if (intent === "editor" && editorDestino) {
+      // Queda «En revisión» y le aparece al editor en «Artículos» y en «Notas para editores» (la nota cuenta como suya para revisarla).
+      await enviarARevisionCore(articleId);
+      // «Agregar»: la nota le llega también a esta persona y sigue con quienes ya la tenían (incluida quien la envía, si se la habían enviado).
+      const sumar = formData.get("sumarDestino") === "1";
+      await registrarAsignacion({ articleId, editorId: editorDestino.id, porId: user.id, mensaje: String(formData.get("mensajeEditor") ?? "").trim().slice(0, 600), fecha: new Date().toISOString() }, { sumar });
+      await registrarActividad(articleId, user.id, "envio");
+      await registrarActividad(articleId, editorDestino.id, "recibio");
+      revalidatePath("/panel/asignaciones");
+    }
+    else if (intent === "programar") {
+      // «YYYY-MM-DDTHH:mm» llega en hora de Colombia (UTC-5, sin horario de verano).
+      const v = String(formData.get("programarPara") ?? "");
+      if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(v)) throw new Error("Elige la fecha y la hora de publicación.");
+      await scheduleArticle(articleId, new Date(`${v}:00-05:00`).toISOString());
+    }
+  } catch (e) {
+    if (e && typeof e === "object" && "digest" in e && String((e as { digest?: string }).digest).startsWith("NEXT_REDIRECT")) throw e;
+    aviso = e instanceof Error && e.message ? e.message : "No se pudo completar la acción.";
+    console.error("saveArticle:", intent, aviso);
   }
-  else if (intent === "programar") {
-    // «YYYY-MM-DDTHH:mm» llega en hora de Colombia (UTC-5, sin horario de verano).
-    const v = String(formData.get("programarPara") ?? "");
-    if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(v)) throw new Error("Elige la fecha y la hora de publicación.");
-    await scheduleArticle(articleId, new Date(`${v}:00-05:00`).toISOString());
-  }
+  const conAviso = aviso ? `&aviso=${encodeURIComponent(aviso.slice(0, 300))}` : "";
 
   // Desde el asistente se vuelve al asistente, en su vista previa.
   const desde = String(formData.get("desde") ?? "");
   if (desde === "ia" || desde === "manual") {
-    redirect(`/panel/articulos/${articleId}?modo=${desde}&paso=vista&guardado=${intent || "borrador"}`);
+    redirect(`/panel/articulos/${articleId}?modo=${desde}&paso=vista&guardado=${aviso ? "borrador" : intent || "borrador"}${conAviso}`);
   }
-  redirect(`/panel/articulos/${articleId}?guardado=1`);
+  redirect(`/panel/articulos/${articleId}?guardado=1${conAviso}`);
 }
 
 /**

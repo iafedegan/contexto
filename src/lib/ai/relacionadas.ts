@@ -20,11 +20,11 @@ const GENERICAS = new Set(["ganaderia", "ganadero", "ganaderos", "ganaderas", "c
 // Palabras con contenido (5 letras o más, no generales) de un texto, sin tildes.
 const palabras = (s: string) => new Set(norm(s).split(/[^a-z0-9ñ]+/).filter((w) => w.length >= 5 && !GENERICAS.has(w)));
 
-// Sin modelo: una nota «habla de lo mismo» si comparte al menos tres palabras con contenido con el título y el resumen de la nota.
+// Sin modelo (o si el modelo no eligió ninguna): una nota «habla de lo mismo» si comparte al menos dos palabras con contenido con el título y el resumen de la nota.
 function porPalabras(nota: string, candidatas: NotaRelacionada[], limite: number): NotaRelacionada[] {
   const mias = palabras(nota);
   return candidatas
-    .filter((c) => [...palabras(`${c.title} ${c.summary}`)].filter((w) => mias.has(w)).length >= 3)
+    .filter((c) => [...palabras(`${c.title} ${c.summary}`)].filter((w) => mias.has(w)).length >= 2)
     .slice(0, limite);
 }
 
@@ -50,7 +50,7 @@ export async function buscarRelacionadasCore(
 
   let candidatas: NotaRelacionada[];
   try {
-    const hits = await hybridSearch(nota, 14);
+    const hits = await hybridSearch(nota, 20);
     const propio = norm(titulo);
     const vistos = new Set<string>();
     candidatas = hits
@@ -72,7 +72,7 @@ export async function buscarRelacionadasCore(
       model,
       schema: juezSchema,
       system:
-        "Eres editor de un medio agropecuario colombiano. Decides qué notas ya publicadas conviene enlazar al final de otra nota. Solo cuentan las que tratan el MISMO asunto concreto (el mismo hecho, programa, acuerdo, enfermedad, cifra o tema específico) y que un lector querría seguir leyendo a continuación. Compartir el sector, la palabra «ganadería» o un tema muy amplio NO basta. Ante la duda, no la elijas: es mejor no enlazar nada que enlazar algo que no viene al caso.",
+        "Eres editor de un medio agropecuario colombiano. Decides qué notas ya publicadas conviene enlazar al final de otra nota. Cuentan las que tratan el MISMO TEMA concreto (por ejemplo: ferias y remates ganaderos, subastas, vacunación contra la aftosa, precio del ganado gordo, una enfermedad, un programa o una región en particular), aunque sea otro año, otra feria o otro departamento, porque un lector interesado en ese tema querría seguir leyendo. NO cuentan las que solo comparten el sector o una palabra muy amplia como «ganadería» o «Colombia». Si hay notas del mismo tema, elige las más útiles (hasta el límite); devuelve la lista vacía solo si de verdad ninguna trata ese tema.",
       prompt: `NOTA QUE SE ESCRIBE:\n${nota.slice(0, 1200)}\n\nNOTAS CANDIDATAS:\n${candidatas
         .map((c, i) => `[${i + 1}] ${c.title} — ${c.summary.slice(0, 260)}`)
         .join("\n")}\n\nDevuelve las candidatas (hasta ${limite}, las más pertinentes primero) que tratan lo mismo, con el motivo en una frase. Si ninguna, devuelve la lista vacía.`,
@@ -84,6 +84,8 @@ export async function buscarRelacionadasCore(
       .filter((n) => n >= 1 && n <= candidatas.length && (vistas.has(n) ? false : (vistas.add(n), true)))
       .slice(0, limite)
       .map((n) => candidatas[n - 1]);
+    // Si el modelo no eligió ninguna pero hay candidatas que comparten varias palabras con contenido con la nota, se ofrecen esas.
+    if (!notas.length) return { ok: true, notas: porPalabras(nota, candidatas, limite), criterio: "palabras" };
     return { ok: true, notas, criterio: "ia" };
   } catch (e) {
     console.error("buscarRelacionadas (modelo):", e);
