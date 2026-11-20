@@ -81,7 +81,8 @@ export function articleMetadata(a: ArticleLike): Metadata {
 
 /** Portada en versión para compartir (ver app/og-imagen): recortada a 1200 × 630 y en JPEG liviano. */
 export function imagenParaCompartir(portada: string): string {
-  return siteUrl(`/og-imagen?u=${encodeURIComponent(abs(portada))}`);
+  // `v` cambia cuando cambia cómo se arma la imagen: la versión anterior quedó guardada un año en la caché de la red (y en WhatsApp).
+  return siteUrl(`/og-imagen?v=2&u=${encodeURIComponent(abs(portada))}`);
 }
 
 /** JSON-LD NewsArticle — verificable en Rich Results Test. */
