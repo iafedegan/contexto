@@ -1,0 +1,11 @@
+/**
+ * ¿La firma de una cuenta debe tomar el nombre de la cuenta? Sí cuando la firma quedó con un nombre de usuario (una sola palabra, como
+ * «pfonseca») y la cuenta ya tiene un nombre real con nombre y apellido. Sin base de datos, para poder probarlo.
+ */
+export function debeTomarNombreDeCuenta(firma: string, nombreCuenta: string): boolean {
+  const f = firma.trim();
+  const n = nombreCuenta.replace(/\s+/g, " ").trim();
+  if (!n || f === n) return false;
+  const pareceUsuario = !/\s/.test(f) && (/[._@0-9]/.test(f) || f === f.toLowerCase());
+  return pareceUsuario && n.includes(" ");
+}

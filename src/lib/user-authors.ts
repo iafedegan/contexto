@@ -3,6 +3,8 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { articles, authors, users } from "@/db/schema";
 import { slugify } from "@/lib/utils";
+import { invalidarCache, TAG_CONTENIDO } from "@/lib/data-cache";
+import { debeTomarNombreDeCuenta } from "@/lib/firma-nombre";
 
 /**
  * Cada persona con cuenta activa del panel debe poder elegirse como autor de una
@@ -19,8 +21,19 @@ export async function ensureUserAuthors(opciones: { forzar?: boolean } = {}): Pr
   ultimaRevision = Date.now();
   const [activos, existentes] = await Promise.all([
     db.select({ id: users.id, name: users.name }).from(users).where(eq(users.active, true)),
-    db.select({ userId: authors.userId, slug: authors.slug }).from(authors),
+    db.select({ id: authors.id, userId: authors.userId, slug: authors.slug, name: authors.name }).from(authors),
   ]);
+  // Firmas que quedaron con un nombre de usuario («pfonseca») porque la cuenta se creó así y después se le puso el nombre real: toman el
+  // nombre de la cuenta. Solo si la firma parece un usuario (una sola palabra, sin espacios) y la cuenta ya tiene nombre y apellido; una firma
+  // que un administrador escribió a mano con espacios no se toca. La dirección (slug) no cambia, para no romper enlaces.
+  let renombradas = 0;
+  for (const a of existentes) {
+    const u = a.userId ? activos.find((x) => x.id === a.userId) : undefined;
+    if (!u || !debeTomarNombreDeCuenta(a.name, u.name)) continue;
+    await db.update(authors).set({ name: u.name.trim() }).where(eq(authors.id, a.id));
+    renombradas++;
+  }
+  if (renombradas) invalidarCache(TAG_CONTENIDO);
   const vinculados = new Set(existentes.map((a) => a.userId).filter(Boolean));
   const slugs = new Set(existentes.map((a) => a.slug));
   for (const u of activos) {

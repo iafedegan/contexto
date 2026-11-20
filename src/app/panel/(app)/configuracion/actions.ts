@@ -7,7 +7,7 @@ import { generarClaveTemporal } from "@/lib/clave-temporal";
 import { fuerzaClave, NIVEL_MINIMO } from "@/lib/fuerza-clave";
 import { enviarClaveTemporal } from "@/lib/correo-clave-temporal";
 import { db } from "@/db";
-import { siteSettings, userPermissionOverrides, users, type UserRole } from "@/db/schema";
+import { authors, siteSettings, userPermissionOverrides, users, type UserRole } from "@/db/schema";
 import { CUOTAS_KEY, type Cuotas } from "@/lib/ai-cuota";
 import { LIMITES_KEY } from "@/lib/budget";
 import { DOS_PASOS, PERMISO_IDS, porDefecto, type PermisoId } from "@/lib/permisos";
@@ -28,6 +28,7 @@ import { aplicarRoles, validarRoles } from "@/lib/ai-roles";
 import { encryptSecret } from "@/lib/secrets";
 import { invalidarCache } from "@/lib/data-cache";
 import { desbloquearCuenta } from "@/lib/rate-limit-bloqueos";
+import { debeTomarNombreDeCuenta } from "@/lib/firma-nombre";
 import { ROLES } from "@/lib/permisos";
 import { asignarRol } from "@/app/panel/(app)/configuracion/roles-actions";
 import { getRolesPropios } from "@/lib/roles-server";
@@ -309,6 +310,14 @@ export async function actualizarMiPerfil(_prev: MiPerfilState, formData: FormDat
   }
 
   await db.update(users).set(cambios).where(eq(users.id, session.user.id));
+  // La firma de las notas sigue al nombre de la cuenta: si estaba con un nombre de usuario («pfonseca»), toma el nombre nuevo.
+  if (name !== yo.name) {
+    const [firma] = await db.select({ id: authors.id, name: authors.name }).from(authors).where(eq(authors.userId, session.user.id)).limit(1);
+    if (firma && (firma.name === yo.name || debeTomarNombreDeCuenta(firma.name, name))) {
+      await db.update(authors).set({ name }).where(eq(authors.id, firma.id));
+      invalidarCache();
+    }
+  }
   revalidatePath("/panel/configuracion");
   return { ok: true, message: passwordNueva ? "Contraseña cambiada. La próxima vez entra con la nueva." : "Datos actualizados." };
 }
