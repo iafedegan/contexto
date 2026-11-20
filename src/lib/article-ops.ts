@@ -10,7 +10,9 @@ import { sanitizeArticleHtml } from "@/lib/sanitize";
 import { auditArticle, SEO_MINIMO_PUBLICAR } from "@/lib/seo-audit";
 import { emitir } from "@/lib/eventos";
 import { slugify } from "@/lib/utils";
-import { slugLibre } from "@/lib/slug-libre";
+import { slugLibre, SUFIJO_ANTIGUO } from "@/lib/slug-libre";
+import { rutaDeNota } from "@/lib/ruta-nota";
+import { redirects } from "@/db/schema";
 import { autorDeUsuario } from "@/lib/user-authors";
 import { invalidarCache } from "@/lib/data-cache";
 
@@ -109,6 +111,55 @@ export async function revalidarNotas(articleIds: string[]) {
     if (a.authorSlug) rutas.add(`/autor/${a.authorSlug}`);
   }
   for (const ruta of rutas) revalidatePath(ruta);
+}
+
+/**
+ * Quita de las direcciones de las notas PUBLICADAS el sufijo al azar que se les ponía cuando el título ya existía (`…-mwp9bxru`). La nota
+ * publicada se queda con la dirección limpia: si la ocupaba un borrador o una nota sin publicar (que nadie ve todavía), es ese el que pasa a
+ * `…-2`; si la ocupa otra nota publicada, la limpia queda con número corto (`…-2`). La dirección vieja queda con una redirección 301 a la nueva.
+ * Idempotente: sin notas con sufijo no hace nada. Lo corre el cron de cada 5 minutos y la publicación de cada nota.
+ */
+export async function limpiarSufijosDeDirecciones(soloIds?: string[]): Promise<{ desde: string; hasta: string }[]> {
+  const cambios: { desde: string; hasta: string }[] = [];
+  const candidatas = await db
+    .select({ id: articles.id, slug: articles.slug, legacyPath: articles.legacyPath, categorySlug: categories.slug })
+    .from(articles)
+    .leftJoin(categories, eq(articles.categoryId, categories.id))
+    .where(and(eq(articles.status, "publicado"), sql`${articles.slug} ~ '-[l-n][0-9a-z]{7}$'`, soloIds?.length ? inArray(articles.id, soloIds) : undefined));
+  const existe = async (x: string, salvo: string) => (await db.select({ id: articles.id }).from(articles).where(and(eq(articles.slug, x), ne(articles.id, salvo))).limit(1)).length > 0;
+  const cambiaRuta = (ruta: string | null, viejo: string, nuevo: string) => (ruta && ruta.endsWith(viejo) ? ruta.slice(0, -viejo.length) + nuevo : ruta);
+  for (const n of candidatas) {
+    if (!SUFIJO_ANTIGUO.test(n.slug)) continue;
+    const base = n.slug.replace(SUFIJO_ANTIGUO, "");
+    if (!base) continue;
+    const rutaVieja = rutaDeNota(n);
+    const tocadas = [n.id];
+    // Si la dirección limpia la tiene una nota SIN publicar, se le cede a la publicada: la otra pasa a la primera libre con número.
+    const [duena] = await db.select({ id: articles.id, slug: articles.slug, legacyPath: articles.legacyPath, status: articles.status }).from(articles).where(and(eq(articles.slug, base), ne(articles.id, n.id))).limit(1);
+    if (duena && duena.status !== "publicado") {
+      const otra = await slugLibre(base, (x) => (x === base ? Promise.resolve(true) : existe(x, duena.id)));
+      await db.update(articles).set({ slug: otra, legacyPath: cambiaRuta(duena.legacyPath, duena.slug, otra) }).where(eq(articles.id, duena.id));
+    }
+    const nuevo = await slugLibre(base, (x) => existe(x, n.id));
+    const legacyNuevo = cambiaRuta(n.legacyPath, n.slug, nuevo);
+    await db.update(articles).set({ slug: nuevo, legacyPath: legacyNuevo, updatedAt: sql`now()` }).where(eq(articles.id, n.id));
+    const rutaNueva = rutaDeNota({ slug: nuevo, legacyPath: legacyNuevo, categorySlug: n.categorySlug });
+    for (const desde of new Set([rutaVieja, `/articulo/${n.slug}`])) {
+      if (desde === rutaNueva) continue;
+      await db.insert(redirects).values({ fromPath: desde, toPath: rutaNueva, statusCode: 301 }).onConflictDoUpdate({ target: redirects.fromPath, set: { toPath: rutaNueva, statusCode: 301 } });
+    }
+    // La página vieja (ya generada) y la nueva se regeneran: la vieja pasa a redirigir. Si no hay contexto de Next (p. ej. un script), se omite:
+    // la dirección ya quedó corregida en la base y la página se rehace en su próxima revalidación.
+    try {
+      revalidatePath(rutaVieja);
+      revalidatePath(`/articulo/${n.slug}`);
+      await revalidarNotas(tocadas);
+    } catch {
+      /* sin contexto de Next: nada que revalidar */
+    }
+    cambios.push({ desde: rutaVieja, hasta: rutaNueva });
+  }
+  return cambios;
 }
 
 // Como `revalidarNotas`, para una sola nota.
@@ -226,6 +277,7 @@ export async function publicarCore(articleId: string) {
     .update(articles)
     .set({ status: "publicado", publishedAt: sql`coalesce(${articles.publishedAt}, now())`, scheduledFor: null, updatedAt: sql`now()` })
     .where(eq(articles.id, articleId));
+  await limpiarSufijosDeDirecciones([articleId]).catch(() => []);
   await asegurarRutaDeColumna(articleId);
   await reindexarNota(articleId);
   await revalidarNota(articleId);

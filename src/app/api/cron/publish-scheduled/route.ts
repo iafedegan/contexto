@@ -9,6 +9,7 @@ import { refrescarObservatorio } from "@/lib/observatorio-fedegan";
 import { refrescarIndicadores } from "@/lib/indicadores-fedegan";
 import { procesarConsejo } from "@/lib/ai/consejo-ejecucion";
 import { invalidarCache } from "@/lib/data-cache";
+import { limpiarSufijosDeDirecciones } from "@/lib/article-ops";
 import { revalidatePath } from "next/cache";
 
 /**
@@ -39,6 +40,8 @@ export async function GET(req: Request) {
   const soloProgramados = new URL(req.url).searchParams.get("solo") === "programados";
 
   const pasada = await procesarProgramadas({ forzar: true });
+  // Direcciones de notas publicadas con sufijo al azar (`…-mwp9bxru`): se limpian solas y dejan su redirección 301 (ver article-ops).
+  const direcciones = await limpiarSufijosDeDirecciones().catch((e) => (console.error("publish-scheduled: falló la limpieza de direcciones", e), []));
   // Los boletines programados cuya hora llegó salen en esta misma pasada (y se retoman los que quedaron a medias).
   const boletines = await procesarBoletinesProgramados({ forzar: true, tiempoMs: 90_000 }).catch((e) => {
     console.error("publish-scheduled: falló el envío de boletines programados", e);
@@ -46,7 +49,7 @@ export async function GET(req: Request) {
   });
   // Consejo de redacción: redacta las piezas que ya tocan (una por pasada cada minuto; hasta dos en la pasada diaria).
   const consejo = await procesarConsejo({ max: soloProgramados ? 1 : 2 }).catch(() => ({ redactadas: 0 }));
-  if (soloProgramados) return NextResponse.json({ published: pasada.slugs, boletines, consejo });
+  if (soloProgramados) return NextResponse.json({ published: pasada.slugs, boletines, consejo, direcciones });
 
   const newsletterGoogle = await keepGoogleAlive()
     .then((h) => (h ? h.ok : null))
@@ -75,5 +78,5 @@ export async function GET(req: Request) {
     revalidatePath("/observatorio");
     revalidatePath("/en/observatorio");
   }
-  return NextResponse.json({ published: pasada.slugs, boletines, consejo, marketData, mantenimiento, newsletterGoogle });
+  return NextResponse.json({ published: pasada.slugs, boletines, consejo, direcciones, marketData, mantenimiento, newsletterGoogle });
 }
