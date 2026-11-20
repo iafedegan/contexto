@@ -369,7 +369,7 @@ export const getAutoresDeSeccion = (slug: string) => leerAutoresDeSeccion(slug);
 
 export type Columnista = { slug: string; name: string; foto: string | null; notas: number };
 
-/** Directorio de columnistas: los autores con notas publicadas en Opinión (y sus subsecciones), el más reciente primero, con su foto (la de su última columna). */
+/** Directorio de columnistas: los autores ACTIVOS con notas publicadas en Opinión (y sus subsecciones), el más reciente primero, con su foto (la de su última columna). */
 const leerColumnistas = cachear(
   "columnistas",
   async (): Promise<Columnista[]> => {
@@ -387,7 +387,8 @@ const leerColumnistas = cachear(
       })
       .from(articles)
       .innerJoin(authors, eq(articles.authorId, authors.id))
-      .where(and(publishedCondition, enCategorias([cat.id, ...hijas.map((h) => h.id)], ["opinion", ...hijas.map((h) => h.slug)])))
+      // Solo las firmas ACTIVAS: al inactivar a un columnista en /panel/comentaristas deja de salir en el directorio, y al activarlo vuelve.
+      .where(and(publishedCondition, eq(authors.active, true), enCategorias([cat.id, ...hijas.map((h) => h.id)], ["opinion", ...hijas.map((h) => h.slug)])))
       .groupBy(authors.id)
       .orderBy(desc(ultima));
     return filas.map((f) => ({ slug: f.slug, name: f.name, foto: f.avatar ?? f.foto, notas: f.notas }));

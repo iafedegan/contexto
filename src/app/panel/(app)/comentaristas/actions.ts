@@ -6,6 +6,7 @@ import { db } from "@/db";
 import { articles, authors } from "@/db/schema";
 import { requireRole } from "@/lib/auth";
 import { crearFirma } from "@/lib/user-authors";
+import { invalidarCache, TAG_CONTENIDO } from "@/lib/data-cache";
 
 type Resultado = { ok: true; message?: string } | { ok: false; message: string };
 
@@ -44,6 +45,9 @@ export async function activarComentarista(id: string, activo: boolean): Promise<
   const filas = await db.update(authors).set({ active: !!activo }).where(eq(authors.id, String(id))).returning({ id: authors.id });
   if (!filas.length) return { ok: false, message: "Esa firma ya no existe." };
   refrescar();
+  // El directorio público de columnistas solo lista las firmas activas: se actualiza al instante, sin esperar a la caché de 10 minutos.
+  invalidarCache(TAG_CONTENIDO);
+  revalidatePath("/categoria/columnistas");
   return { ok: true };
 }
 

@@ -10,6 +10,7 @@ import { sanitizeArticleHtml } from "@/lib/sanitize";
 import { auditArticle, SEO_MINIMO_PUBLICAR } from "@/lib/seo-audit";
 import { emitir } from "@/lib/eventos";
 import { slugify } from "@/lib/utils";
+import { slugLibre } from "@/lib/slug-libre";
 import { autorDeUsuario } from "@/lib/user-authors";
 import { invalidarCache } from "@/lib/data-cache";
 
@@ -67,9 +68,7 @@ export async function guardarBorradorCore(userId: string, input: BorradorInput):
       revalidatePath("/panel/articulos");
       return { ok: true, id: input.id, savedAt: new Date().toISOString() };
     }
-    let slug = slugify(title) || slugify(`nota-${Date.now()}`);
-    const [dup] = await db.select({ id: articles.id }).from(articles).where(eq(articles.slug, slug)).limit(1);
-    if (dup) slug = `${slug}-${Date.now().toString(36)}`;
+    const slug = await slugLibre(slugify(title) || slugify(`nota-${Date.now()}`), async (x) => (await db.select({ id: articles.id }).from(articles).where(eq(articles.slug, x)).limit(1)).length > 0);
     const [row] = await db.insert(articles).values({ ...values, slug, status: "borrador", createdBy: userId }).returning({ id: articles.id });
     await registrarActividad(row.id, userId, "creo");
     revalidatePath("/panel/articulos");
@@ -134,9 +133,7 @@ export async function aprobarBorradorCore(userId: string, draftId: string): Prom
       .returning();
     if (!d) throw new Error("Borrador no disponible.");
 
-    let slug = slugify(d.title) || slugify(`nota-${Date.now()}`);
-    const [dup] = await tx.select({ id: articles.id }).from(articles).where(eq(articles.slug, slug)).limit(1);
-    if (dup) slug = `${slug}-${Date.now().toString(36)}`;
+    const slug = await slugLibre(slugify(d.title) || slugify(`nota-${Date.now()}`), async (x) => (await tx.select({ id: articles.id }).from(articles).where(eq(articles.slug, x)).limit(1)).length > 0);
 
     const [article] = await tx
       .insert(articles)

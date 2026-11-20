@@ -10,6 +10,7 @@ import { db } from "@/db";
 import { articles, categories } from "@/db/schema";
 import { canPublish, requirePermiso } from "@/lib/auth";
 import { slugify } from "@/lib/utils";
+import { slugLibre } from "@/lib/slug-libre";
 import { autorDeUsuario, crearFirma, firmaDeNota, type FirmaCreada } from "@/lib/user-authors";
 import { archivarCore, asegurarRutaDeColumna, distintivosCore, enviarARevisionCore, fijarPortadaCore, guardarBorradorCore, programarCore, publicarCore, reindexarNota, requisitosDePublicacion, revalidarNota, type BorradorInput } from "@/lib/article-ops";
 import { tienePermiso } from "@/lib/permisos-server";
@@ -157,7 +158,7 @@ export async function saveArticle(formData: FormData) {
       .insert(articles)
       .values({
         ...values,
-        slug: slugify(title) || slugify(`nota-${Date.now()}`),
+        slug: await slugLibre(slugify(title) || slugify(`nota-${Date.now()}`), async (x) => (await db.select({ id: articles.id }).from(articles).where(eq(articles.slug, x)).limit(1)).length > 0),
         status: "borrador",
         createdBy: user.id,
       })
