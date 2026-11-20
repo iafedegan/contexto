@@ -29,7 +29,7 @@ type Status = (typeof articles.status.enumValues)[number];
 const SORTS = [
   // Por defecto: lo más nuevo arriba (las notas de este año primero). Una nota vieja que alguien tocó no sube por eso; un borrador sí sube con su última edición.
   { value: "reciente", label: "Más recientes" },
-  { value: "actualizado", label: "Última edición" },
+  { value: "editado", label: "Última edición" },
   { value: "publicado", label: "Fecha de publicación" },
   { value: "lecturas", label: "Más leídos (total)" },
   { value: "semana", label: "Más leídos (7 días)" },
@@ -68,7 +68,9 @@ export default async function ArticlesList({ searchParams }: { searchParams: Sea
     : "";
   const categoria = param(sp, "categoria");
   const autor = param(sp, "autor");
-  const orden = SORTS.some((s) => s.value === param(sp, "orden")) ? param(sp, "orden") : "reciente";
+  // «actualizado» era el orden por defecto antiguo y sigue en enlaces y marcadores guardados: ahora abre «Más recientes».
+  const pedido = param(sp, "orden") === "actualizado" ? "reciente" : param(sp, "orden");
+  const orden = SORTS.some((s) => s.value === pedido) ? pedido : "reciente";
 
   await ensureUserAuthors().catch(() => {});
   const [cats, auths, daily] = await Promise.all([
@@ -116,7 +118,7 @@ export default async function ArticlesList({ searchParams }: { searchParams: Sea
       sql`case when ${articles.status} = 'publicado' then coalesce(${articles.publishedAt}, ${articles.createdAt}) else greatest(${articles.updatedAt}, ${articles.createdAt}) end desc`,
       desc(articles.createdAt),
     ],
-    actualizado: [desc(articles.updatedAt)],
+    editado: [desc(articles.updatedAt)],
     publicado: [sql`${articles.publishedAt} desc nulls last`, desc(articles.updatedAt)],
     lecturas: [desc(articles.views), desc(articles.publishedAt)],
     semana: [desc(weekViews), desc(articles.views)],
