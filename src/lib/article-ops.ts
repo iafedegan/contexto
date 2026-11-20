@@ -3,14 +3,14 @@ import { registrarActividad } from "@/lib/actividad-notas";
 import { palabrasCambiadas } from "@/lib/actividad-reglas";
 import { revalidatePath } from "next/cache";
 import { and, eq, gte, inArray, isNotNull, ne, sql } from "drizzle-orm";
-import { db } from "@/db";
+import { db, rowsOf as rowsDe } from "@/db";
 import { agentDrafts, articles, authors, categories } from "@/db/schema";
 import { embed } from "@/lib/embeddings";
 import { sanitizeArticleHtml } from "@/lib/sanitize";
 import { auditArticle, SEO_MINIMO_PUBLICAR } from "@/lib/seo-audit";
 import { emitir } from "@/lib/eventos";
 import { slugify } from "@/lib/utils";
-import { slugLibre, SUFIJO_ANTIGUO } from "@/lib/slug-libre";
+import { esSufijoDeFecha, slugLibre, SUFIJO_ANTIGUO } from "@/lib/slug-libre";
 import { rutaDeNota } from "@/lib/ruta-nota";
 import { redirects } from "@/db/schema";
 import { autorDeUsuario } from "@/lib/user-authors";
@@ -122,14 +122,15 @@ export async function revalidarNotas(articleIds: string[]) {
 export async function limpiarSufijosDeDirecciones(soloIds?: string[]): Promise<{ desde: string; hasta: string }[]> {
   const cambios: { desde: string; hasta: string }[] = [];
   const candidatas = await db
-    .select({ id: articles.id, slug: articles.slug, legacyPath: articles.legacyPath, categorySlug: categories.slug })
+    .select({ id: articles.id, slug: articles.slug, legacyPath: articles.legacyPath, categorySlug: categories.slug, createdAt: articles.createdAt })
     .from(articles)
     .leftJoin(categories, eq(articles.categoryId, categories.id))
     .where(and(eq(articles.status, "publicado"), sql`${articles.slug} ~ '-[l-n][0-9a-z]{7}$'`, soloIds?.length ? inArray(articles.id, soloIds) : undefined));
   const existe = async (x: string, salvo: string) => (await db.select({ id: articles.id }).from(articles).where(and(eq(articles.slug, x), ne(articles.id, salvo))).limit(1)).length > 0;
   const cambiaRuta = (ruta: string | null, viejo: string, nuevo: string) => (ruta && ruta.endsWith(viejo) ? ruta.slice(0, -viejo.length) + nuevo : ruta);
   for (const n of candidatas) {
-    if (!SUFIJO_ANTIGUO.test(n.slug)) continue;
+    // Solo el sufijo de fecha de verdad: una palabra final como «-lafaurie» o «-monteria» tiene la misma forma y NO se toca.
+    if (!SUFIJO_ANTIGUO.test(n.slug) || !esSufijoDeFecha(n.slug, n.createdAt)) continue;
     const base = n.slug.replace(SUFIJO_ANTIGUO, "");
     if (!base) continue;
     const rutaVieja = rutaDeNota(n);
@@ -160,6 +161,53 @@ export async function limpiarSufijosDeDirecciones(soloIds?: string[]): Promise<{
     cambios.push({ desde: rutaVieja, hasta: rutaNueva });
   }
   return cambios;
+}
+
+/**
+ * Deshace lo que la primera versión de `limpiarSufijosDeDirecciones` hizo por error: le quitó a notas legítimas su última palabra cuando tenía
+ * la forma del sufijo («…-lafaurie», «…-monteria») y dejó una redirección de la dirección original a la recortada. Aquí se busca cada una de
+ * esas redirecciones (creadas desde el 20 de noviembre de 2026), y si el final quitado NO era un sufijo de fecha, la nota vuelve a su dirección
+ * original, se borran esas redirecciones y su «última edición» vuelve a su fecha de publicación. Repite por capas (el error pudo recortar dos
+ * veces la misma dirección). Idempotente: cuando no queda nada que deshacer, no hace nada.
+ */
+export async function restaurarDireccionesRecortadas(): Promise<{ desde: string; hasta: string }[]> {
+  const hechas: { desde: string; hasta: string }[] = [];
+  for (let capa = 0; capa < 6; capa++) {
+    const filas = rowsDe<{ from_path: string; to_path: string }>(
+      await db.execute(sql`select from_path, to_path from redirects
+        where created_at >= '2026-11-20' and status_code = 301 and from_path ~ '-[l-n][0-9a-z]{7}$' and from_path = to_path || substring(from_path from '-[l-n][0-9a-z]{7}$')`),
+    );
+    let enEstaCapa = 0;
+    for (const r of filas) {
+      const sufijo = r.from_path.slice(r.to_path.length);
+      const ultimo = r.to_path.split("/").pop() ?? "";
+      const [n] = await db
+        .select({ id: articles.id, slug: articles.slug, legacyPath: articles.legacyPath, createdAt: articles.createdAt, categorySlug: categories.slug })
+        .from(articles)
+        .leftJoin(categories, eq(articles.categoryId, categories.id))
+        .where(sql`(${articles.legacyPath} = ${r.to_path}) or (${articles.legacyPath} is null and ${articles.slug} = ${ultimo})`)
+        .limit(1);
+      if (!n || rutaDeNota(n) !== r.to_path) continue;
+      const original = `${n.slug}${sufijo}`;
+      if (esSufijoDeFecha(original, n.createdAt)) continue; // esa sí era una limpieza correcta
+      const [ocupada] = await db.select({ id: articles.id }).from(articles).where(and(eq(articles.slug, original), ne(articles.id, n.id))).limit(1);
+      if (ocupada) continue;
+      const legacyOriginal = n.legacyPath ? `${n.legacyPath}${sufijo}` : null;
+      await db.update(articles).set({ slug: original, legacyPath: legacyOriginal, updatedAt: sql`coalesce(${articles.publishedAt}, ${articles.createdAt})` }).where(eq(articles.id, n.id));
+      await db.execute(sql`delete from redirects where to_path = ${r.to_path} and from_path in (${r.from_path}, ${`/articulo/${original}`})`);
+      try {
+        revalidatePath(r.to_path);
+        revalidatePath(r.from_path);
+        await revalidarNotas([n.id]);
+      } catch {
+        /* sin contexto de Next */
+      }
+      hechas.push({ desde: r.to_path, hasta: r.from_path });
+      enEstaCapa++;
+    }
+    if (!enEstaCapa) break;
+  }
+  return hechas;
 }
 
 // Como `revalidarNotas`, para una sola nota.

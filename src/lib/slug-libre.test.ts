@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { slugLibre, SUFIJO_ANTIGUO } from "./slug-libre";
+import { esSufijoDeFecha, slugLibre, SUFIJO_ANTIGUO } from "./slug-libre";
 
 const tomadas = (...s: string[]) => async (x: string) => s.includes(x);
 
@@ -23,4 +23,12 @@ test("reconoce los sufijos antiguos de fecha en base 36 y no un título normal",
   assert.ok(SUFIJO_ANTIGUO.test("fedegan-5-0-la-vision-de-un-gremio-mwp9bxru"));
   assert.ok(!SUFIJO_ANTIGUO.test("fedegan-5-0-la-vision-de-un-gremio"));
   assert.ok(!SUFIJO_ANTIGUO.test("la-columna-de-opinion-2026"));
+});
+
+test("solo es sufijo de fecha si coincide con la fecha de creación de la nota; una palabra como «lafaurie» o «monteria» no", () => {
+  const creada = new Date(parseInt("mwp9bxru", 36) + 1000);
+  assert.ok(esSufijoDeFecha("fedegan-5-0-la-vision-de-un-gremio-mwp9bxru", creada));
+  assert.ok(!esSufijoDeFecha("minagricultura-adjudicado-a-dedo-lafaurie", new Date("2016-12-06")));
+  assert.ok(!esSufijoDeFecha("las-brigadas-tecnologicas-llegaron-a-monteria", new Date("2026-11-01")));
+  assert.ok(!esSufijoDeFecha("un-titulo-medellin", null));
 });

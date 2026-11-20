@@ -1,7 +1,7 @@
 import "server-only";
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
-import { articles, authors, users } from "@/db/schema";
+import { articles, authors, redirects, users } from "@/db/schema";
 import { slugify } from "@/lib/utils";
 import { invalidarCache, TAG_CONTENIDO } from "@/lib/data-cache";
 import { debeTomarNombreDeCuenta } from "@/lib/firma-nombre";
@@ -33,7 +33,11 @@ export async function ensureUserAuthors(opciones: { forzar?: boolean } = {}): Pr
     await db.update(authors).set({ name: u.name.trim() }).where(eq(authors.id, a.id));
     renombradas++;
   }
-  if (renombradas) invalidarCache(TAG_CONTENIDO);
+  // Dos firmas de la MISMA persona (la de su cuenta y otra suelta con el mismo nombre, p. ej. la que vino del sitio anterior): se dejan en una.
+  // Queda la suelta, que suele tener la dirección con el nombre (/autor/pedro-fonseca) y las notas viejas; pasa a ser la de la cuenta, recibe las
+  // notas de la otra, y la otra se borra con una redirección de su dirección a la que queda.
+  const fusionadas = await fusionarFirmasRepetidas();
+  if (renombradas || fusionadas) invalidarCache(TAG_CONTENIDO);
   const vinculados = new Set(existentes.map((a) => a.userId).filter(Boolean));
   const slugs = new Set(existentes.map((a) => a.slug));
   for (const u of activos) {
@@ -96,4 +100,33 @@ export async function crearFirma(nombreCrudo: string): Promise<FirmaCreada> {
   for (let n = 2; slugs.has(slug); n++) slug = `${base}-${n}`;
   const [nueva] = await db.insert(authors).values({ slug, name }).returning({ id: authors.id });
   return { ok: true, id: nueva.id, name, creada: true };
+}
+
+const nombrePlano = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
+
+/** Une la firma de cada cuenta con otra firma SIN cuenta que tenga exactamente el mismo nombre (sin tildes ni mayúsculas). Devuelve cuántas unió. */
+export async function fusionarFirmasRepetidas(): Promise<number> {
+  const todas = await db.select({ id: authors.id, slug: authors.slug, name: authors.name, userId: authors.userId, bio: authors.bio, avatarUrl: authors.avatarUrl }).from(authors);
+  let n = 0;
+  for (const deCuenta of todas.filter((a) => a.userId)) {
+    const suelta = todas.find((a) => !a.userId && a.id !== deCuenta.id && nombrePlano(a.name) === nombrePlano(deCuenta.name));
+    if (!suelta) continue;
+    await db.transaction(async (tx) => {
+      await tx.update(articles).set({ authorId: suelta.id }).where(eq(articles.authorId, deCuenta.id));
+      await tx.update(authors).set({ userId: null }).where(eq(authors.id, deCuenta.id));
+      await tx
+        .update(authors)
+        .set({ userId: deCuenta.userId, active: true, bio: suelta.bio ?? deCuenta.bio, avatarUrl: suelta.avatarUrl ?? deCuenta.avatarUrl })
+        .where(and(eq(authors.id, suelta.id), isNull(authors.userId)));
+      await tx.delete(authors).where(eq(authors.id, deCuenta.id));
+      if (deCuenta.slug !== suelta.slug) {
+        await tx
+          .insert(redirects)
+          .values({ fromPath: `/autor/${deCuenta.slug}`, toPath: `/autor/${suelta.slug}`, statusCode: 301 })
+          .onConflictDoUpdate({ target: redirects.fromPath, set: { toPath: `/autor/${suelta.slug}`, statusCode: 301 } });
+      }
+    });
+    n++;
+  }
+  return n;
 }
