@@ -1,3 +1,4 @@
+// Informe del periodo: el resumen del panel, la audiencia, los suscriptores, la SuperApp y el trabajo de cada persona del equipo en las notas; se imprime o se descarga.
 import Link from "next/link";
 import { ArrowLeft, Download } from "lucide-react";
 import { requirePermiso } from "@/lib/auth";
@@ -12,6 +13,11 @@ import { nfCO as nf } from "@/lib/format";
 import { etiquetaRol } from "@/lib/notas-asignadas-reglas";
 import { ESTADO_LABEL } from "@/lib/estados";
 import { BotonImprimir } from "@/components/panel/boton-imprimir";
+import { AreaChart, Donut } from "@/components/panel/dash-charts";
+import { db } from "@/db";
+import { articles, assistantQueries } from "@/db/schema";
+import { sql } from "drizzle-orm";
+import { pctChange, siteWeekTotals } from "@/lib/article-stats";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Informe" };
@@ -84,12 +90,30 @@ export default async function Informe({ searchParams }: { searchParams: Promise<
   const f = leerFiltros(q);
   const soloPersona = typeof q.persona === "string" ? q.persona : "";
   const fp = { desde: f.desde, hasta: f.hasta };
-  const [p, s, sa, equipoTodo] = await Promise.all([
+  const rangoSql = (col: string) => sql`${sql.raw(col)} >= (${f.desde}::date)::timestamp at time zone 'America/Bogota' and ${sql.raw(col)} < (${f.hasta}::date + 1)::timestamp at time zone 'America/Bogota'`;
+  const [p, s, sa, equipoTodo, porEstado, publicadasPeriodo, preguntas, semana, masLeidas] = await Promise.all([
     panorama(f),
     panoramaSuscriptores(fp),
     configSuperApp() ? resumenSuperApp(fp).catch(() => null) : Promise.resolve(null),
     informeEquipo(f.desde, f.hasta),
+    db.select({ status: articles.status, n: sql<number>`count(*)::int` }).from(articles).groupBy(articles.status),
+    db.select({ n: sql<number>`count(*)::int` }).from(articles).where(sql`${articles.status} = 'publicado' and ${rangoSql("published_at")}`),
+    db.select({ n: sql<number>`count(*)::int` }).from(assistantQueries).where(rangoSql("created_at")),
+    siteWeekTotals(),
+    db.select({ id: articles.id, title: articles.title, views: articles.views }).from(articles).where(sql`${articles.status} = 'publicado' and ${rangoSql("published_at")}`).orderBy(sql`${articles.views} desc`).limit(10),
   ]);
+  const st = Object.fromEntries(porEstado.map((r) => [r.status, r.n])) as Record<string, number>;
+  const partes = [
+    { label: "Publicados", value: st["publicado"] ?? 0, color: "var(--accent-2)" },
+    { label: "En revisión", value: st["en_revision"] ?? 0, color: "var(--accent)" },
+    { label: "Programados", value: st["programado"] ?? 0, color: "var(--link)" },
+    { label: "Borradores", value: st["borrador"] ?? 0, color: "var(--fg-muted)" },
+  ];
+  const totalNotas = partes.reduce((t, x) => t + x.value, 0);
+  const cambioSemana = semana ? pctChange(semana.last7, semana.prev7) : null;
+  const etiquetaDia = new Intl.DateTimeFormat("es-CO", { weekday: "short", timeZone: "UTC" });
+  const dias = p.serie.map((d) => ({ etiqueta: `${etiquetaDia.format(new Date(`${d.dia}T12:00:00Z`)).replace(".", "")} ${d.dia.slice(-2)}`, lecturas: d.lecturas }));
+  const mejor = dias.length ? dias.reduce((m, d) => (d.lecturas > m.lecturas ? d : m), dias[0]) : null;
   const equipo = soloPersona ? equipoTodo.filter((x) => x.id === soloPersona) : equipoTodo;
   const i = p.indicadores;
   const a = p.anterior;
@@ -114,6 +138,33 @@ export default async function Informe({ searchParams }: { searchParams: Promise<
           <BotonImprimir />
         </div>
       </header>
+
+      <Seccion kicker="Resumen" titulo="Estado editorial del sitio">
+        <Cifras items={[
+          { t: "Publicadas en el periodo", v: nf.format(publicadasPeriodo[0]?.n ?? 0) },
+          { t: "Lecturas últimos 7 días", v: nf.format(semana?.last7 ?? 0), d: cambioSemana },
+          { t: "Preguntas al asistente", v: nf.format(preguntas[0]?.n ?? 0) },
+          { t: "Notas en total", v: nf.format(totalNotas) },
+        ]} />
+        <div className="mt-5 grid gap-5 lg:grid-cols-2">
+          <div>
+            <h3 className="mb-2 text-sm font-semibold">Estado de las notas (hoy)</h3>
+            <Donut parts={partes} total={totalNotas} label="Notas" />
+            <Tabla cab={["Estado", "Notas", "% del total"]} filas={partes.map((x) => [x.label, x.value, `${totalNotas ? Math.round((x.value / totalNotas) * 100) : 0} %`])} />
+          </div>
+          <div>
+            <h3 className="mb-2 text-sm font-semibold">Notas publicadas en el periodo más leídas</h3>
+            <Tabla cab={["Nota", "Lecturas"]} filas={masLeidas.map((n) => [n.title, n.views])} />
+          </div>
+        </div>
+        {dias.length > 1 && (
+          <div className="mt-5">
+            <h3 className="mb-1 text-sm font-semibold">Lecturas por día</h3>
+            <p className="mb-2 text-xs text-[var(--fg-muted)]">Total {nf.format(dias.reduce((t, d) => t + d.lecturas, 0))} · promedio diario {nf.format(Math.round(dias.reduce((t, d) => t + d.lecturas, 0) / dias.length))}{mejor && mejor.lecturas > 0 ? ` · mejor día ${mejor.etiqueta} (${nf.format(mejor.lecturas)})` : ""}.</p>
+            <AreaChart labels={dias.map((d) => d.etiqueta)} values={dias.map((d) => d.lecturas)} />
+          </div>
+        )}
+      </Seccion>
 
       <Seccion kicker="Equipo" titulo="Quién hizo qué en las notas">
         <p className="-mt-2 mb-3 text-xs text-[var(--fg-muted)]">
