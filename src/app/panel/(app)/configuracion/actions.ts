@@ -27,6 +27,7 @@ import { verifyApiKey } from "@/lib/ai-verify";
 import { aplicarRoles, validarRoles } from "@/lib/ai-roles";
 import { encryptSecret } from "@/lib/secrets";
 import { invalidarCache } from "@/lib/data-cache";
+import { desbloquearCuenta } from "@/lib/rate-limit-bloqueos";
 import { ROLES } from "@/lib/permisos";
 import { asignarRol } from "@/app/panel/(app)/configuracion/roles-actions";
 import { getRolesPropios } from "@/lib/roles-server";
@@ -82,6 +83,16 @@ export async function toggleUserActive(userId: string, active: boolean) {
 
   await db.update(users).set({ active, updatedAt: new Date() }).where(eq(users.id, userId));
   revalidatePath("/panel/configuracion");
+}
+
+/** Desbloquea una cuenta bloqueada por intentos fallidos (solo administradores): borra sus contadores y puede volver a entrar de inmediato. */
+export async function desbloquearUsuario(userId: string): Promise<{ ok: boolean; message: string }> {
+  await requireRole("administrador");
+  const [persona] = await db.select({ id: users.id, name: users.name, email: users.email }).from(users).where(eq(users.id, String(userId))).limit(1);
+  if (!persona) return { ok: false, message: "Esa cuenta ya no existe." };
+  await desbloquearCuenta(persona);
+  revalidatePath("/panel/configuracion");
+  return { ok: true, message: `${persona.name} ya puede intentar entrar de nuevo.` };
 }
 
 /**

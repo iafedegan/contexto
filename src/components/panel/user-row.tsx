@@ -2,10 +2,11 @@
 
 import { CuotaBarra } from "@/components/panel/cuota-ia-form";
 import { Fragment, useState, useTransition } from "react";
-import { ChevronDown, Copy, KeyRound, Loader2 } from "lucide-react";
+import { ChevronDown, Copy, KeyRound, Loader2, Lock, LockOpen } from "lucide-react";
 import type { UserRole } from "@/db/schema";
 import {
   deleteUser,
+  desbloquearUsuario,
   restablecerClave,
   resetUserPermissions,
   resetUserTotp,
@@ -35,6 +36,7 @@ export function UserRow({
   rolesPropios = [],
   rolId,
   ultimoAcceso,
+  bloqueadoHasta,
 }: {
   user: {
     id: string;
@@ -59,6 +61,8 @@ export function UserRow({
   /** Cuota de IA: la propia (null = usa la predeterminada), la que rige y lo gastado este mes. */
   /** Último inicio de sesión ya formateado (hora de Colombia). */
   ultimoAcceso?: string;
+  /** Hora (Colombia) hasta la que la cuenta está bloqueada por intentos fallidos; sin valor = no está bloqueada. */
+  bloqueadoHasta?: string;
   cuotaIA?: { propia: number | null; efectiva: number | null; gasto: number };
 }) {
   const [pending, start] = useTransition();
@@ -68,6 +72,8 @@ export function UserRow({
   const [reinicio, setReinicio] = useState<{ ok: boolean; message: string; clave?: string } | null>(null);
   const [reiniciando, reiniciarT] = useTransition();
   const [copiada, setCopiada] = useState(false);
+  const [desbloqueo, setDesbloqueo] = useState<{ ok: boolean; message: string } | null>(null);
+  const [desbloqueando, desbloquearT] = useTransition();
   const [marcas, setMarcas] = useState<Record<string, boolean>>(
     Object.fromEntries(permisos.map((p) => [p.id, p.activo])),
   );
@@ -100,6 +106,29 @@ export function UserRow({
         </span>
         <span className="block text-xs text-[var(--fg-muted)]">{user.email}</span>
         <span className="block text-xs text-[var(--fg-muted)]">{ultimoAcceso ? `Último acceso: ${ultimoAcceso}` : "Sin accesos registrados"}</span>
+        {/* Estado de la cuenta: bloqueada por intentos fallidos o desactivada por un administrador. */}
+        {bloqueadoHasta && (
+          <span className="mt-1.5 flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-1 rounded-full bg-red-600/12 px-2.5 py-1 text-xs font-semibold text-red-700">
+              <Lock size={12} aria-hidden /> Bloqueada por intentos fallidos · hasta las {bloqueadoHasta}
+            </span>
+            {canManage && (
+              <button
+                type="button"
+                disabled={desbloqueando}
+                onClick={() => {
+                  setDesbloqueo(null);
+                  desbloquearT(async () => setDesbloqueo(await desbloquearUsuario(user.id)));
+                }}
+                className="inline-flex items-center gap-1.5 rounded-full bg-[#157a4a] px-3 py-1 text-xs font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
+              >
+                {desbloqueando ? <Loader2 size={12} className="animate-spin" aria-hidden /> : <LockOpen size={12} aria-hidden />} Desbloquear
+              </button>
+            )}
+          </span>
+        )}
+        {desbloqueo && <span role="status" className={`mt-1 block text-xs ${desbloqueo.ok ? "text-[#157a4a]" : "text-red-700"}`}>{desbloqueo.message}</span>}
+        {!user.active && <span className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-[var(--surface-2)] px-2.5 py-1 text-xs font-semibold text-[var(--fg-muted)]"><Lock size={12} aria-hidden /> Cuenta desactivada</span>}
         {cuotaIA && <CuotaBarra gasto={cuotaIA.gasto} tope={cuotaIA.efectiva} compacta />}
       </td>
 

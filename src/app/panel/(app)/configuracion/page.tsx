@@ -13,6 +13,7 @@ import { LimitesAsistenteForm } from "@/components/panel/limites-asistente-form"
 import { CuotaIaPredeterminada } from "@/components/panel/cuota-ia-form";
 import { getSiteIdentity } from "@/lib/site-identity";
 import { UserRow } from "@/components/panel/user-row";
+import { bloqueosActivos } from "@/lib/rate-limit-bloqueos";
 import { AddUserForm } from "@/components/panel/add-user-form";
 import { SubTabs } from "@/components/panel/sub-tabs";
 import { RolesEditor } from "@/components/panel/roles-editor";
@@ -82,6 +83,8 @@ export default async function ConfiguracionPage() {
   const ultimo = new Map<string, string>();
   for (const a of accesos) if (!ultimo.has(a.userId)) ultimo.set(a.userId, fmtHora(a.at));
   const ajustes = isAdmin ? await getAjustes() : {};
+  // Cuentas bloqueadas ahora por intentos fallidos (solo lo ve un administrador).
+  const bloqueos = isAdmin ? await bloqueosActivos(people.map((p) => ({ id: p.id, email: p.email }))) : new Map<string, Date>();
   const [rolesPropios, rolesAsignados, cambiosRoles] = isAdmin ? await Promise.all([getRolesPropios(), getRolesAsignados(), getCambiosRoles()]) : [[], {}, {}];
   // Personas por rol (propio por su id; de siempre por su nombre), sin listar a nadie.
   const conteoRoles: Record<string, number> = {};
@@ -238,6 +241,7 @@ export default async function ConfiguracionPage() {
                               canManage={isAdmin && p.id !== session?.user.id}
                               isSelf={p.id === session?.user.id}
                               ultimoAcceso={ultimo.get(p.id)}
+                              bloqueadoHasta={bloqueos.get(p.id) ? new Intl.DateTimeFormat("es-CO", { hour: "numeric", minute: "2-digit", hour12: true, timeZone: "America/Bogota" }).format(bloqueos.get(p.id)) : undefined}
                               exige2fa={exige2fa(p.role, ajustes[p.id])}
                               rolesPropios={rolesPropios.map((r) => ({ id: r.id, nombre: r.nombre }))}
                               rolId={rolesAsignados[p.id]}
