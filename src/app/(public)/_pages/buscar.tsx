@@ -26,35 +26,25 @@ const SUGERENCIAS = [
 
 // Parámetros de la búsqueda: texto, sección y rango de fechas.
 type SP = {
-  searchParams: Promise<{ q?: string; seccion?: string; desde?: string; hasta?: string }>;
+  searchParams: Promise<{ q?: string; seccion?: string; desde?: string; hasta?: string; orden?: string }>;
 };
 
 // Página de búsqueda: resultados del índice unificado con filtros por sección y fechas.
 async function SearchPage({ searchParams, locale }: SP & { locale: Locale }) {
-  const { q = "", seccion = "", desde = "", hasta = "" } = await searchParams;
+  const { q = "", seccion = "", desde = "", hasta = "", orden: ordenQ = "" } = await searchParams;
+  const orden = ordenQ === "relevancia" ? "relevancia" : "recientes";
   const query = q.trim();
   const [site, categorias] = await Promise.all([getSiteTheme(), getTopLevelCategories().catch(() => [])]);
 
   const brutos = query
-    ? await hybridSearch(query, 60).catch((e) => {
+    ? await hybridSearch(query, 30, { orden, seccion, desde, hasta }).catch((e) => {
         console.error("BUSCAR error:", e);
         return [];
       })
     : [];
 
-  // Los filtros (B-03) se aplican sobre el resultado fusionado: la relevancia
-  // la decide la búsqueda híbrida y el filtro solo recorta, nunca reordena.
-  const desdeTs = desde ? Date.parse(`${desde}T00:00:00`) : null;
-  const hastaTs = hasta ? Date.parse(`${hasta}T23:59:59`) : null;
-  const results = brutos
-    .filter((r) => (seccion ? r.categorySlug === seccion : true))
-    .filter((r) => {
-      if (!desdeTs && !hastaTs) return true;
-      if (!r.publishedAt) return false;
-      const ts = Date.parse(r.publishedAt);
-      return (!desdeTs || ts >= desdeTs) && (!hastaTs || ts <= hastaTs);
-    })
-    .slice(0, 30);
+  // Sección, fechas y orden se aplican dentro de la búsqueda (en la base), no recortando los primeros resultados.
+  const results = brutos;
   const filtrando = Boolean(seccion || desde || hasta);
 
   return (
@@ -102,6 +92,13 @@ async function SearchPage({ searchParams, locale }: SP & { locale: Locale }) {
           <label className="flex flex-col gap-1.5">
             <span className="lx-kicker text-[var(--fg-muted)]">{t(locale, "section.to")}</span>
             <input type="date" name="hasta" defaultValue={hasta} className="lx-input" />
+          </label>
+          <label className="flex flex-col gap-1.5">
+            <span className="lx-kicker text-[var(--fg-muted)]">Ordenar</span>
+            <select name="orden" defaultValue={orden} className="lx-input">
+              <option value="recientes">Más recientes</option>
+              <option value="relevancia">Más relevantes</option>
+            </select>
           </label>
           <button type="submit" className="lx-btn min-h-11">
             {t(locale, "section.filter")}

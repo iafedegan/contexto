@@ -77,12 +77,47 @@ export function toOrQuery(input: string): string {
   return [...salida].join(" or ");
 }
 
+/**
+ * La misma pregunta como consulta Y para `to_tsquery`: cada palabra significativa debe estar (con su variante con tilde, si la tiene). Sirve para
+ * saber qué notas traen TODAS las palabras (y si las traen en el titular), que es lo que el lector espera ver primero. Solo letras y números.
+ */
+export function toAndQuery(input: string): string {
+  const sinTilde = (w: string) => w.normalize("NFD").replace(/\p{Diacritic}/gu, "");
+  const grupos: string[][] = [];
+  for (const w of toOrQuery(input).split(" or ").filter(Boolean)) {
+    if (!/^[a-z0-9ñáéíóúü]+$/.test(w)) continue;
+    const g = grupos.find((x) => sinTilde(x[0]) === sinTilde(w));
+    if (g) g.push(w);
+    else grupos.push([w]);
+  }
+  return grupos.map((g) => (g.length > 1 ? `(${g.join(" | ")})` : g[0])).join(" & ");
+}
+
+/** Cómo se ordenan los resultados: lo más reciente entre lo que coincide de verdad, o solo por relevancia. */
+export type OrdenBusqueda = "recientes" | "relevancia";
+
 // Búsqueda híbrida: mezcla similitud vectorial y texto completo en español sobre las notas propias y el archivo histórico, en una sola consulta SQL.
-export async function hybridSearch(query: string, limit = 20, opciones: { semantico?: boolean; terminosExtra?: string[] } = {}): Promise<SearchHit[]> {
+export async function hybridSearch(
+  query: string,
+  limit = 20,
+  opciones: { semantico?: boolean; terminosExtra?: string[]; orden?: OrdenBusqueda; seccion?: string; desde?: string; hasta?: string } = {},
+): Promise<SearchHit[]> {
   // `terminosExtra`: sinónimos y términos del sector que una IA barata propone para la pregunta (ver `expandirConsulta`): se suman a las palabras de la
   // pregunta SOLO en la parte de texto completo, así una nota que dice «ganado gordo» aparece aunque el lector escribiera «novillo».
   const q = toOrQuery([query, ...(opciones.terminosExtra ?? [])].join(" "));
   if (!q) return [];
+  // Consulta Y con las palabras del LECTOR (no las sugeridas por la IA): define qué notas coinciden de verdad.
+  const qAnd = toAndQuery(query) || null;
+  const orden: OrdenBusqueda = opciones.orden ?? "relevancia";
+  const fecha = (v?: string) => (v && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null);
+  const desde = fecha(opciones.desde);
+  const hasta = fecha(opciones.hasta);
+  const seccion = opciones.seccion && /^[a-z0-9-]{1,80}$/.test(opciones.seccion) ? opciones.seccion : null;
+  // Sección y fechas se filtran en la base (antes se recortaba solo entre los 60 primeros resultados y casi siempre quedaba vacío).
+  const filtroNota = sql`(${seccion}::text IS NULL OR c.slug = ${seccion} OR c.parent_id = (SELECT id FROM categories WHERE slug = ${seccion}))
+    AND (${desde}::date IS NULL OR a.published_at >= (${desde}::date)::timestamp AT TIME ZONE 'America/Bogota')
+    AND (${hasta}::date IS NULL OR a.published_at < ((${hasta}::date + 1))::timestamp AT TIME ZONE 'America/Bogota')`;
+  const sinFiltros = sql`${seccion}::text IS NULL AND ${desde}::date IS NULL AND ${hasta}::date IS NULL`;
 
   // El embedding se calcula sobre la pregunta ORIGINAL, no sobre `q`: la lista «palabra or palabra» sin acentos ni palabras
   // vacías sirve para el texto completo, pero le quita al modelo justo lo que entiende (el orden, los matices, las
@@ -98,14 +133,17 @@ export async function hybridSearch(query: string, limit = 20, opciones: { semant
       SELECT
         ${q} AS q,
         ${vecLiteral}::text AS vec,
-        websearch_to_tsquery('spanish', ${q}) AS qry
+        websearch_to_tsquery('spanish', ${q}) AS qry,
+        CASE WHEN ${qAnd}::text IS NULL THEN NULL ELSE to_tsquery('spanish', ${qAnd}::text) END AS qand
     ),
     -- Candidatos del texto completo: se leen del índice sobre \`search_vec\` (ya calculado) y, si una consulta muy general coincide con
     -- decenas de miles de notas, se ordenan solo las 5.000 más recientes. Sin este tope, puntuar todas tardaba segundos con el archivo completo.
     candidatas AS (
       SELECT a.id
-      FROM articles a, params p
-      WHERE a.status = 'publicado' AND a.search_vec @@ p.qry
+      FROM articles a
+      LEFT JOIN categories c ON c.id = a.category_id
+      CROSS JOIN params p
+      WHERE a.status = 'publicado' AND a.search_vec @@ p.qry AND ${filtroNota}
       ORDER BY a.published_at DESC NULLS LAST
       LIMIT 5000
     ),
@@ -114,7 +152,11 @@ export async function hybridSearch(query: string, limit = 20, opciones: { semant
              a.excerpt AS summary, coalesce(a.legacy_path, '/articulo/' || a.slug) AS url,
              a.published_at, a.cover_image_url AS image,
              c.slug AS category_slug, c.name AS category_name,
-             ts_rank(a.search_vec, p.qry) AS rank
+             ts_rank(a.search_vec, p.qry) AS rank,
+             -- Precisión: 2 = todas las palabras en el titular; 1 = todas en la nota; 0 = solo algunas.
+             CASE WHEN p.qand IS NULL THEN 0
+                  WHEN to_tsvector('spanish', a.title) @@ p.qand THEN 2
+                  WHEN a.search_vec @@ p.qand THEN 1 ELSE 0 END AS nivel
       FROM candidatas
       JOIN articles a ON a.id = candidatas.id
       LEFT JOIN categories c ON c.id = a.category_id
@@ -125,14 +167,15 @@ export async function hybridSearch(query: string, limit = 20, opciones: { semant
              ts_rank(
                to_tsvector('spanish', ar.title || ' ' || ar.summary),
                websearch_to_tsquery('spanish', (SELECT q FROM params))
-             ) AS rank
+             ) AS rank,
+             0 AS nivel
       FROM archive_index ar
-      WHERE to_tsvector('spanish', ar.title || ' ' || ar.summary)
+      WHERE ${sinFiltros} AND to_tsvector('spanish', ar.title || ' ' || ar.summary)
             @@ websearch_to_tsquery('spanish', (SELECT q FROM params))
     ),
     lexical_ranked AS (
       -- ORDER BY rn antes del LIMIT: sin él, Postgres no garantiza que las 50 filas sean las mejores.
-      SELECT *, row_number() OVER (ORDER BY rank DESC, id) AS rn FROM lexical ORDER BY rn LIMIT 50
+      SELECT *, row_number() OVER (ORDER BY CASE WHEN ${orden} = 'recientes' THEN nivel ELSE 0 END DESC, rank DESC, id) AS rn FROM lexical ORDER BY rn LIMIT 200
     ),
     -- Cada rama ordena y corta por su cuenta: así usa el índice HNSW. Ordenar la unión recorría los 51.000 vectores en cada pregunta.
     semantic AS (
@@ -143,7 +186,7 @@ export async function hybridSearch(query: string, limit = 20, opciones: { semant
       FROM articles a
       LEFT JOIN categories c ON c.id = a.category_id
       WHERE a.status = 'publicado' AND a.embedding IS NOT NULL
-        AND (SELECT vec FROM params) IS NOT NULL
+        AND (SELECT vec FROM params) IS NOT NULL AND ${filtroNota}
       ORDER BY a.embedding <=> (SELECT vec FROM params)::vector
       LIMIT 50)
       UNION ALL
@@ -151,7 +194,7 @@ export async function hybridSearch(query: string, limit = 20, opciones: { semant
              ar.canonical_url, ar.published_at, NULL::text, NULL::text, NULL::text,
              ar.embedding <=> (SELECT vec FROM params)::vector AS dist
       FROM archive_index ar
-      WHERE ar.embedding IS NOT NULL AND (SELECT vec FROM params) IS NOT NULL
+      WHERE ar.embedding IS NOT NULL AND (SELECT vec FROM params) IS NOT NULL AND ${sinFiltros}
       ORDER BY ar.embedding <=> (SELECT vec FROM params)::vector
       LIMIT 50)
     ),
@@ -160,24 +203,37 @@ export async function hybridSearch(query: string, limit = 20, opciones: { semant
     ),
     fused AS (
       SELECT kind, id, title, summary, url, published_at, image, category_slug, category_name,
-             SUM(w) AS score
+             SUM(w) AS score, MAX(nivel) AS nivel
       FROM (
         SELECT kind, id, title, summary, url, published_at, image, category_slug, category_name,
-               1.0 / (${K} + rn) AS w FROM lexical_ranked
+               1.0 / (${K} + rn) AS w, nivel FROM lexical_ranked
         UNION ALL
         SELECT kind, id, title, summary, url, published_at, image, category_slug, category_name,
-               1.0 / (${K} + rn) AS w FROM semantic_ranked
+               1.0 / (${K} + rn) AS w, 0 AS nivel FROM semantic_ranked
       ) s
       GROUP BY kind, id, title, summary, url, published_at, image, category_slug, category_name
     )
     SELECT kind, id, title, summary, url, published_at, image, category_slug, category_name, score
     FROM fused
     -- Las notas recientes pesan más: a igual coincidencia, la de hace un mes gana a la de hace diez años (hasta +80 %, decayendo con los años).
-    ORDER BY score * (1 + 0.8 / (1 + coalesce(extract(epoch FROM now() - published_at), 0) / 31557600.0)) DESC
-    LIMIT ${limit}
+    ORDER BY
+      -- «Recientes»: primero las que traen todas las palabras en el titular, luego las que las traen en el texto y luego el resto; dentro de
+      -- cada grupo, la más nueva arriba. «Relevancia» (el asistente y las relacionadas): la fusión de siempre, con su empuje a lo reciente.
+      CASE WHEN ${orden} = 'recientes' THEN nivel ELSE 0 END DESC,
+      CASE WHEN ${orden} = 'recientes' THEN published_at END DESC NULLS LAST,
+      score * (1 + 0.8 / (1 + coalesce(extract(epoch FROM now() - published_at), 0) / 31557600.0)) DESC
+    LIMIT ${limit * 2}
   `));
 
-  return (rows as unknown as Array<Record<string, unknown>>).map((r) => ({
+  // Una nota repetida (mismo titular, publicada dos veces en el sitio anterior) sale una sola vez: la primera según el orden.
+  const vistos = new Set<string>();
+  const unicas = (rows as unknown as Array<Record<string, unknown>>).filter((r) => {
+    const clave = String(r.title).toLowerCase().normalize("NFD").replace(/\p{Diacritic}/gu, "").replace(/\s+/g, " ").trim();
+    if (vistos.has(clave)) return false;
+    vistos.add(clave);
+    return true;
+  }).slice(0, limit);
+  return unicas.map((r) => ({
     kind: r.kind as "articulo" | "archivo",
     id: String(r.id),
     title: String(r.title),

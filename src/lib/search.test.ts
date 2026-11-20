@@ -103,3 +103,21 @@ test("buscarRecientes: primero las que tratan del tema, aunque otra más nueva l
   const recientes = await search.buscarRecientes("brucelosis", 6, new Date(Date.now() - 5 * 86_400_000));
   assert.deepEqual(recientes.map((n) => n.title), ["Otra cosa distinta"]);
 });
+
+test("consulta Y: cada palabra debe estar, con su variante con tilde, y sin palabras vacías", async () => {
+  const { toAndQuery } = await import("./search");
+  assert.equal(toAndQuery("vacunacion"), "(vacunacion | vacunación)");
+  assert.equal(toAndQuery("novillo gordo en Medellín"), "novillo & gordo & medellín");
+  assert.equal(toAndQuery("¿qué?"), "");
+});
+
+test("buscar por «recientes»: primero las que traen la palabra en el titular, y entre ellas la más nueva", async () => {
+  const hoy = Date.now();
+  await bd.db.insert(schema.articles).values([
+    { slug: "leptospirosis-vieja", title: "Leptospirosis: guía completa", excerpt: "R", body: "<p>leptospirosis leptospirosis leptospirosis</p>", status: "publicado", publishedAt: new Date(hoy - 900 * 86_400_000) },
+    { slug: "leptospirosis-nueva", title: "Nuevo ciclo contra la leptospirosis", excerpt: "R", body: "<p>Ciclo.</p>", status: "publicado", publishedAt: new Date(hoy - 2 * 86_400_000) },
+    { slug: "leptospirosis-mencion", title: "Precios del ganado", excerpt: "R", body: "<p>Habla de leptospirosis de paso.</p>", status: "publicado", publishedAt: new Date(hoy - 86_400_000) },
+  ]);
+  const r = await search.hybridSearch("leptospirosis", 10, { semantico: false, orden: "recientes" });
+  assert.deepEqual(r.map((h) => h.url.split("/").pop()), ["leptospirosis-nueva", "leptospirosis-vieja", "leptospirosis-mencion"]);
+});
