@@ -136,13 +136,16 @@ export async function saveArticle(formData: FormData) {
   }
 
   let articleId = id;
+  // ¿La nota ya estaba a la vista de los lectores? Solo entonces un cambio suyo (título, foto, distintivos) toca otras páginas.
+  let eraPublica = false;
   if (id) {
     await exigirNotaPropia(user, id);
     // Una nota publicada o programada ya está (o va a estar) a la vista de los lectores: solo quien
     // puede publicar la modifica. Un redactor trabaja sobre borradores y revisión.
     const [actual] = await db.select({ status: articles.status, title: articles.title, excerpt: articles.excerpt, body: articles.body }).from(articles).where(eq(articles.id, id)).limit(1);
     if (!actual) throw new Error("La nota ya no existe.");
-    if (actual.status === "publicado" || actual.status === "programado") {
+    eraPublica = actual.status === "publicado" || actual.status === "programado";
+    if (eraPublica) {
       const puedePublicar = canPublish(user.role) && (await tienePermiso(user.id, user.role, "publicar"));
       if (!puedePublicar) throw new Error("Esta nota ya está publicada o programada: solo un editor puede modificarla.");
     }
@@ -175,10 +178,11 @@ export async function saveArticle(formData: FormData) {
   // Columna destacada de la portada (solo con permiso «portada»; ausente = no tocar).
   const colDest = String(formData.get("columnaDestacada") ?? "keep");
   if ((colDest === "si" || colDest === "no") && (await tienePermiso(user.id, user.role, "portada"))) await fijarColumnaDestacada(articleId, colDest === "si");
-  // Los distintivos (última hora, directo) salen en la cabecera y en las
-  // tarjetas de todo el portal, así que se refresca el layout completo.
+  // Los distintivos (última hora, directo) salen en la cabecera y en las tarjetas de todo el portal, así que al cambiar una nota PUBLICADA
+  // se refresca el layout completo. Un borrador o una nota en revisión no se ve en ninguna página pública: guardarla no debe vaciar la
+  // caché de las ~100.000 notas (cada guardado lo hacía y los rastreadores la volvían a llenar). Publicarla refresca lo suyo en publishArticle.
   invalidarCache();
-  revalidatePath("/", "layout");
+  if (eraPublica) revalidatePath("/", "layout");
   revalidatePath("/panel/articulos");
   // El asistente paso a paso puede, además de guardar, publicar o enviar a
   // revisión en el mismo clic (el permiso se comprueba dentro de cada acción).

@@ -10,6 +10,7 @@ import { EnVivoAvisoDiferido, PwaAvisosDiferido } from "@/components/diferidos";
 import { PwaRegister } from "@/components/pwa-register";
 import { ProgramadasTick } from "@/components/programadas-tick";
 import { FotoPequena } from "@/components/foto-pequena";
+import { LogoSprite } from "@/components/logo-contexto";
 import "./globals.css";
 
 /**
@@ -115,6 +116,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <EnVivoAvisoDiferido />
         <ProgramadasTick />
         <FotoPequena />
+        {/* Trazos del logo una sola vez por página: los logos de la cabecera los usan con <use> (ver logo-contexto.tsx). */}
+        <LogoSprite />
         {children}
       </body>
     </html>

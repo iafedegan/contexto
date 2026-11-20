@@ -53,7 +53,9 @@ export async function guardarEnVivo(_prev: EnVivoState, formData: FormData): Pro
   if ("error" in resultado) return { ok: false, message: resultado.error ?? "" };
   const { antes, config } = resultado;
   invalidarCache();
-  revalidatePath("/", "layout");
+  // Solo la portada (dinámica) muestra la transmisión: no se revalida todo el sitio, que vaciaría la caché de las ~100.000 notas.
+  revalidatePath("/");
+  revalidatePath("/en");
   revalidatePath("/panel/en-vivo");
 
   // Notifica solo cuando empieza un directo nuevo: guardar de nuevo la misma transmisión no repite el aviso.
@@ -73,7 +75,10 @@ export async function revisarEnVivoAhora(): Promise<EnVivoState> {
   revalidatePath("/panel/en-vivo");
   if (!r) return { ok: false, message: "No se pudo revisar el canal ahora. Prueba de nuevo en un momento." };
   if (r.estado === "apagado") return { ok: false, message: "Primero enciende el modo automático y guarda." };
-  if (r.cambio !== "ninguno") revalidatePath("/", "layout");
+  if (r.cambio !== "ninguno") {
+    revalidatePath("/");
+    revalidatePath("/en");
+  }
   const que: Record<string, string> = {
     encendida: "¡El canal está en vivo! La transmisión ya aparece en la portada y se avisó a los suscriptores.",
     "cambio-de-video": "El canal pasó a otro directo: la portada ya muestra el nuevo.",

@@ -1,3 +1,5 @@
+"use client";
+
 /**
  * El logo de CONtexto Ganadero Media en SVG, con los TRAZOS EXACTOS del original (extraídos del archivo de Illustrator «Variaciones logo CONtexto
  * 2026»), coloreado según el Manual de Identidad Visual: la C en dorado (#d9a41a con brillo #f7eea1), el play en turquesa, «CONTEXTO» y «GANADERO MEDIA»
@@ -6,7 +8,13 @@
  * El manual pide no cambiar los colores del logo ni descomponerlo: solo se admiten estas configuraciones (vertical con la C arriba y horizontal con
  * la C a la izquierda); por eso aquí no hay «14 años» ni filetes.
  *
- * `id` debe ser distinto en cada logo de la misma página (los degradados se referencian por id y uno oculto con display:none no pinta).
+ * Peso de la página: los trazos (unos 20 KB) van UNA vez por página en `LogoSprite` (lo pone el layout raíz) y cada logo los usa con
+ * `<use href>`; antes cada logo los repetía (4 copias en la cabecera de cada nota, más otras tantas en los datos de React). Es un
+ * componente de cliente para que los datos de React de la página solo lleven una referencia, no los trazos. Se ve igual: `<use>` hereda el
+ * relleno, el trazo y las variables `--logo-*` del logo que lo usa, y los degradados y el recorte del brillo viven en el sprite (que no va
+ * con display:none: un degradado dentro de un SVG oculto así no pinta).
+ *
+ * `id` ya no hace falta para los degradados (son comunes); se conserva en la firma por compatibilidad.
  */
 
 type Props = { id: string; titulo?: string; className?: string; variante?: "horizontal" | "emblema"; /** Pieza del editor de la cabecera a la que responde (p. ej. «h-logo»: su alto). */ pieza?: string };
@@ -25,127 +33,130 @@ const GANADERO_MEDIA = "M300.59 247.78 C296.78 249.93 293.86 253.02 291.82 257.0
 const TEXTO = "var(--logo-texto, var(--fg, #ffffff))";
 const TURQUESA = "var(--logo-turquesa, #138984)";
 
-function Degradados({ id }: { id: string }) {
-  return (
-    <defs>
-      {/* La C: lámina dorada del manual (#d9a41a) con brillo en #f7eea1 y sombra en el borde. */}
-      <linearGradient id={`${id}-oro`} gradientUnits="userSpaceOnUse" x1="90" y1="58" x2="272" y2="264">
-        <stop offset="0" stopColor="#f7eea1" />
-        <stop offset="0.28" stopColor="#d9a41a" />
-        <stop offset="0.62" stopColor="#b98712" />
-        <stop offset="1" stopColor="#e8c658" />
-      </linearGradient>
-      {/* El play: turquesa con volumen (claro arriba, #138984 al centro, oscuro abajo). */}
-      <linearGradient id={`${id}-play`} gradientUnits="userSpaceOnUse" x1="171" y1="124" x2="246" y2="203">
-        <stop offset="0" stopColor="#6fd8d1" />
-        <stop offset="0.45" stopColor="#138984" />
-        <stop offset="1" stopColor="#0b5a57" />
-      </linearGradient>
-    </defs>
-  );
-}
-
-function Emblema({ id }: { id: string }) {
-  return (
-    <g>
-      <path d={C} fill={`url(#${id}-oro)`} />
-      <path d={BISEL} fill="none" stroke="#f7eea1" strokeOpacity="0.6" strokeWidth="6.865" strokeLinejoin="miter" />
-      <path d={PLAY} fill={`url(#${id}-play)`} />
-      <path d={FACETAS} fill="#bff3ee" fillOpacity="0.55" />
-    </g>
-  );
-}
-
-function LogoColores({ id, titulo = "CONtexto Ganadero Media", className, variante = "horizontal", pieza }: Props) {
-  const g = `logo-${id}`;
-  if (variante === "emblema")
-    return (
-      <svg viewBox="84 54 192 214" role="img" aria-label={titulo} className={className} data-el={pieza}>
-        <title>{titulo}</title>
-        <Degradados id={g} />
-        <Emblema id={g} />
-      </svg>
-    );
-  return (
-    <svg viewBox="80 52 906 252" role="img" aria-label={titulo} className={className} data-el={pieza}>
-      <title>{titulo}</title>
-      <Degradados id={g} />
-      <Emblema id={g} />
-      <path d={ONTEXTO_A} fill={TEXTO} />
-      <path d={X_TURQUESA} fill={TURQUESA} />
-      <path d={X_BLANCA} fill={TEXTO} />
-      <path d={ONTEXTO_B} fill={TEXTO} />
-      <path d={GANADERO_MEDIA} fill={TEXTO} />
-    </svg>
-  );
-}
+/** Prefijo de los id del sprite (únicos en el documento). */
+const P = "cglogo";
+const ref = (nombre: string) => `#${P}-${nombre}`;
+const pintura = (nombre: string) => `url(#${P}-${nombre})`;
 
 /* Versión dorada (modo oscuro): todo el logo en lámina dorada con brillo que recorre las letras. El manual de colores queda para el modo claro. */
 const ONTEXTO_ORO = "M306.47 119.57 C299.07 123.67 293.38 129.5 289.38 137.08 L289.38 137.08 C285.38 144.67 283.38 153.57 283.38 163.81 L283.38 163.81 C283.38 174.04 285.38 182.94 289.38 190.53 L289.38 190.53 C293.38 198.11 299.07 203.97 306.47 208.11 L306.47 208.11 C313.87 212.25 322.58 214.32 332.63 214.32 L332.63 214.32 C342.59 214.32 351.26 212.25 358.65 208.11 L358.65 208.11 C366.05 203.97 371.75 198.11 375.75 190.53 L375.75 190.53 C379.75 182.94 381.75 174.04 381.75 163.81 L381.75 163.81 C381.75 153.57 379.77 144.67 375.82 137.08 L375.82 137.08 C371.86 129.5 366.19 123.67 358.8 119.57 L358.8 119.57 C351.4 115.48 342.68 113.43 332.63 113.43 L332.63 113.43 C322.58 113.43 313.87 115.48 306.47 119.57 M315.19 186.83 C311 181.62 308.91 173.94 308.91 163.81 L308.91 163.81 C308.91 153.67 311 146.01 315.19 140.85 L315.19 140.85 C319.38 135.69 325.19 133.11 332.63 133.11 L332.63 133.11 C339.98 133.11 345.77 135.71 350 140.92 L350 140.92 C354.24 146.13 356.35 153.76 356.35 163.81 L356.35 163.81 C356.35 173.85 354.26 181.5 350.08 186.76 L350.08 186.76 C345.89 192.01 340.07 194.64 332.63 194.64 L332.63 194.64 C325.19 194.64 319.38 192.04 315.19 186.83 M462.11 114.69 L462.11 170.92 L417.04 114.69 L398.34 114.69 L398.34 213.06 L422.2 213.06 L422.2 156.83 L467.14 213.06 L486.11 213.06 L486.11 114.69 Z M500.88 114.69 L500.88 135.48 L530.32 135.48 L530.32 213.06 L556.27 213.06 L556.27 135.48 L585.71 135.48 L585.71 114.69 Z M601.86 114.69 L601.86 213.06 L671.77 213.06 L671.77 193.25 L626.84 193.25 L626.84 172.88 L668.98 172.88 L668.98 153.2 L626.84 153.2 L626.84 134.5 L671.77 134.5 L671.77 114.69 Z M754.87 114.69 L738.56 138.57 L752.43 156.6 L784.59 114.69 Z M681.75 114.69 L718.59 163.39 L681.06 213.06 L710.78 213.06 L733.1 182.08 L746.82 163.56 L733.1 144.83 L711.62 114.69 Z M738.56 188.5 L755.29 213.06 L785.29 213.06 L752.43 169.08 Z M792.49 114.69 L792.49 135.48 L821.93 135.48 L821.93 213.06 L847.88 213.06 L847.88 135.48 L877.32 135.48 L877.32 114.69 Z M907.23 119.57 C899.83 123.67 894.14 129.5 890.14 137.08 L890.14 137.08 C886.14 144.67 884.14 153.57 884.14 163.81 L884.14 163.81 C884.14 174.04 886.14 182.94 890.14 190.53 L890.14 190.53 C894.14 198.11 899.83 203.97 907.23 208.11 L907.23 208.11 C914.62 212.25 923.35 214.32 933.39 214.32 L933.39 214.32 C943.35 214.32 952.02 212.25 959.41 208.11 L959.41 208.11 C966.81 203.97 972.51 198.11 976.51 190.53 L976.51 190.53 C980.51 182.94 982.51 174.04 982.51 163.81 L982.51 163.81 C982.51 153.57 980.53 144.67 976.58 137.08 L976.58 137.08 C972.62 129.5 966.95 123.67 959.55 119.57 L959.55 119.57 C952.16 115.48 943.44 113.43 933.39 113.43 L933.39 113.43 C923.35 113.43 914.62 115.48 907.23 119.57 M915.95 186.83 C911.76 181.62 909.67 173.94 909.67 163.81 L909.67 163.81 C909.67 153.67 911.76 146.01 915.95 140.85 L915.95 140.85 C920.14 135.69 925.95 133.11 933.39 133.11 L933.39 133.11 C940.74 133.11 946.53 135.71 950.76 140.92 L950.76 140.92 C955 146.13 957.11 153.76 957.11 163.81 L957.11 163.81 C957.11 173.85 955.02 181.5 950.84 186.76 L950.84 186.76 C946.65 192.01 940.83 194.64 933.39 194.64 L933.39 194.64 C925.95 194.64 920.14 192.04 915.95 186.83";
-function LogoOro({ id, titulo, className, variante, pieza }: Required<Pick<Props, "id" | "titulo">> & Pick<Props, "className" | "variante" | "pieza">) {
-  const g = `logo-oro-${id}`;
-  const fill = `url(#${g})`;
-  const degradado = (
-    <defs>
-      <linearGradient id={g} gradientUnits="userSpaceOnUse" x1="60" y1="40" x2="980" y2="330">
-        <stop offset="0" stopColor="#8a6624" />
-        <stop offset="0.18" stopColor="#f7eea1" />
-        <stop offset="0.36" stopColor="#d9a41a" />
-        <stop offset="0.55" stopColor="#f7eea1" />
-        <stop offset="0.75" stopColor="#d9a41a" />
-        <stop offset="1" stopColor="#8a6624" />
-      </linearGradient>
-    </defs>
-  );
-  const emblema = (
-    <g>
-      <path d={C} fill={fill} />
-      <path d={BISEL} fill="none" stroke="#f7eea1" strokeOpacity="0.6" strokeWidth="6.865" />
-      <path d={PLAY} fill={fill} />
-      <path d={FACETAS} fill="#f7eea1" fillOpacity="0.55" />
-    </g>
-  );
-  if (variante === "emblema")
-    return (
-      <svg viewBox="84 54 192 214" role="img" aria-label={titulo} className={className} data-el={pieza}>
-        {degradado}
-        {emblema}
-      </svg>
-    );
+
+/**
+ * Los trazos y los degradados del logo, una sola vez por página. Lo pone el layout raíz (`app/layout.tsx`) al principio del <body>.
+ * Invisible y fuera del flujo, pero NO con display:none (los degradados de un SVG así no pintan en Chrome).
+ */
+export function LogoSprite() {
   return (
-    <svg viewBox="80 52 906 252" role="img" aria-label={titulo} className={className} data-el={pieza}>
-      <title>{titulo}</title>
-      {degradado}
-      {emblema}
-      <path d={ONTEXTO_ORO} fill={fill} />
-      <path d={GANADERO_MEDIA} fill={fill} />
+    <svg aria-hidden="true" focusable="false" width="0" height="0" style={{ position: "absolute", width: 0, height: 0, overflow: "hidden" }}>
       <defs>
-        <clipPath id={`${g}-forma`}>
-          <path d={C} />
-          <path d={PLAY} />
-          <path d={ONTEXTO_ORO} />
-          <path d={GANADERO_MEDIA} />
-        </clipPath>
-        <linearGradient id={`${g}-luz`} x1="0" y1="0" x2="1" y2="0">
+        {/* La C: lámina dorada del manual (#d9a41a) con brillo en #f7eea1 y sombra en el borde. */}
+        <linearGradient id={`${P}-oro`} gradientUnits="userSpaceOnUse" x1="90" y1="58" x2="272" y2="264">
+          <stop offset="0" stopColor="#f7eea1" />
+          <stop offset="0.28" stopColor="#d9a41a" />
+          <stop offset="0.62" stopColor="#b98712" />
+          <stop offset="1" stopColor="#e8c658" />
+        </linearGradient>
+        {/* El play: turquesa con volumen (claro arriba, #138984 al centro, oscuro abajo). */}
+        <linearGradient id={`${P}-play`} gradientUnits="userSpaceOnUse" x1="171" y1="124" x2="246" y2="203">
+          <stop offset="0" stopColor="#6fd8d1" />
+          <stop offset="0.45" stopColor="#138984" />
+          <stop offset="1" stopColor="#0b5a57" />
+        </linearGradient>
+        {/* Modo oscuro: todo en lámina dorada. */}
+        <linearGradient id={`${P}-dorado`} gradientUnits="userSpaceOnUse" x1="60" y1="40" x2="980" y2="330">
+          <stop offset="0" stopColor="#8a6624" />
+          <stop offset="0.18" stopColor="#f7eea1" />
+          <stop offset="0.36" stopColor="#d9a41a" />
+          <stop offset="0.55" stopColor="#f7eea1" />
+          <stop offset="0.75" stopColor="#d9a41a" />
+          <stop offset="1" stopColor="#8a6624" />
+        </linearGradient>
+        <linearGradient id={`${P}-luz`} x1="0" y1="0" x2="1" y2="0">
           <stop offset="0" stopColor="#fff" stopOpacity="0" />
           <stop offset="0.5" stopColor="#fff" stopOpacity="0.85" />
           <stop offset="1" stopColor="#fff" stopOpacity="0" />
         </linearGradient>
+        <path id={`${P}-c`} d={C} />
+        <path id={`${P}-bisel`} d={BISEL} />
+        <path id={`${P}-play-forma`} d={PLAY} />
+        <path id={`${P}-facetas`} d={FACETAS} />
+        <path id={`${P}-ontexto-a`} d={ONTEXTO_A} />
+        <path id={`${P}-x-turquesa`} d={X_TURQUESA} />
+        <path id={`${P}-x-blanca`} d={X_BLANCA} />
+        <path id={`${P}-ontexto-b`} d={ONTEXTO_B} />
+        <path id={`${P}-ganadero`} d={GANADERO_MEDIA} />
+        <path id={`${P}-ontexto-oro`} d={ONTEXTO_ORO} />
+        {/* Recorte del brillo que recorre las letras doradas. */}
+        <clipPath id={`${P}-forma`}>
+          <use href={ref("c")} />
+          <use href={ref("play-forma")} />
+          <use href={ref("ontexto-oro")} />
+          <use href={ref("ganadero")} />
+        </clipPath>
       </defs>
-      <g clipPath={`url(#${g}-forma)`} aria-hidden>
-        <g transform="skewX(-20)"><rect className="logo-brillo" x="40" y="40" width="130" height="340" fill={`url(#${g}-luz)`} /></g>
+    </svg>
+  );
+}
+
+function Emblema() {
+  return (
+    <g>
+      <use href={ref("c")} fill={pintura("oro")} />
+      <use href={ref("bisel")} fill="none" stroke="#f7eea1" strokeOpacity="0.6" strokeWidth="6.865" strokeLinejoin="miter" />
+      <use href={ref("play-forma")} fill={pintura("play")} />
+      <use href={ref("facetas")} fill="#bff3ee" fillOpacity="0.55" />
+    </g>
+  );
+}
+
+function LogoColores({ titulo = "CONtexto Ganadero Media", className, variante = "horizontal", pieza }: Omit<Props, "id">) {
+  if (variante === "emblema")
+    return (
+      <svg viewBox="84 54 192 214" role="img" aria-label={titulo} className={className} data-el={pieza}>
+        <title>{titulo}</title>
+        <Emblema />
+      </svg>
+    );
+  return (
+    <svg viewBox="80 52 906 252" role="img" aria-label={titulo} className={className} data-el={pieza}>
+      <title>{titulo}</title>
+      <Emblema />
+      <use href={ref("ontexto-a")} fill={TEXTO} />
+      <use href={ref("x-turquesa")} fill={TURQUESA} />
+      <use href={ref("x-blanca")} fill={TEXTO} />
+      <use href={ref("ontexto-b")} fill={TEXTO} />
+      <use href={ref("ganadero")} fill={TEXTO} />
+    </svg>
+  );
+}
+
+function LogoOro({ titulo, className, pieza }: Required<Pick<Props, "titulo">> & Pick<Props, "className" | "pieza">) {
+  const fill = pintura("dorado");
+  return (
+    <svg viewBox="80 52 906 252" role="img" aria-label={titulo} className={className} data-el={pieza}>
+      <title>{titulo}</title>
+      <g>
+        <use href={ref("c")} fill={fill} />
+        <use href={ref("bisel")} fill="none" stroke="#f7eea1" strokeOpacity="0.6" strokeWidth="6.865" />
+        <use href={ref("play-forma")} fill={fill} />
+        <use href={ref("facetas")} fill="#f7eea1" fillOpacity="0.55" />
+      </g>
+      <use href={ref("ontexto-oro")} fill={fill} />
+      <use href={ref("ganadero")} fill={fill} />
+      <g clipPath={pintura("forma")} aria-hidden>
+        <g transform="skewX(-20)"><rect className="logo-brillo" x="40" y="40" width="130" height="340" fill={pintura("luz")} /></g>
       </g>
     </svg>
   );
 }
 
 /** El logo: dorado en modo oscuro, a colores del manual en modo claro (la elección la hace el CSS, ver `.logo-modo-*` en globals.css). */
-export function LogoContexto({ id, titulo = "CONtexto Ganadero Media", className, variante = "horizontal", pieza }: Props) {
-  if (variante === "emblema") return <LogoColores id={id} titulo={titulo} className={className} variante={variante} pieza={pieza} />;
+export function LogoContexto({ titulo = "CONtexto Ganadero Media", className, variante = "horizontal", pieza }: Props) {
+  if (variante === "emblema") return <LogoColores titulo={titulo} className={className} variante={variante} pieza={pieza} />;
   return (
     <>
-      <LogoColores id={id} titulo={titulo} className={`${className ?? ""} logo-modo-claro`} variante={variante} pieza={pieza} />
-      <LogoOro id={id} titulo={titulo} className={`${className ?? ""} logo-modo-oscuro`} variante={variante} pieza={pieza} />
+      <LogoColores titulo={titulo} className={`${className ?? ""} logo-modo-claro`} variante={variante} pieza={pieza} />
+      <LogoOro titulo={titulo} className={`${className ?? ""} logo-modo-oscuro`} pieza={pieza} />
     </>
   );
 }
