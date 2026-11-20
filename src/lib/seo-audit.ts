@@ -10,7 +10,7 @@
  */
 
 /** Puntuación SEO mínima para que una nota se publique o se programe (además de tener su imagen de portada). */
-export const SEO_MINIMO_PUBLICAR = 80;
+export const SEO_MINIMO_PUBLICAR = 75;
 
 export type AuditSeverity = "error" | "aviso" | "ok";
 
