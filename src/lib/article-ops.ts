@@ -12,6 +12,7 @@ import { emitir } from "@/lib/eventos";
 import { slugify } from "@/lib/utils";
 import { esSufijoDeFecha, slugLibre, SUFIJO_ANTIGUO } from "@/lib/slug-libre";
 import { rutaDeNota } from "@/lib/ruta-nota";
+import { versionAlCambiarDeManos } from "@/lib/versiones-notas";
 import { redirects } from "@/db/schema";
 import { autorDeUsuario } from "@/lib/user-authors";
 import { invalidarCache } from "@/lib/data-cache";
@@ -64,6 +65,7 @@ export async function guardarBorradorCore(userId: string, input: BorradorInput):
       const [row] = await db.select({ status: articles.status, title: articles.title, excerpt: articles.excerpt, body: articles.body }).from(articles).where(eq(articles.id, input.id)).limit(1);
       if (!row) return { ok: false, error: "La nota ya no existe." };
       if (row.status !== "borrador" && row.status !== "en_revision") return { ok: false, skipped: true };
+      await versionAlCambiarDeManos(input.id, userId);
       await db.update(articles).set(values).where(eq(articles.id, input.id));
       const cambio = palabrasCambiadas(`${row.title} ${row.excerpt} ${row.body}`, `${values.title} ${values.excerpt} ${values.body}`);
       if (cambio > 0) await registrarActividad(input.id, userId, "edito", cambio);

@@ -94,3 +94,21 @@ export async function rechazarCambio(articleId: string, userId: string, idCambio
   await guardarVersion(articleId, userId, "rechazo");
   return nuevo;
 }
+
+/**
+ * Si la nota la va a editar otra persona distinta de quien la editó (o creó) por última vez, se guarda antes una foto a nombre de esa persona:
+ * así también quedan marcados los cambios cuando alguien abre y corrige una nota sin que se la hayan enviado.
+ */
+export async function versionAlCambiarDeManos(articleId: string, userId: string): Promise<void> {
+  try {
+    const [ultimo] = await db
+      .select({ userId: articleActivity.userId })
+      .from(articleActivity)
+      .where(and(eq(articleActivity.articleId, articleId), inArray(articleActivity.tipo, ["edito", "creo"])))
+      .orderBy(desc(articleActivity.ultima))
+      .limit(1);
+    if (ultimo && ultimo.userId !== userId) await guardarVersion(articleId, ultimo.userId, "corte");
+  } catch (e) {
+    console.warn("versionAlCambiarDeManos:", (e as Error)?.message ?? e);
+  }
+}

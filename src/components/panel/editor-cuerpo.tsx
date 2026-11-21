@@ -1,6 +1,9 @@
 "use client";
 
-import { useLayoutEffect, useRef, useState } from "react";
+import { cambiosDeNota } from "@/app/panel/(app)/articulos/comentarios-actions";
+import { COLORES_PERSONA } from "@/components/panel/control-cambios";
+import type { ControlDeCambios } from "@/lib/versiones-notas";
+import { useLayoutEffect, useRef, useState, useEffect } from "react";
 import { BarChart3, Bold, Clapperboard, Highlighter, Images, Italic, Link2, List, ListOrdered, Minus, MessageSquareQuote, Quote, Redo2, RemoveFormatting, Replace, Search, Sparkles, Strikethrough, Subscript, Superscript, Table, Underline, Undo2, Unlink, ZoomIn, ZoomOut } from "lucide-react";
 import { decodeSpec, renderChartSvg, svgDataUri } from "@/lib/chart-svg";
 import { escapeHtml } from "@/lib/escape";
@@ -158,6 +161,7 @@ export function EditorCuerpo({
   resumen,
   papel = false,
   imagenIA,
+  articleId,
 }: {
   /** Cuerpo en HTML. */
   value: string;
@@ -169,6 +173,8 @@ export function EditorCuerpo({
   papel?: boolean;
   /** Genera con IA una imagen para el cuerpo (la escena que se escribió y el párrafo donde está el cursor). Sin ella no se ofrece la opción. */
   imagenIA?: (escena: string, parrafo: string) => Promise<ResultadoImagenIA>;
+  /** Nota guardada: con ella el editor muestra, resaltado sobre el texto, lo que cambió cada persona (control de cambios). */
+  articleId?: string | null;
 }) {
   const caja = useRef<HTMLDivElement>(null);
   // Último HTML que salió del editor: si `value` es otro, el cambio vino de fuera (p. ej. la IA reescribió) y se repinta.
@@ -191,6 +197,35 @@ export function EditorCuerpo({
   const imgEl = useRef<HTMLElement | null>(null);
   const [buscar, setBuscar] = useState<{ q: string; r: string; msg: string }>({ q: "", r: "", msg: "" });
   const [zoom, setZoom] = useState(100);
+  // Control de cambios: lo que agregó cada persona, resaltado en su color, y lo quitado, tachado. Si la nota tiene cambios, se abre mostrándolos.
+  const [cambios, setCambios] = useState<ControlDeCambios | null>(null);
+  const [verMarcas, setVerMarcas] = useState(false);
+  const [cargandoMarcas, setCargandoMarcas] = useState(false);
+  // Trae el control de cambios de la nota guardada y, si hay cambios, los muestra resaltados.
+  function traerCambios(mostrar: boolean) {
+    if (!articleId) return;
+    setCargandoMarcas(true);
+    cambiosDeNota(articleId)
+      .then((r) => {
+        if (!r.ok) return;
+        setCambios(r.control);
+        if (mostrar) setVerMarcas(r.control.hay && r.control.cambios.length > 0);
+      })
+      .catch(() => {})
+      .finally(() => setCargandoMarcas(false));
+  }
+  useEffect(() => {
+    if (!articleId) return;
+    let vigente = true;
+    cambiosDeNota(articleId)
+      .then((r) => {
+        if (!vigente || !r.ok) return;
+        setCambios(r.control);
+        setVerMarcas(r.control.hay && r.control.cambios.length > 0);
+      })
+      .catch(() => {});
+    return () => { vigente = false; };
+  }, [articleId]);
   const [caracteres, setCaracteres] = useState(0);
 
   useLayoutEffect(() => {
@@ -682,6 +717,14 @@ export function EditorCuerpo({
               <button type="button" onClick={reemplazarUno} className="rounded-md border border-[var(--border)] px-2 py-1 text-xs font-medium text-[var(--fg-muted)] transition hover:border-[var(--accent)] hover:text-[var(--fg)]">Reemplazar</button>
               <button type="button" onClick={reemplazarTodo} className="rounded-md border border-[var(--border)] px-2 py-1 text-xs font-medium text-[var(--fg-muted)] transition hover:border-[var(--accent)] hover:text-[var(--fg)]">Reemplazar todo</button>
               {buscar.msg && <span role="status" className="text-xs text-[var(--fg-muted)]">{buscar.msg}</span>}
+              {articleId && (
+                <>
+                  <Sep />
+                  <button type="button" disabled={cargandoMarcas} onClick={() => (verMarcas ? setVerMarcas(false) : traerCambios(true))} className={`rounded-md border px-2 py-1 text-xs font-medium transition ${verMarcas ? "border-amber-400 bg-amber-300 text-[#3b2a00]" : "border-[var(--border)] text-[var(--fg-muted)] hover:border-[var(--accent)]"}`}>
+                    {verMarcas ? "Ocultar cambios" : "Mostrar cambios"}
+                  </button>
+                </>
+              )}
               <Sep />
               <Boton titulo="Reducir el zoom" onClick={() => setZoom((z) => Math.max(80, z - 10))}><ZoomOut size={15} /></Boton>
               <span className="w-10 text-center text-xs tabular-nums text-[var(--fg-muted)]">{zoom}%</span>
@@ -690,6 +733,31 @@ export function EditorCuerpo({
           )}
         </div>
       </div>
+      {cambios?.hay && cambios.cambios.length > 0 && (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-b border-amber-300 bg-amber-50 px-3 py-2 text-xs text-[#3b2a00]">
+          <span className="font-semibold">{cambios.cambios.length} {cambios.cambios.length === 1 ? "cambio" : "cambios"} de</span>
+          {cambios.personas.map((p, i) => (
+            <span key={p} className="inline-flex items-center gap-1"><span aria-hidden className="size-2.5 rounded-sm" style={{ background: COLORES_PERSONA[i % COLORES_PERSONA.length] }} />{p}</span>
+          ))}
+          <span className="ml-auto flex gap-2">
+            {verMarcas ? (
+              <button type="button" onClick={() => setVerMarcas(false)} className="rounded-md bg-[#3b2a00] px-2.5 py-1 font-semibold text-white">Editar el texto</button>
+            ) : (
+              <button type="button" disabled={cargandoMarcas} onClick={() => traerCambios(true)} className="rounded-md bg-amber-400 px-2.5 py-1 font-semibold text-[#3b2a00] disabled:opacity-60">Ver cambios resaltados</button>
+            )}
+          </span>
+        </div>
+      )}
+      {verMarcas && cambios && (
+        <>
+          <style dangerouslySetInnerHTML={{ __html: COLORES_PERSONA.map((c, i) => `.cc-marcas ins[data-persona="${i}"]{background:${c};text-decoration:none;border-radius:2px}.cc-marcas del[data-persona="${i}"]{color:#b42318;text-decoration:line-through;background:${c}55}`).join("") }} />
+          <div
+            className="cc-marcas min-h-[50vh] px-5 py-4 text-[1.02rem] leading-relaxed [&_h2]:mb-2 [&_h2]:mt-5 [&_h2]:text-xl [&_h2]:font-semibold [&_p]:my-2.5 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:list-decimal [&_ol]:pl-6 [&_figure_img]:mx-auto [&_figure_img]:max-h-72"
+            aria-label="Cuerpo de la nota con los cambios resaltados"
+            dangerouslySetInnerHTML={{ __html: cambios.cuerpo }}
+          />
+        </>
+      )}
       <div
         ref={caja}
         contentEditable
@@ -699,6 +767,7 @@ export function EditorCuerpo({
         aria-label="Cuerpo de la nota"
         data-placeholder={placeholder}
         spellCheck
+        hidden={verMarcas}
         style={zoom === 100 ? undefined : { zoom: zoom / 100 }}
         onFocus={() => document.execCommand("defaultParagraphSeparator", false, "p")}
         onInput={emitir}

@@ -20,7 +20,7 @@ import { esNotaPropia, exigirNotaPropia } from "@/lib/propiedad-notas";
 import { registrarActividad } from "@/lib/actividad-notas";
 import { palabrasCambiadas } from "@/lib/actividad-reglas";
 import { limpiarEnvio } from "@/lib/notas-asignadas-reglas";
-import { guardarVersion } from "@/lib/versiones-notas";
+import { guardarVersion, versionAlCambiarDeManos } from "@/lib/versiones-notas";
 import { asignacionDe, destinoActivo, devolverAsignacion, quitarAsignacion, registrarAsignacion, soltarAsignacion, type ResultadoAsignacion } from "@/lib/notas-asignadas";
 import { puedeEnviarNota } from "@/lib/notas-asignadas-reglas";
 import { fijarColumnaDestacada } from "@/lib/columna-destacada";
@@ -152,6 +152,7 @@ export async function saveArticle(formData: FormData) {
       const puedePublicar = canPublish(user.role) && (await tienePermiso(user.id, user.role, "publicar"));
       if (!puedePublicar) throw new Error("Esta nota ya está publicada o programada: solo un editor puede modificarla.");
     }
+    await versionAlCambiarDeManos(id, user.id);
     await db.update(articles).set(values).where(eq(articles.id, id));
     const cambio = palabrasCambiadas(`${actual.title} ${actual.excerpt} ${actual.body}`, `${title} ${excerpt} ${body}`);
     if (cambio > 0) await registrarActividad(id, user.id, "edito", cambio);

@@ -1,7 +1,7 @@
 import "server-only";
 import { asc, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { articleActivity, users } from "@/db/schema";
+import { articleActivity, articles, users } from "@/db/schema";
 
 /**
  * Recorrido de una nota: por quién ha pasado y qué hizo cada persona (la creó, la recibió, la editó y cuántas palabras cambió, la pasó a otra,
@@ -35,6 +35,11 @@ export async function recorridoDe(articleId: string): Promise<PasoRecorrido[]> {
     .innerJoin(users, eq(users.id, articleActivity.userId))
     .where(eq(articleActivity.articleId, articleId))
     .orderBy(asc(articleActivity.primera));
+  // Quién creó la nota: si el registro no lo tiene (notas de antes del registro de actividad), sale de la propia nota.
+  if (!filas.some((f) => f.tipo === "creo")) {
+    const [n] = await db.select({ quien: users.name, cuando: articles.createdAt }).from(articles).innerJoin(users, eq(users.id, articles.createdBy)).where(eq(articles.id, articleId)).limit(1);
+    if (n) filas.unshift({ tipo: "creo", primera: n.cuando, ultima: n.cuando, veces: 1, palabras: 0, quien: n.quien });
+  }
   // «Recibió» que llega a menos de 5 minutos de un «pasó»: así se sabe a quién se la pasó.
   const recibidas = filas.filter((f) => f.tipo === "recibio");
   return filas.map((f) => {

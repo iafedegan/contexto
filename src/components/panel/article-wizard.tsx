@@ -1722,7 +1722,7 @@ export function ArticleWizard({
                       <p className="lx-kicker mt-4 text-[#6b756f]">Cuerpo</p>
                     </div>
                     <div className="px-3 pb-10 sm:px-12">
-                      <EditorCuerpo papel value={body} onChange={setBody} imagenIA={imagenParaCuerpo} placeholder="Primer párrafo con lo más importante…"
+                      <EditorCuerpo papel articleId={savedId} value={body} onChange={setBody} imagenIA={imagenParaCuerpo} placeholder="Primer párrafo con lo más importante…"
                         resumen={<>{words} palabras · {Math.max(1, Math.round(words / 200))} min</>} />
                     </div>
                   </article>
@@ -1746,7 +1746,7 @@ export function ArticleWizard({
                   <p className="lx-kicker mt-4 text-[#6b756f]">Cuerpo</p>
                 </div>
                 <div className="px-3 pb-10 sm:px-12">
-                  <EditorCuerpo papel value={body} onChange={setBody} imagenIA={imagenParaCuerpo} placeholder="Primer párrafo con lo más importante…"
+                  <EditorCuerpo papel articleId={savedId} value={body} onChange={setBody} imagenIA={imagenParaCuerpo} placeholder="Primer párrafo con lo más importante…"
                     resumen={<>{words} palabras · {Math.max(1, Math.round(words / 200))} min</>} />
                 </div>
               </article>

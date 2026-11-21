@@ -45,3 +45,21 @@ test("control de cambios: marca lo de Ricardo, se rechaza un cambio y al aceptar
   await ver.guardarVersion(n.id, ricardo, "aceptado");
   assert.equal((await ver.controlDeCambios(n.id)).cambios.length, 0, "aceptar deja la versión actual sin marcas");
 });
+
+test("si otra persona empieza a editar sin que se la envíen, sus cambios también quedan marcados", async () => {
+  const persona = async (email: string, name: string) => (await bd.db.insert(esq.users).values({ email, name, role: "editor", passwordHash: "x" }).returning({ id: esq.users.id }))[0].id;
+  const angie = await persona("an@x.co", "Angie Barbosa");
+  const pedro = await persona("pe@x.co", "Pedro Fonseca");
+  const [n] = await bd.db.insert(esq.articles).values({ slug: "n2", title: "Ferias", excerpt: "x", body: "<p>Rionegro será sede.</p>", createdBy: angie }).returning({ id: esq.articles.id });
+  await act.registrarActividad(n.id, angie, "edito", 3);
+  await ver.versionAlCambiarDeManos(n.id, pedro); // Pedro abre y corrige
+  await bd.db.update(esq.articles).set({ body: "<p>Rionegro (Antioquia) será sede.</p>" }).where(eq(esq.articles.id, n.id));
+  await act.registrarActividad(n.id, pedro, "edito", 1);
+  const c = await ver.controlDeCambios(n.id);
+  assert.equal(c.hay, true);
+  assert.deepEqual(c.personas, ["Pedro Fonseca"]);
+  assert.ok(c.cambios.some((x) => x.tipo === "pone" && x.texto.includes("Antioquia")));
+  const rec = await import("@/lib/recorrido-nota");
+  const pasos = await rec.recorridoDe(n.id);
+  assert.equal(`${pasos[0].quien} ${pasos[0].texto}`, "Angie Barbosa creó la nota");
+});
