@@ -10,7 +10,7 @@ const ICONO: Record<string, LucideIcon> = { creo: FilePlus2, recibio: Inbox, rev
 const TONO: Record<string, string> = { edito: "bg-amber-400 text-[#3b2a00]", publico: "bg-[#157a4a] text-white", envio: "bg-[var(--accent)] text-[var(--accent-fg,#fff)]", devolvio: "bg-[var(--accent)] text-[var(--accent-fg,#fff)]" };
 const hora = (iso: string) => new Intl.DateTimeFormat("es-CO", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit", hour12: true, timeZone: "America/Bogota" }).format(new Date(iso));
 
-export function RecorridoNota({ articleId }: { articleId: string }) {
+export function RecorridoNota({ articleId, sinMarco = false }: { articleId: string; /** Dentro de otra tarjeta (la de envío, al girarla): sin borde ni sombra propios. */ sinMarco?: boolean }) {
   const [pasos, setPasos] = useState<PasoRecorrido[] | null>(null);
   const [error, setError] = useState("");
   useEffect(() => {
@@ -22,7 +22,7 @@ export function RecorridoNota({ articleId }: { articleId: string }) {
   }, [articleId]);
 
   return (
-    <section aria-label="Recorrido de la nota" className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow)] sm:p-5">
+    <section aria-label="Recorrido de la nota" className={sinMarco ? "" : "rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow)] sm:p-5"}>
       <h3 className="text-base font-semibold">Recorrido de la nota</h3>
       <p className="mt-0.5 text-xs text-[var(--fg-muted)]">Por quién ha pasado y qué hizo cada persona. En amarillo, quien la editó.</p>
       {error && <p role="alert" className="mt-3 text-xs text-red-700">{error}</p>}

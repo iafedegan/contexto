@@ -41,7 +41,7 @@ import {
   Plus,
   Sparkles,
   Trash2,
-  X, GitCompareArrows } from "lucide-react";
+  X, GitCompareArrows, History } from "lucide-react";
 import { autosaveDraft, cancelarEnvio, crearAutor, devolverNota, saveArticle, soltarNota } from "@/app/panel/(app)/articulos/actions";
 import { subirMedia } from "./subir-media";
 import { portadaAuto } from "./ajustar-imagen";
@@ -2039,6 +2039,7 @@ export function ArticleWizard({
               </TarjetaEnvio>
               {puedeEnviarEditor ? (
                 <TarjetaEnvio
+                  reverso={savedId ? <RecorridoNota articleId={savedId} sinMarco /> : undefined}
                   Icono={Send}
                   titulo={soyDestinatario ? (envioLibre ? "Enviar o devolver la nota" : "Devolver la nota") : envioLibre ? "Enviar la nota a alguien" : "Enviar la nota a un editor"}
                   ayuda={soyDestinatario ? (envioLibre ? "Cuando termines tu revisión, envíasela a quien quieras, devuélvesela a quien te la envió o quítala de tus pendientes." : "Cuando termines tu revisión, devuélvesela a quien te la envió o quítala de tus pendientes.") : "Queda «En revisión» y le llega en «Artículos»."}
@@ -2148,7 +2149,6 @@ export function ArticleWizard({
                 </TarjetaEnvio>
               ) : null}
             </div>
-            {savedId && <div className="mt-4"><RecorridoNota articleId={savedId} /></div>}
             </div>
           </Step>
         )}
@@ -2433,18 +2433,40 @@ function TarjetaDecision({ n, titulo, ayuda, children }: { n: number; titulo: st
 }
 
 /** Tarjeta del paso «Enviar»: icono, título, ayuda y contenido; las dos tarjetas del paso comparten esta estructura para verse iguales. */
-function TarjetaEnvio({ Icono, titulo, ayuda, children }: { Icono: React.ComponentType<{ size?: number; "aria-hidden"?: boolean }>; titulo: string; ayuda: string; children: React.ReactNode }) {
+function TarjetaEnvio({ Icono, titulo, ayuda, children, reverso }: { Icono: React.ComponentType<{ size?: number; "aria-hidden"?: boolean }>; titulo: string; ayuda: string; children: React.ReactNode; /** Cara de atrás (p. ej. el recorrido de la nota): con ella la tarjeta gira con un botón. */ reverso?: React.ReactNode }) {
+  const [girada, setGirada] = useState(false);
+  const caraClase = "flex min-w-0 flex-col gap-4 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow)] sm:p-5 [backface-visibility:hidden]";
+  const cabecera = (
+    <header className="flex items-start gap-3">
+      <span className="grid size-10 shrink-0 place-items-center rounded-full bg-[var(--accent)] text-[var(--accent-fg,#fff)]"><Icono size={18} aria-hidden /></span>
+      <div className="min-w-0 flex-1">
+        <h3 className="text-base font-semibold leading-tight">{titulo}</h3>
+        <p className="mt-0.5 text-xs text-[var(--fg-muted)]">{ayuda}</p>
+      </div>
+      {reverso && (
+        <button type="button" onClick={() => setGirada(true)} className="inline-flex shrink-0 items-center gap-1 rounded-full border border-[var(--border)] px-2.5 py-1 text-xs font-medium transition hover:border-[var(--accent)] hover:text-[var(--accent)]">
+          <History size={13} aria-hidden /> Recorrido
+        </button>
+      )}
+    </header>
+  );
+  if (!reverso) return <section className={caraClase}>{cabecera}{children}</section>;
+  // Tarjeta que gira: al frente el envío; atrás, el recorrido, que mide lo mismo que el frente y se desplaza por dentro.
   return (
-    <section className="flex min-w-0 flex-col gap-4 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow)] sm:p-5">
-      <header className="flex items-start gap-3">
-        <span className="grid size-10 shrink-0 place-items-center rounded-full bg-[var(--accent)] text-[var(--accent-fg,#fff)]"><Icono size={18} aria-hidden /></span>
-        <div className="min-w-0">
-          <h3 className="text-base font-semibold leading-tight">{titulo}</h3>
-          <p className="mt-0.5 text-xs text-[var(--fg-muted)]">{ayuda}</p>
-        </div>
-      </header>
-      {children}
-    </section>
+    <div className="[perspective:1600px]">
+      <div className={`relative transition-transform duration-500 [transform-style:preserve-3d] ${girada ? "[transform:rotateY(180deg)]" : ""}`}>
+        <section className={caraClase} aria-hidden={girada} inert={girada || undefined}>{cabecera}{children}</section>
+        <section className={`${caraClase} absolute inset-0 min-h-0 overflow-hidden !gap-0 !p-0 [transform:rotateY(180deg)]`} aria-hidden={!girada} inert={!girada || undefined}>
+          <div className="flex items-center justify-between gap-2 border-b border-[var(--border)] px-4 py-2.5 sm:px-5">
+            <p className="text-sm font-semibold">Historial de la nota</p>
+            <button type="button" onClick={() => setGirada(false)} className="inline-flex items-center gap-1 rounded-full border border-[var(--border)] px-2.5 py-1 text-xs font-medium transition hover:border-[var(--accent)] hover:text-[var(--accent)]">
+              <RotateCcw size={13} aria-hidden /> Volver a enviar
+            </button>
+          </div>
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-3 sm:p-4">{reverso}</div>
+        </section>
+      </div>
+    </div>
   );
 }
 
