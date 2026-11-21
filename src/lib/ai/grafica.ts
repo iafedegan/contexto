@@ -143,9 +143,7 @@ export async function generateChartCore(userId: string, input: { topic: string; 
     // Una fuente por dominio, las oficiales y reconocidas primero: la gráfica debe apoyarse en entidades distintas.
     const porHost = unicas.filter((x, k, arr) => arr.findIndex((y) => y.host === x.host) === k);
     const sources = [...porHost.filter((x) => esConfiable(x.host)), ...porHost.filter((x) => !esConfiable(x.host))].slice(0, 8).map(({ title, url }) => ({ title, url }));
-    if (porHost.length < 2) {
-      return { ok: false, error: "Solo hallé una fuente para ese tema; para una gráfica fiable necesito cifras de al menos dos fuentes distintas (p. ej. FEDEGAN, DANE, ICA, FAO). Prueba con un dato más conocido, como «inventario bovino de Colombia 2019–2024»." };
-    }
+    // Una sola fuente confiable basta si cada cifra aparece en ella (abajo se verifica); exigir dos dejaba sin gráfica temas con un único dato oficial.
     if (!sources.length) {
       return { ok: false, error: "La búsqueda no devolvió fuentes citables para ese tema, así que no se genera la gráfica. Prueba describiendo el dato concreto (p. ej. «inventario bovino de Colombia 2019–2024»)." };
     }
@@ -153,7 +151,7 @@ export async function generateChartCore(userId: string, input: { topic: string; 
       const nombre = TIPOS_GRAFICA.find((x) => x.id === tipo)?.label ?? tipo;
       return { ok: false, error: `No hallé datos con la estructura que necesita una gráfica de tipo «${nombre}» (${GUIA[tipo].replace(/^[A-ZÁÉÍÓÚ ]+: /, "").toLowerCase()}). Prueba con otro tipo o con un dato distinto.` };
     }
-    if (!object.enough) return { ok: false, error: "Busqué en fuentes oficiales (DANE, FEDEGAN, ICA, FAO…) y no hallé una serie de cifras comparables para ese tema. Prueba con el dato concreto que quieres mostrar, por ejemplo «precio del kilo de novillo gordo en 2025» o «exportaciones de carne bovina de Colombia 2020–2024»." };
+    if (!object.enough) return { ok: false, error: "Busqué en fuentes oficiales (DANE, FEDEGAN, ICA, FAO…) y no hallé una serie de cifras comparables para ese tema. Prueba con el dato concreto que quieres mostrar, o sube tus datos en Excel, por ejemplo «precio del kilo de novillo gordo en 2025» o «exportaciones de carne bovina de Colombia 2020–2024»." };
     if (!verificada(object, texto)) return { ok: false, error: "Encontré cifras, pero no pude confirmar que cada valor aparezca en las fuentes citadas, así que no genero la gráfica (regla de la casa: solo datos verificables). Prueba con un dato más concreto o inserta la gráfica manual con tus cifras." };
 
     const base: ChartSpec = { type: object.type, title: object.title.slice(0, 110), unit: object.unit.slice(0, 70), labels: object.labels.slice(0, 12).map((l) => l.slice(0, 30)), series: object.series.slice(0, 4), source: object.sourceNote.slice(0, 160) };

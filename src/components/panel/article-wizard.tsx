@@ -41,7 +41,7 @@ import {
   Plus,
   Sparkles,
   Trash2,
-  X, GitCompareArrows, History } from "lucide-react";
+  X, GitCompareArrows, History, FileSpreadsheet, RefreshCw } from "lucide-react";
 import { autosaveDraft, cancelarEnvio, crearAutor, devolverNota, saveArticle, soltarNota } from "@/app/panel/(app)/articulos/actions";
 import { subirMedia } from "./subir-media";
 import { portadaAuto } from "./ajustar-imagen";
@@ -49,6 +49,7 @@ import { creditoFotoValido, FORMATO_CREDITO, ORIGENES_CREDITO } from "@/lib/cred
 import { PedirImagen } from "./pedir-imagen";
 import { etiquetaRol, PROPOSITOS, textoProposito } from "@/lib/notas-asignadas-reglas";
 import { RecorridoNota } from "@/components/panel/recorrido-nota";
+import { leerHoja } from "@/lib/leer-hoja";
 import { ControlCambios } from "@/components/panel/control-cambios";
 import {
   generateArticleDraft,
@@ -67,6 +68,7 @@ import {
   type TopicIdea,
   type NewsItem,
   generateChart,
+  graficaDesdeTabla,
   type ChartResult,
   type DraftPart,
   type TitleContextOptions,
@@ -320,6 +322,9 @@ export function ArticleWizard({
   const [chart, setChart] = useState<Extract<ChartResult, { ok: true }> | null>(null);
   const [chartBusy, startChart] = useTransition();
   const [chartError, setChartError] = useState("");
+  // Gráfica desde un Excel o CSV: nombre del archivo, muestra de la tabla y de dónde salen los datos (se imprime al pie de la gráfica).
+  const [hoja, setHoja] = useState<{ nombre: string; tabla: string[][] } | null>(null);
+  const [fuenteHoja, setFuenteHoja] = useState("");
   const prompt = [topic.trim(), context.trim()].filter(Boolean).join("\n\n");
   // Un artículo reabierto ya tiene borrador: se puede revisar y regenerar.
   const [generated, setGenerated] = useState(!!initial);
@@ -682,6 +687,28 @@ export function ArticleWizard({
   }
 
   // Pide una gráfica con datos de la web.
+  /** Lee el Excel o CSV que se sube y arma la gráfica con sus datos (la IA solo elige columnas, título y tipo). */
+  async function subirHoja(archivo: File | null | undefined) {
+    if (!archivo) return;
+    setChartError("");
+    try {
+      const tabla = await leerHoja(archivo);
+      if (tabla.length < 2) return setChartError("Esa hoja no tiene datos suficientes (al menos un encabezado y dos filas).");
+      setHoja({ nombre: archivo.name, tabla });
+      graficarHoja({ nombre: archivo.name, tabla });
+    } catch (e) {
+      setChartError(e instanceof Error ? e.message : "No se pudo leer ese archivo.");
+    }
+  }
+  function graficarHoja(h: { nombre: string; tabla: string[][] } | null = hoja) {
+    if (!h) return;
+    setChartError("");
+    startChart(async () => {
+      const res = await graficaDesdeTabla({ tabla: h.tabla, nombre: h.nombre, pedido: chartTopic.trim() || title.trim(), tipo: tipoGrafica, fuente: fuenteHoja.trim() || undefined });
+      if (!res.ok) return setChartError(res.error);
+      setChart(res);
+    });
+  }
   function makeChart() {
     setChartError("");
     setChart(null);
@@ -698,7 +725,7 @@ export function ArticleWizard({
   }
   // Texto corto con los datos de una gráfica, para el marcador del cuerpo.
   function tokenDe(c: Extract<ChartResult, { ok: true }>, spec: ChartSpec) {
-    const fuente = `Fuente: ${c.sourceNote || "Google Search"}. Consultado en: ${c.sources.slice(0, 3).map((x) => x.title).join(", ")}.`;
+    const fuente = c.sources.length ? `Fuente: ${c.sourceNote || "Google Search"}. Consultado en: ${c.sources.slice(0, 3).map((x) => x.title).join(", ")}.` : `Fuente: ${c.sourceNote}.`;
     const alt = spec.title.replace(/[|\]]/g, " ");
     return `[[GRAFICA ${encodeSpec(spec)} | ${alt} | ${fuente.replace(/[|\]]/g, " ")}]]`;
   }
@@ -1788,7 +1815,7 @@ export function ArticleWizard({
         )}
 
         {current.key === "grafica" && (
-          <Step ancho="xl" title="Gráfica con datos" hint="Opcional. La IA busca cifras en la web, las dibuja y tú eliges el tipo. La ves aquí antes de insertarla en la nota.">
+          <Step ancho="xl" title="Gráfica con datos" hint="Opcional. La IA busca cifras en la web o interpreta tu Excel o CSV, la dibuja y tú eliges el tipo. La ves aquí antes de insertarla en la nota.">
             {/* Controles a la izquierda, la gráfica a la derecha: se ven a la vez, sin bajar. */}
             <div className="grid min-h-0 flex-1 gap-4 @2xl:grid-cols-2 @2xl:grid-rows-[minmax(0,1fr)]">
               <div className="flex flex-col gap-3 @2xl:self-start">
@@ -1826,6 +1853,40 @@ export function ArticleWizard({
                   {chartBusy ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
                   {chartBusy ? "Buscando datos y dibujando…" : chart ? "Buscar otros datos" : "Generar gráfica"}
                 </button>
+                <div className="flex flex-col gap-2 rounded-[var(--radius)] border border-dashed border-[var(--border-strong)] p-3">
+                  <span className="lx-kicker text-[var(--fg-muted)]">O sube tus datos</span>
+                  <label
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={(e) => { e.preventDefault(); void subirHoja(e.dataTransfer.files?.[0]); }}
+                    className="flex cursor-pointer items-center gap-3 rounded-[var(--radius)] bg-[var(--surface-2)]/60 px-3 py-3 text-sm transition hover:bg-[var(--surface-2)]"
+                  >
+                    <FileSpreadsheet size={22} aria-hidden className="shrink-0 text-[#1d6f42]" />
+                    <span className="min-w-0">
+                      <strong className="block">{hoja ? hoja.nombre : "Excel (.xlsx) o CSV"}</strong>
+                      <span className="text-xs text-[var(--fg-muted)]">{hoja ? `${hoja.tabla.length} filas leídas · toca para cambiar el archivo` : "Arrástralo aquí o toca para elegirlo. La IA lo interpreta y las cifras salen tal cual de tu archivo."}</span>
+                    </span>
+                    <input type="file" accept=".xlsx,.csv,.tsv,text/csv" className="sr-only" onChange={(e) => { void subirHoja(e.target.files?.[0]); e.target.value = ""; }} />
+                  </label>
+                  {hoja && (
+                    <>
+                      <div className="max-h-36 overflow-auto rounded border border-[var(--border)] text-[0.7rem]">
+                        <table className="w-full border-collapse">
+                          <tbody>
+                            {hoja.tabla.slice(0, 6).map((f, i) => (
+                              <tr key={i} className={i === 0 ? "bg-[var(--surface-2)] font-semibold" : ""}>
+                                {f.slice(0, 6).map((c, j) => <td key={j} className="border-b border-[var(--border)] px-1.5 py-1 whitespace-nowrap">{c}</td>)}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                      <input value={fuenteHoja} onChange={(e) => setFuenteHoja(e.target.value)} placeholder="¿De dónde salen los datos? (p. ej. DANE, ENA 2025)" className={`${input} text-sm`} />
+                      <button type="button" onClick={() => graficarHoja()} disabled={chartBusy} className="lx-btn lx-btn-ghost self-start !min-h-9 text-xs">
+                        <RefreshCw size={14} aria-hidden /> Volver a graficar el archivo
+                      </button>
+                    </>
+                  )}
+                </div>
                 {chartError && <p role="alert" className="text-sm text-[var(--danger,#b4442e)]">{chartError}</p>}
               </div>
               <div className="min-h-0 min-w-0">
@@ -1836,7 +1897,7 @@ export function ArticleWizard({
                     </div>
                     <details className="text-xs text-[var(--fg-muted)]">
                       <summary className="cursor-pointer">
-                        Datos que encontró la IA en la web: <strong>verifica las fuentes antes de publicar.</strong>
+                        {chart.sources.length ? <>Datos que encontró la IA en la web: <strong>verifica las fuentes antes de publicar.</strong></> : <>Datos de tu archivo: las cifras salen tal cual de la tabla.</>}
                       </summary>
                       <p className="mt-1.5">{chart.sourceNote}</p>
                       <ul className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1">

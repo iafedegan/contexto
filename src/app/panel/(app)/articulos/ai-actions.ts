@@ -1,5 +1,7 @@
 "use server";
 
+import { graficaDesdeTablaCore } from "@/lib/ai/grafica-tabla-ia";
+
 /**
  * Acciones del asistente de redacción llamadas desde el panel (con sesión). La lógica vive en `@/lib/ai-core`
  * para poder usarla también desde el bot de Telegram, que no tiene sesión de navegador.
@@ -71,6 +73,12 @@ export async function suggestTitlesAndContexts(...args: Parameters<typeof sugges
 export async function generateChart(...args: Parameters<typeof generateChartCore> extends [string, ...infer R] ? R : never) {
   const user = await requirePermiso("articulos");
   return generateChartCore(user.id, ...args);
+}
+
+// Gráfica desde un Excel o CSV que sube quien redacta. Exige el permiso «articulos»; los números salen de la tabla, no de la IA.
+export async function graficaDesdeTabla(...args: Parameters<typeof graficaDesdeTablaCore> extends [string, ...infer R] ? R : never) {
+  const user = await requirePermiso("articulos");
+  return graficaDesdeTablaCore(user.id, ...args);
 }
 
 // Aconseja temas de nota. Exige el permiso «articulos» y delega en la función núcleo, que descuenta la cuota de IA.
