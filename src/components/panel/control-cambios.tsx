@@ -100,7 +100,9 @@ export function ControlCambios({ articleId, alCambiarCuerpo, alCerrar }: { artic
             {!control && !error && <p className="text-sm text-black/55">Cargando…</p>}
             {control && !control.hay && (
               <p className="rounded bg-black/5 px-4 py-3 text-sm">
-                Esta nota todavía no ha pasado de una persona a otra. Cuando alguien la envíe, desde ese momento cada cambio quedará marcado aquí con el nombre de quien lo hizo.
+                {control.editaronSinVersion.length > 1
+                  ? `La editaron ${control.editaronSinVersion.join(", ").replace(/, ([^,]*)$/, " y $1")}, pero antes de que se guardaran versiones del texto, así que esos cambios no se pueden marcar. Desde ahora, cuando otra persona la corrija o se la pasen, cada cambio quedará marcado aquí con el nombre de quien lo hizo.`
+                  : "Esta nota todavía no ha pasado de una persona a otra. Cuando alguien la envíe o la corrija otra persona, desde ese momento cada cambio quedará marcado aquí con el nombre de quien lo hizo."}
               </p>
             )}
             {control?.hay && control.cambios.length === 0 && !control.titulo.includes("<ins") && !control.titulo.includes("<del") && (

@@ -34,7 +34,24 @@ export type ControlDeCambios = {
   /** Personas que hicieron cambios, en orden (el índice es su color). */
   personas: string[];
   desde: string | null;
+  /**
+   * Sin versiones guardadas: quiénes la editaron según el registro de actividad. Pasa con las notas editadas antes de que existiera el control
+   * de cambios: se sabe quién la tocó, pero no se guardó el texto de antes, así que no hay nada que resaltar todavía.
+   */
+  editaronSinVersion: string[];
 };
+
+const VACIO: ControlDeCambios = { hay: false, cuerpo: "", titulo: "", cambios: [], personas: [], desde: null, editaronSinVersion: [] };
+
+async function editoresSinVersion(articleId: string): Promise<string[]> {
+  const filas = await db
+    .select({ quien: users.name })
+    .from(articleActivity)
+    .innerJoin(users, eq(users.id, articleActivity.userId))
+    .where(and(eq(articleActivity.articleId, articleId), eq(articleActivity.tipo, "edito")))
+    .orderBy(asc(articleActivity.primera));
+  return [...new Set(filas.map((f) => f.quien))];
+}
 
 // Versiones desde la última aceptación (la aceptación es el nuevo punto de partida), con su autor, más el estado actual si hay cambios sin foto.
 async function cadena(articleId: string): Promise<{ versiones: (Version & { titulo: string })[]; desde: Date | null } | null> {
@@ -71,15 +88,15 @@ async function cadena(articleId: string): Promise<{ versiones: (Version & { titu
 export async function controlDeCambios(articleId: string): Promise<ControlDeCambios> {
   try {
     const c = await cadena(articleId);
-    if (!c) return { hay: false, cuerpo: "", titulo: "", cambios: [], personas: [], desde: null };
+    if (!c) return { ...VACIO, editaronSinVersion: await editoresSinVersion(articleId) };
     const personas = [...new Set(c.versiones.slice(1).map((v) => v.autor))];
     const cuerpo = marcar(atribuir(c.versiones), personas);
     const titulo = marcar(atribuir(c.versiones.map((v) => ({ html: v.titulo, autor: v.autor, limpia: v.limpia }))), personas);
     const usadas = personas.filter((p) => cuerpo.lista.some((x) => x.autor === p) || titulo.lista.some((x) => x.autor === p));
-    return { hay: true, cuerpo: cuerpo.html, titulo: titulo.html, cambios: cuerpo.lista, personas: usadas.length ? personas : [], desde: c.desde?.toISOString() ?? null };
+    return { hay: true, cuerpo: cuerpo.html, titulo: titulo.html, cambios: cuerpo.lista, personas: usadas.length ? personas : [], desde: c.desde?.toISOString() ?? null, editaronSinVersion: [] };
   } catch (e) {
     console.warn("controlDeCambios:", (e as Error)?.message ?? e);
-    return { hay: false, cuerpo: "", titulo: "", cambios: [], personas: [], desde: null };
+    return VACIO;
   }
 }
 

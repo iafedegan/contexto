@@ -2094,7 +2094,7 @@ export function ArticleWizard({
             {/* Desplazamiento propio: con la lista de personas, el mensaje y los botones, la tarjeta de envío no cabe en la pantalla del asistente y
                 lo de abajo («Agregar a…») quedaba cortado sin poder bajar. */}
             <div className="-mr-2 min-h-0 flex-1 overflow-y-auto overscroll-contain pb-2 pr-2">
-            <div className="grid items-start gap-4 @2xl:grid-cols-2">
+            <div className="grid items-start gap-4 @2xl:h-full @2xl:grid-cols-2 @2xl:grid-rows-[minmax(0,1fr)]">
               <TarjetaEnvio Icono={Brush} titulo="Solicitar la imagen" ayuda="Un diseñador la prepara y te la devuelve a la nota.">
                 <PedirImagen articleId={savedId} titulo={title} resumen={excerpt} portadaActual={cover} alUsar={(u, a, pie) => { setCover(u); setCoverCaption(pie ?? ""); if (a) setCoverAlt(a); setImgError(""); }} />
               </TarjetaEnvio>
@@ -2512,11 +2512,12 @@ function TarjetaEnvio({ Icono, titulo, ayuda, children, reverso }: { Icono: Reac
     </header>
   );
   if (!reverso) return <section className={caraClase}>{cabecera}{children}</section>;
-  // Tarjeta que gira: al frente el envío; atrás, el recorrido, que mide lo mismo que el frente y se desplaza por dentro.
+  // Tarjeta que gira: al frente el envío; atrás, el recorrido. En pantalla ancha la tarjeta mide lo que queda visible del paso (con su borde
+  // de abajo a la vista) y cada cara se desplaza por dentro, para que nunca se vea cortada.
   return (
-    <div className="[perspective:1600px]">
-      <div className={`relative transition-transform duration-500 [transform-style:preserve-3d] ${girada ? "[transform:rotateY(180deg)]" : ""}`}>
-        <section className={caraClase} aria-hidden={girada} inert={girada || undefined}>{cabecera}{children}</section>
+    <div className="[perspective:1600px] @2xl:h-full @2xl:min-h-0">
+      <div className={`relative transition-transform duration-500 [transform-style:preserve-3d] @2xl:h-full ${girada ? "[transform:rotateY(180deg)]" : ""}`}>
+        <section className={`${caraClase} @2xl:max-h-full @2xl:overflow-y-auto @2xl:overscroll-contain`} aria-hidden={girada} inert={girada || undefined}>{cabecera}{children}</section>
         <section className={`${caraClase} absolute inset-0 min-h-0 overflow-hidden !gap-0 !p-0 [transform:rotateY(180deg)]`} aria-hidden={!girada} inert={!girada || undefined}>
           <div className="flex items-center justify-between gap-2 border-b border-[var(--border)] px-4 py-2.5 sm:px-5">
             <p className="text-sm font-semibold">Historial de la nota</p>

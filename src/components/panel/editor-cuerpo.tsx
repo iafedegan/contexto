@@ -748,6 +748,11 @@ export function EditorCuerpo({
           </span>
         </div>
       )}
+      {cambios && !cambios.hay && cambios.editaronSinVersion.length > 1 && (
+        <p className="border-b border-black/10 bg-black/[0.03] px-3 py-2 text-xs text-black/70">
+          La editaron {cambios.editaronSinVersion.join(", ").replace(/, ([^,]*)$/, " y $1")}, pero antes de que se guardaran versiones del texto, así que esos cambios no se pueden resaltar. Desde ahora, cuando otra persona la corrija o se la pasen, lo que cambie saldrá resaltado con su nombre.
+        </p>
+      )}
       {verMarcas && cambios && (
         <>
           <style dangerouslySetInnerHTML={{ __html: COLORES_PERSONA.map((c, i) => `.cc-marcas ins[data-persona="${i}"]{background:${c};text-decoration:none;border-radius:2px}.cc-marcas del[data-persona="${i}"]{color:#b42318;text-decoration:line-through;background:${c}55}`).join("") }} />
