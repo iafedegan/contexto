@@ -141,7 +141,7 @@ export function UserRow({
         {cuotaIA && <CuotaBarra gasto={cuotaIA.gasto} tope={cuotaIA.efectiva} compacta />}
       </td>
 
-      <td className="border-b border-[var(--border)] px-4 py-3">
+      <td data-etiqueta="Rol" className="border-b border-[var(--border)] px-4 py-3">
         {canManage ? (
           <select
             value={rolId && rolesPropios.some((r) => r.id === rolId) ? `rol:${rolId}` : user.role}
@@ -178,7 +178,7 @@ export function UserRow({
         )}
       </td>
 
-      <td className="border-b border-[var(--border)] px-4 py-3">
+      <td data-etiqueta="Contraseña" className="border-b border-[var(--border)] px-4 py-3">
         {user.mustChangePassword ? (
           <span className="inline-block rounded-full bg-[#d97706]/12 px-2.5 py-1 text-xs font-medium leading-snug text-[#92400e]">Primer ingreso: falta cambiar la contraseña</span>
         ) : (
@@ -216,7 +216,7 @@ export function UserRow({
         )}
       </td>
 
-      <td className="border-b border-[var(--border)] px-4 py-3">
+      <td data-etiqueta="Estado" className="border-b border-[var(--border)] px-4 py-3">
         {canManage ? (
           <div className="flex flex-wrap items-center gap-2">
           <button

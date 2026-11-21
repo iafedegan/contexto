@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+/* «pantalla»: escritorio con altura de sobra (≥ 1024 × 736 px). Las pantallas del panel que encajan todo en la ventana (asistente de
+   notas) solo lo hacen aquí; en una ventana más baja la página crece y se baja entera, para que nada quede cortado. */
+@custom-variant pantalla (@media (min-width: 64rem) and (min-height: 46rem));
+
 /* ====================================================================
    CONtexto Ganadero Media — Sistema de diseño "deluxe"
    ---------------------------------------------------------------------------
@@ -817,6 +821,63 @@ a {
     border-color 0.4s var(--ease-lux);
 }
 
+/* Tarjeta del paso del asistente: se desplaza por dentro solo cuando el asistente mide la ventana (ver la variante «pantalla»); si no, no
+   recorta nada, para que la barra del editor pueda quedarse pegada arriba mientras baja la página. */
+.lx-card[data-paso-asistente] {
+  overflow: visible;
+}
+@media (min-width: 64rem) and (min-height: 46rem) {
+  .lx-card[data-paso-asistente] {
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+}
+/* Tabla que en el celular se vuelve una tarjeta por fila: sin encabezados, cada celda debajo de la otra con su nombre encima
+   (`data-etiqueta` en la celda). Así no hay que deslizar de lado para ver la última columna. */
+@media (max-width: 39.99rem) {
+  .tabla-tarjetas {
+    min-width: 0;
+  }
+  .tabla-tarjetas thead {
+    display: none;
+  }
+  .tabla-tarjetas,
+  .tabla-tarjetas tbody,
+  .tabla-tarjetas tr,
+  .tabla-tarjetas td {
+    display: block;
+    width: 100%;
+  }
+  .tabla-tarjetas tr {
+    border-bottom: 1px solid var(--border);
+    padding: 0.75rem 1rem;
+  }
+  .tabla-tarjetas td {
+    border: 0;
+    padding: 0.3rem 0;
+  }
+  .tabla-tarjetas td[data-etiqueta]::before {
+    content: attr(data-etiqueta);
+    display: block;
+    margin-bottom: 0.2rem;
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--fg-muted);
+  }
+}
+
+/* Panel SEO del asistente en una ventana ancha pero baja: la página crece, así que se queda pegado arriba con su propio desplazamiento. */
+@media (min-width: 64rem) and (max-height: 45.99rem) {
+  .lx-card[data-seo-asistente] {
+    position: sticky;
+    top: 0.5rem;
+    align-self: flex-start;
+    max-height: calc(100dvh - 1rem);
+  }
+}
+
 @media (hover: hover) {
   .lx-card:hover {
     transform: translateY(-6px);
@@ -1012,11 +1073,18 @@ a {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: color-mix(in oklab, var(--surface) 100%, transparent);
-  padding: 0.7rem 0.95rem;
   font-family: var(--font-body);
   font-size: 0.95rem;
   color: var(--fg);
   transition: border-color 0.3s, box-shadow 0.3s, background 0.3s;
+}
+
+/* El relleno va en la capa de componentes para que las utilidades de cada campo lo puedan cambiar: un buscador con lupa usa `pl-9` y,
+   sin esto, el texto quedaba debajo del icono («🔍uscar por nombre»). */
+@layer components {
+  .lx-input {
+    padding: 0.7rem 0.95rem;
+  }
 }
 
 .lx-input::placeholder { color: var(--fg-muted); }

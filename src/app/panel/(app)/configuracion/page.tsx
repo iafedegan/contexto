@@ -220,7 +220,7 @@ export default async function ConfiguracionPage() {
                     </div>
                     {isAdmin && (
                     <div className="overflow-x-auto rounded-[var(--radius)] border border-[var(--border)]">
-                      <table className="w-full min-w-[34rem] border-separate border-spacing-0 text-sm">
+                      <table className="tabla-tarjetas w-full min-w-[34rem] border-separate border-spacing-0 text-sm">
                         <thead>
                           <tr>
                             {["Persona", "Rol", "Contraseña", "Estado"].map((h) => (

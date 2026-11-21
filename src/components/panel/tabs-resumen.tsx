@@ -26,17 +26,19 @@ export function TabsResumen({ activa, analitica, parametros = "" }: { activa: Pe
   ];
   if (!analitica) return null; // sin permiso de análisis no hay nada que alternar
   return (
-    <nav aria-label="Resumen y análisis" className="-mx-1 overflow-x-auto px-1 pb-1">
-      <ul className="flex w-full rounded-full sm:inline-flex sm:w-auto border border-[var(--border-strong)] bg-[var(--surface)] p-0.5 shadow-[var(--shadow)]">
+    // En el celular las cinco pestañas no caben: cada una conserva su ancho y la tira se desliza de lado (antes se apretaban y los nombres
+    // se montaban unos sobre otros, «SuscriptoresSuperApp»).
+    <nav aria-label="Resumen y análisis" className="-mx-1 overflow-x-auto overscroll-x-contain px-1 pb-1 [scrollbar-width:none]">
+      <ul className="flex w-max min-w-full rounded-full sm:inline-flex sm:w-auto sm:min-w-0 border border-[var(--border-strong)] bg-[var(--surface)] p-0.5 shadow-[var(--shadow)]">
         {pestanas.map(({ id, t, Icono, href }) => (
-          <li key={id} className="min-w-0 flex-1 sm:flex-none">
+          <li key={id} className="flex-1 sm:flex-none">
             <Link href={href} aria-current={activa === id ? "page" : undefined}
               className={`inline-flex min-h-10 w-full items-center justify-center gap-2 whitespace-nowrap rounded-full px-2.5 text-[0.8125rem] sm:w-auto sm:px-4 sm:text-sm font-semibold transition ${activa === id ? "bg-[var(--accent)] text-white!" : "text-[var(--fg-muted)] hover:text-[var(--fg)]"}`}>
               <Icono size={15} aria-hidden className="hidden min-[430px]:block" /> {t}
             </Link>
           </li>
         ))}
-        <li className="min-w-0 flex-1 sm:flex-none">
+        <li className="flex-1 sm:flex-none">
           <Link href={`/panel/analitica/informe${p ? `?${p}` : ""}`} className="inline-flex min-h-10 w-full items-center justify-center gap-2 whitespace-nowrap rounded-full px-2.5 text-[0.8125rem] font-semibold text-[var(--accent)] transition hover:bg-[var(--surface-2)] sm:w-auto sm:px-4 sm:text-sm">
             <FileText size={15} aria-hidden className="hidden min-[430px]:block" /> Informe
           </Link>

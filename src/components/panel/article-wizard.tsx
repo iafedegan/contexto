@@ -1125,9 +1125,11 @@ export function ArticleWizard({
       action={saveArticle}
       // En escritorio el asistente mide EXACTAMENTE la ventana (100dvh menos el margen del panel: 2 × 8 px, ya sin pie):
       // cada paso cabe sin desplazarse, y lo largo (ideas, noticias, intervenciones…) va en carruseles.
-      // En pantallas pequeñas la página puede crecer, con la barra de navegación fija abajo.
+      // En pantallas pequeñas la página puede crecer, con la barra de navegación fija abajo. Lo mismo en una ventana ancha pero baja
+      // (portátil con la ventana a media altura): encajonar todo en la ventana dejaba al paso un hueco de pocos centímetros y lo de abajo
+      // quedaba cortado; por eso el alto fijo solo se aplica si la ventana mide al menos 46rem de alto.
       data-asistente
-      className="-my-6 flex min-h-[max(30rem,calc(100dvh-var(--panel-header-h,61px)-5.75rem))] flex-col gap-3 lg:h-[calc(100dvh-1rem)] lg:min-h-0"
+      className="-my-6 flex min-h-[max(30rem,calc(100dvh-var(--panel-header-h,61px)-5.75rem))] flex-col gap-3 pantalla:h-[calc(100dvh-1rem)] pantalla:min-h-0"
     >
       {/* Todo viaja oculto: el formulario solo se envía desde la vista previa. */}
       <input type="hidden" name="id" value={savedId} />
@@ -1234,8 +1236,9 @@ export function ArticleWizard({
       )}
       {/* --- Pantalla del paso + panel SEO lateral (escritorio) --- */}
       <div className="flex min-h-0 flex-1 gap-3">
-      {/* Sin desplazamiento propio salvo en una ventana demasiado baja (el `auto` solo actúa si no cabe). */}
-      <div className="lx-card flex min-h-0 min-w-0 flex-1 flex-col p-5 sm:p-6" style={{ transform: "none", overflowY: "auto" }}>
+      {/* Desplazamiento propio solo cuando el asistente mide la ventana; si la página crece (celular, ventana baja) baja la página entera,
+          y así la barra del editor puede quedarse pegada arriba mientras se escribe. */}
+      <div data-paso-asistente className="lx-card flex min-h-0 min-w-0 flex-1 flex-col p-5 sm:p-6" style={{ transform: "none" }}>
         {mode === "ia" && generated && PART_OF[current.key] && (
           <div className="mx-auto mb-3 flex max-w-2xl items-center gap-2 text-xs text-[var(--fg-muted)]">
             <Sparkles size={13} className="text-[var(--accent)]" />
@@ -1760,7 +1763,7 @@ export function ArticleWizard({
                 ampliado,
               )
             ) : (
-              <div className="min-h-0 flex-1 overflow-y-auto rounded-[var(--radius-lg)] bg-[#e4e7e5]"><div className="p-3 sm:p-6">
+              <div className="min-h-0 flex-1 rounded-[var(--radius-lg)] bg-[#e4e7e5] pantalla:overflow-y-auto"><div className="p-3 sm:p-6">
               <article data-comentable className={`mx-auto w-full ${ampliado ? "max-w-5xl" : "max-w-3xl"} rounded-sm bg-white text-[#1b1b1b] shadow-[0_1px_3px_rgba(0,0,0,.18),0_10px_30px_rgba(0,0,0,.08)]`}>
                 <div className="px-6 pb-2 pt-8 sm:px-14 sm:pt-12">
                   <label className="lx-kicker text-[#6b756f]" htmlFor="doc-titulo">Título</label>
@@ -2674,7 +2677,8 @@ function SeoPanel({ score, items, groups, capped, focus }: { score: number; item
   const mostrar = vista === "falta" && pending.length > 0 ? "falta" : "cumplido";
 
   return (
-    <aside className="lx-card hidden min-h-0 w-72 shrink-0 flex-col overscroll-contain p-0 lg:flex xl:w-80" style={{ transform: "none", overflowX: "hidden", overflowY: "auto" }} aria-label="Puntuación SEO">
+    // En una ventana baja la página crece: el panel SEO se queda pegado arriba (con su propio desplazamiento) mientras baja el paso.
+    <aside data-seo-asistente className="lx-card hidden min-h-0 w-72 shrink-0 flex-col overscroll-contain p-0 lg:flex xl:w-80" style={{ transform: "none", overflowX: "hidden", overflowY: "auto" }} aria-label="Puntuación SEO">
       <div className="shrink-0 border-b border-[var(--border)] p-4">
         <p className="lx-kicker text-[var(--fg-muted)]">SEO en vivo</p>
         <div className="mt-1 flex items-baseline gap-2">

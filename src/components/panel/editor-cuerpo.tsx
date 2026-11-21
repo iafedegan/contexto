@@ -553,7 +553,7 @@ export function EditorCuerpo({
       <EmbedAltura />
       {imagen && <InsertarImagen inicial={imagen.origen} parrafo={imagen.parrafo} generarIA={imagenIA} onInsertar={insertarImagen} onCerrar={() => setImagen(null)} />}
       {/* Cinta de herramientas por pestañas, como en Word */}
-      <div className={`shrink-0 border-b border-[var(--border)] ${papel ? "sticky top-0 z-10 bg-[#f3f4f3]" : "bg-[var(--surface-2)]/40"}`}>
+      <div className={`shrink-0 border-b border-[var(--border)] ${papel ? "sticky top-[var(--panel-header-h,0px)] z-10 bg-[#f3f4f3]" : "bg-[var(--surface-2)]/40"}`}>
         <div role="tablist" aria-label="Cinta de herramientas" className="flex items-end gap-1 px-2 pt-1.5">
           <button type="button" role="tab" aria-selected={pestana === "inicio"} onClick={() => setPestana("inicio")} className={tabClase("inicio")}>Inicio</button>
           <button type="button" role="tab" aria-selected={pestana === "insertar"} onClick={() => setPestana("insertar")} className={tabClase("insertar")}>Insertar</button>

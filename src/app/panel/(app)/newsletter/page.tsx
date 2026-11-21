@@ -105,15 +105,16 @@ export default async function NewsletterPage({ searchParams }: { searchParams: P
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      {/* En el celular van de a dos (antes una por fila: cuatro tarjetas ocupaban toda la pantalla antes de llegar a las ediciones). */}
+      <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
         {indicadores.map(({ l, v, ayuda, Icono, tono }) => (
-          <div key={l} className="flex items-start justify-between gap-3 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow)]">
-            <div>
+          <div key={l} className="flex min-w-0 items-start justify-between gap-2 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-3 shadow-[var(--shadow)] sm:gap-3 sm:p-4">
+            <div className="min-w-0">
               <p className="text-xs font-medium text-[var(--fg-muted)]">{l}</p>
               <p className="lx-display mt-1 text-3xl font-semibold tabular-nums">{v}</p>
               <p className="mt-0.5 text-xs text-[var(--fg-muted)]">{ayuda}</p>
             </div>
-            <span className={`grid size-9 shrink-0 place-items-center rounded-full ${tono}`}><Icono size={17} aria-hidden /></span>
+            <span className={`hidden size-9 shrink-0 place-items-center rounded-full min-[400px]:grid ${tono}`}><Icono size={17} aria-hidden /></span>
           </div>
         ))}
       </div>

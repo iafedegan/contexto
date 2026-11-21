@@ -72,7 +72,8 @@ export function ComentaristasLista({ filas }: { filas: FilaComentarista[] }) {
               </form>
             ) : (
               <div className="flex flex-wrap items-center gap-3">
-                <div className="min-w-0 flex-1">
+                {/* Base de 14rem: en el celular los botones bajan a otra línea en vez de aplastar el nombre y el correo. */}
+                <div className="min-w-0 flex-1 basis-56 [overflow-wrap:anywhere]">
                   <p className="flex flex-wrap items-center gap-2 font-semibold">
                     {f.nombre}
                     <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${f.activo ? "bg-[#157a4a]/12 text-[#0f5a37]" : "bg-black/8 text-[var(--fg-muted)]"}`}>{f.activo ? "Activo" : "Inactivo"}</span>
