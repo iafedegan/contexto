@@ -4,7 +4,7 @@ import { db } from "@/db";
 import { articles, readerSessions } from "@/db/schema";
 import { clasificarFuente } from "@/lib/fuente-lectura";
 import { perfilDeUa } from "@/lib/lectores-ua";
-import type { EntradaInicio, EntradaProgreso } from "@/lib/lectores-entrada";
+import type { EntradaInicio, EntradaModo, EntradaProgreso } from "@/lib/lectores-entrada";
 
 /**
  * Escritura de las lecturas por visitante (solo de quien aceptó la medición). El navegador avisa dos veces: al empezar a
@@ -64,6 +64,16 @@ export async function registrarProgreso(e: EntradaProgreso): Promise<boolean> {
       seconds: sql`greatest(${readerSessions.seconds}, ${e.segundos})`,
       updatedAt: sql`now()`,
     })
+    .where(and(eq(readerSessions.id, e.lectura), eq(readerSessions.visitorId, e.visitante)))
+    .returning({ id: readerSessions.id });
+  return r.length > 0;
+}
+
+/** Marca que, en esa lectura, la persona usó el modo revista o escuchó la nota. Solo quien la empezó puede marcarla. */
+export async function registrarModo(e: EntradaModo): Promise<boolean> {
+  const r = await db
+    .update(readerSessions)
+    .set(e.modo === "revista" ? { usedMagazine: true } : { usedListen: true })
     .where(and(eq(readerSessions.id, e.lectura), eq(readerSessions.visitorId, e.visitante)))
     .returning({ id: readerSessions.id });
   return r.length > 0;

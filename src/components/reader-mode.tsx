@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { BookOpen, ChevronLeft, ChevronRight, Minus, Plus, Settings2, X } from "lucide-react";
+import { avisarModo } from "@/components/lector-tracker";
 import { ListenArticle } from "@/components/listen-article";
 import { ArticleBody } from "@/components/article-body";
 import { ImagenSitio } from "@/components/ui/imagen-sitio";
@@ -88,6 +89,7 @@ export function ReaderMode({
     setPrefs(loadPrefs());
     setPage(0);
     setOpen(true);
+    avisarModo("r");
   }
 
   // Cambia las preferencias y las guarda.
@@ -167,9 +169,9 @@ export function ReaderMode({
       <button
         type="button"
         onClick={openReader}
-        className="lx-ui inline-flex items-center gap-2 rounded-full border border-[var(--border)] px-4 py-2 text-sm font-medium transition hover:border-[var(--accent)] hover:text-[var(--accent)]"
+        className="lx-ui rv-cta inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm transition"
       >
-        <BookOpen size={16} /> Leer en modo revista
+        <BookOpen size={18} /> Leer en modo revista
       </button>
 
       {open &&

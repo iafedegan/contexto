@@ -14,6 +14,7 @@ export const esUuid = (v: unknown): v is string => typeof v === "string" && UUID
 
 export type EntradaInicio = { visitante: string; slug: string; recurrente: boolean; utm: { utmSource: string; utmMedium: string; utmCampaign: string; referrer: string } };
 export type EntradaProgreso = { visitante: string; lectura: string; scroll: number; segundos: number };
+export type EntradaModo = { visitante: string; lectura: string; modo: "revista" | "escucha" };
 export type EntradaVinculo = { visitante: string; suscriptor: string; firma: string };
 
 /** Inicio de una lectura: `null` si falta el código del visitante o la nota. */
@@ -32,6 +33,15 @@ export function validarProgreso(b: unknown): EntradaProgreso | null {
   const lectura = t(o.id, 40);
   if (!UUID.test(visitante) || !UUID.test(lectura)) return null;
   return { visitante: visitante.toLowerCase(), lectura: lectura.toLowerCase(), scroll: entero(o.sc, 0, 100), segundos: entero(o.s, 0, 3600) };
+}
+
+/** Aviso de que la persona usó el modo revista (`r`) o escuchó la nota (`e`) en una lectura. */
+export function validarModo(b: unknown): EntradaModo | null {
+  const o = (b && typeof b === "object" ? b : {}) as Record<string, unknown>;
+  const visitante = t(o.vid, 40);
+  const lectura = t(o.id, 40);
+  if (!UUID.test(visitante) || !UUID.test(lectura) || (o.m !== "r" && o.m !== "e")) return null;
+  return { visitante: visitante.toLowerCase(), lectura: lectura.toLowerCase(), modo: o.m === "r" ? "revista" : "escucha" };
 }
 
 /** Una lectura cuenta como «completa» cuando la persona llegó casi al final de la nota. */

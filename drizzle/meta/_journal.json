@@ -316,6 +316,13 @@
       "when": 1795210398015,
       "tag": "0044_versiones_notas",
       "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1795300000000,
+      "tag": "0045_lectura_modo",
+      "breakpoints": true
     }
   ]
 }

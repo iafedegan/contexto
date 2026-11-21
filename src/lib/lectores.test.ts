@@ -291,3 +291,12 @@ test("el editor puede unir un navegador con un suscriptor: autoriza, vincula y a
   assert.equal(filas.length, 1);
   assert.equal(filas[0].notas, 2, "cuentan las lecturas que ese navegador ya había hecho");
 });
+
+test("validarModo: solo acepta revista o escucha con códigos válidos", async () => {
+  const { validarModo } = await import("./lectores-entrada");
+  const id = "123e4567-e89b-42d3-a456-426614174000";
+  assert.deepEqual(validarModo({ vid: id, id, m: "r" }), { visitante: id, lectura: id, modo: "revista" });
+  assert.equal(validarModo({ vid: id, id, m: "e" })?.modo, "escucha");
+  assert.equal(validarModo({ vid: id, id, m: "x" }), null);
+  assert.equal(validarModo({ vid: "no", id, m: "r" }), null);
+});

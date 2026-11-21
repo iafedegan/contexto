@@ -1,13 +1,13 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { clientIp, hit } from "@/lib/rate-limit";
-import { validarInicio, validarProgreso, validarVinculo } from "@/lib/lectores-entrada";
+import { validarInicio, validarModo, validarProgreso, validarVinculo } from "@/lib/lectores-entrada";
 import { lectorTokenValido, vincularVisitante } from "@/lib/lectores-suscriptor";
 import { marcarNavegadorSuscriptor } from "@/lib/suscriptor-navegador";
 import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { newsletterSubscribers } from "@/db/schema";
-import { iniciarLectura, registrarProgreso } from "@/lib/lectores-registro";
+import { iniciarLectura, registrarModo, registrarProgreso } from "@/lib/lectores-registro";
 import { COOKIE_SUPERAPP, leerSesionLocal } from "@/lib/superapp/sesion";
 import { FUENTE_SUPERAPP, vincularVisitante as vincularSuperApp } from "@/lib/superapp/personas";
 
@@ -55,6 +55,11 @@ export async function POST(req: Request) {
       const e = validarProgreso(cuerpo);
       if (!e) return NextResponse.json({ ok: false }, { status: 400 });
       return NextResponse.json({ ok: await registrarProgreso(e) });
+    }
+    if (accion === "m") {
+      const e = validarModo(cuerpo);
+      if (!e) return NextResponse.json({ ok: false }, { status: 400 });
+      return NextResponse.json({ ok: await registrarModo(e) });
     }
     if (accion === "v") {
       // Enlace del boletín: la firma solo la tiene quien recibió ESE correo, así que el vínculo queda verificado.

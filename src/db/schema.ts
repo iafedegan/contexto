@@ -533,6 +533,10 @@ export const readerSessions = pgTable(
     maxScroll: smallint("max_scroll").notNull().default(0),
     /** Segundos con la pestaña a la vista (tope de una hora). */
     seconds: integer("seconds").notNull().default(0),
+    /** La persona abrió la nota en «modo revista» durante esta lectura. */
+    usedMagazine: boolean("used_magazine").notNull().default(false),
+    /** La persona le dio escuchar (voz) a la nota durante esta lectura. */
+    usedListen: boolean("used_listen").notNull().default(false),
   },
   (t) => [
     index("reader_sessions_created_idx").on(t.createdAt),

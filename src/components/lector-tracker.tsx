@@ -2,6 +2,15 @@
 
 import { useEffect } from "react";
 import { MED_EVENT, decisionMedicion, visitante } from "@/lib/medicion-cliente";
+export const MODO_EVENT = "cg:modo";
+/** Avisa a la medición que la persona usó el modo revista (`r`) o escuchó la nota (`e`). No hace nada si no aceptó la medición. */
+export function avisarModo(m: "r" | "e") {
+  try {
+    window.dispatchEvent(new CustomEvent(MODO_EVENT, { detail: m }));
+  } catch {
+    /* sin medición */
+  }
+}
 
 /**
  * Mide CÓMO se lee una nota, solo si la persona aceptó la medición: hasta dónde baja, cuántos segundos la tiene a la vista
@@ -47,6 +56,25 @@ export function LectorTracker({ slug }: { slug: string }) {
         const enviado = navigator.sendBeacon?.("/api/lectura", new Blob([cuerpo], { type: "application/json" }));
         if (!enviado) void fetch("/api/lectura", { method: "POST", headers: { "content-type": "application/json" }, body: cuerpo, keepalive: true }).catch(() => {});
       };
+      // Modo revista / escuchar: se manda una vez por lectura; si llega antes del código de lectura, queda en espera.
+      const modos = new Set<string>();
+      const enviados = new Set<string>();
+      const mandarModos = () => {
+        if (!id) return;
+        for (const m of modos) {
+          if (enviados.has(m)) continue;
+          enviados.add(m);
+          void fetch("/api/lectura", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ a: "m", vid: v.id, id, m }), keepalive: true }).catch(() => {});
+        }
+      };
+      const alModo = (e: Event) => {
+        const m = (e as CustomEvent<string>).detail;
+        if (m === "r" || m === "e") {
+          modos.add(m);
+          mandarModos();
+        }
+      };
+      window.addEventListener(MODO_EVENT, alModo);
       // Cuenta un segundo solo si la pestaña está a la vista y la ventana tiene el foco.
       const reloj = setInterval(() => {
         if (document.visibilityState === "visible") segundos += 1;
@@ -68,6 +96,7 @@ export function LectorTracker({ slug }: { slug: string }) {
             id = j.id;
             avance();
             mandar();
+            mandarModos();
           }
         } catch {
           /* sin red: la lectura simplemente no se mide */
@@ -80,6 +109,7 @@ export function LectorTracker({ slug }: { slug: string }) {
       fin = () => {
         activo = false;
         mandar();
+        window.removeEventListener(MODO_EVENT, alModo);
         clearTimeout(inicio);
         clearInterval(reloj);
         window.removeEventListener("scroll", alScroll);

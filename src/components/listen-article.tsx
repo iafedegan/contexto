@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { avisarModo } from "@/components/lector-tracker";
 import { Gauge, Pause, Play, Square, Volume2 } from "lucide-react";
 
 // Velocidades de lectura en voz alta disponibles.
@@ -121,6 +122,7 @@ export function ListenArticle({
     indiceActual.current = 0;
     encolarDesde(0, rate);
     setState("playing");
+    avisarModo("e");
   }
 
   // Pausa la lectura.
