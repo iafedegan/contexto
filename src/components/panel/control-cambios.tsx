@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
+import { createPortal } from "react-dom";
 import { Check, GitCompareArrows, Loader2, Undo2, X } from "lucide-react";
 import { aceptarCambiosNota, cambiosDeNota, rechazarCambioNota } from "@/app/panel/(app)/articulos/comentarios-actions";
 import type { ControlDeCambios } from "@/lib/versiones-notas";
@@ -65,7 +66,9 @@ export function ControlCambios({ articleId, alCambiarCuerpo, alCerrar }: { artic
 
   const persona = (nombre: string) => Math.max(0, control?.personas.indexOf(nombre) ?? 0);
 
-  return (
+  // En un portal al <body>: dentro de la barra del asistente (que tiene su propio contexto de posición) el `fixed` quedaba recortado a su alto.
+  if (typeof document === "undefined") return null;
+  return createPortal(
     <div role="dialog" aria-modal="true" aria-label="Control de cambios" className="fixed inset-0 z-[90] flex bg-black/45 p-2 sm:p-6" onClick={(e) => e.target === e.currentTarget && alCerrar()}>
       <style dangerouslySetInnerHTML={{ __html: estilo }} />
       <div className="mx-auto flex h-full w-full max-w-6xl flex-col overflow-hidden rounded-[var(--radius-lg)] bg-white text-[#1b1b1b] shadow-2xl">
@@ -148,6 +151,7 @@ export function ControlCambios({ articleId, alCambiarCuerpo, alCerrar }: { artic
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
