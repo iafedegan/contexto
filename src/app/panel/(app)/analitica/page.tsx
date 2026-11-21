@@ -1,4 +1,4 @@
-import { Clock, Eye, Flame, LogIn, Repeat, ScrollText, ShieldCheck, Smartphone, TriangleAlert, UserPlus, Users } from "lucide-react";
+import { BookOpen, Clock, Eye, Flame, LogIn, Repeat, ScrollText, ShieldCheck, Smartphone, TriangleAlert, UserPlus, Users, Volume2 } from "lucide-react";
 import { requirePermiso } from "@/lib/auth";
 import { tienePermiso } from "@/lib/permisos-server";
 import { adopcion, identificados, lecturasDe } from "@/lib/lectores-identificados";
@@ -162,6 +162,8 @@ async function Audiencia({ f, hoy }: { f: ReturnType<typeof leerFiltros>; hoy: s
             <Kpi icono={ScrollText} titulo="Lectura completa" valor={`${parte(i.completas, i.lecturas).toLocaleString("es-CO", { maximumFractionDigits: 0 })} %`} ayuda={`bajan el ${Math.round(i.scrollMedio)} % del texto`} delta={dif(parte(i.completas, i.lecturas), parte(a.completas, a.lecturas))} />
             <Kpi icono={Repeat} titulo="Vuelven" valor={`${parte(i.recurrentes, i.lecturas).toLocaleString("es-CO", { maximumFractionDigits: 0 })} %`} ayuda="lecturas de quien ya leyó antes" delta={dif(parte(i.recurrentes, i.lecturas), parte(a.recurrentes, a.lecturas))} />
             <Kpi icono={Flame} titulo="Rebote" valor={`${parte(i.rebotes, i.lecturas).toLocaleString("es-CO", { maximumFractionDigits: 0 })} %`} ayuda="se van en menos de 10 s" delta={dif(parte(i.rebotes, i.lecturas), parte(a.rebotes, a.lecturas))} bueno="baja" />
+            <Kpi icono={BookOpen} titulo="Modo revista" valor={nfCO.format(i.revista)} ayuda={`${parte(i.revista, i.lecturas).toLocaleString("es-CO", { maximumFractionDigits: 0 })} % de las lecturas`} delta={dif(i.revista, a.revista)} />
+            <Kpi icono={Volume2} titulo="Escuchan la nota" valor={nfCO.format(i.escucha)} ayuda={`${parte(i.escucha, i.lecturas).toLocaleString("es-CO", { maximumFractionDigits: 0 })} % de las lecturas`} delta={dif(i.escucha, a.escucha)} />
           </section>
 
           {hallazgos.length > 0 && (

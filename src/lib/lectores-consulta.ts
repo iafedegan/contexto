@@ -27,7 +27,7 @@ export function donde(f: Filtros, rango = { desde: f.desde, hasta: f.hasta }, si
 }
 const filas = <T,>(r: unknown) => rowsOf<Record<string, unknown>>(r) as unknown as T[];
 
-export type Indicadores = { lecturas: number; visitantes: number; segundosMedios: number; segundosMediana: number; scrollMedio: number; completas: number; recurrentes: number; rebotes: number };
+export type Indicadores = { lecturas: number; visitantes: number; segundosMedios: number; segundosMediana: number; scrollMedio: number; completas: number; recurrentes: number; rebotes: number; revista: number; escucha: number };
 export type Dia = { dia: string; lecturas: number; visitantes: number; recurrentes: number };
 export type Calor = { dow: number; hora: number; n: number };
 export type Desglose = { clave: string; lecturas: number; visitantes: number; scroll: number; segundos: number };
@@ -62,10 +62,11 @@ async function indicadores(f: Filtros, rango = { desde: f.desde, hasta: f.hasta 
       coalesce(avg(s.seconds), 0)::float "segundosMedios", coalesce(percentile_cont(0.5) within group (order by s.seconds), 0)::float "segundosMediana",
       coalesce(avg(s.max_scroll), 0)::float "scrollMedio",
       (count(*) filter (where s.max_scroll >= ${LECTURA_COMPLETA}))::int completas, (count(*) filter (where s.returning))::int recurrentes,
-      (count(*) filter (where s.seconds < 10 and s.max_scroll < 25))::int rebotes
+      (count(*) filter (where s.seconds < 10 and s.max_scroll < 25))::int rebotes,
+      (count(*) filter (where s.used_magazine))::int revista, (count(*) filter (where s.used_listen))::int escucha
       ${DESDE} where ${donde(f, rango)}`),
   );
-  return { lecturas: 0, visitantes: 0, segundosMedios: 0, segundosMediana: 0, scrollMedio: 0, completas: 0, recurrentes: 0, rebotes: 0, ...r };
+  return { lecturas: 0, visitantes: 0, segundosMedios: 0, segundosMediana: 0, scrollMedio: 0, completas: 0, recurrentes: 0, rebotes: 0, revista: 0, escucha: 0, ...r };
 }
 
 async function desglose(columna: "device" | "browser" | "os" | "source" | "city" | "region" | "categoria", f: Filtros, limite: number): Promise<Desglose[]> {

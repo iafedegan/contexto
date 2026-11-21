@@ -31,7 +31,7 @@ test("la semana empieza el lunes y las variaciones no dividen por cero", () => {
 });
 
 const base = (o: Partial<Panorama["indicadores"]> = {}): Pick<Panorama, "indicadores" | "calor" | "dispositivos" | "fuentes" | "regiones" | "embudo"> => ({
-  indicadores: { lecturas: 100, visitantes: 60, segundosMedios: 80, segundosMediana: 62, scrollMedio: 58, completas: 40, recurrentes: 35, rebotes: 10, ...o },
+  indicadores: { lecturas: 100, visitantes: 60, segundosMedios: 80, segundosMediana: 62, scrollMedio: 58, completas: 40, recurrentes: 35, rebotes: 10, revista: 0, escucha: 0, ...o },
   calor: [{ dow: 2, hora: 8, n: 20 }, { dow: 5, hora: 21, n: 5 }],
   dispositivos: [{ clave: "mobile", lecturas: 70, visitantes: 40, scroll: 55, segundos: 70 }],
   fuentes: [{ clave: "Google", lecturas: 45, visitantes: 30, scroll: 60, segundos: 80 }],
