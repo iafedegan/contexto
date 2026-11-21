@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { avisarModo } from "@/components/lector-tracker";
+import { avisarModo } from "@/lib/medicion-cliente";
 import { Gauge, Pause, Play, Square, Volume2 } from "lucide-react";
 
 // Velocidades de lectura en voz alta disponibles.

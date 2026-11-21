@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { BookOpen, ChevronLeft, ChevronRight, Minus, Plus, Settings2, X } from "lucide-react";
-import { avisarModo } from "@/components/lector-tracker";
+import { avisarModo } from "@/lib/medicion-cliente";
 import { ListenArticle } from "@/components/listen-article";
 import { ArticleBody } from "@/components/article-body";
 import { ImagenSitio } from "@/components/ui/imagen-sitio";

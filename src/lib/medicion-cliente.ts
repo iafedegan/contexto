@@ -7,6 +7,19 @@ export const MED_COOKIE = "cg_med";
 export const VID_COOKIE = "cg_vid";
 /** Evento del navegador que avisa de que la persona decidió (o cambió su decisión). */
 export const MED_EVENT = "cg-med";
+/** Evento del navegador con el que el modo revista y «Escuchar» avisan a la medición de la lectura (`LectorTracker`). */
+export const MODO_EVENT = "cg:modo";
+/**
+ * Avisa a la medición que la persona usó el modo revista (`r`) o escuchó la nota (`e`). No hace nada si no aceptó la medición.
+ * Vive aquí (infraestructura) y no junto al medidor para que los botones de la nota lo puedan usar sin depender del sitio público.
+ */
+export function avisarModo(m: "r" | "e") {
+  try {
+    window.dispatchEvent(new CustomEvent(MODO_EVENT, { detail: m }));
+  } catch {
+    /* sin medición */
+  }
+}
 const DIAS_PERMISO = 365;
 const DIAS_CODIGO = 400; // el máximo que los navegadores dejan guardar una cookie
 

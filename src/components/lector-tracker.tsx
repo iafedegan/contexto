@@ -1,16 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { MED_EVENT, decisionMedicion, visitante } from "@/lib/medicion-cliente";
-export const MODO_EVENT = "cg:modo";
-/** Avisa a la medición que la persona usó el modo revista (`r`) o escuchó la nota (`e`). No hace nada si no aceptó la medición. */
-export function avisarModo(m: "r" | "e") {
-  try {
-    window.dispatchEvent(new CustomEvent(MODO_EVENT, { detail: m }));
-  } catch {
-    /* sin medición */
-  }
-}
+import { MED_EVENT, MODO_EVENT, decisionMedicion, visitante } from "@/lib/medicion-cliente";
 
 /**
  * Mide CÓMO se lee una nota, solo si la persona aceptó la medición: hasta dónde baja, cuántos segundos la tiene a la vista
