@@ -15,7 +15,7 @@ import { rutaDeNota } from "@/lib/ruta-nota";
 import { versionAlCambiarDeManos } from "@/lib/versiones-notas";
 import { redirects } from "@/db/schema";
 import { autorDeUsuario } from "@/lib/user-authors";
-import { invalidarCache } from "@/lib/data-cache";
+import { invalidarCache, TAG_CONTENIDO } from "@/lib/data-cache";
 
 /**
  * Operaciones sobre notas SIN sesión de navegador ni permisos propios: quien las llama (las acciones del panel o el
@@ -92,6 +92,7 @@ export async function reindexarNota(articleId: string) {
 }
 
 // Descarta la caché de datos y las páginas afectadas por una o varias notas: portada, sitemap, feed y, de cada nota, su página, su categoría y su autor. Es el ÚNICO sitio que lo hace (el panel, Telegram y la publicación programada pasan por aquí).
+// Solo «contenido» (listados de portada y secciones): nunca «ajustes» ni el marco del sitio, así las demás notas guardadas no se tocan.
 export async function revalidarNotas(articleIds: string[]) {
   if (!articleIds.length) return;
   const filas = await db
@@ -101,7 +102,7 @@ export async function revalidarNotas(articleIds: string[]) {
     .leftJoin(authors, eq(articles.authorId, authors.id))
     .where(inArray(articles.id, articleIds));
   if (!filas.length) return;
-  invalidarCache();
+  invalidarCache(TAG_CONTENIDO);
   revalidatePath("/");
   revalidatePath("/sitemap.xml");
   revalidatePath("/feed.xml");
@@ -348,7 +349,11 @@ export async function archivarCore(articleId: string) {
   await revalidarNota(articleId);
 }
 
-/** Distintivos de la nota: «Última hora» (barra roja, solo la más reciente) y «En vivo / en desarrollo» (etiqueta). Devuelve `false` si la nota ya no existe. */
+/**
+ * Distintivos de la nota: «Última hora» (insignia, solo la más reciente) y «En vivo / en desarrollo» (etiqueta). Devuelve `false` si la nota ya no existe.
+ * «Última hora» no está en el HTML guardado de ninguna nota (la pide el navegador a `/api/ultima-hora`): cambiarla solo renueva los
+ * listados y borra de la red esa respuesta, sin regenerar notas. «En vivo» sí va en la página de la nota: esa (y solo esa) se renueva.
+ */
 export async function distintivosCore(articleId: string, d: { isBreaking?: boolean; isLive?: boolean }): Promise<boolean> {
   const set: { isBreaking?: boolean; isLive?: boolean } = {};
   if (typeof d.isBreaking === "boolean") set.isBreaking = d.isBreaking;
@@ -356,7 +361,13 @@ export async function distintivosCore(articleId: string, d: { isBreaking?: boole
   if (!Object.keys(set).length) return true;
   const filas = await db.update(articles).set({ ...set, updatedAt: sql`now()` }).where(eq(articles.id, articleId)).returning({ id: articles.id });
   if (!filas.length) return false;
-  await revalidarNota(articleId);
+  if (set.isLive !== undefined) {
+    await revalidarNota(articleId);
+  } else {
+    invalidarCache(TAG_CONTENIDO);
+    revalidatePath("/");
+    revalidatePath("/en");
+  }
   return true;
 }
 

@@ -54,7 +54,7 @@ async function HomePage({ locale, portadaBorrador }: { locale: Locale; portadaBo
 
   if (articles.length === 0) {
     return (
-      <SiteShell theme={DEFAULT_HOME_LAYOUT.templateId} locale={locale} variant="portada">
+      <SiteShell theme={DEFAULT_HOME_LAYOUT.templateId} locale={locale} variant="portada" datosEnServidor>
         <div className="py-24 text-center">
           <p className="lx-display text-3xl">{t(locale, "home.empty")}</p>
           <p className="mt-3 text-sm text-[var(--fg-muted)]">
@@ -202,6 +202,8 @@ async function HomePage({ locale, portadaBorrador }: { locale: Locale; portadaBo
       theme={site.theme}
       style={site.style}
       locale={locale} variant="portada"
+      // La portada es dinámica: «Última hora», la pauta del pie y las cotizaciones se pintan en el servidor (ver SiteShell).
+      datosEnServidor
       aboveMain={
         <>
           {car.posicion === "arriba" && carruselConColumna && <div className="mt-4">{carruselConColumna}</div>}

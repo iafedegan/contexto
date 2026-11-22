@@ -17,10 +17,10 @@ import { DEFAULT_HOME_LAYOUT } from "@/lib/home-layout";
 import { posicionesDePortada, type PosicionPortada } from "@/lib/ubicacion-nota";
 import { getPreviewDraft } from "@/lib/preview-draft";
 import type { PortadaDraft } from "@/lib/portada-draft";
-import { cachear, TAG_AJUSTES, TAG_CONTENIDO } from "@/lib/data-cache";
+import { cachear, TAG_CONTENIDO, TAG_MENU, TAG_SITIO, TTL_LARGO } from "@/lib/data-cache";
 
 /** Disposición y plantilla de la portada, configuradas en /panel/portada. */
-/** Fila `home_layout` de site_settings, cacheada entre peticiones (la invalida el panel al guardar). */
+/** Fila `home_layout` de site_settings, cacheada 30 días entre peticiones: la leen TODAS las páginas (también las notas estáticas), así que solo la invalida el panel cuando el diseño cambió de verdad. */
 const leerLayoutHome = cachear(
   "home-layout",
   async () => {
@@ -31,7 +31,7 @@ const leerLayoutHome = cachear(
       .limit(1);
     return (row?.value as HomeLayoutConfig | undefined) ?? null;
   },
-  { tags: [TAG_AJUSTES] },
+  { tags: [TAG_SITIO], segundos: TTL_LARGO },
 );
 
 // Configuración visual de la portada: la del borrador en la vista previa o la guardada (con caché entre peticiones).
@@ -528,11 +528,11 @@ export async function getAllCategories() {
   return db.select().from(categories).orderBy(categories.sortOrder, categories.name);
 }
 
-// Categorías de primer nivel leídas de la caché de datos (5 minutos).
+// Categorías de primer nivel leídas de la caché de datos: las lee el menú de todas las páginas, así que duran 30 días y solo las renuevan las acciones de secciones (TAG_MENU).
 const leerCategoriasPrincipales = cachear(
   "categorias-principales",
   () => db.select().from(categories).where(isNull(categories.parentId)).orderBy(categories.sortOrder, categories.name),
-  { tags: [TAG_CONTENIDO], segundos: 300 },
+  { tags: [TAG_MENU], segundos: TTL_LARGO },
 );
 /** Solo las categorías de primer nivel (sin padre) — para el navbar. */
 export const getTopLevelCategories = cache(() => leerCategoriasPrincipales());
@@ -563,7 +563,7 @@ export const getBandasDeSecciones = cachear(
 /** Subsección del menú; `children` son las de tercer nivel (por ejemplo, los países de Sur América). */
 export type NavHija = { slug: string; name: string; children?: { slug: string; name: string }[] };
 
-// Subsecciones de cada sección de primer nivel (por slug del padre), en su orden, leídas de la caché de datos (5 minutos).
+// Subsecciones de cada sección de primer nivel (por slug del padre), en su orden, leídas de la caché de datos (30 días; las renuevan las acciones de secciones).
 const leerHijasDelMenu = cachear(
   "menu-hijas",
   async (): Promise<Record<string, NavHija[]>> => {
@@ -589,14 +589,15 @@ const leerHijasDelMenu = cachear(
     }
     return salida;
   },
-  { tags: [TAG_CONTENIDO], segundos: 300 },
+  { tags: [TAG_MENU], segundos: TTL_LARGO },
 );
 /** Subsecciones de cada sección de primer nivel: alimentan los menús desplegables de la barra de navegación. */
 export const getNavChildren = cache(() => leerHijasDelMenu());
 
 /**
  * Última hora (H-05): la nota marcada como `is_breaking` más reciente. Solo
- * una: la barra pierde su fuerza si se usa para todo.
+ * una: la barra pierde su fuerza si se usa para todo. Dura 60 s: NUNCA la lee una página estática (ahí se pide desde el navegador a
+ * `/api/ultima-hora`), solo la portada, las secciones y la API.
  */
 export const getBreakingArticle = cachear(
   "ultima-hora",

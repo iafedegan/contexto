@@ -239,7 +239,8 @@ async function CategoryPage({ params, searchParams, locale, portadaBorrador }: P
   );
 
   return (
-    <SiteShell theme={site.theme} style={site.style} locale={locale} variant="seccion">
+    // La sección es dinámica: «Última hora», la pauta del pie y las cotizaciones se pintan en el servidor (ver SiteShell).
+    <SiteShell theme={site.theme} style={site.style} locale={locale} variant="seccion" datosEnServidor>
       {(() => {
         const css = blockStylesCss(items);
         return css ? <style dangerouslySetInnerHTML={{ __html: css }} /> : null;

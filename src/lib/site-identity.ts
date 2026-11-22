@@ -3,7 +3,7 @@ import { cache } from "react";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { siteSettings } from "@/db/schema";
-import { cachear, TAG_AJUSTES } from "@/lib/data-cache";
+import { cachear, TAG_SITIO, TTL_LARGO } from "@/lib/data-cache";
 
 /**
  * Identidad del sitio, editable desde /panel/configuracion.
@@ -39,7 +39,7 @@ export const DEFAULT_IDENTITY: SiteIdentity = {
   radioStreamUrl: "",
 };
 
-// Fila de identidad leída de la base y cacheada 5 minutos entre peticiones.
+// Fila de identidad leída de la base y cacheada 30 días entre peticiones (la leen todas las páginas; el panel la invalida al guardarla).
 const leerIdentidad = cachear(
   "identidad",
   async () => {
@@ -50,7 +50,7 @@ const leerIdentidad = cachear(
       .limit(1);
     return (row?.value as Partial<SiteIdentity> | undefined) ?? null;
   },
-  { tags: [TAG_AJUSTES], segundos: 300 },
+  { tags: [TAG_SITIO], segundos: TTL_LARGO },
 );
 
 /** `cache()`: una sola consulta por render aunque la pidan layout y páginas. */

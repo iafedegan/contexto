@@ -45,3 +45,25 @@ export function normalizeLayout(input: HomeLayoutConfig): HomeLayoutConfig {
   const anchoPrincipal = (["normal", "ancha", "muyAncha"] as const).find((p) => p === input.anchoPrincipal);
   return { ...input, ...(templateId ? { templateId } : {}), anchoPrincipal: anchoPrincipal ?? "ancha", regions: sanitizeRegions(input.regions), pantallas: sanitizePantallas(input.pantallas), parts, sectionFilters: sectionFilters ?? "cabecera", ticker: sanitizeTicker(input.ticker), carrusel: sanitizeCarrusel(input.carrusel), carruseles: sanitizeCarruseles(input.carruseles), textos: sanitizeTextos(input.textos), menuNav: sanitizeMenuNavbar(input.menuNav), sectionEls: sanitizeSectionEls(input.sectionEls), zones: sanitizeZones(input.zones) };
 }
+
+// Copia con las claves de cada objeto en orden alfabético y sin valores `undefined` (como queda al guardarlo en jsonb, que reordena claves).
+function canonico(v: unknown): unknown {
+  if (Array.isArray(v)) return v.map((x) => (x === undefined ? null : canonico(x)));
+  if (v && typeof v === "object") {
+    const salida: Record<string, unknown> = {};
+    for (const k of Object.keys(v).sort()) {
+      const x = (v as Record<string, unknown>)[k];
+      if (x !== undefined) salida[k] = canonico(x);
+    }
+    return salida;
+  }
+  return v;
+}
+
+/**
+ * ¿Dos diseños de la portada quedan IGUALES una vez normalizados? El panel solo purga el sitio (las ~100.000 notas llevan la plantilla)
+ * si el diseño de verdad cambió: «Publicar cambios» vuelve a guardar el diseño aunque solo se haya movido una nota de la portada.
+ */
+export function mismoDiseno(a: HomeLayoutConfig, b: HomeLayoutConfig): boolean {
+  return JSON.stringify(canonico(normalizeLayout(a))) === JSON.stringify(canonico(normalizeLayout(b)));
+}

@@ -92,7 +92,8 @@ export async function getAdsZoneRows(): Promise<AdsZoneRow[]> {
   return rows;
 }
 
-// Anuncios activos leídos de la base y guardados 60 segundos entre peticiones.
+// Anuncios activos leídos de la base y guardados 60 segundos entre peticiones. Solo los leen páginas dinámicas y `/api/anuncios`: una
+// página estática que los leyera bajaría su `revalidate` a 60 s (ver data-cache.ts).
 const leerAnunciosActivos = cachear(
   "anuncios-activos",
   (): Promise<AdsZoneContent[]> =>
@@ -123,6 +124,11 @@ const activeAds = cache(async (): Promise<AdsZoneContent[]> => {
   }
   return rows.filter((r) => r.html || r.imageUrl);
 });
+
+/** Todos los anuncios activos y vigentes (de todas las posiciones): los pide `/api/anuncios` para las páginas estáticas. */
+export async function getAnunciosVigentes(): Promise<AdsZoneContent[]> {
+  return activeAds();
+}
 
 /** Anuncios activos de una posición, en orden (principal primero). */
 export async function getAdsForPosition(position: AdPosition): Promise<AdsZoneContent[]> {

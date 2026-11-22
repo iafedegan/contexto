@@ -13,10 +13,21 @@ import { dangerouslyDeleteByTag } from "@vercel/functions";
  * las acciones del panel lo invalidan al instante con `invalidarCache()` al publicar o cambiar ajustes.
  */
 
-/** Notas, categorías, autores y todo lo que cambia al publicar. */
+/**
+ * Etiquetas. OJO: en Next 16, `unstable_cache` leído al generar una página estática le pega a ESA página sus etiquetas y le baja el
+ * `revalidate` a su TTL. Por eso lo que leen las notas y los autores (el marco del sitio) usa `TTL_LARGO` y etiquetas propias que solo
+ * se invalidan cuando eso cambia de verdad; «contenido» y «ajustes» quedan para la portada y las secciones, que son dinámicas.
+ */
+/** Listados de la portada y las secciones: cambia al publicar. Ninguna página estática la lleva. */
 export const TAG_CONTENIDO = "contenido";
-/** Identidad del sitio, plantilla de portada, ventana emergente y anuncios. */
+/** En vivo, anuncios y cotizaciones de las páginas dinámicas. Ninguna página estática la lleva. */
 export const TAG_AJUSTES = "ajustes";
+/** Plantilla (`home_layout`), identidad, ventana emergente y analítica: el marco de TODAS las páginas. Invalidarla regenera las ~100.000 notas. */
+export const TAG_SITIO = "sitio";
+/** Categorías del menú y del pie: solo la invalidan las acciones de secciones (también regenera todas las notas). */
+export const TAG_MENU = "menu";
+/** TTL de lo que leen las páginas estáticas: 30 días, igual que su `revalidate`. Se renuevan por invalidación explícita, no por tiempo. */
+export const TTL_LARGO = 2_592_000;
 
 /** Un `Date` serializado por JSON.stringify: `2026-10-05T10:00:00.000Z`, exactamente con ese formato. */
 const FECHA_ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
@@ -45,14 +56,15 @@ export function cachear<A extends unknown[], R>(
 
 /**
  * Descarta lo cacheado: la siguiente visita lee de la base. Llamar desde una acción del servidor o un
- * handler de ruta, junto a los `revalidatePath` (nunca durante un render).
+ * handler de ruta, junto a los `revalidatePath` (nunca durante un render). Sin etiquetas descarta «contenido» y «ajustes»,
+ * que no tocan ninguna página estática; `TAG_SITIO` y `TAG_MENU` hay que pedirlas a propósito.
  */
 export function invalidarCache(...tags: string[]) {
   for (const tag of tags.length ? tags : [TAG_CONTENIDO, TAG_AJUSTES]) revalidateTag(tag, { expire: 0 });
   borrarCopiasCdn();
 }
 
-/** Etiqueta (`Vercel-Cache-Tag`) de las páginas que guarda la red de Vercel: portada y secciones. */
+/** Etiqueta (`Vercel-Cache-Tag`) de lo que guarda la red de Vercel: portada, secciones y los datos que las notas piden desde el navegador (`/api/ultima-hora`, `/api/anuncios`, `/api/cintillo`). */
 export const TAG_CDN_PORTAL = "portal";
 
 /**

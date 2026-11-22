@@ -7,10 +7,11 @@ import { notFound, permanentRedirect } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import type { Metadata } from "next";
-import { AdsBanner } from "@/components/ads-banner";
+import { AdsBannerCliente } from "@/components/ads-banner-cliente";
 import { ViewCounter } from "@/components/view-counter";
 import { LectorTracker } from "@/components/lector-tracker";
-import { BreakingBadge, LiveBadge } from "@/components/live-badge";
+import { LiveBadge } from "@/components/live-badge";
+import { InsigniaUltimaHoraNota } from "@/components/ultima-hora-cliente";
 import { ShareButtons } from "@/components/share-buttons";
 import { ReaderMode } from "@/components/reader-mode";
 import { ArticleHero, ARTICLE_BODY_CLASS } from "@/components/article/article-hero";
@@ -18,7 +19,7 @@ import { JsonLd } from "@/components/json-ld";
 import { SiteShell } from "@/components/site-shell";
 import { getSiteTheme } from "@/lib/site-theme";
 import { CoverArt } from "@/components/cover-art";
-import { getBreakingArticle, getPublishedArticleBySlug, type FullArticle } from "@/lib/content";
+import { getPublishedArticleBySlug, type FullArticle } from "@/lib/content";
 import { relatedContent } from "@/lib/search";
 import { articleMetadata, breadcrumbJsonLd, newsArticleJsonLd } from "@/lib/seo";
 import { formatDate } from "@/lib/utils";
@@ -27,6 +28,8 @@ import { esDeOpinion, rutaDeNota } from "@/lib/ruta-nota";
 
 /** Artículo — plantilla «Marfil & Burdeos». */
 export const revalidate = 2592000; // 30 días: las notas viejas no cambian; al publicar o editar se renuevan al instante (revalidarNotas).
+// OJO: todo lo que lee esta página (y SiteShell) por `cachear` debe durar también 30 días; un TTL más corto le baja este `revalidate`
+// (Next 16) y la nota se regeneraría sola. «Última hora» y los anuncios se piden desde el navegador (ver data-cache.ts).
 
 // Parámetros de la ruta: la dirección de la nota.
 type Params = {
@@ -73,17 +76,11 @@ async function ArticlePage({ params, locale, desdeOriginal }: Params & { locale:
   // Una columna se sirve en /columna/<título>: por /articulo/<título> redirige (permanente) para que haya una sola dirección.
   if (!desdeOriginal && locale === "es" && !a.legacyPath && esDeOpinion(a.categorySlug)) permanentRedirect(`/columna/${a.slug}`);
 
-  const [related, site, enBarra] = await Promise.all([
-    relatedContent(a.title, a.id, 4, a.categorySlug).catch(() => []),
-    getSiteTheme(),
-    getBreakingArticle().catch(() => null),
-  ]);
-  // La nota que destaca hoy la barra roja lleva la misma insignia en la propia nota (y la barra, que repetiría su titular, se omite).
-  const ultimaHora = enBarra?.slug === a.slug;
+  const [related, site] = await Promise.all([relatedContent(a.title, a.id, 4, a.categorySlug).catch(() => []), getSiteTheme()]);
 
   return (
     <SiteShell theme={site.theme} style={site.style} locale={locale} variant="articulo">
-      <ArticleDocument a={a} related={related} locale={locale} theme={site.parts.body} ultimaHora={ultimaHora} />
+      <ArticleDocument a={a} related={related} locale={locale} theme={site.parts.body} />
     </SiteShell>
   );
 }
@@ -99,7 +96,6 @@ export function ArticleDocument({
   locale,
   preview = false,
   theme = "esmeralda",
-  ultimaHora = false,
 }: {
   /** Plantilla activa: decide la estructura de la apertura. */
   theme?: string;
@@ -107,8 +103,6 @@ export function ArticleDocument({
   related: Awaited<ReturnType<typeof relatedContent>>;
   locale: Locale;
   preview?: boolean;
-  /** La nota es la «Última hora» de la barra roja: lleva la insignia roja sobre el titular. */
-  ultimaHora?: boolean;
 }) {
   // Columna de opinión (foto redonda del autor en lugar de la foto grande): las secciones Opinión, Columnas o Columnistas, o la sección «columna» (o «columna», como en el sitio anterior) o una dirección original /columna/…
   const esColumna = esDeOpinion(a.categorySlug) || !!a.legacyPath?.startsWith("/columna") || a.slug.startsWith("columna-");
@@ -136,7 +130,8 @@ export function ArticleDocument({
         <ArticleHero
           theme={theme}
           // Pauta horizontal de la nota: a la derecha de la firma y los botones (sin hueco si no hay campaña).
-          pauta={!preview ? <AdsBanner zone="article_top" className="ml-auto" /> : undefined}
+          // Se pide desde el navegador: un anuncio nuevo no regenera la nota guardada.
+          pauta={!preview ? <AdsBannerCliente zone="article_top" className="ml-auto" /> : undefined}
           kicker={a.categorySlug ? categoryLabel(locale, a.categorySlug, a.categoryName ?? "") : undefined}
           title={a.title}
           excerpt={a.excerpt}
@@ -201,8 +196,9 @@ export function ArticleDocument({
           cover={
         // Una columna lleva el retrato del columnista, casi siempre pequeño: a todo el ancho se pixela, así que va chico y centrado.
         <figure data-el="n-photo" className={esColumna ? "lx-media relative mx-auto mt-10 aspect-square w-48 overflow-hidden rounded-full sm:w-56" : "lx-media lx-card mt-10 aspect-[16/9] w-full"}>
-          {/* «Última hora»: la insignia va en la esquina de la imagen, no en una franja. */}
-          {ultimaHora && <BreakingBadge locale={locale} className="absolute left-3 top-3 z-[5] shadow-lg" />}
+          {/* «Última hora»: la insignia va en la esquina de la imagen, no en una franja. La nota que destaca hoy la lleva; se decide en el
+              navegador (`/api/ultima-hora`), así marcarla o desmarcarla no regenera ninguna nota. */}
+          {!preview && <InsigniaUltimaHoraNota slug={a.slug} locale={locale} className="absolute left-3 top-3 z-[5] shadow-lg" />}
           {a.coverImageUrl && esColumna ? (
             <Image
               src={a.coverImageUrl}
@@ -260,7 +256,7 @@ export function ArticleDocument({
         {/* Zona comercial del artículo. La plantilla es de una sola columna, así
             que la creatividad de 300×250 va tras el cuerpo, antes de los temas;
             si la zona está vacía o fuera de vigencia no ocupa espacio. */}
-        {!preview && <AdsBanner zone="article_sidebar" className="mx-auto mt-14" />}
+        {!preview && <AdsBannerCliente zone="article_sidebar" className="mx-auto mt-14" />}
 
         {a.tags.length > 0 && (
           <ul className="mx-auto mt-12 flex flex-wrap gap-2">

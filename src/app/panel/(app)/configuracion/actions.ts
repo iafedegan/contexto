@@ -26,7 +26,7 @@ import {
 import { verifyApiKey } from "@/lib/ai-verify";
 import { aplicarRoles, validarRoles } from "@/lib/ai-roles";
 import { encryptSecret } from "@/lib/secrets";
-import { invalidarCache } from "@/lib/data-cache";
+import { invalidarCache, TAG_SITIO } from "@/lib/data-cache";
 import { desbloquearCuenta } from "@/lib/rate-limit-bloqueos";
 import { debeTomarNombreDeCuenta } from "@/lib/firma-nombre";
 import { ROLES } from "@/lib/permisos";
@@ -59,8 +59,8 @@ export async function saveSiteIdentity(formData: FormData) {
       set: { value: identity, updatedAt: sql`now()` },
     });
 
-  // El nombre y el lema salen en cabecera, pie y metadatos de todas las rutas.
-  invalidarCache();
+  // El nombre y el lema salen en cabecera, pie y metadatos de todas las rutas (también las notas): se purga el sitio entero.
+  invalidarCache(TAG_SITIO);
   revalidatePath("/", "layout");
   revalidatePath("/panel/configuracion");
 }
@@ -474,8 +474,8 @@ export async function saveAnalyticsSettings(formData: FormData) {
     .values({ key: ANALYTICS_KEY, value })
     .onConflictDoUpdate({ target: siteSettings.key, set: { value, updatedAt: sql`now()` } });
 
-  // El script de GA4 se inyecta en el layout público.
-  invalidarCache();
+  // El script de GA4 se inyecta en el layout público (también en las notas): se purga el sitio entero.
+  invalidarCache(TAG_SITIO);
   revalidatePath("/", "layout");
   revalidatePath("/panel/configuracion");
 }

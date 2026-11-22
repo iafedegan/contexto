@@ -1,7 +1,7 @@
 import "server-only";
 import { sql } from "drizzle-orm";
 import { db, rowsOf } from "@/db";
-import { cachear } from "@/lib/data-cache";
+import { cachear, TTL_LARGO } from "@/lib/data-cache";
 import { embed, toVectorLiteral } from "./embeddings";
 
 /**
@@ -251,15 +251,16 @@ export async function hybridSearch(
 export const TAG_RELACIONADAS = "relacionadas";
 
 /**
- * Notas relacionadas de una nota, guardadas un día en la caché de datos. Antes se calculaban en cada página de nota que se generaba: con
+ * Notas relacionadas de una nota, guardadas 30 días en la caché de datos. Antes se calculaban en cada página de nota que se generaba: con
  * 51 mil notas (y los robots recorriéndolas) era el 80 % del tiempo de la base (2,4 s por consulta). Su etiqueta es propia, así que
- * publicar una nota no borra las relacionadas de todas las demás: a lo sumo una nota nueva tarda un día en aparecer como relacionada.
+ * publicar una nota no borra las relacionadas de todas las demás. El TTL es el mismo de la página de la nota: uno más corto le bajaría el
+ * `revalidate` a la nota y la haría regenerarse sola (ver data-cache.ts). Las relacionadas de una nota se renuevan cuando se edita esa nota.
  */
 const relacionadasEnCache = cachear(
   "relacionadas",
   (seedText: string, excludeArticleId: string, limit: number, fallbackCategorySlug: string | null) =>
     calcularRelacionadas(seedText, excludeArticleId, limit, fallbackCategorySlug),
-  { tags: [TAG_RELACIONADAS], segundos: 86_400 },
+  { tags: [TAG_RELACIONADAS], segundos: TTL_LARGO },
 );
 export async function relatedContent(seedText: string, excludeArticleId: string, limit = 5, fallbackCategorySlug?: string | null): Promise<SearchHit[]> {
   let hits: SearchHit[];

@@ -15,7 +15,7 @@ import { autorDeUsuario, crearFirma, firmaDeNota, type FirmaCreada } from "@/lib
 import { archivarCore, asegurarRutaDeColumna, distintivosCore, enviarARevisionCore, fijarPortadaCore, guardarBorradorCore, programarCore, publicarCore, reindexarNota, requisitosDePublicacion, revalidarNota, type BorradorInput } from "@/lib/article-ops";
 import { tienePermiso } from "@/lib/permisos-server";
 import { avisarSiUltimaHora } from "@/lib/push";
-import { invalidarCache } from "@/lib/data-cache";
+import { invalidarCache, TAG_CONTENIDO } from "@/lib/data-cache";
 import { esNotaPropia, exigirNotaPropia } from "@/lib/propiedad-notas";
 import { registrarActividad } from "@/lib/actividad-notas";
 import { palabrasCambiadas } from "@/lib/actividad-reglas";
@@ -182,11 +182,12 @@ export async function saveArticle(formData: FormData) {
   // Columna destacada de la portada (solo con permiso «portada»; ausente = no tocar).
   const colDest = String(formData.get("columnaDestacada") ?? "keep");
   if ((colDest === "si" || colDest === "no") && (await tienePermiso(user.id, user.role, "portada"))) await fijarColumnaDestacada(articleId, colDest === "si");
-  // Los distintivos (última hora, directo) salen en la cabecera y en las tarjetas de todo el portal, así que al cambiar una nota PUBLICADA
-  // se refresca el layout completo. Un borrador o una nota en revisión no se ve en ninguna página pública: guardarla no debe vaciar la
-  // caché de las ~100.000 notas (cada guardado lo hacía y los rastreadores la volvían a llenar). Publicarla refresca lo suyo en publishArticle.
-  invalidarCache();
-  if (eraPublica) revalidatePath("/", "layout");
+  // Una nota PUBLICADA que se edita renueva SU página, su sección, su autor y los listados (revalidarNota), nada más: «Última hora» y los
+  // anuncios ya no van en el HTML de las demás notas (los pide el navegador), así que no hace falta vaciar el sitio entero (antes se hacía
+  // con `revalidatePath("/", "layout")` y los rastreadores volvían a llenar la caché de las ~100.000 notas). Un borrador o una nota en
+  // revisión no se ve en ninguna página pública: solo se renuevan los listados del panel. Publicarla refresca lo suyo en publishArticle.
+  if (eraPublica) await revalidarNota(articleId);
+  else invalidarCache(TAG_CONTENIDO);
   revalidatePath("/panel/articulos");
   // El asistente paso a paso puede, además de guardar, publicar o enviar a
   // revisión en el mismo clic (el permiso se comprueba dentro de cada acción).

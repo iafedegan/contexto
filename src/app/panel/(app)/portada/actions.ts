@@ -8,11 +8,11 @@ import { sanitizeHomeStyle } from "@/lib/home-style";
 import { auth, requirePermiso } from "@/lib/auth";
 import { AD_ZONE_SPECS, positionOf } from "@/lib/ads-positions";
 import { parseAdDate, validateAd } from "@/lib/ads-validate";
-import { normalizeLayout } from "@/lib/home-layout-normalize";
+import { mismoDiseno, normalizeLayout } from "@/lib/home-layout-normalize";
 import { sanitizePopup, type PopupConfig } from "@/lib/popup-types";
 import { POPUP_KEY, getSitePopup } from "@/lib/popup";
 import { draftKey, sanitizeDraft } from "@/lib/preview-draft";
-import { invalidarCache } from "@/lib/data-cache";
+import { invalidarCache, TAG_AJUSTES, TAG_SITIO } from "@/lib/data-cache";
 
 // Orden y estilo de una nota en la portada.
 export type HomeLayoutEntry = {
@@ -71,15 +71,30 @@ async function saveHomeSectionLayout(input: HomeLayoutConfig) {
   await requirePermiso("portada");
   // El estilo por componente acaba convertido en CSS: se guarda ya validado.
   const config = normalizeLayout(input);
+  await guardarDiseno(config);
+  revalidatePath("/panel/portada");
+}
+
+/** El `home_layout` guardado hoy (tal como está en la base), o null si nunca se guardó. */
+async function disenoGuardado(): Promise<HomeLayoutConfig | null> {
+  const [row] = await db.select({ value: siteSettings.value }).from(siteSettings).where(eq(siteSettings.key, "home_layout")).limit(1);
+  return (row?.value as HomeLayoutConfig | undefined) ?? null;
+}
+
+/**
+ * Guarda el diseño (ya normalizado) y purga el sitio SOLO si de verdad cambió. La plantilla tiñe TODO el portal (artículo, sección,
+ * buscador…), así que un cambio regenera las ~100.000 notas; pero «Publicar cambios» vuelve a mandar el diseño aunque solo se haya
+ * movido una nota de la portada, y antes eso vaciaba la caché de todo el sitio cada vez.
+ */
+async function guardarDiseno(config: HomeLayoutConfig, previo?: HomeLayoutConfig | null) {
+  const antes = previo === undefined ? await disenoGuardado() : previo;
+  if (antes && mismoDiseno(antes, config)) return;
   await db
     .insert(siteSettings)
     .values({ key: "home_layout", value: config })
     .onConflictDoUpdate({ target: siteSettings.key, set: { value: config, updatedAt: sql`now()` } });
-  // La plantilla tiñe TODO el portal (artículo, sección, buscador…), así que
-  // se revalida el árbol entero y no solo la portada.
-  invalidarCache();
+  invalidarCache(TAG_SITIO);
   revalidatePath("/", "layout");
-  revalidatePath("/panel/portada");
 }
 
 type AnchoPrincipal = NonNullable<HomeLayoutConfig["anchoPrincipal"]>;
@@ -99,14 +114,10 @@ export async function guardarAnchoPortada(valor: string): Promise<{ ok: boolean;
   await requirePermiso("portada");
   const ancho = (["normal", "ancha", "muyAncha"] as const).find((a) => a === valor);
   if (!ancho) return { ok: false, message: "Ese ancho no existe." };
-  const [row] = await db.select({ value: siteSettings.value }).from(siteSettings).where(eq(siteSettings.key, "home_layout")).limit(1);
-  const config = normalizeLayout({ ...((row?.value as HomeLayoutConfig | undefined) ?? {}), anchoPrincipal: ancho });
-  await db
-    .insert(siteSettings)
-    .values({ key: "home_layout", value: config })
-    .onConflictDoUpdate({ target: siteSettings.key, set: { value: config, updatedAt: sql`now()` } });
-  invalidarCache();
-  revalidatePath("/", "layout");
+  const antes = await disenoGuardado();
+  const config = normalizeLayout({ ...(antes ?? {}), anchoPrincipal: ancho });
+  // Si el ancho ya era ese, no se toca nada (ni se purga el sitio).
+  await guardarDiseno(config, antes);
   revalidatePath("/panel/portada");
   return { ok: true, message: "Listo: la portada ya usa ese ancho." };
 }
@@ -123,7 +134,8 @@ async function saveSitePopup(input: PopupConfig): Promise<PopupConfig> {
     .insert(siteSettings)
     .values({ key: POPUP_KEY, value: config })
     .onConflictDoUpdate({ target: siteSettings.key, set: { value: config, updatedAt: sql`now()` } });
-  invalidarCache();
+  // La ventana emergente va en el HTML de todas las páginas: se purga el sitio (solo se llama si cambió, ver publishHomeDraft).
+  invalidarCache(TAG_SITIO);
   revalidatePath("/", "layout");
   return config;
 }
@@ -250,8 +262,10 @@ export async function publishHomeDraft(): Promise<{ ok: boolean; message: string
       .onConflictDoUpdate({ target: adsZones.key, set: { html: w.html, imageUrl: w.imageUrl, clickUrl: w.clickUrl, active: w.active, startsAt: w.startsAt, endsAt: w.endsAt } });
   }
   if (adWrites.length) {
-    invalidarCache();
-    revalidatePath("/", "layout");
+    // Las notas piden los anuncios desde el navegador (`/api/anuncios`): basta con renovar la caché de datos de las páginas dinámicas y
+    // borrar de la red las copias con la etiqueta `portal` (lo hace invalidarCache). Ninguna nota se regenera.
+    invalidarCache(TAG_AJUSTES);
+    revalidatePath("/");
   }
 
   await db.delete(siteSettings).where(eq(siteSettings.key, draftKey(user.id)));
@@ -311,8 +325,9 @@ export async function restoreHomeSnapshot(input: unknown): Promise<{ ok: boolean
           .values({ key, name: AD_ZONE_SPECS[position].label, ...w })
           .onConflictDoUpdate({ target: adsZones.key, set: w });
       }
-      invalidarCache();
-      revalidatePath("/", "layout");
+      // Los anuncios de las notas se piden desde el navegador: no hace falta regenerar ninguna nota (ver publishHomeDraft).
+      invalidarCache(TAG_AJUSTES);
+      revalidatePath("/");
     }
   }
   revalidatePath("/panel/portada");

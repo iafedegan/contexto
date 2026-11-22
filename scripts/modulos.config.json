@@ -21,7 +21,7 @@
         "^components/ui/",
         "^content/",
         "^components/(logo-mark|social-icons|turnstile|radio-player|interactive-chart|toro-bot|personaje-ganadero|diferido|back-to-top|logo-contexto|foto-pequena)\\.tsx$",
-        "^lib/(pantallas|cintillo|carrusel|grafica-tabla|leer-hoja|textos-cabecera|menu-navbar|consejo/plan|gam|regiones-colombia|data-cache|safe-fetch|en-paralelo|toro-posicion|personajes|panel-tema|formato-seccion|rate-limit|claves|env|escape|validate|format|utils|cron-auth|i18n|budget|bots|csp|citas|pestanas|logo-archivos|lectores-ua|lectores-geo|lectores-suscriptor|lectores-filtros|lectores-entrada|medicion-cliente|superapp-cliente|navegador-incrustado|media-mime|media-upload|media-firma|media-storage|media-limpieza|nav-limits|home-fonts|home-regions|template-parts|home-style|ads-types|home-layout|home-layout-normalize|home-background|section-els|paginas-bloques|modo-selectores|suscriptor-navegador|popup-types|site-identity|turnstile|eventos|zones|theme|geo-reverse|embeddings|vectorizar|vectorizar|chart-svg|chart-png|imagen-webp|fuerza-clave)\\.tsx?$",
+        "^lib/(pantallas|cintillo|carrusel|grafica-tabla|leer-hoja|textos-cabecera|menu-navbar|consejo/plan|gam|regiones-colombia|data-cache|safe-fetch|en-paralelo|toro-posicion|personajes|panel-tema|formato-seccion|rate-limit|claves|env|escape|validate|format|utils|cron-auth|i18n|budget|bots|csp|citas|pestanas|logo-archivos|lectores-ua|lectores-geo|lectores-suscriptor|lectores-filtros|lectores-entrada|medicion-cliente|superapp-cliente|navegador-incrustado|media-mime|media-upload|media-firma|media-storage|media-limpieza|nav-limits|home-fonts|home-regions|template-parts|home-style|ads-types|home-layout|home-layout-normalize|home-background|section-els|paginas-bloques|modo-selectores|suscriptor-navegador|popup-types|site-identity|turnstile|eventos|zones|theme|geo-reverse|embeddings|vectorizar|vectorizar|chart-svg|chart-png|imagen-webp|fuerza-clave|recurso-cliente)\\.tsx?$",
         "^lib/api/"
       ],
       "puedeUsar": []
@@ -87,7 +87,7 @@
       "rutas": [
         "^lib/(site-[a-z-]+|theme|zones|ads|ads-positions|ads-validate|ads-frame|popup|canvas-hints|portada-[a-z-]+|preview-chrome|block-tools)\\.tsx?$",
         "^components/home/(?!templates)",
-        "^components/(site-header|site-footer|site-shell|site-popup|site-popup-diferido|sticky-rail|en-portada|cintillo-mercado|cintillo-tira|more-menu|nav-menu-item|mobile-nav|theme-toggle|locale-switch|ads-banner|gam-slot|feature-strip|mobile-tab-bar|instalar-app|lupa-buscar|search-box)\\.tsx$"
+        "^components/(site-header|site-footer|site-shell|site-popup|site-popup-diferido|sticky-rail|en-portada|cintillo-mercado|cintillo-mercado-cliente|cintillo-tira|ultima-hora-cliente|more-menu|nav-menu-item|mobile-nav|theme-toggle|locale-switch|ads-banner|ads-banner-cliente|gam-slot|feature-strip|mobile-tab-bar|instalar-app|lupa-buscar|search-box)\\.tsx$"
       ],
       "puedeUsar": [
         "infra",

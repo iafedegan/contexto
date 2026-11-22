@@ -6,7 +6,7 @@ import { db } from "@/db";
 import { articles, categories } from "@/db/schema";
 import { requirePermiso } from "@/lib/auth";
 import { slugify } from "@/lib/utils";
-import { invalidarCache } from "@/lib/data-cache";
+import { invalidarCache, TAG_AJUSTES, TAG_CONTENIDO, TAG_MENU } from "@/lib/data-cache";
 
 // Estado que se devuelve al formulario: si salió bien y el mensaje.
 export type SeccionState = { ok: boolean; message: string } | null;
@@ -52,8 +52,8 @@ export async function actualizarSeccion(_prev: SeccionState, formData: FormData)
 
   revalidatePath(`/categoria/${row.slug}`);
   revalidatePath(`/en/categoria/${row.slug}`);
-  // El menú principal y el pie leen las categorías en cada página.
-  invalidarCache();
+  // El menú principal y el pie leen las categorías en cada página (también las notas): TAG_MENU y el sitio entero.
+  invalidarCache(TAG_CONTENIDO, TAG_AJUSTES, TAG_MENU);
   revalidatePath("/", "layout");
   revalidatePath("/panel/portada");
 
@@ -71,8 +71,8 @@ async function refrescarMenu(slugs: (string | null | undefined)[] = []) {
     revalidatePath(`/categoria/${s}`);
     revalidatePath(`/en/categoria/${s}`);
   }
-  // El menú y el pie leen las categorías en todas las páginas.
-  invalidarCache();
+  // El menú y el pie leen las categorías en todas las páginas (también las notas): TAG_MENU y el sitio entero.
+  invalidarCache(TAG_CONTENIDO, TAG_AJUSTES, TAG_MENU);
   revalidatePath("/", "layout");
   revalidatePath("/sitemap.xml");
   revalidatePath("/panel/portada");

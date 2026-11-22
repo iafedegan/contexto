@@ -6,6 +6,8 @@ import { BackToTop } from "@/components/back-to-top";
 import { SitePopupDiferido } from "@/components/site-popup-diferido";
 import { ReadingProgress } from "@/components/reading-progress";
 import { AdsBanner } from "@/components/ads-banner";
+import { AdsBannerCliente } from "@/components/ads-banner-cliente";
+import { UltimaHoraInsignias } from "@/components/ultima-hora-cliente";
 import { SiteHeader, type NavItem } from "@/components/site-header";
 import { MobileTabBar } from "@/components/mobile-tab-bar";
 import { SiteFooter } from "@/components/site-footer";
@@ -50,17 +52,12 @@ const SHELL: Record<ShellVariant, { main: string; fx: string }> = {
 };
 
 /**
- * Insignia «Última hora» en la esquina de la imagen de la tarjeta de la nota marcada (la más reciente). Es CSS y no un componente
- * porque las tarjetas se pintan también desde componentes de cliente; cada tarjeta lleva su `data-bs-root` con el slug.
- */
-function estiloUltimaHora(slug: string, etiqueta: string): string {
-  const texto = `⚡ ${etiqueta}`.toUpperCase().replace(/["\\\n]/g, "");
-  return `[data-bs-root="${slug}"] .lx-media{position:relative;container-type:inline-size}[data-bs-root="${slug}"] .lx-media::after{content:"${texto}";position:absolute;top:.6rem;left:.6rem;z-index:5;pointer-events:none;background:var(--danger,#c0392b);color:#fff;font:700 .66rem/1 var(--font-ui,system-ui,sans-serif);letter-spacing:.14em;padding:.4rem .65rem;border-radius:999px;box-shadow:0 2px 10px rgba(0,0,0,.4);white-space:nowrap}@container (max-width:150px){[data-bs-root="${slug}"] .lx-media::after{content:"⚡";top:.35rem;left:.35rem;padding:.3rem .42rem;font-size:.75rem}}`;
-}
-
-/**
  * Envoltorio de plantilla: fija el tema (`data-theme`), las capas de textura y
  * la pareja navbar/footer. Las categorías se consultan una sola vez por página.
+ *
+ * Todo lo que lee aquí dura 30 días en la caché de datos y se renueva solo cuando el panel lo cambia (ver data-cache.ts): las notas
+ * son estáticas y una lectura con un TTL más corto las haría regenerarse solas. Lo que cambia a menudo («Última hora», anuncios,
+ * cotizaciones) lo pide el navegador, salvo con `datosEnServidor` (portada y secciones, que se pintan en cada visita).
  */
 export async function SiteShell({
   theme,
@@ -71,6 +68,7 @@ export async function SiteShell({
   locale = DEFAULT_LOCALE,
   aboveMain,
   topBar,
+  datosEnServidor = false,
 }: {
   /** Plantilla activa: paleta, tipografías, cabecera y pie. */
   theme: Theme;
@@ -94,6 +92,11 @@ export async function SiteShell({
   aboveMain?: React.ReactNode;
   /** Franja a todo el ancho por ENCIMA de la cabecera, en lo más alto de la página (el cintillo de la portada). */
   topBar?: React.ReactNode;
+  /**
+   * Solo páginas DINÁMICAS (portada, secciones): «Última hora», la pauta del pie y las cotizaciones se pintan en el servidor. En una
+   * página estática (nota, autor) deben ir al navegador: si no, la página guardada llevaría su TTL corto y se regeneraría sola.
+   */
+  datosEnServidor?: boolean;
 }) {
   const [navTodo, extraNav, identity, site, popup, ultimaHora] = await Promise.all([
     navItems(locale),
@@ -101,7 +104,7 @@ export async function SiteShell({
     getSiteIdentity(),
     getSiteTheme(),
     getSitePopup(),
-    getBreakingSlugs().catch(() => [] as string[]),
+    datosEnServidor ? getBreakingSlugs().catch(() => [] as string[]) : null,
   ]);
   // Ajustes del editor: secciones visibles, enlaces propios y submenús.
   const nav = aplicarMenu(navTodo, site.menuNav);
@@ -117,11 +120,11 @@ export async function SiteShell({
           <ReadingProgress />
         </div>
       )}
-      {/* «Última hora» ya no es una franja roja: la nota marcada lleva una insignia en la esquina de su imagen (ver `estiloUltimaHora`). */}
-      {ultimaHora.filter((sl) => /^[a-z0-9-]+$/.test(sl)).map((sl) => <style key={sl} dangerouslySetInnerHTML={{ __html: estiloUltimaHora(sl, t(locale, "breaking.label")) }} />)}
+      {/* «Última hora» ya no es una franja roja: la nota marcada lleva una insignia en la esquina de su imagen (ver ultima-hora-cliente.tsx). */}
+      <UltimaHoraInsignias locale={locale} inicial={ultimaHora ? { slugs: ultimaHora, nota: null } : undefined} />
       {/* En el celular el cintillo y la cabecera quedan fijos arriba al hacer scroll; en pantallas grandes el envoltorio no existe (contents) y la barra de secciones conserva su propio sticky. */}
       <div className="cg-cabecera-fija sticky top-0 z-50 lg:contents">
-        {topBar ?? <CintilloMercado locale={locale} />}
+        {topBar ?? <CintilloMercado locale={locale} enServidor={datosEnServidor} />}
         <SiteHeader theme={theme} nav={nav} extraNav={sinOcultas(extraNav, site.menuNav)} locale={locale} identity={conTextos(identity, site.textos)} variant={site.parts.navbar} />
       </div>
       {aboveMain}
@@ -139,7 +142,7 @@ export async function SiteShell({
       </main>
       {/* Leaderboard antes del pie (§9.1). Vacío = no ocupa espacio. */}
       <div className="shell pb-10">
-        <AdsBanner zone="footer" className="mx-auto" />
+        {datosEnServidor ? <AdsBanner zone="footer" className="mx-auto" /> : <AdsBannerCliente zone="footer" className="mx-auto" />}
       </div>
       {/* Popup diseñado en /panel/portada (si está activo). */}
       {popup.enabled && <SitePopupDiferido config={popup} />}

@@ -16,7 +16,7 @@ import { adsZones } from "@/db/schema";
 import { requireRole } from "@/lib/auth";
 import { AD_ZONE_SPECS, positionOf, suffixOf } from "@/lib/ads-positions";
 import { parseAdDate, validateAd } from "@/lib/ads-validate";
-import { invalidarCache } from "@/lib/data-cache";
+import { invalidarCache, TAG_AJUSTES } from "@/lib/data-cache";
 
 // Estado que se devuelve al formulario: si salió bien y el mensaje.
 export type AdsZoneState = { ok: boolean; message: string } | null;
@@ -48,10 +48,10 @@ export async function saveAdsZone(_prev: AdsZoneState, formData: FormData): Prom
     .values({ key, name, html, imageUrl, clickUrl, active, startsAt, endsAt })
     .onConflictDoUpdate({ target: adsZones.key, set: { html, imageUrl, clickUrl, active, startsAt, endsAt } });
 
-  // La pauta sale en la portada, en cada artículo y en el pie: se refresca
-  // todo el sitio público, no solo una ruta.
-  invalidarCache();
-  revalidatePath("/", "layout");
+  // La pauta sale en la portada, en cada artículo y en el pie. Las notas y el pie la piden desde el navegador (`/api/anuncios`), así que
+  // basta con renovar la caché de datos y borrar de la red las copias con la etiqueta `portal` (lo hace invalidarCache): ninguna nota se regenera.
+  invalidarCache(TAG_AJUSTES);
+  revalidatePath("/");
   revalidatePath("/panel/configuracion");
   revalidatePath("/panel/portada");
 
@@ -65,8 +65,8 @@ export async function clearAdsZone(key: string): Promise<void> {
     .update(adsZones)
     .set({ html: null, imageUrl: null, clickUrl: null, active: false, startsAt: null, endsAt: null })
     .where(eq(adsZones.key, key));
-  invalidarCache();
-  revalidatePath("/", "layout");
+  invalidarCache(TAG_AJUSTES);
+  revalidatePath("/");
   revalidatePath("/panel/configuracion");
   revalidatePath("/panel/portada");
 }
@@ -96,8 +96,8 @@ export async function deleteAdsZone(key: string): Promise<void> {
   await requireRole("administrador");
   if (!positionOf(key) || !key.includes("__")) return;
   await db.delete(adsZones).where(eq(adsZones.key, key));
-  invalidarCache();
-  revalidatePath("/", "layout");
+  invalidarCache(TAG_AJUSTES);
+  revalidatePath("/");
   revalidatePath("/panel/configuracion");
   revalidatePath("/panel/portada");
 }
