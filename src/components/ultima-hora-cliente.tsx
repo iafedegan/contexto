@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { t, type Locale } from "@/lib/i18n";
-import { useRecurso } from "@/lib/recurso-cliente";
+import { esObjeto, useRecurso } from "@/lib/recurso-cliente";
 import { BreakingBadge } from "@/components/live-badge";
 
 /** Respuesta de `/api/ultima-hora`: las notas marcadas a la vista (las 8 más recientes) y la más reciente de todas. */
@@ -11,14 +11,19 @@ export type UltimaHora = { slugs: string[]; nota: { slug: string } | null };
 // Dirección válida de una nota: va dentro de un selector CSS.
 const SLUG = /^[a-z0-9-]+$/;
 
+// ¿La respuesta de `/api/ultima-hora` tiene la forma esperada? Si no, no se pinta ninguna insignia.
+const esUltimaHora = (v: unknown): v is UltimaHora =>
+  esObjeto(v) && Array.isArray(v.slugs) && v.slugs.every((s) => typeof s === "string") && (v.nota === null || (esObjeto(v.nota) && typeof v.nota.slug === "string"));
+
 /**
  * «Última hora» se pinta en el navegador en las páginas estáticas (notas, autores): marcar o desmarcar una nota no regenera ninguna página
  * guardada, y el cambio se ve en todas apenas `/api/ultima-hora` lo refleja (la red lo guarda 30 s y el panel lo borra al cambiar la marca).
+ * Si la petición falla o tarda, no hay insignias (van en posición absoluta: no queda ningún hueco).
  */
 function useUltimaHora(inicial?: UltimaHora): UltimaHora | null {
   const pathname = usePathname();
-  const pedida = useRecurso<UltimaHora>(inicial ? null : "/api/ultima-hora", pathname);
-  return inicial ?? pedida;
+  const pedida = useRecurso(inicial ? null : "/api/ultima-hora", esUltimaHora, pathname);
+  return inicial ?? pedida.valor;
 }
 
 /**

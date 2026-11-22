@@ -6,21 +6,27 @@ import { AD_ZONE_SPECS, positionOf, suffixOf, type AdPosition } from "@/lib/ads-
 import { SANDBOX_ANUNCIO, documentoPublicitario } from "@/lib/ads-frame";
 import { GAM_POR_POSICION } from "@/lib/gam";
 import { cn } from "@/lib/utils";
-import { useRecurso } from "@/lib/recurso-cliente";
+import { esObjeto, textoONulo, useRecurso } from "@/lib/recurso-cliente";
 import { GamSlot } from "@/components/gam-slot";
 
 /** Un anuncio propio activo, tal como llega de `/api/anuncios`. */
 type Anuncio = { key: string; html: string | null; imageUrl: string | null; clickUrl: string | null };
 
+// ¿La respuesta de `/api/anuncios` tiene la forma esperada? Si no, el espacio no pinta nada.
+const sonAnuncios = (v: unknown): v is { anuncios: Anuncio[] } =>
+  esObjeto(v) && Array.isArray(v.anuncios) && v.anuncios.every((a) => esObjeto(a) && typeof a.key === "string" && textoONulo(a.html) && textoONulo(a.imageUrl) && textoONulo(a.clickUrl));
+
 /**
  * Lo mismo que `AdsBanner`, pero pedido desde el navegador: es el que usan las páginas estáticas (notas, autores, pie del sitio). Así
  * cargar, cambiar o apagar un anuncio no regenera ninguna nota guardada. Mientras llega la respuesta ocupa lo mismo que un espacio de
  * Google Ad Manager vacío (1 px); con anuncio propio se pinta con el tamaño de su posición, y sin él usa Ad Manager (si está activado).
- * La última respuesta queda en la sesión: en la siguiente página el anuncio sale de entrada, sin esperar a la red.
+ * La última respuesta queda en la sesión: en la siguiente página el anuncio sale de entrada, sin esperar a la red. Si la petición falla
+ * o tarda más de 5 s, el espacio no pinta nada (ni anuncio propio ni Ad Manager): la nota se ve igual, sin hueco.
  */
 export function AdsBannerCliente({ zone, className, completo = false }: { zone: AdPosition; className?: string; completo?: boolean }) {
   const pathname = usePathname();
-  const datos = useRecurso<{ anuncios: Anuncio[] }>("/api/anuncios", pathname);
+  const { valor: datos, fallo } = useRecurso("/api/anuncios", sonAnuncios, pathname);
+  if (fallo) return null;
   // Aún sin respuesta: el mismo hueco mínimo que deja un espacio de Ad Manager mientras espera.
   if (!datos) return <div aria-hidden className="w-full" style={{ minHeight: 1 }} />;
   const spec = AD_ZONE_SPECS[zone];
