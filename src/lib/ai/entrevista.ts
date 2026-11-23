@@ -341,17 +341,47 @@ const EXT_TEXTO = /\.(txt|md|csv)$/i;
  * Lee UN documento subido (PDF, Word .docx o texto) y lo devuelve como material para redactar. El PDF lo lee el modelo; el resto se lee sin IA.
  * El asistente llama una vez por archivo (máximo 3 por nota).
  */
+/** Tipo de una foto que el modelo puede ver (JPEG, PNG o WebP), por los primeros bytes del archivo y no por su nombre; `null` si no lo es. */
+function tipoFoto(b: Uint8Array): "image/jpeg" | "image/png" | "image/webp" | null {
+  if (b.length < 12) return null;
+  if (b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return "image/jpeg";
+  if (b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47) return "image/png";
+  if (String.fromCharCode(...b.subarray(0, 4)) === "RIFF" && String.fromCharCode(...b.subarray(8, 12)) === "WEBP") return "image/webp";
+  return null;
+}
+
+const INSTRUCCION_FOTO =
+  "Eres un asistente de redacción de un medio periodístico colombiano. Recibes una foto que sube la redacción (un cartel, un documento, un recorte, una nota manuscrita, una feria, un hato, un evento…) y entregas el MATERIAL para que otra etapa redacte la nota. Responde con dos partes: " +
+  "«TEXTO VISIBLE»: transcribe con fidelidad todo lo escrito en la imagen (carteles, pancartas, tablas, cifras, fechas, nombres), sin corregir ni resumir; si algo no se lee, escribe [ilegible]; si no hay texto, escribe «Sin texto visible». " +
+  "«QUÉ SE VE»: describe solo lo observable (lugar aparente, animales, objetos, acciones, cantidad de personas, ambiente). " +
+  "Reglas: no inventes nombres, cifras, fechas, lugares, cargos ni hechos que no estén escritos o a la vista; NO identifiques a nadie por su rostro (si hay un rótulo con su nombre, cítalo como «según el rótulo»); " +
+  "si falta algo que una nota necesitaría (quién, cuándo, dónde), termina con «FALTA CONFIRMAR:» y la lista.";
+
 export async function leerDocumentoCore(userId: string, formData: FormData): Promise<MaterialResult> {
   const f = formData.get("documento");
   if (!(f instanceof File) || f.size === 0) return { ok: false, error: "No llegó ningún documento." };
   if (f.size > MAX_DOCUMENTO) return { ok: false, error: `«${f.name}» pesa ${(f.size / 1048576).toFixed(1)} MB; el máximo son 4 MB por documento.` };
-  const titulo = `Documento: ${f.name.replace(/\.[a-z0-9]+$/i, "").slice(0, 80)}`;
+  const nombreCorto = f.name.replace(/\.[a-z0-9]+$/i, "").slice(0, 80);
   const bytes = new Uint8Array(await f.arrayBuffer());
+  const foto = tipoFoto(bytes);
+  const titulo = foto ? `Foto: ${nombreCorto}` : `Documento: ${nombreCorto}`;
   try {
     let texto = "";
     if (/\.docx$/i.test(f.name)) {
       texto = textoDeDocx(bytes) ?? "";
       if (!texto) return { ok: false, error: `No se pudo leer «${f.name}». Guárdalo de nuevo como .docx o súbelo en PDF.` };
+    } else if (foto) {
+      const model = await getModelo("editor");
+      if (!model) return { ok: false, error: "Falta la clave del modelo (la conecta un administrador en Configuración → Inteligencia artificial)." };
+      const cuota = await verificarCuotaIA(userId);
+      if (!cuota.ok) return { ok: false, error: cuota.message };
+      const r = await generateText({
+        model,
+        system: INSTRUCCION_FOTO,
+        messages: [{ role: "user", content: [{ type: "text", text: "Entrega el material de esta foto para redactar la nota." }, { type: "image", image: bytes, mediaType: foto }] }],
+      });
+      await registrarUsoIA(userId, r.usage);
+      texto = r.text.trim();
     } else if (/\.doc$/i.test(f.name)) {
       return { ok: false, error: "El formato .doc antiguo no se puede leer: guárdalo como .docx o PDF." };
     } else if (EXT_TEXTO.test(f.name) || f.type.startsWith("text/")) {

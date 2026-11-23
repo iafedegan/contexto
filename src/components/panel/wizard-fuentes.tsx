@@ -26,7 +26,7 @@ const FUENTES = [
   { id: "noticias", Icono: Search, titulo: "Buscar noticias", ayuda: "Investiga una persona o tema en medios, YouTube y fuentes oficiales." },
   { id: "entrevista", Icono: Mic, titulo: "Voz o video", ayuda: "Sube una grabación: la IA la transcribe por intervenciones." },
   { id: "enlaces", Icono: Link2, titulo: "Enlaces", ayuda: "Pega hasta 5 páginas y redacta con palabras propias." },
-  { id: "documentos", Icono: FileText, titulo: "Documentos", ayuda: "Sube hasta 3 (PDF, Word o texto): la IA los lee y redacta la nota." },
+  { id: "documentos", Icono: FileText, titulo: "Documentos", ayuda: "Sube hasta 3 (PDF, Word, texto o foto): la IA los lee y redacta la nota." },
 ] as const;
 
 /** Las cuatro fuentes como tarjetas; al pulsar una se abre su pantalla. `notas` muestra lo ya cargado de cada una. */
@@ -359,7 +359,7 @@ export function PantallaDocumentos({
   const libres = MAX_DOCUMENTOS - cargados.length;
   return (
     <div className="flex flex-col gap-3">
-      <p className="text-sm text-[var(--fg-muted)]">Sube hasta {MAX_DOCUMENTOS} documentos (PDF, Word .docx o texto, de hasta 4 MB cada uno). La IA los lee y redacta con palabras propias, atribuyendo.</p>
+      <p className="text-sm text-[var(--fg-muted)]">Sube hasta {MAX_DOCUMENTOS} archivos: documentos (PDF, Word .docx o texto) o <strong>fotos</strong> (JPG, PNG o WebP) de un cartel, un recorte, una nota a mano o un evento. La IA lee el texto y describe lo que se ve, sin inventar, y redacta con palabras propias, atribuyendo. Revisa lo que entendió antes de publicar.</p>
       {cargados.length > 0 && (
         <ul className="flex flex-col gap-1 text-sm">
           {cargados.map((t) => (
@@ -369,12 +369,12 @@ export function PantallaDocumentos({
       )}
       <label className={`flex flex-col items-center justify-center gap-2 rounded-[var(--radius)] border border-dashed border-[var(--border-strong,var(--border))] px-4 py-8 text-center text-sm ${libres > 0 && !ocupado ? "cursor-pointer hover:bg-[var(--surface-2)]" : "opacity-60"}`}>
         {ocupado ? <Loader2 size={22} className="animate-spin" aria-hidden /> : <FileText size={22} aria-hidden />}
-        <span className="font-medium">{ocupado ? "Leyendo documentos…" : libres > 0 ? `Elegir documentos (puedes subir ${libres} más)` : "Ya subiste los 3 documentos"}</span>
+        <span className="font-medium">{ocupado ? "Leyendo archivos…" : libres > 0 ? `Elegir documentos o fotos (puedes subir ${libres} más)` : "Ya subiste los 3 archivos"}</span>
         <input
           type="file"
           multiple
           disabled={libres <= 0 || ocupado}
-          accept=".pdf,.docx,.txt,.md,.csv,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
+          accept=".pdf,.docx,.txt,.md,.csv,.jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
           className="sr-only"
           onChange={(e) => { const lista = [...(e.target.files ?? [])]; e.target.value = ""; if (lista.length) onArchivos(lista); }}
         />

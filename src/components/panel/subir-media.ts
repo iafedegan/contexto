@@ -13,7 +13,7 @@ const ANCHO_MAX = 2048;
  * pedía sin pasar por el optimizador las bajaba enteras (salida de datos de Supabase). Hecho en el navegador porque `sharp` no va en las
  * funciones de Vercel. Se conserva la transparencia; los GIF, WebP, AVIF y video no se tocan. Si algo falla o no se ahorra peso, sube el original.
  */
-async function aWebpEnNavegador(file: File): Promise<File> {
+export async function aWebpEnNavegador(file: File): Promise<File> {
   if (!/^image\/(png|jpeg)$/.test(file.type) || file.size < MIN_PARA_COMPRIMIR) return file;
   try {
     const bmp = await createImageBitmap(file, { imageOrientation: "from-image" });

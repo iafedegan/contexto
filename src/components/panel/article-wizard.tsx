@@ -43,7 +43,7 @@ import {
   Trash2,
   X, GitCompareArrows, History, FileSpreadsheet, RefreshCw } from "lucide-react";
 import { autosaveDraft, cancelarEnvio, crearAutor, devolverNota, saveArticle, soltarNota } from "@/app/panel/(app)/articulos/actions";
-import { subirMedia } from "./subir-media";
+import { aWebpEnNavegador, subirMedia } from "./subir-media";
 import { portadaAuto } from "./ajustar-imagen";
 import { creditoFotoValido, FORMATO_CREDITO, ORIGENES_CREDITO } from "@/lib/credito-foto";
 import { PedirImagen } from "./pedir-imagen";
@@ -885,7 +885,8 @@ export function ArticleWizard({
     startDocs(async () => {
       for (const f of elegidos) {
         const fd = new FormData();
-        fd.set("documento", f);
+        // Una foto de celular pesa varios MB y la petición admite ~4,5: se baja a WebP de hasta 2048 px (el texto sigue legible).
+        fd.set("documento", await aWebpEnNavegador(f));
         const res = await leerDocumento(fd);
         if (res.ok) {
           setMaterial((m) => (m.some((x) => x.title === res.material.title && x.text === res.material.text) ? m : [...m, res.material]));
