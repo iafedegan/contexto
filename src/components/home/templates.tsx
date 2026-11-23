@@ -580,12 +580,9 @@ function GremialCardLink({
 // Miniatura de la plantilla gremial.
 function GremialThumb({ a, sizes, priority = false }: { a: ArticleListItem; sizes: string; priority?: boolean }) {
   if (!a.coverImageUrl) return <CoverArt seed={a.slug} label={a.title} className="text-3xl" />;
-  return (
-    // Miniaturas dentro del editor de portada (sin dominio conocido en build); en el
-    // sitio público next/image ya sirve estas mismas URLs en otras plantillas.
-    // eslint-disable-next-line @next/next/no-img-element
-    <img src={a.coverImageUrl} alt={a.coverImageAlt ?? a.title} sizes={sizes} width={640} height={360} className="size-full object-cover" loading={priority ? "eager" : "lazy"} />
-  );
+  // Por `ImagenSitio` (next/image): un `<img>` pelado bajaba el PNG original (~3 MB) de Supabase en cada visita a la portada y
+  // disparaba la salida de datos de la factura; así se sirve WebP al tamaño de la pantalla.
+  return <ImagenSitio src={a.coverImageUrl} alt={a.coverImageAlt ?? a.title} sizes={sizes} ancho={640} alto={360} className="size-full object-cover" prioridad={priority} />;
 }
 
 /**
