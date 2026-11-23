@@ -700,7 +700,15 @@ export function ArticleWizard({
       setChartError(e instanceof Error ? e.message : "No se pudo leer ese archivo.");
     }
   }
-  function graficarHoja(h: { nombre: string; tabla: string[][] } | null = hoja) {
+  /** Descarta el archivo subido por error (solo vive en el navegador) y, si la gráfica salía de él, también esa gráfica. */
+  function quitarHoja() {
+    setHoja(null);
+    setFuenteHoja("");
+    setChartError("");
+    // Sin fuentes web = la gráfica se armó con la tabla del archivo; la de la web no se toca.
+    if (chart && chart.sources.length === 0) setChart(null);
+  }
+  function graficarHoja(h:{ nombre: string; tabla: string[][] } | null = hoja) {
     if (!h) return;
     setChartError("");
     startChart(async () => {
@@ -1884,9 +1892,14 @@ export function ArticleWizard({
                         </table>
                       </div>
                       <input value={fuenteHoja} onChange={(e) => setFuenteHoja(e.target.value)} placeholder="¿De dónde salen los datos? (p. ej. DANE, ENA 2025)" className={`${input} text-sm`} />
-                      <button type="button" onClick={() => graficarHoja()} disabled={chartBusy} className="lx-btn lx-btn-ghost self-start !min-h-9 text-xs">
-                        <RefreshCw size={14} aria-hidden /> Volver a graficar el archivo
-                      </button>
+                      <div className="flex flex-wrap gap-2">
+                        <button type="button" onClick={() => graficarHoja()} disabled={chartBusy} className="lx-btn lx-btn-ghost self-start !min-h-9 text-xs">
+                          <RefreshCw size={14} aria-hidden /> Volver a graficar el archivo
+                        </button>
+                        <button type="button" onClick={quitarHoja} disabled={chartBusy} className="lx-btn lx-btn-ghost self-start !min-h-9 text-xs">
+                          <Trash2 size={14} aria-hidden /> Quitar archivo
+                        </button>
+                      </div>
                     </>
                   )}
                 </div>
