@@ -15,6 +15,9 @@ const SHELL_CACHE = `cg-shell-${VERSION}`;
 const PAGES_CACHE = "cg-pages";
 // Caché de imágenes.
 const IMAGES_CACHE = "cg-images";
+// Fotos de las notas descargadas para leer sin conexión. Va aparte de IMAGES_CACHE para que navegar no las expulse: antes
+// compartían caché, cada visita las sacaba por el límite de 80 y la siguiente sincronización volvía a bajarlas.
+const OFFLINE_IMAGES_CACHE = "cg-offline-images";
 // Caché de archivos estáticos de la compilación.
 const ASSETS_CACHE = "cg-assets";
 // Índice de notas descargadas (títulos) para listarlas en /offline.
@@ -62,11 +65,12 @@ self.addEventListener("install", (event) => {
 });
 
 self.addEventListener("activate", (event) => {
-  const keep = new Set([SHELL_CACHE, PAGES_CACHE, IMAGES_CACHE, ASSETS_CACHE, META_CACHE]);
+  const keep = new Set([SHELL_CACHE, PAGES_CACHE, IMAGES_CACHE, OFFLINE_IMAGES_CACHE, ASSETS_CACHE, META_CACHE]);
   event.waitUntil(
     caches
       .keys()
       .then((keys) => Promise.all(keys.filter((k) => !keep.has(k)).map((k) => caches.delete(k))))
+      .then(borrarOriginalesAjenos)
       .then(() => self.clients.claim()),
   );
 });
@@ -108,6 +112,18 @@ self.addEventListener("fetch", (event) => {
   }
 });
 
+// Las versiones anteriores guardaban el original de Supabase de cada portada (2-3 MB, opaco): se liberan.
+async function borrarOriginalesAjenos() {
+  try {
+    const cache = await caches.open(IMAGES_CACHE);
+    for (const req of await cache.keys()) {
+      if (new URL(req.url).origin !== self.location.origin) await cache.delete(req);
+    }
+  } catch {
+    /* sin caché: nada que borrar */
+  }
+}
+
 // Navegación: primero la red; si falla, la copia guardada o la página sin conexión.
 async function networkFirstNavigation(request) {
   const cache = await caches.open(PAGES_CACHE);
@@ -126,10 +142,12 @@ async function networkFirstNavigation(request) {
   }
 }
 
-// Imagen optimizada: primero la caché; si no está, la red; sin red, la original descargada.
+// Imagen optimizada: primero la caché (la de navegación o la descargada para leer sin conexión); si no está, la red; sin
+// red, la misma foto en otro ancho de los ya guardados.
 async function optimizedImage(request, url) {
   const cache = await caches.open(IMAGES_CACHE);
-  const cached = await cache.match(request);
+  const offline = await caches.open(OFFLINE_IMAGES_CACHE);
+  const cached = (await cache.match(request)) ?? (await offline.match(request, { ignoreVary: true }));
   if (cached) return cached;
   try {
     const fresh = await fetch(request);
@@ -140,9 +158,19 @@ async function optimizedImage(request, url) {
     return fresh;
   } catch {
     const original = url.searchParams.get("url");
-    const fallback = original ? await cache.match(new URL(original, self.location.origin).href) : null;
+    const fallback = original ? (await mismaFoto(offline, original)) ?? (await mismaFoto(cache, original)) : null;
     return fallback ?? Response.error();
   }
+}
+
+// Busca en una caché la misma foto (mismo parámetro `url` de /_next/image) en cualquier ancho.
+async function mismaFoto(cache, original) {
+  for (const req of await cache.keys()) {
+    const u = new URL(req.url);
+    // ignoreVary: /_next/image responde con `Vary: Accept` y la petición guardada no lleva el Accept del navegador.
+    if (u.pathname === "/_next/image" && u.searchParams.get("url") === original) return cache.match(req, { ignoreVary: true });
+  }
+  return null;
 }
 
 // Responde con lo guardado y lo actualiza en segundo plano.
@@ -188,7 +216,7 @@ async function syncOffline() {
     if (!res.ok) return;
     const { pages = [], images = [], articles = [] } = await res.json();
     const pagesCache = await caches.open(PAGES_CACHE);
-    const imagesCache = await caches.open(IMAGES_CACHE);
+    const imagesCache = await caches.open(OFFLINE_IMAGES_CACHE);
 
     // De a una: descargar sin competir con lo que el lector está viendo.
     for (const path of pages) {
@@ -199,19 +227,29 @@ async function syncOffline() {
         /* se reintenta en la próxima sincronización */
       }
     }
+    // Solo fotos del propio sitio (/_next/image): nunca el original de otro dominio (Supabase cobra cada descarga), y
+    // cada foto se baja una sola vez por teléfono.
+    const vigentes = new Set();
     for (const src of images) {
       try {
         const abs = new URL(src, self.location.origin).href;
-        if (await imagesCache.match(abs)) continue;
-        const sameOrigin = new URL(abs).origin === self.location.origin;
-        const r = await fetch(abs, sameOrigin ? {} : { mode: "no-cors" });
-        if (r.ok || r.type === "opaque") await imagesCache.put(abs, r);
+        if (new URL(abs).origin !== self.location.origin) continue;
+        vigentes.add(abs);
+        if (await imagesCache.match(abs, { ignoreVary: true })) continue;
+        // Con `Accept` de imagen el optimizador entrega WebP (~65 KB); sin él, PNG (más del doble).
+        const r = await fetch(abs, { headers: { Accept: "image/webp,image/*,*/*;q=0.8" } });
+        if (r.ok) await imagesCache.put(abs, r);
       } catch {
         /* imagen no disponible: la nota se lee igual */
       }
     }
+    // Quedan solo las fotos de las notas vigentes (si la lista llegó vacía, se conserva lo que había).
+    if (vigentes.size > 0) {
+      for (const req of await imagesCache.keys()) {
+        if (!vigentes.has(req.url)) await imagesCache.delete(req);
+      }
+    }
     await trim(PAGES_CACHE, MAX_PAGES);
-    await trim(IMAGES_CACHE, MAX_IMAGES);
 
     const meta = await caches.open(META_CACHE);
     await meta.put(

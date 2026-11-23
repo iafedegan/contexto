@@ -16,7 +16,8 @@ export async function subirMedia(file: File): Promise<UploadResult> {
   }
   const preparada = await prepararSubidaMedia({ name: file.name, type: file.type, size: file.size });
   if (!preparada.ok) return preparada;
-  const put = await fetch(preparada.uploadUrl, { method: "PUT", headers: { "content-type": file.type }, body: file });
+  // Mismo `cache-control` que las subidas del servidor (CACHE_CONTROL_MEDIA en media-storage.ts, que es solo del servidor).
+  const put = await fetch(preparada.uploadUrl, { method: "PUT", headers: { "content-type": file.type, "cache-control": "max-age=31536000" }, body: file });
   if (!put.ok) return { ok: false, error: `No se pudo subir el archivo (${put.status}).` };
   return confirmarSubidaMedia({ path: preparada.path });
 }

@@ -24,6 +24,12 @@ const auth = (key: string) => ({ Authorization: `Bearer ${key}`, apikey: key });
 /** Mensaje cuando falta configurar el almacenamiento. */
 export const SIN_STORAGE = "Falta configurar SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY en el servidor.";
 
+/**
+ * Cada subida lleva un nombre único (UUID) y nunca se reescribe, así que el navegador puede guardarla un año sin volver a
+ * pedirla. Sin esto Supabase la servía con `no-cache` y cada visita la revalidaba contra su CDN.
+ */
+export const CACHE_CONTROL_MEDIA = "max-age=31536000";
+
 /** Dirección pública de un objeto del bucket. */
 export function urlPublicaMedia(path: string): string | null {
   const c = credenciales();
@@ -37,7 +43,7 @@ export async function subirBytesMedia(bytes: Uint8Array, tipo: TipoMedia): Promi
   const path = `${randomUUID()}.${tipo.ext}`;
   const res = await fetch(`${c.url}/storage/v1/object/${BUCKET}/${path}`, {
     method: "POST",
-    headers: { ...auth(c.key), "Content-Type": tipo.mime, "x-upsert": "false" },
+    headers: { ...auth(c.key), "Content-Type": tipo.mime, "x-upsert": "false", "cache-control": CACHE_CONTROL_MEDIA },
     body: Buffer.from(bytes),
     signal: AbortSignal.timeout(60_000),
   });

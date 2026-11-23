@@ -1,10 +1,14 @@
 import { NextResponse } from "next/server";
 import { getRecentArticles } from "@/lib/content";
+import { urlImagenOptimizada } from "@/lib/imagen-optimizada";
 
 /**
  * Qué descarga el Service Worker para leer sin conexión (public/sw.js):
  * la portada y las últimas notas con su foto de portada. Solo URLs públicas
- * de lectura; nada del panel ni de la IA.
+ * de lectura; nada del panel ni de la IA. Las fotos van en su versión
+ * optimizada de /_next/image (~60 KB, desde la red de Vercel), nunca el
+ * original de Supabase: bajar el PNG de 2-3 MB de cada portada en cada
+ * teléfono era casi todo el «cached egress» del proyecto.
  */
 // Nunca en el build (consultaría la base desde el servidor de build); la
 // respuesta se cachea en la CDN 5 minutos.
@@ -24,7 +28,7 @@ export async function GET() {
   return NextResponse.json(
     {
     pages: ["/", ...items.map((a) => `/articulo/${a.slug}`)],
-    images: items.map((a) => a.coverImageUrl).filter((u): u is string => !!u),
+    images: items.map((a) => (a.coverImageUrl ? urlImagenOptimizada(a.coverImageUrl) : null)).filter((u): u is string => !!u),
     articles: items.map((a) => ({ slug: a.slug, title: a.title })),
     },
     { headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=3600" } },
