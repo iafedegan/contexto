@@ -172,16 +172,16 @@ export async function saveArticle(formData: FormData) {
   await reindexarNota(articleId);
   // Una columna se sirve en /columna/<título>, también si ya estaba publicada y solo se guarda.
   await asegurarRutaDeColumna(articleId);
-  // Lugar en la portada del sitio (solo con permiso «portada»; «keep» o ausente = no tocar).
+  // Lugar en la portada del sitio (cualquier cuenta que edite la nota; «keep» o ausente = no tocar).
   const portadaPos = String(formData.get("portadaPos") ?? "keep");
-  if ((portadaPos === "0" || portadaPos === "1" || portadaPos === "none") && (await tienePermiso(user.id, user.role, "portada"))) {
+  if (portadaPos === "0" || portadaPos === "1" || portadaPos === "none") {
     const [act] = await db.select({ pos: articles.homePosition }).from(articles).where(eq(articles.id, articleId)).limit(1);
     const quiere = portadaPos === "none" ? null : Number(portadaPos);
     if ((act?.pos ?? null) !== quiere) await fijarPortadaCore(articleId, quiere);
   }
-  // Columna destacada de la portada (solo con permiso «portada»; ausente = no tocar).
+  // Columna destacada de la portada (cualquier cuenta que edite la nota; ausente = no tocar).
   const colDest = String(formData.get("columnaDestacada") ?? "keep");
-  if ((colDest === "si" || colDest === "no") && (await tienePermiso(user.id, user.role, "portada"))) await fijarColumnaDestacada(articleId, colDest === "si");
+  if (colDest === "si" || colDest === "no") await fijarColumnaDestacada(articleId, colDest === "si");
   // Una nota PUBLICADA que se edita renueva SU página, su sección, su autor y los listados (revalidarNota), nada más: «Última hora» y los
   // anuncios ya no van en el HTML de las demás notas (los pide el navegador), así que no hace falta vaciar el sitio entero (antes se hacía
   // con `revalidatePath("/", "layout")` y los rastreadores volvían a llenar la caché de las ~100.000 notas). Un borrador o una nota en

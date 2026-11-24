@@ -4,7 +4,6 @@ import { asc, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { articles, authors, categories, users } from "@/db/schema";
 import { auth, canPublish, requirePermiso } from "@/lib/auth";
-import { tienePermiso } from "@/lib/permisos-server";
 import Link from "next/link";
 import { ArrowLeft, PenLine, Sparkles } from "lucide-react";
 import { ArticleEditor } from "@/components/article-editor";
@@ -132,7 +131,7 @@ export default async function ArticleEditorPage({
           puedeEnviarEditor={puedeEnviarNota(session!.user.role)}
           envioLibre={envioLibre(session!.user.role)}
           canPublish={canPublish(session!.user.role)}
-          canPortada={await tienePermiso(session!.user.id, session!.user.role, "portada")}
+          canPortada
           esColumnaDestacada={esColumnaDestacada}
           estilo={estilo}
           escritores={escritores}
@@ -203,7 +202,7 @@ export default async function ArticleEditorPage({
           comentariosNuevos={(await contarSinLeer(session!.user.id, [id]).catch(() => new Map<string, number>())).get(id) ?? 0}
           status={row.status}
           canPublish={canPublish(session!.user.role)}
-          canPortada={await tienePermiso(session!.user.id, session!.user.role, "portada")}
+          canPortada
           esColumnaDestacada={esColumnaDestacada}
           estilo={estilo}
           escritores={escritores}
