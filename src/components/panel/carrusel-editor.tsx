@@ -20,21 +20,25 @@ export function CarruselEditor({
   value,
   onChange,
   secciones,
+  modo = "fotos",
 }: {
   value: CarruselConfig | undefined;
   onChange: (next: Required<CarruselConfig>) => void;
+  /** «videos»: carrusel de videos de YouTube (solo sus diapositivas, sin notas del sitio); «fotos»: el de notas y fotos propias. */
+  modo?: "fotos" | "videos";
   /** Secciones del sitio para elegir de cuál salen las notas. */
   secciones: { slug: string; name: string }[];
 }) {
   const v = sanitizeCarrusel(value);
-  const set = (p: Partial<CarruselConfig>) => onChange(sanitizeCarrusel({ ...v, ...p }));
+  const videos = modo === "videos";
+  const set = (p: Partial<CarruselConfig>) => onChange(sanitizeCarrusel({ ...v, ...(videos ? { fuente: "propias" as const } : {}), ...p }));
 
   return (
     <div className="flex flex-col gap-3 text-sm">
       {/* Interruptor: grande y con su explicación, para que se entienda qué hace sin probarlo. */}
       <label className={`flex cursor-pointer items-center justify-between gap-3 rounded-xl border px-3.5 py-3 transition ${v.activo ? "border-[var(--accent)] bg-[var(--accent)]/8" : "border-[var(--border-strong)]"}`}>
         <span className="min-w-0">
-          <span className="block font-semibold">{v.activo ? "Carrusel encendido" : "Carrusel apagado"}</span>
+          <span className="block font-semibold">{videos ? (v.activo ? "Carrusel de videos encendido" : "Carrusel de videos apagado") : v.activo ? "Carrusel encendido" : "Carrusel apagado"}</span>
           <span className="block text-xs text-[var(--fg-muted)]">{v.activo ? "Se ve en la portada al publicar los cambios." : "No se ve en la portada. Puedes prepararlo y encenderlo cuando esté listo."}</span>
         </span>
         <input type="checkbox" role="switch" checked={v.activo} onChange={(e) => set({ activo: e.target.checked })} className="peer sr-only" />
@@ -43,35 +47,36 @@ export function CarruselEditor({
         </span>
       </label>
 
-      {/* Las fotos de TV y de Fedegán que salen bajo las destacadas no son de este carrusel: vienen de la página «Portada del inicio». */}
-      <p className="flex gap-2 rounded-lg bg-[var(--surface-2)] px-3 py-2.5 text-xs leading-relaxed text-[var(--fg-muted)]">
-        <Info size={14} className="mt-0.5 shrink-0 text-[var(--accent)]" aria-hidden />
-        <span>
-          ¿Buscas los carruseles de fotos o de TV que salen bajo las notas destacadas? Esos se editan en{" "}
-          <Link href="/panel/paginas" className="font-semibold text-[var(--accent)] underline-offset-2 hover:underline">Páginas › Portada del inicio</Link>. Este interruptor los muestra u oculta a todos.
-        </span>
-      </p>
+      {!videos && (
+        <p className="flex gap-2 rounded-lg bg-[var(--surface-2)] px-3 py-2.5 text-xs leading-relaxed text-[var(--fg-muted)]">
+          <Info size={14} className="mt-0.5 shrink-0 text-[var(--accent)]" aria-hidden />
+          <span>
+            Si este carrusel no tiene fotos propias, en su lugar sale el de fotos de la página{" "}
+            <Link href="/panel/paginas" className="font-semibold text-[var(--accent)] underline-offset-2 hover:underline">Páginas › Portada del inicio</Link>.
+          </span>
+        </p>
+      )}
 
-      <Grupo titulo="Fotos propias" resumen={`${v.diapositivas.length} de ${CARRUSEL_MAX_DIAPOSITIVAS}${v.fotosActivo ? "" : " · apagado"}`}>
-        <Interruptor activo={v.fotosActivo} nombre="Carrusel de fotos" onChange={(fotosActivo) => set({ fotosActivo })} />
-        <Diapositivas lista={v.diapositivas} onChange={(diapositivas) => set({ diapositivas })} />
-        {v.diapositivas.length > 0 && v.fuente !== "propias" && (
-          <Opciones
-            etiqueta="Dónde van respecto a las notas"
-            valor={v.propiasPosicion}
-            opciones={[
-              ["antes", "Primero las mías"],
-              ["despues", "Primero las notas"],
-            ]}
-            onChange={(propiasPosicion) => set({ propiasPosicion })}
-          />
-        )}
-      </Grupo>
-
-      <Grupo titulo="Videos de TV (YouTube)" resumen={`${v.videos.length} de ${CARRUSEL_MAX_DIAPOSITIVAS}${v.videosActivo ? "" : " · apagado"}`}>
-        <Interruptor activo={v.videosActivo} nombre="Carrusel de videos" onChange={(videosActivo) => set({ videosActivo })} />
-        <Videos lista={v.videos} onChange={(videos) => set({ videos })} />
-      </Grupo>
+      {videos ? (
+        <Grupo titulo="Videos de YouTube" resumen={`${v.diapositivas.length} de ${CARRUSEL_MAX_DIAPOSITIVAS}`}>
+          <Videos lista={v.diapositivas} onChange={(diapositivas) => set({ diapositivas })} />
+        </Grupo>
+      ) : (
+        <Grupo titulo="Fotos propias" resumen={`${v.diapositivas.length} de ${CARRUSEL_MAX_DIAPOSITIVAS}`}>
+          <Diapositivas lista={v.diapositivas} onChange={(diapositivas) => set({ diapositivas })} />
+          {v.diapositivas.length > 0 && v.fuente !== "propias" && (
+            <Opciones
+              etiqueta="Dónde van respecto a las notas"
+              valor={v.propiasPosicion}
+              opciones={[
+                ["antes", "Primero las mías"],
+                ["despues", "Primero las notas"],
+              ]}
+              onChange={(propiasPosicion) => set({ propiasPosicion })}
+            />
+          )}
+        </Grupo>
+      )}
 
       <Grupo titulo="Título y lugar en la portada" resumen={v.titulo || "Sin título"}>
         <input value={v.titulo} onChange={(e) => set({ titulo: e.target.value })} maxLength={60} placeholder="Título sobre el carrusel (vacío = sin título)" className="lx-input !py-1.5 !text-xs" />
@@ -88,6 +93,7 @@ export function CarruselEditor({
         />
       </Grupo>
 
+      {!videos && (
         <Grupo titulo="Notas del sitio" resumen={v.fuente === "propias" ? "Ninguna" : `${v.cantidad} notas`}>
           <Opciones
             etiqueta="De dónde salen"
@@ -113,6 +119,7 @@ export function CarruselEditor({
           {v.fuente !== "propias" && <Deslizador etiqueta="Cuántas notas" valor={v.cantidad} min={3} max={20} texto={String(v.cantidad)} onChange={(cantidad) => set({ cantidad })} />}
           <Casilla etiqueta="Solo notas que tengan foto" valor={v.soloConFoto} onChange={(soloConFoto) => set({ soloConFoto })} />
         </Grupo>
+      )}
 
         <Grupo titulo="Tamaño y tarjetas visibles">
           <Deslizador etiqueta="En computador" valor={v.visiblesEscritorio} min={1} max={5} texto={String(v.visiblesEscritorio)} onChange={(visiblesEscritorio) => set({ visiblesEscritorio })} />
@@ -457,6 +464,40 @@ function Diapositivas({ lista, onChange }: { lista: Diapositiva[]; onChange: (d:
  * Más carruseles, además del principal: cada uno con su propia fuente, estilo y lugar de la portada. Se pueden añadir hasta
  * `CARRUSEL_MAX_EXTRA`, abrir uno para editarlo y quitarlo cuando ya no haga falta.
  */
+// Carrusel de videos aún sin guardar: encendido y solo con sus diapositivas.
+const VIDEOS_VACIO = () => sanitizeCarrusel({ activo: true, fuente: "propias", titulo: "", posicion: "abajo" });
+
+/**
+ * Los dos carruseles de la portada, cada uno con todas sus opciones: el 1.º (notas y fotos propias, `carrusel`) y el 2.º (videos de YouTube,
+ * el primero de `carruseles`). Los dos salen cerrados; cada uno tiene su propio interruptor.
+ */
+export function CarruselesPortada({
+  carrusel,
+  carruseles,
+  onChange,
+  secciones,
+}: {
+  carrusel: CarruselConfig | undefined;
+  carruseles: CarruselConfig[] | undefined;
+  onChange: (p: { carrusel?: Required<CarruselConfig>; carruseles?: Required<CarruselConfig>[] }) => void;
+  secciones: { slug: string; name: string }[];
+}) {
+  const principal = sanitizeCarrusel(carrusel);
+  const todas = sanitizeCarruseles(carruseles);
+  const videos = todas[0] ?? VIDEOS_VACIO();
+  return (
+    <div className="flex flex-col gap-3">
+      <Grupo titulo="Carrusel 1 · Fotos y notas" resumen={`${principal.activo ? "Encendido" : "Apagado"} · ${resumenCarrusel(principal)}`}>
+        <CarruselEditor value={principal} onChange={(c) => onChange({ carrusel: c })} secciones={secciones} />
+      </Grupo>
+      <Grupo titulo="Carrusel 2 · Videos de TV" resumen={`${videos.activo ? "Encendido" : "Apagado"} · ${videos.diapositivas.length} de ${CARRUSEL_MAX_DIAPOSITIVAS} videos`}>
+        <CarruselEditor modo="videos" value={videos} onChange={(c) => onChange({ carruseles: [c, ...todas.slice(1)] })} secciones={secciones} />
+      </Grupo>
+      <CarruselesExtra value={carruseles} onChange={(carruseles) => onChange({ carruseles })} secciones={secciones} />
+    </div>
+  );
+}
+
 export function CarruselesExtra({
   value,
   onChange,
@@ -466,15 +507,18 @@ export function CarruselesExtra({
   onChange: (next: Required<CarruselConfig>[]) => void;
   secciones: { slug: string; name: string }[];
 }) {
-  const lista = sanitizeCarruseles(value);
+  // La 1.ª de la lista es el carrusel de videos (se edita en su propio bloque); aquí van las demás, numeradas desde el 3.
+  const todas = sanitizeCarruseles(value);
+  const lista = todas.slice(1);
   const [abierto, setAbierto] = useState<number | null>(null);
-  const cambiar = (i: number, c: Required<CarruselConfig>) => onChange(lista.map((x, j) => (j === i ? c : x)));
+  const guardar = (resto: Required<CarruselConfig>[]) => onChange([todas[0] ?? VIDEOS_VACIO(), ...resto]);
+  const cambiar = (i: number, c: Required<CarruselConfig>) => guardar(lista.map((x, j) => (j === i ? c : x)));
   const quitar = (i: number) => {
-    onChange(lista.filter((_, j) => j !== i));
+    guardar(lista.filter((_, j) => j !== i));
     setAbierto(null);
   };
   const añadir = () => {
-    onChange([...lista, sanitizeCarrusel({ activo: true, posicion: "abajo", titulo: `Carrusel ${lista.length + 2}`, fuente: "recientes" })]);
+    guardar([...lista, sanitizeCarrusel({ activo: true, posicion: "abajo", titulo: `Carrusel ${lista.length + 3}`, fuente: "recientes" })]);
     setAbierto(lista.length);
   };
   return (
@@ -486,10 +530,10 @@ export function CarruselesExtra({
           <li key={i} className="rounded-lg border border-[var(--border)]">
             <div className="flex items-center gap-2 p-2">
               <button type="button" onClick={() => setAbierto(abierto === i ? null : i)} className="min-w-0 flex-1 text-left" aria-expanded={abierto === i}>
-                <span className="block truncate text-sm font-medium">{c.titulo || `Carrusel ${i + 2}`}{c.activo ? "" : " · apagado"}</span>
+                <span className="block truncate text-sm font-medium">{c.titulo || `Carrusel ${i + 3}`}{c.activo ? "" : " · apagado"}</span>
                 <span className="block truncate text-xs text-[var(--fg-muted)]">{resumenCarrusel(c)}</span>
               </button>
-              <button type="button" onClick={() => quitar(i)} aria-label={`Quitar el carrusel ${i + 2}`} className="rounded-md p-2 text-[var(--danger)] hover:bg-[var(--surface-2)]">
+              <button type="button" onClick={() => quitar(i)} aria-label={`Quitar el carrusel ${i + 3}`} className="rounded-md p-2 text-[var(--danger)] hover:bg-[var(--surface-2)]">
                 <Trash2 size={15} />
               </button>
             </div>
@@ -590,15 +634,3 @@ function Videos({ lista, onChange }: { lista: Diapositiva[]; onChange: (d: Diapo
   );
 }
 
-// Interruptor propio de un carrusel (el general de arriba apaga todos).
-function Interruptor({ activo, nombre, onChange }: { activo: boolean; nombre: string; onChange: (v: boolean) => void }) {
-  return (
-    <label className={`mt-2 flex cursor-pointer items-center justify-between gap-3 rounded-lg border px-3 py-2 text-xs transition ${activo ? "border-[var(--accent)] bg-[var(--accent)]/8" : "border-[var(--border-strong)]"}`}>
-      <span className="font-semibold">{activo ? `${nombre} encendido` : `${nombre} apagado`}</span>
-      <input type="checkbox" role="switch" checked={activo} onChange={(e) => onChange(e.target.checked)} className="peer sr-only" />
-      <span aria-hidden className={`relative h-5 w-9 shrink-0 rounded-full transition ${activo ? "bg-[var(--accent)]" : "bg-[var(--border-strong)]"} peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-[var(--accent)]`}>
-        <span className={`absolute top-0.5 size-4 rounded-full bg-white shadow transition-all ${activo ? "left-[1.125rem]" : "left-0.5"}`} />
-      </span>
-    </label>
-  );
-}

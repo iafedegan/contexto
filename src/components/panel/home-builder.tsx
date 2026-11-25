@@ -23,8 +23,7 @@ import { SectionTree, type SectionNode } from "@/components/panel/section-tree";
 import { PartsEditor } from "@/components/panel/parts-editor";
 import { PopupEditor } from "@/components/panel/popup-editor";
 import { CintilloEditor } from "@/components/panel/cintillo-editor";
-import { CarruselEditor, CarruselesExtra } from "@/components/panel/carrusel-editor";
-import { resumenCarrusel } from "@/lib/carrusel";
+import { CarruselesPortada } from "@/components/panel/carrusel-editor";
 import { PreviewFrame, type Zoom } from "@/components/panel/preview-frame";
 import { PortadaToolbar, type Viewport } from "@/components/panel/portada-toolbar";
 import { PortadaToast, type ToastData } from "@/components/panel/portada-toast";
@@ -1068,14 +1067,13 @@ export function HomeBuilder({
 
             <Bloque
               id="carrusel"
-              titulo="Carrusel de notas"
-              resumen={layout.carrusel?.activo ? `Activado · ${resumenCarrusel(layout.carrusel)}` : "Apagado"}
+              titulo="Carruseles de la portada"
+              resumen={`${layout.carrusel?.activo ? "1 encendido" : "1 apagado"} · ${layout.carruseles?.[0]?.activo === false ? "2 apagado" : "2 encendido"}`}
               icono={<TextCursorInput size={13} />}
               abierto={!!openBlocks.carrusel}
               onToggle={toggle("carrusel")}
             >
-              <CarruselEditor value={layout.carrusel} onChange={(carrusel) => patchLayout({ carrusel })} secciones={sections.map((n) => ({ slug: n.slug, name: n.name }))} />
-              <CarruselesExtra value={layout.carruseles} onChange={(carruseles) => patchLayout({ carruseles })} secciones={sections.map((n) => ({ slug: n.slug, name: n.name }))} />
+              <CarruselesPortada carrusel={layout.carrusel} carruseles={layout.carruseles} onChange={(p) => patchLayout(p)} secciones={sections.map((n) => ({ slug: n.slug, name: n.name }))} />
             </Bloque>
 
             <Bloque

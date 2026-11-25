@@ -34,11 +34,6 @@ export const CARRUSEL_MAX_DIAPOSITIVAS = 12;
 export type CarruselConfig = {
   /** Diapositivas propias: fotos con su texto y su enlace, además de (o en lugar de) las notas. */
   diapositivas?: Diapositiva[];
-  /** Videos de YouTube (TV): carrusel aparte en el hueco de Esmeralda; cada uno es una diapositiva con la foto del video y su enlace. */
-  videos?: Diapositiva[];
-  /** Interruptores propios del carrusel de fotos y del de videos (el general apaga ambos). Encendidos por defecto. */
-  fotosActivo?: boolean;
-  videosActivo?: boolean;
   /** Si hay notas y diapositivas propias, cuáles van primero. */
   propiasPosicion?: "antes" | "despues";
   /** Mostrar el carrusel en la portada. */
@@ -104,9 +99,6 @@ export type CarruselConfig = {
 
 export const DEFAULT_CARRUSEL: Required<CarruselConfig> = {
   diapositivas: [],
-  videos: [],
-  fotosActivo: true,
-  videosActivo: true,
   propiasPosicion: "antes",
   activo: false,
   titulo: "Destacados",
@@ -179,9 +171,6 @@ export function sanitizeCarrusel(input: unknown): Required<CarruselConfig> {
   const fuente = uno(c.fuente, ["portada", "recientes", "masleidas", "seccion", "propias"] as const, d.fuente);
   return {
     diapositivas: sanitizeDiapositivas(c.diapositivas),
-    videos: sanitizeDiapositivas(c.videos),
-    fotosActivo: bool(c.fotosActivo, d.fotosActivo),
-    videosActivo: bool(c.videosActivo, d.videosActivo),
     propiasPosicion: uno(c.propiasPosicion, ["antes", "despues"] as const, d.propiasPosicion),
     activo: bool(c.activo, d.activo),
     titulo: typeof c.titulo === "string" ? c.titulo.replace(/\s+/g, " ").trimStart().slice(0, 60) : d.titulo,

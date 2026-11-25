@@ -169,23 +169,6 @@ async function HomePage({ locale, portadaBorrador }: { locale: Locale; portadaBo
   };
   const nodosCarrusel = await Promise.all(carruseles.map((c, i) => construirCarrusel(c, i)));
   const car = carruseles[0];
-  // Videos de TV puestos en «Carrusel de notas» › «Videos de TV»: un carrusel aparte (mismo aspecto que el de fotos) que reemplaza al de TV de la «Portada del inicio».
-  const notasVideos: NotaCarrusel[] = car.videos.map((d) => ({
-    slug: `video-${d.id}`,
-    href: d.enlace || null,
-    externa: true,
-    sinOptimizar: true,
-    title: d.titulo,
-    excerpt: "",
-    image: d.imagen,
-    imageAlt: d.titulo,
-    categoria: null,
-    autor: null,
-    fecha: null,
-  }));
-  const nodoVideos = car.activo && notasVideos.length
-    ? <CarruselPortada key="videos" config={{ ...car, titulo: "", indicador: "puntos" as const, barraProgreso: false, tamanoTitular: Math.max(car.tamanoTitular, 26), visiblesEscritorio: 1, visiblesTableta: 1, visiblesCelular: 1, estilo: "superpuesta" as const, aspecto: "3:2" as const, ancho: 1800 }} notas={notasVideos} />
-    : null;
   const carruselPropio = nodosCarrusel[0];
   const esEsmeraldaTema = !["revista", "compacto", "vanguardia", "clasico", "gremial"].includes(body);
   // Los carruseles adicionales, agrupados por el lugar de la portada que cada uno eligió.
@@ -201,18 +184,19 @@ async function HomePage({ locale, portadaBorrador }: { locale: Locale; portadaBo
   // lugar del primer carrusel de la «Portada del inicio»; los demás siguen a su lado. Antes esas fotos se publicaban y no salían en ningún lado.
   const conFotosPropias = car.diapositivas.length > 0 && Boolean(carruselPropio);
   const carruselesDelInicio = filasCarrusel.flatMap((f) => f.celdas.flat().map((el) => ({ ...f, id: `${f.id}-${el.id}`, columnas: [12], celdas: [[el]] })));
-  // Cada carrusel del hueco tiene su propio interruptor en el editor: fotos (las propias o, si no hay, el primero de la «Portada del inicio») y
-  // videos (los propios o el segundo de la «Portada del inicio»). Los demás carruseles de esa página siguen a su lado.
+  // Dos carruseles se editan por completo en el panel (cada uno con su interruptor y sus opciones): el 1.º, de fotos y notas, y el 2.º, de videos de
+  // YouTube (`carruseles[0]`). Si el 1.º no tiene fotos propias sale en su lugar el de fotos de la «Portada del inicio»; si el 2.º no tiene videos,
+  // el de TV de esa página. Apagado, no sale ninguno de los dos. Los demás carruseles van a su lado.
   const delInicio = carruselesDelInicio.map((f) => <PaginaVista key={f.id} contenido={{ filas: [f] }} notas={notasInicioPropio} />);
-  const slotFotos = car.fotosActivo ? (conFotosPropias ? carruselPropio : delInicio[0]) : null;
-  const slotVideos = car.videosActivo ? (nodoVideos ?? delInicio[1]) : null;
-  const hueco = !esEsmeralda || !car.activo
+  const videosCar = carruseles[1];
+  const nodoVideos = nodosCarrusel[1];
+  const slotFotos = car.activo ? (conFotosPropias ? carruselPropio : delInicio[0]) : null;
+  const slotVideos = videosCar ? (videosCar.activo ? (videosCar.diapositivas.length ? nodoVideos : delInicio[1]) : null) : delInicio[1];
+  const hueco = !esEsmeralda
     ? []
     : carruselesDelInicio.length || nodoVideos
-      ? [slotFotos, slotVideos, ...delInicio.slice(2)].filter(Boolean)
-      : car.fotosActivo
-        ? nodosCarrusel.filter(Boolean)
-        : [];
+      ? [slotFotos, slotVideos, ...nodosCarrusel.slice(2)].filter(Boolean)
+      : nodosCarrusel.filter(Boolean);
   const carrusel = esEsmeralda ? null : carruselPropio;
   // ¿Hay columna que mostrar? (lectura cacheada; la misma que hace la tarjeta). Esmeralda reparte distinto la apertura según haya o no.
   const hayColumna = Boolean(await getUltimaColumnaLafaurie().catch(() => null));
