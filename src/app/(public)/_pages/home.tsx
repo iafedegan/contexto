@@ -172,7 +172,17 @@ async function HomePage({ locale, portadaBorrador }: { locale: Locale; portadaBo
   // Esmeralda: todos los carruseles activos van en el hueco que queda bajo las dos destacadas, de a dos y compactos (en vez de a todo el ancho).
   // Si el inicio propio trae filas de carruseles, esas van al hueco (otras noticias, no las del banner); si no, el carrusel de notas de la portada.
   // El interruptor «Carrusel de notas» del panel manda sobre todos los carruseles del hueco: apagado, no sale ninguno (tampoco los de la página «Portada del inicio»).
-  const hueco = !esEsmeralda || !car.activo ? [] : filasCarrusel.length ? [<PaginaVista key="car" contenido={{ filas: filasCarrusel }} notas={notasInicioPropio} />] : nodosCarrusel.filter(Boolean);
+  // Si el carrusel de notas tiene fotos propias (las que se suben en «Carrusel de notas» › «Fotos propias»), ocupa el primer lugar del hueco en
+  // lugar del primer carrusel de la «Portada del inicio»; los demás siguen a su lado. Antes esas fotos se publicaban y no salían en ningún lado.
+  const conFotosPropias = car.diapositivas.length > 0 && Boolean(carruselPropio);
+  const carruselesDelInicio = filasCarrusel.flatMap((f) => f.celdas.flat().map((el) => ({ ...f, id: `${f.id}-${el.id}`, columnas: [12], celdas: [[el]] })));
+  const hueco = !esEsmeralda || !car.activo
+    ? []
+    : conFotosPropias && carruselesDelInicio.length
+      ? [carruselPropio, ...carruselesDelInicio.slice(1).map((f) => <PaginaVista key={f.id} contenido={{ filas: [f] }} notas={notasInicioPropio} />)]
+      : filasCarrusel.length
+        ? [<PaginaVista key="car" contenido={{ filas: filasCarrusel }} notas={notasInicioPropio} />]
+        : nodosCarrusel.filter(Boolean);
   const carrusel = esEsmeralda ? null : carruselPropio;
   // ¿Hay columna que mostrar? (lectura cacheada; la misma que hace la tarjeta). Esmeralda reparte distinto la apertura según haya o no.
   const hayColumna = Boolean(await getUltimaColumnaLafaurie().catch(() => null));
