@@ -201,15 +201,18 @@ async function HomePage({ locale, portadaBorrador }: { locale: Locale; portadaBo
   // lugar del primer carrusel de la «Portada del inicio»; los demás siguen a su lado. Antes esas fotos se publicaban y no salían en ningún lado.
   const conFotosPropias = car.diapositivas.length > 0 && Boolean(carruselPropio);
   const carruselesDelInicio = filasCarrusel.flatMap((f) => f.celdas.flat().map((el) => ({ ...f, id: `${f.id}-${el.id}`, columnas: [12], celdas: [[el]] })));
+  // Cada carrusel del hueco tiene su propio interruptor en el editor: fotos (las propias o, si no hay, el primero de la «Portada del inicio») y
+  // videos (los propios o el segundo de la «Portada del inicio»). Los demás carruseles de esa página siguen a su lado.
+  const delInicio = carruselesDelInicio.map((f) => <PaginaVista key={f.id} contenido={{ filas: [f] }} notas={notasInicioPropio} />);
+  const slotFotos = car.fotosActivo ? (conFotosPropias ? carruselPropio : delInicio[0]) : null;
+  const slotVideos = car.videosActivo ? (nodoVideos ?? delInicio[1]) : null;
   const hueco = !esEsmeralda || !car.activo
     ? []
-    : nodoVideos
-      ? [conFotosPropias ? carruselPropio : carruselesDelInicio[0] ? <PaginaVista key={carruselesDelInicio[0].id} contenido={{ filas: [carruselesDelInicio[0]] }} notas={notasInicioPropio} /> : null, nodoVideos].filter(Boolean)
-    : conFotosPropias && carruselesDelInicio.length
-      ? [carruselPropio, ...carruselesDelInicio.slice(1).map((f) => <PaginaVista key={f.id} contenido={{ filas: [f] }} notas={notasInicioPropio} />)]
-      : filasCarrusel.length
-        ? [<PaginaVista key="car" contenido={{ filas: filasCarrusel }} notas={notasInicioPropio} />]
-        : nodosCarrusel.filter(Boolean);
+    : carruselesDelInicio.length || nodoVideos
+      ? [slotFotos, slotVideos, ...delInicio.slice(2)].filter(Boolean)
+      : car.fotosActivo
+        ? nodosCarrusel.filter(Boolean)
+        : [];
   const carrusel = esEsmeralda ? null : carruselPropio;
   // ¿Hay columna que mostrar? (lectura cacheada; la misma que hace la tarjeta). Esmeralda reparte distinto la apertura según haya o no.
   const hayColumna = Boolean(await getUltimaColumnaLafaurie().catch(() => null));

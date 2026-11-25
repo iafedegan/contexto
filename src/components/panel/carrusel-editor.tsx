@@ -52,7 +52,8 @@ export function CarruselEditor({
         </span>
       </p>
 
-      <Grupo titulo="Fotos propias" resumen={`${v.diapositivas.length} de ${CARRUSEL_MAX_DIAPOSITIVAS}`}>
+      <Grupo titulo="Fotos propias" resumen={`${v.diapositivas.length} de ${CARRUSEL_MAX_DIAPOSITIVAS}${v.fotosActivo ? "" : " · apagado"}`}>
+        <Interruptor activo={v.fotosActivo} nombre="Carrusel de fotos" onChange={(fotosActivo) => set({ fotosActivo })} />
         <Diapositivas lista={v.diapositivas} onChange={(diapositivas) => set({ diapositivas })} />
         {v.diapositivas.length > 0 && v.fuente !== "propias" && (
           <Opciones
@@ -67,7 +68,8 @@ export function CarruselEditor({
         )}
       </Grupo>
 
-      <Grupo titulo="Videos de TV (YouTube)" resumen={`${v.videos.length} de ${CARRUSEL_MAX_DIAPOSITIVAS}`}>
+      <Grupo titulo="Videos de TV (YouTube)" resumen={`${v.videos.length} de ${CARRUSEL_MAX_DIAPOSITIVAS}${v.videosActivo ? "" : " · apagado"}`}>
+        <Interruptor activo={v.videosActivo} nombre="Carrusel de videos" onChange={(videosActivo) => set({ videosActivo })} />
         <Videos lista={v.videos} onChange={(videos) => set({ videos })} />
       </Grupo>
 
@@ -585,5 +587,18 @@ function Videos({ lista, onChange }: { lista: Diapositiva[]; onChange: (d: Diapo
         ))}
       </ol>
     </div>
+  );
+}
+
+// Interruptor propio de un carrusel (el general de arriba apaga todos).
+function Interruptor({ activo, nombre, onChange }: { activo: boolean; nombre: string; onChange: (v: boolean) => void }) {
+  return (
+    <label className={`mt-2 flex cursor-pointer items-center justify-between gap-3 rounded-lg border px-3 py-2 text-xs transition ${activo ? "border-[var(--accent)] bg-[var(--accent)]/8" : "border-[var(--border-strong)]"}`}>
+      <span className="font-semibold">{activo ? `${nombre} encendido` : `${nombre} apagado`}</span>
+      <input type="checkbox" role="switch" checked={activo} onChange={(e) => onChange(e.target.checked)} className="peer sr-only" />
+      <span aria-hidden className={`relative h-5 w-9 shrink-0 rounded-full transition ${activo ? "bg-[var(--accent)]" : "bg-[var(--border-strong)]"} peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-[var(--accent)]`}>
+        <span className={`absolute top-0.5 size-4 rounded-full bg-white shadow transition-all ${activo ? "left-[1.125rem]" : "left-0.5"}`} />
+      </span>
+    </label>
   );
 }
