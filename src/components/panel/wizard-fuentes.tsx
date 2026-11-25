@@ -400,7 +400,7 @@ export function PantallaEntrevista({
   ocupado: boolean;
   fase: string;
   error: string;
-  onArchivo: (f: File) => void;
+  onArchivo: (f: File[]) => void;
   filasPersonas: number;
 }) {
   const listo = participantesListos(personas, despues);
@@ -422,21 +422,22 @@ export function PantallaEntrevista({
         </p>
         <label className={`lx-btn w-fit cursor-pointer ${ocupado || !listo ? "pointer-events-none opacity-60" : ""}`}>
           {ocupado ? <Loader2 size={15} className="animate-spin" /> : <Mic size={15} />}
-          {ocupado ? fase || "Procesando…" : "Subir audio o video"}
+          {ocupado ? fase || "Procesando…" : "Subir audios o videos"}
           <input
             type="file"
             accept="audio/*,video/*,.mp3,.m4a,.wav,.ogg,.opus,.webm,.aac,.flac,.mp4,.m4v,.mov,.mpeg,.mpg,.avi,.wmv,.3gp"
+            multiple
             disabled={ocupado || !listo}
             className="hidden"
             onChange={(e) => {
-              const f = e.target.files?.[0];
+              const f = Array.from(e.target.files ?? []);
               e.target.value = "";
-              if (f) onArchivo(f);
+              if (f.length) onArchivo(f);
             }}
           />
         </label>
         {!listo && <p className="text-xs text-[var(--fg-muted)]">Escribe al menos un nombre para activar la subida.</p>}
-        <p className="text-xs text-[var(--fg-muted)]">Audio (MP3, M4A, WAV, OGG…) hasta 20 MB · video (MP4, MOV, WEBM…) de hasta unos 800 MB y 20 min de grabación. Puede tardar un par de minutos.</p>
+        <p className="text-xs text-[var(--fg-muted)]">Audio (MP3, M4A, WAV, OGG…) hasta 20 MB cada uno, varios a la vez · video (MP4, MOV, WEBM…) de hasta unos 800 MB y 20 min de grabación. Puede tardar un par de minutos.</p>
         {error && <p role="alert" className="text-sm text-[var(--danger,#b4442e)]">{error}</p>}
       </div>
     </div>

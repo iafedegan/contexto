@@ -785,7 +785,7 @@ export function ArticleWizard({
   /** Tope por archivo que acepta el modelo (audio ya extraído o video chico). */
   const MAX_ENTREVISTA = 20 * 1024 * 1024;
   // Sube una entrevista de audio o video y la transcribe.
-  function subirEntrevista(original: File) {
+  function subirEntrevista(archivos: File[]) {
     setAudioError("");
     if (!participantesListos(personas, quienesDespues)) return setAudioError("Escribe quiénes intervienen en la grabación, o marca que los identificarás después.");
     // Lo que declaró el editor viaja con el archivo para que la IA etiquete cada intervención con el nombre correcto.
@@ -793,7 +793,9 @@ export function ArticleWizard({
     const contexto = (parte?: { n: number; de: number }) => JSON.stringify({ participantes: declarados, esEntrevista: esEntrevistaGrabada, parte });
     startAudio(async () => {
       try {
+       for (const [idx, original] of archivos.entries()) {
         let f = original;
+        if (archivos.length > 1) setAudioFase(`Archivo ${idx + 1} de ${archivos.length}…`);
         // Un video se reduce primero a su audio EN EL NAVEGADOR: así no se sube el video (pesa cientos de MB).
         if (esVideo(original)) {
           setAudioFase("Extrayendo el audio del video…");
@@ -850,7 +852,9 @@ export function ArticleWizard({
           res = await transcribirEntrevistaSubida({ path: c.path, name: original.name, contexto: contexto() });
         }
         if (!res.ok) return setAudioError(res.error);
-        setMaterial((m) => [...m, res.material]);
+        const nuevo = res.material;
+        setMaterial((m) => [...m, nuevo]);
+       }
         setOptions(null);
         // Recién transcrita: se abre la revisión para asignar quién dijo cada fragmento.
         setFuente(null);
