@@ -162,7 +162,8 @@ export function CarruselPortada({ config: c, notas }: { config: Required<Carruse
                 <span className="cg-car-texto">
                   {c.mostrarCategoria && n.categoria && <span className="cg-car-cat">{n.categoria}</span>}
                   <span className="cg-car-tit lx-display">{n.title}</span>
-                  {c.mostrarResumen && n.excerpt && <span className="cg-car-res">{n.excerpt}</span>}
+                  {/* El texto de una foto propia sale siempre: quien lo escribió quiere que se lea (la casilla «Resumen» es para las notas). */}
+                  {(c.mostrarResumen || n.slug.startsWith("propia-")) && n.excerpt && <span className="cg-car-res">{n.excerpt}</span>}
                   {(c.mostrarAutor && n.autor) || (c.mostrarFecha && n.fecha) ? (
                     <span className="cg-car-meta">{[c.mostrarAutor ? n.autor : null, c.mostrarFecha ? n.fecha : null].filter(Boolean).join(" · ")}</span>
                   ) : null}
