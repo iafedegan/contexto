@@ -139,7 +139,10 @@ async function HomePage({ locale, portadaBorrador }: { locale: Locale; portadaBo
       autor: null,
       fecha: null,
     }));
-    const delSitio: NotaCarrusel[] = (car.fuente === "propias" ? [] : fuente)
+    const enHueco = !["revista", "compacto", "vanguardia", "clasico", "gremial"].includes(body);
+    // En el hueco de Esmeralda, un carrusel con fotos propias muestra solo esas fotos: las notas del sitio ya están en la portada.
+    const sinNotas = car.fuente === "propias" || (enHueco && propias.length > 0);
+    const delSitio: NotaCarrusel[] = (sinNotas ? [] : fuente)
       .filter((a) => !car.soloConFoto || a.coverImageUrl)
       .slice(0, car.cantidad)
       .map((a) => ({
@@ -155,8 +158,8 @@ async function HomePage({ locale, portadaBorrador }: { locale: Locale; portadaBo
       }));
     const notasCar = car.propiasPosicion === "antes" ? [...propias, ...delSitio] : [...delSitio, ...propias];
     // Esmeralda los pone de a dos en el hueco bajo las destacadas: una diapositiva a la vez, título sobre la foto y proporción 3:2 (más altos que anchos de banda).
-    const enHueco = !["revista", "compacto", "vanguardia", "clasico", "gremial"].includes(body);
-    const config = enHueco ? { ...car, visiblesEscritorio: 1, visiblesTableta: 1, visiblesCelular: 1, estilo: "superpuesta" as const, aspecto: "3:2" as const, ancho: 1800 } : car;
+    // Sin título encima, con puntos y sin barra de progreso, como los carruseles de la «Portada del inicio»: si no, este quedaba más alto que el de al lado.
+    const config = enHueco ? { ...car, titulo: "", indicador: "puntos" as const, barraProgreso: false, visiblesEscritorio: 1, visiblesTableta: 1, visiblesCelular: 1, estilo: "superpuesta" as const, aspecto: "3:2" as const, ancho: 1800 } : car;
     return notasCar.length ? <CarruselPortada key={clave} config={config} notas={notasCar} /> : null;
   };
   const nodosCarrusel = await Promise.all(carruseles.map((c, i) => construirCarrusel(c, i)));
