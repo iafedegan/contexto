@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { Play } from "lucide-react";
 
 /**
@@ -44,6 +45,8 @@ export function EnVivoInline({ videoId, titulo }: { videoId: string; titulo: str
           className="absolute inset-0 size-full border-0"
         />
       )}
+      {/* Un clic en la imagen lleva a /en-vivo (el iframe se tragaría el clic); las franjas de arriba y de abajo se dejan libres para el sonido, el título y los controles de YouTube. */}
+      <Link href="/en-vivo" aria-label={`Ver la transmisión: ${titulo}`} className="absolute inset-x-0 top-[16%] bottom-[22%] z-10" />
     </div>
   );
 }
