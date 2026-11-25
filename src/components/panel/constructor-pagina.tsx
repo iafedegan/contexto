@@ -890,7 +890,10 @@ function PropiedadesBloque({ e, onCambiarCon, onElegirImagen }: { e: ElementoBlo
       ))}
       {s.items && (
         <div className="flex flex-col gap-1.5 border-t border-[var(--border)] pt-3">
-          <p className="text-xs font-bold">{s.items.nombre}s ({e.items.length})</p>
+          <p className="flex items-baseline justify-between text-xs font-bold">
+            <span>{s.items.nombre}s</span>
+            <span className={e.items.length >= s.items.max ? "text-[#b45309]" : "font-normal text-[var(--fg-muted)]"}>{e.items.length} de {s.items.max}</span>
+          </p>
           {e.items.map((it, i) => {
             const abiertoEste = abierto === it._id;
             return (
@@ -898,12 +901,20 @@ function PropiedadesBloque({ e, onCambiarCon, onElegirImagen }: { e: ElementoBlo
                 <div className="flex items-center gap-1 px-2 py-1.5">
                   <button type="button" onClick={() => setAbierto(abiertoEste ? null : it._id)} className="flex min-w-0 flex-1 items-center gap-1.5 text-left text-xs font-semibold">
                     <ChevronDown size={13} className={`shrink-0 transition ${abiertoEste ? "" : "-rotate-90"}`} />
+                    {/* Miniatura numerada: así se reconoce cada foto sin abrirla. */}
+                    {it.imagen ? (
+                      <span className="relative size-9 shrink-0 overflow-hidden rounded bg-[var(--surface-2)]">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={it.imagen} alt="" className="size-full object-cover" loading="lazy" />
+                        <span className="absolute bottom-0 left-0 rounded-tr bg-black/70 px-1 text-[9px] font-bold text-white">{i + 1}</span>
+                      </span>
+                    ) : null}
                     <span className="truncate">{resumen(it, i)}</span>
                   </button>
                   <button type="button" onClick={() => moverItem(i, -1)} disabled={i === 0} aria-label="Subir" className="grid size-6 place-items-center rounded hover:bg-[var(--surface-2)] disabled:opacity-30"><ArrowUp size={12} /></button>
                   <button type="button" onClick={() => moverItem(i, 1)} disabled={i === e.items.length - 1} aria-label="Bajar" className="grid size-6 place-items-center rounded hover:bg-[var(--surface-2)] disabled:opacity-30"><ArrowDown size={12} /></button>
                   <button type="button" onClick={() => conBloque((b) => void b.items.splice(i + 1, 0, { ...b.items[i], _id: nuevoId() }))} disabled={e.items.length >= s.items!.max} aria-label="Duplicar" className="grid size-6 place-items-center rounded hover:bg-[var(--surface-2)] disabled:opacity-30"><Copy size={12} /></button>
-                  <button type="button" onClick={() => conBloque((b) => void b.items.splice(i, 1))} aria-label="Quitar" className="grid size-6 place-items-center rounded text-[#b91c1c] hover:bg-[#b91c1c]/10"><Trash2 size={12} /></button>
+                  <button type="button" onClick={() => conBloque((b) => void b.items.splice(i, 1))} aria-label={`Eliminar ${resumen(it, i)}`} title="Eliminar" className="grid size-7 place-items-center rounded text-[#b91c1c] hover:bg-[#b91c1c]/10"><Trash2 size={13} /></button>
                 </div>
                 {abiertoEste && (
                   <div className="flex flex-col gap-2.5 border-t border-[var(--border)] p-2.5">
@@ -927,6 +938,11 @@ function PropiedadesBloque({ e, onCambiarCon, onElegirImagen }: { e: ElementoBlo
           >
             <Plus size={13} /> Añadir {s.items.nombre.toLowerCase()}
           </button>
+          {e.items.length >= s.items.max && (
+            <p role="status" className="rounded-lg border border-[#d97706]/40 bg-[#d97706]/10 px-2.5 py-1.5 text-[11px] text-[#92400e]">
+              Llegaste al máximo de {s.items.max}. Para añadir otra, elimina una con el ícono de la papelera.
+            </p>
+          )}
         </div>
       )}
     </>
