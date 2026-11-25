@@ -7,7 +7,7 @@ import { Play } from "lucide-react";
 /**
  * Video de la transmisión en la portada. Primero sale la portada del video en alta definición (maxresdefault, 1280×720; si el video no la
  * tiene cae a hqdefault) con su play, así el LCP no espera a YouTube; en cuanto la página carga se monta el reproductor y arranca solo, sin
- * sonido (los navegadores no dejan arrancar con sonido sin que la persona toque la página). Mide como mucho el 60 % del alto de la pantalla (siempre 16:9, centrado) para que no ocupe toda la portada; YouTube sirve HD.
+ * sonido (los navegadores no dejan arrancar con sonido sin que la persona toque la página). Llena el ancho que le da su contenedor (EnVivoBlock lo limita al 60 % del alto de la pantalla, siempre 16:9); YouTube sirve HD.
  */
 export function EnVivoInline({ videoId, titulo }: { videoId: string; titulo: string }) {
   const [reproductor, setReproductor] = useState(false);
@@ -19,7 +19,7 @@ export function EnVivoInline({ videoId, titulo }: { videoId: string; titulo: str
   }, []);
 
   return (
-    <div style={{ width: "min(100%, calc(60vh * 16 / 9))" }} className="relative mx-auto aspect-video overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border)] bg-black">
+    <div className="relative aspect-video w-full overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border)] bg-black">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={poster}

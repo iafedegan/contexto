@@ -65,13 +65,17 @@ async function HomePage({ locale, portadaBorrador }: { locale: Locale; portadaBo
     );
   }
 
-  const { lead, second, rail, river: rioCompleto } = splitHomeSlots(articles);
+  // Se toma de getSiteTheme (misma fuente que el resto del portal).
+  const [site, identity, enVivo] = await Promise.all([getSiteTheme(), getSiteIdentity(), getEnVivo()]);
+  // Con una transmisión encendida, las dos primeras notas de la portada van junto al video y el resto de la portada se reacomoda con las que siguen;
+  // al apagarla todo vuelve a su lugar.
+  const hayEnVivo = enVivo.activo && Boolean(enVivo.videoId);
+  const notasJuntoAlVideo = hayEnVivo ? articles.slice(0, 2) : [];
+  const { lead, second, rail, river: rioCompleto } = splitHomeSlots(hayEnVivo ? articles.slice(2) : articles);
   // La cuadrícula del final se recorta a filas completas: así no queda una nota sola en la última fila.
   const colsRio = Math.max(1, layout.riverColumns || 3);
   const river = rioCompleto.length > colsRio ? rioCompleto.slice(0, rioCompleto.length - (rioCompleto.length % colsRio)) : rioCompleto;
   // Cuerpo de la plantilla compuesta; la paleta sigue siendo `templateId`.
-  // Se toma de getSiteTheme (misma fuente que el resto del portal).
-  const [site, identity, enVivo] = await Promise.all([getSiteTheme(), getSiteIdentity(), getEnVivo()]);
   const body = site.parts.body;
 
   const opinion = articles.find((a) => a.categorySlug === "opinion");
@@ -279,7 +283,7 @@ async function HomePage({ locale, portadaBorrador }: { locale: Locale; portadaBo
         const css = blockStylesCss(articles);
         return css ? <style dangerouslySetInnerHTML={{ __html: css }} /> : null;
       })()}
-      <CardSlugsProvider slugs={[lead, second, ...rail, ...river].filter((a): a is NonNullable<typeof a> => Boolean(a)).map((a) => a.slug)}>
+      <CardSlugsProvider slugs={[...notasJuntoAlVideo, lead, second, ...rail, ...river].filter((a): a is NonNullable<typeof a> => Boolean(a)).map((a) => a.slug)}>
       {/* Esmeralda lleva la barra lateral dentro, junto a «Lo más reciente»: arriba, la apertura y «Lo último» respiran a dos columnas. */}
       <div className={`grid grid-cols-1 gap-12 ${esEsmeralda ? "" : "lg:grid-cols-[minmax(0,1fr)_19rem]"}`}>
         <div className={esEsmeralda ? "min-w-0" : "lx-bleed-off min-w-0"}>
@@ -287,7 +291,7 @@ async function HomePage({ locale, portadaBorrador }: { locale: Locale; portadaBo
               mapa indexado en runtime) para no perder el límite cliente/servidor
               que Next resuelve de forma estática. */}
           {/* Con una transmisión encendida en /panel/en-vivo, el video toma el lugar principal y la nota destacada baja. */}
-          <EnVivoBlock config={enVivo} locale={locale} />
+          <EnVivoBlock config={enVivo} locale={locale} laterales={notasJuntoAlVideo} />
           {car.posicion === "tras-en-vivo" && carruselConColumna && <div className="mb-10">{carruselConColumna}</div>}
           {extrasEn("tras-en-vivo").map((n, i) => <div key={`ev${i}`} className="mb-10">{n}</div>)}
           {body === "revista" ? (
