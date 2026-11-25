@@ -1,0 +1,49 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { Play } from "lucide-react";
+
+/**
+ * Video de la transmisión en la portada. Primero sale la portada del video en alta definición (maxresdefault, 1280×720; si el video no la
+ * tiene cae a hqdefault) con su play, así el LCP no espera a YouTube; en cuanto la página carga se monta el reproductor y arranca solo, sin
+ * sonido (los navegadores no dejan arrancar con sonido sin que la persona toque la página). Mide como mucho el 60 % del alto de la pantalla (siempre 16:9, centrado) para que no ocupe toda la portada; YouTube sirve HD.
+ */
+export function EnVivoInline({ videoId, titulo }: { videoId: string; titulo: string }) {
+  const [reproductor, setReproductor] = useState(false);
+  const [poster, setPoster] = useState(`https://i.ytimg.com/vi/${videoId}/maxresdefault.jpg`);
+
+  useEffect(() => {
+    const t = window.setTimeout(() => setReproductor(true), 600);
+    return () => window.clearTimeout(t);
+  }, []);
+
+  return (
+    <div style={{ width: "min(100%, calc(60vh * 16 / 9))" }} className="relative mx-auto aspect-video overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border)] bg-black">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={poster}
+        alt=""
+        onLoad={(e) => { if (e.currentTarget.naturalWidth <= 120) setPoster(`https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`); }}
+        onError={() => setPoster(`https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`)}
+        fetchPriority="high"
+        className="absolute inset-0 size-full object-cover"
+      />
+      {!reproductor && (
+        <span className="absolute inset-0 grid place-items-center bg-black/25">
+          <span className="grid size-16 place-items-center rounded-full bg-[var(--danger)] text-white shadow-lg md:size-20">
+            <Play size={30} fill="currentColor" aria-hidden />
+          </span>
+        </span>
+      )}
+      {reproductor && (
+        <iframe
+          title={titulo}
+          src={`https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&mute=1&playsinline=1&rel=0&modestbranding=1&iv_load_policy=3&vq=hd1080&cc_load_policy=1&cc_lang_pref=es`}
+          allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+          allowFullScreen
+          className="absolute inset-0 size-full border-0"
+        />
+      )}
+    </div>
+  );
+}
