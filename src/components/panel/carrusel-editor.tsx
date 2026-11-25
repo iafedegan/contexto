@@ -52,7 +52,7 @@ export function CarruselEditor({
         </span>
       </p>
 
-      <Grupo titulo="Fotos propias" resumen={`${v.diapositivas.length} de ${CARRUSEL_MAX_DIAPOSITIVAS}`} abierto>
+      <Grupo titulo="Fotos propias" resumen={`${v.diapositivas.length} de ${CARRUSEL_MAX_DIAPOSITIVAS}`}>
         <Diapositivas lista={v.diapositivas} onChange={(diapositivas) => set({ diapositivas })} />
         {v.diapositivas.length > 0 && v.fuente !== "propias" && (
           <Opciones
@@ -67,7 +67,7 @@ export function CarruselEditor({
         )}
       </Grupo>
 
-      <Grupo titulo="Videos de TV (YouTube)" resumen={`${v.videos.length} de ${CARRUSEL_MAX_DIAPOSITIVAS}`} abierto>
+      <Grupo titulo="Videos de TV (YouTube)" resumen={`${v.videos.length} de ${CARRUSEL_MAX_DIAPOSITIVAS}`}>
         <Videos lista={v.videos} onChange={(videos) => set({ videos })} />
       </Grupo>
 
