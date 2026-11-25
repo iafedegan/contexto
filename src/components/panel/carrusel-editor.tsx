@@ -67,7 +67,7 @@ export function CarruselEditor({
         )}
       </Grupo>
 
-      <Grupo titulo="Videos de TV (YouTube)" resumen={`${v.videos.length} de ${CARRUSEL_MAX_DIAPOSITIVAS}`}>
+      <Grupo titulo="Videos de TV (YouTube)" resumen={`${v.videos.length} de ${CARRUSEL_MAX_DIAPOSITIVAS}`} abierto>
         <Videos lista={v.videos} onChange={(videos) => set({ videos })} />
       </Grupo>
 
