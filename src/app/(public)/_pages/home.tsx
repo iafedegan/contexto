@@ -165,6 +165,23 @@ async function HomePage({ locale, portadaBorrador }: { locale: Locale; portadaBo
   };
   const nodosCarrusel = await Promise.all(carruseles.map((c, i) => construirCarrusel(c, i)));
   const car = carruseles[0];
+  // Videos de TV puestos en «Carrusel de notas» › «Videos de TV»: un carrusel aparte (mismo aspecto que el de fotos) que reemplaza al de TV de la «Portada del inicio».
+  const notasVideos: NotaCarrusel[] = car.videos.map((d) => ({
+    slug: `video-${d.id}`,
+    href: d.enlace || null,
+    externa: true,
+    sinOptimizar: true,
+    title: d.titulo,
+    excerpt: "",
+    image: d.imagen,
+    imageAlt: d.titulo,
+    categoria: null,
+    autor: null,
+    fecha: null,
+  }));
+  const nodoVideos = car.activo && notasVideos.length
+    ? <CarruselPortada key="videos" config={{ ...car, titulo: "", indicador: "puntos" as const, barraProgreso: false, tamanoTitular: Math.max(car.tamanoTitular, 26), visiblesEscritorio: 1, visiblesTableta: 1, visiblesCelular: 1, estilo: "superpuesta" as const, aspecto: "3:2" as const, ancho: 1800 }} notas={notasVideos} />
+    : null;
   const carruselPropio = nodosCarrusel[0];
   const esEsmeraldaTema = !["revista", "compacto", "vanguardia", "clasico", "gremial"].includes(body);
   // Los carruseles adicionales, agrupados por el lugar de la portada que cada uno eligió.
@@ -182,6 +199,8 @@ async function HomePage({ locale, portadaBorrador }: { locale: Locale; portadaBo
   const carruselesDelInicio = filasCarrusel.flatMap((f) => f.celdas.flat().map((el) => ({ ...f, id: `${f.id}-${el.id}`, columnas: [12], celdas: [[el]] })));
   const hueco = !esEsmeralda || !car.activo
     ? []
+    : nodoVideos
+      ? [conFotosPropias ? carruselPropio : carruselesDelInicio[0] ? <PaginaVista key={carruselesDelInicio[0].id} contenido={{ filas: [carruselesDelInicio[0]] }} notas={notasInicioPropio} /> : null, nodoVideos].filter(Boolean)
     : conFotosPropias && carruselesDelInicio.length
       ? [carruselPropio, ...carruselesDelInicio.slice(1).map((f) => <PaginaVista key={f.id} contenido={{ filas: [f] }} notas={notasInicioPropio} />)]
       : filasCarrusel.length

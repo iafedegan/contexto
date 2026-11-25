@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { and, eq, inArray, isNotNull, notInArray, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { adsZones, articles, siteSettings, type HomeLayoutConfig, type HomeStyle } from "@/db/schema";
+import { adsZones, articles, paginas, siteSettings, type HomeLayoutConfig, type HomeStyle } from "@/db/schema";
 import { sanitizeHomeStyle } from "@/lib/home-style";
 import { auth, requirePermiso } from "@/lib/auth";
 import { AD_ZONE_SPECS, positionOf } from "@/lib/ads-positions";
@@ -332,4 +332,26 @@ export async function restoreHomeSnapshot(input: unknown): Promise<{ ok: boolean
   }
   revalidatePath("/panel/portada");
   return { ok: true, message: "Se volvió a la versión anterior." };
+}
+
+/**
+ * Los videos de YouTube que hoy salen en el carrusel de TV de la página «Portada del inicio» (Páginas), listos para pasarlos al editor de
+ * «Carrusel de notas». Solo lee: no toca la página.
+ */
+export async function videosDelInicio(): Promise<{ id: string; imagen: string; titulo: string; enlace: string }[]> {
+  await requirePermiso("portada");
+  const [row] = await db.select({ contenido: paginas.contenido }).from(paginas).where(eq(paginas.slug, "inicio")).limit(1);
+  const out: { id: string; imagen: string; titulo: string; enlace: string }[] = [];
+  for (const fila of row?.contenido?.filas ?? []) {
+    for (const el of fila.celdas.flat()) {
+      if (el.tipo !== "carrusel" || !Array.isArray(el.items)) continue;
+      for (const it of el.items as Record<string, unknown>[]) {
+        const enlace = typeof it.url === "string" ? it.url : "";
+        const imagen = typeof it.imagen === "string" ? it.imagen : "";
+        if (!/^https:\/\/(www\.)?(youtube\.com|youtu\.be)\//i.test(enlace) || !imagen) continue;
+        out.push({ id: `v-${out.length}-${Math.random().toString(36).slice(2, 6)}`, imagen, titulo: typeof it.titulo === "string" ? it.titulo : "", enlace });
+      }
+    }
+  }
+  return out.slice(0, 12);
 }

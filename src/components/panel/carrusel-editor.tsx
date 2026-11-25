@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowDown, ArrowUp, ChevronDown, ImagePlus, Info, Loader2, Pencil, Plus, Trash2 } from "lucide-react";
 import { subirMedia } from "@/components/panel/subir-media";
+import { videosDelInicio } from "@/app/panel/(app)/portada/actions";
 import { CARRUSEL_MAX_DIAPOSITIVAS, CARRUSEL_MAX_EXTRA, resumenCarrusel, sanitizeCarrusel, sanitizeCarruseles, type CarruselConfig, type Diapositiva } from "@/lib/carrusel";
 
 /**
@@ -64,6 +65,10 @@ export function CarruselEditor({
             onChange={(propiasPosicion) => set({ propiasPosicion })}
           />
         )}
+      </Grupo>
+
+      <Grupo titulo="Videos de TV (YouTube)" resumen={`${v.videos.length} de ${CARRUSEL_MAX_DIAPOSITIVAS}`}>
+        <Videos lista={v.videos} onChange={(videos) => set({ videos })} />
       </Grupo>
 
       <Grupo titulo="Título y lugar en la portada" resumen={v.titulo || "Sin título"}>
@@ -499,6 +504,76 @@ export function CarruselesExtra({
           <Plus size={14} /> Añadir otro carrusel
         </button>
       )}
+    </div>
+  );
+}
+
+// Videos de YouTube del carrusel de TV: se pega el enlace, la foto sale sola (la del propio video) y se escribe el título. «Traer los de la
+// Portada del inicio» copia los que hoy están en Páginas, para no volver a escribirlos.
+const idYoutube = (u: string) => /(?:youtu\.be\/|[?&]v=|\/embed\/|\/shorts\/)([\w-]{11})/.exec(u)?.[1] ?? null;
+function Videos({ lista, onChange }: { lista: Diapositiva[]; onChange: (d: Diapositiva[]) => void }) {
+  const [url, setUrl] = useState("");
+  const [msg, setMsg] = useState("");
+  const [trayendo, setTrayendo] = useState(false);
+  const lleno = lista.length >= CARRUSEL_MAX_DIAPOSITIVAS;
+  const mover = (i: number, d: number) => {
+    const j = i + d;
+    if (j < 0 || j >= lista.length) return;
+    const c = lista.slice();
+    [c[i], c[j]] = [c[j], c[i]];
+    onChange(c);
+  };
+  function agregar() {
+    const id = idYoutube(url.trim());
+    if (!id) return setMsg("Pega el enlace de un video de YouTube (youtube.com/watch?v=… o youtu.be/…).");
+    if (lleno) return setMsg(`Ya hay ${CARRUSEL_MAX_DIAPOSITIVAS} videos, el máximo.`);
+    onChange([...lista, { id: nuevoId(), imagen: `https://i.ytimg.com/vi/${id}/hqdefault.jpg`, etiqueta: "", titulo: "", texto: "", enlace: `https://www.youtube.com/watch?v=${id}`, nuevaPestana: true }]);
+    setUrl("");
+    setMsg("");
+  }
+  async function traer() {
+    setTrayendo(true);
+    setMsg("");
+    try {
+      const v = await videosDelInicio();
+      if (!v.length) setMsg("La página «Portada del inicio» no tiene videos de YouTube.");
+      else onChange(v.map((x) => ({ id: nuevoId(), imagen: x.imagen, etiqueta: "", titulo: x.titulo, texto: "", enlace: x.enlace, nuevaPestana: true })));
+    } catch {
+      setMsg("No se pudieron leer los videos de la Portada del inicio.");
+    }
+    setTrayendo(false);
+  }
+  return (
+    <div className="flex flex-col gap-3 pt-2">
+      <p className="text-xs text-[var(--fg-muted)]">Si hay videos aquí, salen en el carrusel de TV de la portada en lugar del que está en Páginas.</p>
+      <div className="flex gap-2">
+        <input value={url} onChange={(e) => setUrl(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); agregar(); } }} placeholder="https://www.youtube.com/watch?v=…" className="lx-input min-w-0 flex-1 !py-1.5 !text-xs" />
+        <button type="button" onClick={agregar} disabled={lleno} className="inline-flex h-8 items-center gap-1 rounded-md border border-[var(--border)] px-2.5 text-xs font-semibold hover:border-[var(--accent)] disabled:opacity-40"><Plus size={13} /> Agregar</button>
+      </div>
+      {lista.length === 0 && (
+        <button type="button" onClick={traer} disabled={trayendo} className="inline-flex h-8 w-fit items-center gap-1.5 rounded-md border border-[var(--border)] px-2.5 text-xs font-medium hover:border-[var(--accent)] disabled:opacity-50">
+          {trayendo && <Loader2 size={13} className="animate-spin" />} Traer los videos de la Portada del inicio
+        </button>
+      )}
+      {msg && <p role="status" className="text-xs text-[#b45309]">{msg}</p>}
+      <ol className="flex flex-col gap-2">
+        {lista.map((d, i) => (
+          <li key={d.id} className="overflow-hidden rounded-xl border border-[var(--border)]">
+            <div className="flex items-center gap-3 p-2">
+              <div className="relative h-14 w-24 shrink-0 overflow-hidden rounded-lg bg-[var(--surface-2)]">
+                <Image src={d.imagen} alt="" fill unoptimized className="object-cover" />
+                <span className="absolute left-1 top-1 grid size-5 place-items-center rounded-full bg-black/70 text-[11px] font-bold text-white">{i + 1}</span>
+              </div>
+              <input key={`t-${d.titulo}`} defaultValue={d.titulo} onBlur={(e) => onChange(lista.map((x) => (x.id === d.id ? { ...x, titulo: e.target.value } : x)))} maxLength={120} placeholder="Título del video" className="lx-input min-w-0 flex-1 !py-1.5 !text-xs" />
+            </div>
+            <div className="flex items-center gap-1 border-t border-[var(--border)] bg-[var(--surface-2)]/50 px-2 py-1.5">
+              <button type="button" onClick={() => mover(i, -1)} disabled={i === 0} aria-label={`Subir el video ${i + 1}`} className="grid size-8 place-items-center rounded-md hover:bg-[var(--surface-2)] disabled:opacity-30"><ArrowUp size={14} /></button>
+              <button type="button" onClick={() => mover(i, 1)} disabled={i === lista.length - 1} aria-label={`Bajar el video ${i + 1}`} className="grid size-8 place-items-center rounded-md hover:bg-[var(--surface-2)] disabled:opacity-30"><ArrowDown size={14} /></button>
+              <button type="button" onClick={() => onChange(lista.filter((x) => x.id !== d.id))} className="ml-auto inline-flex h-8 items-center gap-1 rounded-md px-2 text-xs font-semibold text-red-700 hover:bg-red-600/10"><Trash2 size={13} /> Eliminar</button>
+            </div>
+          </li>
+        ))}
+      </ol>
     </div>
   );
 }
