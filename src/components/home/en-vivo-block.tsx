@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { EnVivoInline } from "@/components/home/en-vivo-inline";
-import { ArticleCard } from "@/components/article-card";
+import { EnlaceNota as Enlace } from "@/components/ui/enlace-nota";
+import { CardMedia } from "@/components/cover-art";
+import { hrefNota } from "@/lib/ruta-nota";
 import type { ArticleListItem } from "@/lib/content";
 import { LiveBadge } from "@/components/live-badge";
 import type { Locale } from "@/lib/i18n";
@@ -25,8 +27,19 @@ export function EnVivoBlock({ config, locale, laterales = [] }: { config: EnVivo
           <EnVivoInline videoId={config.videoId} titulo={titulo} />
         </div>
         {laterales.length > 0 && (
-          <div className="grid min-w-0 flex-1 grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-1">
-            {laterales.map((a) => <ArticleCard key={a.slug} a={a} variant="lead" locale={locale} />)}
+          // Junto al video, las notas miden lo mismo que él: la columna no suma alto (sus tarjetas van absolutas) y se reparte en partes iguales.
+          <div className="relative min-w-0 flex-1 lg:self-stretch">
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:absolute lg:inset-0 lg:grid-cols-1 lg:grid-rows-2">
+              {laterales.map((a) => (
+                <Enlace key={a.slug} href={hrefNota(locale, a)} className="group relative block aspect-[16/10] min-h-0 overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border)] lg:aspect-auto">
+                  <span className="absolute inset-0 block"><CardMedia src={a.coverImageUrl} alt={a.coverImageAlt ?? a.title} seed={a.slug} label={a.categoryName ?? a.title} ratio="h-full" sizes="(min-width: 1024px) 30vw, 100vw" /></span>
+                  <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/55 to-transparent p-4 pt-16 text-white">
+                    {a.categoryName && <span className="block text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--accent)]">{a.categoryName}</span>}
+                    <span className="lx-display mt-1 line-clamp-3 block text-lg font-semibold leading-snug group-hover:underline xl:text-xl">{a.title}</span>
+                  </span>
+                </Enlace>
+              ))}
+            </div>
           </div>
         )}
       </div>
