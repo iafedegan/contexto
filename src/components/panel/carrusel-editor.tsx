@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowDown, ArrowUp, ChevronDown, ImagePlus, Info, Loader2, Pencil, Plus, Trash2 } from "lucide-react";
@@ -511,6 +511,7 @@ export function CarruselesExtra({
 // Videos de YouTube del carrusel de TV: se pega el enlace, la foto sale sola (la del propio video) y se escribe el título. «Traer los de la
 // Portada del inicio» copia los que hoy están en Páginas, para no volver a escribirlos.
 const idYoutube = (u: string) => /(?:youtu\.be\/|[?&]v=|\/embed\/|\/shorts\/)([\w-]{11})/.exec(u)?.[1] ?? null;
+let videosYaTraidos = false;
 function Videos({ lista, onChange }: { lista: Diapositiva[]; onChange: (d: Diapositiva[]) => void }) {
   const [url, setUrl] = useState("");
   const [msg, setMsg] = useState("");
@@ -531,12 +532,21 @@ function Videos({ lista, onChange }: { lista: Diapositiva[]; onChange: (d: Diapo
     setUrl("");
     setMsg("");
   }
-  async function traer() {
+  // La primera vez que se abre el editor sin videos propios, se cargan solos los que hoy salen en el carrusel de TV (los de la Portada del
+  // inicio), para que el carrusel que se ve en el sitio ya esté aquí y se pueda ajustar; se guardan al «Publicar cambios».
+  useEffect(() => {
+    if (lista.length === 0 && !videosYaTraidos) {
+      videosYaTraidos = true;
+      void traer(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  async function traer(silencioso = false) {
     setTrayendo(true);
     setMsg("");
     try {
       const v = await videosDelInicio();
-      if (!v.length) setMsg("La página «Portada del inicio» no tiene videos de YouTube.");
+      if (!v.length) { if (!silencioso) setMsg("La página «Portada del inicio» no tiene videos de YouTube."); }
       else onChange(v.map((x) => ({ id: nuevoId(), imagen: x.imagen, etiqueta: "", titulo: x.titulo, texto: "", enlace: x.enlace, nuevaPestana: true })));
     } catch {
       setMsg("No se pudieron leer los videos de la Portada del inicio.");
@@ -551,7 +561,7 @@ function Videos({ lista, onChange }: { lista: Diapositiva[]; onChange: (d: Diapo
         <button type="button" onClick={agregar} disabled={lleno} className="inline-flex h-8 items-center gap-1 rounded-md border border-[var(--border)] px-2.5 text-xs font-semibold hover:border-[var(--accent)] disabled:opacity-40"><Plus size={13} /> Agregar</button>
       </div>
       {lista.length === 0 && (
-        <button type="button" onClick={traer} disabled={trayendo} className="inline-flex h-8 w-fit items-center gap-1.5 rounded-md border border-[var(--border)] px-2.5 text-xs font-medium hover:border-[var(--accent)] disabled:opacity-50">
+        <button type="button" onClick={() => traer()} disabled={trayendo} className="inline-flex h-8 w-fit items-center gap-1.5 rounded-md border border-[var(--border)] px-2.5 text-xs font-medium hover:border-[var(--accent)] disabled:opacity-50">
           {trayendo && <Loader2 size={13} className="animate-spin" />} Traer los videos de la Portada del inicio
         </button>
       )}
