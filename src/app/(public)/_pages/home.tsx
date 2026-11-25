@@ -171,7 +171,8 @@ async function HomePage({ locale, portadaBorrador }: { locale: Locale; portadaBo
   const esEsmeralda = !["revista", "compacto", "vanguardia", "clasico", "gremial"].includes(body);
   // Esmeralda: todos los carruseles activos van en el hueco que queda bajo las dos destacadas, de a dos y compactos (en vez de a todo el ancho).
   // Si el inicio propio trae filas de carruseles, esas van al hueco (otras noticias, no las del banner); si no, el carrusel de notas de la portada.
-  const hueco = !esEsmeralda ? [] : filasCarrusel.length ? [<PaginaVista key="car" contenido={{ filas: filasCarrusel }} notas={notasInicioPropio} />] : nodosCarrusel.filter(Boolean);
+  // El interruptor «Carrusel de notas» del panel manda sobre todos los carruseles del hueco: apagado, no sale ninguno (tampoco los de la página «Portada del inicio»).
+  const hueco = !esEsmeralda || !car.activo ? [] : filasCarrusel.length ? [<PaginaVista key="car" contenido={{ filas: filasCarrusel }} notas={notasInicioPropio} />] : nodosCarrusel.filter(Boolean);
   const carrusel = esEsmeralda ? null : carruselPropio;
   // ¿Hay columna que mostrar? (lectura cacheada; la misma que hace la tarjeta). Esmeralda reparte distinto la apertura según haya o no.
   const hayColumna = Boolean(await getUltimaColumnaLafaurie().catch(() => null));
