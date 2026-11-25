@@ -2416,8 +2416,9 @@ export function ArticleWizard({
                 )}
               </div>
             )}
-            <button type="submit" name="intent" value="borrador" className="lx-btn lx-btn-ghost">
-              <Save size={15} /> Guardar borrador
+            {/* En una nota ya publicada o programada, quien no publica guarda los cambios sobre la nota en línea (no vuelve a borrador). */}
+            <button type="submit" name="intent" value="borrador" className={!canPublish && (status === "publicado" || status === "programado") ? "lx-btn" : "lx-btn lx-btn-ghost"}>
+              <Save size={15} /> {!canPublish && (status === "publicado" || status === "programado") ? "Guardar y actualizar" : "Guardar borrador"}
             </button>
             {/* Con un editor elegido en «Sección y autor», el envío a ese editor va primero (y reemplaza «Enviar a revisión»). */}
             {puedeEnviarEditor && editorElegido && (
@@ -2440,7 +2441,7 @@ export function ArticleWizard({
               <button type="submit" name="intent" value="publicar" disabled={status !== "publicado" && !puedeSalir} title={status !== "publicado" && !puedeSalir ? "Falta la imagen de portada, su crédito o el SEO mínimo" : undefined} className="lx-btn disabled:cursor-not-allowed disabled:opacity-50 disabled:saturate-50">
                 <Send size={15} /> {status === "publicado" ? "Guardar y actualizar" : "Publicar"}
               </button>
-            ) : !editorElegido ? (
+            ) : !editorElegido && status !== "publicado" && status !== "programado" ? (
               <button type="submit" name="intent" value="revision" className="lx-btn">
                 <Send size={15} /> Enviar a revisión
               </button>

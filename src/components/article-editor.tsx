@@ -269,7 +269,7 @@ export function ArticleEditor({
             type="submit"
             className="inline-flex items-center gap-1.5 rounded-full bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--accent-fg)] shadow-sm transition hover:opacity-90"
           >
-            <Save size={15} /> Guardar borrador
+            <Save size={15} /> {status === "publicado" || status === "programado" ? "Guardar cambios" : "Guardar borrador"}
           </button>
         </div>
       </div>
@@ -774,7 +774,8 @@ export function ArticleEditor({
           {initial.id && (
             <Panel title="Flujo editorial" icon={<Send size={13} />}>
               <div className="flex flex-col gap-2.5">
-                {!canPublish && (
+                {/* Una nota ya publicada o programada no vuelve a revisión: su autor la corrige con «Guardar cambios». */}
+                {!canPublish && status !== "publicado" && status !== "programado" && (
                   <button
                     type="submit"
                     formAction={submitForReviewAction}

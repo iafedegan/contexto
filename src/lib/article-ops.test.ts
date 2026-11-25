@@ -150,3 +150,16 @@ test("quienPublica: un editor con permiso publica cualquier nota; el resto, si e
   assert.match(cuerpo, /status !== "borrador" && n\?\.status !== "en_revision"/);
   assert.match(cuerpo, /requisitosDePublicacion/);
 });
+
+test("saveArticle: una nota publicada o programada la modifica quien puede publicar o su autora, no otra persona", async () => {
+  const { readFileSync } = await import("node:fs");
+  const codigo = readFileSync("src/app/panel/(app)/articulos/actions.ts", "utf8");
+  const cuerpo = codigo.match(/export async function saveArticle\([^)]*\)[^{]*\{([\s\S]*?)\n\}/)?.[1] ?? "";
+  assert.match(cuerpo, /if \(!puedePublicar && !\(await esAutoraDeNota\(user, id\)\)\) throw/);
+  const propiedad = readFileSync("src/lib/propiedad-notas.ts", "utf8");
+  const autora = propiedad.match(/export async function esAutoraDeNota\([^)]*\)[^{]*\{([\s\S]*?)\n\}/)?.[1] ?? "";
+  // Solo quien la creó o la firma: las notas enviadas o asignadas no cuentan.
+  assert.match(autora, /articles\.createdBy/);
+  assert.match(autora, /articles\.authorId/);
+  assert.doesNotMatch(autora, /notasAsignadasA/);
+});

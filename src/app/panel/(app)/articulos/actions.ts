@@ -16,7 +16,7 @@ import { archivarCore, asegurarRutaDeColumna, distintivosCore, enviarARevisionCo
 import { tienePermiso } from "@/lib/permisos-server";
 import { avisarSiUltimaHora } from "@/lib/push";
 import { invalidarCache, TAG_CONTENIDO } from "@/lib/data-cache";
-import { esNotaPropia, exigirNotaPropia } from "@/lib/propiedad-notas";
+import { esAutoraDeNota, esNotaPropia, exigirNotaPropia } from "@/lib/propiedad-notas";
 import { registrarActividad } from "@/lib/actividad-notas";
 import { palabrasCambiadas } from "@/lib/actividad-reglas";
 import { limpiarEnvio } from "@/lib/notas-asignadas-reglas";
@@ -55,7 +55,7 @@ async function requirePublicador() {
   return user;
 }
 
-// Guarda una nota desde el formulario: sanea el cuerpo, impide editar notas publicadas a quien no puede publicar, recalcula su embedding y, si se pide, publica, envía a revisión o programa.
+// Guarda una nota desde el formulario: sanea el cuerpo, impide editar notas publicadas ajenas a quien no puede publicar, recalcula su embedding y, si se pide, publica, envía a revisión o programa.
 export async function saveArticle(formData: FormData) {
   const user = await requirePermiso("articulos");
   // «Enviar» (redactor → editor; editor o administrador → cualquier persona activa): se valida ANTES de guardar, para no dejar la nota a medias.
@@ -143,14 +143,15 @@ export async function saveArticle(formData: FormData) {
   let eraPublica = false;
   if (id) {
     await exigirNotaPropia(user, id);
-    // Una nota publicada o programada ya está (o va a estar) a la vista de los lectores: solo quien
-    // puede publicar la modifica. Un redactor trabaja sobre borradores y revisión.
+    // Una nota publicada o programada ya está (o va a estar) a la vista de los lectores: la modifica quien puede publicar
+    // o su autora (quien la creó o la firma), para que pueda corregir lo que ya publicó. Las notas de otras personas, no.
+    // Cada cambio queda en el control de cambios (versionAlCambiarDeManos y registrarActividad).
     const [actual] = await db.select({ status: articles.status, title: articles.title, excerpt: articles.excerpt, body: articles.body }).from(articles).where(eq(articles.id, id)).limit(1);
     if (!actual) throw new Error("La nota ya no existe.");
     eraPublica = actual.status === "publicado" || actual.status === "programado";
     if (eraPublica) {
       const puedePublicar = canPublish(user.role) && (await tienePermiso(user.id, user.role, "publicar"));
-      if (!puedePublicar) throw new Error("Esta nota ya está publicada o programada: solo un editor puede modificarla.");
+      if (!puedePublicar && !(await esAutoraDeNota(user, id))) throw new Error("Esta nota ya está publicada o programada: solo su autor o un editor pueden modificarla.");
     }
     await versionAlCambiarDeManos(id, user.id);
     await db.update(articles).set(values).where(eq(articles.id, id));

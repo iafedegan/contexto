@@ -37,6 +37,18 @@ export async function esNotaPropia(p: Persona, articleId: string): Promise<boole
   return !existe;
 }
 
+/**
+ * ¿Es la persona AUTORA de la nota (la creó o lleva su firma)? Más estricto que `esNotaPropia`: no cuentan las notas que le enviaron.
+ * Sirve para que quien escribió y publicó su nota pueda corregirla después, aunque no tenga el permiso de publicar.
+ */
+export async function esAutoraDeNota(p: Persona, articleId: string): Promise<boolean> {
+  if (p.role === "administrador") return true;
+  const ids = await misAutorIds(p.id);
+  const cond = or(eq(articles.createdBy, p.id), ...(ids.length ? [inArray(articles.authorId, ids)] : []));
+  const [fila] = await db.select({ id: articles.id }).from(articles).where(and(eq(articles.id, articleId), cond)).limit(1);
+  return Boolean(fila);
+}
+
 /** Lanza si la nota es de otra persona. */
 export async function exigirNotaPropia(p: Persona, articleId: string): Promise<void> {
   if (!(await esNotaPropia(p, articleId))) throw new Error("Solo puedes ver y modificar tus propias notas.");
