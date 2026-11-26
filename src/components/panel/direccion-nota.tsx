@@ -3,9 +3,10 @@
 import { useEffect, useState, useTransition } from "react";
 import { Link2, Loader2 } from "lucide-react";
 import { cambiarDireccion, verDireccion } from "@/app/panel/(app)/articulos/actions";
+import { slugify } from "@/lib/utils";
 
 /** La dirección (URL) con la que sale la nota, con su último tramo editable. `version` obliga a releerla (p. ej. al cambiar de sección). */
-export function DireccionNota({ articleId, version, onRuta }: { articleId: string; version?: string; onRuta?: (ruta: string) => void }) {
+export function DireccionNota({ articleId, version, onRuta, titulo }: { articleId: string; titulo: string; version?: string; onRuta?: (ruta: string) => void }) {
   const [dir, setDir] = useState<{ ruta: string; publica: boolean } | null>(null);
   const [texto, setTexto] = useState("");
   const [aviso, setAviso] = useState<{ ok: boolean; texto: string } | null>(null);
@@ -34,13 +35,15 @@ export function DireccionNota({ articleId, version, onRuta }: { articleId: strin
   const actual = dir.ruta.split("/").pop() ?? "";
   const base = dir.ruta.slice(0, dir.ruta.length - actual.length);
 
-  function guardar() {
+  const delTitulo = slugify(titulo);
+
+  function guardar(nueva = texto) {
     if (!dir) return;
     if (dir.publica && !window.confirm("La nota ya salió al público. ¿Cambiar su dirección? La anterior seguirá funcionando y llevará a la nueva.")) return;
     setAviso(null);
     iniciar(async () => {
       try {
-        const r = await cambiarDireccion(articleId, texto);
+        const r = await cambiarDireccion(articleId, nueva);
         if (!r.ok) return setAviso({ ok: false, texto: r.error });
         setDir({ ...dir, ruta: r.ruta });
         setTexto(r.ruta.split("/").pop() ?? "");
@@ -77,11 +80,21 @@ export function DireccionNota({ articleId, version, onRuta }: { articleId: strin
       {texto !== actual && (
         <button
           type="button"
-          onClick={guardar}
+          onClick={() => guardar()}
           disabled={ocupado || texto.length < 3}
           className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-[var(--border-strong)] bg-[var(--surface)] px-3 py-1 font-semibold hover:bg-[var(--surface-2)] disabled:opacity-50"
         >
           {ocupado && <Loader2 size={13} className="animate-spin" aria-hidden />} Guardar dirección
+        </button>
+      )}
+      {delTitulo.length >= 3 && delTitulo !== actual && texto === actual && (
+        <button
+          type="button"
+          onClick={() => guardar(delTitulo)}
+          disabled={ocupado}
+          className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-[var(--border-strong)] bg-[var(--surface)] px-3 py-1 font-semibold hover:bg-[var(--surface-2)] disabled:opacity-50"
+        >
+          {ocupado && <Loader2 size={13} className="animate-spin" aria-hidden />} Usar el título
         </button>
       )}
       {aviso && <p role="status" className={aviso.ok ? "text-[#15803d]" : "basis-full text-[var(--danger,#b4442e)]"}>{aviso.texto}</p>}

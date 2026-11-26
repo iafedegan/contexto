@@ -2248,7 +2248,7 @@ export function ArticleWizard({
                 <Eye size={14} /> Así se verá en el sitio
               </p>
             </div>
-            {savedId && <DireccionNota articleId={savedId} version={categoryId ?? ""} onRuta={setRutaNota} />}
+            {savedId && <DireccionNota articleId={savedId} titulo={title} version={categoryId ?? ""} onRuta={setRutaNota} />}
             {esAdmin && (
               <div
                 className="flex shrink-0 flex-wrap items-center gap-2 text-xs"
