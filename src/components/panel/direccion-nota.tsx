@@ -5,7 +5,7 @@ import { Link2, Loader2 } from "lucide-react";
 import { cambiarDireccion, verDireccion } from "@/app/panel/(app)/articulos/actions";
 
 /** La dirección (URL) con la que sale la nota, con su último tramo editable. `version` obliga a releerla (p. ej. al cambiar de sección). */
-export function DireccionNota({ articleId, version }: { articleId: string; version?: string }) {
+export function DireccionNota({ articleId, version, onRuta }: { articleId: string; version?: string; onRuta?: (ruta: string) => void }) {
   const [dir, setDir] = useState<{ ruta: string; publica: boolean } | null>(null);
   const [texto, setTexto] = useState("");
   const [aviso, setAviso] = useState<{ ok: boolean; texto: string } | null>(null);
@@ -24,6 +24,11 @@ export function DireccionNota({ articleId, version }: { articleId: string; versi
       vivo = false;
     };
   }, [articleId, version]);
+
+  const rutaActual = dir?.ruta;
+  useEffect(() => {
+    if (rutaActual) onRuta?.(rutaActual);
+  }, [rutaActual, onRuta]);
 
   if (!dir) return null;
   const actual = dir.ruta.split("/").pop() ?? "";

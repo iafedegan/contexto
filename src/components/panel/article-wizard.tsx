@@ -436,6 +436,8 @@ export function ArticleWizard({
   const puedeSalir = !faltaPortada && !faltaCredito && !faltaSeo;
   // Autoguardado: a cada cambio (con una pausa) y al cambiar de paso se guarda el borrador, sin salir del asistente.
   const [savedId, setSavedId] = useState(initial?.id ?? "");
+  // Dirección real de la nota, para la vista previa.
+  const [rutaNota, setRutaNota] = useState<string>();
   // Lo que se cargó en el primer paso (el tema, el audio y los documentos ya leídos, los enlaces, las indicaciones) se guarda en este navegador
   // mientras la nota exista y no esté publicada: al salir y volver al asistente sigue ahí. Al publicarla se borra.
   const claveFuente = savedId ? `cg-fuente-nota:${savedId}` : "";
@@ -2246,7 +2248,7 @@ export function ArticleWizard({
                 <Eye size={14} /> Así se verá en el sitio
               </p>
             </div>
-            {savedId && <DireccionNota articleId={savedId} version={categoryId ?? ""} />}
+            {savedId && <DireccionNota articleId={savedId} version={categoryId ?? ""} onRuta={setRutaNota} />}
             {esAdmin && (
               <div className="flex flex-wrap items-end gap-3 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface-2)] p-3 text-sm">
                 <label className="flex min-w-[14rem] flex-1 flex-col gap-1">
@@ -2315,6 +2317,7 @@ export function ArticleWizard({
                   author={authorName}
                   minutes={Math.max(1, Math.round(words / 200))}
                   tags={tags}
+                  ruta={rutaNota}
                 />
               </div>
             ) : (

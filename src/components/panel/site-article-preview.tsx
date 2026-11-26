@@ -37,6 +37,8 @@ export type Props = {
   author?: string;
   minutes: number;
   tags: string[];
+  /** Dirección real de la nota (`/seccion/titulo`), para mostrarla completa en la barra del navegador. */
+  ruta?: string;
 };
 
 /**
@@ -83,6 +85,7 @@ export function Frame({
   author,
   minutes,
   tags,
+  ruta,
 }: Props) {
   const WIDTH = 1440;
   const frame = useRef<HTMLDivElement>(null);
@@ -108,10 +111,10 @@ export function Frame({
         <span className="size-2.5 rounded-full bg-[#ff5f57]" />
         <span className="size-2.5 rounded-full bg-[#febc2e]" />
         <span className="size-2.5 rounded-full bg-[#28c840]" />
-        <span className="ml-3 truncate rounded-md bg-[var(--surface)] px-3 py-0.5 text-xs text-[var(--fg-muted)]">
-          contextoganadero.com/articulo/…
+        <span className="ml-3 min-w-0 select-text break-all rounded-md bg-[var(--surface)] px-3 py-0.5 text-xs text-[var(--fg-muted)]" onClick={(e) => e.stopPropagation()}>
+          contextoganadero.com{ruta ?? "/articulo/…"}
         </span>
-        <span className="ml-auto text-xs text-[var(--fg-muted)]">
+        <span className="ml-auto shrink-0 text-xs text-[var(--fg-muted)]">
           Escritorio · {WIDTH} px · {Math.round(scale * 100)} %
         </span>
       </div>
