@@ -80,6 +80,7 @@ import { textoDeSegmentos, type Material, type Participante, type Segmento } fro
 import { participantesListos, SegmentosEditor } from "@/components/panel/entrevista-editor";
 import { SiteArticlePreview, type SitePreviewChrome } from "@/components/panel/site-article-preview";
 import { briefParaPrompt, type BriefSeccion } from "@/lib/consejo/plan";
+import { DireccionNota } from "@/components/panel/direccion-nota";
 import { FuenteCards, MAX_DOCUMENTOS, PantallaDocumentos, PantallaEnlaces, PantallaEntrevista, PantallaIdeas, PantallaNoticias, type Fuente } from "@/components/panel/wizard-fuentes";
 import { WizardStepper } from "@/components/panel/wizard-stepper";
 import { BotonVoz } from "@/components/panel/boton-voz";
@@ -2245,6 +2246,7 @@ export function ArticleWizard({
                 <Eye size={14} /> Así se verá en el sitio
               </p>
             </div>
+            {savedId && <DireccionNota articleId={savedId} version={categoryId ?? ""} />}
             {esAdmin && (
               <div className="flex flex-wrap items-end gap-3 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface-2)] p-3 text-sm">
                 <label className="flex min-w-[14rem] flex-1 flex-col gap-1">

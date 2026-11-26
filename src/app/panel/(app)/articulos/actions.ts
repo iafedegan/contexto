@@ -12,7 +12,7 @@ import { canPublish, requirePermiso } from "@/lib/auth";
 import { slugify } from "@/lib/utils";
 import { slugLibre } from "@/lib/slug-libre";
 import { autorDeUsuario, crearFirma, firmaDeNota, type FirmaCreada } from "@/lib/user-authors";
-import { archivarCore, asegurarRutaDeColumna, distintivosCore, enviarARevisionCore, fijarPortadaCore, guardarBorradorCore, programarCore, publicarCore, reindexarNota, requisitosDePublicacion, revalidarNota, type BorradorInput } from "@/lib/article-ops";
+import { archivarCore, asegurarRutaDeColumna, cambiarDireccionCore, direccionDeNota, distintivosCore, enviarARevisionCore, fijarPortadaCore, guardarBorradorCore, programarCore, publicarCore, reindexarNota, requisitosDePublicacion, revalidarNota, type BorradorInput } from "@/lib/article-ops";
 import { tienePermiso } from "@/lib/permisos-server";
 import { avisarSiUltimaHora } from "@/lib/push";
 import { invalidarCache, TAG_CONTENIDO } from "@/lib/data-cache";
@@ -251,6 +251,31 @@ export async function cancelarEnvio(articleId: string): Promise<{ ok: boolean; m
   revalidatePath("/panel/articulos");
   revalidatePath(`/panel/articulos/${id}`);
   return { ok: true, message: "Envío cancelado." };
+}
+
+// Dirección actual de la nota (para mostrarla en la vista previa).
+export async function verDireccion(articleId: string) {
+  const user = await requirePermiso("articulos");
+  await exigirNotaPropia(user, articleId);
+  return direccionDeNota(articleId);
+}
+
+// Cambia la dirección de la nota. Una publicada o programada solo la cambia quien puede publicar o su autora.
+export async function cambiarDireccion(articleId: string, texto: string): Promise<{ ok: true; ruta: string } | { ok: false; error: string }> {
+  const user = await requirePermiso("articulos");
+  await exigirNotaPropia(user, articleId);
+  const [a] = await db.select({ status: articles.status, publishedAt: articles.publishedAt }).from(articles).where(eq(articles.id, articleId)).limit(1);
+  if (!a) return { ok: false, error: "La nota ya no existe." };
+  if (a.publishedAt || a.status === "publicado" || a.status === "programado") {
+    const puedePublicar = canPublish(user.role) && (await tienePermiso(user.id, user.role, "publicar"));
+    if (!puedePublicar && !(await esAutoraDeNota(user, articleId))) return { ok: false, error: "Esta nota ya está publicada o programada: solo su autor o un editor pueden cambiar su dirección." };
+  }
+  const r = await cambiarDireccionCore(articleId, String(texto ?? "").slice(0, 200));
+  if (r.ok) {
+    await registrarActividad(articleId, user.id, "edito", 1);
+    revalidatePath("/panel/articulos");
+  }
+  return r;
 }
 
 // Pasa un borrador a revisión; sobre una nota publicada falla para no sacarla del sitio (la regla vive en `enviarARevisionCore`).

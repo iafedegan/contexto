@@ -24,7 +24,7 @@ export type Fuente = "ideas" | "noticias" | "entrevista" | "enlaces" | "document
 const FUENTES = [
   { id: "ideas", Icono: Lightbulb, titulo: "Ideas de la IA", ayuda: "Temas en tendencia del sector, con sus fuentes." },
   { id: "noticias", Icono: Search, titulo: "Buscar noticias", ayuda: "Investiga una persona o tema en medios, YouTube y fuentes oficiales." },
-  { id: "entrevista", Icono: Mic, titulo: "Voz o video", ayuda: "Sube una grabación: la IA la transcribe por intervenciones." },
+  { id: "entrevista", Icono: Mic, titulo: "Voz o video", ayuda: "Sube una o varias grabaciones: la IA las transcribe." },
   { id: "enlaces", Icono: Link2, titulo: "Enlaces", ayuda: "Pega hasta 5 páginas y redacta con palabras propias." },
   { id: "documentos", Icono: FileText, titulo: "Documentos", ayuda: "Sube hasta 3 (PDF, Word, texto o foto): la IA los lee y redacta la nota." },
 ] as const;

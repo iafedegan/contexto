@@ -2,7 +2,7 @@ import "server-only";
 import { registrarActividad } from "@/lib/actividad-notas";
 import { palabrasCambiadas } from "@/lib/actividad-reglas";
 import { revalidatePath } from "next/cache";
-import { and, eq, gte, inArray, isNotNull, ne, sql } from "drizzle-orm";
+import { and, eq, gte, inArray, isNotNull, ne, or, sql } from "drizzle-orm";
 import { db, rowsOf as rowsDe } from "@/db";
 import { agentDrafts, articles, authors, categories } from "@/db/schema";
 import { embed } from "@/lib/embeddings";
@@ -387,4 +387,56 @@ export async function fijarPortadaCore(articleId: string, posicion: number | nul
   revalidatePath("/");
   revalidatePath("/panel/portada");
   await revalidarNota(articleId);
+}
+
+/** Dirección actual de una nota, tal como la ven los lectores. */
+export async function direccionDeNota(articleId: string): Promise<{ ruta: string; publica: boolean } | null> {
+  const [a] = await db
+    .select({ slug: articles.slug, legacyPath: articles.legacyPath, categorySlug: categories.slug, publishedAt: articles.publishedAt })
+    .from(articles)
+    .leftJoin(categories, eq(articles.categoryId, categories.id))
+    .where(eq(articles.id, articleId))
+    .limit(1);
+  return a ? { ruta: rutaDeNota(a), publica: !!a.publishedAt } : null;
+}
+
+/**
+ * Cambia la dirección de una nota (el último tramo; la sección se conserva). Si la nota ya salió alguna vez, la dirección anterior queda con
+ * redirección 301 a la nueva, así no se rompen los enlaces compartidos ni los de buscadores.
+ */
+export async function cambiarDireccionCore(articleId: string, texto: string): Promise<{ ok: true; ruta: string } | { ok: false; error: string }> {
+  const nuevo = slugify(texto);
+  if (nuevo.length < 3) return { ok: false, error: "Escribe una dirección de al menos 3 letras o números." };
+  const [a] = await db
+    .select({ slug: articles.slug, legacyPath: articles.legacyPath, categorySlug: categories.slug, publishedAt: articles.publishedAt })
+    .from(articles)
+    .leftJoin(categories, eq(articles.categoryId, categories.id))
+    .where(eq(articles.id, articleId))
+    .limit(1);
+  if (!a) return { ok: false, error: "La nota ya no existe." };
+  const rutaVieja = rutaDeNota(a);
+  const legacyNuevo = a.legacyPath ? a.legacyPath.replace(/[^/]*$/, nuevo) : null;
+  const rutaNueva = rutaDeNota({ slug: nuevo, legacyPath: legacyNuevo, categorySlug: a.categorySlug });
+  if (rutaNueva === rutaVieja && nuevo === a.slug) return { ok: true, ruta: rutaVieja };
+  const ocupada = await db
+    .select({ id: articles.id })
+    .from(articles)
+    .where(and(ne(articles.id, articleId), or(eq(articles.slug, nuevo), eq(articles.legacyPath, rutaNueva))))
+    .limit(1);
+  if (ocupada.length) return { ok: false, error: "Otra nota ya usa esa dirección. Prueba con otra." };
+  const viejas = [...new Set([rutaVieja, `/articulo/${a.slug}`])].filter((r) => r !== rutaNueva);
+  await db.transaction(async (tx) => {
+    await tx.update(articles).set({ slug: nuevo, legacyPath: legacyNuevo, updatedAt: sql`now()` }).where(eq(articles.id, articleId));
+    // La dirección nueva no puede redirigir a otra parte (volver a una anterior no debe crear un bucle).
+    await tx.delete(redirects).where(inArray(redirects.fromPath, [rutaNueva, `/articulo/${nuevo}`]));
+    if (!a.publishedAt) return;
+    // Las redirecciones que llegaban a la anterior apuntan directo a la nueva: sin cadenas.
+    await tx.update(redirects).set({ toPath: rutaNueva }).where(inArray(redirects.toPath, viejas));
+    for (const desde of viejas) {
+      await tx.insert(redirects).values({ fromPath: desde, toPath: rutaNueva, statusCode: 301 }).onConflictDoUpdate({ target: redirects.fromPath, set: { toPath: rutaNueva, statusCode: 301 } });
+    }
+  });
+  for (const r of viejas) revalidatePath(r);
+  await revalidarNotas([articleId]);
+  return { ok: true, ruta: rutaNueva };
 }

@@ -3,8 +3,9 @@ import { sanitizeArticleHtml } from "@/lib/sanitize";
 import { incrustarEnlaces } from "@/lib/embeds";
 import { EmbedAltura } from "@/components/embed-altura";
 import { ArticleBody } from "@/components/article-body";
-import { notFound, permanentRedirect } from "next/navigation";
+import { permanentRedirect } from "next/navigation";
 import Link from "next/link";
+import { resolverRutaAntigua } from "./ruta-antigua";
 import Image from "next/image";
 import type { Metadata } from "next";
 import { AdsBannerCliente } from "@/components/ads-banner-cliente";
@@ -72,7 +73,7 @@ async function ArticlePage({ params, locale, desdeOriginal }: Params & { locale:
   // Sin `.catch`: si la base falla, la página FALLA (Next conserva la versión guardada y no cachea nada) en vez de responder 404 a una nota que existe.
   // `null` solo significa que la nota de verdad no existe.
   const a = await getPublishedArticleBySlug(slug);
-  if (!a) notFound();
+  if (!a) return resolverRutaAntigua(["articulo", slug]); // dirección cambiada (redirige) o inexistente (404)
   // Una columna se sirve en /columna/<título>: por /articulo/<título> redirige (permanente) para que haya una sola dirección.
   if (!desdeOriginal && locale === "es" && !a.legacyPath && esDeOpinion(a.categorySlug)) permanentRedirect(`/columna/${a.slug}`);
 
