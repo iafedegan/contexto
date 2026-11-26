@@ -10,7 +10,7 @@ import { sanitizeArticleHtml } from "@/lib/sanitize";
 import { auditArticle, SEO_MINIMO_PUBLICAR } from "@/lib/seo-audit";
 import { emitir } from "@/lib/eventos";
 import { slugify } from "@/lib/utils";
-import { esSufijoDeFecha, slugLibre, SUFIJO_ANTIGUO } from "@/lib/slug-libre";
+import { esDireccionDelTitulo, esSufijoDeFecha, slugLibre, SUFIJO_ANTIGUO } from "@/lib/slug-libre";
 import { rutaDeNota } from "@/lib/ruta-nota";
 import { versionAlCambiarDeManos } from "@/lib/versiones-notas";
 import { redirects } from "@/db/schema";
@@ -42,6 +42,19 @@ export type BorradorInput = {
 // Resultado de guardar un borrador: el id y la hora, o el motivo por el que no se guardó.
 export type GuardadoResult = { ok: true; id: string; savedAt: string } | { ok: false; skipped?: boolean; error?: string; detalle?: string };
 
+/**
+ * Mientras la nota no haya salido nunca, su dirección sigue al título: el primer guardado automático puede ocurrir con un título provisional
+ * («Congreso ganadero») y la nota salía con una dirección que no contaba de qué trata. Una dirección ajustada a mano (ya no coincide con el
+ * título guardado) se respeta, y una nota publicada nunca cambia sola. Se llama ANTES de guardar el título nuevo.
+ */
+export async function direccionSigueAlTitulo(articleId: string, tituloNuevo: string) {
+  const [a] = await db.select({ title: articles.title, slug: articles.slug, legacyPath: articles.legacyPath, publishedAt: articles.publishedAt }).from(articles).where(eq(articles.id, articleId)).limit(1);
+  const base = slugify(tituloNuevo);
+  if (!a || a.publishedAt || !base || base === slugify(a.title) || !esDireccionDelTitulo(a.slug, a.title)) return;
+  const slug = await slugLibre(base, async (x) => (await db.select({ id: articles.id }).from(articles).where(and(eq(articles.slug, x), ne(articles.id, articleId))).limit(1)).length > 0);
+  await db.update(articles).set({ slug, legacyPath: a.legacyPath ? a.legacyPath.replace(/[^/]*$/, slug) : null }).where(eq(articles.id, articleId));
+}
+
 /** Crea o actualiza el BORRADOR. Solo toca notas en borrador o en revisión (una publicada solo cambia con sus botones). */
 export async function guardarBorradorCore(userId: string, input: BorradorInput): Promise<GuardadoResult> {
   const title = input.title.trim();
@@ -66,6 +79,7 @@ export async function guardarBorradorCore(userId: string, input: BorradorInput):
       if (!row) return { ok: false, error: "La nota ya no existe." };
       if (row.status !== "borrador" && row.status !== "en_revision") return { ok: false, skipped: true };
       await versionAlCambiarDeManos(input.id, userId);
+      await direccionSigueAlTitulo(input.id, title);
       await db.update(articles).set(values).where(eq(articles.id, input.id));
       const cambio = palabrasCambiadas(`${row.title} ${row.excerpt} ${row.body}`, `${values.title} ${values.excerpt} ${values.body}`);
       if (cambio > 0) await registrarActividad(input.id, userId, "edito", cambio);

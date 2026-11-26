@@ -2250,13 +2250,16 @@ export function ArticleWizard({
             </div>
             {savedId && <DireccionNota articleId={savedId} version={categoryId ?? ""} onRuta={setRutaNota} />}
             {esAdmin && (
-              <div className="flex flex-wrap items-end gap-3 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface-2)] p-3 text-sm">
-                <label className="flex min-w-[14rem] flex-1 flex-col gap-1">
-                  <span className="text-xs font-semibold">Firmar la nota como</span>
+              <div
+                className="flex shrink-0 flex-wrap items-center gap-2 text-xs"
+                title="La vista previa muestra la firma elegida. Se guarda con la nota; si ya está publicada, usa «Guardar y actualizar»."
+              >
+                <label className="flex min-w-[14rem] flex-1 items-center gap-2">
+                  <span className="whitespace-nowrap font-semibold">Firma</span>
                   <select
                     value={authorId}
                     onChange={(e) => setAuthorId(e.target.value)}
-                    className="w-full rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] px-3 py-2"
+                    className="min-w-0 flex-1 rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 py-1"
                   >
                     {!authorId && <option value="">— Elige una firma —</option>}
                     {autoresTodos.map((a) => (
@@ -2264,38 +2267,33 @@ export function ArticleWizard({
                     ))}
                   </select>
                 </label>
-                <div className="flex min-w-[14rem] flex-1 flex-col gap-1">
-                  <label htmlFor="nuevo-autor" className="text-xs font-semibold">¿No está en la lista? Créala</label>
-                  <div className="flex gap-2">
-                    <input
-                      id="nuevo-autor"
-                      value={nuevoAutor}
-                      onChange={(e) => setNuevoAutor(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          if (nuevoAutor.trim().length >= 2 && !creandoAutor) crearYFirmar();
-                        }
-                      }}
-                      placeholder="Nombre y apellido"
-                      maxLength={80}
-                      className="min-w-0 flex-1 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] px-3 py-2"
-                    />
-                    <button
-                      type="button"
-                      onClick={crearYFirmar}
-                      disabled={creandoAutor || nuevoAutor.trim().length < 2}
-                      className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-[var(--border-strong)] bg-[var(--surface)] px-4 py-2 text-xs font-semibold hover:bg-[var(--surface-2)] disabled:opacity-50"
-                    >
-                      {creandoAutor ? <Loader2 size={14} className="animate-spin" aria-hidden /> : <Plus size={14} aria-hidden />} Crear y firmar
-                    </button>
-                  </div>
+                <div className="flex min-w-[14rem] flex-1 items-center gap-2">
+                  <input
+                    id="nuevo-autor"
+                    aria-label="Crear una firma nueva"
+                    value={nuevoAutor}
+                    onChange={(e) => setNuevoAutor(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        if (nuevoAutor.trim().length >= 2 && !creandoAutor) crearYFirmar();
+                      }
+                    }}
+                    placeholder="¿No está? Nombre y apellido"
+                    maxLength={80}
+                    className="min-w-0 flex-1 rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 py-1"
+                  />
+                  <button
+                    type="button"
+                    onClick={crearYFirmar}
+                    disabled={creandoAutor || nuevoAutor.trim().length < 2}
+                    className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-[var(--border-strong)] bg-[var(--surface)] px-3 py-1 font-semibold hover:bg-[var(--surface-2)] disabled:opacity-50"
+                  >
+                    {creandoAutor ? <Loader2 size={13} className="animate-spin" aria-hidden /> : <Plus size={13} aria-hidden />} Crear y firmar
+                  </button>
                 </div>
-                {errorAutor && <p role="alert" className="basis-full text-xs text-[var(--danger,#b4442e)]">{errorAutor}</p>}
-                {avisoAutor && <p role="status" className="basis-full text-xs text-[#157a4a]">{avisoAutor}</p>}
-                <p className="basis-full text-xs text-[var(--fg-muted)]">
-                  La vista previa de abajo muestra la firma elegida. Se guarda con la nota; si ya está publicada, usa «Guardar y actualizar».
-                </p>
+                {errorAutor && <p role="alert" className="basis-full text-[var(--danger,#b4442e)]">{errorAutor}</p>}
+                {avisoAutor && <p role="status" className="basis-full text-[#157a4a]">{avisoAutor}</p>}
               </div>
             )}
             {canPublish && (breaking || live) && (

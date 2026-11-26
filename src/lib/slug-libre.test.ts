@@ -32,3 +32,11 @@ test("solo es sufijo de fecha si coincide con la fecha de creación de la nota; 
   assert.ok(!esSufijoDeFecha("las-brigadas-tecnologicas-llegaron-a-monteria", new Date("2026-11-01")));
   assert.ok(!esSufijoDeFecha("un-titulo-medellin", null));
 });
+
+import { esDireccionDelTitulo as delTitulo } from "./slug-libre";
+
+test("la dirección automática se distingue de la ajustada a mano", () => {
+  assert.equal(delTitulo("congreso-ganadero", "Congreso ganadero"), true);
+  assert.equal(delTitulo("congreso-ganadero-2", "Congreso ganadero"), true);
+  assert.equal(delTitulo("fedegan-recibe-respaldo", "Congreso ganadero"), false);
+});

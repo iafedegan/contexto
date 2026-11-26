@@ -1,3 +1,5 @@
+import { slugify } from "@/lib/utils";
+
 /**
  * Dirección (slug) libre para una nota nueva. Si el título ya está tomado, se agrega un número corto y legible (`titulo-2`, `titulo-3`…) y no un
  * sufijo al azar: las direcciones con letras y números sueltos (`…-mwp9bxru`) se ven mal en el navegador, en los buscadores y al compartirlas.
@@ -13,6 +15,15 @@ export async function slugLibre(base: string, existe: (slug: string) => Promise<
     if (!(await existe(candidato))) return candidato;
   }
   return `${base.slice(0, 80)}-${Date.now().toString(36).slice(-4)}`;
+}
+
+/** ¿La dirección es la que salió sola de ese título (tal cual o con número, `titulo-2`)? Si no, alguien la ajustó a mano. */
+export function esDireccionDelTitulo(slug: string, titulo: string): boolean {
+  const base = slugify(titulo);
+  if (!base) return /^nota-\d+$/.test(slug);
+  if (slug === base) return true;
+  const m = slug.match(/^(.*)-(\d{1,2})$/);
+  return !!m && (m[1] === base || m[1] === base.slice(0, 96 - m[2].length - 1).replace(/-$/, ""));
 }
 
 /**

@@ -12,7 +12,7 @@ import { canPublish, requirePermiso } from "@/lib/auth";
 import { slugify } from "@/lib/utils";
 import { slugLibre } from "@/lib/slug-libre";
 import { autorDeUsuario, crearFirma, firmaDeNota, type FirmaCreada } from "@/lib/user-authors";
-import { archivarCore, asegurarRutaDeColumna, cambiarDireccionCore, direccionDeNota, distintivosCore, enviarARevisionCore, fijarPortadaCore, guardarBorradorCore, programarCore, publicarCore, reindexarNota, requisitosDePublicacion, revalidarNota, type BorradorInput } from "@/lib/article-ops";
+import { archivarCore, asegurarRutaDeColumna, cambiarDireccionCore, direccionDeNota, direccionSigueAlTitulo, distintivosCore, enviarARevisionCore, fijarPortadaCore, guardarBorradorCore, programarCore, publicarCore, reindexarNota, requisitosDePublicacion, revalidarNota, type BorradorInput } from "@/lib/article-ops";
 import { tienePermiso } from "@/lib/permisos-server";
 import { avisarSiUltimaHora } from "@/lib/push";
 import { invalidarCache, TAG_CONTENIDO } from "@/lib/data-cache";
@@ -154,6 +154,7 @@ export async function saveArticle(formData: FormData) {
       if (!puedePublicar && !(await esAutoraDeNota(user, id))) throw new Error("Esta nota ya está publicada o programada: solo su autor o un editor pueden modificarla.");
     }
     await versionAlCambiarDeManos(id, user.id);
+    await direccionSigueAlTitulo(id, title);
     await db.update(articles).set(values).where(eq(articles.id, id));
     const cambio = palabrasCambiadas(`${actual.title} ${actual.excerpt} ${actual.body}`, `${title} ${excerpt} ${body}`);
     if (cambio > 0) await registrarActividad(id, user.id, "edito", cambio);
